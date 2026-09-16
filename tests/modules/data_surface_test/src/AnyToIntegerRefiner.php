@@ -20,7 +20,7 @@ final class AnyToIntegerRefiner implements DataSurfaceRefinerInterface {
    * {@inheritdoc}
    */
   public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
-    return DataDefinition::create('integer')->setRequired(FALSE);
+    return DataDefinition::create('integer');
   }
 
 }

@@ -1,0 +1,10 @@
+name: Data Surface Demo - Classic
+type: module
+description: 'The demo block and the demo formatter written the pre-surface way, by hand, so the two can be read side by side. Depends on nothing from Data Surface.'
+package: Data Surface
+lifecycle: experimental
+lifecycle_link: 'https://git.drupalcode.org/project/data_surface/-/blob/1.0.x/README.md#experimental-submodules'
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - drupal:block
+  - drupal:field

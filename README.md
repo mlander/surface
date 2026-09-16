@@ -145,6 +145,10 @@ their configuration may change without a deprecation path.
 
 - **Data Surface Demo** (`data_surface_demo`) — one surface driving a
   block, a field formatter and a standalone form.
+- **Data Surface Demo - Classic** (`data_surface_demo_classic`) — the
+  same block and the same formatter written the pre-surface way, by
+  hand, with a parity test holding the two to the same behavior and a
+  README counting what each costs. Depends on nothing from this module.
 - **Data Surface Demo Extras** (`data_surface_demo_extras`) — a
   third-party module extending someone else's surface through the build
   event, with no form alter anywhere.

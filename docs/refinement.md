@@ -102,6 +102,34 @@ Only the values are merged this way. Everything else about the refined
 definition — its other constraints, its description, its default — is
 the owner's, because the owner is the one who answers for the key.
 
+#### One refiner, several keys
+
+A refiner method is handed every key it is registered for, so a host that
+refines more than one key writes one method that has to sort them out.
+The house style is a `match` on the name, dispatching to one protected
+method per key:
+
+```php
+public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
+  return match ($name) {
+    'bundle' => $this->refineBundle($definition, $values),
+    'field' => $this->refineField($definition, $values),
+    default => $definition,
+  };
+}
+```
+
+`default => $definition` is the whole of "this refiner has nothing to say
+about that key", and each arm's method reads as the narrowing of one key
+rather than as one branch of a method about several. The demo block is
+the shipped example, and the same shape is used for
+`refineOutputDefinition()`.
+
+A refiner for a **single** key stays a plain guard — `if ($name !==
+'variant') { return $definition; }` — with no dispatch ceremony. That is
+nearly every refiner, the contribution refiners included, because a
+contributor refines the key it contributed to.
+
 A refiner is handed a deep clone, so it may mutate what it is given and
 hand it back, or answer with a fresh definition. A fresh definition does
 not have to carry the declared default or the examples forward: those

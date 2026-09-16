@@ -399,15 +399,13 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
         : new TranslatableMarkup('Third party settings'))
       ->setDescription($emitted
         ? new TranslatableMarkup('Values emitted by other modules.')
-        : new TranslatableMarkup('Settings added by other modules.'))
-      ->setRequired(FALSE);
+        : new TranslatableMarkup('Settings added by other modules.'));
     foreach ($mounted as $provider => $keys) {
       $name = static::providerLabel((string) $provider);
       $provider_map = MapDataDefinition::create()
         ->setLabel($emitted
           ? new TranslatableMarkup('@provider outputs', ['@provider' => $name])
-          : new TranslatableMarkup('@provider settings', ['@provider' => $name]))
-        ->setRequired(FALSE);
+          : new TranslatableMarkup('@provider settings', ['@provider' => $name]));
       foreach ($keys as $key => $definition) {
         $provider_map->setPropertyDefinition((string) $key, $definition);
       }

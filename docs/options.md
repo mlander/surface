@@ -112,7 +112,6 @@ twice anywhere:
 ```php
 $builder->setDefinition('variant', DataDefinition::create('string')
   ->setLabel(new TranslatableMarkup('Variant'))
-  ->setRequired(FALSE)
   ->addConstraint('LabeledChoice', ['choices' => DemoVariant::choices()]));
 ```
 

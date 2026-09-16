@@ -18,19 +18,12 @@ use Drupal\data_surface_demo_node_type\NodeTypeSurfaceProvider;
  * Everything the content type form still has an opinion about.
  *
  * All that is left of a form class once the values are declared on a
- * surface: core's visual grouping, the machine name's mirror-while-
- * typing, the sentence a person reads afterwards and the page they land
- * on. There is no build, no validate and no submit, because there was
- * nothing in them that was about content types — DataSurfaceProviderForm
- * runs the pipeline for every provider alike, and the two routes name
- * this class beside the provider.
+ * surface: visual grouping, the machine name's mirror-while-typing, the
+ * sentence a person reads afterwards and the page they land on. No
+ * build, no validate, no submit.
  *
- * Nothing here can change what a value means. Every element keeps its
- * name and its #parents; #group only relocates an element at render
- * time, and the machine name element already carries the pattern, the
- * length and the uniqueness constraint from the surface. Deleting this
- * class yields the same flat working form, which is the test of whether
- * a cosmetic layer is really cosmetic.
+ * Deleting this class yields the same flat working form, which is the
+ * test of whether a cosmetic layer is really cosmetic.
  */
 final class NodeTypeSurfaceFormCosmetics implements DataSurfaceFormCosmeticsInterface {
 
@@ -98,22 +91,14 @@ final class NodeTypeSurfaceFormCosmetics implements DataSurfaceFormCosmeticsInte
       $form[$key][$name]['#weight'] = 20;
     }
 
-    // The machine name element's mirror-while-typing UX, which only an
-    // add has anything to mirror: on edit the key is locked, and the
-    // generated element is already disabled.
-    //
     // The element type is borrowed for what it draws, not for what it
-    // checks. Core's machine name element also validates, against its
-    // own pattern and against an "exists" callback, and both of those
-    // questions are already on the surface: the Regex constraint the
-    // definition carries, and the uniqueness constraint the provider
-    // adds for this operation. Left in place they answer first, and a
-    // form state keeps only the FIRST error per element, so the
-    // element's generic sentence would replace the surface's violation
-    // and the value that was refused would never be named. A layer that
-    // decides what a value may be is no longer cosmetic, so the
-    // checking half of the borrowed element is dropped here and the
-    // surface stays the one authority on what this key accepts.
+    // checks: its own validation asks what the surface's Regex and
+    // uniqueness constraints already ask, answers first, and a form
+    // state keeps only the FIRST error per element — so the element's
+    // generic sentence would replace the surface's violation. Dropping
+    // #element_validate is what keeps this layer cosmetic. Only an add
+    // has anything to mirror; on edit the key is locked and the
+    // generated element is already disabled.
     if ($operation === NodeTypeSurfaceProvider::OPERATION_ADD) {
       $form[$key]['type']['#type'] = 'machine_name';
       $form[$key]['type']['#machine_name'] = [

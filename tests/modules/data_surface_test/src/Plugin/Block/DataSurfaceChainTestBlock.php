@@ -14,20 +14,11 @@ use Drupal\data_surface\Plugin\Block\DataSurfaceBlockBase;
 /**
  * Three keys, each narrowing the next, with deliberate overlaps.
  *
- * The fixture the discard rule is held to, and it exists because the
- * other chain fixtures in this module cannot express the cases the rule
- * turns on. Casing and variant is two links, and its lists are disjoint,
- * so every change orphans everything: it can show that an orphaned value
- * goes away and nothing else.
- *
- * The lists here overlap on purpose. Tier one's `a` and `b` both offer
- * `two`, so a value can survive a change of its parent — which is the
- * only way to prove that the fall-back is the stored value rather than
- * an empty select. `c` offers neither `one` nor `two`, so a stored value
- * can be orphaned alongside an in-progress one, which is the branch that
- * hands over to the stale placeholder. And there is a third link, so a
- * discard at the second can be seen to reach the third inside one
- * rebuild rather than one rebuild later.
+ * The fixture the discard rule is held to. The lists overlap on purpose:
+ * `a` and `b` both offer `two`, so a value can survive a change of its
+ * parent, while `c` offers neither `one` nor `two`, so a stored value can
+ * be orphaned alongside an in-progress one. The third link is there so a
+ * discard at the second can be seen to reach it inside one rebuild.
  *
  * @see \Drupal\Tests\data_surface\Kernel\RefinementDiscardTest
  */
@@ -62,25 +53,21 @@ final class DataSurfaceChainTestBlock extends DataSurfaceBlockBase {
   public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
     $builder->setDefinition('tier_one', DataDefinition::create('string')
       ->setLabel(new TranslatableMarkup('Tier one'))
-      ->setRequired(FALSE)
       ->addConstraint('Choice', ['choices' => array_keys(self::SECOND)]));
     $builder->setDefault('tier_one', 'a');
 
     $builder->setDefinition('tier_two', DataDefinition::create('string')
-      ->setLabel(new TranslatableMarkup('Tier two'))
-      ->setRequired(FALSE));
+      ->setLabel(new TranslatableMarkup('Tier two')));
     $builder->addRefinement('tier_two', ['tier_one']);
 
     $builder->setDefinition('tier_three', DataDefinition::create('string')
-      ->setLabel(new TranslatableMarkup('Tier three'))
-      ->setRequired(FALSE));
+      ->setLabel(new TranslatableMarkup('Tier three')));
     $builder->addRefinement('tier_three', ['tier_two']);
 
     // A key that refines against nothing, so that a rebuild can be seen
     // to leave the rest of the form alone.
     $builder->setDefinition('note', DataDefinition::create('string')
-      ->setLabel(new TranslatableMarkup('Note'))
-      ->setRequired(FALSE));
+      ->setLabel(new TranslatableMarkup('Note')));
     $builder->setDefault('note', 'stored note');
   }
 
@@ -88,11 +75,25 @@ final class DataSurfaceChainTestBlock extends DataSurfaceBlockBase {
    * {@inheritdoc}
    */
   public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
-    $choices = match ($name) {
-      'tier_two' => self::SECOND[$values['tier_one']] ?? NULL,
-      'tier_three' => self::THIRD[$values['tier_two']] ?? NULL,
-      default => NULL,
+    return match ($name) {
+      'tier_two' => $this->refineTier($definition, self::SECOND[$values['tier_one']] ?? NULL),
+      'tier_three' => $this->refineTier($definition, self::THIRD[$values['tier_two']] ?? NULL),
+      default => $definition,
     };
+  }
+
+  /**
+   * Narrows one tier to what the tier above it offers.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The advertised definition.
+   * @param array|null $choices
+   *   The values on offer, or NULL when the tier above offers none.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface
+   *   The narrowed definition.
+   */
+  protected function refineTier(DataDefinitionInterface $definition, ?array $choices): DataDefinitionInterface {
     return $choices === NULL
       ? $definition
       : $definition->addConstraint('Choice', ['choices' => $choices]);

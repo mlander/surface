@@ -29,57 +29,24 @@ use Drupal\node\NodeTypeInterface;
 /**
  * Provides the content type surface and the storage behind it.
  *
- * One declaration serves both operations; the operation is build-time
- * context. On add, the machine name carries a service-backed uniqueness
- * constraint, the kind of check config schema cannot express. On edit
- * the machine name is locked: still advertised, so a consumer sees the
- * key and its value, but fixed, which the generated form renders as a
- * disabled element and schema emission would express as const plus
- * readOnly. Locking is the degenerate refinement, narrowing the value
- * space to exactly one value.
+ * One declaration serves both operations, and the operation is
+ * build-time context: on add the machine name carries a service-backed
+ * uniqueness constraint, on edit it is locked — still advertised, but
+ * narrowed to the one value it has.
  *
- * The other half of the demo is that the class has no apply() method.
- * Everything a content type form does on save is a target here: the node
- * type config entity for the keys it owns, and base field overrides for
- * the title label and the three workflow defaults, which are not stored
- * on the node type at all. Those two destinations ride in one composite
- * target, so the value set stays one surface and the write stays one
- * commit, and the whole translation is visible rather than buried in a
- * save method.
+ * There is no apply() method. Everything core's content type form does
+ * on save is a target here: the node type config entity for the keys it
+ * owns, and base field overrides for the title label and the three
+ * workflow defaults, which are not stored on the node type at all. One
+ * composite target carries both, so the write stays one commit.
  *
- * The surface is runtime-built, since its defaults and its locking both
- * depend on the entity, so it lives in a method rather than in an
- * attribute.
+ * The provider contract is answered three times over the same operation
+ * and subject pair — surface, access, destination — which is what lets
+ * this module ship no form class: its two routes name the generic
+ * provider form with this service, an operation, and the route
+ * parameter the subject is read from.
  *
- * The provider interface is answered with the operation and subject
- * pair: 'add' with no subject is the surface for creating a content
- * type, and 'edit' with a content type machine name is the surface for
- * one that exists. This is the module that shows why the coordinate has
- * two halves — the verb says what is being done and the subject says
- * what it is being done to, so neither has to be parsed out of the
- * other, and the vocabulary stays two words a discovery document can
- * list. The alternative, a setter taking the entity, would make a
- * container service stateful: two callers in one request would overwrite
- * each other's subject. surfaceFor() stays as the typed entry point a
- * caller holding the entity uses; the pair is the spelling for a caller
- * that has only strings, such as a route, an agent, or the endpoint
- * addressing a surface by host type, host id, operation and subject.
- *
- * The same pair carries the access answer. surfaceAccess() states once
- * what the two routes state in YAML and what the operation link asks
- * before it offers itself: the entity's own create or update answer,
- * ANDed with this module's permission. The form hands that answer to the
- * pipeline when it writes, so the gate a person meets on the way in and
- * the gate the values meet on the way out are one gate rather than two
- * spellings of one intention.
- *
- * And the same pair carries the destination, which completes the triple
- * and is what lets this module ship no form class at all: its two routes
- * name the generic provider form with this service, an operation, and
- * the route parameter the subject is read from. Editing writes the
- * content type the subject names; adding writes one that does not exist
- * yet, whose machine name is itself a submitted value, so that half
- * waits one stage in NodeTypeAddTarget.
+ * @see docs/forms.md
  */
 final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
 
@@ -96,19 +63,16 @@ final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
   /**
    * The operation asking for the surface of a content type that exists.
    *
-   * A bare verb, and the subject beside it names which content type. The
-   * machine name never rides inside the operation, because an operation
-   * that carries identity is a vocabulary nobody can enumerate.
+   * A bare verb: the machine name rides in the subject beside it, never
+   * inside the operation.
    */
   public const OPERATION_EDIT = 'edit';
 
   /**
    * The permission opening this module's surface-driven way in.
    *
-   * Spelled here rather than in the hook class, because this is the
-   * class that answers the access question now: the routes, the
-   * operation link and the form's own write all read this provider's
-   * answer, so there is one place the permission is named.
+   * Named here, not in the hook class: the routes, the operation link
+   * and the form's own write all read this provider's answer.
    */
   public const PERMISSION = 'administer data surface node type demo';
 
@@ -141,15 +105,9 @@ final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
   /**
    * {@inheritdoc}
    *
-   * Two operations: 'add' for a content type that does not exist yet,
-   * which is the one surface this provider builds with no subject, and
-   * 'edit' for one that does, whose subject is its machine name.
-   * Anything else is a caller asking for a surface this provider does
-   * not have, which is worth a refusal rather than a quiet fallback to
-   * the add surface. The operation's default is 'add' rather than the
-   * interface's generic 'configure', because a content type that is not
-   * named yet is the only surface this provider can build without being
-   * told anything.
+   * The default operation is 'add' rather than the interface's generic
+   * 'configure': a content type that is not named yet is the only
+   * surface this provider can build without being told anything.
    *
    * @throws \InvalidArgumentException
    *   When the operation is neither, when 'add' is handed a subject it
@@ -181,10 +139,8 @@ final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
   /**
    * Resolves the subject of an edit operation into a content type.
    *
-   * The whole of what "opaque id" means here: a caller hands over a
-   * string, and this is the one place that says what it is a string of.
-   * A subject naming nothing is refused by name, because a surface for
-   * a content type that is not there is not something to fall back from.
+   * The one place that says what the opaque subject string is a string
+   * of.
    *
    * @param string|null $subject
    *   The machine name the caller named, or NULL when it named none.
@@ -212,29 +168,15 @@ final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
   /**
    * {@inheritdoc}
    *
-   * The two requirements each route carries, in one answer: the entity's
-   * own say over whether a content type may be created or changed, and
-   * this module's permission for its second way in. Both have to allow,
-   * which is why they are ANDed rather than ORed — entity access keeps
-   * this module from granting more than core's own content type form
-   * grants, and the permission decides whether the surface-driven way in
-   * exists on this site at all.
+   * The two requirements each route carries, ANDed: the entity's own say
+   * over the content type, and this module's permission.
    *
-   * Allowed rather than neutral when both agree, because this is an
-   * affirmative answer about a write the module owns, and forbidden
-   * whenever they do not: this provider is where the requirement is
-   * written down, so it has no third state to offer, and the neutral
-   * core's permission and entity helpers answer with becomes an explicit
-   * refusal through DataSurfaceAccess::decisive(). A route reads that
-   * neutral as no; the pipeline's gate would read it as "nothing to
-   * say", and the two have to agree. An operation this provider has no
-   * surface for, and a subject it cannot place, are likewise refused:
-   * unlike getDataSurface(), which throws at a caller asking for a
-   * surface that does not exist, an access question is never answered
-   * with an exception.
-   *
-   * The form, the routes and the operation link all read this, so the
-   * gate a person meets and the gate a payload meets cannot drift.
+   * Never neutral. A route reads neutral as no while the pipeline's gate
+   * reads it as "nothing to say", and the two have to agree, so
+   * DataSurfaceAccess::decisive() turns the neutral answer core's
+   * helpers give into an explicit one. An access question is also never
+   * answered with an exception, so a bad coordinate is forbidden here
+   * where getDataSurface() throws.
    */
   public function surfaceAccess(string $operation = self::OPERATION_ADD, ?string $subject = NULL, ?AccountInterface $account = NULL): AccessResultInterface {
     $account ??= $this->currentUser;
@@ -285,17 +227,10 @@ final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
   /**
    * {@inheritdoc}
    *
-   * The third answer for the same two operations, and the one that
-   * shows why a surface and a destination are asked for separately:
-   * one declaration describes both operations, and each of them writes
-   * somewhere different. Editing writes the content type the subject
-   * names; adding writes a content type that does not exist yet, whose
-   * machine name is itself one of the submitted values, so the
-   * composite is resolved one stage later by NodeTypeAddTarget.
-   *
-   * Refused exactly where getDataSurface() is refused, and in the same
-   * words, because a caller holding a coordinate the surface answers
-   * for must not find the target answering for a different one.
+   * One declaration, two destinations. Editing writes the content type
+   * the subject names; adding writes one that does not exist yet, whose
+   * machine name is itself a submitted value, so the composite is
+   * resolved one stage later by NodeTypeAddTarget.
    *
    * @throws \InvalidArgumentException
    *   When the operation is neither, when 'add' is handed a subject it
@@ -327,13 +262,9 @@ final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
   /**
    * Builds the surface for a content type, or for creating one.
    *
-   * The typed counterpart of the pair, and the in-process convenience a
-   * caller already holding the entity uses: ('add', NULL) and
-   * ('edit', $id) both arrive here, so there is one surface build and
-   * two ways of naming it rather than two builds that could drift. It
-   * also serves the one caller the pair cannot: a form holding an
-   * entity the route already loaded, which would otherwise be loaded
-   * again from its own id.
+   * The typed counterpart of the operation and subject pair: both
+   * spellings arrive here, so there is one surface build and two ways of
+   * naming it.
    *
    * @param \Drupal\node\NodeTypeInterface|null $type
    *   The content type being edited, or NULL when adding.
@@ -364,14 +295,10 @@ final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
           'message' => 'The machine name must contain only lowercase letters, numbers, and underscores.',
         ]),
       // Core has no multiline string type, so the definition says so
-      // with a setting and the string widget renders a textarea. That
-      // matches how node.schema.yml already types these two keys, and
-      // the widget choice still comes from the definition rather than
-      // from form code.
+      // with a setting and the string widget renders a textarea.
       'description' => DataDefinition::create('string')
         ->setLabel(new TranslatableMarkup('Description'))
         ->setDescription(new TranslatableMarkup('Displays on the Content types page.'))
-        ->setRequired(FALSE)
         ->setSetting('multiline', TRUE),
       // Not stored on the node type: this is the title base field's per
       // bundle label, one of the storage destinations the composite
@@ -381,15 +308,9 @@ final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
         ->setDescription(new TranslatableMarkup('The label shown for the title field on the content form.'))
         ->setRequired(TRUE)
         ->addConstraint('Length', ['max' => 255]),
-      // The values are 0, 1 and 2, and what they mean travels with them:
-      // one labeled choice constraint, whose labels come from the enum
-      // core already declares. Nothing cosmetic supplies these words, so
-      // a machine consumer reads the same three meanings a person does.
-      // Spelled canonically — the allowed values as a list, the labels
-      // beside them — and this is what the canonical spelling is for:
-      // the values are integers, and an integer-keyed map of labels
-      // cannot be told from a list of values, so the short spelling the
-      // string-valued declarations use cannot express this one.
+      // Spelled canonically — values as a list, labels beside them —
+      // because the values are integers, and an integer-keyed map of
+      // labels cannot be told from a list of values.
       'preview_mode' => DataDefinition::create('integer')
         ->setLabel(new TranslatableMarkup('Preview before submitting'))
         ->setRequired(TRUE)
@@ -400,28 +321,22 @@ final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
       'help' => DataDefinition::create('string')
         ->setLabel(new TranslatableMarkup('Explanation or submission guidelines'))
         ->setDescription(new TranslatableMarkup('Displayed at the top of the page when creating or editing content of this type.'))
-        ->setRequired(FALSE)
         ->setSetting('multiline', TRUE),
       'status' => DataDefinition::create('boolean')
         ->setLabel(new TranslatableMarkup('Published'))
-        ->setDescription(new TranslatableMarkup('Whether new content of this type is published by default.'))
-        ->setRequired(FALSE),
+        ->setDescription(new TranslatableMarkup('Whether new content of this type is published by default.')),
       'promote' => DataDefinition::create('boolean')
         ->setLabel(new TranslatableMarkup('Promoted to front page'))
-        ->setDescription(new TranslatableMarkup('Whether new content of this type is promoted by default.'))
-        ->setRequired(FALSE),
+        ->setDescription(new TranslatableMarkup('Whether new content of this type is promoted by default.')),
       'sticky' => DataDefinition::create('boolean')
         ->setLabel(new TranslatableMarkup('Sticky at top of lists'))
-        ->setDescription(new TranslatableMarkup('Whether new content of this type is sticky by default.'))
-        ->setRequired(FALSE),
+        ->setDescription(new TranslatableMarkup('Whether new content of this type is sticky by default.')),
       'new_revision' => DataDefinition::create('boolean')
         ->setLabel(new TranslatableMarkup('Create new revision'))
-        ->setDescription(new TranslatableMarkup('Whether edits create a new revision by default.'))
-        ->setRequired(FALSE),
+        ->setDescription(new TranslatableMarkup('Whether edits create a new revision by default.')),
       'display_submitted' => DataDefinition::create('boolean')
         ->setLabel(new TranslatableMarkup('Display author and date information'))
-        ->setDescription(new TranslatableMarkup('Author username and publish date will be displayed.'))
-        ->setRequired(FALSE),
+        ->setDescription(new TranslatableMarkup('Author username and publish date will be displayed.')),
     ];
 
     if ($type === NULL) {
@@ -496,18 +411,11 @@ final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
    */
   public function targetFor(?NodeTypeInterface $type = NULL, ?string $bundle = NULL): CompositeTarget {
     $entity = $type ?? $this->entityTypeManager->getStorage('node_type')->create([]);
-    // Two keys name a setter the node type already offers, and both of
-    // those setters carry core's own #[ActionMethod], so a key a surface
-    // writes here is a key a recipe can write too. Naming them as
-    // strings rather than wrapping them in closures is what keeps the
-    // whole target serializable.
-    //
-    // Preview mode is the exception, and deliberately a plain property:
-    // its setter now wants the NodePreviewMode enum and deprecates the
-    // integer, while the surface describes the integer the schema
-    // stores, and the LabeledChoice constraint has already refused
-    // anything that is not one of the three cases. Converting on the way
-    // in would mean a shape transform in a place that has none.
+    // Setters are named as strings, never wrapped in closures, because
+    // the whole target has to stay serializable. Preview mode is
+    // deliberately a plain property: its setter wants the NodePreviewMode
+    // enum and deprecates the integer the schema stores, and the
+    // LabeledChoice constraint has already refused anything else.
     $entity_keys = [
       'name' => 'name',
       'type' => 'type',
@@ -516,9 +424,8 @@ final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
       'preview_mode' => 'preview_mode',
       'new_revision' => [ConfigEntityTarget::METHOD => 'setNewRevision'],
       'display_submitted' => [ConfigEntityTarget::METHOD => 'setDisplaySubmitted'],
-      // Nothing mounts settings on this surface today, but when a module
-      // does through the build event the target already knows where they
-      // go: core's own third party settings on the same entity.
+      // Nothing mounts settings here today; when a module does, they
+      // land in core's own third party settings on the same entity.
       'third_party_settings' => 'third_party_settings',
     ];
     $entity_target = new ConfigEntityTarget($entity, $entity_keys, $this->typedConfig);
@@ -545,9 +452,7 @@ final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
    * Reads the node field definitions the surface takes defaults from.
    *
    * The workflow defaults and the title label live on the node base
-   * fields, overridden per bundle, not on the node type entity. Reading
-   * them here is half of the storage translation this surface makes
-   * visible; the composite target is the other half.
+   * fields, overridden per bundle, not on the node type entity.
    *
    * @param \Drupal\node\NodeTypeInterface|null $type
    *   The content type, or NULL when adding, where the entity type's own

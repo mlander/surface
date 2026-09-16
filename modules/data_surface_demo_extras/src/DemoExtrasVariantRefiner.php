@@ -11,30 +11,22 @@ use Drupal\data_surface\DataSurfaceRefinerInterface;
 /**
  * Narrows this module's own contribution to the demo formatter.
  *
- * The contribution refiner from decision D2, and the whole point of it
- * is what this class cannot do. It is handed the values this module
- * contributed — the one ribbon variant — and nothing else, so it cannot
- * narrow away the formatter's own variants by accident, and it cannot
- * hand back a value it was not given. Whether the ribbon is offered is
- * this module's business alone, and the refined surface is the union of
- * its answer and the formatter's.
+ * It is handed the one value this module contributed and nothing else,
+ * so it can neither keep nor lose any of the formatter's own variants.
+ * What it answers is that a ribbon only makes sense in upper case.
  *
- * What it answers is: a ribbon only makes sense in upper case. The
- * ribbon is dropped for every other casing, and the formatter's own
- * variants are unaffected either way.
+ * A named, stateless class because surfaces ride along in cached forms:
+ * an anonymous refiner is fatal on the first AJAX rebuild.
  *
- * A named, stateless class deliberately: surfaces ride along in cached
- * forms for validation, so every refiner must be serializable. An
- * anonymous class here is fatal to the form cache on the first AJAX
- * rebuild.
+ * @see docs/refinement.md
  */
 final class DemoExtrasVariantRefiner implements DataSurfaceRefinerInterface {
 
   /**
    * The choice this module contributes, keyed by its value.
    *
-   * A method rather than a class constant because the label is
-   * translatable markup, and PHP allows no object in a constant.
+   * A method, not a constant: PHP allows no object in a constant and the
+   * label is translatable markup.
    *
    * @return array<string, \Drupal\Core\StringTranslation\TranslatableMarkup>
    *   The contributed label, keyed by the value it belongs to.

@@ -106,19 +106,16 @@ class SurfaceAddressItem extends AddressItem implements FieldSurfaceProviderInte
     // list is constructed around its item and described fluently after.
     $countries = new ListDataDefinition(['type' => 'list'], DataDefinition::create('string')
       ->setLabel(new TranslatableMarkup('Country'))
-      ->setRequired(FALSE)
       ->addConstraint('Country', []));
     $countries
       ->setLabel(new TranslatableMarkup('Available countries'))
-      ->setDescription(new TranslatableMarkup('Leave empty for all countries.'))
-      ->setRequired(FALSE);
+      ->setDescription(new TranslatableMarkup('Leave empty for all countries.'));
     $builder->setDefinition('available_countries', $countries);
     $builder->setDefault('available_countries', []);
 
     $builder->setDefinition('langcode_override', DataDefinition::create('string')
       ->setLabel(new TranslatableMarkup('Language override'))
       ->setDescription(new TranslatableMarkup('Ensures entered addresses are always formatted in the same language.'))
-      ->setRequired(FALSE)
       // Locked languages are excluded by default, which is what the
       // address module's own settings form does by hand: "not specified"
       // and "not applicable" are not languages an address is formatted
@@ -128,8 +125,7 @@ class SurfaceAddressItem extends AddressItem implements FieldSurfaceProviderInte
 
     $builder->setDefinition('field_overrides', MapDataDefinition::create()
       ->setLabel(new TranslatableMarkup('Field overrides'))
-      ->setDescription(new TranslatableMarkup('Override the country-specific address format, forcing properties to always be hidden, optional, or required.'))
-      ->setRequired(FALSE));
+      ->setDescription(new TranslatableMarkup('Override the country-specific address format, forcing properties to always be hidden, optional, or required.')));
     $builder->setDefault('field_overrides', []);
     $builder->setPropertyDefinitions('field_overrides', static::fieldOverrideDefinitions());
   }
@@ -196,7 +192,6 @@ class SurfaceAddressItem extends AddressItem implements FieldSurfaceProviderInte
       $definitions[$field_name] = new DataDefinition([
         'type' => 'string',
         'label' => $label,
-        'required' => FALSE,
         'constraints' => [
           'LabeledChoice' => [
             'choices' => [

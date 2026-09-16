@@ -79,10 +79,9 @@ class DataSurfaceContributionTest extends DataSurfaceKernelTestBase {
   protected function builder(): DataSurfaceBuilderInterface {
     $builder = new DataSurfaceBuilder(
       definitions: [
-        'casing' => DataDefinition::create('string')->setLabel('Casing')->setRequired(FALSE),
+        'casing' => DataDefinition::create('string')->setLabel('Casing'),
         'variant' => DataDefinition::create('string')
           ->setLabel('Variant')
-          ->setRequired(FALSE)
           ->addConstraint('LabeledChoice', [
             'choices' => self::OWNED,
             'labels' => ['bold' => 'Bold', 'strong' => 'Strong', 'quiet' => 'Quiet', 'muted' => 'Muted'],
@@ -164,8 +163,8 @@ class DataSurfaceContributionTest extends DataSurfaceKernelTestBase {
   public function testSingleContributionIsThePlainChain(): void {
     $builder = new DataSurfaceBuilder(
       definitions: [
-        'casing' => DataDefinition::create('string')->setRequired(FALSE),
-        'variant' => DataDefinition::create('string')->setRequired(FALSE),
+        'casing' => DataDefinition::create('string'),
+        'variant' => DataDefinition::create('string'),
       ],
       refinements: ['variant' => ['casing']],
     );
@@ -204,7 +203,7 @@ class DataSurfaceContributionTest extends DataSurfaceKernelTestBase {
     }
     $builder = new DataSurfaceBuilder(
       definitions: [
-        'casing' => DataDefinition::create('string')->setRequired(FALSE),
+        'casing' => DataDefinition::create('string'),
         'variant' => $definition,
       ],
       refinements: ['variant' => ['casing']],
@@ -321,11 +320,11 @@ class DataSurfaceContributionTest extends DataSurfaceKernelTestBase {
    * a refiner the sealed surface's own property definitions.
    */
   public function testTheSealedSurfaceIsNeverReachable(): void {
-    $map = MapDataDefinition::create()->setLabel('Extras')->setRequired(FALSE);
-    $map->setPropertyDefinition('note', DataDefinition::create('string')->setRequired(FALSE));
+    $map = MapDataDefinition::create()->setLabel('Extras');
+    $map->setPropertyDefinition('note', DataDefinition::create('string'));
     $builder = new DataSurfaceBuilder(
       definitions: [
-        'casing' => DataDefinition::create('string')->setRequired(FALSE),
+        'casing' => DataDefinition::create('string'),
         'extras' => $map,
       ],
       refinements: ['extras' => ['casing']],
@@ -362,11 +361,11 @@ class DataSurfaceContributionTest extends DataSurfaceKernelTestBase {
    * accepted value would then disagree about what the key starts from.
    */
   public function testMetadataSurvivesFreshDefinitions(): void {
-    $value = DataDefinition::create('any')->setLabel('Value')->setRequired(FALSE);
+    $value = DataDefinition::create('any')->setLabel('Value');
     DefinitionMetadata::setDefaultValue($value, 7);
     DefinitionMetadata::setExamples($value, [1, 2]);
     $builder = new DataSurfaceBuilder(
-      definitions: ['kind' => DataDefinition::create('string')->setRequired(FALSE), 'value' => $value],
+      definitions: ['kind' => DataDefinition::create('string'), 'value' => $value],
       refinements: ['value' => ['kind']],
     );
     $surface = $builder->addRefiner('value', new AnyToIntegerRefiner())->seal();
@@ -384,8 +383,8 @@ class DataSurfaceContributionTest extends DataSurfaceKernelTestBase {
   public function testRefinerCacheabilityReachesTheRefinedSurface(): void {
     $builder = new DataSurfaceBuilder(
       definitions: [
-        'casing' => DataDefinition::create('string')->setRequired(FALSE),
-        'variant' => DataDefinition::create('string')->setRequired(FALSE),
+        'casing' => DataDefinition::create('string'),
+        'variant' => DataDefinition::create('string'),
       ],
       refinements: ['variant' => ['casing']],
     );

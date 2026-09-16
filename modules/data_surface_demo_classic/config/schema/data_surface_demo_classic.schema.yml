@@ -1,0 +1,45 @@
+# Hand maintained, and the second place every one of these keys is
+# written down: the form element above says the same thing in form API
+# words, and nothing checks that the two agree.
+block.settings.data_surface_demo_classic:
+  type: block_settings
+  label: 'Data surface demo (classic) block settings'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    headline:
+      type: string
+      label: 'Headline'
+    entity_type:
+      type: string
+      label: 'Entity type'
+    bundle:
+      type: string
+      label: 'Bundle'
+      nullable: true
+    field:
+      type: string
+      label: 'Highlight field'
+      nullable: true
+    limit:
+      type: integer
+      label: 'Number of items'
+    show_summary:
+      type: boolean
+      label: 'Show summaries'
+
+field.formatter.settings.data_surface_demo_classic_string:
+  type: mapping
+  label: 'Data surface demo formatter (classic) settings'
+  mapping:
+    prefix:
+      type: string
+      label: 'Prefix'
+      nullable: true
+    casing:
+      type: string
+      label: 'Casing'
+    variant:
+      type: string
+      label: 'Variant'
+      nullable: true

@@ -91,7 +91,7 @@ class TargetsTest extends DataSurfaceKernelTestBase {
   protected function siteSurface(): DataSurfaceInterface {
     $definitions = [
       'name' => DataDefinition::create('string')->setLabel('Site name')->setRequired(TRUE),
-      'slogan' => DataDefinition::create('string')->setLabel('Slogan')->setRequired(FALSE),
+      'slogan' => DataDefinition::create('string')->setLabel('Slogan'),
     ];
     DefinitionMetadata::setDefaultValue($definitions['name'], 'Drupal');
     DefinitionMetadata::setDefaultValue($definitions['slogan'], '');
@@ -313,7 +313,7 @@ class TargetsTest extends DataSurfaceKernelTestBase {
     $builder->setThirdPartyDefinition(
       'data_surface_target_test',
       'note',
-      DataDefinition::create('string')->setLabel('Note')->setRequired(FALSE),
+      DataDefinition::create('string')->setLabel('Note'),
       'nothing yet',
     );
     return $builder->seal();
@@ -329,7 +329,7 @@ class TargetsTest extends DataSurfaceKernelTestBase {
     $builder = new DataSurfaceBuilder([
       'label' => DataDefinition::create('string')->setLabel('Label')->setRequired(TRUE),
       'weight' => DataDefinition::create('integer')->setLabel('Weight')->setRequired(TRUE),
-      'style' => DataDefinition::create('string')->setLabel('Style')->setRequired(FALSE),
+      'style' => DataDefinition::create('string')->setLabel('Style'),
     ]);
     $builder->setDefault('label', 'Example');
     $builder->setDefault('weight', 0);
@@ -557,7 +557,7 @@ class TargetsTest extends DataSurfaceKernelTestBase {
     // A surface that says nothing about the label, so neither the map
     // nor the surface claims that path.
     $builder = new DataSurfaceBuilder([
-      'style' => DataDefinition::create('string')->setLabel('Style')->setRequired(FALSE),
+      'style' => DataDefinition::create('string')->setLabel('Style'),
     ]);
     $builder->setDefault('style', '');
     $surface = $builder->seal();

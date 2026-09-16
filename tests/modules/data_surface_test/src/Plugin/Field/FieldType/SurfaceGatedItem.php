@@ -56,8 +56,7 @@ class SurfaceGatedItem extends StringItem implements FieldSurfaceProviderInterfa
   public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
     $builder->setDefinition('note', DataDefinition::create('string')
       ->setLabel(new TranslatableMarkup('Note'))
-      ->setDescription(new TranslatableMarkup('A note stored with this field instance.'))
-      ->setRequired(FALSE));
+      ->setDescription(new TranslatableMarkup('A note stored with this field instance.')));
     // NULL is a declared default, and declaring one is not the same as
     // declaring none: the key starts empty rather than absent.
     $builder->setDefault('note', NULL);

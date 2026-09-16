@@ -62,6 +62,7 @@ of them is meant to replace core's own forms on a production site.
 | Submodule | Shows |
 | --- | --- |
 | `data_surface_demo` | One surface driving three hosts: a block, a field formatter, and a standalone form. |
+| `data_surface_demo_classic` | The same block and formatter written the pre-surface way, for the side-by-side comparison. Depends on nothing from Data Surface. |
 | `data_surface_demo_extras` | A third-party module extending someone else's surface through the build event, with no form alter. |
 | `data_surface_demo_node_type` | One surface serving an add form and an edit form, with a composite target. Adds its own permission. |
 | `data_surface_address` | A contributed field type adopting a surface without being forked. Needs Address. |
@@ -71,7 +72,7 @@ Each submodule's own README says what it shows, how to try it, and which
 tests gate it.
 
 ```bash
-drush pm:install data_surface_demo data_surface_demo_extras
+drush pm:install data_surface_demo data_surface_demo_extras data_surface_demo_classic
 ```
 
 `data_surface_demo_node_type` also defines

@@ -50,8 +50,7 @@ class BaseFieldOverrideTargetTest extends DataSurfaceKernelTestBase {
   protected function surface(): DataSurfaceInterface {
     $builder = new DataSurfaceBuilder([
       'name_label' => DataDefinition::create('string')
-        ->setLabel('Name field label')
-        ->setRequired(FALSE),
+        ->setLabel('Name field label'),
     ]);
     $builder->setDefault('name_label', NULL);
     return $builder->seal();
@@ -173,8 +172,8 @@ class BaseFieldOverrideTargetTest extends DataSurfaceKernelTestBase {
    */
   public function testClearingAndSettingOneFieldIsRefused(): void {
     $builder = new DataSurfaceBuilder([
-      'name_label' => DataDefinition::create('string')->setLabel('Label')->setRequired(FALSE),
-      'name_default' => DataDefinition::create('string')->setLabel('Default')->setRequired(FALSE),
+      'name_label' => DataDefinition::create('string')->setLabel('Label'),
+      'name_default' => DataDefinition::create('string')->setLabel('Default'),
     ]);
     $builder->setDefault('name_label', NULL);
     $builder->setDefault('name_default', NULL);

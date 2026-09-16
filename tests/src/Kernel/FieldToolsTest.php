@@ -417,7 +417,7 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
    * through refineOutputs().
    */
   public function testOutputsConvertToContextDefinitions(): void {
-    $meta = MapDataDefinition::create()->setLabel(new TranslatableMarkup('Meta'))->setRequired(FALSE);
+    $meta = MapDataDefinition::create()->setLabel(new TranslatableMarkup('Meta'));
     $meta->setPropertyDefinition('count', DataDefinition::create('integer')
       ->setLabel(new TranslatableMarkup('Count'))
       ->setRequired(TRUE));
@@ -431,7 +431,6 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
         ->setRequired(TRUE))
       ->setOutputDefinition('note', DataDefinition::create('string')
         ->setLabel(new TranslatableMarkup('Note'))
-        ->setRequired(FALSE)
         ->addConstraint('LabeledChoice', [
           'choices' => ['short', 'long'],
           'labels' => [
@@ -441,8 +440,7 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
         ]))
       ->setOutputDefinition('meta', $meta)
       ->setOutputDefinition('tags', ListDataDefinition::create('string')
-        ->setLabel(new TranslatableMarkup('Tags'))
-        ->setRequired(FALSE));
+        ->setLabel(new TranslatableMarkup('Tags')));
     $surface = $builder->seal();
 
     $outputs = $this->container->get('data_surface_tool.input_definitions')->outputsFromSurface($surface);

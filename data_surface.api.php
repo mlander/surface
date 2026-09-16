@@ -215,7 +215,6 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  *       'badge',
  *       DataDefinition::create('string')
  *         ->setLabel(new TranslatableMarkup('Badge'))
- *         ->setRequired(FALSE)
  *         ->addConstraint('LabeledChoice', [
  *           'choices' => [
  *             'star' => new TranslatableMarkup('Star'),
@@ -248,8 +247,7 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  *       'my_module',
  *       'badge',
  *       DataDefinition::create('string')
- *         ->setLabel(new TranslatableMarkup('Badge'))
- *         ->setRequired(FALSE),
+ *         ->setLabel(new TranslatableMarkup('Badge')),
  *     );
  *   }
  *
@@ -278,6 +276,22 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  *
  * }
  * @endcode
+ *
+ * That is the single-key spelling, and a contribution refiner is always
+ * single-key: it refines the key it contributed to. A host refining several
+ * keys of its own gets one method for all of them, and dispatches with a
+ * match on the name rather than a run of guards, one protected method per
+ * key:
+ * @code
+ * public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
+ *   return match ($name) {
+ *     'bundle' => $this->refineBundle($definition, $values),
+ *     'field' => $this->refineField($definition, $values),
+ *     default => $definition,
+ *   };
+ * }
+ * @endcode
+ * The same shape serves refineOutputDefinition(). See docs/refinement.md.
  *
  * The third role is the policy filter, registered the same way and run last,
  * over every key, once every contribution has spoken:

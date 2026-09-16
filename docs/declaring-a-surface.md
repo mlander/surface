@@ -68,8 +68,7 @@ final class TeaserBlock extends DataSurfaceBlockBase {
       ]));
 
     $builder->setDefinition('bundle', DataDefinition::create('string')
-      ->setLabel(new TranslatableMarkup('Bundle'))
-      ->setRequired(FALSE));
+      ->setLabel(new TranslatableMarkup('Bundle')));
     // The edge sits beside the key it belongs to.
     $builder->addRefinement('bundle', ['entity_type']);
   }
@@ -244,8 +243,7 @@ afterwards. That is one more line of the declaration:
 ```php
 public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
   $builder->setDefinition('field_overrides', MapDataDefinition::create()
-    ->setLabel(new TranslatableMarkup('Field overrides'))
-    ->setRequired(FALSE));
+    ->setLabel(new TranslatableMarkup('Field overrides')));
   $builder->setDefault('field_overrides', []);
   $builder->setPropertyDefinitions('field_overrides', static::fieldOverrideDefinitions());
 }
@@ -370,9 +368,21 @@ It is worth being plain about the edges:
 ## Required
 
 `required` on a core `DataDefinition` is falsy unless you set it —
-definitions are **optional by default**. That differs from the input
-world (the Tool API's `InputDefinition` defaults to required), so say
-which you mean rather than relying on the default.
+definitions are **optional by default**.
+
+> **Requiredness appears only when it says something.** Write
+> `setRequired(TRUE)` on the keys that must be configured, and write
+> nothing at all on the keys that need not be. A `setRequired(FALSE)`
+> repeats the default in every declaration, so it reads as a decision
+> where there is none, and a reader scanning for the required keys has to
+> read the falsy ones to rule them out.
+
+This module's declarations follow that rule throughout, so a
+`setRequired()` anywhere in a surface is a `TRUE`. The one place the
+opposite is written down is a definition that did not start optional: the
+Tool API's `InputDefinition` defaults to *required*, so
+`data_surface_tool` turns the flag off explicitly when it derives one
+from config schema, and there the call is saying something.
 
 What "required" means here is that the key must be *configured*, which is
 a narrower claim than "non-empty": `FALSE`, `0` and `[]` all satisfy a

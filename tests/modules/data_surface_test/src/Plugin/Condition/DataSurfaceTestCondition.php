@@ -14,13 +14,9 @@ use Drupal\data_surface\Plugin\Condition\DataSurfaceConditionBase;
 /**
  * A condition that adopts surfaces and says nothing else about settings.
  *
- * What a condition costs once the base class carries the pipeline: one
- * method declaring what it accepts, one refiner method for the
- * setting that depends on another, and the two methods the condition
- * host asks for. There is no defaultConfiguration, no
- * buildConfigurationForm, no validateConfigurationForm and no
- * submitConfigurationForm, and the negate checkbox core owns is still
- * there because the base class keeps the host's own half.
+ * One declaration, one refiner, and the two methods the condition host
+ * asks for; the negate checkbox core owns is still there, because the
+ * base class keeps the host's own half.
  *
  * Deliberately context free: it compares two of its own values, so the
  * test can evaluate it without gathering contexts.
@@ -37,7 +33,6 @@ final class DataSurfaceTestCondition extends DataSurfaceConditionBase {
   public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
     $builder->setDefinition('mode', DataDefinition::create('string')
       ->setLabel(new TranslatableMarkup('Comparison'))
-      ->setRequired(FALSE)
       ->addConstraint('LabeledChoice', [
         'choices' => [
           'at_least' => new TranslatableMarkup('At least'),
@@ -49,7 +44,6 @@ final class DataSurfaceTestCondition extends DataSurfaceConditionBase {
     $builder->setDefinition('threshold', DataDefinition::create('integer')
       ->setLabel(new TranslatableMarkup('Threshold'))
       ->setDescription(new TranslatableMarkup('The number the reading is compared against.'))
-      ->setRequired(FALSE)
       ->addConstraint('Range', ['min' => 0, 'max' => 100]));
     $builder->setDefault('threshold', 10);
     $builder->addRefinement('threshold', ['mode']);
@@ -57,7 +51,6 @@ final class DataSurfaceTestCondition extends DataSurfaceConditionBase {
     $builder->setDefinition('reading', DataDefinition::create('integer')
       ->setLabel(new TranslatableMarkup('Reading'))
       ->setDescription(new TranslatableMarkup('The number the condition tests.'))
-      ->setRequired(FALSE)
       ->addConstraint('Range', ['min' => 0, 'max' => 100]));
     $builder->setDefault('reading', 0);
   }

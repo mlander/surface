@@ -99,8 +99,7 @@ abstract class DataSurfaceKernelTestBase extends KernelTestBase {
    */
   protected function casingVariantDefinitions(array $variant_choices = []): array {
     $variant = DataDefinition::create('string')
-      ->setLabel('Variant')
-      ->setRequired(FALSE);
+      ->setLabel('Variant');
     if ($variant_choices !== []) {
       $variant->addConstraint('Choice', ['choices' => $variant_choices]);
     }

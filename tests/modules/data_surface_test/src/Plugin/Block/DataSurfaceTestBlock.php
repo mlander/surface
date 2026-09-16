@@ -15,11 +15,8 @@ use Drupal\data_surface\Plugin\Block\DataSurfaceBlockBase;
 /**
  * A block that adopts surfaces and says nothing else about its settings.
  *
- * What a block costs once the base class carries the pipeline: one
- * method declaring what it accepts, one refiner method for the
- * setting that depends on another, and build(). There is no
- * defaultConfiguration, no blockForm, no blockValidate and no
- * blockSubmit, which is the whole claim of the adoption layer.
+ * One declaration, one refiner, build(). No defaultConfiguration, no
+ * blockForm, no blockValidate, no blockSubmit.
  */
 #[Block(
   id: 'data_surface_test_block',
@@ -65,18 +62,15 @@ final class DataSurfaceTestBlock extends DataSurfaceBlockBase {
 
     $builder->setDefinition('limit', DataDefinition::create('integer')
       ->setLabel(new TranslatableMarkup('Number of items'))
-      ->setRequired(FALSE)
       ->addConstraint('Range', ['min' => 1, 'max' => 50]));
     $builder->setDefault('limit', 10);
 
     $builder->setDefinition('show_summary', DataDefinition::create('boolean')
-      ->setLabel(new TranslatableMarkup('Show summaries'))
-      ->setRequired(FALSE));
+      ->setLabel(new TranslatableMarkup('Show summaries')));
     $builder->setDefault('show_summary', TRUE);
 
     $builder->setDefinition('casing', DataDefinition::create('string')
       ->setLabel(new TranslatableMarkup('Casing'))
-      ->setRequired(FALSE)
       ->addConstraint('LabeledChoice', [
         'choices' => [
           'none' => new TranslatableMarkup('As written'),
@@ -88,8 +82,7 @@ final class DataSurfaceTestBlock extends DataSurfaceBlockBase {
 
     $builder->setDefinition('variant', DataDefinition::create('string')
       ->setLabel(new TranslatableMarkup('Variant'))
-      ->setDescription(new TranslatableMarkup('Pick a casing other than none to see its variants.'))
-      ->setRequired(FALSE));
+      ->setDescription(new TranslatableMarkup('Pick a casing other than none to see its variants.')));
     $builder->addRefinement('variant', ['casing']);
   }
 

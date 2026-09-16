@@ -185,7 +185,7 @@ class DataSurfaceFormCacheTest extends DataSurfaceKernelTestBase {
    */
   protected function nameSurface(): DataSurfaceInterface {
     $builder = new DataSurfaceBuilder([
-      'name' => DataDefinition::create('string')->setLabel('Name')->setRequired(FALSE),
+      'name' => DataDefinition::create('string')->setLabel('Name'),
     ]);
     $builder->setDefault('name', '');
     return $builder->seal();

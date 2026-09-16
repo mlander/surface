@@ -90,7 +90,7 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
       ]);
     return new DataSurface(DefinitionMap::fromArrays(definitions: [
       'pick' => $pick,
-      'note' => DataDefinition::create('string')->setLabel('Note')->setRequired(FALSE),
+      'note' => DataDefinition::create('string')->setLabel('Note'),
     ]));
   }
 
@@ -389,7 +389,6 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
     $surface = new DataSurface(DefinitionMap::fromArrays(definitions: [
       'pick' => DataDefinition::create('string')
         ->setLabel('Pick')
-        ->setRequired(FALSE)
         ->addConstraint('Length', ['max' => 3]),
     ]));
 
@@ -411,8 +410,7 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
     $surface = new DataSurface(DefinitionMap::fromArrays(definitions: [
       'picks' => ListDataDefinition::create('string')
         ->setItemDefinition($item)
-        ->setLabel('Picks')
-        ->setRequired(FALSE),
+        ->setLabel('Picks'),
     ]));
 
     // Deliberate: a partial keep — some items stashed, others chosen —

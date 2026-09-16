@@ -57,7 +57,6 @@ class LabeledChoiceTest extends DataSurfaceKernelTestBase {
         definitions: [
           'mode' => DataDefinition::create('integer')
             ->setLabel('Mode')
-            ->setRequired(FALSE)
             ->addConstraint('LabeledChoice', [
               'choices' => [0, 1, 2],
               'labels' => [

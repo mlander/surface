@@ -47,6 +47,12 @@ drush pm:install data_surface_demo
 | `/admin/config/development/data-surface-demo` | The same surface as a standalone form, writing to State instead of block configuration. Needs `administer site configuration`. |
 | Manage display, on any bundle with a string field | Choose the **Data surface demo formatter** and open its settings. |
 
+`data_surface_demo_classic` ships the same block and the same formatter
+written the pre-surface way, by hand. Install it beside this module to
+read the two side by side; its README counts the lines and the separate
+mechanisms each version costs, and `Kernel\ClassicParityTest` holds the
+two to the same behavior.
+
 `data_surface_demo_extras` extends the formatter's surface from outside,
 with no form alter anywhere. Install it and the variant select gains a
 value and a mounted badge setting.
@@ -58,4 +64,5 @@ value and a mounted badge setting.
 | `Kernel\DemoBlockTest` | The block's surface, refinement and configuration round trip. |
 | `Kernel\DemoFormatterTest` | The formatter's settings protocol, including the extras module's contribution. |
 | `Kernel\DemoFormTest` | The standalone form against `StateTarget`. |
+| `Kernel\ClassicParityTest` | That the block and the formatter still match their hand-written twins. |
 | `FunctionalJavascript\DataSurfaceRefinementTest` | The AJAX rebuild in a real browser. |

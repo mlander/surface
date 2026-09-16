@@ -28,8 +28,7 @@ In the same declaration as the inputs, on the same builder:
 ```php
 public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
   $builder->setDefinition('variant', DataDefinition::create('string')
-    ->setLabel(new TranslatableMarkup('Variant'))
-    ->setRequired(FALSE));
+    ->setLabel(new TranslatableMarkup('Variant')));
 
   $builder->setOutputDefinition('text', DataDefinition::create('string')
     ->setLabel(new TranslatableMarkup('Text'))
@@ -37,9 +36,7 @@ public static function declareDataSurface(DataSurfaceBuilderInterface $builder):
     ->setRequired(TRUE));
 
   $classes = new ListDataDefinition(['type' => 'list'], DataDefinition::create('string'));
-  $classes
-    ->setLabel(new TranslatableMarkup('Classes'))
-    ->setRequired(FALSE);
+  $classes->setLabel(new TranslatableMarkup('Classes'));
   $builder->setOutputDefinition('classes', $classes);
   $builder->addOutputRefinement('classes', ['variant']);
 }
@@ -251,8 +248,7 @@ $event->builder->setThirdPartyOutputDefinition(
   'my_module',
   'badge',
   DataDefinition::create('string')
-    ->setLabel(new TranslatableMarkup('Badge'))
-    ->setRequired(FALSE),
+    ->setLabel(new TranslatableMarkup('Badge')),
 );
 ```
 

@@ -22,7 +22,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
   modules/custom/data_surface'
 ```
 
-The baseline as of this writing: **547 tests, 2703 assertions, 0 errors,
+The baseline as of this writing: **559 tests, 2856 assertions, 0 errors,
 2 failures**. The test and assertion counts drift upward as work lands
 and are not the thing to check. **No test may error, and the only tests
 that may fail are the ones in `DataSurfaceRefinementTest`**, for a reason
@@ -79,6 +79,9 @@ npx --yes cspell@8 --config /tmp/merged.json --no-progress --no-summary "**"
   runtime in `getDataSurface()`. Never half of each.
 - Refiners narrow a definition, contributors widen the surface at build
   time, filters remove keys. Those are three different jobs; do not blur.
+- Requiredness appears only when it says something: `setRequired(TRUE)` on
+  the keys that must be configured, nothing at all on the rest, because
+  core data definitions are optional by default.
 - Violations are message objects end to end, from the pipeline to the form,
   never pre-rendered strings.
 - No closures anywhere a form array or a surface carries — both are
@@ -116,7 +119,7 @@ src/Form/                Form builder, host traits, the generic provider form.
 src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constraints.
 src/Options/             Option sets, the resolver plugin base and manager.
 src/Refinement/ Event/   Narrowing and choice sets; the build event.
-modules/                 Five experimental submodules; each has its own README.
+modules/                 Six experimental submodules; each has its own README.
 tests/src/               Unit, Kernel, Functional, FunctionalJavascript.
 docs/ scripts/           Published documentation; check.sh and the generator.
 ```

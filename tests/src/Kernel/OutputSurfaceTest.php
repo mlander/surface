@@ -60,25 +60,22 @@ class OutputSurfaceTest extends DataSurfaceKernelTestBase {
         ->setRequired(TRUE)
         ->addConstraint('Choice', ['choices' => ['plain', 'rich']]),
     ]);
-    $meta = MapDataDefinition::create()->setLabel('Meta')->setRequired(FALSE);
+    $meta = MapDataDefinition::create()->setLabel('Meta');
     $meta->setPropertyDefinition('count', DataDefinition::create('integer')
       ->setLabel('Count')
       ->setRequired(TRUE));
     $meta->setPropertyDefinition('tag', DataDefinition::create('string')
-      ->setLabel('Tag')
-      ->setRequired(FALSE));
+      ->setLabel('Tag'));
     $builder
       ->setOutputDefinition('text', DataDefinition::create('string')
         ->setLabel('Text')
         ->setRequired(TRUE))
       ->setOutputDefinition('note', DataDefinition::create('string')
         ->setLabel('Note')
-        ->setRequired(FALSE)
         ->addConstraint('Choice', ['choices' => ['short', 'long']]))
       ->setOutputDefinition('meta', $meta)
       ->setOutputDefinition('tags', ListDataDefinition::create('string')
-        ->setLabel('Tags')
-        ->setRequired(FALSE))
+        ->setLabel('Tags'))
       ->addOutputRefinement('note', ['mode'])
       ->addOutputRefiner('note', new ModeNoteOutputRefiner());
     return $builder;

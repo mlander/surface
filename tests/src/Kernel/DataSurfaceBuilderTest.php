@@ -56,9 +56,8 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
     return new DataSurfaceBuilder([
       'casing' => DataDefinition::create('string')
         ->setLabel('Casing')
-        ->setRequired(FALSE)
         ->addConstraint('Choice', ['choices' => ['none', 'uppercase']]),
-      'extras' => MapDataDefinition::create()->setLabel('Extras')->setRequired(FALSE),
+      'extras' => MapDataDefinition::create()->setLabel('Extras'),
     ]);
   }
 
@@ -79,7 +78,7 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
    * Tests that every mutator refuses to run after seal().
    */
   public function testEveryMutatorRefusesAfterSeal(): void {
-    $definition = DataDefinition::create('string')->setRequired(FALSE);
+    $definition = DataDefinition::create('string');
     $mutations = [
       'setDefinition' => static fn (DataSurfaceBuilderInterface $b) => $b->setDefinition('added', clone $definition),
       'setPropertyDefinitions' => static fn (DataSurfaceBuilderInterface $b) => $b->setPropertyDefinitions('extras', ['badge' => clone $definition]),
@@ -127,8 +126,8 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
    */
   public function testPropertyDefinitionsReachTheSealedSurface(): void {
     $builder = $this->builder();
-    $badge = DataDefinition::create('string')->setLabel('Badge')->setRequired(FALSE);
-    $note = DataDefinition::create('string')->setLabel('Note')->setRequired(FALSE);
+    $badge = DataDefinition::create('string')->setLabel('Badge');
+    $note = DataDefinition::create('string')->setLabel('Note');
 
     $builder->setPropertyDefinitions('extras', ['badge' => $badge]);
     $builder->setPropertyDefinition('extras', 'note', $note);
@@ -186,7 +185,6 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
     $builder = new DataSurfaceBuilder([
       'mode' => DataDefinition::create('string')
         ->setLabel('Mode')
-        ->setRequired(FALSE)
         ->addConstraint('LabeledChoice', [
           'choices' => ['off' => 'Off', 'on' => 'On'],
           'descriptions' => ['off' => 'Nothing happens.'],
@@ -227,7 +225,6 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
   public function testExtendChoicesRefusesTwoOwnersForOneValue(): void {
     $builder = new DataSurfaceBuilder([
       'mode' => DataDefinition::create('string')
-        ->setRequired(FALSE)
         ->addConstraint('LabeledChoice', ['choices' => ['on' => 'On']]),
     ]);
     $builder->extendChoices('mode', ['auto' => 'Automatic'], 'first');
@@ -277,7 +274,7 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
    */
   public function testExtendChoicesRefusesAnOpenKey(): void {
     $builder = new DataSurfaceBuilder([
-      'note' => DataDefinition::create('string')->setRequired(FALSE),
+      'note' => DataDefinition::create('string'),
     ]);
 
     $this->expectException(\InvalidArgumentException::class);
@@ -295,9 +292,9 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
    */
   public function testSealRefusesRefinementCycles(): void {
     $builder = new DataSurfaceBuilder([
-      'a' => DataDefinition::create('string')->setRequired(FALSE),
-      'b' => DataDefinition::create('string')->setRequired(FALSE),
-      'c' => DataDefinition::create('string')->setRequired(FALSE),
+      'a' => DataDefinition::create('string'),
+      'b' => DataDefinition::create('string'),
+      'c' => DataDefinition::create('string'),
     ]);
     $builder->addRefinement('a', ['b']);
     $builder->addRefinement('b', ['c']);
@@ -313,9 +310,9 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
    */
   public function testSealAcceptsDiamonds(): void {
     $builder = new DataSurfaceBuilder([
-      'entity_type' => DataDefinition::create('string')->setRequired(FALSE),
-      'bundle' => DataDefinition::create('string')->setRequired(FALSE),
-      'field' => DataDefinition::create('string')->setRequired(FALSE),
+      'entity_type' => DataDefinition::create('string'),
+      'bundle' => DataDefinition::create('string'),
+      'field' => DataDefinition::create('string'),
     ]);
     $builder->addRefinement('bundle', ['entity_type']);
     $builder->addRefinement('field', ['entity_type', 'bundle']);

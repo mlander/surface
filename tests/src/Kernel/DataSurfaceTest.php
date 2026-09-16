@@ -45,6 +45,22 @@ class DataSurfaceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Tests that a fresh core data definition is not required.
+   *
+   * The convention "requiredness appears only when it says something"
+   * leans on this one fact about core, so it is pinned here rather than
+   * assumed: every declaration in this module that writes no
+   * setRequired() call is declaring an optional key, and would be
+   * declaring a required one if core ever changed its mind.
+   *
+   * @see docs/declaring-a-surface.md
+   */
+  public function testCoreDefinitionsAreOptionalByDefault(): void {
+    $this->assertFalse(DataDefinition::create('string')->isRequired());
+    $this->assertFalse(MapDataDefinition::create()->isRequired());
+  }
+
+  /**
    * Tests refinement, chains, and the narrowing contract.
    *
    * The single-contribution case, which is nearly every case: one owner,
@@ -84,7 +100,7 @@ class DataSurfaceTest extends DataSurfaceKernelTestBase {
       DefinitionMap::fromArrays(
         definitions: [
           'kind' => DataDefinition::create('string'),
-          'value' => DataDefinition::create('any')->setRequired(FALSE),
+          'value' => DataDefinition::create('any'),
         ],
         refinements: ['value' => ['kind']],
       ),
@@ -114,7 +130,7 @@ class DataSurfaceTest extends DataSurfaceKernelTestBase {
    * Tests path-aware violations inside nested maps.
    */
   public function testNestedViolationPaths(): void {
-    $map = MapDataDefinition::create()->setLabel('Settings')->setRequired(FALSE);
+    $map = MapDataDefinition::create()->setLabel('Settings');
     $map->setPropertyDefinition('sub', DataDefinition::create('string')->addConstraint('Length', ['max' => 3]));
     $surface = new DataSurface(DefinitionMap::fromArrays(definitions: ['settings' => $map]));
 
@@ -126,16 +142,16 @@ class DataSurfaceTest extends DataSurfaceKernelTestBase {
    * Tests that a map's default assembles from its property definitions.
    */
   public function testNestedMapDefaults(): void {
-    $badge = DataDefinition::create('string')->setRequired(FALSE);
+    $badge = DataDefinition::create('string');
     DefinitionMetadata::setDefaultValue($badge, 'star');
-    $inner = MapDataDefinition::create()->setLabel('Inner')->setRequired(FALSE);
+    $inner = MapDataDefinition::create()->setLabel('Inner');
     $inner->setPropertyDefinition('badge', $badge);
-    $inner->setPropertyDefinition('note', DataDefinition::create('string')->setRequired(FALSE));
+    $inner->setPropertyDefinition('note', DataDefinition::create('string'));
 
-    $outer = MapDataDefinition::create()->setLabel('Outer')->setRequired(FALSE);
+    $outer = MapDataDefinition::create()->setLabel('Outer');
     $outer->setPropertyDefinition('provider', $inner);
-    $empty = MapDataDefinition::create()->setLabel('Empty')->setRequired(FALSE);
-    $empty->setPropertyDefinition('nothing', DataDefinition::create('string')->setRequired(FALSE));
+    $empty = MapDataDefinition::create()->setLabel('Empty');
+    $empty->setPropertyDefinition('nothing', DataDefinition::create('string'));
 
     $surface = new DataSurface(DefinitionMap::fromArrays(definitions: ['settings' => $outer, 'empty' => $empty]));
     // Properties that declare nothing are left out at the nested level.
@@ -158,7 +174,7 @@ class DataSurfaceTest extends DataSurfaceKernelTestBase {
    * Tests that a declared NULL default differs from declaring none.
    */
   public function testDeclaredNullDefault(): void {
-    $definition = DataDefinition::create('string')->setRequired(FALSE);
+    $definition = DataDefinition::create('string');
     $this->assertFalse(DefinitionMetadata::hasDefaultValue($definition));
     $this->assertNull(DefinitionMetadata::getDefaultValue($definition));
     // Reading a definition that declares nothing must not make it
@@ -178,7 +194,7 @@ class DataSurfaceTest extends DataSurfaceKernelTestBase {
    * Tests that example values round-trip through the definition.
    */
   public function testExamplesRoundTrip(): void {
-    $definition = DataDefinition::create('string')->setRequired(FALSE);
+    $definition = DataDefinition::create('string');
     $this->assertSame([], DefinitionMetadata::getExamples($definition));
 
     DefinitionMetadata::setExamples($definition, ['+31 20 624 1111', '0031206241111']);

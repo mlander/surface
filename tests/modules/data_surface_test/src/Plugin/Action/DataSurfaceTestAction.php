@@ -46,7 +46,6 @@ final class DataSurfaceTestAction extends DataSurfaceActionBase {
 
     $builder->setDefinition('level', DataDefinition::create('string')
       ->setLabel(new TranslatableMarkup('Level'))
-      ->setRequired(FALSE)
       ->addConstraint('LabeledChoice', [
         'choices' => [
           'status' => new TranslatableMarkup('Status'),

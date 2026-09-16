@@ -253,7 +253,6 @@ class ChoiceSpellingParityTest extends DataSurfaceKernelTestBase {
   protected function definition(array $options): DataDefinitionInterface {
     return DataDefinition::create('string')
       ->setLabel('Badge')
-      ->setRequired(FALSE)
       ->addConstraint('LabeledChoice', $options);
   }
 

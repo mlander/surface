@@ -76,7 +76,6 @@ final class TestSurfaceSubscriber implements EventSubscriberInterface {
         'badge',
         DataDefinition::create('string')
           ->setLabel(new TranslatableMarkup('Badge'))
-          ->setRequired(FALSE)
           ->addConstraint('Choice', ['choices' => ['star', 'flame']]),
       );
       return;
@@ -89,7 +88,6 @@ final class TestSurfaceSubscriber implements EventSubscriberInterface {
       'badge',
       DataDefinition::create('string')
         ->setLabel(new TranslatableMarkup('Badge'))
-        ->setRequired(FALSE)
         ->addConstraint('Choice', ['choices' => ['star', 'flame']]),
       'star',
     );

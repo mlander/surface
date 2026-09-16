@@ -718,7 +718,7 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
    */
   protected static function listDefinition(): ListDataDefinition {
     $list = new ListDataDefinition([], DataDefinition::create('string'));
-    $list->setLabel('Countries')->setRequired(FALSE);
+    $list->setLabel('Countries');
     return $list;
   }
 

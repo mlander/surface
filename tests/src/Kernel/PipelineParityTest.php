@@ -51,29 +51,26 @@ class PipelineParityTest extends DataSurfaceKernelTestBase {
   protected function surface(): DataSurfaceInterface {
     $badge = DataDefinition::create('string')
       ->setLabel('Badge')
-      ->setRequired(FALSE)
       ->addConstraint('Choice', ['choices' => ['star', 'flame']]);
     DefinitionMetadata::setDefaultValue($badge, 'flame');
-    $extras = MapDataDefinition::create()->setLabel('Extras')->setRequired(FALSE);
+    $extras = MapDataDefinition::create()->setLabel('Extras');
     $extras->setPropertyDefinition('badge', $badge);
     $extras->setPropertyDefinition('weight', DataDefinition::create('integer')
-      ->setLabel('Weight')
-      ->setRequired(FALSE));
+      ->setLabel('Weight'));
 
     $definitions = [
       'title' => DataDefinition::create('string')->setLabel('Title')->setRequired(TRUE),
-      'count' => DataDefinition::create('integer')->setLabel('Count')->setRequired(FALSE),
-      'ratio' => DataDefinition::create('float')->setLabel('Ratio')->setRequired(FALSE),
-      'active' => DataDefinition::create('boolean')->setLabel('Active')->setRequired(FALSE),
+      'count' => DataDefinition::create('integer')->setLabel('Count'),
+      'ratio' => DataDefinition::create('float')->setLabel('Ratio'),
+      'active' => DataDefinition::create('boolean')->setLabel('Active'),
       'mode' => DataDefinition::create('integer')
         ->setLabel('Mode')
-        ->setRequired(FALSE)
         ->addConstraint('LabeledChoice', [
           'choices' => [0, 1, 2],
           'labels' => [0 => 'Disabled', 1 => 'Optional', 2 => 'Required'],
         ]),
       'extras' => $extras,
-      'flavor' => DataDefinition::create('string')->setLabel('Flavor')->setRequired(FALSE),
+      'flavor' => DataDefinition::create('string')->setLabel('Flavor'),
     ];
     DefinitionMetadata::setDefaultValue($definitions['title'], 'Hello');
     DefinitionMetadata::setDefaultValue($definitions['mode'], 1);

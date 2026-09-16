@@ -48,12 +48,11 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
   protected function surface(array $locked = []): DataSurfaceInterface {
     $badge = DataDefinition::create('string')
       ->setLabel('Badge')
-      ->setRequired(FALSE)
       ->addConstraint('Choice', ['choices' => ['star', 'flame']]);
     // The nested default lives on the property definition, so the map's
     // own default assembles itself.
     DefinitionMetadata::setDefaultValue($badge, 'flame');
-    $map = MapDataDefinition::create()->setLabel('Extras')->setRequired(FALSE);
+    $map = MapDataDefinition::create()->setLabel('Extras');
     $map->setPropertyDefinition('badge', $badge);
 
     $definitions = [
@@ -63,11 +62,9 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
         ->addConstraint('Length', ['max' => 40]),
       'notes' => DataDefinition::create('string')
         ->setLabel('Notes')
-        ->setRequired(FALSE)
         ->setSetting('multiline', TRUE),
       'mode' => DataDefinition::create('integer')
         ->setLabel('Mode')
-        ->setRequired(FALSE)
         // Integer values need the canonical spelling: a map keyed 0, 1,
         // 2 is indistinguishable from a bare list of labels.
         ->addConstraint('LabeledChoice', [
@@ -76,9 +73,8 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
         ]),
       'limit' => DataDefinition::create('integer')
         ->setLabel('Limit')
-        ->setRequired(FALSE)
         ->addConstraint('Range', ['min' => 1, 'max' => 50]),
-      'active' => DataDefinition::create('boolean')->setLabel('Active')->setRequired(FALSE),
+      'active' => DataDefinition::create('boolean')->setLabel('Active'),
       'extras' => $map,
     ];
     DefinitionMetadata::setDefaultValue($definitions['title'], 'Hello');
@@ -203,7 +199,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
       DefinitionMap::fromArrays(
         definitions: [
           'kind' => $kind,
-          'detail' => DataDefinition::create('string')->setLabel('Detail')->setRequired(FALSE),
+          'detail' => DataDefinition::create('string')->setLabel('Detail'),
         ],
         refinements: ['detail' => ['kind']],
         locked: ['kind'],
@@ -316,7 +312,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
    *   The surface.
    */
   protected function tagsSurface(): DataSurfaceInterface {
-    $tags = ListDataDefinition::create('string')->setLabel('Tags')->setRequired(FALSE);
+    $tags = ListDataDefinition::create('string')->setLabel('Tags');
     $tags->getItemDefinition()->addConstraint('LabeledChoice', [
       'choices' => ['news', 'tips', 'events'],
       'labels' => ['news' => 'News', 'tips' => 'Tips', 'events' => 'Events'],
@@ -384,7 +380,6 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
   public function testRefinedChoicesReachTheSelect(): void {
     $mode = DataDefinition::create('integer')
       ->setLabel('Mode')
-      ->setRequired(FALSE)
       ->addConstraint('LabeledChoice', [
         'choices' => [0, 1, 2],
         'labels' => [0 => 'Disabled', 1 => 'Optional', 2 => 'Required'],
@@ -392,7 +387,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
     $surface = new DataSurface(
       DefinitionMap::fromArrays(
         definitions: [
-          'scope' => DataDefinition::create('string')->setLabel('Scope')->setRequired(FALSE),
+          'scope' => DataDefinition::create('string')->setLabel('Scope'),
           'mode' => $mode,
         ],
         refinements: ['mode' => ['scope']],
@@ -588,7 +583,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
       DefinitionMap::fromArrays(
         definitions: [
           'extras' => $map,
-          'detail' => DataDefinition::create('string')->setLabel('Detail')->setRequired(FALSE),
+          'detail' => DataDefinition::create('string')->setLabel('Detail'),
         ],
         refinements: ['detail' => ['extras']],
       ),
@@ -707,8 +702,8 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
   public function testSurfaceCacheabilityReachesTheContainer(): void {
     $builder = new DataSurfaceBuilder(
       definitions: [
-        'casing' => DataDefinition::create('string')->setLabel('Casing')->setRequired(FALSE),
-        'variant' => DataDefinition::create('string')->setLabel('Variant')->setRequired(FALSE),
+        'casing' => DataDefinition::create('string')->setLabel('Casing'),
+        'variant' => DataDefinition::create('string')->setLabel('Variant'),
       ],
       refinements: ['variant' => ['casing']],
     );
@@ -798,8 +793,8 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
     return new DataSurface(
       DefinitionMap::fromArrays(
         definitions: [
-          'kind' => DataDefinition::create('string')->setLabel('Kind')->setRequired(FALSE),
-          'detail' => DataDefinition::create('string')->setLabel('Detail')->setRequired(FALSE),
+          'kind' => DataDefinition::create('string')->setLabel('Kind'),
+          'detail' => DataDefinition::create('string')->setLabel('Detail'),
         ],
         refinements: ['detail' => ['kind']],
       ),

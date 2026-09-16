@@ -15,11 +15,9 @@ use Drupal\data_surface\Plugin\Field\FieldFormatter\DataSurfaceFormatterBase;
 /**
  * A formatter that adopts surfaces on a host that never heard of them.
  *
- * Field UI has no validate or submit hook for settings and prunes what
- * it saves against a static defaults array; the base class and its trait
- * answer both from this class's declaration, which is static for that
- * reason, so the formatter itself holds its declaration, its refiner,
- * and viewElements().
+ * One declaration, one refiner, viewElements(). Field UI's missing
+ * validate and submit hooks, and the static defaults it prunes against,
+ * are the base class's problem.
  */
 #[FieldFormatter(
   id: 'data_surface_test_formatter',
@@ -57,12 +55,10 @@ final class DataSurfaceTestFormatter extends DataSurfaceFormatterBase {
     $builder->setDefinition('prefix', DataDefinition::create('string')
       ->setLabel(new TranslatableMarkup('Prefix'))
       ->setDescription(new TranslatableMarkup('Text placed before each value.'))
-      ->setRequired(FALSE)
       ->addConstraint('Length', ['max' => 10]));
 
     $builder->setDefinition('casing', DataDefinition::create('string')
       ->setLabel(new TranslatableMarkup('Casing'))
-      ->setRequired(FALSE)
       ->addConstraint('LabeledChoice', [
         'choices' => [
           'none' => new TranslatableMarkup('As written'),
@@ -74,8 +70,7 @@ final class DataSurfaceTestFormatter extends DataSurfaceFormatterBase {
 
     $builder->setDefinition('variant', DataDefinition::create('string')
       ->setLabel(new TranslatableMarkup('Variant'))
-      ->setDescription(new TranslatableMarkup('Pick a casing other than none to see its variants.'))
-      ->setRequired(FALSE));
+      ->setDescription(new TranslatableMarkup('Pick a casing other than none to see its variants.')));
     $builder->addRefinement('variant', ['casing']);
   }
 

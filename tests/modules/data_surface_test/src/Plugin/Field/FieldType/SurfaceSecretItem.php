@@ -55,14 +55,12 @@ class SurfaceSecretItem extends StringItem implements FieldSurfaceProviderInterf
   public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
     $builder->setDefinition('endpoint', DataDefinition::create('string')
       ->setLabel(new TranslatableMarkup('Endpoint'))
-      ->setDescription(new TranslatableMarkup('Where this field sends its values.'))
-      ->setRequired(FALSE));
+      ->setDescription(new TranslatableMarkup('Where this field sends its values.')));
     $builder->setDefault('endpoint', '');
 
     $token = DataDefinition::create('string')
       ->setLabel(new TranslatableMarkup('API key'))
-      ->setDescription(new TranslatableMarkup('The key this field authenticates with.'))
-      ->setRequired(FALSE);
+      ->setDescription(new TranslatableMarkup('The key this field authenticates with.'));
     DefinitionMetadata::setSecret($token);
     $builder->setDefinition('token', $token);
     $builder->setDefault('token', '');
