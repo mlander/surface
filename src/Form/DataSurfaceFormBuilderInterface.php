@@ -106,11 +106,18 @@ interface DataSurfaceFormBuilderInterface {
    *   The container the elements were built into.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state to flag violations on.
+   * @param array $current
+   *   The stored values, in surface shape — the same ones handed to
+   *   extractSurfaceValues(). Only what a key already holds can be
+   *   stale, so a host that does not pass them gets a stale value
+   *   refused as an ordinary violation, which is the bug this exists
+   *   to close rather than a safe default.
    *
    * @return bool
-   *   TRUE when the values are valid.
+   *   TRUE when the values are valid. Stale references do not make them
+   *   invalid: they are warned about and saved.
    */
-  public function validateSurfaceForm(DataSurfaceInterface $surface, array $values, array $container, FormStateInterface $form_state): bool;
+  public function validateSurfaceForm(DataSurfaceInterface $surface, array $values, array $container, FormStateInterface $form_state, array $current = []): bool;
 
   /**
    * Attaches surface violations to the exact elements they belong to.
@@ -119,6 +126,14 @@ interface DataSurfaceFormBuilderInterface {
    * constraint built, never as text: Form API takes a Stringable and
    * renders it when the error is printed, so a message with placeholders
    * is escaped once, by whoever prints it.
+   *
+   * Stale references are not violations and are not flagged as ones:
+   * they become a warning through the messenger, naming the key and the
+   * value being kept. The element itself says so too, but it says it
+   * where it is built — a select carries the sentinel option, the note
+   * and the class from buildSurfaceForm() — because a form that fails
+   * validation is rebuilt from scratch and anything written onto an
+   * element here would not survive to be rendered.
    *
    * @param \Drupal\data_surface\Pipeline\ViolationSet $errors
    *   The violations, as the pipeline reports them.

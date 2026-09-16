@@ -26,6 +26,14 @@ namespace Drupal\data_surface\Pipeline;
  * array of arrays, and summaries and form errors read the same as they
  * always did.
  *
+ * Stale references are held to one side. A set built from a list
+ * containing them files them under stale() and nowhere else: they are
+ * not iterated, not counted, not named by keys(), and do not make
+ * isEmpty() false. That is the whole of "stale never blocks" — every
+ * existing reader asks isEmpty() or iterates, so none of them has to
+ * learn anything new to keep saving a value that went stale, and a
+ * reader that wants to say so out loud asks stale() on purpose.
+ *
  * @see \Drupal\data_surface\Pipeline\SurfaceViolation
  * @see \Drupal\data_surface\Pipeline\DataSurfacePipelineInterface::validate()
  *
@@ -41,24 +49,66 @@ final class ViolationSet implements \IteratorAggregate, \Countable {
   private readonly array $grouped;
 
   /**
+   * The stale references, in the order they were found.
+   *
+   * A flat list rather than a grouping: nothing renders stale entries
+   * per key the way form errors are rendered per element, and every
+   * reader so far wants all of them — a messenger warning, an agent's
+   * "re-choose these" list.
+   *
+   * @var \Drupal\data_surface\Pipeline\SurfaceViolation[]
+   */
+  private readonly array $staleEntries;
+
+  /**
    * Constructs a ViolationSet.
    *
    * @param \Drupal\data_surface\Pipeline\SurfaceViolation[] $violations
-   *   The violations, in the order they were found.
+   *   The violations, in the order they were found. Entries flagged
+   *   stale are separated out here and answered by stale() alone.
    */
   public function __construct(array $violations = []) {
     $grouped = [];
+    $stale = [];
     foreach ($violations as $violation) {
+      if ($violation->stale) {
+        $stale[] = $violation;
+        continue;
+      }
       $grouped[$violation->key][] = $violation;
     }
     $this->grouped = $grouped;
+    $this->staleEntries = $stale;
+  }
+
+  /**
+   * Gets the stale references, in the order they were found.
+   *
+   * @return \Drupal\data_surface\Pipeline\SurfaceViolation[]
+   *   The stale entries; empty when nothing went stale.
+   */
+  public function stale(): array {
+    return $this->staleEntries;
+  }
+
+  /**
+   * Returns whether anything in this run referred to a value gone stale.
+   *
+   * @return bool
+   *   TRUE when the set holds at least one stale reference.
+   */
+  public function hasStale(): bool {
+    return $this->staleEntries !== [];
   }
 
   /**
    * Returns whether nothing was refused.
    *
+   * Stale references do not count: they are not refusals, and a run that
+   * found only stale entries is a run that may proceed.
+   *
    * @return bool
-   *   TRUE when the set holds no violations.
+   *   TRUE when the set holds no blocking violations.
    */
   public function isEmpty(): bool {
     return $this->grouped === [];

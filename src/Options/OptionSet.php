@@ -38,6 +38,32 @@ final class OptionSet implements CacheableDependencyInterface {
   }
 
   /**
+   * Returns whether a value is one this set offers.
+   *
+   * The membership question asked in exactly the way a select answers
+   * it: the options are keyed by the value, so the value is looked up as
+   * an array key, and PHP's own key coercion makes `'2'` and `2` the
+   * same option the way a submitted select does. Anything that cannot be
+   * an array key — a boolean, a float, an array, NULL — is not in any
+   * option list, so the answer is no rather than a notice.
+   *
+   * One place answers it because two things ask: the options widget,
+   * deciding whether a stored value can still be rendered as a chosen
+   * option, and the pipeline, deciding whether a refused value is stale
+   * rather than wrong. If those two disagreed, a form would stash a
+   * value the pipeline then refused, or warn about one it accepted.
+   *
+   * @param mixed $value
+   *   The value to look for.
+   *
+   * @return bool
+   *   TRUE when the set offers the value.
+   */
+  public function allows(mixed $value): bool {
+    return (is_int($value) || is_string($value)) && array_key_exists($value, $this->options);
+  }
+
+  /**
    * Keeps only the values both sets allow.
    *
    * Every constraint on a definition has to hold at once, so a

@@ -205,13 +205,14 @@ class DataSurfaceProviderForm extends FormBase {
     $subject = $this->surfaceSubject();
     $surface = $provider->getDataSurface($operation, $subject);
     $builder = $this->surfaceFormBuilder();
+    $current = $this->storedSurfaceValues($surface, $provider->getDataSurfaceTarget($operation, $subject));
     $values = $builder->extractSurfaceValues(
       $surface,
       $form[static::SURFACE_KEY],
       $form_state,
-      $this->storedSurfaceValues($surface, $provider->getDataSurfaceTarget($operation, $subject)),
+      $current,
     );
-    $builder->validateSurfaceForm($surface, $values, $form[static::SURFACE_KEY], $form_state);
+    $builder->validateSurfaceForm($surface, $values, $form[static::SURFACE_KEY], $form_state, $current);
   }
 
   /**

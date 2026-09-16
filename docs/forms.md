@@ -206,11 +206,71 @@ started from, as a plain array, so it survives the form cache. See [the
 serialization rule](targets.md#the-serialization-rule) for what may and
 may not ride on a form array.
 
+`validateSurfaceForm()` takes the same `$current` and for a second
+reason: only what a key already holds can be *stale*, so a host that
+does not pass the stored values there gets a stale value refused as an
+ordinary violation. The host traits pass one array to both calls.
+
+## Stale values on a form
+
+A select whose stored value is no longer among the options it offers —
+a deleted bundle, an uninstalled plugin, a refinement that narrowed —
+renders on a **placeholder**, never on a real option:
+
+```html
+<select name="settings[bundle]">
+  <option value="">- None -</option>
+  <option value="@data_surface:keep-stale" selected>Previous value article is no longer available</option>
+  <option value="page">Page</option>
+</select>
+```
+
+Four things are true of that element, and each of them closes a
+different way of losing the value:
+
+- **The stale value is not in the list.** Offering it back would let
+  somebody re-save a reference to something that does not exist, and
+  would make the list that is offered wider than the list that
+  validates.
+- **Nothing else is selected.** A browser handed a select whose value is
+  missing from its options picks the first one, so the next unrelated
+  save used to write that first option over the stored value without
+  anybody choosing anything.
+- **The placeholder is `DataSurfacePipelineInterface::KEEP_STALE`**, in
+  the same reserved `@` namespace as `CLEAR_SECRET`, and the element
+  carries the value it stands for on `#data_surface_stale` — a plain
+  value, per [the serialization rule](targets.md#the-serialization-rule).
+  Extraction maps the marker back through the stash, so **leaving the
+  select alone keeps the stored value**. Reading it back is
+  `DataSurfaceWidgetBase`'s job rather than the options widget's:
+  extraction resolves widgets from the surface as advertised, having no
+  values yet to refine with, so a key that is only a choice once a
+  refiner has narrowed it is built by the options widget and read back
+  by another.
+- **Clearing is still expressible and still distinct.** An optional
+  select keeps its ordinary `- None -` beside the placeholder; a
+  required one gets the placeholder and the real options and nothing
+  else.
+
+A note is appended to the element's description — "The stored value
+article is no longer available. It is kept until you choose another." —
+and the element gets a `data-surface-stale` class. Both are written when
+the element is built, not when it is validated, because a form that
+fails validation is rebuilt from scratch and anything written onto an
+element in a validate handler never reaches the page.
+
+On submit, `flagSurfaceErrors()` turns each stale reference into a
+messenger **warning** and never a form error: nothing is wrong with the
+submission and the save is going ahead. The nag repeats on every save,
+which is the point — the value keeps working, and it will not start
+working again on its own.
+
 ## Violations
 
 `validateSurfaceForm()` flags violations on the exact elements they
 belong to before it answers, so a host with nothing else to do may ignore
-the return value.
+the return value. Stale references are not violations and are not
+flagged as ones; see above.
 
 A violation's message reaches `FormStateInterface::setError()` as the
 object the constraint built, never as text. Form API takes a

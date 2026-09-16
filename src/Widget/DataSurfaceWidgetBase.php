@@ -8,6 +8,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Plugin\PluginBase;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 
 /**
  * Common ground for data surface widgets.
@@ -20,6 +21,28 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
  * tree needs walking, as the map widget's does.
  */
 abstract class DataSurfaceWidgetBase extends PluginBase implements DataSurfaceWidgetInterface {
+
+  /**
+   * Render key carrying the stale value an element stands in for.
+   *
+   * Written by the widget that renders a placeholder instead of a value
+   * it cannot show — the options widget's sentinel option is the only
+   * one today — and read back here, by every widget, because which
+   * widget reads an element back is not the same question as which
+   * widget built it. Extraction resolves widgets from the surface as
+   * advertised, since it has no values yet to refine with, while the
+   * form was built from the surface refined against what was stored: a
+   * key that is a plain string until a refiner narrows it into a choice
+   * is built by the options widget and read back by the string one. So
+   * the stash belongs to the element, not to a widget, and reading it
+   * back is shared ground.
+   *
+   * What it holds is a value and never anything else. The element is
+   * serialized into the form cache and walked by every element alter
+   * hook on the site, which is the same rule that keeps closures out of
+   * a form array.
+   */
+  public const STALE_KEY = '#data_surface_stale';
 
   /**
    * Builds the properties every element derives from its definition.
@@ -42,7 +65,37 @@ abstract class DataSurfaceWidgetBase extends PluginBase implements DataSurfaceWi
    * {@inheritdoc}
    */
   public function extractValue(DataDefinitionInterface $definition, array $element, FormStateInterface $form_state, array $fallback_parents): mixed {
-    return $this->rawValue($element, $form_state, $fallback_parents);
+    return static::unstash($element, $this->rawValue($element, $form_state, $fallback_parents));
+  }
+
+  /**
+   * Maps a keep-stale submission back to the value it stands for.
+   *
+   * An element that could not render its stored value rendered a marker
+   * in its place, and a control left alone submits what it was rendered
+   * with — so the marker coming back means "keep", which is what leaving
+   * a control alone has always meant. It is mapped back here rather than
+   * left for the pipeline because the marker is a rendering device: no
+   * value the pipeline handles is ever that string, and a payload that
+   * sends it is sending a value its key does not have.
+   *
+   * The stash is the authority, not the marker. An element carrying no
+   * stash never had a stale value, so the marker submitted into it is an
+   * ordinary string and is passed along to be refused as one.
+   *
+   * @param array $element
+   *   The element the value was submitted for.
+   * @param mixed $value
+   *   The raw submitted value.
+   *
+   * @return mixed
+   *   The stashed value when the marker came back, the raw value
+   *   otherwise.
+   */
+  protected static function unstash(array $element, mixed $value): mixed {
+    return $value === DataSurfacePipelineInterface::KEEP_STALE && array_key_exists(self::STALE_KEY, $element)
+      ? $element[self::STALE_KEY]
+      : $value;
   }
 
   /**

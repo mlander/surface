@@ -161,6 +161,71 @@ Two consequences:
 Encryption is a separate concern and lives one layer down, at the
 storage shape: see [Targets](targets.md#secrets-at-the-codec).
 
+## Stale values: the third state
+
+A key can be in three states, not two. It can be unanswered, it can hold
+an answer, and it can hold an answer that **was** true and is not any
+more — a bundle that was deleted, a plugin whose module was uninstalled,
+a value a refinement has since narrowed away. The third state is not
+something any caller did, and that is what the rules turn on.
+
+A value is **stale** when all three of these hold at once:
+
+| Condition | Why it is in the test |
+| --- | --- |
+| It is exactly what storage holds for that key | A value that differs was chosen by whoever sent it, so it is refused however far outside the list it falls. This is the whole line between "re-choose this" and "that is not a valid answer". |
+| The key offers a list of values at all | Read from the options service — the same list a generated select renders. A key with no list has no membership to have fallen out of. |
+| The value is not in that list | If it is, the refusal came from some other constraint, and that is an ordinary refusal of a value the key still offers. |
+
+Then:
+
+| | never set | holds a live value | holds a stale value |
+| --- | --- | --- | --- |
+| **optional** | valid, `NULL` | held to its constraints | kept, reported stale, saved |
+| **required** | violation: "@label is required." | held to its constraints | kept, reported stale, saved |
+| **the form shows** | the ordinary empty select | the chosen option | a placeholder naming the missing value, no real option chosen |
+| **untouched save** | stays unanswered | stays as it is | **stays as it is** |
+
+Four consequences worth stating:
+
+- **Display never errors.** The select renders with the placeholder
+  selected and the stale value is never injected back into the list as
+  something that can be chosen. Nothing is auto-selected in its place either: a
+  browser handed a select whose value is missing picks the first option,
+  and that is how an unrelated save used to silently rewrite the value.
+- **Untouched means keep.** The placeholder maps back to the stored
+  value on extraction, so an unrelated save cannot clear it. This is the
+  trap, and it is the same one secrets have: an empty select otherwise
+  means clear.
+- **Stale never blocks.** A run that found only stale entries is valid,
+  commits, and carries the stale references on its result — see
+  [the pipeline](pipeline.md#stale-never-blocks). A new value outside
+  the list is still a hard violation.
+- **Required splits.** Never set plus required is the ordinary required
+  violation. Stale plus required stashes and nags like any other stale,
+  because there is a value there and losing it helps nobody.
+
+Clearing stays expressible and stays distinct from keeping: an optional
+select keeps its ordinary `- None -` beside the placeholder, and
+choosing it empties the key. A required select gets the placeholder and
+the real options and nothing else.
+
+Two boundaries, both deliberate:
+
+- **Lists are not covered.** A multiple select's items are each members
+  of the same set, so a stale item would have to be stashed and warned
+  about per item, and a partial keep is a shape neither the widget nor
+  the rule has. A list whose items went stale is refused as it always
+  was.
+- **`setConfiguration()` keeps what it is given.** A plugin's
+  `setConfiguration()` is the load path — every host calls it from
+  inside its own constructor with what the site saved — and it has one
+  array and no separate notion of what is stored, so it cannot tell a
+  value that went stale from a bad one a caller invented, and it keeps
+  both rather than throwing. It still throws for everything else the
+  surface refuses. The write path, `submit()`, does have both and does
+  refuse the invented one.
+
 ## Shape mismatches
 
 Casting is for values that mean the same thing in another notation. A
@@ -234,7 +299,7 @@ resets it to the default.
 | Stage | Decides |
 | --- | --- |
 | `accept()` | Whether a key was configured, what type its value takes, whether the shape is acceptable at all, and how input merges over what is stored. Keeps a secret key's stored value when the input says nothing. Refuses undeclared keys and shape mismatches. Needs no services. |
-| `validate()` | Whether a required key was answered, and whether the answers satisfy the constraints of the surface **refined against those same answers**. |
+| `validate()` | Whether a required key was answered, and whether the answers satisfy the constraints of the surface **refined against those same answers**. Given the stored values, it also tells a stale reference from a refusal. |
 | `refine()` | Which definitions narrow, given which dependencies are configured. A dependency holding `FALSE` or `[]` is an answer and does narrow. |
 | `prepare()` / `commit()` | Nothing about values; the target's storage shape and the write. |
 

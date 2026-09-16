@@ -310,4 +310,35 @@ trait SurfaceFieldSettingsTrait {
     return implode(' ', $lines);
   }
 
+  /**
+   * Names the stale references a run reported, as their own list.
+   *
+   * Beside the violations and never mixed into them, because they are a
+   * different instruction. A violation says "that input is wrong, send
+   * something else"; a stale reference says "nothing you sent is wrong,
+   * and a value that was already here points at something that is gone —
+   * choose again when you can". An agent that saw them as one list would
+   * either retry a request that succeeded or ignore a setting that has
+   * quietly stopped meaning anything.
+   *
+   * Empty for almost every run, and left out of the result entirely when
+   * it is, so nothing is added to the shape a caller reads on a normal
+   * save.
+   *
+   * @param \Drupal\data_surface\Pipeline\ViolationSet $violations
+   *   The violations, exactly as the pipeline reports them.
+   *
+   * @return array<string, string>
+   *   What to re-choose, keyed by the full path of the key holding it.
+   *   The messages are rendered here for the same reason the summary's
+   *   are: a tool result carries strings.
+   */
+  protected function staleReferences(ViolationSet $violations): array {
+    $stale = [];
+    foreach ($violations->stale() as $reference) {
+      $stale[$reference->fullPath()] = (string) $reference->message;
+    }
+    return $stale;
+  }
+
 }

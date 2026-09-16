@@ -191,7 +191,11 @@ class FieldUpdate extends ToolBase implements InputDefinitionRefinerInterface {
           ]));
         }
         $updated[] = 'settings';
-        return $this->updatedResult($field, $field_name, $bundle, $updated, FALSE);
+        // What the run asks the caller to re-choose, as opposed to what
+        // it refused: the settings were saved, and a key pointing at
+        // something that no longer exists is reported beside them rather
+        // than as a failure.
+        return $this->updatedResult($field, $field_name, $bundle, $updated, FALSE, $this->staleReferences($result->violations));
       }
       if ($settings !== []) {
         $class = $this->fieldTypePluginManager->getDefinitions()[$field->getType()]['class'];
@@ -217,15 +221,20 @@ class FieldUpdate extends ToolBase implements InputDefinitionRefinerInterface {
    * @param bool $save
    *   Whether this method still owns the write. FALSE when the pipeline
    *   has already committed the field.
+   * @param array<string, string> $stale
+   *   Stored references the run reported as stale, keyed by path; left
+   *   out of the result entirely when there are none, so an ordinary
+   *   save carries exactly the shape it always did.
    *
    * @return \Drupal\tool\ExecutableResult
    *   The result.
    */
-  protected function updatedResult(FieldConfig $field, string $field_name, string $bundle, array $updated, bool $save): ExecutableResult {
+  protected function updatedResult(FieldConfig $field, string $field_name, string $bundle, array $updated, bool $save, array $stale = []): ExecutableResult {
+    $data = ['settings' => $field->getSettings()] + ($stale === [] ? [] : ['stale' => $stale]);
     if ($updated === []) {
       return ExecutableResult::success($this->t('No changes made to field @field.', [
         '@field' => $field_name,
-      ]), ['settings' => $field->getSettings()]);
+      ]), $data);
     }
     if ($save) {
       $field->save();
@@ -234,7 +243,7 @@ class FieldUpdate extends ToolBase implements InputDefinitionRefinerInterface {
       '@field' => $field_name,
       '@bundle' => $bundle,
       '@updated' => implode(', ', $updated),
-    ]), ['settings' => $field->getSettings()]);
+    ]), $data);
   }
 
   /**

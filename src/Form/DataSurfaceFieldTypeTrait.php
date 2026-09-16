@@ -267,8 +267,9 @@ trait DataSurfaceFieldTypeTrait {
     $target = $item->getDataSurfaceTarget();
     // @phpstan-ignore globalDrupalDependencyInjection.useDependencyInjection
     $builder = \Drupal::service('data_surface.form_builder');
-    $values = $builder->extractSurfaceValues($surface, $element, $form_state, $element[static::CURRENT_ELEMENT_KEY] ?? []);
-    if (!$builder->validateSurfaceForm($surface, $values, $element, $form_state)) {
+    $current = $element[static::CURRENT_ELEMENT_KEY] ?? [];
+    $values = $builder->extractSurfaceValues($surface, $element, $form_state, $current);
+    if (!$builder->validateSurfaceForm($surface, $values, $element, $form_state, $current)) {
       // The values are already flagged on their own elements, and there
       // is nothing safe to hand the host, so what it finds in form state
       // stays whatever the elements produced.

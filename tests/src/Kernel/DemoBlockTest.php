@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Core\Form\FormState;
+use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Target\PluginConfigurationTarget;
 use Drupal\data_surface_demo\Plugin\Block\DataSurfaceDemoBlock;
 use Drupal\node\Entity\NodeType;
@@ -193,21 +194,30 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
 
   /**
    * Tests that configuration is validated at the boundary, not trusted.
+   *
+   * With one exception, and it is the one item 11 decided: a value the
+   * list no longer offers is kept rather than refused, because this
+   * method is how a host loads what the site saved and cannot tell a
+   * bundle that was deleted from a bundle that never existed. Everything
+   * else the surface refuses still refuses here.
    */
   public function testSetConfigurationValidates(): void {
     $block = $this->createBlock();
 
-    // A bundle the refined surface does not allow is refused, which is
-    // the refinement chain running outside any form.
-    try {
-      $block->setConfiguration(['entity_type' => 'node', 'bundle' => 'not-a-bundle']);
-      $this->fail('Expected an invalid bundle to be refused.');
-    }
-    catch (\InvalidArgumentException $e) {
-      $this->assertStringContainsString('bundle', $e->getMessage());
-    }
+    // A bundle the refined surface does not allow is kept and reported
+    // as stale rather than thrown: the refinement chain still ran — it
+    // is what says the bundle is not on the list — and what changed is
+    // what happens next.
+    $block->setConfiguration(['entity_type' => 'node', 'bundle' => 'not-a-bundle']);
+    $this->assertSame('not-a-bundle', $block->getConfiguration()['bundle']);
+    $stale = $this->pipeline()
+      ->validate($block->getDataSurface(), $block->getConfiguration(), $block->getConfiguration())
+      ->stale();
+    $this->assertCount(1, $stale);
+    $this->assertSame('bundle', $stale[0]->key);
 
-    // The declared range holds just as well.
+    // The declared range holds just as well, and has nothing to do with
+    // a list, so it throws as it always did.
     $this->expectException(\InvalidArgumentException::class);
     $this->expectExceptionMessageMatches('/limit/');
     $block->setConfiguration(['limit' => 999]);
@@ -287,6 +297,55 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     // A key with no stored value says so in words rather than printing a
     // PHP literal.
     $this->assertContains('Bundle: not configured', $items);
+  }
+
+  /**
+   * Tests a block whose stored bundle was deleted under it.
+   *
+   * The bug item 11 was decided from, on the real host it was hit on.
+   * The block is configured for a node bundle, the bundle is deleted,
+   * and the block is constructed again from what the site saved. Before
+   * the stale rule this threw InvalidArgumentException out of the plugin
+   * manager — "Invalid configuration: bundle: The value you selected is
+   * not a valid choice." — from setConfiguration(), which every host
+   * calls inside its own constructor. So the block's configuration form
+   * died, the block listing died, and every page the block rendered on
+   * died: the one page that could have fixed the value was the one page
+   * that could not be opened.
+   *
+   * Now the value is kept, the select comes up on a placeholder naming
+   * it, and nothing errors until somebody chooses again.
+   */
+  public function testDeletedBundleIsKeptRatherThanFatal(): void {
+    $stored = [
+      'headline' => 'Featured',
+      'entity_type' => 'node',
+      'bundle' => 'article',
+      'limit' => 5,
+    ];
+    $this->assertSame('article', $this->createBlock($stored)->getConfiguration()['bundle']);
+
+    NodeType::load('article')->delete();
+    $this->container->get('entity_type.bundle.info')->clearCachedBundles();
+
+    // Constructing does not throw, and the value is still there.
+    $block = $this->createBlock($stored);
+    $this->assertSame('article', $block->getConfiguration()['bundle']);
+
+    // The form opens, and the bundle select says what is missing rather
+    // than quietly coming up on some other bundle.
+    $surface = $block->getDataSurface();
+    $element = $this->formBuilder()
+      ->buildSurfaceForm($surface, $block->getConfiguration(), new FormState())['bundle'];
+    $this->assertSame(DataSurfacePipelineInterface::KEEP_STALE, $element['#default_value']);
+    $this->assertArrayNotHasKey('article', $element['#options']);
+    $this->assertArrayHasKey('page', $element['#options']);
+    $this->assertStringContainsString('article', (string) $element['#options'][DataSurfacePipelineInterface::KEEP_STALE]);
+
+    // And the values validate, so an unrelated save goes through.
+    $violations = $this->pipeline()->validate($surface, $block->getConfiguration(), $block->getConfiguration());
+    $this->assertTrue($violations->isEmpty());
+    $this->assertCount(1, $violations->stale());
   }
 
 }

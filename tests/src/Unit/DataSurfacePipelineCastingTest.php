@@ -14,6 +14,7 @@ use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\data_surface\DataSurface;
 use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Pipeline\DataSurfacePipeline;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Pipeline\ShapeMismatchException;
@@ -52,6 +53,16 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
    * stub is there so validate() can be called for the required rules
    * without a container behind it.
    *
+   * The options service is never asked anything here, and cannot be: it
+   * is consulted only to tell a stale value from a wrong one, which
+   * happens only after a constraint has refused something, and nothing
+   * these cases validate is ever refused by the stub above. So it is
+   * handed over without running its constructor, rather than assembled
+   * out of a plugin manager, a constraint manager and a logger that
+   * would all be stubs of things this test has no opinion about. The
+   * stale rule itself is a kernel test's job, because it is only true
+   * if the list the pipeline reads is the list a real resolver made.
+   *
    * @return \Drupal\data_surface\Pipeline\DataSurfacePipeline
    *   The pipeline under test.
    */
@@ -60,7 +71,8 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
     $typed_data->method('validate')->willReturn(new ConstraintViolationList());
     $manager = $this->createMock(TypedDataManagerInterface::class);
     $manager->method('create')->willReturn($typed_data);
-    return new DataSurfacePipeline($manager);
+    $options = (new \ReflectionClass(DataSurfaceOptions::class))->newInstanceWithoutConstructor();
+    return new DataSurfacePipeline($manager, $options);
   }
 
   /**

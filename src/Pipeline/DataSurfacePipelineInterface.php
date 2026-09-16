@@ -62,6 +62,33 @@ interface DataSurfacePipelineInterface {
   public const CLEAR_SECRET = '@data_surface:clear-secret';
 
   /**
+   * The option a generated select offers in place of a stale value.
+   *
+   * A stored value that has fallen outside the list its key now offers
+   * cannot be rendered as a chosen option, and must not be injected into
+   * the list as though it could still be chosen. So the select renders
+   * with this marker selected instead, labeled with the value that is no
+   * longer available, and extraction maps it back to the stored value
+   * through the marker the element carries. Leaving the select alone
+   * therefore means "keep what is stored", which is what leaving a
+   * control alone has always meant everywhere else.
+   *
+   * Spelled in the same reserved "@" namespace as ACCESS_VIOLATION_KEY
+   * and CLEAR_SECRET, for the same reason: no definition is named with a
+   * leading "@", so the namespace cannot collide with a real value.
+   *
+   * Unlike CLEAR_SECRET this is the form path's own marker and not a
+   * word a payload says: a caller with no form in front of it keeps a
+   * stale value by sending it, or not sending the key at all. Sent as a
+   * value by a payload it is an ordinary string, refused by the choice
+   * constraint like any other value the key does not offer.
+   *
+   * @see \Drupal\data_surface\Plugin\DataSurfaceWidget\OptionsWidget
+   * @see docs/forms.md
+   */
+  public const KEEP_STALE = '@data_surface:keep-stale';
+
+  /**
    * Produces a complete, typed value set from partial, untyped input.
    *
    * Values merge in one order at every level: the surface's declared
@@ -111,17 +138,33 @@ interface DataSurfacePipelineInterface {
    * satisfy a required key and are then held to its constraints like any
    * other value.
    *
+   * One refusal is not a refusal. A key whose value the refined surface
+   * will not take, which is exactly what is stored for that key, and
+   * which is no longer among the values the key offers, is **stale**:
+   * nothing about this run tried to change it, so refusing it would
+   * punish a caller for something the site did. It is reported as a
+   * stale entry in the returned set, which does not block — see
+   * ViolationSet::stale() and docs/semantics.md. A value that differs
+   * from what is stored is an ordinary violation however far out of the
+   * list it is, because that one was chosen.
+   *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The surface, as advertised.
    * @param array $values
    *   The accepted values.
+   * @param array $current
+   *   The stored values, in surface shape; what a key already holds is
+   *   the only thing that can be stale. The default says nothing is
+   *   stored, so nothing can be stale, which is right for a caller
+   *   validating values that are not on their way to storage at all.
    *
    * @return \Drupal\data_surface\Pipeline\ViolationSet
    *   The violations, each carrying its surface key, the property path
    *   within that key ('' for the value itself) and an unrendered
-   *   message. Empty when the values are valid.
+   *   message, with any stale entries held to one side. Empty when the
+   *   values are valid.
    */
-  public function validate(DataSurfaceInterface $surface, array $values): ViolationSet;
+  public function validate(DataSurfaceInterface $surface, array $values, array $current = []): ViolationSet;
 
   /**
    * Checks an emitted array against what the surface says it emits.

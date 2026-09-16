@@ -83,12 +83,35 @@ class DataSurfaceActionBaseTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that an undeclared choice is refused as well as an oversized value.
+   * Tests that a value outside the list is kept rather than fatal.
+   *
+   * The trade the stale model makes, at the one place it costs
+   * something. Construction is the load path: a host builds its plugin
+   * from whatever the site saved, so a value the list no longer offers
+   * arrives here through no fault of any caller — a deleted bundle, an
+   * uninstalled module — and throwing took down the only page that
+   * could have fixed it. This method has one array and no separate
+   * notion of what is stored, so it cannot tell that value from a bad
+   * one a caller just invented, and it keeps both. The write path still
+   * refuses the invented one, because there the stored value is a
+   * different thing from the submitted one.
+   *
+   * Everything else the surface refuses still throws here, which is
+   * what the oversized message above pins.
+   *
+   * @see \Drupal\data_surface\DataSurfaceConfigurationTrait::setConfiguration()
+   * @see \Drupal\Tests\data_surface\Kernel\StaleValueTest
    */
-  public function testInvalidChoiceThrows(): void {
-    $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessageMatches('/level/');
-    $this->createAction(['level' => 'shouting']);
+  public function testAnUndeclaredChoiceIsKeptRatherThanRefused(): void {
+    $action = $this->createAction(['level' => 'shouting']);
+
+    $this->assertSame('shouting', $action->getConfiguration()['level']);
+    // And it is reported as stale by anything that asks with the stored
+    // values in hand, so a form renders the placeholder and warns.
+    $configuration = $action->getConfiguration();
+    $violations = $this->pipeline()->validate($action->getDataSurface(), $configuration, $configuration);
+    $this->assertTrue($violations->isEmpty());
+    $this->assertCount(1, $violations->stale());
   }
 
   /**

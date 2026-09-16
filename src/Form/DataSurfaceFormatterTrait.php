@@ -216,8 +216,9 @@ trait DataSurfaceFormatterTrait {
     $surface = $formatter->getDataSurface();
     // @phpstan-ignore globalDrupalDependencyInjection.useDependencyInjection
     $builder = \Drupal::service('data_surface.form_builder');
-    $values = $builder->extractSurfaceValues($surface, $element, $form_state, is_array($current) ? $current : []);
-    $builder->validateSurfaceForm($surface, $values, $element, $form_state);
+    $stored = is_array($current) ? $current : [];
+    $values = $builder->extractSurfaceValues($surface, $element, $form_state, $stored);
+    $builder->validateSurfaceForm($surface, $values, $element, $form_state, $stored);
     // The host copies whatever the elements produced, so the accepted
     // values have to be what it finds there.
     $form_state->setValueForElement($element, $values);

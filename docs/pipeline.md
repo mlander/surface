@@ -136,7 +136,7 @@ reference for this page.
 ### validate
 
 ```php
-public function validate(DataSurfaceInterface $surface, array $values): ViolationSet;
+public function validate(DataSurfaceInterface $surface, array $values, array $current = []): ViolationSet;
 ```
 
 Refines the surface against the values first, then runs the constraints,
@@ -161,6 +161,45 @@ foreach ($violations as $violation) {
 Iteration is grouped by key, in the order the keys were first refused,
 so a summary reads every violation of one key together even when a
 config schema reported them interleaved.
+
+#### Stale never blocks
+
+`$current` is what storage holds, and it is what makes one refusal not a
+refusal. A value that the refined surface will not take, which is
+*exactly what is stored* for that key, and which is no longer among the
+values the key offers, is **stale**: nothing about this run tried to
+change it, so refusing it would punish a caller for something the site
+did. The full rule and its two deliberate boundaries are in
+[value semantics](semantics.md#stale-values-the-third-state).
+
+A stale entry is a `SurfaceViolation` with its `stale` flag set, and the
+set holds it to one side:
+
+```php
+$violations = $pipeline->validate($surface, $values, $current);
+$violations->isEmpty();   // TRUE — stale entries do not count.
+$violations->hasStale();  // TRUE — and there is something to re-choose.
+$violations->stale();     // The stale entries, in the order found.
+```
+
+Stale entries are not iterated, not counted, not named by `keys()`, and
+do not make `isEmpty()` false. That is the whole of "stale never
+blocks": every reader either asks `isEmpty()` or iterates, so none of
+them had to learn anything new to keep saving a value that went stale,
+and a reader that wants to say so out loud asks `stale()` on purpose.
+The generated form turns them into a warning through the messenger
+rather than a form error; the field tools report them as their own
+`stale` list beside the settings they saved, so an agent can tell
+"re-choose this" from "invalid input".
+
+A key that is stale is reported as stale and not re-judged: whatever
+else its constraints would have said is about a value this run is not
+changing and could not have chosen.
+
+Passing no `$current` says nothing is stored, so nothing can be stale,
+which is right for a caller validating values that are not on their way
+to storage. `submit()` passes what it loaded; the generated form passes
+the same stored values it extracted against.
 
 ### conformOutput
 
@@ -217,6 +256,12 @@ written.
 `DataSurfaceResult` carries `values`, `violations`, the `prepared`
 artifact when the values were valid, `committed`, and the `access` answer
 the run was gated by. `isValid()` is the question most callers ask.
+
+A committed result can still carry violations, and there is exactly one
+way that happens: the set holds stale references and nothing else. They
+travel on rather than being replaced by an empty set, because that is
+how a caller with no form in front of it learns there is something to
+re-choose.
 
 The access answer is the caller's own, already resolved, rather than a
 provider the pipeline would have to hold — no closures, and nothing in

@@ -13,6 +13,7 @@ use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\data_surface\DataSurfaceAccess;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\Options\DataSurfaceOptions;
 
 /**
  * The one entry point from raw values to stored values.
@@ -40,9 +41,17 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
    *   The typed data manager, used to run the surface's constraints.
+   * @param \Drupal\data_surface\Options\DataSurfaceOptions $options
+   *   The options service, asked one question and only when a value has
+   *   already been refused: is this value among the ones its key offers?
+   *   The list that validates and the list that is offered are the same
+   *   list, so the stale rule has to read it from the same place a
+   *   generated select does, or a form would stash a value the pipeline
+   *   then refused.
    */
   public function __construct(
     protected readonly TypedDataManagerInterface $typedDataManager,
+    protected readonly DataSurfaceOptions $options,
   ) {
   }
 
@@ -133,7 +142,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   /**
    * {@inheritdoc}
    */
-  public function validate(DataSurfaceInterface $surface, array $values): ViolationSet {
+  public function validate(DataSurfaceInterface $surface, array $values, array $current = []): ViolationSet {
     $refined = $surface->refine($values);
     $errors = [];
     foreach ($refined->getDefinitions() as $name => $definition) {
@@ -141,7 +150,9 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       if (!ValueState::isConfigured($value)) {
         // Not configured: nothing to hold to a constraint, and for a
         // required key the surface's own message rather than whichever
-        // type-specific one a constraint would have produced.
+        // type-specific one a constraint would have produced. A key that
+        // was never set is this case whether it is required or not, and
+        // it is never stale: there is no value to keep.
         if ($definition->isRequired()) {
           $errors[] = new SurfaceViolation((string) $name, '', new TranslatableMarkup('@label is required.', [
             '@label' => $definition->getLabel() ?? $name,
@@ -150,16 +161,95 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         continue;
       }
       $typed_data = $this->typedDataManager->create($definition, $value, $name);
+      $refusals = [];
       foreach ($typed_data->validate() as $violation) {
         // The message stays the object the constraint built. Flattening
         // it here would render its placeholders once, as plain text, and
         // whatever reads the violation afterwards would escape that text
         // a second time; a form error, a tool result and a log line each
         // render it themselves, at their own boundary.
-        $errors[] = new SurfaceViolation((string) $name, (string) $violation->getPropertyPath(), $violation->getMessage());
+        $refusals[] = new SurfaceViolation((string) $name, (string) $violation->getPropertyPath(), $violation->getMessage());
       }
+      if ($refusals !== [] && $this->isStale($definition, $value, (string) $name, $current)) {
+        // The whole key is reported as stale and not re-judged. What
+        // else its constraints would say is about a value this run is
+        // not changing and could not have chosen — it is what storage
+        // holds — and saying it would read as a list of things to fix
+        // where there is exactly one: choose again.
+        $errors[] = $this->staleViolation($definition, $value, (string) $name);
+        continue;
+      }
+      $errors = array_merge($errors, $refusals);
     }
     return new ViolationSet($errors);
+  }
+
+  /**
+   * Answers whether a refused value is a stale reference.
+   *
+   * Three things have to be true at once, and each of them rules out a
+   * case that is not stale:
+   *
+   * - The value is exactly what storage holds for that key. A value that
+   *   differs was chosen by whoever sent it, so it is refused however
+   *   far outside the list it falls. This is the whole line between
+   *   "re-choose this" and "that is not a valid answer".
+   * - The key offers a list of values at all, read from the options
+   *   service, which is the same list a generated select renders. A key
+   *   with no list has no membership to fall outside of; whatever its
+   *   constraints refused, they refused on their own terms.
+   * - The value is not in that list. If it is, the refusal came from
+   *   some other constraint — a length, a range — and that is an
+   *   ordinary refusal of a value the key still offers.
+   *
+   * Lists are deliberately not covered. A multiple select's items are
+   * each members of the same set, so a stale item would have to be
+   * stashed and warned about per item, with a partial keep that neither
+   * the widget nor this rule has a shape for. A list whose items went
+   * stale is refused as it always was.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The refined definition, which is where the narrowed list lives.
+   * @param mixed $value
+   *   The value that was refused.
+   * @param string $name
+   *   The surface key.
+   * @param array $current
+   *   The stored values, in surface shape.
+   *
+   * @return bool
+   *   TRUE when the refusal is a stale reference.
+   */
+  protected function isStale(DataDefinitionInterface $definition, mixed $value, string $name, array $current): bool {
+    if ($definition instanceof ListDataDefinitionInterface) {
+      return FALSE;
+    }
+    if (!array_key_exists($name, $current) || $current[$name] !== $value) {
+      return FALSE;
+    }
+    $set = $this->options->resolve($definition);
+    return $set !== NULL && !$set->allows($value);
+  }
+
+  /**
+   * Builds the entry reporting one stale reference.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The refined definition, for its label.
+   * @param mixed $value
+   *   The stale value, which the message names so that whoever reads it
+   *   knows what is about to be kept.
+   * @param string $name
+   *   The surface key.
+   *
+   * @return \Drupal\data_surface\Pipeline\SurfaceViolation
+   *   The stale entry.
+   */
+  protected function staleViolation(DataDefinitionInterface $definition, mixed $value, string $name): SurfaceViolation {
+    return new SurfaceViolation($name, '', new TranslatableMarkup('@label keeps the value @value, which is no longer available. Choose a new one when you can.', [
+      '@label' => $definition->getLabel() ?? $name,
+      '@value' => (string) $value,
+    ]), TRUE);
   }
 
   /**
@@ -414,7 +504,10 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     catch (ShapeMismatchException $e) {
       return new DataSurfaceResult($current, $this->shapeMismatchViolations($e), access: $access);
     }
-    $violations = $this->validate($surface, $values);
+    // What storage holds is what the stale rule is judged against, and
+    // it was loaded a moment ago for the merge, so the question costs
+    // nothing extra here.
+    $violations = $this->validate($surface, $values, $current);
     if (!$violations->isEmpty()) {
       return new DataSurfaceResult($values, $violations, access: $access);
     }
@@ -424,11 +517,15 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     catch (TargetViolationsException $e) {
       return new DataSurfaceResult($values, $e->getViolations(), access: $access);
     }
+    // The set travels on rather than being replaced by an empty one: it
+    // blocks nothing, so the run is valid and committed, and the stale
+    // references it carries are how a caller — a form warning, an
+    // agent's dry run — learns what to re-choose.
     if ($dry_run) {
-      return new DataSurfaceResult($values, new ViolationSet(), $prepared, access: $access);
+      return new DataSurfaceResult($values, $violations, $prepared, access: $access);
     }
     $this->commit($prepared, $target);
-    return new DataSurfaceResult($values, new ViolationSet(), $prepared, TRUE, $access);
+    return new DataSurfaceResult($values, $violations, $prepared, TRUE, $access);
   }
 
   /**

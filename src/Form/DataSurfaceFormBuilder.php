@@ -7,6 +7,7 @@ namespace Drupal\data_surface\Form;
 use Drupal\Component\Utility\Html;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Render\ElementInfoManagerInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\DataSurfaceInterface;
@@ -54,11 +55,16 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
    *   callback of its own, and an explicit #process replaces whatever
    *   the element type declares instead of adding to it, so the type's
    *   own callbacks are read from here and kept.
+   * @param \Drupal\Core\Messenger\MessengerInterface $messenger
+   *   The messenger, which carries the one thing a surface has to say
+   *   that is not an error and not part of an element: that a stored
+   *   value went stale and is being kept.
    */
   public function __construct(
     protected readonly DataSurfaceWidgetManager $widgetManager,
     protected readonly DataSurfacePipelineInterface $pipeline,
     protected readonly ElementInfoManagerInterface $elementInfo,
+    protected readonly MessengerInterface $messenger,
   ) {
   }
 
@@ -240,8 +246,8 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
   /**
    * {@inheritdoc}
    */
-  public function validateSurfaceForm(DataSurfaceInterface $surface, array $values, array $container, FormStateInterface $form_state): bool {
-    $errors = $this->pipeline->validate($surface, $values);
+  public function validateSurfaceForm(DataSurfaceInterface $surface, array $values, array $container, FormStateInterface $form_state, array $current = []): bool {
+    $errors = $this->pipeline->validate($surface, $values, $current);
     $this->flagSurfaceErrors($errors, $container, $form_state);
     return $errors->isEmpty();
   }
@@ -269,6 +275,14 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
       else {
         $form_state->setErrorByName(implode('][', array_merge([$violation->key], $segments)), $violation->message);
       }
+    }
+    foreach ($errors->stale() as $reference) {
+      // Deliberately not setError(): a stale reference is not something
+      // the person did, nothing is wrong with the submission, and the
+      // save is going ahead. Saying it out loud each time is the nag the
+      // model asks for — the value keeps working, and it will not start
+      // working again on its own.
+      $this->messenger->addWarning($reference->message);
     }
   }
 

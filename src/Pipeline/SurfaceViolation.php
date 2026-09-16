@@ -7,8 +7,16 @@ namespace Drupal\data_surface\Pipeline;
 /**
  * One thing a surface, a target or the pipeline itself refused.
  *
- * Three facts, and no more: which surface key the refusal belongs to,
- * where inside that key's value it sits, and what to say about it.
+ * Four facts, and no more: which surface key the refusal belongs to,
+ * where inside that key's value it sits, what to say about it, and
+ * whether it blocks.
+ *
+ * Almost every entry blocks. The one that does not is a stale
+ * reference — a stored value that has fallen outside the list its key
+ * now offers — which is reported so it can be said out loud and
+ * deliberately does not stop the save, because the alternative is
+ * resetting a value nobody asked to change. See ViolationSet for how
+ * the two are kept apart, and docs/semantics.md for the rule.
  *
  * The message stays whatever object built it — a constraint's
  * TranslatableMarkup, the surface's own required message, a config
@@ -33,11 +41,17 @@ final class SurfaceViolation {
    *   string for the value itself.
    * @param string|\Stringable $message
    *   What to say about it, unrendered.
+   * @param bool $stale
+   *   TRUE when the entry is a stale reference rather than a refusal:
+   *   the key holds what it always held, that value is no longer among
+   *   the ones the key offers, and nothing about this run tried to
+   *   change it. A stale entry warns and never blocks.
    */
   public function __construct(
     public readonly string $key,
     public readonly string $path,
     public readonly string|\Stringable $message,
+    public readonly bool $stale = FALSE,
   ) {
   }
 

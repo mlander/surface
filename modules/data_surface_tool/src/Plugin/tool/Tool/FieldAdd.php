@@ -189,6 +189,10 @@ class FieldAdd extends ToolBase implements InputDefinitionRefinerInterface {
 
     $surface = $this->surfaceLocator->surfaceFor($field);
     $target = $surface === NULL ? NULL : $this->surfaceLocator->targetFor($field);
+    // What the run asks the caller to re-choose, as opposed to what it
+    // refused: empty on every ordinary save, and left out of the result
+    // when it is.
+    $stale = [];
     if ($surface !== NULL && $target !== NULL) {
       // One call does the whole of it: the surface says what the values
       // may be, the target says what they are stored as, and the commit
@@ -201,6 +205,7 @@ class FieldAdd extends ToolBase implements InputDefinitionRefinerInterface {
           '@violations' => $this->violationSummary($result->violations),
         ]));
       }
+      $stale = $this->staleReferences($result->violations);
     }
     else {
       if (!empty($settings)) {
@@ -224,7 +229,7 @@ class FieldAdd extends ToolBase implements InputDefinitionRefinerInterface {
       '@field' => $field_name,
       '@bundle' => $bundle,
       '@type' => $entity_type_id,
-    ]), ['settings' => $field->getSettings()]);
+    ]), ['settings' => $field->getSettings()] + ($stale === [] ? [] : ['stale' => $stale]));
   }
 
   /**

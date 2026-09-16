@@ -172,8 +172,9 @@ trait DataSurfaceHostFormTrait {
     // The stored values go with the form: a key the host chose not to
     // render has said nothing, and must keep what it holds rather than
     // fall back to its declared default.
-    $values = $builder->extractSurfaceValues($surface, $form, $form_state, $this->storedSurfaceValues($surface));
-    $builder->validateSurfaceForm($surface, $values, $form, $form_state);
+    $current = $this->storedSurfaceValues($surface);
+    $values = $builder->extractSurfaceValues($surface, $form, $form_state, $current);
+    $builder->validateSurfaceForm($surface, $values, $form, $form_state, $current);
   }
 
   /**

@@ -104,13 +104,14 @@ final class DataSurfaceDemoForm extends FormBase {
     // What State already holds goes with the form: a key with no
     // rendered element has said nothing and must keep its stored value
     // rather than fall back to its declared default.
+    $current = $this->demoTarget()->load($surface);
     $values = $builder->extractSurfaceValues(
       $surface,
       $form['surface'],
       $form_state,
-      $this->demoTarget()->load($surface),
+      $current,
     );
-    $builder->validateSurfaceForm($surface, $values, $form['surface'], $form_state);
+    $builder->validateSurfaceForm($surface, $values, $form['surface'], $form_state, $current);
   }
 
   /**
