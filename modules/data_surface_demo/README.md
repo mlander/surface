@@ -8,8 +8,9 @@ same surface.
 
 ### The block: `data_surface_demo`
 
-A configurable block that declares its settings in a `DataSurfaceAware`
-attribute and writes no form code at all — no `defaultConfiguration()`,
+A configurable block that declares its settings in one
+`declareDataSurface()` method and writes no form code at all — no
+`defaultConfiguration()`,
 no `blockForm()`, no `blockValidate()`, no `blockSubmit()`. The entity
 type is a `PluginExists` constraint naming its manager and interface,
 which the options resolver reads as a select of content entity types, so
@@ -22,7 +23,7 @@ site state, through the one refiner method on the class.
 Adoption on a host protocol with no validate and no submit hook. Field UI
 asks for a settings form, harvests the raw values itself, and prunes what
 it saves against a static defaults array. `defaultSettings()` is not
-written here: the base class derives it from the same definitions the
+written here: the base class derives it from the same declaration the
 surface is built from, `third_party_settings` included, so settings other
 modules mount at build time survive the display save.
 

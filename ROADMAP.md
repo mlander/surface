@@ -129,8 +129,14 @@ the subject upcast from the route, so standalone providers stop
 hand-writing form classes and the node type form shrinks to routing
 plus its cosmetic layer, which is the part that should stay bespoke.
 
-Prerequisite, third half: **the method becomes the one home; the
-attribute stops declaring.** The static-harvest claim the attribute was
+Prerequisite, third half — DONE 2026-09-15. The attribute is deleted;
+`declareDataSurface(builder)` is the one home, static so the formatter
+defaults protocol reads the same declaration the instance path builds
+from, with no container and no plugin constructed out of season; the
+awareness service slimmed to interface detection for the future
+catalogue; nine classes converted with semantic parity proven by the
+suite and the byte-identical comparison document. Original spec: **the
+method becomes the one home; the attribute stops declaring.** The static-harvest claim the attribute was
 built on has shrunk to detection, which the interface already provides,
 and the pre-contribution sketch it holds is a lie of omission next to
 what the factory builds; meanwhile its costs are real: the
@@ -172,6 +178,23 @@ which serves the real contract.
    a headless consumer. The general block output story stays gated on
    declared data and context dependencies, which is the one clean-room
    convergence not yet built; interactive blocks stay out of scope.
+
+   Discoverability, folded into discovery after the human-search
+   review: standalone providers get a **service tag** carrying host
+   type and id, and a **catalogue service** unions tagged providers
+   with surface-aware plugin definitions to answer "all surfaces on
+   this site" with provider class, operations, and file. The discovery
+   document serves from the catalogue, so standalone providers stop
+   being invisible to enumeration. On top of it, a **list tool**
+   through the bridge (drush is broken on this site) giving a human
+   the thirty-second answer: every surface, where it lives, who
+   provides it, which kind. And a **form debug annotation**: when a
+   debug setting is on, generated forms carry an HTML comment naming
+   the host id and provider class, the Twig-debug move, bridging a
+   misbehaving page to the right file with no convention knowledge.
+   Naming rules (SurfaceProvider suffix, swap adopters named and
+   cross-referenced from their hook docblock) land in the docs and the
+   repository CLAUDE.md.
 
 7. **The dry-run and validate endpoint, Precognition-shaped.** The
    *same* pipeline entry with a stage-selection flag, never a parallel

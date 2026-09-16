@@ -8,8 +8,10 @@ use Drupal\Core\Field\Attribute\FieldType;
 use Drupal\Core\Field\Plugin\Field\FieldType\StringItem;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\data_surface\Attribute\DataSurfaceAware;
+use Drupal\data_surface\DataSurfaceBuilderInterface;
+use Drupal\data_surface\DataSurfaceDeclarationInterface;
 use Drupal\data_surface\DataSurfaceInterface;
+use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Form\DataSurfaceFieldTypeTrait;
 use Drupal\data_surface\Form\FieldSurfaceProviderInterface;
 
@@ -28,10 +30,10 @@ use Drupal\data_surface\Form\FieldSurfaceProviderInterface;
  * generic wiring in FieldSettingsTarget and not something this fixture
  * arranged.
  *
- * The flag is declared in the definition array, as the defaults beside
- * it are, because the attribute's definitions are array literals.
- * DefinitionMetadata::setSecret() is the spelling for a surface built in
- * code, and it writes the same key.
+ * The flag is written onto the definition with
+ * DefinitionMetadata::setSecret(), beside the defaults the builder
+ * writes, because both are metadata core's definitions have no methods
+ * for yet.
  *
  * @see \Drupal\data_surface\DefinitionMetadata::setSecret()
  */
@@ -43,26 +45,28 @@ use Drupal\data_surface\Form\FieldSurfaceProviderInterface;
   default_widget: 'string_textfield',
   default_formatter: 'string',
 )]
-#[DataSurfaceAware(definitions: [
-  'endpoint' => new DataDefinition([
-    'type' => 'string',
-    'label' => new TranslatableMarkup('Endpoint'),
-    'description' => new TranslatableMarkup('Where this field sends its values.'),
-    'required' => FALSE,
-    'default_value' => '',
-  ]),
-  'token' => new DataDefinition([
-    'type' => 'string',
-    'label' => new TranslatableMarkup('API key'),
-    'description' => new TranslatableMarkup('The key this field authenticates with.'),
-    'required' => FALSE,
-    'default_value' => '',
-    'secret' => TRUE,
-  ]),
-])]
-class SurfaceSecretItem extends StringItem implements FieldSurfaceProviderInterface {
+class SurfaceSecretItem extends StringItem implements FieldSurfaceProviderInterface, DataSurfaceDeclarationInterface {
 
   use DataSurfaceFieldTypeTrait;
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
+    $builder->setDefinition('endpoint', DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Endpoint'))
+      ->setDescription(new TranslatableMarkup('Where this field sends its values.'))
+      ->setRequired(FALSE));
+    $builder->setDefault('endpoint', '');
+
+    $token = DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('API key'))
+      ->setDescription(new TranslatableMarkup('The key this field authenticates with.'))
+      ->setRequired(FALSE);
+    DefinitionMetadata::setSecret($token);
+    $builder->setDefinition('token', $token);
+    $builder->setDefault('token', '');
+  }
 
   /**
    * {@inheritdoc}
@@ -78,7 +82,7 @@ class SurfaceSecretItem extends StringItem implements FieldSurfaceProviderInterf
     // The field item is bound to one field config entity, so it is its
     // own subject and a caller naming another has the wrong item.
     $this->surfaceSelfSubject($subject);
-    return $this->surfaceFactory()->buildFromClass(static::class, NULL, 'field_type:data_surface_secret');
+    return $this->declaredSurface('field_type:data_surface_secret');
   }
 
 }

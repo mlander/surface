@@ -8,6 +8,7 @@ use Drupal\Core\Field\FieldItemInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FormatterBase;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\data_surface\DataSurfaceDeclarationInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DataSurfaceProviderInterface;
 use Drupal\data_surface\DataSurfaceRefinerInterface;
@@ -24,8 +25,9 @@ use Drupal\data_surface\Pipeline\Omitted;
  *
  * The class composes the formatter trait, absorbs the one host quirk the
  * trait cannot — defaultSettings() is static, so it is answered here
- * from the class's attribute; a formatter whose surface is built at
- * runtime overrides it — and splits viewing in two.
+ * from the class's own declaration, which is static for exactly this
+ * reason; a formatter whose surface is built at runtime overrides it —
+ * and splits viewing in two.
  *
  * ## The split, and why it is here
  *
@@ -54,7 +56,7 @@ use Drupal\data_surface\Pipeline\Omitted;
  * @see \Drupal\data_surface\Pipeline\DataSurfacePipelineInterface::conformOutput()
  * @see docs/outputs.md
  */
-abstract class DataSurfaceFormatterBase extends FormatterBase implements DataSurfaceProviderInterface, DataSurfaceRefinerInterface {
+abstract class DataSurfaceFormatterBase extends FormatterBase implements DataSurfaceProviderInterface, DataSurfaceRefinerInterface, DataSurfaceDeclarationInterface {
 
   use DataSurfaceFormatterTrait;
 
@@ -68,8 +70,8 @@ abstract class DataSurfaceFormatterBase extends FormatterBase implements DataSur
   /**
    * {@inheritdoc}
    *
-   * The surface is whatever the class declares in its attribute, with
-   * this formatter as the refiner.
+   * The surface is whatever the class declares in declareDataSurface(),
+   * with this formatter as the refiner.
    *
    * A formatter is its own subject: the plugin instance is the whole of
    * what this surface describes, so the subject is NULL, and any
@@ -82,7 +84,7 @@ abstract class DataSurfaceFormatterBase extends FormatterBase implements DataSur
     // The host id is namespaced by plugin type, so a subscriber
     // matching on it cannot pick up a host of another kind that
     // happens to share a plugin id.
-    return $this->surfaceFactory()->buildFromClass(static::class, $this, 'field_formatter:' . $this->getPluginId());
+    return $this->declaredSurface('field_formatter:' . $this->getPluginId());
   }
 
   /**

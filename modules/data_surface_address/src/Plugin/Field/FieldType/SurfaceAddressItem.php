@@ -11,8 +11,8 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\address\Plugin\Field\FieldType\AddressItem;
-use Drupal\data_surface\Attribute\DataSurfaceAware;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
+use Drupal\data_surface\DataSurfaceDeclarationInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Form\DataSurfaceFieldTypeTrait;
 use Drupal\data_surface\Form\FieldSurfaceProviderInterface;
@@ -32,16 +32,16 @@ use Drupal\data_surface_address\AddressSettingsShape;
  * comes from the parent unchanged, because the storage contract is
  * unchanged. Only the way the settings are described changed.
  *
- * The contract sits on the class it describes, and it is static. That is
- * the lesson of the labeled options work in PLAN.md applied to a real
- * surface: the country list and the language list used to be built into
- * the definitions at runtime, which forced the whole description into a
- * service and out of reach of anything that has not instantiated a field
- * item. Declared as the Country and LanguageExists constraints instead,
- * the live lookup moves to the resolvers, where cacheability is handled
- * once, and what is left is literal enough to sit in an attribute. A
- * deriver, a documentation generator or an agent enumerating field types
- * now reads these settings from the class alone.
+ * The contract sits on the class it describes, in one method, and it is
+ * static. That is the lesson of the labeled options work in PLAN.md
+ * applied to a real surface: the country list and the language list used
+ * to be built into the definitions at runtime, which forced the whole
+ * description into a service and out of reach of anything that has not
+ * instantiated a field item. Declared as the Country and LanguageExists
+ * constraints instead, the live lookup moves to the resolvers, where
+ * cacheability is handled once, and what is left is literal. The
+ * declaration asks the site for nothing, which is what lets the several
+ * static host protocols read it.
  *
  * The surface describes the INPUT shape, deliberately not the storage
  * shape:
@@ -63,64 +63,21 @@ use Drupal\data_surface_address\AddressSettingsShape;
  * no services and no field item, and anything that wants to write these
  * settings can use it.
  *
- * One piece of the declaration cannot live in the attribute: core's
- * MapDataDefinition takes only its own definition array in its
- * constructor and gains its property definitions through a setter, so
- * the twelve overridable address fields are declared in
- * fieldOverrideDefinitions() instead. They are still part of the
- * advertisement: getFieldSurface() hands them to the builder through the
- * callback the factory takes for exactly this, so the map is complete
- * before the surface is sealed and a subscriber sees the twelve
- * properties like any other. That is the pattern for every
- * attribute-declared surface carrying a map — the attribute declares the
- * flat part, one callback supplies the properties, and there is still
- * one surface rather than one the host patched afterwards. See
- * ADOPTION.md.
+ * The twelve overridable address fields are declared beside the map they
+ * fill, like everything else. Core's MapDataDefinition takes only its
+ * own definition array in its constructor and gains its property
+ * definitions through a setter, which is the whole of the awkwardness
+ * and none of it is visible here: the builder's setPropertyDefinitions()
+ * says them in the declaration, so the map is complete before the
+ * surface is sealed and a subscriber sees the twelve properties like any
+ * other. See ADOPTION.md.
  *
  * The static default field settings stay the parent's. They include the
  * deprecated 'fields' key, which the surface deliberately does not
  * describe, so reading them from the declaration would drop a key the
  * address module's own accessors still look for.
  */
-#[DataSurfaceAware(definitions: [
-  'available_countries' => new ListDataDefinition(
-    [
-      'label' => new TranslatableMarkup('Available countries'),
-      'description' => new TranslatableMarkup('Leave empty for all countries.'),
-      'required' => FALSE,
-      'default_value' => [],
-    ],
-    // The item says what one country code is, and the Country
-    // constraint is the whole of that: which codes exist is the address
-    // module's answer, resolved live by the country options resolver
-    // rather than frozen into this declaration.
-    new DataDefinition([
-      'type' => 'string',
-      'label' => new TranslatableMarkup('Country'),
-      'required' => FALSE,
-      'constraints' => ['Country' => []],
-    ]),
-  ),
-  'langcode_override' => new DataDefinition([
-    'type' => 'string',
-    'label' => new TranslatableMarkup('Language override'),
-    'description' => new TranslatableMarkup('Ensures entered addresses are always formatted in the same language.'),
-    'required' => FALSE,
-    'default_value' => NULL,
-    // Locked languages are excluded by default, which is what the
-    // address module's own settings form does by hand: "not specified"
-    // and "not applicable" are not languages an address is formatted in.
-    'constraints' => ['LanguageExists' => []],
-  ]),
-  'field_overrides' => new MapDataDefinition([
-    'type' => 'map',
-    'label' => new TranslatableMarkup('Field overrides'),
-    'description' => new TranslatableMarkup('Override the country-specific address format, forcing properties to always be hidden, optional, or required.'),
-    'required' => FALSE,
-    'default_value' => [],
-  ]),
-])]
-class SurfaceAddressItem extends AddressItem implements FieldSurfaceProviderInterface {
+class SurfaceAddressItem extends AddressItem implements FieldSurfaceProviderInterface, DataSurfaceDeclarationInterface {
 
   use DataSurfaceFieldTypeTrait;
 
@@ -135,18 +92,56 @@ class SurfaceAddressItem extends AddressItem implements FieldSurfaceProviderInte
 
   /**
    * {@inheritdoc}
+   *
+   * The three settings the address module stores per field instance, in
+   * the input shape a caller sends rather than the shape the field
+   * stores; the target below is where the two meet.
+   */
+  public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
+    // The item says what one country code is, and the Country
+    // constraint is the whole of that: which codes exist is the address
+    // module's answer, resolved live by the country options resolver
+    // rather than frozen into this declaration. Core takes a list's item
+    // definition in the constructor rather than through a setter, so the
+    // list is constructed around its item and described fluently after.
+    $countries = new ListDataDefinition(['type' => 'list'], DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Country'))
+      ->setRequired(FALSE)
+      ->addConstraint('Country', []));
+    $countries
+      ->setLabel(new TranslatableMarkup('Available countries'))
+      ->setDescription(new TranslatableMarkup('Leave empty for all countries.'))
+      ->setRequired(FALSE);
+    $builder->setDefinition('available_countries', $countries);
+    $builder->setDefault('available_countries', []);
+
+    $builder->setDefinition('langcode_override', DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Language override'))
+      ->setDescription(new TranslatableMarkup('Ensures entered addresses are always formatted in the same language.'))
+      ->setRequired(FALSE)
+      // Locked languages are excluded by default, which is what the
+      // address module's own settings form does by hand: "not specified"
+      // and "not applicable" are not languages an address is formatted
+      // in.
+      ->addConstraint('LanguageExists', []));
+    $builder->setDefault('langcode_override', NULL);
+
+    $builder->setDefinition('field_overrides', MapDataDefinition::create()
+      ->setLabel(new TranslatableMarkup('Field overrides'))
+      ->setDescription(new TranslatableMarkup('Override the country-specific address format, forcing properties to always be hidden, optional, or required.'))
+      ->setRequired(FALSE));
+    $builder->setDefault('field_overrides', []);
+    $builder->setPropertyDefinitions('field_overrides', static::fieldOverrideDefinitions());
+  }
+
+  /**
+   * {@inheritdoc}
    */
   public function getFieldSurface(string $operation = FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS, ?string $subject = NULL): DataSurfaceInterface {
     // The field item is bound to one field config entity, so it is its
     // own subject and a caller naming another has the wrong item.
     $this->surfaceSelfSubject($subject);
-    return $this->surfaceFactory()->buildFromClass(
-      static::class,
-      NULL,
-      self::HOST_ID,
-      static fn (DataSurfaceBuilderInterface $builder) => $builder
-        ->setPropertyDefinitions('field_overrides', static::fieldOverrideDefinitions()),
-    );
+    return $this->declaredSurface(self::HOST_ID);
   }
 
   /**
@@ -169,17 +164,13 @@ class SurfaceAddressItem extends AddressItem implements FieldSurfaceProviderInte
    * caller reading the surface no longer has to know that; the
    * definitions are the vocabulary.
    *
-   * These belong in the attribute beside the map they fill, and cannot
-   * go there: core's MapDataDefinition takes only its definition array
-   * in its constructor, and property definitions are added through
-   * setPropertyDefinition(). So they are read from here into the builder
-   * before the surface is sealed, which is the nearest thing to
-   * declaring them and leaves the advertisement complete. The labels
-   * likewise repeat what the address module's
-   * LabelHelper::getGenericFieldLabels() says, because a static method
-   * call is not an attribute argument either; AddressFieldSurfaceTest
-   * asserts the two agree word for word, so the duplication cannot drift
-   * unnoticed.
+   * A method of their own rather than twelve more lines inside the
+   * declaration, because the shape is one sentence repeated twelve times
+   * and a loop says that better than the repetition would. The labels
+   * repeat what the address module's LabelHelper::getGenericFieldLabels()
+   * says rather than calling it, so that the declaration stays literal;
+   * AddressFieldSurfaceTest asserts the two agree word for word, so the
+   * duplication cannot drift unnoticed.
    *
    * @return array<string, \Drupal\Core\TypedData\DataDefinitionInterface>
    *   One optional override definition per overridable address field, in

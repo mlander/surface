@@ -195,24 +195,24 @@ trait DataSurfaceFieldTypeTrait {
   }
 
   /**
-   * Reads the static default field settings from a class's attribute.
+   * Reads the static default field settings from a class's declaration.
    *
    * The same static-protocol problem the formatter trait has:
-   * defaultFieldSettings() cannot consult an instance. A field type
-   * whose surface is fully declared in the DataSurfaceAware attribute
-   * answers with this; a field type whose surface needs services to
-   * describe itself at all — a country list, a language list, a label
-   * helper — has no static declaration to read and keeps whatever
-   * static defaults it already had.
+   * defaultFieldSettings() cannot consult an instance. A field type that
+   * declares its surface answers with this, because a declaration is
+   * static; a field type whose surface needs services to describe itself
+   * at all — a country list, a language list, a label helper — has no
+   * declaration to read and keeps whatever static defaults it already
+   * had.
    *
-   * @param string $class
+   * @param class-string $class
    *   The fully qualified field item class name.
    *
    * @return array
    *   The declared defaults keyed by setting name.
    *
    * @throws \LogicException
-   *   When the class declares no static surface.
+   *   When the class declares no surface.
    */
   protected static function surfaceDefaultFieldSettings(string $class): array {
     return static::surfaceDeclaredDefaults($class);

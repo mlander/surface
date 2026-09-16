@@ -44,28 +44,26 @@ and Tool integrations and the submodules.
 
 ## Quick start
 
-Declare the surface on the class whose values it describes, and delete
-the form code:
+Declare the surface in one method on the class whose values it
+describes, and delete the form code:
 
 ```php
 #[Block(id: 'my_teaser', admin_label: new TranslatableMarkup('Teaser'))]
-#[DataSurfaceAware(definitions: [
-  'headline' => new DataDefinition([
-    'type' => 'string',
-    'label' => new TranslatableMarkup('Headline'),
-    'required' => TRUE,
-    'constraints' => ['Length' => ['max' => 50]],
-    'default_value' => 'Featured content',
-  ]),
-  'limit' => new DataDefinition([
-    'type' => 'integer',
-    'label' => new TranslatableMarkup('Number of items'),
-    'required' => TRUE,
-    'default_value' => 10,
-    'constraints' => ['Range' => ['min' => 1, 'max' => 50]],
-  ]),
-])]
 final class TeaserBlock extends DataSurfaceBlockBase {
+
+  public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
+    $builder->setDefinition('headline', DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Headline'))
+      ->setRequired(TRUE)
+      ->addConstraint('Length', ['max' => 50]));
+    $builder->setDefault('headline', 'Featured content');
+
+    $builder->setDefinition('limit', DataDefinition::create('integer')
+      ->setLabel(new TranslatableMarkup('Number of items'))
+      ->setRequired(TRUE)
+      ->addConstraint('Range', ['min' => 1, 'max' => 50]));
+    $builder->setDefault('limit', 10);
+  }
 
   public function build(): array {
     return ['#markup' => $this->configuration['headline']];

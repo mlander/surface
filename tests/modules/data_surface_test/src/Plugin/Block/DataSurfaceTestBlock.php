@@ -8,14 +8,15 @@ use Drupal\Core\Block\Attribute\Block;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\Attribute\DataSurfaceAware;
+use Drupal\data_surface\DataSurfaceBuilderInterface;
+use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Plugin\Block\DataSurfaceBlockBase;
 
 /**
  * A block that adopts surfaces and says nothing else about its settings.
  *
- * What a block costs once the base class carries the pipeline: the
- * attribute declaring what it accepts, one refiner method for the
+ * What a block costs once the base class carries the pipeline: one
+ * method declaring what it accepts, one refiner method for the
  * setting that depends on another, and build(). There is no
  * defaultConfiguration, no blockForm, no blockValidate and no
  * blockSubmit, which is the whole claim of the adoption layer.
@@ -24,57 +25,6 @@ use Drupal\data_surface\Plugin\Block\DataSurfaceBlockBase;
   id: 'data_surface_test_block',
   admin_label: new TranslatableMarkup('Data surface test block'),
   forms: ['alternate' => 'data_surface_test.alternate_form'],
-)]
-#[DataSurfaceAware(
-  definitions: [
-    'headline' => new DataDefinition([
-      'type' => 'string',
-      'label' => new TranslatableMarkup('Headline'),
-      'description' => new TranslatableMarkup('Shown above the items.'),
-      'required' => TRUE,
-      'default_value' => 'Featured',
-      'examples' => ['Quarterly report'],
-      'constraints' => ['Length' => ['max' => 20]],
-    ]),
-    'limit' => new DataDefinition([
-      'type' => 'integer',
-      'label' => new TranslatableMarkup('Number of items'),
-      'required' => FALSE,
-      'default_value' => 10,
-      'constraints' => ['Range' => ['min' => 1, 'max' => 50]],
-    ]),
-    'show_summary' => new DataDefinition([
-      'type' => 'boolean',
-      'label' => new TranslatableMarkup('Show summaries'),
-      'required' => FALSE,
-      'default_value' => TRUE,
-    ]),
-    'casing' => new DataDefinition([
-      'type' => 'string',
-      'label' => new TranslatableMarkup('Casing'),
-      'required' => FALSE,
-      'default_value' => 'none',
-      'constraints' => [
-        'LabeledChoice' => [
-          'choices' => ['none', 'uppercase', 'lowercase'],
-          'labels' => [
-            'none' => new TranslatableMarkup('As written'),
-            'uppercase' => new TranslatableMarkup('Upper case'),
-            'lowercase' => new TranslatableMarkup('Lower case'),
-          ],
-        ],
-      ],
-    ]),
-    'variant' => new DataDefinition([
-      'type' => 'string',
-      'label' => new TranslatableMarkup('Variant'),
-      'description' => new TranslatableMarkup('Pick a casing other than none to see its variants.'),
-      'required' => FALSE,
-    ]),
-  ],
-  refinements: [
-    'variant' => ['casing'],
-  ],
 )]
 final class DataSurfaceTestBlock extends DataSurfaceBlockBase {
 
@@ -98,6 +48,50 @@ final class DataSurfaceTestBlock extends DataSurfaceBlockBase {
         'muted' => new TranslatableMarkup('Muted'),
       ],
     ];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
+    $headline = DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Headline'))
+      ->setDescription(new TranslatableMarkup('Shown above the items.'))
+      ->setRequired(TRUE)
+      ->addConstraint('Length', ['max' => 20]);
+    DefinitionMetadata::setExamples($headline, ['Quarterly report']);
+    $builder->setDefinition('headline', $headline);
+    $builder->setDefault('headline', 'Featured');
+
+    $builder->setDefinition('limit', DataDefinition::create('integer')
+      ->setLabel(new TranslatableMarkup('Number of items'))
+      ->setRequired(FALSE)
+      ->addConstraint('Range', ['min' => 1, 'max' => 50]));
+    $builder->setDefault('limit', 10);
+
+    $builder->setDefinition('show_summary', DataDefinition::create('boolean')
+      ->setLabel(new TranslatableMarkup('Show summaries'))
+      ->setRequired(FALSE));
+    $builder->setDefault('show_summary', TRUE);
+
+    $builder->setDefinition('casing', DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Casing'))
+      ->setRequired(FALSE)
+      ->addConstraint('LabeledChoice', [
+        'choices' => ['none', 'uppercase', 'lowercase'],
+        'labels' => [
+          'none' => new TranslatableMarkup('As written'),
+          'uppercase' => new TranslatableMarkup('Upper case'),
+          'lowercase' => new TranslatableMarkup('Lower case'),
+        ],
+      ]));
+    $builder->setDefault('casing', 'none');
+
+    $builder->setDefinition('variant', DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Variant'))
+      ->setDescription(new TranslatableMarkup('Pick a casing other than none to see its variants.'))
+      ->setRequired(FALSE));
+    $builder->addRefinement('variant', ['casing']);
   }
 
   /**

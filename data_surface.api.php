@@ -123,7 +123,37 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  * refuses a named subject by name. The host base classes call it on the first
  * line of getDataSurface(), so an adopting plugin writes nothing.
  *
+ * What such a plugin does write is its declaration.
+ * \Drupal\data_surface\DataSurfaceDeclarationInterface::declareDataSurface() is
+ * handed a fresh builder with the plugin already bound as its refiner, and is
+ * the one home for everything the surface says — definitions, defaults, locks,
+ * refinement edges, map properties and outputs:
+ * @code
+ * final class ExampleBlock extends DataSurfaceBlockBase {
+ *
+ *   public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
+ *     $builder->setDefinition('headline', DataDefinition::create('string')
+ *       ->setLabel(new TranslatableMarkup('Headline'))
+ *       ->setRequired(TRUE)
+ *       ->addConstraint('Length', ['max' => 50]));
+ *     $builder->setDefault('headline', 'Featured content');
+ *   }
+ *
+ * }
+ * @endcode
+ *
+ * The method is static because several host protocols ask a class for its
+ * defaults with no instance to ask — a formatter's defaultSettings(), a field
+ * type's defaultFieldSettings() — and one declaration answering both them and
+ * the instance is what keeps a hand-maintained defaults array from coming
+ * back. A host whose surface needs live site state to describe itself at all
+ * builds it in getDataSurface() instead, through
+ * \Drupal\data_surface\DataSurfaceHostTrait::surfaceBuilder() and
+ * \Drupal\data_surface\DataSurfaceHostTrait::builtSurface(), and answers its
+ * host's static protocols itself.
+ *
  * @see \Drupal\data_surface\DataSurfaceProviderInterface
+ * @see \Drupal\data_surface\DataSurfaceDeclarationInterface
  * @see \Drupal\data_surface\Form\FieldSurfaceProviderInterface
  * @see \Drupal\data_surface\Form\DataSurfaceProviderForm
  * @see \Drupal\data_surface\DataSurfaceHostTrait::surfaceSelfSubject()

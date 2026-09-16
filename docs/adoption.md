@@ -58,12 +58,13 @@ are close relatives with their own defaults spellings.
 
 **Built.** `DataSurfaceFormatterTrait` runs the whole pipeline in an
 `#element_validate` on the surface container, plus a static defaults shim
-reading the class's attribute. `DataSurfaceFormatterBase` is that trait
+reading the class's declaration. `DataSurfaceFormatterBase` is that trait
 and one line.
 
 Two host realities it had to absorb. `defaultSettings()` is static and
-cannot consult an instance surface, so it is answered from the
-`#[DataSurfaceAware]` attribute. And the host prunes what it saves
+cannot consult an instance surface, so it is answered from
+`declareDataSurface()`, which is static for that reason. And the host
+prunes what it saves
 against that same static array — `EntityDisplayBase::setComponent()`
 intersects through `prepareConfiguration()` — so keys another module
 mounts onto the surface at build time have to appear in it too, which is
@@ -88,7 +89,7 @@ than the form".
 
 **Half built.** `DataSurfaceFieldTypeTrait` plus `FieldSettingsTarget`
 covers instance settings, and `data_surface_address` is the worked
-example — the address field type's settings declared in an attribute on
+example — the address field type's settings declared in one method on
 the item class, with Field UI rendering the generated form and the
 address module unmodified. Storage settings and the `$has_data` lock are
 the untouched half; address has no storage settings.

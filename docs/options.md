@@ -141,10 +141,9 @@ language manager, and the cost was not the code: **a definition that
 cannot be written down without services forces the whole surface to be
 built at runtime**, in a service, away from the class it describes. Said
 as the `Country` and `LanguageExists` constraints instead, the
-definitions became literal enough to sit in a `#[DataSurfaceAware]`
-attribute on the field item itself, harvestable without instantiation,
-and the live lookup moved to the one place that already answers for
-freshness.
+definitions became literal enough to sit in a static declaration on the
+field item itself, readable without instantiation, and the live lookup
+moved to the one place that already answers for freshness.
 
 So: when a list is "every one of a kind that this site has", say that and
 write a resolver. Keep `LabeledChoice` for a vocabulary that really is

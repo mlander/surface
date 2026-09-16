@@ -144,7 +144,7 @@ manager, and the cost was not the code: a definition that cannot be
 written down without services forces the whole surface to be built at
 runtime, in a service, away from the class it describes. Said as the
 `Country` and `LanguageExists` constraints instead, the definitions
-became literal enough to sit in a `DataSurfaceAware` attribute on the
+became literal enough to sit in a `DataSurfaceAware` attribute (the attribute was later retired for `declareDataSurface()`; see docs/declaring-a-surface.md) on the
 field item itself, harvestable without instantiation, and the live
 lookup moved to the one place that already answers for freshness. So:
 when a list is "every one of a kind that this site has", say that, and

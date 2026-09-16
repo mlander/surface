@@ -10,7 +10,7 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\address\LabelHelper;
-use Drupal\data_surface\Attribute\DataSurfaceAware;
+use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Form\FieldSurfaceProviderInterface;
@@ -521,41 +521,50 @@ class AddressFieldSurfaceTest extends DataSurfaceKernelTestBase {
   /**
    * Tests that the whole contract is readable from the class alone.
    *
-   * The point of moving the declaration into the attribute: a deriver, a
+   * The point of the declaration being static: a deriver, a
    * documentation generator or an agent enumerating field types reads
    * these settings without a container, a field, or an instantiated
-   * item. Nothing below asks the site for anything.
+   * item, and so do the static host protocols that ask a field type for
+   * its default settings. Nothing below asks the site for anything —
+   * the builder is filled and sealed on the spot, with no factory and
+   * no build event, which is exactly what the static defaults shim
+   * does.
    */
   public function testSurfaceIsDeclaredOnTheClass(): void {
-    $attribute = DataSurfaceAware::fromClass(SurfaceAddressItem::class);
+    $builder = new DataSurfaceBuilder();
+    SurfaceAddressItem::declareDataSurface($builder);
+    $declared = $builder->seal()->getDefinitions()->toArray();
 
-    $this->assertNotNull($attribute);
     $this->assertSame(
       ['available_countries', 'langcode_override', 'field_overrides'],
-      array_keys($attribute->definitions),
+      array_keys($declared),
     );
     // The live lists are named as constraints rather than built into the
     // definitions, which is the whole reason this can be static: the
     // country list and the language list are resolved from these two,
     // and neither is repeated as a labeled choice anywhere.
-    $countries = $this->itemOf($attribute->definitions['available_countries'])->getConstraints();
+    $countries = $this->itemOf($declared['available_countries'])->getConstraints();
     $this->assertSame([], $countries['Country']);
     $this->assertArrayNotHasKey('LabeledChoice', $countries);
-    $languages = $attribute->definitions['langcode_override']->getConstraints();
+    $languages = $declared['langcode_override']->getConstraints();
     $this->assertSame([], $languages['LanguageExists']);
     $this->assertArrayNotHasKey('LabeledChoice', $languages);
     $this->assertSame(
       ['available_countries' => [], 'langcode_override' => NULL, 'field_overrides' => []],
-      array_map([DefinitionMetadata::class, 'defaultOf'], $attribute->definitions),
+      array_map([DefinitionMetadata::class, 'defaultOf'], $declared),
     );
+    // The map's twelve properties are part of the same declaration
+    // rather than something the host patches in afterwards.
+    $this->assertCount(12, $this->propertiesOf($declared['field_overrides']));
   }
 
   /**
    * Tests that the declared override labels are the address module's.
    *
-   * The twelve labels are written out in the field item class because a
-   * static method call is not an attribute argument, so this is the
-   * assertion that stops the copy from drifting away from the original.
+   * The twelve labels are written out in the field item class rather
+   * than read from the address module, so that the declaration stays
+   * literal; this is the assertion that stops the copy from drifting
+   * away from the original.
    */
   public function testOverrideLabelsMatchTheAddressModule(): void {
     $properties = $this->propertiesOf($this->surface()->getDefinition('field_overrides'));

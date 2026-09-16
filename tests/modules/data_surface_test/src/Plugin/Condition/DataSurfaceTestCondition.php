@@ -8,14 +8,14 @@ use Drupal\Core\Condition\Attribute\Condition;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\Attribute\DataSurfaceAware;
+use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\Plugin\Condition\DataSurfaceConditionBase;
 
 /**
  * A condition that adopts surfaces and says nothing else about settings.
  *
- * What a condition costs once the base class carries the pipeline: the
- * attribute declaring what it accepts, one refiner method for the
+ * What a condition costs once the base class carries the pipeline: one
+ * method declaring what it accepts, one refiner method for the
  * setting that depends on another, and the two methods the condition
  * host asks for. There is no defaultConfiguration, no
  * buildConfigurationForm, no validateConfigurationForm and no
@@ -29,45 +29,39 @@ use Drupal\data_surface\Plugin\Condition\DataSurfaceConditionBase;
   id: 'data_surface_test_condition',
   label: new TranslatableMarkup('Data surface test condition'),
 )]
-#[DataSurfaceAware(
-  definitions: [
-    'mode' => new DataDefinition([
-      'type' => 'string',
-      'label' => new TranslatableMarkup('Comparison'),
-      'required' => FALSE,
-      'default_value' => 'at_least',
-      'constraints' => [
-        'LabeledChoice' => [
-          'choices' => ['at_least', 'at_most'],
-          'labels' => [
-            'at_least' => new TranslatableMarkup('At least'),
-            'at_most' => new TranslatableMarkup('At most'),
-          ],
-        ],
-      ],
-    ]),
-    'threshold' => new DataDefinition([
-      'type' => 'integer',
-      'label' => new TranslatableMarkup('Threshold'),
-      'description' => new TranslatableMarkup('The number the reading is compared against.'),
-      'required' => FALSE,
-      'default_value' => 10,
-      'constraints' => ['Range' => ['min' => 0, 'max' => 100]],
-    ]),
-    'reading' => new DataDefinition([
-      'type' => 'integer',
-      'label' => new TranslatableMarkup('Reading'),
-      'description' => new TranslatableMarkup('The number the condition tests.'),
-      'required' => FALSE,
-      'default_value' => 0,
-      'constraints' => ['Range' => ['min' => 0, 'max' => 100]],
-    ]),
-  ],
-  refinements: [
-    'threshold' => ['mode'],
-  ],
-)]
 final class DataSurfaceTestCondition extends DataSurfaceConditionBase {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
+    $builder->setDefinition('mode', DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Comparison'))
+      ->setRequired(FALSE)
+      ->addConstraint('LabeledChoice', [
+        'choices' => ['at_least', 'at_most'],
+        'labels' => [
+          'at_least' => new TranslatableMarkup('At least'),
+          'at_most' => new TranslatableMarkup('At most'),
+        ],
+      ]));
+    $builder->setDefault('mode', 'at_least');
+
+    $builder->setDefinition('threshold', DataDefinition::create('integer')
+      ->setLabel(new TranslatableMarkup('Threshold'))
+      ->setDescription(new TranslatableMarkup('The number the reading is compared against.'))
+      ->setRequired(FALSE)
+      ->addConstraint('Range', ['min' => 0, 'max' => 100]));
+    $builder->setDefault('threshold', 10);
+    $builder->addRefinement('threshold', ['mode']);
+
+    $builder->setDefinition('reading', DataDefinition::create('integer')
+      ->setLabel(new TranslatableMarkup('Reading'))
+      ->setDescription(new TranslatableMarkup('The number the condition tests.'))
+      ->setRequired(FALSE)
+      ->addConstraint('Range', ['min' => 0, 'max' => 100]));
+    $builder->setDefault('reading', 0);
+  }
 
   /**
    * {@inheritdoc}

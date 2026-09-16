@@ -5,48 +5,45 @@ declare(strict_types=1);
 namespace Drupal\data_surface;
 
 use Drupal\Component\Plugin\Definition\PluginDefinitionInterface;
-use Drupal\data_surface\Attribute\DataSurfaceAware;
+use Drupal\data_surface\Form\FieldSurfaceProviderInterface;
 
 /**
- * Answers surface questions about classes without instantiating them.
+ * Answers which classes expose a surface, without instantiating them.
  *
- * Detection needs no attribute: implementing the provider interface is
- * visible from any plugin definition's class name. The attribute adds
- * the statically declared refinement map on top, so a consumer can know
- * not just that a plugin is configurable through a surface, but which of
- * its values depend on which others, before a single plugin is booted.
+ * Detection is the whole of it, and it needs nothing declared for the
+ * purpose: implementing a provider interface is visible from any plugin
+ * definition's class name, which is cached. So a deriver, a
+ * documentation page, or an agent listing the configurable things on a
+ * site reads the list from plugin definitions alone and boots nothing.
  *
- * That is what makes a catalogue possible — a deriver, a documentation
- * page, or an agent listing the configurable things on a site reads the
- * whole answer from plugin definitions, which are already cached.
+ * What a surface *holds* is not answered here. It used to be, in the
+ * days when a class declared the flat part of its surface in an
+ * attribute, and the answer was always a sketch: it could not carry a
+ * map's properties, it knew nothing of what the build event adds, and a
+ * host whose surface needed live state declared none of it. The honest
+ * answer to "what does this surface hold" is the built surface, which
+ * costs an instance; the honest cheap answer is "this class has one",
+ * which is this service.
  */
 final class DataSurfaceAwareness {
 
   /**
    * Determines whether a class exposes a surface.
    *
+   * Both provider interfaces count. A field item answers for its
+   * instance settings through the field type counterpart rather than
+   * through the plugin one, and a catalogue that missed field types
+   * would be missing a host family rather than a corner case.
+   *
    * @param string $class
    *   The fully qualified class name.
    *
    * @return bool
-   *   TRUE when the class provides a surface, by interface or attribute.
+   *   TRUE when the class provides a surface.
    */
   public function isSurfaceAware(string $class): bool {
     return is_subclass_of($class, DataSurfaceProviderInterface::class)
-      || DataSurfaceAware::fromClass($class) !== NULL;
-  }
-
-  /**
-   * Reads a class's statically declared refinement map.
-   *
-   * @param string $class
-   *   The fully qualified class name.
-   *
-   * @return array<string, string[]>
-   *   The refinement map; empty when the class declares none statically.
-   */
-  public function declaredRefinements(string $class): array {
-    return DataSurfaceAware::refinementsOf($class);
+      || is_subclass_of($class, FieldSurfaceProviderInterface::class);
   }
 
   /**
@@ -72,7 +69,7 @@ final class DataSurfaceAwareness {
         default => NULL,
       };
       if ($class !== NULL && $this->isSurfaceAware($class)) {
-        $aware[$plugin_id] = new DataSurfaceAwarenessRecord($class, $this->declaredRefinements($class));
+        $aware[$plugin_id] = new DataSurfaceAwarenessRecord($class);
       }
     }
     return $aware;

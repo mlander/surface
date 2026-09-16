@@ -23,41 +23,32 @@ way.
 
 ## Declaring outputs
 
-In the attribute, beside the inputs:
+In the same declaration as the inputs, on the same builder:
 
 ```php
-#[DataSurfaceAware(
-  definitions: [
-    'variant' => new DataDefinition([
-      'type' => 'string',
-      'label' => new TranslatableMarkup('Variant'),
-      'required' => FALSE,
-    ]),
-  ],
-  outputs: [
-    'text' => new DataDefinition([
-      'type' => 'string',
-      'label' => new TranslatableMarkup('Text'),
-      'description' => new TranslatableMarkup('What is shown.'),
-      'required' => TRUE,
-    ]),
-    'classes' => new ListDataDefinition([
-      'type' => 'list',
-      'label' => new TranslatableMarkup('Classes'),
-      'required' => FALSE,
-    ], new DataDefinition(['type' => 'string'])),
-  ],
-  output_refinements: ['classes' => ['variant']],
-)]
+public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
+  $builder->setDefinition('variant', DataDefinition::create('string')
+    ->setLabel(new TranslatableMarkup('Variant'))
+    ->setRequired(FALSE));
+
+  $builder->setOutputDefinition('text', DataDefinition::create('string')
+    ->setLabel(new TranslatableMarkup('Text'))
+    ->setDescription(new TranslatableMarkup('What is shown.'))
+    ->setRequired(TRUE));
+
+  $classes = new ListDataDefinition(['type' => 'list'], DataDefinition::create('string'));
+  $classes
+    ->setLabel(new TranslatableMarkup('Classes'))
+    ->setRequired(FALSE);
+  $builder->setOutputDefinition('classes', $classes);
+  $builder->addOutputRefinement('classes', ['variant']);
+}
 ```
 
-Or on the builder, for a surface built at runtime:
+A surface built at runtime says the same thing on its own builder, and
+adds an output refiner that is not the host itself the same way:
 
 ```php
-$builder->setOutputDefinition('text', DataDefinition::create('string')
-  ->setLabel(new TranslatableMarkup('Text'))
-  ->setRequired(TRUE));
-$builder->addOutputRefinement('classes', ['variant']);
 $builder->addOutputRefiner('classes', new MyOutputRefiner());
 ```
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Core\Form\FormState;
+use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface_test\Plugin\Block\DataSurfaceTestBlock;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
@@ -12,8 +13,8 @@ use PHPUnit\Framework\Attributes\Group;
 /**
  * Tests progressive adoption on a block, the busiest group A host.
  *
- * The test block declares an attribute surface, one refiner method and
- * build(); everything asserted here — defaults, validation at the
+ * The test block declares its surface in one method, plus one refiner
+ * method and build(); everything asserted here — defaults, validation at the
  * configuration boundary, a generated form, refinement over AJAX, and
  * storage through the pipeline — comes from the base class and its
  * traits, which is the claim the adoption layer makes.
@@ -244,22 +245,41 @@ class DataSurfaceBlockBaseTest extends DataSurfaceKernelTestBase {
 
   /**
    * Tests that the class is readable as surface-aware without booting it.
+   *
+   * Detection, and only detection: the provider interface is visible
+   * from the plugin definition's class name, which is cached, so a
+   * catalogue lists the configurable plugins on a site without booting
+   * one. What each surface holds is the built surface's answer, which
+   * costs an instance and is asserted everywhere else in this class.
    */
   public function testAwarenessReadsTheClass(): void {
     $awareness = $this->container->get('data_surface.awareness');
 
     $this->assertTrue($awareness->isSurfaceAware(DataSurfaceTestBlock::class));
-    $this->assertSame(
-      ['variant' => ['casing']],
-      $awareness->declaredRefinements(DataSurfaceTestBlock::class),
-    );
 
     $aware = $awareness->filterDefinitions($this->container->get('plugin.manager.block')->getDefinitions());
     $this->assertArrayHasKey('data_surface_test_block', $aware);
     $this->assertSame(DataSurfaceTestBlock::class, $aware['data_surface_test_block']->class);
-    $this->assertSame(['variant' => ['casing']], $aware['data_surface_test_block']->refinements);
     // A block that knows nothing about surfaces is not in the list.
     $this->assertArrayNotHasKey('system_powered_by_block', $aware);
+  }
+
+  /**
+   * Tests that the declaration alone answers for the refinement edges.
+   *
+   * The edge the awareness service used to answer from an attribute. It
+   * is still readable without a container — the declaration is static —
+   * but it is read from the one home every other part of the surface
+   * comes from rather than from a second, partial description beside it.
+   */
+  public function testTheDeclarationCarriesTheRefinementEdges(): void {
+    $builder = new DataSurfaceBuilder();
+    DataSurfaceTestBlock::declareDataSurface($builder);
+
+    $this->assertSame(
+      ['casing'],
+      $builder->seal()->getDefinitions()->entry('variant')?->dependencies,
+    );
   }
 
 }

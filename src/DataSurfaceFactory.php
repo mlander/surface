@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface;
 
-use Drupal\data_surface\Attribute\DataSurfaceAware;
 use Drupal\data_surface\Event\DataSurfaceBuildEvent;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Builds surfaces through the alter stage.
  *
- * Building is the factory's, not the attribute's: the attribute declares
- * what a class's surface holds and nothing more, so reading a
- * declaration costs no container and building one always goes through
- * the same alter stage a hand-built surface goes through.
+ * Building is the factory's, and only the factory's: a class says what
+ * its surface holds, which costs no container to read, and turning that
+ * into a sealed, altered surface goes through the one alter stage here,
+ * whether the declaration was written in a method or handed over as a
+ * builder somebody else filled.
  *
  * Host ids are namespaced `<host type>:<id>` — `block:foo`,
  * `field_formatter:foo`, `field_type:address`, `entity_type:node_type` —
@@ -51,37 +51,6 @@ final class DataSurfaceFactory implements DataSurfaceFactoryInterface {
     }
     $this->eventDispatcher->dispatch(new DataSurfaceBuildEvent($builder, $host_class, $host_id));
     return $builder->seal();
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function buildFromClass(string $class, ?DataSurfaceRefinerInterface $refiner, string $host_id, ?callable $before_seal = NULL): DataSurfaceInterface {
-    $attribute = DataSurfaceAware::fromClass($class);
-    if ($attribute === NULL || $attribute->definitions === []) {
-      throw new \LogicException(sprintf(
-        '%s declares no static surface definitions; build the surface in getDataSurface() instead.',
-        $class,
-      ));
-    }
-    // The outputs travel through the builder's constructor like the
-    // inputs do, rather than through a loop of setters, so a declaration
-    // that refuses — a default on an output — refuses at seal with the
-    // whole picture rather than halfway through the harvest.
-    $builder = new DataSurfaceBuilder(
-      $attribute->definitions,
-      $attribute->refinements,
-      $refiner,
-      $attribute->outputs,
-      $attribute->output_refinements,
-    );
-    foreach ($attribute->locked as $name) {
-      $builder->lock($name);
-    }
-    if ($before_seal !== NULL) {
-      $before_seal($builder);
-    }
-    return $this->build($builder, $class, $host_id);
   }
 
 }

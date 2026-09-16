@@ -342,9 +342,8 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
     }
     $outputs = $this->outputs;
     // Asked again over everything, because outputs also arrive whole
-    // through the constructor — which is the path a class's attribute
-    // takes — and a declaration that cannot be honored has to be
-    // refused however it was written down.
+    // through the constructor, and a declaration that cannot be honored
+    // has to be refused however it was written down.
     foreach ($outputs as $name => $definition) {
       static::assertOutputDeclarable((string) $name, $definition);
     }

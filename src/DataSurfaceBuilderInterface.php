@@ -82,11 +82,10 @@ interface DataSurfaceBuilderInterface {
    *
    * The companion to setDefinition() for maps. Core's MapDataDefinition
    * takes only its own definition array in its constructor and gains its
-   * properties through a setter, so a map declared in the
-   * DataSurfaceAware attribute arrives with no properties at all. This
-   * is where they are supplied — before seal, so subscribers and every
-   * later consumer see the complete map rather than one the host filled
-   * in afterwards.
+   * properties through a setter, so a map arrives from its constructor
+   * with no properties at all. This is where they are supplied — before
+   * seal, so subscribers and every later consumer see the complete map
+   * rather than one the host filled in afterwards.
    *
    * Existing properties of the same name are replaced; properties the
    * definition already carries under other names are kept.

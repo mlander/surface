@@ -252,10 +252,12 @@ Two more things these hosts force:
 
 - **Static defaults.** `defaultSettings()` is static and cannot consult
   an instance surface. `DataSurfaceHostTrait::surfaceDeclaredDefaults()`
-  answers it from the class's `#[DataSurfaceAware]` attribute; a class
-  whose surface is built at runtime overrides `defaultSettings()` itself,
-  and the helper throws a clear message rather than returning a quietly
-  empty array.
+  answers it from the class's `declareDataSurface()`, which is a static
+  method for exactly this reason: it fills a builder, seals it on the
+  spot with no factory and no build event, and reads the defaults off
+  it. A class whose surface is built at runtime overrides
+  `defaultSettings()` itself, and the helper throws a clear message
+  rather than returning a quietly empty array.
 - **Pruning.** `EntityDisplayBase::setComponent()` runs values through
   the formatter manager's `prepareConfiguration()`, which intersects them
   with `defaultSettings()`. Keys mounted onto the surface at build time

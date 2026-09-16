@@ -191,11 +191,11 @@ class OutputSurfaceTest extends DataSurfaceKernelTestBase {
   /**
    * Tests that an output declared in a constructor is checked at seal.
    *
-   * The path a class's attribute takes, which never passes through the
-   * setter, so the refusal has to be asked again where the surface is
-   * assembled.
+   * The path a builder handed a whole set of outputs takes, which never
+   * passes through the setter, so the refusal has to be asked again
+   * where the surface is assembled.
    */
-  public function testAttributeDeclaredDefaultIsRefusedAtSeal(): void {
+  public function testConstructorDeclaredDefaultIsRefusedAtSeal(): void {
     $builder = new DataSurfaceBuilder(
       definitions: ['mode' => DataDefinition::create('string')],
       outputs: ['text' => new DataDefinition(['type' => 'string', 'default_value' => 'x'])],

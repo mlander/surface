@@ -13,13 +13,13 @@ modified.
 
 Three pieces, all on `SurfaceAddressItem`:
 
-- The `#[DataSurfaceAware]` attribute — the definitions, readable from
-  the class without instantiating anything. The country list and the
-  language list are not in it: the items carry the address module's
-  `Country` constraint and the `LanguageExists` constraint, and
-  `CountryOptions` and `LanguageExistsOptions` resolve them live, which
-  is what lets the declaration be static. The twelve override properties
-  are merged in `getFieldSurface()`, because core's `MapDataDefinition`
+- `declareDataSurface()` — the definitions, readable from the class
+  without instantiating anything. The country list and the language list
+  are not in it: the items carry the address module's `Country`
+  constraint and the `LanguageExists` constraint, and `CountryOptions`
+  and `LanguageExistsOptions` resolve them live, which is what lets the
+  declaration be static. The twelve override properties are set on the
+  same builder in the same method, because core's `MapDataDefinition`
   cannot take property definitions in its constructor.
 - `toStorage()` / `fromStorage()` — the shape transform between the input
   shape and the stored shape. It is not new logic: it is the settings

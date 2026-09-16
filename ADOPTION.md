@@ -283,7 +283,7 @@ The host harvests raw form values itself. Adapter, now built:
 `DataSurfaceFormatterTrait`, an `#element_validate` on the surface
 container that extracts, validates, flags, and writes the accepted
 values back into form state, plus a static defaults shim reading the
-class's `DataSurfaceAware` attribute. `DataSurfaceFormatterBase` is that
+class's `DataSurfaceAware` attribute (the attribute was later retired for `declareDataSurface()`; see docs/declaring-a-surface.md). `DataSurfaceFormatterBase` is that
 trait plus the one line answering static `defaultSettings()`.
 
 | Family | Base class | Storage destination | Quirk to absorb |

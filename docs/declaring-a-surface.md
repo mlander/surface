@@ -2,80 +2,77 @@
 
 A surface is built by a builder and sealed. Nothing else constructs one,
 and once it is sealed every mutator on the builder throws. Where the
-building happens is the only real choice: in a `#[DataSurfaceAware]`
-attribute on the class, or at runtime in `getDataSurface()`.
+building happens is the only real choice: in the class's own
+`declareDataSurface()`, or at runtime in `getDataSurface()`.
 
 ## One home, never split
 
 The rule is short and it is the one to get right:
 
-> A surface that can be written down as a literal is declared entirely in
-> the attribute. A surface that needs live site state to describe itself
-> at all is built entirely at runtime. Never half of each.
+> A surface that can be written down without asking the site anything is
+> declared entirely in `declareDataSurface()`. A surface that needs live
+> site state to describe itself at all is built entirely in
+> `getDataSurface()`. Never half of each.
 
-A class whose contract is half in an attribute and half in a method has
-no single place to read it, which defeats the point of having one.
+A class whose contract is half in one method and half in another has no
+single place to read it, which defeats the point of having one.
 
-**The attribute** is worth reaching for, because a fully
-attribute-declared surface is harvestable without instantiating anything:
-`DataSurfaceAwareness` reads the definitions, the locks and the
-dependency graph from the class alone, which is what a deriver,
-documentation, or an agent enumerating configurable things needs.
+**The declaration** is worth reaching for, because it is static: several
+host protocols ask a class for its defaults with no instance to ask. A
+field formatter's `defaultSettings()` and a field type's
+`defaultFieldSettings()` are static methods that have to answer with the
+defaults of the very surface the instance advertises, and a static
+declaration is what lets them, with no second copy of the defaults
+anywhere. It is also what a deriver, a documentation page or an agent
+reads when it wants a class's contract without booting a plugin.
 
 Note that "static" is decided by runtime *dependence*, not by structure.
 A constraint such as `PluginExists`, whose allowed values are resolved
 live from a plugin manager, still has a static spelling, so a definition
-carrying it belongs in the attribute. What forces a runtime build is a
+carrying it belongs in the declaration. What forces a runtime build is a
 surface whose definitions cannot be written down without calling a
 service — a `LabeledChoice` whose list is assembled from the country
 repository, say. When you find yourself in that position, read [Options
 and resolvers](options.md): saying it as an existence constraint plus a
 resolver is usually what turns a runtime surface back into a literal one.
 
-### The attribute
+### The declaration
 
-PHP's new-in-initializers covers attribute arguments, so complete data
-definitions live there. Static calls are not allowed in an attribute
-argument, which rules out the fluent `DataDefinition::create(...)`
-spelling; the constructor takes the definition array instead, and every
-key a surface reads fits in it.
+`DataSurfaceDeclarationInterface` is one static method taking the
+builder. Everything a surface says goes into it: definitions, defaults,
+refinement edges, locks, map properties, and [outputs](outputs.md).
 
 ```php
 #[Block(
   id: 'my_teaser',
   admin_label: new TranslatableMarkup('Teaser'),
 )]
-#[DataSurfaceAware(
-  definitions: [
-    'headline' => new DataDefinition([
-      'type' => 'string',
-      'label' => new TranslatableMarkup('Headline'),
-      'description' => new TranslatableMarkup('Shown above the items.'),
-      'required' => TRUE,
-      'constraints' => ['Length' => ['max' => 50]],
-      'default_value' => 'Featured content',
-      'examples' => ['Quarterly report'],
-    ]),
-    'entity_type' => new DataDefinition([
-      'type' => 'string',
-      'label' => new TranslatableMarkup('Entity type'),
-      'required' => TRUE,
-      'constraints' => [
-        'PluginExists' => [
-          'manager' => 'entity_type.manager',
-          'interface' => ContentEntityInterface::class,
-        ],
-      ],
-    ]),
-    'bundle' => new DataDefinition([
-      'type' => 'string',
-      'label' => new TranslatableMarkup('Bundle'),
-      'required' => FALSE,
-    ]),
-  ],
-  refinements: ['bundle' => ['entity_type']],
-)]
 final class TeaserBlock extends DataSurfaceBlockBase {
+
+  public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
+    $headline = DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Headline'))
+      ->setDescription(new TranslatableMarkup('Shown above the items.'))
+      ->setRequired(TRUE)
+      ->addConstraint('Length', ['max' => 50]);
+    DefinitionMetadata::setExamples($headline, ['Quarterly report']);
+    $builder->setDefinition('headline', $headline);
+    $builder->setDefault('headline', 'Featured content');
+
+    $builder->setDefinition('entity_type', DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Entity type'))
+      ->setRequired(TRUE)
+      ->addConstraint('PluginExists', [
+        'manager' => 'entity_type.manager',
+        'interface' => ContentEntityInterface::class,
+      ]));
+
+    $builder->setDefinition('bundle', DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Bundle'))
+      ->setRequired(FALSE));
+    // The edge sits beside the key it belongs to.
+    $builder->addRefinement('bundle', ['entity_type']);
+  }
 
   public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
     if ($name === 'bundle') {
@@ -91,31 +88,32 @@ final class TeaserBlock extends DataSurfaceBlockBase {
 }
 ```
 
-The attribute takes five arguments: `definitions` keyed by surface key,
-`refinements` as a map of target key to the sibling keys it is refined
-against, `locked` as a list of keys whose value is fixed, and — for a
-host that says what it emits as well as what it takes — `outputs` and
-`output_refinements`, which are [Outputs](outputs.md).
-
-Nothing else is needed. `DataSurfaceBlockBase::getDataSurface()` already
-routes the class through `DataSurfaceFactoryInterface::buildFromClass()`,
-passing the plugin itself as the refiner, so the block above has no
+Nothing else is needed. `DataSurfaceBlockBase::getDataSurface()` hands
+this method a fresh builder with the plugin already bound as the refiner
+and seals the result through the factory, so the block above has no
 `defaultConfiguration()`, no `blockForm()`, no `blockValidate()` and no
 `blockSubmit()`. See [Generated forms](forms.md) for the equivalent base
 class or trait per host family.
+
+The declaration may consult nothing but itself: no `$this`, no
+container. That is the price of being readable from the class, and it is
+the same price the static host protocols pay.
 
 ### At runtime
 
 A host whose surface needs services builds it in `getDataSurface()` and
 routes it through the factory, which is what dispatches the build event
-and seals the result:
+and seals the result. Two helpers on `DataSurfaceHostTrait` are the whole
+of the ceremony:
 
 ```php
 public function getDataSurface(string $operation = 'configure', ?string $subject = NULL): DataSurfaceInterface {
   // This plugin is its own subject, so there is nothing a subject could
   // name and one is refused rather than ignored.
   $this->surfaceSelfSubject($subject);
-  $builder = new DataSurfaceBuilder();
+  // A fresh builder, with this plugin already bound as its refiner and,
+  // when it implements the interface, as its output refiner too.
+  $builder = $this->surfaceBuilder();
   $builder->setDefinition('language', DataDefinition::create('string')
     ->setLabel(new TranslatableMarkup('Language'))
     ->addConstraint('LanguageExists', ['allowLocked' => FALSE]));
@@ -123,9 +121,13 @@ public function getDataSurface(string $operation = 'configure', ?string $subject
   if ($operation === 'edit') {
     $builder->lock('id');
   }
-  return $this->surfaceFactory()->build($builder, static::class, 'block:' . $this->getPluginId());
+  return $this->builtSurface($builder, 'block:' . $this->getPluginId());
 }
 ```
+
+A class that builds here answers its host's static protocols itself:
+there is no declaration for `defaultSettings()` to read, and the shim
+says so with an exception rather than returning a quietly empty array.
 
 A surface that did not come from the factory was never offered to
 subscribers, so nothing may assume it is complete. Build through the
@@ -135,6 +137,20 @@ The `$operation` argument is how one class serves more than one form: a
 host that resolves a form class per operation asks for the surface by
 name, and the same class can lock a key on `edit` that it leaves open on
 `add`. The default is `configure`.
+
+### History: the attribute
+
+Until Phase B a class could declare the flat part of its surface in a
+`#[DataSurfaceAware]` attribute instead, and the factory harvested it.
+The attribute is gone, and the argument for removing it is worth keeping:
+the static harvest it was built for had shrunk to detection, which the
+provider interface already provides, and the sketch it held was a lie of
+omission next to what the factory builds. Its costs were real —
+array constructors only, so no fluent `DataDefinition::create()`; no map
+property definitions, which is why the address field type needed a
+before-seal callback; no translatable constants; and two homes for one
+contract. A declaration in a method says all of it in one place, so
+plugins and standalone providers now author identically.
 
 ### The operation and subject pair
 
@@ -178,7 +194,7 @@ inside the verb.
 
 ### Host ids
 
-Both factory methods take a host id, and it is namespaced
+The factory takes a host id with every build, and it is namespaced
 `<host type>:<id>` — `block:my_teaser`, `field_formatter:my_formatter`,
 `field_type:address`, `entity_type:node_type`. The namespace is what
 keeps two hosts of different kinds that happen to share a plugin id from
@@ -189,26 +205,22 @@ name for picks one and keeps it.
 ## Map properties, before seal
 
 Core's `MapDataDefinition` takes only its own definition array in its
-constructor and gains its property definitions through a setter, so a map
-declared in the attribute arrives with no properties at all.
+constructor and gains its property definitions through a setter.
 `ListDataDefinition` has no such problem: its item definition is a
 constructor argument.
 
 The builder is where a map's properties are supplied, and the timing is
 the whole point — **before seal**, so that subscribers and every later
 consumer see one complete surface rather than one the host filled in
-afterwards. `buildFromClass()` takes a callback for exactly this:
+afterwards. That is one more line of the declaration:
 
 ```php
-public function getFieldSurface(): DataSurfaceInterface {
-  return $this->surfaceFactory()->buildFromClass(
-    static::class,
-    NULL,
-    'field_type:my_type',
-    static function (DataSurfaceBuilderInterface $builder): void {
-      $builder->setPropertyDefinitions('field_overrides', $properties);
-    },
-  );
+public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
+  $builder->setDefinition('field_overrides', MapDataDefinition::create()
+    ->setLabel(new TranslatableMarkup('Field overrides'))
+    ->setRequired(FALSE));
+  $builder->setDefault('field_overrides', []);
+  $builder->setPropertyDefinitions('field_overrides', static::fieldOverrideDefinitions());
 }
 ```
 
@@ -216,6 +228,12 @@ public function getFieldSurface(): DataSurfaceInterface {
 the rest; `setPropertyDefinition()` does one at a time. Both refuse a key
 the builder does not hold, and a key whose definition takes no
 properties. The address field type's item class is the worked example.
+
+A list is constructed around its item definition rather than described
+into one, so write `new ListDataDefinition(['type' => 'list'], $item)`
+and describe the list fluently afterwards. Core's
+`ListDataDefinition::create()` asks the typed data manager for the item,
+and a declaration reaches for no service.
 
 ## Defaults and examples
 

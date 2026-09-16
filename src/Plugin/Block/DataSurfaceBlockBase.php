@@ -8,6 +8,7 @@ use Drupal\Core\Block\BlockBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceConfigurationTrait;
+use Drupal\data_surface\DataSurfaceDeclarationInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DataSurfaceProviderInterface;
 use Drupal\data_surface\DataSurfaceRefinerInterface;
@@ -46,7 +47,7 @@ use Drupal\data_surface\Form\DataSurfaceHostFormTrait;
  *   the provider method is not called access(): BlockPluginInterface
  *   already owns that name with an incompatible signature.
  */
-abstract class DataSurfaceBlockBase extends BlockBase implements DataSurfaceProviderInterface, DataSurfaceRefinerInterface {
+abstract class DataSurfaceBlockBase extends BlockBase implements DataSurfaceProviderInterface, DataSurfaceRefinerInterface, DataSurfaceDeclarationInterface {
 
   use DataSurfaceConfigurationTrait {
     setConfiguration as protected setSurfaceConfiguration;
@@ -56,8 +57,8 @@ abstract class DataSurfaceBlockBase extends BlockBase implements DataSurfaceProv
   /**
    * {@inheritdoc}
    *
-   * The surface is whatever the class declares in its attribute, with
-   * this plugin as the refiner. A block whose surface needs live site
+   * The surface is whatever the class declares in declareDataSurface(),
+   * with this plugin as the refiner. A block whose surface needs live site
    * state to describe itself overrides this and builds the surface here
    * instead, which is the one other legal home for it.
    *
@@ -72,7 +73,7 @@ abstract class DataSurfaceBlockBase extends BlockBase implements DataSurfaceProv
     // The host id is namespaced by plugin type, so a subscriber
     // matching on it cannot pick up a host of another kind that
     // happens to share a plugin id.
-    return $this->surfaceFactory()->buildFromClass(static::class, $this, 'block:' . $this->getPluginId());
+    return $this->declaredSurface('block:' . $this->getPluginId());
   }
 
   /**

@@ -7,6 +7,7 @@ namespace Drupal\data_surface\Plugin\Action;
 use Drupal\Core\Action\ConfigurableActionBase;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceConfigurationTrait;
+use Drupal\data_surface\DataSurfaceDeclarationInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DataSurfaceProviderInterface;
 use Drupal\data_surface\DataSurfaceRefinerInterface;
@@ -58,7 +59,7 @@ use Drupal\data_surface\Form\DataSurfacePluginFormTrait;
  * @see \Drupal\data_surface\Plugin\Condition\DataSurfaceConditionBase
  * @see \Drupal\data_surface\DataSurfaceProviderInterface::surfaceAccess()
  */
-abstract class DataSurfaceActionBase extends ConfigurableActionBase implements DataSurfaceProviderInterface, DataSurfaceRefinerInterface {
+abstract class DataSurfaceActionBase extends ConfigurableActionBase implements DataSurfaceProviderInterface, DataSurfaceRefinerInterface, DataSurfaceDeclarationInterface {
 
   use DataSurfaceConfigurationTrait;
   use DataSurfacePluginFormTrait;
@@ -66,8 +67,8 @@ abstract class DataSurfaceActionBase extends ConfigurableActionBase implements D
   /**
    * {@inheritdoc}
    *
-   * The surface is whatever the class declares in its attribute, with
-   * this plugin as the refiner. An action whose surface needs live site
+   * The surface is whatever the class declares in declareDataSurface(),
+   * with this plugin as the refiner. An action whose surface needs live site
    * state to describe itself overrides this and builds the surface here
    * instead, which is the one other legal home for it.
    *
@@ -82,7 +83,7 @@ abstract class DataSurfaceActionBase extends ConfigurableActionBase implements D
     // The host id is namespaced by plugin type, so a subscriber
     // matching on it cannot pick up a host of another kind that
     // happens to share a plugin id.
-    return $this->surfaceFactory()->buildFromClass(static::class, $this, 'action:' . $this->getPluginId());
+    return $this->declaredSurface('action:' . $this->getPluginId());
   }
 
   /**

@@ -1,5 +1,5 @@
 # Schema for the test plugins that store configuration. Each one mirrors
-# the definitions its DataSurfaceAware attribute declares, so a test
+# the definitions its declareDataSurface() method declares, so a test
 # placing the plugin passes strict config schema checking.
 
 block.settings.data_surface_test_block:

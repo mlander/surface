@@ -95,7 +95,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * Builds a map from the plain arrays an author writes.
    *
    * The boundary the roadmap's rule names: contracts are objects,
-   * payloads and authoring syntax are arrays. The attribute declares
+   * payloads and authoring syntax are arrays. A declaration says
    * definitions, a refinement map and a list of locked keys as plain
    * arrays, and this is where they become one collection, so nothing
    * about declaring a surface changes.

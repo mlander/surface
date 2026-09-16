@@ -9,7 +9,7 @@ use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\Attribute\DataSurfaceAware;
+use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\Plugin\Field\FieldFormatter\DataSurfaceFormatterBase;
 
 /**
@@ -17,49 +17,14 @@ use Drupal\data_surface\Plugin\Field\FieldFormatter\DataSurfaceFormatterBase;
  *
  * Field UI has no validate or submit hook for settings and prunes what
  * it saves against a static defaults array; the base class and its trait
- * answer both from this class's attribute, so the formatter itself holds
- * its declaration, its refiner, and viewElements().
+ * answer both from this class's declaration, which is static for that
+ * reason, so the formatter itself holds its declaration, its refiner,
+ * and viewElements().
  */
 #[FieldFormatter(
   id: 'data_surface_test_formatter',
   label: new TranslatableMarkup('Data surface test formatter'),
   field_types: ['string'],
-)]
-#[DataSurfaceAware(
-  definitions: [
-    'prefix' => new DataDefinition([
-      'type' => 'string',
-      'label' => new TranslatableMarkup('Prefix'),
-      'description' => new TranslatableMarkup('Text placed before each value.'),
-      'required' => FALSE,
-      'constraints' => ['Length' => ['max' => 10]],
-    ]),
-    'casing' => new DataDefinition([
-      'type' => 'string',
-      'label' => new TranslatableMarkup('Casing'),
-      'required' => FALSE,
-      'default_value' => 'none',
-      'constraints' => [
-        'LabeledChoice' => [
-          'choices' => ['none', 'uppercase', 'lowercase'],
-          'labels' => [
-            'none' => new TranslatableMarkup('As written'),
-            'uppercase' => new TranslatableMarkup('Upper case'),
-            'lowercase' => new TranslatableMarkup('Lower case'),
-          ],
-        ],
-      ],
-    ]),
-    'variant' => new DataDefinition([
-      'type' => 'string',
-      'label' => new TranslatableMarkup('Variant'),
-      'description' => new TranslatableMarkup('Pick a casing other than none to see its variants.'),
-      'required' => FALSE,
-    ]),
-  ],
-  refinements: [
-    'variant' => ['casing'],
-  ],
 )]
 final class DataSurfaceTestFormatter extends DataSurfaceFormatterBase {
 
@@ -83,6 +48,36 @@ final class DataSurfaceTestFormatter extends DataSurfaceFormatterBase {
         'muted' => new TranslatableMarkup('Muted'),
       ],
     ];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
+    $builder->setDefinition('prefix', DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Prefix'))
+      ->setDescription(new TranslatableMarkup('Text placed before each value.'))
+      ->setRequired(FALSE)
+      ->addConstraint('Length', ['max' => 10]));
+
+    $builder->setDefinition('casing', DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Casing'))
+      ->setRequired(FALSE)
+      ->addConstraint('LabeledChoice', [
+        'choices' => ['none', 'uppercase', 'lowercase'],
+        'labels' => [
+          'none' => new TranslatableMarkup('As written'),
+          'uppercase' => new TranslatableMarkup('Upper case'),
+          'lowercase' => new TranslatableMarkup('Lower case'),
+        ],
+      ]));
+    $builder->setDefault('casing', 'none');
+
+    $builder->setDefinition('variant', DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Variant'))
+      ->setDescription(new TranslatableMarkup('Pick a casing other than none to see its variants.'))
+      ->setRequired(FALSE));
+    $builder->addRefinement('variant', ['casing']);
   }
 
   /**

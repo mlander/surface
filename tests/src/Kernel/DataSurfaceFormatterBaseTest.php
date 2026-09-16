@@ -16,7 +16,7 @@ use PHPUnit\Framework\Attributes\Group;
  * Field UI asks for a settings form and then copies whatever the
  * elements produced, and it prunes what it saves against a static
  * defaults array the instance cannot reach. The base class answers both
- * from the class's attribute, so the formatter holds its declaration,
+ * from the class's declaration, so the formatter holds that declaration,
  * its refiner and its output.
  */
 #[Group('data_surface')]
@@ -60,7 +60,7 @@ class DataSurfaceFormatterBaseTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests the static defaults answered from the class's attribute.
+   * Tests the static defaults answered from the class's declaration.
    *
    * There is one declaration, so there is nothing to keep in step: the
    * static array the host prunes against is derived from the same

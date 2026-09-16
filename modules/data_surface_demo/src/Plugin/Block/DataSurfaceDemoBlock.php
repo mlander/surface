@@ -12,7 +12,8 @@ use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\Attribute\DataSurfaceAware;
+use Drupal\data_surface\DataSurfaceBuilderInterface;
+use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Plugin\Block\DataSurfaceBlockBase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -20,8 +21,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * A block whose entire settings form is generated from its surface.
  *
  * What is left of a configurable block once the base class carries the
- * pipeline: the attribute declaring what it accepts, one refiner method
- * for the settings that depend on another, and build(). There is no
+ * pipeline: one method declaring what it accepts, one refiner method for
+ * the settings that depend on another, and build(). There is no
  * defaultConfiguration, no blockForm, no blockValidate and no
  * blockSubmit — compare the config_surface original, which still spelled
  * all four out.
@@ -30,89 +31,13 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * PluginExists constraint naming the manager and the interface, which
  * the options resolver reads as a select of content entity types; the
  * bundle and the field are refined into labeled choices from live site
- * state. The refinement map is static — entity type narrows bundle,
- * bundle narrows field — so it belongs in the attribute with the
- * definitions, and the surface is fully attribute-declared even though
- * resolving it consults the site.
+ * state. The refinement edges sit beside the definitions they belong to
+ * — entity type narrows bundle, bundle narrows field — because there is
+ * one home for everything this block's surface says.
  */
 #[Block(
   id: 'data_surface_demo',
   admin_label: new TranslatableMarkup('Data surface demo'),
-)]
-#[DataSurfaceAware(
-  definitions: [
-    'headline' => new DataDefinition([
-      'type' => 'string',
-      'label' => new TranslatableMarkup('Headline'),
-      'description' => new TranslatableMarkup('Shown above the featured content.'),
-      'required' => TRUE,
-      'default_value' => 'Featured content',
-      'examples' => ['Quarterly report'],
-      'constraints' => ['Length' => ['max' => 50]],
-    ]),
-    'entity_type' => new DataDefinition([
-      'type' => 'string',
-      'label' => new TranslatableMarkup('Entity type'),
-      'description' => new TranslatableMarkup('The type of content to feature.'),
-      'required' => TRUE,
-      // 'user', not 'node'. A declared default has to satisfy the key's
-      // own constraints, because the base class applies the defaults
-      // through the pipeline while the plugin is being constructed: a
-      // default of 'node' made this block impossible to construct on any site
-      // without the node module, since its own PluginExists constraint
-      // refused the value before the block existed. The user entity type
-      // is a content entity type every Drupal site has, so the default
-      // is valid wherever the block can be installed at all. The demo
-      // loses nothing: user has exactly one bundle and node has several,
-      // so choosing a different entity type still narrows the bundle
-      // list to something visibly different, which is the chain the
-      // JavaScript test walks.
-      'default_value' => 'user',
-      // One declaration doing both jobs: the constraint refuses a plugin
-      // that is not a content entity type, and the options resolver
-      // reads the same constraint as the select's choices.
-      'constraints' => [
-        'PluginExists' => [
-          'manager' => 'entity_type.manager',
-          'interface' => ContentEntityInterface::class,
-        ],
-      ],
-    ]),
-    'bundle' => new DataDefinition([
-      'type' => 'string',
-      'label' => new TranslatableMarkup('Bundle'),
-      'description' => new TranslatableMarkup('Choose an entity type to see its bundles.'),
-      'required' => FALSE,
-    ]),
-    'field' => new DataDefinition([
-      'type' => 'string',
-      'label' => new TranslatableMarkup('Highlight field'),
-      'description' => new TranslatableMarkup('Choose a bundle to pick from its fields.'),
-      'required' => FALSE,
-    ]),
-    'limit' => new DataDefinition([
-      'type' => 'integer',
-      'label' => new TranslatableMarkup('Number of items'),
-      'description' => new TranslatableMarkup('How many items to feature.'),
-      'required' => TRUE,
-      'default_value' => 10,
-      'constraints' => ['Range' => ['min' => 1, 'max' => 50]],
-    ]),
-    'show_summary' => new DataDefinition([
-      'type' => 'boolean',
-      'label' => new TranslatableMarkup('Show summaries'),
-      'description' => new TranslatableMarkup('Whether item summaries render.'),
-      'required' => FALSE,
-      'default_value' => TRUE,
-    ]),
-  ],
-  refinements: [
-    'bundle' => ['entity_type'],
-    // A target refined against an optional dependency: while bundle is
-    // empty this stays an open text field; once a bundle is chosen the
-    // field list narrows to that bundle's fields.
-    'field' => ['entity_type', 'bundle'],
-  ],
 )]
 final class DataSurfaceDemoBlock extends DataSurfaceBlockBase implements ContainerFactoryPluginInterface {
 
@@ -157,6 +82,78 @@ final class DataSurfaceDemoBlock extends DataSurfaceBlockBase implements Contain
       $container->get('entity_type.bundle.info'),
       $container->get('entity_field.manager'),
     );
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Static in the sense that matters: nothing here asks the site
+   * anything. The entity type list is a PluginExists constraint the
+   * options resolver reads live, and the bundle and field lists are the
+   * refiner's business below, so the declaration itself is literal.
+   */
+  public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
+    $headline = DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Headline'))
+      ->setDescription(new TranslatableMarkup('Shown above the featured content.'))
+      ->setRequired(TRUE)
+      ->addConstraint('Length', ['max' => 50]);
+    DefinitionMetadata::setExamples($headline, ['Quarterly report']);
+    $builder->setDefinition('headline', $headline);
+    $builder->setDefault('headline', 'Featured content');
+
+    $builder->setDefinition('entity_type', DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Entity type'))
+      ->setDescription(new TranslatableMarkup('The type of content to feature.'))
+      ->setRequired(TRUE)
+      // One declaration doing both jobs: the constraint refuses a plugin
+      // that is not a content entity type, and the options resolver
+      // reads the same constraint as the select's choices.
+      ->addConstraint('PluginExists', [
+        'manager' => 'entity_type.manager',
+        'interface' => ContentEntityInterface::class,
+      ]));
+    // 'user', not 'node'. A declared default has to satisfy the key's
+    // own constraints, because the base class applies the defaults
+    // through the pipeline while the plugin is being constructed: a
+    // default of 'node' made this block impossible to construct on any
+    // site without the node module, since its own PluginExists
+    // constraint refused the value before the block existed. The user
+    // entity type is a content entity type every Drupal site has, so the
+    // default is valid wherever the block can be installed at all. The
+    // demo loses nothing: user has exactly one bundle and node has
+    // several, so choosing a different entity type still narrows the
+    // bundle list to something visibly different, which is the chain the
+    // JavaScript test walks.
+    $builder->setDefault('entity_type', 'user');
+
+    $builder->setDefinition('bundle', DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Bundle'))
+      ->setDescription(new TranslatableMarkup('Choose an entity type to see its bundles.'))
+      ->setRequired(FALSE));
+    $builder->addRefinement('bundle', ['entity_type']);
+
+    $builder->setDefinition('field', DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Highlight field'))
+      ->setDescription(new TranslatableMarkup('Choose a bundle to pick from its fields.'))
+      ->setRequired(FALSE));
+    // A target refined against an optional dependency: while bundle is
+    // empty this stays an open text field; once a bundle is chosen the
+    // field list narrows to that bundle's fields.
+    $builder->addRefinement('field', ['entity_type', 'bundle']);
+
+    $builder->setDefinition('limit', DataDefinition::create('integer')
+      ->setLabel(new TranslatableMarkup('Number of items'))
+      ->setDescription(new TranslatableMarkup('How many items to feature.'))
+      ->setRequired(TRUE)
+      ->addConstraint('Range', ['min' => 1, 'max' => 50]));
+    $builder->setDefault('limit', 10);
+
+    $builder->setDefinition('show_summary', DataDefinition::create('boolean')
+      ->setLabel(new TranslatableMarkup('Show summaries'))
+      ->setDescription(new TranslatableMarkup('Whether item summaries render.'))
+      ->setRequired(FALSE));
+    $builder->setDefault('show_summary', TRUE);
   }
 
   /**

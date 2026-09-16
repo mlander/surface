@@ -12,6 +12,11 @@ namespace Drupal\data_surface;
  * reads — form, validation, defaults, schema — never a form-only
  * variant. A surface that did not come from here was never offered to
  * subscribers, so nothing may assume it is complete.
+ *
+ * One method, because there is one way in. A host declares its surface
+ * in a method, fills a builder there, and hands the builder over; how
+ * much of that method is the host's own code and how much a base class
+ * wrote for it is the host's business and not the factory's.
  */
 interface DataSurfaceFactoryInterface {
 
@@ -43,38 +48,5 @@ interface DataSurfaceFactoryInterface {
    *   surface and dispatches one build event.
    */
   public function build(DataSurfaceBuilderInterface $builder, string $host_class, string $host_id): DataSurfaceInterface;
-
-  /**
-   * Builds the surface a class declares in its DataSurfaceAware attribute.
-   *
-   * Routed through build(), so the build event fires and alters apply to
-   * attribute-declared surfaces exactly as they do to hand-built ones.
-   * Each call reflects a fresh attribute instance, so the definition
-   * objects are never shared between instances — which matters because
-   * refinement mutates a definition's constraints.
-   *
-   * The attribute declares the flat part of a surface, which is all a
-   * PHP attribute argument can express. A host whose surface also
-   * carries map properties supplies them in $before_seal, so the
-   * complete surface still reaches the build event.
-   *
-   * @param string $class
-   *   The fully qualified class name.
-   * @param \Drupal\data_surface\DataSurfaceRefinerInterface|null $refiner
-   *   The provider's refiner, typically the plugin instance itself.
-   * @param string $host_id
-   *   The namespaced identifier for the host, `<host type>:<id>`.
-   * @param callable|null $before_seal
-   *   Receives the builder after the attribute has been read and before
-   *   the build event is dispatched, for the parts of a surface an
-   *   attribute cannot declare.
-   *
-   * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The advertised surface.
-   *
-   * @throws \LogicException
-   *   When the class declares no attribute or no static definitions.
-   */
-  public function buildFromClass(string $class, ?DataSurfaceRefinerInterface $refiner, string $host_id, ?callable $before_seal = NULL): DataSurfaceInterface;
 
 }

@@ -8,6 +8,7 @@ use Drupal\Core\Condition\ConditionPluginBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceConfigurationTrait;
+use Drupal\data_surface\DataSurfaceDeclarationInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DataSurfaceProviderInterface;
 use Drupal\data_surface\DataSurfaceRefinerInterface;
@@ -47,7 +48,7 @@ use Drupal\data_surface\Form\DataSurfacePluginFormTrait;
  * @see \Drupal\data_surface\Plugin\Block\DataSurfaceBlockBase
  *   The same composition for the host that renames the triple.
  */
-abstract class DataSurfaceConditionBase extends ConditionPluginBase implements DataSurfaceProviderInterface, DataSurfaceRefinerInterface {
+abstract class DataSurfaceConditionBase extends ConditionPluginBase implements DataSurfaceProviderInterface, DataSurfaceRefinerInterface, DataSurfaceDeclarationInterface {
 
   use DataSurfaceConfigurationTrait {
     defaultConfiguration as protected surfaceDefaultConfiguration;
@@ -59,10 +60,10 @@ abstract class DataSurfaceConditionBase extends ConditionPluginBase implements D
   /**
    * {@inheritdoc}
    *
-   * The surface is whatever the class declares in its attribute, with
-   * this plugin as the refiner. A condition whose surface needs live
-   * site state to describe itself overrides this and builds the surface
-   * here instead, which is the one other legal home for it.
+   * The surface is whatever the class declares in declareDataSurface(),
+   * with this plugin as the refiner. A condition whose surface needs
+   * live site state to describe itself overrides this and builds the
+   * surface here instead, which is the one other legal home for it.
    *
    * A condition is its own subject: the plugin instance is the whole of
    * what this surface describes, so the subject is NULL, and any
@@ -75,7 +76,7 @@ abstract class DataSurfaceConditionBase extends ConditionPluginBase implements D
     // The host id is namespaced by plugin type, so a subscriber
     // matching on it cannot pick up a host of another kind that
     // happens to share a plugin id.
-    return $this->surfaceFactory()->buildFromClass(static::class, $this, 'condition:' . $this->getPluginId());
+    return $this->declaredSurface('condition:' . $this->getPluginId());
   }
 
   /**

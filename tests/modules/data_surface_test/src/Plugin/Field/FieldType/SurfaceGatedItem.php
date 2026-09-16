@@ -11,7 +11,8 @@ use Drupal\Core\Field\Plugin\Field\FieldType\StringItem;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\data_surface\Attribute\DataSurfaceAware;
+use Drupal\data_surface\DataSurfaceBuilderInterface;
+use Drupal\data_surface\DataSurfaceDeclarationInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Form\DataSurfaceFieldTypeTrait;
 use Drupal\data_surface\Form\FieldSurfaceProviderInterface;
@@ -38,16 +39,7 @@ use Drupal\data_surface\Form\FieldSurfaceProviderInterface;
   default_widget: 'string_textfield',
   default_formatter: 'string',
 )]
-#[DataSurfaceAware(definitions: [
-  'note' => new DataDefinition([
-    'type' => 'string',
-    'label' => new TranslatableMarkup('Note'),
-    'description' => new TranslatableMarkup('A note stored with this field instance.'),
-    'required' => FALSE,
-    'default_value' => NULL,
-  ]),
-])]
-class SurfaceGatedItem extends StringItem implements FieldSurfaceProviderInterface {
+class SurfaceGatedItem extends StringItem implements FieldSurfaceProviderInterface, DataSurfaceDeclarationInterface {
 
   use DataSurfaceFieldTypeTrait {
     surfaceAccess as protected fieldConfigAccess;
@@ -57,6 +49,19 @@ class SurfaceGatedItem extends StringItem implements FieldSurfaceProviderInterfa
    * The state key that makes this field type refuse its settings.
    */
   public const REFUSE_STATE_KEY = 'data_surface_test.field_settings_refused';
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
+    $builder->setDefinition('note', DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Note'))
+      ->setDescription(new TranslatableMarkup('A note stored with this field instance.'))
+      ->setRequired(FALSE));
+    // NULL is a declared default, and declaring one is not the same as
+    // declaring none: the key starts empty rather than absent.
+    $builder->setDefault('note', NULL);
+  }
 
   /**
    * {@inheritdoc}
@@ -72,7 +77,7 @@ class SurfaceGatedItem extends StringItem implements FieldSurfaceProviderInterfa
     // The field item is bound to one field config entity, so it is its
     // own subject and a caller naming another has the wrong item.
     $this->surfaceSelfSubject($subject);
-    return $this->surfaceFactory()->buildFromClass(static::class, NULL, 'field_type:data_surface_gated');
+    return $this->declaredSurface('field_type:data_surface_gated');
   }
 
   /**

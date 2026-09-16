@@ -9,7 +9,6 @@ use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\data_surface\Attribute\DataSurfaceAware;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 
@@ -37,8 +36,8 @@ use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
  *
  * The surface factory is fetched here for the same reason and under the
  * same exception: a base class asked for its surface from inside its own
- * constructor has no injected factory yet, and the factory is where
- * building an attribute-declared surface lives.
+ * constructor has no injected factory yet, and the factory is where the
+ * build event and the seal live.
  */
 trait DataSurfaceHostTrait {
 
@@ -166,44 +165,147 @@ trait DataSurfaceHostTrait {
   }
 
   /**
-   * Reads the default values a class declares in its attribute.
+   * Gets the refiner a surface built here is bound to.
+   *
+   * A plugin that narrows its own definitions refines them itself, which
+   * is the ordinary case and the reason the host base classes implement
+   * the refiner interface. A host that does not — a field item, whose
+   * settings depend on nothing else it holds — binds none rather than
+   * binding an object with nothing to say.
+   *
+   * @return \Drupal\data_surface\DataSurfaceRefinerInterface|null
+   *   This host, when it refines; NULL when it does not.
+   */
+  protected function surfaceRefiner(): ?DataSurfaceRefinerInterface {
+    return $this instanceof DataSurfaceRefinerInterface ? $this : NULL;
+  }
+
+  /**
+   * Gets a fresh builder with this host bound as its refiner.
+   *
+   * The starting point for a surface built in a method: one call, and
+   * the builder already knows who narrows the definitions about to be
+   * declared into it. A host that also refines its outputs is bound as
+   * the output refiner too, because the builder takes a refiner
+   * implementing both interfaces as both.
+   *
+   * A builder describes one surface and dispatches one build event, so
+   * this hands back a new one every time rather than a shared one.
+   *
+   * @return \Drupal\data_surface\DataSurfaceBuilderInterface
+   *   The unsealed builder.
+   */
+  protected function surfaceBuilder(): DataSurfaceBuilderInterface {
+    return new DataSurfaceBuilder(refiner: $this->surfaceRefiner());
+  }
+
+  /**
+   * Seals a builder into the surface this host advertises.
+   *
+   * Through the factory, always: a surface that did not come from there
+   * was never offered to subscribers, so nothing may assume it is
+   * complete.
+   *
+   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   *   The builder to seal.
+   * @param string $host_id
+   *   The namespaced identifier for the host, `<host type>:<id>`.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The advertised surface, alters applied.
+   */
+  protected function builtSurface(DataSurfaceBuilderInterface $builder, string $host_id): DataSurfaceInterface {
+    return $this->surfaceFactory()->build($builder, static::class, $host_id);
+  }
+
+  /**
+   * Builds the surface this class declares, sealed through the factory.
+   *
+   * The whole of what a host base class does for a plugin that declares
+   * its surface: a fresh builder with this instance as its refiner, the
+   * class's own declaration said into it, and the build event before the
+   * seal.
+   *
+   * @param string $host_id
+   *   The namespaced identifier for the host, `<host type>:<id>`.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The advertised surface, alters applied.
+   *
+   * @throws \LogicException
+   *   When the class declares no surface.
+   */
+  protected function declaredSurface(string $host_id): DataSurfaceInterface {
+    $builder = static::surfaceDeclarationBuilder(static::class, $this->surfaceRefiner());
+    return $this->builtSurface($builder, $host_id);
+  }
+
+  /**
+   * Fills a builder with what a class declares, without sealing it.
+   *
+   * Shared by the instance path and by the static defaults shim below,
+   * so that the surface a host advertises and the defaults its host
+   * protocol reads statically come from the same sentence.
+   *
+   * @param class-string $class
+   *   The fully qualified class name.
+   * @param \Drupal\data_surface\DataSurfaceRefinerInterface|null $refiner
+   *   The refiner to bind, or NULL when nothing is being built — a
+   *   declaration describes, and reading one needs no refiner.
+   *
+   * @return \Drupal\data_surface\DataSurfaceBuilderInterface
+   *   The unsealed builder holding the declaration.
+   *
+   * @throws \LogicException
+   *   When the class declares no surface.
+   */
+  protected static function surfaceDeclarationBuilder(string $class, ?DataSurfaceRefinerInterface $refiner = NULL): DataSurfaceBuilderInterface {
+    if (!is_a($class, DataSurfaceDeclarationInterface::class, TRUE)) {
+      throw new \LogicException(sprintf(
+        '%s declares no surface: implement %s, or build the surface in getDataSurface() and answer the host\'s static protocols there.',
+        $class,
+        DataSurfaceDeclarationInterface::class,
+      ));
+    }
+    $builder = new DataSurfaceBuilder(refiner: $refiner);
+    $class::declareDataSurface($builder);
+    return $builder;
+  }
+
+  /**
+   * Reads the default values a class declares.
    *
    * Several host protocols ask for their defaults statically — a
    * formatter's defaultSettings(), a field type's defaultFieldSettings()
    * — and a static method cannot consult an instance surface. A class
-   * whose surface is fully declared in the DataSurfaceAware attribute
-   * can still answer, because the definitions are readable from the
-   * class itself; this is the one rule for doing so, kept here rather
-   * than in each host's trait so the several static-defaults shims
-   * cannot disagree about what a declared default is.
+   * that declares its surface can still answer, because a declaration is
+   * static; this is the one rule for doing so, kept here rather than in
+   * each host's trait so the several static-defaults shims cannot
+   * disagree about what a declared default is.
+   *
+   * What is read is the declaration alone, sealed on the spot and thrown
+   * away: no build event, no container, and no subscriber's contribution
+   * — the same answer the class itself would give. The defaults a
+   * contributor mounts are advertised on the built surface and reach
+   * storage under the third party namespace the host protocol already
+   * knows about.
    *
    * A class whose surface needs live site state to describe itself has
-   * no static declaration to read, so it answers its host's static
-   * protocol itself. The exception says so rather than returning a
-   * quietly empty array.
+   * no declaration to read, so it answers its host's static protocol
+   * itself. The exception says so rather than returning a quietly empty
+   * array.
    *
-   * @param string $class
+   * @param class-string $class
    *   The fully qualified class name.
    *
    * @return array
    *   The declared defaults keyed by surface key.
    *
    * @throws \LogicException
-   *   When the class declares no static surface.
+   *   When the class declares no surface.
    */
   protected static function surfaceDeclaredDefaults(string $class): array {
-    $attribute = DataSurfaceAware::fromClass($class);
-    if ($attribute === NULL || $attribute->definitions === []) {
-      throw new \LogicException(sprintf(
-        '%s declares no static surface definitions, so its default settings cannot be read from the class; answer the host\'s static defaults method with the defaults of the surface built at runtime.',
-        $class,
-      ));
-    }
-    $defaults = [];
-    foreach ($attribute->definitions as $name => $definition) {
-      $defaults[$name] = DefinitionMetadata::defaultOf($definition);
-    }
-    return $defaults;
+    return static::surfaceDeclarationBuilder($class)->seal()->getDefaultValues();
   }
 
   /**

@@ -41,9 +41,10 @@ use Drupal\data_surface\DataSurfaceHostTrait;
  *   is nothing to flatten on the way: widgets emit definition-shaped
  *   trees, so what extraction returns is already the settings shape.
  * - defaultSettings() is static and cannot consult an instance surface.
- *   surfaceDefaultSettings() answers it from the attribute for a class
- *   whose surface is static; a class whose surface is built at runtime
- *   overrides defaultSettings() itself.
+ *   surfaceDefaultSettings() answers it from the class's own
+ *   declaration, which is a static method for exactly this reason; a
+ *   class whose surface is built at runtime overrides defaultSettings()
+ *   itself.
  * - The host prunes settings against that static array on save:
  *   EntityDisplayBase::setComponent() runs values through the formatter
  *   manager's prepareConfiguration(), which intersects them with
@@ -136,9 +137,9 @@ trait DataSurfaceFormatterTrait {
   }
 
   /**
-   * Reads the static default settings from a class's attribute.
+   * Reads the static default settings from a class's declaration.
    *
-   * @param string $class
+   * @param class-string $class
    *   The fully qualified formatter class name.
    *
    * @return array
@@ -146,7 +147,7 @@ trait DataSurfaceFormatterTrait {
    *   third party namespace the host prunes against.
    *
    * @throws \LogicException
-   *   When the class declares no static surface, in which case it has to
+   *   When the class declares no surface, in which case it has to
    *   answer defaultSettings() itself.
    */
   protected static function surfaceDefaultSettings(string $class): array {

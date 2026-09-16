@@ -15,7 +15,7 @@ use PHPUnit\Framework\Attributes\Group;
  * An action owns no configuration keys of its own and supplies neither a
  * build nor a submit for the surface to compose with, so the base class
  * is the two traits and nothing else. What that buys is asserted here:
- * a plugin holding one attribute answers for its defaults, validates
+ * a plugin holding one declaration answers for its defaults, validates
  * what it is constructed with, generates its whole form, stores what the
  * form collected, and runs on the stored values.
  */

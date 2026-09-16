@@ -11,7 +11,7 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
-use Drupal\data_surface\Attribute\DataSurfaceAware;
+use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DataSurfaceOutputRefinerInterface;
 use Drupal\data_surface\Pipeline\Omitted;
 use Drupal\data_surface\Plugin\Field\FieldFormatter\DataSurfaceFormatterBase;
@@ -22,8 +22,9 @@ use Drupal\data_surface\Plugin\Field\FieldFormatter\DataSurfaceFormatterBase;
  * Adoption on a host that never heard of surfaces: Field UI has no
  * validate and no submit hook for settings, and it prunes what it saves
  * against a static defaults array an instance cannot reach. The base
- * class answers both from this class's attribute, so the formatter holds
- * its declaration, its refiner, and viewElements().
+ * class answers both from this class's declaration, which is static for
+ * exactly that reason, so the formatter holds its declaration, its
+ * refiner, and viewElements().
  *
  * Note what is absent next to the config_surface original:
  * defaultSettings() is not written here at all. It is derived from the
@@ -35,85 +36,6 @@ use Drupal\data_surface\Plugin\Field\FieldFormatter\DataSurfaceFormatterBase;
   id: 'data_surface_demo_string',
   label: new TranslatableMarkup('Data surface demo formatter'),
   field_types: ['string'],
-)]
-#[DataSurfaceAware(
-  definitions: [
-    'prefix' => new DataDefinition([
-      'type' => 'string',
-      'label' => new TranslatableMarkup('Prefix'),
-      'description' => new TranslatableMarkup('Text placed before each value.'),
-      'required' => FALSE,
-      'constraints' => ['Length' => ['max' => 10]],
-    ]),
-    'casing' => new DataDefinition([
-      'type' => 'string',
-      'label' => new TranslatableMarkup('Casing'),
-      'description' => new TranslatableMarkup('How the value text is cased.'),
-      'required' => TRUE,
-      'default_value' => 'none',
-      'constraints' => [
-        'LabeledChoice' => [
-          'choices' => ['none', 'uppercase', 'lowercase'],
-          'labels' => [
-            'none' => new TranslatableMarkup('As written'),
-            'uppercase' => new TranslatableMarkup('Upper case'),
-            'lowercase' => new TranslatableMarkup('Lower case'),
-          ],
-        ],
-      ],
-    ]),
-    // Every variant this formatter has, spelled out: what a key allows
-    // is what it advertises, and the refiner below only ever takes from
-    // this list. A third-party module adds to it at build time rather
-    // than appending to a refined list afterwards — see the extras demo.
-    'variant' => new DataDefinition([
-      'type' => 'string',
-      'label' => new TranslatableMarkup('Variant'),
-      'description' => new TranslatableMarkup('The variants the chosen casing offers.'),
-      'required' => FALSE,
-      'constraints' => [
-        'LabeledChoice' => [
-          'choices' => ['bold', 'strong', 'quiet', 'muted'],
-          'labels' => [
-            'bold' => new TranslatableMarkup('Bold'),
-            'strong' => new TranslatableMarkup('Strong'),
-            'quiet' => new TranslatableMarkup('Quiet'),
-            'muted' => new TranslatableMarkup('Muted'),
-          ],
-        ],
-      ],
-    ]),
-  ],
-  refinements: [
-    'variant' => ['casing'],
-  ],
-  // The other half of the contract: what showing a field item through
-  // this formatter emits. Declared in the same vocabulary as the
-  // settings above, with no defaults and nothing locked, because
-  // nothing sends an output.
-  outputs: [
-    'text' => new DataDefinition([
-      'type' => 'string',
-      'label' => new TranslatableMarkup('Text'),
-      'description' => new TranslatableMarkup('The field value, prefixed and cased as the settings ask.'),
-      'required' => TRUE,
-    ]),
-    'classes' => new ListDataDefinition([
-      'type' => 'list',
-      'label' => new TranslatableMarkup('Classes'),
-      'description' => new TranslatableMarkup('The classes the chosen variant puts on the wrapper. Absent when no variant is chosen.'),
-      'required' => FALSE,
-    ], new DataDefinition([
-      'type' => 'string',
-      'label' => new TranslatableMarkup('Class'),
-    ])),
-  ],
-  // An output refines against the *input*: once a variant is chosen,
-  // the only class this formatter may emit is that variant's own, and
-  // saying so is what makes the emitted schema worth reading.
-  output_refinements: [
-    'classes' => ['variant'],
-  ],
 )]
 final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements DataSurfaceOutputRefinerInterface {
 
@@ -142,6 +64,78 @@ final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements
         'muted' => new TranslatableMarkup('Muted'),
       ],
     ];
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Both halves of the contract in one method: what this formatter
+   * accepts, and what showing a field item through it emits. The outputs
+   * are declared in the same vocabulary as the settings, with no
+   * defaults and nothing locked, because nothing sends an output.
+   */
+  public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
+    $builder->setDefinition('prefix', DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Prefix'))
+      ->setDescription(new TranslatableMarkup('Text placed before each value.'))
+      ->setRequired(FALSE)
+      ->addConstraint('Length', ['max' => 10]));
+
+    $builder->setDefinition('casing', DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Casing'))
+      ->setDescription(new TranslatableMarkup('How the value text is cased.'))
+      ->setRequired(TRUE)
+      ->addConstraint('LabeledChoice', [
+        'choices' => ['none', 'uppercase', 'lowercase'],
+        'labels' => [
+          'none' => new TranslatableMarkup('As written'),
+          'uppercase' => new TranslatableMarkup('Upper case'),
+          'lowercase' => new TranslatableMarkup('Lower case'),
+        ],
+      ]));
+    $builder->setDefault('casing', 'none');
+
+    // Every variant this formatter has, spelled out: what a key allows
+    // is what it advertises, and the refiner below only ever takes from
+    // this list. A third-party module adds to it at build time rather
+    // than appending to a refined list afterwards — see the extras demo.
+    $builder->setDefinition('variant', DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Variant'))
+      ->setDescription(new TranslatableMarkup('The variants the chosen casing offers.'))
+      ->setRequired(FALSE)
+      ->addConstraint('LabeledChoice', [
+        'choices' => ['bold', 'strong', 'quiet', 'muted'],
+        'labels' => [
+          'bold' => new TranslatableMarkup('Bold'),
+          'strong' => new TranslatableMarkup('Strong'),
+          'quiet' => new TranslatableMarkup('Quiet'),
+          'muted' => new TranslatableMarkup('Muted'),
+        ],
+      ]));
+    $builder->addRefinement('variant', ['casing']);
+
+    $builder->setOutputDefinition('text', DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Text'))
+      ->setDescription(new TranslatableMarkup('The field value, prefixed and cased as the settings ask.'))
+      ->setRequired(TRUE));
+
+    // A list says what one of its items is, and core takes that item
+    // definition in the constructor rather than through a setter, so
+    // this one is constructed around its item and then described
+    // fluently like every definition beside it. The static create() is
+    // deliberately not used: it asks the typed data manager for the item
+    // definition, and a declaration reaches for no service.
+    $classes = new ListDataDefinition(['type' => 'list'], DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Class')));
+    $classes
+      ->setLabel(new TranslatableMarkup('Classes'))
+      ->setDescription(new TranslatableMarkup('The classes the chosen variant puts on the wrapper. Absent when no variant is chosen.'))
+      ->setRequired(FALSE);
+    $builder->setOutputDefinition('classes', $classes);
+    // An output refines against the *input*: once a variant is chosen,
+    // the only class this formatter may emit is that variant's own, and
+    // saying so is what makes the emitted schema worth reading.
+    $builder->addOutputRefinement('classes', ['variant']);
   }
 
   /**
@@ -200,7 +194,7 @@ final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements
    * The whole of what this formatter does, with no render array in
    * sight. The base class turns it into one; a test, a JSON
    * representation or an agent reads it as it is, and conformOutput()
-   * holds it to what the attribute above declares.
+   * holds it to what the declaration above says.
    */
   public function formatValue(FieldItemInterface $item, array $settings): array {
     $value = (string) ($item->getValue()['value'] ?? '');

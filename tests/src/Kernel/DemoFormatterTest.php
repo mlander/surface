@@ -384,7 +384,7 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the attribute's outputs are harvested and sealed.
+   * Tests that the declared outputs are read and sealed.
    *
    * The declaration is read off the class exactly as the inputs are, so
    * a formatter says what it emits in the same place, in the same

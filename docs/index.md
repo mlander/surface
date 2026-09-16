@@ -44,6 +44,7 @@ it](https://www.drupal.org/project/drupal/issues/3622144).
 | **Refiner** | Returns a narrower definition for one key, given what its dependencies hold. | `DataSurfaceRefinerInterface`, and `DataSurfaceFilterInterface` for policy filters |
 | **Host** | The thing whose values a surface describes: a block, a formatter, a condition, an action, a field type, a standalone form. | `Form\*` traits and the `Plugin/*Base` classes |
 | **Provider** | A class that answers with a surface, and with the target it writes to, for a given operation. | `DataSurfaceProviderInterface`, `Form\FieldSurfaceProviderInterface` |
+| **Declaration** | The one home for what a class's surface holds: a static method handed a builder, readable without an instance, which is what the static host defaults protocols need. | `DataSurfaceDeclarationInterface::declareDataSurface()` |
 
 Read the architecture as three layers that never reach into each other.
 A surface is pure data: it holds definitions and refiners, reaches no
@@ -73,11 +74,11 @@ config action and a stored settings array are all the same kind of
 thing, and wrapping them would buy nothing and cost every caller a
 conversion.
 
-**Authoring syntax is arrays too.** The `DataSurfaceAware` attribute
-takes plain arrays of definitions, refinements and locked keys.
-`DefinitionMap::fromArrays()` is the boundary where they become the
-collection, so declaring a surface never means constructing an object
-graph by hand.
+**Authoring syntax is arrays too.** A declaration hands the builder
+plain arrays — a constraint's options, a choice list with its labels, the
+keys a refinement edge names. `DefinitionMap::fromArrays()` is the
+boundary where they become the collection, so declaring a surface never
+means constructing an object graph by hand.
 
 ## Where to start
 
