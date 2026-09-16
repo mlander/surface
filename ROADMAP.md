@@ -286,7 +286,15 @@ which serves the real contract.
     because mounts will tempt violations: chains of selects are
     declared option domains (item 8), presence is relevance (item 10)
     and never a refiner's job, and the imperative refiner stays the
-    marked escape hatch for computed narrowing only. Standalone versus
+    marked escape hatch for computed narrowing only. Refiner dispatch contract, pinned 2026-09-16 so nesting cannot
+    break it: a refiner is always dispatched on the DECLARED edge
+    spelling, never a concrete expanded path; wildcard expansion
+    delivers the index through a separate refinement context argument;
+    mounted child surfaces run their refiners re-keyed in their own
+    local frame, so no parent ever matches into child paths. This
+    keeps every refiner's name space flat and closed, which is what
+    makes the match-dispatch house style sound at any depth.
+    Standalone versus
     embedded declarations are a spectrum since the attribute retired:
     promote to a standalone surface class on reuse, captured subject,
     variant branches, third-party ownership, or a declaration
