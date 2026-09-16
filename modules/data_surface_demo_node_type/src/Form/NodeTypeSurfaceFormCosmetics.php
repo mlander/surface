@@ -13,7 +13,6 @@ use Drupal\data_surface\Form\DataSurfaceFormCosmeticsInterface;
 use Drupal\data_surface\Form\DataSurfaceProviderForm;
 use Drupal\data_surface\Pipeline\DataSurfaceResult;
 use Drupal\data_surface_demo_node_type\NodeTypeSurfaceProvider;
-use Drupal\node\Entity\NodeType;
 
 /**
  * Everything the content type form still has an opinion about.
@@ -102,12 +101,25 @@ final class NodeTypeSurfaceFormCosmetics implements DataSurfaceFormCosmeticsInte
     // The machine name element's mirror-while-typing UX, which only an
     // add has anything to mirror: on edit the key is locked, and the
     // generated element is already disabled.
+    //
+    // The element type is borrowed for what it draws, not for what it
+    // checks. Core's machine name element also validates, against its
+    // own pattern and against an "exists" callback, and both of those
+    // questions are already on the surface: the Regex constraint the
+    // definition carries, and the uniqueness constraint the provider
+    // adds for this operation. Left in place they answer first, and a
+    // form state keeps only the FIRST error per element, so the
+    // element's generic sentence would replace the surface's violation
+    // and the value that was refused would never be named. A layer that
+    // decides what a value may be is no longer cosmetic, so the
+    // checking half of the borrowed element is dropped here and the
+    // surface stays the one authority on what this key accepts.
     if ($operation === NodeTypeSurfaceProvider::OPERATION_ADD) {
       $form[$key]['type']['#type'] = 'machine_name';
       $form[$key]['type']['#machine_name'] = [
-        'exists' => [NodeType::class, 'load'],
         'source' => [$key, 'name'],
       ];
+      $form[$key]['type']['#element_validate'] = [];
     }
     return $form;
   }

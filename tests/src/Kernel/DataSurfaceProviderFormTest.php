@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
+use Drupal\Core\Field\Entity\BaseFieldOverride;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Routing\RouteObjectInterface;
@@ -271,7 +272,17 @@ class DataSurfaceProviderFormTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Cooking instructions.', $type->getDescription());
     $this->assertSame(2, $type->getPreviewMode(FALSE)->value);
     // And the base field override half, which the add target could only
-    // reach once the values had named the bundle.
+    // reach once the values had named the bundle. Read as the config it
+    // is as well as through the field manager: a definition comes from a
+    // cache with a process-long memo behind it, and what was actually
+    // stored is the thing a second process, a deployment or an export
+    // would see.
+    $title_override = BaseFieldOverride::load('node.recipe.title');
+    $this->assertInstanceOf(BaseFieldOverride::class, $title_override);
+    $this->assertSame('Recipe name', (string) $title_override->label());
+    $promote_override = BaseFieldOverride::load('node.recipe.promote');
+    $this->assertInstanceOf(BaseFieldOverride::class, $promote_override);
+    $this->assertTrue((bool) $promote_override->getDefaultValueLiteral()[0]['value']);
     $fields = $this->container->get('entity_field.manager')->getFieldDefinitions('node', 'recipe');
     $this->assertSame('Recipe name', (string) $fields['title']->getLabel());
     $this->assertTrue((bool) $fields['promote']->getDefaultValueLiteral()[0]['value']);
@@ -318,6 +329,15 @@ class DataSurfaceProviderFormTest extends DataSurfaceKernelTestBase {
 
   /**
    * Tests a violation reaching the element that carries the value.
+   *
+   * The element and the message both, because only the pair says the
+   * check that ran was the surface's. A form state keeps the FIRST
+   * error set on an element and drops every later one, so an element
+   * type borrowed for presentation — the machine name the cosmetic
+   * layer swaps in here — answers first with a sentence of its own and
+   * leaves the surface's violation nowhere to go. Asserting the element
+   * alone cannot tell that apart, which is how it reached a browser
+   * before anything noticed.
    */
   public function testViolationsAreFlaggedOnTheirOwnElements(): void {
     NodeType::create(['type' => 'recipe', 'name' => 'Recipe'])->save();
@@ -331,6 +351,10 @@ class DataSurfaceProviderFormTest extends DataSurfaceKernelTestBase {
 
     $errors = $form_state->getErrors();
     $this->assertArrayHasKey('surface][type', $errors);
+    $this->assertSame(
+      'A content type with the machine name recipe already exists.',
+      strip_tags((string) $errors['surface][type']),
+    );
     $this->assertSame('Recipe', NodeType::load('recipe')->label());
     $this->assertSame([], $this->statusMessages());
   }

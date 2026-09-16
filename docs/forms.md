@@ -339,6 +339,14 @@ render time. If you find yourself wanting to change allowed values, a
 default, or whether a key is required, that belongs on the surface —
 through [the build event](declaring-a-surface.md), not here.
 
+Swapping an element's `#type` for a better-looking one borrows what it
+checks along with what it draws, so clear its `#element_validate` when
+you do. An element validates before any form level handler, and a form
+state keeps only the first error set on an element, so a check that came
+with the element answers first and the surface's own violation — the one
+that names the value that was refused — is dropped in silence. The demo
+does exactly this where it borrows core's machine name element.
+
 `data_surface_demo_node_type` is the worked example: two routes, a
 provider service, a cosmetics service holding core's vertical tabs, the
 machine name's mirror-while-typing, the message and the redirect. There

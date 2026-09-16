@@ -24,11 +24,11 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * the one check static schema cannot express — reaches the person as an
  * error on the element that carries the machine name.
  *
- * This checkout cannot run this test locally: installing the node module
- * inside a functional test fails here with a PluginNotFoundException for
- * node_make_sticky_action, and core's own node functional tests fail
- * identically, so the failure is the environment rather than this
- * module. It is written for CI.
+ * It was written for CI, because installing the node module inside a
+ * functional test used to fail here with a PluginNotFoundException for
+ * node_make_sticky_action. The project level phpunit.xml and its
+ * bootstrap fixed that, and the first run this checkout managed found
+ * two things a kernel test cannot see.
  *
  * @group data_surface
  */
@@ -113,6 +113,15 @@ class NodeTypeSurfaceFormTest extends BrowserTestBase {
     // And the base field override half: the title's per bundle label and
     // the promote default are not stored on the content type, and both
     // moved in the same commit.
+    //
+    // Read through a field manager told to forget first. This test runs
+    // in its own process beside the one that served the request, and
+    // that process resolved the node base fields while there were no
+    // overrides at all; the memo behind getFieldDefinitions() holds that
+    // answer for the rest of the run and no cache tag the request
+    // invalidated reaches it. Core's own functional tests drop it the
+    // same way before reading definitions a request has just changed.
+    $this->container->get('entity_field.manager')->clearCachedFieldDefinitions();
     $fields = $this->container->get('entity_field.manager')
       ->getFieldDefinitions('node', 'recipe');
     $this->assertSame('Recipe name', (string) $fields['title']->getLabel());

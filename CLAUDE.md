@@ -22,26 +22,27 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
   modules/custom/data_surface'
 ```
 
-The baseline as of this writing: **510 tests, 2436 assertions, 0 errors,
-3 failures**. The test and assertion counts drift upward as work lands and
-are not the thing to check. **No test may error, and exactly three may
-fail**, one of them for a reason that is not this module's:
+The baseline as of this writing: **510 tests, 2443 assertions, 0 errors,
+1 failure**. The test and assertion counts drift upward as work lands and
+are not the thing to check. **No test may error, and exactly one may
+fail**, and that one for a reason that is not this module's:
 
 1. `DataSurfaceRefinementTest::testRefinementChainRebuildsTheSurface` —
    environmental. `DriverException: Could not open connection` on port
    4444; ddev runs no webdriver. This one is the invariant.
-2. `NodeTypeSurfaceFormTest::testAddStoresTheTypeAndItsOverrides` — an
-   **open finding**: the title override is asserted as `Recipe name` and
-   comes back `Title`.
-3. `NodeTypeSurfaceFormTest::testDuplicateMachineNameIsRefusedOnTheTypeElement`
-   — an **open finding**: the duplicate machine name message never appears.
 
-Both findings are real and unfixed. They surfaced only once node could be
-installed inside functional tests at all, which the project-level
-`web/core/phpunit.xml` and its bootstrap at the site root
-(`phpunit-bootstrap.php`) made possible; delete those two files and the
-old `node_make_sticky_action` install failure comes back, hiding these
-tests again. Any error, or any other failure, is a real regression.
+There are no open findings. The two that stood here —
+`NodeTypeSurfaceFormTest::testAddStoresTheTypeAndItsOverrides` and
+`NodeTypeSurfaceFormTest::testDuplicateMachineNameIsRefusedOnTheTypeElement`
+— are fixed: the cosmetic layer no longer lets core's machine name
+element validate beside the surface and swallow its violation, and the
+test drops the field definitions its own process memoized before the
+request wrote them. Both are pinned by kernel tests now. They surfaced
+only once node could be installed inside functional tests at all, which
+the project-level `web/core/phpunit.xml` and its bootstrap at the site
+root (`phpunit-bootstrap.php`) made possible; delete those two files and
+the old `node_make_sticky_action` install failure comes back, hiding
+these tests again. Any error, or any other failure, is a real regression.
 
 `scripts/check.sh` runs the suite and all three gates below in order,
 enforces that rule, and stops at the first failure.

@@ -51,6 +51,14 @@ interface DataSurfaceFormCosmeticsInterface {
    * allowed values, its default, whether it is required — is in the
    * wrong place, and the surface build event is the right one.
    *
+   * Borrowing an element type for what it draws borrows what it checks
+   * as well, and that half has to go: an element's own #element_validate
+   * runs before any form level handler, and a form state keeps only the
+   * first error per element, so a check the element brings with it
+   * silently replaces the surface's own violation message. Clear
+   * #element_validate on an element whose type was swapped for
+   * presentation, and let the surface's constraints answer.
+   *
    * @param array $form
    *   The complete form, with the surface container under its own key
    *   and the actions element already in place.

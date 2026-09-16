@@ -22,12 +22,10 @@ else
   (cd "$ROOT" && ddev exec bash -c "$RUN") 2>&1 | tee "$WORK/phpunit.txt"
 fi
 
-# Three failures are known and no test may error. One failure is this
-# checkout's: the FunctionalJavascript test wants a webdriver on port 4444
-# and ddev has none. Two are open findings. CLAUDE.md has the detail.
-KNOWN='NodeTypeSurfaceFormTest::testAddStoresTheTypeAndItsOverrides'
-KNOWN="$KNOWN|NodeTypeSurfaceFormTest::testDuplicateMachineNameIsRefusedOnTheTypeElement"
-KNOWN="$KNOWN|DataSurfaceRefinementTest::testRefinementChainRebuildsTheSurface"
+# One failure is known and no test may error, and that one is this
+# checkout's rather than the module's: the FunctionalJavascript test wants
+# a webdriver on port 4444 and ddev has none. CLAUDE.md has the detail.
+KNOWN='DataSurfaceRefinementTest::testRefinementChainRebuildsTheSurface'
 SUMMARY="$(grep -E '^(Tests:|OK) ' "$WORK/phpunit.txt" | tail -1)"
 [ -n "$SUMMARY" ] || fail "phpunit did not finish; no result line in its output"
 ERRORS="$(printf '%s' "$SUMMARY" | sed -n 's/.*Errors: \([0-9][0-9]*\).*/\1/p')"
@@ -73,5 +71,5 @@ php "$WORK/merge.php" "$WEB/core" "$MODULE" "$WORK/cspell.json" || fail "cspell 
 
 echo
 echo "PASS: phpunit, phpcs, phpstan, cspell. PASS means no errors at all and"
-echo "only the three known failures — the webdriver one, which is this"
-echo "checkout's, and two open findings. Anything else is a real regression."
+echo "only the one known failure — the webdriver one, which is this"
+echo "checkout's. Anything else is a real regression."
