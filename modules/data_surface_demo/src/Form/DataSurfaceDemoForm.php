@@ -79,9 +79,10 @@ final class DataSurfaceDemoForm extends FormBase {
     // The pipeline's own merge rule, reused rather than restated: the
     // surface's defaults, then whatever the target holds, then the
     // in-progress choice an AJAX rebuild is refining against.
-    $values = array_replace(
+    $values = $this->surfaceFormValues(
+      $surface,
       $this->surfacePipeline()->accept($surface, [], $this->demoTarget()->load($surface)),
-      $this->surfaceRefinementInput($surface, $form_state),
+      $form_state,
     );
     $form['surface'] = $this->surfaceFormBuilder()
       ->buildSurfaceForm($surface, $values, $form_state, self::WRAPPER_KEY);

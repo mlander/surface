@@ -535,9 +535,9 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the AJAX validates the surface and nothing around it.
+   * Tests that the AJAX validates the one element and nothing else.
    */
-  public function testAjaxIsLimitedToTheSurfaceContainer(): void {
+  public function testAjaxIsLimitedToTheTriggeringElement(): void {
     $container = $this->formBuilder()->buildSurfaceForm($this->dependencySurface(), [], new FormState());
     // The limit cannot be written at build time: a container does not
     // know its own value path until Form API assigns one.
@@ -548,12 +548,34 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
     $complete_form = [];
     DataSurfaceFormBuilder::processSurfaceContainer($container, $form_state, $complete_form);
 
-    // Scoped to the container, not to the element: the surface's own
-    // values stay readable on the rebuild, and the host form around it
-    // is neither validated nor stripped.
-    $this->assertSame([['settings']], $container['kind']['#limit_validation_errors']);
+    // Scoped to the element, not to the container around it. Touching
+    // one select says one thing about one key; every other key on the
+    // surface is still mid-edit and has not been submitted, so nothing
+    // else may be judged. Scoped to the container, a dependent the new
+    // choice had just orphaned was flagged as a wrong answer — and Form
+    // API skips the rebuild outright once anything has errored, so the
+    // container came back unrefined as well.
+    $this->assertSame([['settings', 'kind']], $container['kind']['#limit_validation_errors']);
     // Only what carries AJAX is limited.
     $this->assertArrayNotHasKey('#limit_validation_errors', $container['detail']);
+  }
+
+  /**
+   * Tests that the limit follows the value path, not the render path.
+   *
+   * A container that is not a tree puts its children at the top level,
+   * and the limit is a value path: it has to say where the value is,
+   * not where the element sits.
+   */
+  public function testTheLimitFollowsTheValuePath(): void {
+    $container = $this->formBuilder()->buildSurfaceForm($this->dependencySurface(), [], new FormState());
+    $container['#parents'] = ['settings'];
+    $container['#tree'] = FALSE;
+    $form_state = new FormState();
+    $complete_form = [];
+    DataSurfaceFormBuilder::processSurfaceContainer($container, $form_state, $complete_form);
+
+    $this->assertSame([['kind']], $container['kind']['#limit_validation_errors']);
   }
 
   /**

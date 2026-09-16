@@ -116,7 +116,10 @@ trait DataSurfaceHostFormTrait {
    * Current values are the stored configuration narrowed to the
    * surface's own keys, overlaid with whatever an in-progress AJAX
    * refinement rebuild has already collected, so the definitions refine
-   * against what the person just chose.
+   * against what the person just chose — minus whatever that choice has
+   * just orphaned, which is withdrawn rather than judged. The overlay
+   * and that rule both live in surfaceFormValues(), one copy for every
+   * host.
    *
    * @param array $form
    *   The host's form array.
@@ -129,10 +132,7 @@ trait DataSurfaceHostFormTrait {
   protected function buildDataSurfaceForm(array $form, FormStateInterface $form_state): array {
     $surface = $this->getDataSurface();
     $builder = $this->surfaceFormBuilder();
-    $values = array_replace(
-      $this->storedSurfaceValues($surface),
-      $this->surfaceRefinementInput($surface, $form_state),
-    );
+    $values = $this->surfaceFormValues($surface, $this->storedSurfaceValues($surface), $form_state);
     // Merged through the builder rather than with a plain union: the
     // host's fragment is the host's element, and a union would hand the
     // surface's container type, attributes and tree flag to it.

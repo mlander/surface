@@ -23,7 +23,7 @@ services:
   Drupal\data_surface\Target\SecretCodecInterface: '@data_surface.secret_codec'
   data_surface.form_builder:
     class: Drupal\data_surface\Form\DataSurfaceFormBuilder
-    arguments: ['@plugin.manager.data_surface_widget', '@data_surface.pipeline', '@element_info', '@messenger']
+    arguments: ['@plugin.manager.data_surface_widget', '@data_surface.pipeline', '@element_info', '@messenger', '@data_surface.options']
   Drupal\data_surface\Form\DataSurfaceFormBuilderInterface: '@data_surface.form_builder'
   logger.channel.data_surface:
     parent: logger.channel_base

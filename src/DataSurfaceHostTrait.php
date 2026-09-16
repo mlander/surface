@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface;
 
+use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Form\FormStateInterface;
@@ -319,6 +320,16 @@ trait DataSurfaceHostTrait {
    * it is located on the complete form state through the triggering
    * element's own position, which is nesting-agnostic.
    *
+   * Read from the raw input rather than from the validated values, and
+   * that is not a detail. A refinement trigger limits validation to
+   * itself, and Form API answers a limit by throwing away every value
+   * outside it before the rebuild runs — so the values are, by then, the
+   * one key that was touched and nothing else, while the input is still
+   * the whole form as the browser sent it. Reading the values instead
+   * dropped every other in-progress edit on the way through, and left a
+   * chain refining its second link against storage rather than against
+   * the choice made one rebuild earlier.
+   *
    * Widgets emit definition-shaped trees, so a definition's value sits
    * directly at its own key. (The adapter-era proof of concept had to
    * reach one level deeper, into a 'value' child, which is the kind of
@@ -330,19 +341,117 @@ trait DataSurfaceHostTrait {
    *   The form state of the containing form.
    *
    * @return array
-   *   Submitted values keyed by surface key; empty when the form is not
+   *   Submitted input keyed by surface key; empty when the form is not
    *   rebuilding.
    */
   protected function surfaceRefinementInput(DataSurfaceInterface $surface, FormStateInterface $form_state): array {
-    $state = $form_state instanceof SubformStateInterface
-      ? $form_state->getCompleteFormState()
-      : $form_state;
-    $trigger = $state->getTriggeringElement();
-    if ($trigger === NULL || !isset($trigger['#parents'])) {
+    $state = static::surfaceCompleteFormState($form_state);
+    $path = static::surfaceInputPath($state);
+    if ($path === NULL) {
       return [];
     }
-    $tree = $state->getValue(array_slice($trigger['#parents'], 0, -1));
+    $input = $state->getUserInput();
+    $tree = NestedArray::getValue($input, $path);
     return is_array($tree) ? array_intersect_key($tree, $surface->getDefinitions()->toArray()) : [];
+  }
+
+  /**
+   * Merges stored values with the input an AJAX rebuild is refining on.
+   *
+   * The one overlay every host builds its surface form from, so that the
+   * order — stored underneath, in-progress edit on top — and the rule
+   * for what the edit invalidates are said once rather than per host.
+   *
+   * What the builder names as discarded is dropped from two places, not
+   * one. From the overlay, so the definitions refine and the elements
+   * default against the fall-back value; and from the raw input, because
+   * Form API resolves an element's #value from the input before it ever
+   * looks at #default_value, so an input left in place would put the
+   * orphaned value straight back into the rebuilt select and undo the
+   * whole thing.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The surface being built.
+   * @param array $stored
+   *   What the host holds for the surface's keys.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state of the containing form.
+   *
+   * @return array
+   *   The values to build the surface form from.
+   */
+  protected function surfaceFormValues(DataSurfaceInterface $surface, array $stored, FormStateInterface $form_state): array {
+    $input = $this->surfaceRefinementInput($surface, $form_state);
+    // A programmatic submission is not a rebuild. Its caller said every
+    // value on purpose, in one statement, and a value the surface
+    // refuses is refused rather than quietly dropped — the payload rule,
+    // and the same line the stale model draws: chosen, therefore judged.
+    // Discarding is for the half-finished edit a browser is still in the
+    // middle of.
+    if ($input !== [] && !static::surfaceCompleteFormState($form_state)->isProgrammed()) {
+      $discarded = $this->surfaceFormBuilder()->discardedRefinementInput($surface, $stored, $input);
+      if ($discarded !== []) {
+        $this->forgetSurfaceInput($discarded, $form_state);
+        $input = array_diff_key($input, array_flip($discarded));
+      }
+    }
+    return $input === [] ? $stored : array_replace($stored, $input);
+  }
+
+  /**
+   * Takes discarded keys out of the raw input the rebuild will read.
+   *
+   * @param string[] $keys
+   *   The surface keys whose input is discarded.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state of the containing form.
+   */
+  protected function forgetSurfaceInput(array $keys, FormStateInterface $form_state): void {
+    $state = static::surfaceCompleteFormState($form_state);
+    $path = static::surfaceInputPath($state);
+    if ($path === NULL) {
+      return;
+    }
+    $input = $state->getUserInput();
+    foreach ($keys as $key) {
+      NestedArray::unsetValue($input, [...$path, $key]);
+    }
+    $state->setUserInput($input);
+  }
+
+  /**
+   * Gets the state the whole form's input and values live on.
+   *
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state a host was handed.
+   *
+   * @return \Drupal\Core\Form\FormStateInterface
+   *   The complete form state.
+   */
+  protected static function surfaceCompleteFormState(FormStateInterface $form_state): FormStateInterface {
+    return $form_state instanceof SubformStateInterface
+      ? $form_state->getCompleteFormState()
+      : $form_state;
+  }
+
+  /**
+   * Locates the surface container inside the raw input, via the trigger.
+   *
+   * A refinement trigger is one of the surface's own elements, so its
+   * siblings are the rest of the surface wherever the host nested it.
+   *
+   * @param \Drupal\Core\Form\FormStateInterface $state
+   *   The complete form state.
+   *
+   * @return string[]|null
+   *   The input path of the surface container, or NULL when nothing
+   *   triggered this build.
+   */
+  protected static function surfaceInputPath(FormStateInterface $state): ?array {
+    $trigger = $state->getTriggeringElement();
+    return $trigger === NULL || !isset($trigger['#parents'])
+      ? NULL
+      : array_slice($trigger['#parents'], 0, -1);
   }
 
 }

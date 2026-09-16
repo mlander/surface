@@ -150,16 +150,37 @@ the form is submitted, or when a scalar dependency is touched.
 
 ### `#limit_validation_errors`
 
-Every `#ajax` the builder attached is limited to the container's own
-value path, so touching a dependency validates the surface and never the
-host form around it, and leaves the surface's submitted values — and only
-those — readable on the rebuild.
+Every `#ajax` the builder attached is limited to **that element's own
+value path** and nothing wider. Touching one select says one thing about
+one key: the host form around the surface is not being answered, and
+neither is the rest of the surface.
+
+It was once limited to the whole container, and that one line was a bug
+with two halves. A dependent still holding a value the new choice had
+just orphaned was inside the limit, so the rebuild flagged it — an error
+for a question nobody had asked. And because Form API skips the rebuild
+outright once anything has errored, the container came back refined
+against the choice that had just been replaced: the dependent's list did
+not follow its own parent either. Narrowing the limit closes both.
+
+Nothing is lost by narrowing it. The surface's real validation runs on
+submit, through the host's validate stage, where every key has been
+answered on purpose.
+
+One consequence to know about, because it is not obvious: Form API
+answers a limit by **throwing away every value outside it** before the
+rebuild runs. So by the time the container is rebuilt,
+`$form_state->getValues()` holds the one key that was touched. That is
+why the in-progress overlay is read from the raw input instead — see
+[the SubformState lesson](#the-subformstate-lesson).
 
 It is set in a `#process` callback on the container rather than written
 at build time, for two reasons that are easy to get wrong:
 
 1. A container does not know its own `#parents` until Form API assigns
-   them, so there is no path to limit to at build time.
+   them, so there is no path to limit to at build time — and neither do
+   its children, so the callback computes each child's path the way Form
+   API is about to.
 2. It has to be the container's callback rather than each child's,
    because by the time a child is processed Form API has already taken
    its copy of the triggering element.
@@ -187,6 +208,20 @@ fixed path, which is what makes it nesting-agnostic. If you write a host
 adapter of your own, go through those rather than reading `$form_state`
 directly.
 
+`surfaceRefinementInput()` reads the **raw input**, not the validated
+values, and that is not a detail: a refinement trigger limits validation
+to itself, and Form API throws away every value outside a limit before
+the rebuild runs. The values are the one touched key by then; the input
+is still the whole form as the browser sent it. Reading the values
+instead dropped every other in-progress edit on the way through, and
+left a chain refining its second link against storage rather than
+against the choice made one rebuild earlier.
+
+Hosts do not call it directly. `surfaceFormValues($surface, $stored,
+$form_state)` is the one overlay every host builds from: stored
+underneath, in-progress edit on top, and the discard rule below applied
+between them.
+
 ## Current values on extraction
 
 `extractSurfaceValues()` takes a `$current` argument: what the surface's
@@ -210,6 +245,62 @@ may not ride on a form array.
 reason: only what a key already holds can be *stale*, so a host that
 does not pass the stored values there gets a stale value refused as an
 ordinary violation. The host traits pass one array to both calls.
+
+## Two ways a value stops being allowed
+
+A value can stop being allowed for two quite different reasons, and the
+treatments are opposite. **The distinction is where the invalidation came
+from**, not what the value is.
+
+| | Out of the form, in storage | Inside the form, mid-edit |
+|---|---|---|
+| What happened | A bundle was deleted, a module uninstalled, a refiner narrowed under a saved value | The person changed a dependency, orphaning what a dependent was holding |
+| What it is | A **stored** value that no longer validates | Input nobody submitted: an answer to a question no longer on the screen |
+| Treatment | Kept, placeholder, warning on save | **Discarded**, silently |
+| Cleared when | A real submit, and at no other time | Never — nothing was stored to clear |
+| Said out loud | A messenger warning, on every save | Nothing at all |
+
+The two meet without conflicting. If a parent changes while a child was
+already showing the stale placeholder, the sentinel the browser posted
+back is transient input like any other and is withdrawn — and the stored
+value it stands for is still stored, because a stored value clears on a
+submit and at no other time.
+
+### The in-form half: discarding orphaned input
+
+On a refinement rebuild the surface is refined against the new values
+first, and then every refinement target that the input holds a value for
+is tested against its newly narrowed definition with
+`OptionSet::allows()`. A value the narrowed definition no longer offers
+is **dropped from the input**, and the key falls back, in this order:
+
+1. its **stored** value, when the narrowed definition still offers that;
+2. the **stale placeholder**, when something is stored and is no longer
+   offered — the other half of the table, reached from here;
+3. **nothing chosen**: the `- None -` option on an optional select.
+
+No error and no warning, ever. Nothing was submitted, so there is nothing
+to judge and nothing to report.
+
+Three rules keep it honest:
+
+- **Only input is ever dropped.** `discardedRefinementInput()` names
+  keys; a stored value is never touched by it. A rule that could reach
+  storage would be the stale model with the safety taken off.
+- **The chain settles in one rebuild.** Dropping a value moves what the
+  next target refines against, which invalidates that target's input the
+  same way, so the question is asked again until nothing more moves.
+  Changing the first of three links resets all three in the one rebuild
+  the person is waiting on.
+- **A programmatic submission is exempt.** Its caller said every value on
+  purpose, in one statement, so a value the surface refuses is refused
+  rather than quietly dropped. Discarding is for the half-finished edit
+  a browser is still in the middle of.
+
+The drop reaches the raw input as well as the overlay, because Form API
+resolves an element's `#value` from the input before it ever looks at
+`#default_value`. An input left in place would put the orphaned value
+straight back into the rebuilt select.
 
 ## Stale values on a form
 
@@ -445,11 +536,13 @@ class is three delegations long:
 public function buildForm(array $form, FormStateInterface $form_state): array {
   $surface = $this->surface();
   // The pipeline's own merge rule, reused rather than restated: the
-  // surface's defaults, then whatever the target holds, then the
-  // in-progress choice an AJAX rebuild is refining against.
-  $values = array_replace(
+  // surface's defaults, then whatever the target holds — and then, laid
+  // over the top by surfaceFormValues(), the in-progress choice an AJAX
+  // rebuild is refining against, minus whatever that choice orphaned.
+  $values = $this->surfaceFormValues(
+    $surface,
     $this->surfacePipeline()->accept($surface, [], $this->target()->load($surface)),
-    $this->surfaceRefinementInput($surface, $form_state),
+    $form_state,
   );
   $form['surface'] = $this->surfaceFormBuilder()
     ->buildSurfaceForm($surface, $values, $form_state, 'my-form');

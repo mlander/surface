@@ -166,7 +166,7 @@ trait DataSurfaceFormatterTrait {
     $surface = $this->getDataSurface();
     $builder = $this->surfaceFormBuilder();
     $stored = array_intersect_key($this->getSettings(), $surface->getDefinitions()->toArray());
-    $values = array_replace($stored, $this->surfaceRefinementInput($surface, $form_state));
+    $values = $this->surfaceFormValues($surface, $stored, $form_state);
     $field_name = $this->fieldDefinition->getName();
     $element = $builder->buildSurfaceForm(
       $surface,

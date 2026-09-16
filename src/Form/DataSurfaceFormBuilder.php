@@ -10,8 +10,10 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Render\ElementInfoManagerInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Pipeline\ViolationSet;
 use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
@@ -59,12 +61,17 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
    *   The messenger, which carries the one thing a surface has to say
    *   that is not an error and not part of an element: that a stored
    *   value went stale and is being kept.
+   * @param \Drupal\data_surface\Options\DataSurfaceOptions $options
+   *   The options service, which answers the one question the discard
+   *   rule turns on: whether the refined definition still offers the
+   *   value an in-progress edit left behind.
    */
   public function __construct(
     protected readonly DataSurfaceWidgetManager $widgetManager,
     protected readonly DataSurfacePipelineInterface $pipeline,
     protected readonly ElementInfoManagerInterface $elementInfo,
     protected readonly MessengerInterface $messenger,
+    protected readonly DataSurfaceOptions $options,
   ) {
   }
 
@@ -124,6 +131,89 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
     // state-dependent shape would be cached as though it were static.
     CacheableMetadata::createFromObject($surface)->applyTo($container);
     return $container;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function discardedRefinementInput(DataSurfaceInterface $surface, array $stored, array $input): array {
+    $targets = array_intersect_key($surface->getDefinitions()->refinements(), $input);
+    if ($targets === []) {
+      return [];
+    }
+    // What the person has in front of them right now, before anything is
+    // taken away. Every "did this move?" question below is asked against
+    // this, so a key is only ever judged against the edit it was made
+    // under.
+    $overlay = array_replace($stored, $input);
+    $discarded = [];
+    do {
+      $values = array_replace($stored, array_diff_key($input, $discarded));
+      $refined = $surface->refine($values);
+      $again = FALSE;
+      foreach ($targets as $name => $dependencies) {
+        if (isset($discarded[$name]) || $this->stillStands($refined, $name, $dependencies, $input[$name], $overlay, $values)) {
+          continue;
+        }
+        $discarded[$name] = $name;
+        // One drop moves the next target's dependency, so the whole
+        // question is asked again rather than once per key in whatever
+        // order the definitions happen to be declared in. A chain of any
+        // length settles inside one rebuild.
+        $again = TRUE;
+      }
+    } while ($again);
+    return array_values($discarded);
+  }
+
+  /**
+   * Answers whether one target's in-progress input survives the rebuild.
+   *
+   * Two ways it does not. Either the narrowed definition no longer
+   * offers the value — the direct case, a bundle orphaned by a new
+   * entity type — or a key it refines against has itself just been
+   * discarded to something else, which is the same invalidation one
+   * link further down the chain: the answer was given under a question
+   * that no longer reads the same way.
+   *
+   * A key with no value list behind it is never discarded. There is
+   * nothing to have fallen out of, and an open string that narrowed to
+   * another open string is still holding exactly what was typed into it.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $refined
+   *   The surface refined against the values as they now stand.
+   * @param string $name
+   *   The target key.
+   * @param string[] $dependencies
+   *   The keys the target refines against.
+   * @param mixed $value
+   *   The in-progress input the target holds.
+   * @param array $overlay
+   *   The values as the person left them, before any discard.
+   * @param array $values
+   *   The values as they now stand.
+   *
+   * @return bool
+   *   TRUE when the input is still the person's own answer to the
+   *   question in front of them.
+   */
+  protected function stillStands(DataSurfaceInterface $refined, string $name, array $dependencies, mixed $value, array $overlay, array $values): bool {
+    foreach ($dependencies as $dependency) {
+      if (($overlay[$dependency] ?? NULL) !== ($values[$dependency] ?? NULL)) {
+        return FALSE;
+      }
+    }
+    // Only a value a select could have offered can be tested for
+    // membership at all; anything else is not a choice and is left
+    // alone. A list is left alone for the same reason the stale rule
+    // leaves one alone: some items kept and others dropped is a shape
+    // neither the widget nor this rule has.
+    $definition = $refined->getDefinition($name);
+    if ($definition === NULL || $definition instanceof ListDataDefinitionInterface || (!is_int($value) && !is_string($value))) {
+      return TRUE;
+    }
+    $set = $this->options->resolve($definition);
+    return $set === NULL || $set->allows($value);
   }
 
   /**
@@ -199,10 +289,31 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
     // this. That ordering is the only moment the limit can be written:
     // Form API keeps a copy of the triggering element, so anything added
     // to a child later is never seen.
+    //
+    // The limit is the triggering element and nothing else, not the
+    // container around it. Touching a select is not a submission of the
+    // surface: the person has said one thing, about one key, and every
+    // other key is still mid-edit. Scoped to the container, the rebuild
+    // validated the whole surface — so a dependent holding a value the
+    // new choice had just orphaned was flagged as a wrong answer to a
+    // question nobody asked, and, because Form API skips the rebuild
+    // outright once anything has errored, the container came back
+    // refined against the old choice as well. Both halves of the bug
+    // were that one line.
+    //
+    // The surface's real validation is unaffected: it runs on submit,
+    // through the host's validate stage, where every key has been
+    // answered on purpose.
     $parents = $element['#parents'] ?? [];
+    $tree = !empty($element['#tree']);
     foreach (static::elementChildren($element) as $key) {
       if (isset($element[$key]['#ajax']) && !isset($element[$key]['#limit_validation_errors'])) {
-        $element[$key]['#limit_validation_errors'] = [$parents];
+        // The child's own value path, computed the way Form API is about
+        // to compute it: children of a tree container are nested under
+        // it, and children of anything else are top level.
+        $element[$key]['#limit_validation_errors'] = [
+          $element[$key]['#parents'] ?? ($tree ? [...$parents, $key] : [$key]),
+        ];
       }
     }
     return $element;

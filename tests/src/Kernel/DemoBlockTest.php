@@ -181,7 +181,10 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
 
     $form_state = new FormState();
     $form_state->setTriggeringElement(['#parents' => ['settings', 'entity_type']]);
-    $form_state->setValue(['settings'], ['entity_type' => 'node']);
+    // The raw input, which is what a rebuild reads. See
+    // DataSurfaceHostTrait::surfaceRefinementInput() for why the
+    // validated values are the wrong half by then.
+    $form_state->setUserInput(['settings' => ['entity_type' => 'node']]);
 
     $form = $block->buildConfigurationForm([], $form_state);
 

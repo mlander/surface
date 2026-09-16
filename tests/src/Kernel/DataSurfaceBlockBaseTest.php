@@ -227,9 +227,15 @@ class DataSurfaceBlockBaseTest extends DataSurfaceKernelTestBase {
 
     $form_state = new FormState();
     $form_state->setTriggeringElement(['#parents' => ['settings', 'casing']]);
-    $form_state->setValue(['settings'], [
-      'headline' => 'Featured',
-      'casing' => 'lowercase',
+    // The raw input, which is what a rebuild reads: a refinement
+    // trigger limits validation to itself, so by the time the container
+    // is rebuilt the validated values hold that one key and nothing
+    // else, while the input is still the whole form as it was sent.
+    $form_state->setUserInput([
+      'settings' => [
+        'headline' => 'Featured',
+        'casing' => 'lowercase',
+      ],
     ]);
 
     $form = $block->buildConfigurationForm([], $form_state);

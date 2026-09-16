@@ -22,14 +22,16 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
   modules/custom/data_surface'
 ```
 
-The baseline as of this writing: **538 tests, 2600 assertions, 0 errors,
-1 failure**. The test and assertion counts drift upward as work lands and
-are not the thing to check. **No test may error, and exactly one may
-fail**, and that one for a reason that is not this module's:
+The baseline as of this writing: **547 tests, 2703 assertions, 0 errors,
+2 failures**. The test and assertion counts drift upward as work lands
+and are not the thing to check. **No test may error, and the only tests
+that may fail are the ones in `DataSurfaceRefinementTest`**, for a reason
+that is not this module's:
 
-1. `DataSurfaceRefinementTest::testRefinementChainRebuildsTheSurface` —
-   environmental. `DriverException: Could not open connection` on port
-   4444; ddev runs no webdriver. This one is the invariant.
+1. `DataSurfaceRefinementTest` — environmental, every test in it.
+   `DriverException: Could not open connection` on port 4444; ddev runs
+   no webdriver. That class is the invariant; a failure anywhere else is
+   a real regression.
 
 There are no open findings. The two that stood here —
 `NodeTypeSurfaceFormTest::testAddStoresTheTypeAndItsOverrides` and

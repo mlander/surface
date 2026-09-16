@@ -44,6 +44,40 @@ interface DataSurfaceFormBuilderInterface {
   public function buildSurfaceForm(DataSurfaceInterface $surface, array $values, FormStateInterface $form_state, string $wrapper_key = 'data-surface'): array;
 
   /**
+   * Names the in-progress input a rebuild has just invalidated.
+   *
+   * The in-form half of the two-case rule. When the form's own edit of a
+   * dependency orphans what a dependent was holding, the dependent's
+   * input is transient — nobody submitted it, and it is no longer an
+   * answer to the question now being asked — so it is discarded and the
+   * key falls back: to its stored value when the narrowed definition
+   * still offers that, to the stale placeholder when a stored value
+   * exists and is no longer offered, and otherwise to nothing chosen at
+   * all. Nothing is flagged and nothing is warned about, because nothing
+   * was submitted.
+   *
+   * The out-of-form half is the stale model and is untouched here: only
+   * input is ever named, never a stored value, which clears on a real
+   * submit and at no other time.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The surface, as advertised.
+   * @param array $stored
+   *   What the host stores for the surface's keys.
+   * @param array $input
+   *   The in-progress input an AJAX refinement rebuild collected, keyed
+   *   by surface key.
+   *
+   * @return string[]
+   *   The surface keys whose input is to be dropped. A chain settles in
+   *   one call: discarding a dependency's input invalidates whatever
+   *   refines against it, however many links deep.
+   *
+   * @see docs/forms.md
+   */
+  public function discardedRefinementInput(DataSurfaceInterface $surface, array $stored, array $input): array;
+
+  /**
    * Merges a surface container into a host's own form element.
    *
    * For hosts whose protocol hands over a form fragment the surface has

@@ -229,7 +229,7 @@ trait DataSurfaceFieldTypeTrait {
     // input shape of what is stored rather than the storage shape, and
     // an in-progress refinement rebuild overlays what was just chosen.
     $stored = array_intersect_key($target->load($surface), $surface->getDefinitions()->toArray());
-    $values = array_replace($stored, $this->surfaceRefinementInput($surface, $form_state));
+    $values = $this->surfaceFormValues($surface, $stored, $form_state);
     $element = $this->surfaceFormBuilder()->buildSurfaceForm(
       $surface,
       $values,
