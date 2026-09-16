@@ -32,6 +32,69 @@ argument of [the pipeline's `accept()`](pipeline.md#accept), so a key
 nobody sent keeps what it holds instead of falling back to its declared
 default.
 
+## Asking a provider for one
+
+A target is the third answer of the provider contract's triple, beside
+the surface and the access answer, and all three resolve from the same
+coordinate:
+
+```php
+$surface = $provider->getDataSurface($operation, $subject);
+$access  = $provider->surfaceAccess($operation, $subject);
+$target  = $provider->getDataSurfaceTarget($operation, $subject);
+```
+
+That is what lets a caller holding nothing but an operation and a
+subject write as well as read — a generated form, a config action, a
+Drush command, the discovery endpoint. Before the accessor existed,
+target acquisition had three spellings: plugin hosts wrapped themselves
+implicitly inside a submit handler, the field contract had an accessor
+of its own name, and a standalone provider invented a method nobody
+else could call.
+
+The operation and subject mean here exactly what they mean on
+`getDataSurface()`, and a provider refuses the same coordinates in the
+same words: a target answering for a coordinate the surface refuses
+would be a destination for values nobody could describe.
+
+| Host family | Answers with |
+| --- | --- |
+| Any configurable plugin (block, condition, action) | `PluginConfigurationTarget` over itself, from `DataSurfaceHostFormTrait` — the one construction path for the family, which the form submit now asks for rather than building inline. |
+| Field types | `FieldSettingsTarget` over the field config entity the item is bound to, from `DataSurfaceFieldTypeTrait`. A field type whose storage shape differs overrides it and hands the target a shape. |
+| Field formatters | Nothing: they throw. |
+| A standalone provider | Whatever it writes. The node type demo answers with its composite. |
+
+### The refusal, and why it is a refusal
+
+A provider whose operation has a surface but no target it can name
+throws `\LogicException`. Two kinds of provider legitimately do:
+
+1. **A host that owns the write.** A field formatter's settings are one
+   component of an entity view display, and Field UI copies whatever the
+   settings element produced onto that display and saves it. The
+   formatter has no destination to hand out, so it says so.
+2. **A read-only surface**, describing values nobody writes through the
+   pipeline.
+
+A quietly useless target would be worse than the exception: a caller
+would submit into it, the pipeline would report the values committed,
+and nothing would have been stored.
+
+### When the destination is named by the submission
+
+An add operation has no subject, because the thing it creates does not
+exist to be named — and yet its destination may depend on what is being
+created. The node type demo is the worked example: a content type's base
+field overrides belong to a bundle, and the bundle IS the machine name
+being submitted.
+
+The answer is a target that waits one stage. `NodeTypeAddTarget` reads
+against the entity type's own base fields, exactly as a brand new bundle
+does, and builds the real composite in `prepare()` around the machine
+name the accepted values carry. The alternative — a target accessor
+taking the accepted values — would have put a write-path argument on a
+method the discovery endpoint calls with nothing but a coordinate.
+
 ## Prepare and commit are separate, and that is the whole design
 
 `prepare()` writes nothing. It shapes, it validates against whatever the

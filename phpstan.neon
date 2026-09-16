@@ -29,6 +29,13 @@ parameters:
     -
       identifier: new.static
       path: src/Options/DataSurfaceOptionsResolverBase.php
+    # ContainerInjectionInterface::create() is declared to return static,
+    # and core's own form base classes are extended freely, so the form a
+    # route names stays extensible rather than being sealed to satisfy
+    # the rule.
+    -
+      identifier: new.static
+      path: src/Form/DataSurfaceProviderForm.php
     # Core's ContextDefinition documents $label as string|null|Stringable
     # and $description as string|null, while storing and rendering both
     # the same way. Passing a plain string would drop the translation.

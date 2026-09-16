@@ -109,7 +109,14 @@ type provider is deleted. This is the wire shape the discovery route
 and the dry-run endpoint address surfaces by: host type, host id,
 operation, subject.
 
-Prerequisite, second half: **complete the per-operation triple on the
+Prerequisite, second half — DONE 2026-09-15. The triple is complete
+(`getDataSurfaceTarget()` on both provider contracts, the field-side
+accessor renamed to match), `DataSurfaceProviderForm` serves provider
+forms from route coordinates with a three-method cosmetics seam, and
+the node type demo's form class is gone, not shrunk: routing plus a
+small cosmetics class. The standalone State demo form deliberately
+stays hand-written as the documented case of a surface paired with a
+target nobody owns. Original spec: **complete the per-operation triple on the
 provider contract.** Target acquisition currently has three spellings:
 plugin hosts wrap themselves implicitly, the field contract has an
 accessor, the node type provider invented a bespoke method. The

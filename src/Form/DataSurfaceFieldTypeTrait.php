@@ -111,14 +111,28 @@ trait DataSurfaceFieldTypeTrait {
    * this and hands the target a SettingsShapeInterface, which is where
    * the transform becomes visible.
    *
+   * A field item is its own subject, as it is for the surface, so the
+   * first line refuses any subject by name.
+   *
+   * @param string $operation
+   *   The operation the target is wanted for. Not read: both of a field
+   *   type's settings sets are stored on the same field config entity,
+   *   and the storage settings half is not in this trait at all.
+   * @param string|null $subject
+   *   The id of the thing the operation is about, which for a field item
+   *   may only be NULL.
+   *
    * @return \Drupal\data_surface\Pipeline\DataSurfaceTargetInterface
    *   The target.
    *
+   * @throws \InvalidArgumentException
+   *   When a subject was named.
    * @throws \LogicException
    *   When the item's field definition is not a field config entity,
    *   which is the only kind of definition whose settings are editable.
    */
-  public function getFieldSettingsTarget(): DataSurfaceTargetInterface {
+  public function getDataSurfaceTarget(string $operation = FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS, ?string $subject = NULL): DataSurfaceTargetInterface {
+    $this->surfaceSelfSubject($subject);
     return new FieldSettingsTarget($this->settingsFieldConfig());
   }
 
@@ -210,7 +224,7 @@ trait DataSurfaceFieldTypeTrait {
   public function fieldSettingsForm(array $form, FormStateInterface $form_state): array {
     $field = $this->settingsFieldConfig();
     $surface = $this->getFieldSurface();
-    $target = $this->getFieldSettingsTarget();
+    $target = $this->getDataSurfaceTarget();
     // Current values come through the target, so the form shows the
     // input shape of what is stored rather than the storage shape, and
     // an in-progress refinement rebuild overlays what was just chosen.
@@ -250,7 +264,7 @@ trait DataSurfaceFieldTypeTrait {
   public static function validateSurfaceFieldSettings(array $element, FormStateInterface $form_state): void {
     $item = static::surfaceFieldItem($element[static::FIELD_ELEMENT_KEY] ?? NULL, $form_state);
     $surface = $item->getFieldSurface();
-    $target = $item->getFieldSettingsTarget();
+    $target = $item->getDataSurfaceTarget();
     // @phpstan-ignore globalDrupalDependencyInjection.useDependencyInjection
     $builder = \Drupal::service('data_surface.form_builder');
     $values = $builder->extractSurfaceValues($surface, $element, $form_state, $element[static::CURRENT_ELEMENT_KEY] ?? []);

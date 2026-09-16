@@ -123,7 +123,7 @@ class SecretSettingsTest extends DataSurfaceKernelTestBase {
    */
   protected function submit(array $input): DataSurfaceResult {
     $item = $this->item();
-    $result = $this->pipeline()->submit($item->getFieldSurface(), $input, $item->getFieldSettingsTarget());
+    $result = $this->pipeline()->submit($item->getFieldSurface(), $input, $item->getDataSurfaceTarget());
     $this->assertCount(0, $result->violations);
     $this->assertTrue($result->committed);
     return $result;
@@ -149,7 +149,7 @@ class SecretSettingsTest extends DataSurfaceKernelTestBase {
     // What the pipeline is handed back is the secret itself, which is
     // what makes the next partial update legal.
     $item = $this->item();
-    $loaded = $item->getFieldSettingsTarget()->load($item->getFieldSurface());
+    $loaded = $item->getDataSurfaceTarget()->load($item->getFieldSurface());
     $this->assertSame('sk-1234', $loaded['token']);
   }
 
@@ -181,7 +181,7 @@ class SecretSettingsTest extends DataSurfaceKernelTestBase {
     $this->assertSame('sk-1234', $this->codec()->decrypt($this->storedSettings()['token']));
 
     $item = $this->item();
-    $this->assertSame('sk-1234', $item->getFieldSettingsTarget()->load($item->getFieldSurface())['token']);
+    $this->assertSame('sk-1234', $item->getDataSurfaceTarget()->load($item->getFieldSurface())['token']);
   }
 
   /**
@@ -195,7 +195,7 @@ class SecretSettingsTest extends DataSurfaceKernelTestBase {
     $this->assertNull($this->storedSettings()['token']);
 
     $item = $this->item();
-    $this->assertNull($item->getFieldSettingsTarget()->load($item->getFieldSurface())['token']);
+    $this->assertNull($item->getDataSurfaceTarget()->load($item->getFieldSurface())['token']);
   }
 
   /**
@@ -212,13 +212,13 @@ class SecretSettingsTest extends DataSurfaceKernelTestBase {
     $field->setSettings(['endpoint' => 'https://example.com', 'token' => 'sk-legacy'] + $field->getSettings())->save();
 
     $item = $this->item();
-    $this->assertSame('sk-legacy', $item->getFieldSettingsTarget()->load($item->getFieldSurface())['token']);
+    $this->assertSame('sk-legacy', $item->getDataSurfaceTarget()->load($item->getFieldSurface())['token']);
 
     $this->submit(['endpoint' => 'https://example.test']);
     $this->assertTrue($this->codec()->isEncrypted($this->storedSettings()['token']));
 
     $item = $this->item();
-    $this->assertSame('sk-legacy', $item->getFieldSettingsTarget()->load($item->getFieldSurface())['token']);
+    $this->assertSame('sk-legacy', $item->getDataSurfaceTarget()->load($item->getFieldSurface())['token']);
   }
 
   /**
@@ -229,7 +229,7 @@ class SecretSettingsTest extends DataSurfaceKernelTestBase {
 
     $item = $this->item();
     $surface = $item->getFieldSurface();
-    $values = $item->getFieldSettingsTarget()->load($surface);
+    $values = $item->getDataSurfaceTarget()->load($surface);
     $this->assertSame('sk-1234', $values['token']);
 
     // Built from the values that do hold the secret, which is the point:

@@ -19,9 +19,10 @@ satisfy one host family's protocol using it.
 | Conditions | `Plugin\Condition\DataSurfaceConditionBase` | The declaration, the refiner, `evaluate()` and `summary()`. |
 | Actions | `Plugin\Action\DataSurfaceActionBase` | The declaration, the refiner, `execute()` and `access()`. |
 | Field formatters | `Plugin\Field\FieldFormatter\DataSurfaceFormatterBase` | The declaration, the refiner, `viewElements()`. |
-| Field types | `Form\DataSurfaceFieldTypeTrait` on the item class | The declaration and `getFieldSurface()`, which takes the same operation and subject pair with `field_settings` as its verb; `getFieldSettingsTarget()` only when the storage shape differs from the input shape. |
+| Field types | `Form\DataSurfaceFieldTypeTrait` on the item class | The declaration and `getFieldSurface()`, which takes the same operation and subject pair with `field_settings` as its verb; `getDataSurfaceTarget()` only when the storage shape differs from the input shape. |
 | Any plugin resolving a form class per operation | `Form\DataSurfacePluginForm` | Nothing at all: list the class under a `forms` key. It is named per operation, so it settles the verb at construction and hands the subject to the plugin unread. |
-| A standalone form | Nothing | Build the container, call `submit()`. |
+| A standalone provider served at a route | `Form\DataSurfaceProviderForm` | Nothing but routing, and a cosmetic layer if the page needs one. |
+| A standalone form of your own | Nothing | Build the container, call `submit()`. |
 
 Under those sit three traits, and it is worth knowing which is which when
 you adopt a family none of the base classes covers:
@@ -260,6 +261,105 @@ Two more things these hosts force:
   with `defaultSettings()`. Keys mounted onto the surface at build time
   must therefore appear in that static array too, which is why
   `surfaceDefaultSettings()` always declares `third_party_settings`.
+
+## The generic provider form
+
+A provider answers three questions about one coordinate — surface,
+access, target — which is everything a form needs. So a standalone
+provider does not write a form class: a route names it, and
+`Form\DataSurfaceProviderForm` does the rest.
+
+```yaml
+example.edit:
+  path: '/admin/structure/examples/{example}/surface-edit'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceProviderForm'
+    _title: 'Edit example'
+    _data_surface_provider: 'example.surface_provider'
+    _data_surface_operation: 'edit'
+    _data_surface_subject: 'example'
+    _data_surface_cosmetics: 'example.surface_form_cosmetics'
+  requirements:
+    _entity_access: 'example.update'
+```
+
+The four defaults:
+
+| Default | Holds |
+| --- | --- |
+| `_data_surface_provider` | A service id, or a class the class resolver can instantiate. |
+| `_data_surface_operation` | The verb, from the provider's own vocabulary. Defaults to `configure`. |
+| `_data_surface_subject` | **The name of a route parameter**, not the subject. Its raw value — the string in the path, before upcasting — is the subject. Absent means the provider is its own subject. |
+| `_data_surface_cosmetics` | Optional. A service id or class implementing `Form\DataSurfaceFormCosmeticsInterface`. |
+
+They are underscore-prefixed because Drupal's routing treats such
+defaults as its own: no parameter converter tries to upcast them and no
+argument resolver tries to hand them to `buildForm()`.
+
+The subject rule is the one worth reading twice. A route that has to
+upcast `{example}` to an entity for its own `_entity_access` requirement
+still hands the provider the plain id its contract is written in, so the
+route's access layer and the provider's vocabulary do not have to agree
+about types.
+
+The surface container is built under the `surface` key, which is
+`DataSurfaceProviderForm::SURFACE_KEY` and is part of the contract with
+anything that reads submitted values by path.
+
+### Access, twice
+
+The build refuses a **forbidden** provider answer with a 403, and the
+submit hands the same answer to the pipeline. The second is the one that
+matters, for the reason in [the non-drift rule](#hosts-and-the-non-drift-rule)
+above: a route requirement is checked when the page is built and the
+submit arrives later. A route that states its gate in YAML as well —
+which `data_surface_demo_node_type` does — gets core's own access layer
+first, and the form's check is the floor under it. Neutral blocks
+nothing.
+
+### The cosmetic seam
+
+Three methods, `Form\DataSurfaceFormCosmeticsInterface`, and they are
+the whole of what a form class is still for:
+
+| Method | Decides |
+| --- | --- |
+| `alterSurfaceForm()` | How the built elements are arranged. Runs after every element exists, including the actions. |
+| `surfaceFormMessage()` | What the person is told. NULL for the generic sentence. |
+| `surfaceFormRedirect()` | Where they are sent. NULL to stay on the form. |
+
+A route names one, or the provider implements the interface itself when
+its presentation is the same wherever it is served from.
+
+Nothing in a cosmetic layer can change what a value means. Every element
+keeps its name and its `#parents`; `#group` only relocates an element at
+render time. If you find yourself wanting to change allowed values, a
+default, or whether a key is required, that belongs on the surface —
+through [the build event](declaring-a-surface.md), not here.
+
+`data_surface_demo_node_type` is the worked example: two routes, a
+provider service, a cosmetics service holding core's vertical tabs, the
+machine name's mirror-while-typing, the message and the redirect. There
+is no form class in the module at all.
+
+### When a hand-written form is still right
+
+Three cases, and the demo module is the second one:
+
+1. **The page is not one provider's page.** A form collecting a surface
+   beside several unrelated things — a confirmation step, a batch, an
+   entity form the surface rides inside — is a form, and it composes the
+   surface builder itself.
+2. **The surface and the destination belong to different owners.**
+   `data_surface_demo` renders the demo block's surface into a
+   `StateTarget`, which is exactly the claim it exists to make: a surface
+   is independent of where its values are stored. Converting it would
+   mean inventing a provider adapter that answers `getDataSurface()` for
+   a surface it does not own, which is more indirection than the three
+   delegations it would delete.
+3. **The host protocol is not a route.** Field UI, the block layout
+   form, the manage display form: those are the host trait families
+   above, not this.
 
 ## A standalone form
 

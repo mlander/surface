@@ -11,6 +11,7 @@ use Drupal\Core\Plugin\PluginFormBase;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DataSurfaceProviderInterface;
+use Drupal\data_surface\Pipeline\DataSurfaceTargetInterface;
 
 /**
  * A reusable plugin form generated entirely from the plugin's surface.
@@ -121,6 +122,40 @@ class DataSurfacePluginForm extends PluginFormBase {
     return $this->plugin instanceof DataSurfaceProviderInterface
       ? $this->plugin->surfaceAccess($this->operation, $subject, $account)
       : AccessResult::neutral();
+  }
+
+  /**
+   * Asks the plugin where this form's operation stores its values.
+   *
+   * Delegated for the reason the other two are: the surface is the
+   * plugin's, so the destination is the plugin's to name, and a plugin
+   * that has overridden the accessor — one whose values do not live in
+   * its own configuration array — must not be second-guessed by the
+   * form class serving it. The operation is this form's own and the
+   * subject travels unread, exactly as above.
+   *
+   * @param string $operation
+   *   Unused; present to satisfy the provider signature.
+   * @param string|null $subject
+   *   The id of the thing the operation is about, passed to the plugin
+   *   as it arrived.
+   *
+   * @return \Drupal\data_surface\Pipeline\DataSurfaceTargetInterface
+   *   The plugin's target for this form's operation.
+   *
+   * @throws \LogicException
+   *   When the plugin does not provide a surface at all, which is the
+   *   same refusal getDataSurface() makes.
+   */
+  public function getDataSurfaceTarget(string $operation = 'configure', ?string $subject = NULL): DataSurfaceTargetInterface {
+    if (!$this->plugin instanceof DataSurfaceProviderInterface) {
+      throw new \LogicException(sprintf(
+        '%s requires a plugin implementing DataSurfaceProviderInterface; %s given.',
+        static::class,
+        get_debug_type($this->plugin),
+      ));
+    }
+    return $this->plugin->getDataSurfaceTarget($this->operation, $subject);
   }
 
   /**

@@ -9,6 +9,7 @@ use Drupal\Component\Plugin\PluginInspectionInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DataSurfaceHostTrait;
+use Drupal\data_surface\Pipeline\DataSurfaceTargetInterface;
 use Drupal\data_surface\Target\PluginConfigurationTarget;
 
 /**
@@ -32,7 +33,9 @@ use Drupal\data_surface\Target\PluginConfigurationTarget;
  * Submit goes through the pipeline rather than assigning the values: the
  * plugin configuration target puts the host-owned keys back around them
  * and commits, so the storage rule lives in one place for every caller,
- * form or not.
+ * form or not. The target itself comes from getDataSurfaceTarget(),
+ * which this trait also answers, so the form path and a caller holding
+ * only a coordinate reach one construction rather than two.
  */
 trait DataSurfaceHostFormTrait {
 
@@ -69,6 +72,42 @@ trait DataSurfaceHostFormTrait {
       ));
     }
     return $this;
+  }
+
+  /**
+   * Gets the target this host's surface values are stored through.
+   *
+   * The one construction path for the plugin host family, and what the
+   * submit stage below now asks rather than constructing a target of its
+   * own: a plugin's values live in its configuration array, so the
+   * target is the plugin wrapped in a PluginConfigurationTarget, and a
+   * form, a config action, a tool and the discovery endpoint all reach
+   * the same object by asking the provider for it.
+   *
+   * A plugin is its own subject, exactly as it is for the surface, so a
+   * caller naming one has addressed the wrong provider and is refused by
+   * name.
+   *
+   * @param string $operation
+   *   The host operation the target is wanted for. Not read: a plugin's
+   *   configuration array is where every one of its operations stores,
+   *   which is the whole reason this host family needs no target code
+   *   per operation.
+   * @param string|null $subject
+   *   The id of the thing the operation is about, which for a plugin may
+   *   only be NULL.
+   *
+   * @return \Drupal\data_surface\Pipeline\DataSurfaceTargetInterface
+   *   The target.
+   *
+   * @throws \InvalidArgumentException
+   *   When a subject was named.
+   *
+   * @see \Drupal\data_surface\DataSurfaceProviderInterface::getDataSurfaceTarget()
+   */
+  public function getDataSurfaceTarget(string $operation = 'configure', ?string $subject = NULL): DataSurfaceTargetInterface {
+    $this->surfaceSelfSubject($subject);
+    return new PluginConfigurationTarget($this->surfaceConfigurable());
   }
 
   /**
@@ -157,7 +196,7 @@ trait DataSurfaceHostFormTrait {
     $result = $this->surfacePipeline()->submit(
       $surface,
       $values,
-      new PluginConfigurationTarget($this->surfaceConfigurable()),
+      $this->getDataSurfaceTarget(),
       access: $this->surfaceAccess(),
     );
     if (!$result->isValid()) {

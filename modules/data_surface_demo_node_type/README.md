@@ -21,6 +21,14 @@ config entity and a set of base field overrides through one composite
 target, in an order that matters, because on add the bundle does not
 exist while values are prepared.
 
+There is no form class in this module. Both routes name
+`Drupal\data_surface\Form\DataSurfaceProviderForm` with the provider
+service, the operation, and — for the edit route — the route parameter
+the subject is read from. What is left of a form here is
+`NodeTypeSurfaceFormCosmetics`: core's vertical tabs, the machine name's
+mirror-while-typing, the message and the redirect, which is the part
+that should stay bespoke.
+
 ## How to try it
 
 ```bash
@@ -71,6 +79,9 @@ appears where following it would be refused.
 
 `Kernel\NodeTypeSurfaceTest` covers the add and edit surfaces, the lock
 on edit, and the composite target's two destinations.
+`Kernel\DataSurfaceProviderFormTest` drives both routes through the
+generic form, message and redirect included, and
+`Functional\NodeTypeSurfaceFormTest` does the same in a browser.
 
 ## Why it is a demo and not a replacement
 

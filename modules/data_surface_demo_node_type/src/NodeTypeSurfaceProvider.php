@@ -18,6 +18,7 @@ use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceFactoryInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DataSurfaceProviderInterface;
+use Drupal\data_surface\Pipeline\DataSurfaceTargetInterface;
 use Drupal\data_surface\Target\BaseFieldOverrideTarget;
 use Drupal\data_surface\Target\CompositeTarget;
 use Drupal\data_surface\Target\ConfigEntityTarget;
@@ -71,6 +72,14 @@ use Drupal\node\NodeTypeInterface;
  * pipeline when it writes, so the gate a person meets on the way in and
  * the gate the values meet on the way out are one gate rather than two
  * spellings of one intention.
+ *
+ * And the same pair carries the destination, which completes the triple
+ * and is what lets this module ship no form class at all: its two routes
+ * name the generic provider form with this service, an operation, and
+ * the route parameter the subject is read from. Editing writes the
+ * content type the subject names; adding writes one that does not exist
+ * yet, whose machine name is itself a submitted value, so that half
+ * waits one stage in NodeTypeAddTarget.
  */
 final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
 
@@ -271,6 +280,48 @@ final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
       $type->access('update', $account, TRUE)->andIf($permission),
       'Editing a content type through this module needs both permission to administer content types and the demo module\'s own permission.',
     );
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * The third answer for the same two operations, and the one that
+   * shows why a surface and a destination are asked for separately:
+   * one declaration describes both operations, and each of them writes
+   * somewhere different. Editing writes the content type the subject
+   * names; adding writes a content type that does not exist yet, whose
+   * machine name is itself one of the submitted values, so the
+   * composite is resolved one stage later by NodeTypeAddTarget.
+   *
+   * Refused exactly where getDataSurface() is refused, and in the same
+   * words, because a caller holding a coordinate the surface answers
+   * for must not find the target answering for a different one.
+   *
+   * @throws \InvalidArgumentException
+   *   When the operation is neither, when 'add' is handed a subject it
+   *   has nothing to do with, or when 'edit' names no content type or
+   *   names one that does not exist.
+   */
+  public function getDataSurfaceTarget(string $operation = self::OPERATION_ADD, ?string $subject = NULL): DataSurfaceTargetInterface {
+    if ($operation === self::OPERATION_ADD) {
+      if ($subject !== NULL) {
+        throw new \InvalidArgumentException(sprintf(
+          'The "%s" operation writes a content type that does not exist yet, so it has no subject; "%s" was named.',
+          self::OPERATION_ADD,
+          $subject,
+        ));
+      }
+      return new NodeTypeAddTarget($this);
+    }
+    if ($operation !== self::OPERATION_EDIT) {
+      throw new \InvalidArgumentException(sprintf(
+        'The content type surface is written for the "%s" or "%s" operation, not for "%s".',
+        self::OPERATION_ADD,
+        self::OPERATION_EDIT,
+        $operation,
+      ));
+    }
+    return $this->targetFor($this->subjectContentType($subject));
   }
 
   /**

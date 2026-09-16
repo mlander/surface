@@ -96,6 +96,46 @@ trait DataSurfaceFormatterTrait {
   abstract public function getDataSurface(string $operation = 'configure', ?string $subject = NULL): DataSurfaceInterface;
 
   /**
+   * States that a formatter has no target of its own to hand out.
+   *
+   * The shipped example of the provider contract's one refusal. A
+   * formatter's settings are not the formatter's to store: they are one
+   * component of an entity view display, and Field UI copies whatever
+   * the settings element produced onto that display and saves it. So
+   * there is no destination this object could name, and the settings
+   * form path never asks for one — it runs accept and validate in an
+   * #element_validate callback and writes the accepted values back into
+   * form state for the host to copy.
+   *
+   * Saying so out loud is the point. A quietly useless target — the
+   * formatter's own settings array, say, thrown away with the plugin
+   * instance at the end of the request — would let a caller submit into
+   * it and be told the values were stored.
+   *
+   * A caller that means to write a formatter's settings writes the
+   * display: load the entity view display, set the component, save it.
+   *
+   * @param string $operation
+   *   The host operation the target is wanted for.
+   * @param string|null $subject
+   *   The id of the thing the operation is about.
+   *
+   * @return never
+   *   Never returns: the provider contract's one refusal.
+   *
+   * @throws \LogicException
+   *   Always.
+   *
+   * @see \Drupal\data_surface\DataSurfaceProviderInterface::getDataSurfaceTarget()
+   */
+  public function getDataSurfaceTarget(string $operation = 'configure', ?string $subject = NULL): never {
+    throw new \LogicException(sprintf(
+      'The settings of the %s formatter are stored by the entity view display that hosts it, not by the formatter, so there is no target to hand out; write the display component instead.',
+      static::class,
+    ));
+  }
+
+  /**
    * Reads the static default settings from a class's attribute.
    *
    * @param string $class

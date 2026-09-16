@@ -101,7 +101,7 @@ class AddressFieldSurfaceTest extends DataSurfaceKernelTestBase {
     $field ??= $this->field;
     $item = $this->container->get('typed_data_manager')->create($field->getItemDefinition());
     $this->assertInstanceOf(FieldSurfaceProviderInterface::class, $item);
-    $target = $item->getFieldSettingsTarget();
+    $target = $item->getDataSurfaceTarget();
     $this->assertInstanceOf(DataSurfaceTargetInterface::class, $target);
     return $target;
   }

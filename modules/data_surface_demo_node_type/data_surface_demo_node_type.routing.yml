@@ -7,11 +7,20 @@
 # surface-driven way in is open on this site, which is what keeps the
 # demo from being a back door nobody has reviewed, open to anyone holding
 # "administer content types".
+#
+# Neither route names a form class of this module's own. The generic
+# provider form builds both from the coordinate below — the provider
+# service, the operation, and, for the edit route, the route parameter
+# whose raw value is the subject. What stays this module's is the
+# cosmetic layer the last default names.
 data_surface_demo_node_type.add:
   path: '/admin/structure/types/surface-add'
   defaults:
-    _form: 'Drupal\data_surface_demo_node_type\Form\NodeTypeSurfaceForm'
+    _form: 'Drupal\data_surface\Form\DataSurfaceProviderForm'
     _title: 'Add content type (surface)'
+    _data_surface_provider: 'data_surface_demo_node_type.provider'
+    _data_surface_operation: 'add'
+    _data_surface_cosmetics: 'data_surface_demo_node_type.form_cosmetics'
   requirements:
     _permission: 'administer data surface node type demo'
     _entity_create_access: 'node_type'
@@ -19,8 +28,15 @@ data_surface_demo_node_type.add:
 data_surface_demo_node_type.edit:
   path: '/admin/structure/types/manage/{node_type}/surface-edit'
   defaults:
-    _form: 'Drupal\data_surface_demo_node_type\Form\NodeTypeSurfaceForm'
+    _form: 'Drupal\data_surface\Form\DataSurfaceProviderForm'
     _title: 'Edit content type (surface)'
+    _data_surface_provider: 'data_surface_demo_node_type.provider'
+    _data_surface_operation: 'edit'
+    # The name of the parameter, not the subject: the route upcasts
+    # {node_type} to an entity for its own access requirement, and the
+    # provider is handed the raw machine name its contract is written in.
+    _data_surface_subject: 'node_type'
+    _data_surface_cosmetics: 'data_surface_demo_node_type.form_cosmetics'
   requirements:
     _permission: 'administer data surface node type demo'
     _entity_access: 'node_type.update'

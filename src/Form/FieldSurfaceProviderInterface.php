@@ -89,10 +89,31 @@ interface FieldSurfaceProviderInterface {
    * same for every instance of the field type, and the target is the
    * instance being described.
    *
+   * Spelled exactly as DataSurfaceProviderInterface spells it, name and
+   * pair alike, unlike getFieldSurface(). There is no ambiguity for the
+   * operation to resolve away here — a target is a destination, and the
+   * operation argument is what says which of a field type's two sets of
+   * settings is meant — so a caller holding either kind of provider asks
+   * for a destination one way, as it already does for an access answer.
+   *
+   * @param string $operation
+   *   The operation the target is wanted for; OPERATION_FIELD_SETTINGS
+   *   unless a field type serves more than the instance settings.
+   * @param string|null $subject
+   *   The id of the thing the operation is about, or NULL when the
+   *   field item is its own subject. The same opaque id
+   *   getFieldSurface() takes.
+   *
    * @return \Drupal\data_surface\Pipeline\DataSurfaceTargetInterface
    *   The target.
+   *
+   * @throws \InvalidArgumentException
+   *   When the operation is not one this field type has a target for, or
+   *   when the subject is one it cannot resolve.
+   *
+   * @see \Drupal\data_surface\DataSurfaceProviderInterface::getDataSurfaceTarget()
    */
-  public function getFieldSettingsTarget(): DataSurfaceTargetInterface;
+  public function getDataSurfaceTarget(string $operation = self::OPERATION_FIELD_SETTINGS, ?string $subject = NULL): DataSurfaceTargetInterface;
 
   /**
    * Answers whether an account may configure these settings.

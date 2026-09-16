@@ -132,7 +132,11 @@ The module uses these seven words in exactly one sense each.
   run an operation**, with core's `AccessResult`, and the pipeline
   consults that answer before it reads or writes anything — so a form, a
   Drush command, a config action and an agent resolve one gate rather
-  than four.
+  than four. Surface, access and target all resolve from the same
+  coordinate, which is why a route naming a provider and an operation is
+  a working form with no form class behind it:
+  `Form\DataSurfaceProviderForm` serves any provider, and what stays
+  bespoke is the cosmetic layer.
 
 ## Experimental submodules
 
@@ -147,8 +151,9 @@ their configuration may change without a deprecation path.
   third-party module extending someone else's surface through the build
   event, with no form alter anywhere.
 - **Data Surface Demo - Node type** (`data_surface_demo_node_type`) — one
-  surface serving an add form and an edit form, with a composite target.
-  Adds its own permission; see its README.
+  surface serving an add form and an edit form, with a composite target,
+  and two routes that name the generic provider form rather than a form
+  class. Adds its own permission; see its README.
 - **Data Surface - Address field settings** (`data_surface_address`) — a
   contributed field type adopting a surface without being forked. Needs
   [Address](https://www.drupal.org/project/address).
@@ -172,7 +177,7 @@ Full documentation is under [`docs/`](docs/).
 | [Value semantics](docs/semantics.md) | Configured or not, the casting table, shape mismatches. |
 | [Outputs](docs/outputs.md) | Declaring what a host emits, the Omitted sentinel, conformance. |
 | [Targets](docs/targets.md) | The seven shipped targets and the serialization rule. |
-| [Generated forms](docs/forms.md) | Host families, the merge rule, AJAX, extraction. |
+| [Generated forms](docs/forms.md) | Host families, the generic provider form and its cosmetic seam, the merge rule, AJAX, extraction. |
 | [Widgets](docs/widgets.md) | The widget plugin type, and writing one. |
 | [Options and resolvers](docs/options.md) | `LabeledChoice`, the resolver plugin type, the stock resolvers. |
 | [Refinement](docs/refinement.md) | Contributions, the narrowing table, cacheability. |

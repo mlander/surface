@@ -83,7 +83,7 @@ final class FieldSurfaceLocator {
    *   The target, or NULL when this field type declares none.
    */
   public function targetFor(FieldConfigInterface $field): ?DataSurfaceTargetInterface {
-    return $this->fieldItem($field)?->getFieldSettingsTarget();
+    return $this->fieldItem($field)?->getDataSurfaceTarget();
   }
 
   /**

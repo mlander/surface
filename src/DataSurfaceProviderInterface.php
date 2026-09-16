@@ -6,6 +6,7 @@ namespace Drupal\data_surface;
 
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\data_surface\Pipeline\DataSurfaceTargetInterface;
 
 /**
  * Something whose values are described by a runtime surface.
@@ -133,5 +134,58 @@ interface DataSurfaceProviderInterface {
    * @see \Drupal\data_surface\Pipeline\DataSurfacePipelineInterface::submit()
    */
   public function surfaceAccess(string $operation = 'configure', ?string $subject = NULL, ?AccountInterface $account = NULL): AccessResultInterface;
+
+  /**
+   * Gets where one operation's values are read from and written to.
+   *
+   * The third answer of the triple, and the one that completes it:
+   * surface, access and target are all resolvable from the same
+   * operation and subject, so a caller holding nothing but a coordinate
+   * can describe a thing, ask whether it may be written, and write it.
+   * Without this a generated endpoint could serve plugins, whose target
+   * is always the plugin itself, and nothing else.
+   *
+   * The pair means here exactly what it means on getDataSurface(): the
+   * operation is a closed verb that never carries identity, the subject
+   * is an opaque id the provider resolves for itself, and NULL is a
+   * provider that is its own subject — which is every plugin, formatter
+   * and field item, and is why the host base classes in this module
+   * answer this by wrapping themselves in a
+   * \Drupal\data_surface\Target\PluginConfigurationTarget.
+   *
+   * A surface and a target are not the same object for a reason worth
+   * restating here: one destination serves the add surface and the edit
+   * surface of one thing, and one surface may be written to several
+   * destinations. So this is a second question about the same
+   * coordinate, not a property of the surface.
+   *
+   * @param string $operation
+   *   The host operation the target is wanted for; the same vocabulary
+   *   getDataSurface() takes, under the same rule.
+   * @param string|null $subject
+   *   The id of the thing the operation is about, or NULL when the
+   *   provider is its own subject. The same opaque id getDataSurface()
+   *   takes.
+   *
+   * @return \Drupal\data_surface\Pipeline\DataSurfaceTargetInterface
+   *   Where that operation's values live.
+   *
+   * @throws \InvalidArgumentException
+   *   When the operation is not one this provider has a target for, or
+   *   when the subject is one it cannot resolve — the same refusals
+   *   getDataSurface() makes, for the same reasons.
+   * @throws \LogicException
+   *   When the operation has a surface but no target this provider can
+   *   name: a read-only surface describing values nobody writes, or a
+   *   host that owns the write itself and never hands a destination out
+   *   — a field formatter's settings are the shipped example, since the
+   *   entity display that hosts it is what stores them. A quietly
+   *   useless target would be worse, because a caller would submit into
+   *   it and be told the values were stored.
+   *
+   * @see \Drupal\data_surface\Pipeline\DataSurfaceTargetInterface
+   * @see docs/targets.md
+   */
+  public function getDataSurfaceTarget(string $operation = 'configure', ?string $subject = NULL): DataSurfaceTargetInterface;
 
 }

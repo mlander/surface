@@ -98,8 +98,24 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  *     return $this->answerFor($operation, $subject, $account);
  *   }
  *
+ *   public function getDataSurfaceTarget(string $operation = 'add', ?string $subject = NULL): DataSurfaceTargetInterface {
+ *     // The third answer about the same coordinate, refused in the same
+ *     // words as the surface: where these values are read from and
+ *     // written to. A provider whose operation has a surface but no
+ *     // destination — a read-only one, or a host that owns the write —
+ *     // throws \LogicException rather than handing back a target that
+ *     // would report values stored and store nothing.
+ *     return $this->targetFor($operation === 'add' ? NULL : $this->resolve($subject));
+ *   }
+ *
  * }
  * @endcode
+ *
+ * Surface, access and target from one coordinate is what makes a provider
+ * servable without a form class: a route naming the provider service, the
+ * operation and the route parameter the subject is read from is a working
+ * page through \Drupal\data_surface\Form\DataSurfaceProviderForm, and what
+ * stays hand-written is the cosmetic layer.
  *
  * A provider that is its own subject — a block, a condition, an action, a
  * formatter, a field item — inherits the rule from
@@ -109,6 +125,7 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  *
  * @see \Drupal\data_surface\DataSurfaceProviderInterface
  * @see \Drupal\data_surface\Form\FieldSurfaceProviderInterface
+ * @see \Drupal\data_surface\Form\DataSurfaceProviderForm
  * @see \Drupal\data_surface\DataSurfaceHostTrait::surfaceSelfSubject()
  * @see docs/declaring-a-surface.md
  * @see docs/pipeline.md
