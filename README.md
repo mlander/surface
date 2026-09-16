@@ -185,6 +185,12 @@ Full documentation is under [`docs/`](docs/).
 `data_surface.api.php` documents the build event and the two plugin
 types for the API reference.
 
+## Development
+
+`scripts/check.sh` runs the test suite, PHPCS, PHPStan and cspell in one
+go, with the incantations each of them needs; `CLAUDE.md` explains what a
+passing run looks like.
+
 The design history is kept beside this file: [PLAN.md](PLAN.md) for the
 gaps and phases as they were reasoned through, [ADOPTION.md](ADOPTION.md)
 for the full core survey, and [HARDENING.md, and the forward plan in ROADMAP.md](HARDENING.md) for the audit

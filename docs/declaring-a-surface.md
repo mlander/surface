@@ -202,6 +202,33 @@ looking like one host to a subscriber. It is part of a host's public
 surface, because subscribers match on it; a host whose kind core has no
 name for picks one and keeps it.
 
+## Class names
+
+Two class-naming rules, so that a reader who has only a grep finds the
+rest of the story.
+
+**A standalone provider ends in `SurfaceProvider`.** A class that
+implements `DataSurfaceProviderInterface` without being a host of its own
+— it answers with a surface, a target and an access result for an
+operation and subject — is named for what it provides:
+`NodeTypeSurfaceProvider`. A host that carries its own declaration is
+named for the host, not for the surface, because the surface is not the
+thing it is.
+
+**A class-swap adopter prefixes the swapped class with `Surface`, and
+says so in the hook.** Adopting a class you do not own means subclassing
+it and swapping the subclass in through an info alter — the address field
+type is the shipped example, where
+`\Drupal\address\Plugin\Field\FieldType\AddressItem` becomes
+`SurfaceAddressItem`. The prefix makes the pair legible at a glance, and
+the hook implementation's docblock **must name the replacement class**,
+so that grepping for the original class name lands on the one line that
+replaces it rather than on a `use` statement with no explanation.
+`AddressSurfaceHooks::fieldInfoAlter()` is the pattern to copy.
+
+Both rules exist for the same reason as the host id namespace: the
+module's seams have to be findable from either end.
+
 ## Map properties, before seal
 
 Core's `MapDataDefinition` takes only its own definition array in its
