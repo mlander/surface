@@ -69,8 +69,7 @@ final class DemoExtrasSurfaceSubscriber implements EventSubscriberInterface {
         ->setDescription(new TranslatableMarkup('A badge rendered beside the value.'))
         ->setRequired(FALSE)
         ->addConstraint('LabeledChoice', [
-          'choices' => ['star', 'flame'],
-          'labels' => [
+          'choices' => [
             'star' => new TranslatableMarkup('Star'),
             'flame' => new TranslatableMarkup('Flame'),
           ],

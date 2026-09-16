@@ -48,8 +48,7 @@ final class DataSurfaceTestAction extends DataSurfaceActionBase {
       ->setLabel(new TranslatableMarkup('Level'))
       ->setRequired(FALSE)
       ->addConstraint('LabeledChoice', [
-        'choices' => ['status', 'warning'],
-        'labels' => [
+        'choices' => [
           'status' => new TranslatableMarkup('Status'),
           'warning' => new TranslatableMarkup('Warning'),
         ],

@@ -78,8 +78,7 @@ final class DataSurfaceTestBlock extends DataSurfaceBlockBase {
       ->setLabel(new TranslatableMarkup('Casing'))
       ->setRequired(FALSE)
       ->addConstraint('LabeledChoice', [
-        'choices' => ['none', 'uppercase', 'lowercase'],
-        'labels' => [
+        'choices' => [
           'none' => new TranslatableMarkup('As written'),
           'uppercase' => new TranslatableMarkup('Upper case'),
           'lowercase' => new TranslatableMarkup('Lower case'),
@@ -103,10 +102,7 @@ final class DataSurfaceTestBlock extends DataSurfaceBlockBase {
       return $definition;
     }
     $offered = $variants[$values['casing']];
-    $definition->addConstraint('LabeledChoice', [
-      'choices' => array_keys($offered),
-      'labels' => $offered,
-    ]);
+    $definition->addConstraint('LabeledChoice', ['choices' => $offered]);
     if ($definition instanceof DataDefinition) {
       $definition->setDescription(new TranslatableMarkup('A @casing variant.', [
         '@casing' => $values['casing'],

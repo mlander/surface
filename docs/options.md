@@ -63,6 +63,85 @@ this constraint, so `choices` alone is never read as one. Both `labels`
 and `descriptions` may be partial: a value with no label of its own is
 named by its value.
 
+Both spellings are one declaration to every consumer: the resolver
+answers with the same `OptionSet`, the narrowing check gives the same
+verdict, and a contribution merges into either identically —
+`ChoiceSpellingParityTest` is where that is held to.
+
+### One vocabulary, declared once
+
+The map spelling already keeps a declaration from naming a value twice.
+When the *code* names the values too — a `match` on a stored setting, a
+lookup of what each value offers — a backed enum keeps the whole
+vocabulary in one place. Core's `NodePreviewMode` is the precedent:
+cases, a `label()` method, and `asOptions()` projecting the two into the
+value-to-label map a form takes.
+
+```php
+enum DemoVariant: string {
+
+  case Bold = 'bold';
+  case Strong = 'strong';
+  case Quiet = 'quiet';
+  case Muted = 'muted';
+
+  public function label(): TranslatableMarkup {
+    return match ($this) {
+      self::Bold => new TranslatableMarkup('Bold'),
+      // ...
+    };
+  }
+
+  /**
+   * The value-to-label map the short spelling takes.
+   */
+  public static function choices(): array {
+    $choices = [];
+    foreach (self::cases() as $case) {
+      $choices[$case->value] = $case->label();
+    }
+    return $choices;
+  }
+
+}
+```
+
+The declaration consumes the projection, and no value is spelled out
+twice anywhere:
+
+```php
+$builder->setDefinition('variant', DataDefinition::create('string')
+  ->setLabel(new TranslatableMarkup('Variant'))
+  ->setRequired(FALSE)
+  ->addConstraint('LabeledChoice', ['choices' => DemoVariant::choices()]));
+```
+
+**An enum is not a fence around the key.** What the key allows is the
+constraint, and a contributing module widens it at build time with a
+value of its own: `data_surface_demo_extras` contributes `ribbon`, which
+is deliberately not a case in the demo's enum. A contributor answers for
+its own value, and the owner's enum is not where that value lives — that
+is what a contribution *is*. So code acting on a stored value takes the
+string it was handed rather than `DemoVariant::from()`-ing it, and only
+the owner's own half of the vocabulary is enumerated. An enum used as a
+gate turns every contribution into a fatal.
+
+**When the plain map is enough.** Most vocabularies are named once, in
+the declaration, and read back only as options. Those want the map
+spelling and nothing else; an enum whose only caller is the declaration
+buys a class for no reader. Reach for the enum when the values are also
+matched on in code. And when the values are integers, the enum fills the
+`labels` half of the canonical spelling rather than the whole of the
+short one, because an integer-keyed map of labels cannot be told from a
+list of values:
+
+```php
+->addConstraint('LabeledChoice', [
+  'choices' => array_column(NodePreviewMode::cases(), 'value'),
+  'labels' => NodePreviewMode::asOptions(),
+]);
+```
+
 ## The resolver plugin type
 
 A resolver reads one kind of constraint as a list of allowed values.

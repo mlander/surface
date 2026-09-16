@@ -174,10 +174,7 @@ final class DataSurfaceDemoBlock extends DataSurfaceBlockBase implements Contain
       if ($choices === []) {
         return $definition;
       }
-      $definition->addConstraint('LabeledChoice', [
-        'choices' => array_keys($choices),
-        'labels' => $choices,
-      ]);
+      $definition->addConstraint('LabeledChoice', ['choices' => $choices]);
       if ($definition instanceof DataDefinition) {
         $definition->setDescription(new TranslatableMarkup('A @entity_type bundle.', [
           '@entity_type' => $entity_type_id,
@@ -196,10 +193,7 @@ final class DataSurfaceDemoBlock extends DataSurfaceBlockBase implements Contain
       if ($choices === []) {
         return $definition;
       }
-      $definition->addConstraint('LabeledChoice', [
-        'choices' => array_keys($choices),
-        'labels' => $choices,
-      ]);
+      $definition->addConstraint('LabeledChoice', ['choices' => $choices]);
       if ($definition instanceof DataDefinition) {
         $definition->setDescription(new TranslatableMarkup('A field on @entity_type @bundle.', [
           '@entity_type' => $values['entity_type'],

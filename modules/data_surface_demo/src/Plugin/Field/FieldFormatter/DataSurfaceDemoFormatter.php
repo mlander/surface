@@ -15,6 +15,8 @@ use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DataSurfaceOutputRefinerInterface;
 use Drupal\data_surface\Pipeline\Omitted;
 use Drupal\data_surface\Plugin\Field\FieldFormatter\DataSurfaceFormatterBase;
+use Drupal\data_surface\Refinement\ChoiceSet;
+use Drupal\data_surface_demo\DemoVariant;
 
 /**
  * A field formatter whose settings form is generated from its surface.
@@ -45,28 +47,6 @@ final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements
   public const VARIANT_CLASS_PREFIX = 'data-surface-variant-';
 
   /**
-   * The variant choices each casing offers, with their labels.
-   *
-   * A method rather than a class constant because the labels are
-   * translatable markup, and PHP allows no object in a constant.
-   *
-   * @return array<string, array<string, \Drupal\Core\StringTranslation\TranslatableMarkup>>
-   *   Variant labels keyed by value, keyed by the casing offering them.
-   */
-  public static function variants(): array {
-    return [
-      'uppercase' => [
-        'bold' => new TranslatableMarkup('Bold'),
-        'strong' => new TranslatableMarkup('Strong'),
-      ],
-      'lowercase' => [
-        'quiet' => new TranslatableMarkup('Quiet'),
-        'muted' => new TranslatableMarkup('Muted'),
-      ],
-    ];
-  }
-
-  /**
    * {@inheritdoc}
    *
    * Both halves of the contract in one method: what this formatter
@@ -86,8 +66,7 @@ final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements
       ->setDescription(new TranslatableMarkup('How the value text is cased.'))
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', [
-        'choices' => ['none', 'uppercase', 'lowercase'],
-        'labels' => [
+        'choices' => [
           'none' => new TranslatableMarkup('As written'),
           'uppercase' => new TranslatableMarkup('Upper case'),
           'lowercase' => new TranslatableMarkup('Lower case'),
@@ -95,23 +74,17 @@ final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements
       ]));
     $builder->setDefault('casing', 'none');
 
-    // Every variant this formatter has, spelled out: what a key allows
-    // is what it advertises, and the refiner below only ever takes from
-    // this list. A third-party module adds to it at build time rather
-    // than appending to a refined list afterwards — see the extras demo.
+    // Every variant this formatter has, from the one place they are
+    // written down: what a key allows is what it advertises, and the
+    // refiner below only ever takes from this list. The enum's map is
+    // the short spelling of the constraint, so no value is named twice.
+    // A third-party module adds to the list at build time rather than
+    // appending to a refined list afterwards — see the extras demo.
     $builder->setDefinition('variant', DataDefinition::create('string')
       ->setLabel(new TranslatableMarkup('Variant'))
       ->setDescription(new TranslatableMarkup('The variants the chosen casing offers.'))
       ->setRequired(FALSE)
-      ->addConstraint('LabeledChoice', [
-        'choices' => ['bold', 'strong', 'quiet', 'muted'],
-        'labels' => [
-          'bold' => new TranslatableMarkup('Bold'),
-          'strong' => new TranslatableMarkup('Strong'),
-          'quiet' => new TranslatableMarkup('Quiet'),
-          'muted' => new TranslatableMarkup('Muted'),
-        ],
-      ]));
+      ->addConstraint('LabeledChoice', ['choices' => DemoVariant::choices()]));
     $builder->addRefinement('variant', ['casing']);
 
     $builder->setOutputDefinition('text', DataDefinition::create('string')
@@ -150,15 +123,20 @@ final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements
    * as saying no.
    */
   public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
-    $variants = static::variants();
-    if ($name !== 'variant' || !isset($variants[$values['casing']])) {
+    $offered = DemoVariant::choicesFor((string) ($values['casing'] ?? ''));
+    if ($name !== 'variant' || $offered === []) {
       return $definition;
     }
-    $offered = $variants[$values['casing']];
-    $declared = $definition->getConstraints()['LabeledChoice']['choices'] ?? [];
+    // Read through ChoiceSet rather than off the raw constraint array.
+    // Either spelling may be on the definition by the time a refiner is
+    // handed it — a declaration keeps the one it was written in, and a
+    // key that has been contributed to has been rewritten canonically —
+    // and this is the one place that reads both.
+    $declared = ChoiceSet::of($definition);
     $definition->addConstraint('LabeledChoice', [
-      'choices' => array_values(array_intersect($declared, array_keys($offered))),
-      'labels' => $offered,
+      'choices' => $declared === NULL
+        ? []
+        : array_intersect_key($offered, array_flip($declared->values)),
     ]);
     if ($definition instanceof DataDefinition) {
       $definition->setDescription(new TranslatableMarkup('A @casing display variant.', [

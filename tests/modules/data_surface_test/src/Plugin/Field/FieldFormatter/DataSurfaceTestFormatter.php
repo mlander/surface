@@ -64,8 +64,7 @@ final class DataSurfaceTestFormatter extends DataSurfaceFormatterBase {
       ->setLabel(new TranslatableMarkup('Casing'))
       ->setRequired(FALSE)
       ->addConstraint('LabeledChoice', [
-        'choices' => ['none', 'uppercase', 'lowercase'],
-        'labels' => [
+        'choices' => [
           'none' => new TranslatableMarkup('As written'),
           'uppercase' => new TranslatableMarkup('Upper case'),
           'lowercase' => new TranslatableMarkup('Lower case'),
@@ -89,10 +88,7 @@ final class DataSurfaceTestFormatter extends DataSurfaceFormatterBase {
       return $definition;
     }
     $offered = $variants[$values['casing']];
-    $definition->addConstraint('LabeledChoice', [
-      'choices' => array_keys($offered),
-      'labels' => $offered,
-    ]);
+    $definition->addConstraint('LabeledChoice', ['choices' => $offered]);
     return $definition;
   }
 

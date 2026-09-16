@@ -192,10 +192,20 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
     $this->assertInstanceOf(MapDataDefinition::class, $provider);
     $badge = $provider->getPropertyDefinitions()['badge'] ?? NULL;
     $this->assertNotNull($badge);
-    $this->assertSame(['star', 'flame'], $badge->getConstraints()['LabeledChoice']['choices']);
+    // Declared in the map spelling — one entry per value, nothing
+    // written twice — and read back by the resolver as the one option
+    // set every consumer sees, labels and all.
+    $declared = $badge->getConstraints()['LabeledChoice'];
+    $this->assertArrayNotHasKey('labels', $declared);
     $this->assertSame(
       ['star' => 'Star', 'flame' => 'Flame'],
-      array_map('strval', $badge->getConstraints()['LabeledChoice']['labels']),
+      array_map('strval', $declared['choices']),
+    );
+    $badge_options = $this->options()->resolve($badge);
+    $this->assertNotNull($badge_options);
+    $this->assertSame(
+      ['star' => 'Star', 'flame' => 'Flame'],
+      array_map('strval', $badge_options->options),
     );
 
     // The generated form renders the mounted setting with its labels,

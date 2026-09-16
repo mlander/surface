@@ -217,8 +217,7 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  *         ->setLabel(new TranslatableMarkup('Badge'))
  *         ->setRequired(FALSE)
  *         ->addConstraint('LabeledChoice', [
- *           'choices' => ['star', 'flame'],
- *           'labels' => [
+ *           'choices' => [
  *             'star' => new TranslatableMarkup('Star'),
  *             'flame' => new TranslatableMarkup('Flame'),
  *           ],
@@ -273,7 +272,7 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  *       return $definition;
  *     }
  *     // And here it does not, which takes nothing else with it.
- *     $definition->addConstraint('LabeledChoice', ['choices' => [], 'labels' => []]);
+ *     $definition->addConstraint('LabeledChoice', ['choices' => []]);
  *     return $definition;
  *   }
  *

@@ -39,8 +39,7 @@ final class DataSurfaceTestCondition extends DataSurfaceConditionBase {
       ->setLabel(new TranslatableMarkup('Comparison'))
       ->setRequired(FALSE)
       ->addConstraint('LabeledChoice', [
-        'choices' => ['at_least', 'at_most'],
-        'labels' => [
+        'choices' => [
           'at_least' => new TranslatableMarkup('At least'),
           'at_most' => new TranslatableMarkup('At most'),
         ],

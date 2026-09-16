@@ -51,7 +51,7 @@ final class DemoExtrasVariantRefiner implements DataSurfaceRefinerInterface {
       // Everything this module contributed stays on offer.
       return $definition;
     }
-    $definition->addConstraint('LabeledChoice', ['choices' => [], 'labels' => []]);
+    $definition->addConstraint('LabeledChoice', ['choices' => []]);
     return $definition;
   }
 

@@ -385,8 +385,11 @@ final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
       // one labeled choice constraint, whose labels come from the enum
       // core already declares. Nothing cosmetic supplies these words, so
       // a machine consumer reads the same three meanings a person does.
-      // Spelled canonically, the allowed values beside their labels,
-      // because an integer-keyed label map cannot be told from a list.
+      // Spelled canonically — the allowed values as a list, the labels
+      // beside them — and this is what the canonical spelling is for:
+      // the values are integers, and an integer-keyed map of labels
+      // cannot be told from a list of values, so the short spelling the
+      // string-valued declarations use cannot express this one.
       'preview_mode' => DataDefinition::create('integer')
         ->setLabel(new TranslatableMarkup('Preview before submitting'))
         ->setRequired(TRUE)
