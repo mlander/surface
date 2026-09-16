@@ -123,8 +123,12 @@ The module uses these seven words in exactly one sense each.
   protocol it has to satisfy: a block plugin, a field formatter, an
   action, a condition, a field type, a standalone form.
 - **Provider** — a class that answers with a surface, and with the target
-  that surface writes to, for a given operation. A host that cannot carry
-  its own declaration delegates to one. A provider also answers **who may
+  that surface writes to, for a given **operation and subject**: a verb
+  from the host type's vocabulary that never carries identity, beside an
+  opaque id the provider resolves itself, which is NULL when the provider
+  is its own subject. That pair is the coordinate a surface is addressed
+  by, on the wire as in process. A host that cannot carry its own
+  declaration delegates to a provider. A provider also answers **who may
   run an operation**, with core's `AccessResult`, and the pipeline
   consults that answer before it reads or writes anything — so a form, a
   Drush command, a config action and an agent resolve one gate rather

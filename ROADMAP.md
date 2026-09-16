@@ -97,6 +97,49 @@ The clean rooms' second structural finding: our contract is rebuilt
 in-process per request and readable only from booted PHP; theirs is a
 served document. Drupal-shaped version:
 
+Prerequisite, before the endpoint's coordinates freeze: **split
+operation from subject on the provider contract.** `operation` becomes
+a closed verb from the host type's vocabulary and never carries
+identity; `subject` is an optional opaque string id the provider
+resolves itself, NULL when the provider is its own subject. Both
+`getDataSurface()` and `surfaceAccess()` take the pair; typed entry
+points such as the node type provider's entity-taking method remain
+the in-process convenience; the edit-prefixed id encoding in the node
+type provider is deleted. This is the wire shape the discovery route
+and the dry-run endpoint address surfaces by: host type, host id,
+operation, subject.
+
+Prerequisite, second half: **complete the per-operation triple on the
+provider contract.** Target acquisition currently has three spellings:
+plugin hosts wrap themselves implicitly, the field contract has an
+accessor, the node type provider invented a bespoke method. The
+provider contract gains a target accessor for a given operation and
+subject, so surface, access, and target form the complete triple the
+endpoint resolves from coordinates; without it the endpoint could
+serve plugins but not standalone providers. Payoff: a generic provider
+form controller, route names the provider service and operation with
+the subject upcast from the route, so standalone providers stop
+hand-writing form classes and the node type form shrinks to routing
+plus its cosmetic layer, which is the part that should stay bespoke.
+
+Prerequisite, third half: **the method becomes the one home; the
+attribute stops declaring.** The static-harvest claim the attribute was
+built on has shrunk to detection, which the interface already provides,
+and the pre-contribution sketch it holds is a lie of omission next to
+what the factory builds; meanwhile its costs are real: the
+array-constructor-only spelling, no map property definitions (the
+address before-seal callback exists only for this), no translatable
+constants, the interim metadata keys, and the one-home rule itself.
+`definitions`, `outputs`, `refinements`, and `locked` leave the
+attribute; every surface is declared in `getDataSurface()` through the
+builder, with a protected builder helper on the host bases keeping
+simple plugins compact; the attribute is deleted (the interface is the
+marker) unless a future index needs it for category-style metadata.
+Plugins and standalone providers then author identically, and the
+subject-capturing refiner pattern is the same everywhere. Tooling that
+wanted containerless indexing uses the discovery document instead,
+which serves the real contract.
+
 4. **Emission as a plugin type.** Per-constraint schema normalizers,
    ordered, matched by constraint (by `instanceof`, not plugin id,
    which also resolves the Tool API normalizer thread), so third
@@ -113,6 +156,16 @@ served document. Drupal-shaped version:
    graph, access verbs, output schema), cheap because the attribute is
    harvestable and the factory is the one assembly point. Regenerated
    only from commit-side cache invalidation, never from a rehearsal.
+   Rider on discovery: **the demo block declares its outputs.** Its
+   output is a headline and a list of labeled lines, no fetching
+   involved, so it splits a pure resolve step from `build()` the way
+   the formatter split `formatValue()`, and `build()` assembles the
+   render array from it. This proves the output vocabulary on a
+   composite shape and makes the block's discovery entry meaningful to
+   a headless consumer. The general block output story stays gated on
+   declared data and context dependencies, which is the one clean-room
+   convergence not yet built; interactive blocks stay out of scope.
+
 7. **The dry-run and validate endpoint, Precognition-shaped.** The
    *same* pipeline entry with a stage-selection flag, never a parallel
    route: full submit, dry run (stop after prepare), validate-only,
