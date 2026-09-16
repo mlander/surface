@@ -228,12 +228,23 @@ which serves the real contract.
     and commit and stored values stand (never pruned: the no-silent-
     loss rule holds against both Laravel's `exclude_unless` and the
     clean rooms' `when`-pruning, which we reject).
-11. **Stale-value policy per refinement edge** (Filament's child reset
-    made data): reset-to-default versus keep-and-violate, applied by
-    the pipeline between accept and validate, so the form rebuild and
-    an agent round trip resolve a stale dependent identically. Also:
-    stale references become a distinct violation class so hosts can
-    degrade instead of refusing opaquely.
+11. **Stale values: stash, warn, never reset** (decided 2026-09-16
+    after the owner hit it live; supersedes the earlier
+    reset-versus-keep policy menu, deleting the per-edge knob).
+    Display never errors: a select whose stored value fell outside the
+    refined set renders unselected with a placeholder naming the
+    unavailable value; required selects included, and no forced
+    defaults ever. Untouched means keep: the widget marks the element
+    stale and extraction maps the untouched placeholder back to the
+    stored value, so an unrelated save can never clear it (the trap:
+    empty submissions otherwise mean clear). Stale is its own
+    non-blocking violation class: a failing value that equals the
+    stored one on a refined key warns and saves; a new out-of-set
+    value stays a hard violation. Required splits: never-set is the
+    ordinary hard violation, stale-required stashes and nags. Dry-run
+    responses expose stale references as their own field so agents see
+    re-choose distinctly from invalid. Semantics doc gains stale as a
+    third state.
 12. **Wildcard segments in the D6 path grammar.** D6's dotted paths
     gain a `*` list-item segment, expanded against the actual payload
     at refinement time, so errors and refiners stay index-addressed.
@@ -259,7 +270,27 @@ which serves the real contract.
 
 16. **D6: dotted refinement paths and `mount()`**, so a contributor
     can refine the key it mounted and nested surfaces compose. The
-    settled syntax plus the wildcard segment from item 12.
+    settled syntax plus the wildcard segment from item 12. Amended
+    2026-09-16 with the union story: mounts come in two kinds. Plain
+    mounts, the third-party namespace case. And
+    **discriminator-selected variant mounts**: a sibling key chooses
+    which child surface occupies a branch, because refinement narrows
+    values and structurally cannot swap shape; when a drill level
+    changes which keys exist rather than which values are allowed, it
+    is a union, spelled as a discriminator plus one self-contained
+    child surface per variant, violations path-prefixed, the composite
+    target routing the branch, emitted as JSON Schema oneOf. First
+    target: plugin-selects-plugin, where the mounted child is the
+    chosen plugin's own surface reused, never restated. Guardrails
+    that keep deep drill-downs out of imperative code, restated here
+    because mounts will tempt violations: chains of selects are
+    declared option domains (item 8), presence is relevance (item 10)
+    and never a refiner's job, and the imperative refiner stays the
+    marked escape hatch for computed narrowing only. Standalone versus
+    embedded declarations are a spectrum since the attribute retired:
+    promote to a standalone surface class on reuse, captured subject,
+    variant branches, third-party ownership, or a declaration
+    outgrowing one screen.
 17. **Presets**: named whole-configuration value sets on the
     attribute, validated through the pipeline at build, surfaced as
     placement starting points and reused as test fixtures.
