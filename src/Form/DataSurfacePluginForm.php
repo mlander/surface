@@ -68,16 +68,24 @@ class DataSurfacePluginForm extends PluginFormBase {
   /**
    * Gets the surface of the operation this form was built for.
    *
-   * The argument is ignored: which operation this form serves is settled
-   * when it is constructed, not when it is asked.
+   * The operation argument is ignored: which operation this form serves
+   * is settled when it is constructed, not when it is asked. The
+   * subject is not, and is handed to the plugin unread — a form class
+   * is named per operation, never per subject, so the half of the
+   * coordinate that identifies a thing stays the caller's to name and
+   * the plugin's to resolve.
    *
    * @param string $operation
    *   Unused; present to satisfy the provider signature.
+   * @param string|null $subject
+   *   The id of the thing the operation is about, passed to the plugin
+   *   as it arrived; NULL when the plugin is its own subject, which is
+   *   what a plugin behind this form ordinarily is.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The plugin's surface for this form's operation.
    */
-  public function getDataSurface(string $operation = 'configure'): DataSurfaceInterface {
+  public function getDataSurface(string $operation = 'configure', ?string $subject = NULL): DataSurfaceInterface {
     if (!$this->plugin instanceof DataSurfaceProviderInterface) {
       throw new \LogicException(sprintf(
         '%s requires a plugin implementing DataSurfaceProviderInterface; %s given.',
@@ -85,7 +93,7 @@ class DataSurfacePluginForm extends PluginFormBase {
         get_debug_type($this->plugin),
       ));
     }
-    return $this->plugin->getDataSurface($this->operation);
+    return $this->plugin->getDataSurface($this->operation, $subject);
   }
 
   /**
@@ -94,10 +102,14 @@ class DataSurfacePluginForm extends PluginFormBase {
    * The surface is the plugin's, so the answer is the plugin's too: a
    * form class serving a provider must not become a second, quieter
    * gate. The operation is this form's own, for the same reason
-   * getDataSurface() ignores its argument.
+   * getDataSurface() ignores its argument, and the subject travels to
+   * the plugin unread, for the same reason it does there.
    *
    * @param string $operation
    *   Unused; present to satisfy the provider signature.
+   * @param string|null $subject
+   *   The id of the thing the operation is about, passed to the plugin
+   *   as it arrived.
    * @param \Drupal\Core\Session\AccountInterface|null $account
    *   The account to answer for, or NULL for the current user.
    *
@@ -105,9 +117,9 @@ class DataSurfacePluginForm extends PluginFormBase {
    *   The plugin's answer, or no opinion when the plugin is not a
    *   provider — which the surface build refuses in its own words.
    */
-  public function surfaceAccess(string $operation = 'configure', ?AccountInterface $account = NULL): AccessResultInterface {
+  public function surfaceAccess(string $operation = 'configure', ?string $subject = NULL, ?AccountInterface $account = NULL): AccessResultInterface {
     return $this->plugin instanceof DataSurfaceProviderInterface
-      ? $this->plugin->surfaceAccess($this->operation, $account)
+      ? $this->plugin->surfaceAccess($this->operation, $subject, $account)
       : AccessResult::neutral();
   }
 

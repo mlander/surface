@@ -111,7 +111,10 @@ routes it through the factory, which is what dispatches the build event
 and seals the result:
 
 ```php
-public function getDataSurface(string $operation = 'configure'): DataSurfaceInterface {
+public function getDataSurface(string $operation = 'configure', ?string $subject = NULL): DataSurfaceInterface {
+  // This plugin is its own subject, so there is nothing a subject could
+  // name and one is refused rather than ignored.
+  $this->surfaceSelfSubject($subject);
   $builder = new DataSurfaceBuilder();
   $builder->setDefinition('language', DataDefinition::create('string')
     ->setLabel(new TranslatableMarkup('Language'))
@@ -132,6 +135,46 @@ The `$operation` argument is how one class serves more than one form: a
 host that resolves a form class per operation asks for the surface by
 name, and the same class can lock a key on `edit` that it leaves open on
 `add`. The default is `configure`.
+
+### The operation and subject pair
+
+`getDataSurface()` and `surfaceAccess()` take one coordinate in two
+halves, and the same two halves in the same order everywhere:
+
+- **`$operation`** is a closed verb from the host type's own
+  vocabulary — `configure`, `add`, `edit`, `field_settings` — and it
+  **never carries identity**. An operation that names the thing it acts
+  on is a vocabulary nobody can enumerate, and a discovery document
+  cannot list it.
+- **`$subject`** is an **opaque string id the provider resolves for
+  itself**. Nothing between the caller and the provider parses it: it is
+  a content type machine name to one provider and a workflow state to
+  the next.
+
+`NULL` for the subject means **the provider is its own subject**, which
+is the ordinary case: a block, a condition, an action, a formatter and a
+field item each describe themselves, and there is nothing left to name.
+Those hosts refuse any other subject by name —
+`DataSurfaceHostTrait::surfaceSelfSubject()` is the one line that does
+it — rather than serving the surface nobody asked for. A provider that
+owns several subjects resolves the id itself and throws
+`\InvalidArgumentException` naming one it cannot place.
+
+An access question is never answered with an exception, so
+`surfaceAccess()` **refuses** an operation or a subject it cannot place
+instead of throwing; the neutral host default has no opinion about
+either.
+
+`data_surface_demo_node_type` is the worked example: `('add', NULL)`
+builds the surface for a content type that does not exist yet and
+`('edit', 'article')` the surface for one that does, and the provider's
+`surfaceFor(?NodeTypeInterface)` stays beside them as the typed,
+in-process convenience for a caller that already holds the entity.
+
+**This pair is the wire coordinate**: the Phase B discovery route and
+the dry-run endpoint address any surface by host type, host id,
+operation and subject, which is why identity is not allowed to hide
+inside the verb.
 
 ### Host ids
 

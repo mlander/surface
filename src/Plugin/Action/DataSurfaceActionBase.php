@@ -70,8 +70,15 @@ abstract class DataSurfaceActionBase extends ConfigurableActionBase implements D
    * this plugin as the refiner. An action whose surface needs live site
    * state to describe itself overrides this and builds the surface here
    * instead, which is the one other legal home for it.
+   *
+   * An action is its own subject: the plugin instance is the whole of
+   * what this surface describes, so the subject is NULL, and any
+   * other is refused by name rather than quietly ignored.
    */
-  public function getDataSurface(string $operation = 'configure'): DataSurfaceInterface {
+  public function getDataSurface(string $operation = 'configure', ?string $subject = NULL): DataSurfaceInterface {
+    // The plugin instance is the only thing this surface describes, so
+    // a caller naming a subject has addressed the wrong provider.
+    $this->surfaceSelfSubject($subject);
     // The host id is namespaced by plugin type, so a subscriber
     // matching on it cannot pick up a host of another kind that
     // happens to share a plugin id.

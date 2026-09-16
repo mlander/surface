@@ -30,14 +30,24 @@ values first, which a caller holding only a surface could forget to do.
 ### access
 
 ```php
-public function surfaceAccess(string $operation = 'configure', ?AccountInterface $account = NULL): AccessResultInterface;
+public function surfaceAccess(string $operation = 'configure', ?string $subject = NULL, ?AccountInterface $account = NULL): AccessResultInterface;
 ```
 
 Not a method on the pipeline: it is a method on the **provider**, and the
-pipeline is one of its callers. One answer per operation and account,
+pipeline is one of its callers. One answer per coordinate and account,
 resolved once, read by the generated form, a Drush command, a config
 action, an agent and the future endpoint — which is what keeps a route's
 gate and a payload's gate from becoming two different rules.
+
+The coordinate is the same pair `getDataSurface()` takes, in the same
+order: a verb that never carries identity, then an opaque subject id the
+provider resolves for itself, `NULL` when the provider is its own
+subject. It is what the Phase B endpoint will address a surface by, so
+the surface a payload asks for and the answer that gates it are named
+one way. See
+[the operation and subject pair](declaring-a-surface.md#the-operation-and-subject-pair).
+An operation or a subject the provider cannot place is **refused** here
+rather than thrown over, because something has to be told no.
 
 The answer is core's `AccessResultInterface`, so it carries a reason and
 its own cacheability, and the third state carries weight:
@@ -211,14 +221,15 @@ the run was gated by. `isValid()` is the question most callers ask.
 The access answer is the caller's own, already resolved, rather than a
 provider the pipeline would have to hold — no closures, and nothing in
 the pipeline that knows what a provider is. A host asks its provider for
-the operation it is running and hands the answer over:
+the coordinate it is running — the operation, and the subject when the
+provider owns more than itself — and hands the answer over:
 
 ```php
 $result = $pipeline->submit(
   $surface,
   $values,
   $target,
-  access: $provider->surfaceAccess($operation),
+  access: $provider->surfaceAccess($operation, $subject),
 );
 ```
 
@@ -276,7 +287,8 @@ the two halves honest is that a host must never spell the question twice:
   once, in `NodeTypeSurfaceProvider::surfaceAccess()` — the entity's own
   create or update answer, ANDed with the module's permission — and the
   routes, the operation link in the content type listing, and the form's
-  own write all read that one answer.
+  own write all read that one answer, asking for it with the same pair:
+  `('add', NULL)` or `('edit', <machine name>)`.
 - **The field tools** ask the field item's `surfaceAccess()` beside the
   entity and field checks they already ran, in both `checkAccess()` and
   `doExecute()`, because `execute()` is callable from PHP with no check

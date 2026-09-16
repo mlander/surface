@@ -107,9 +107,9 @@ and silently overrules another.
 types (`configure`, `state`, `transition`), icon extractors, media
 sources.
 
-**Built.** One surface per operation through
-`DataSurfaceProviderInterface::getDataSurface(string $operation)`, and
-one generic `DataSurfacePluginForm` any plugin can list under any
+**Built.** One surface per coordinate through
+`DataSurfaceProviderInterface::getDataSurface(string $operation, ?string $subject)`,
+and one generic `DataSurfacePluginForm` any plugin can list under any
 operation. No per-plugin form classes at all. The operation is a
 constructor argument, so an operation other than `configure` names a
 service id in the `forms` key rather than the bare class, which is how

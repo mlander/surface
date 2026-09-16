@@ -60,18 +60,23 @@ final class NodeTypeSurfaceHooks {
    *
    * The link asks exactly what the route it points at asks, and asks it
    * in the one place the question is answered: the provider's access
-   * answer for the edit operation, which is the entity's own say over
-   * this content type ANDed with this module's permission. So the link
-   * is never offered where it would be refused, and it cannot drift from
-   * the route or from the form's own write. The answer's cacheability
-   * travels with the listing.
+   * answer for the edit operation with this content type as its
+   * subject, which is the entity's own say over it ANDed with this
+   * module's permission. So the link is never offered where it would be
+   * refused, and it cannot drift from the route or from the form's own
+   * write. The answer's cacheability travels with the listing.
    */
   #[Hook('entity_operation')]
   public function entityOperation(EntityInterface $entity, CacheableMetadata $cacheability): array {
     if (!$entity instanceof NodeTypeInterface) {
       return [];
     }
-    $access = $this->provider->surfaceAccess($this->provider->operationFor($entity));
+    // The pair the route the link points at is addressed by: the verb,
+    // then the content type it is about.
+    $access = $this->provider->surfaceAccess(
+      NodeTypeSurfaceProvider::OPERATION_EDIT,
+      (string) $entity->id(),
+    );
     $cacheability->addCacheableDependency($access);
     if (!$access->isAllowed()) {
       return [];

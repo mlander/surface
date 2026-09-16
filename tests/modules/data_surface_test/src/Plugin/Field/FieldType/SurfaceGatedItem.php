@@ -68,7 +68,10 @@ class SurfaceGatedItem extends StringItem implements FieldSurfaceProviderInterfa
   /**
    * {@inheritdoc}
    */
-  public function getFieldSurface(): DataSurfaceInterface {
+  public function getFieldSurface(string $operation = FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS, ?string $subject = NULL): DataSurfaceInterface {
+    // The field item is bound to one field config entity, so it is its
+    // own subject and a caller naming another has the wrong item.
+    $this->surfaceSelfSubject($subject);
     return $this->surfaceFactory()->buildFromClass(static::class, NULL, 'field_type:data_surface_gated');
   }
 
@@ -80,12 +83,12 @@ class SurfaceGatedItem extends StringItem implements FieldSurfaceProviderInterfa
    * in this order: whatever the entity said, this says no while the flag
    * is set, and defers to the entity when it is not.
    */
-  public function surfaceAccess(string $operation = FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS, ?AccountInterface $account = NULL): AccessResultInterface {
+  public function surfaceAccess(string $operation = FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS, ?string $subject = NULL, ?AccountInterface $account = NULL): AccessResultInterface {
     // @phpstan-ignore globalDrupalDependencyInjection.useDependencyInjection
     if (\Drupal::state()->get(self::REFUSE_STATE_KEY, FALSE)) {
       return AccessResult::forbidden('The gated test field type does not allow its settings to be configured.');
     }
-    return $this->fieldConfigAccess($operation, $account);
+    return $this->fieldConfigAccess($operation, $subject, $account);
   }
 
 }

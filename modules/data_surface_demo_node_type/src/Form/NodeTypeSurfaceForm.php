@@ -186,17 +186,19 @@ final class NodeTypeSurfaceForm extends FormBase {
     // On add the bundle is one of the submitted values, so the target
     // cannot be built before the values are read.
     $target = $this->provider->targetFor($node_type, (string) ($values['type'] ?? ''));
-    // The provider's answer for the same operation the surface was built
-    // for, handed to the pipeline rather than re-asked here: the route
-    // that rendered this form and the write that ends it are then gated
-    // by one answer, and a permission revoked between the two is caught
-    // by the half that writes.
-    $result = $this->pipeline->submit(
-      $surface,
-      $values,
-      $target,
-      access: $this->provider->surfaceAccess($this->provider->operationFor($node_type)),
-    );
+    // The provider's answer for the same coordinate the surface was
+    // built for, handed to the pipeline rather than re-asked here: the
+    // route that rendered this form and the write that ends it are then
+    // gated by one answer, and a permission revoked between the two is
+    // caught by the half that writes. Adding names no content type yet,
+    // so the verb travels alone; editing names the one it is about.
+    $access = $node_type === NULL
+      ? $this->provider->surfaceAccess(NodeTypeSurfaceProvider::OPERATION_ADD)
+      : $this->provider->surfaceAccess(
+        NodeTypeSurfaceProvider::OPERATION_EDIT,
+        (string) $node_type->id(),
+      );
+    $result = $this->pipeline->submit($surface, $values, $target, access: $access);
     if (!$result->isValid()) {
       $this->surfaceFormBuilder->flagSurfaceErrors($result->violations, $form['surface'], $form_state);
       return;

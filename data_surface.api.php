@@ -55,6 +55,67 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
 }
 
 /**
+ * @defgroup data_surface_provider Addressing a surface
+ * @{
+ * The coordinate every provider answers to: an operation and a subject.
+ *
+ * \Drupal\data_surface\DataSurfaceProviderInterface takes the two in this
+ * order, and so does its field type counterpart,
+ * \Drupal\data_surface\Form\FieldSurfaceProviderInterface:
+ * - The *operation* is a closed verb from the host type's own vocabulary —
+ *   configure, add, edit, field_settings — and it never carries identity. An
+ *   operation that names the thing it acts on is a vocabulary nobody can
+ *   enumerate.
+ * - The *subject* is an opaque string id the provider resolves for itself.
+ *   Nothing between the caller and the provider parses it, and NULL means the
+ *   provider is its own subject, which every plugin, formatter and field item
+ *   is.
+ *
+ * The pair is the wire coordinate a surface is addressed by — host type, host
+ * id, operation, subject — so identity stays out of the verb and a discovery
+ * document can list the verbs a host type has.
+ *
+ * A provider that owns several subjects resolves the id itself, and refuses
+ * one it cannot place rather than falling back to a surface nobody asked for:
+ * @code
+ * final class ExampleProvider implements DataSurfaceProviderInterface {
+ *
+ *   public function getDataSurface(string $operation = 'add', ?string $subject = NULL): DataSurfaceInterface {
+ *     if ($operation === 'add') {
+ *       // The thing does not exist yet, so this operation has no subject.
+ *       return $this->surfaceFor();
+ *     }
+ *     if ($operation !== 'edit') {
+ *       throw new \InvalidArgumentException(sprintf('No "%s" surface here.', $operation));
+ *     }
+ *     return $this->surfaceFor($this->resolve($subject));
+ *   }
+ *
+ *   public function surfaceAccess(string $operation = 'add', ?string $subject = NULL, ?AccountInterface $account = NULL): AccessResultInterface {
+ *     // The same coordinate, and a refusal rather than an exception: an
+ *     // access question is never answered by throwing, because something
+ *     // has to be told no.
+ *     return $this->answerFor($operation, $subject, $account);
+ *   }
+ *
+ * }
+ * @endcode
+ *
+ * A provider that is its own subject — a block, a condition, an action, a
+ * formatter, a field item — inherits the rule from
+ * \Drupal\data_surface\DataSurfaceHostTrait::surfaceSelfSubject(), which
+ * refuses a named subject by name. The host base classes call it on the first
+ * line of getDataSurface(), so an adopting plugin writes nothing.
+ *
+ * @see \Drupal\data_surface\DataSurfaceProviderInterface
+ * @see \Drupal\data_surface\Form\FieldSurfaceProviderInterface
+ * @see \Drupal\data_surface\DataSurfaceHostTrait::surfaceSelfSubject()
+ * @see docs/declaring-a-surface.md
+ * @see docs/pipeline.md
+ * @}
+ */
+
+/**
  * @defgroup data_surface_build_event Extending someone else's surface
  * @{
  * Adding to a surface at build time, where the addition is advertised.

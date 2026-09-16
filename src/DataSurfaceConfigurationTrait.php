@@ -23,7 +23,7 @@ use Drupal\data_surface\Pipeline\ViolationSummary;
  * top, which is why adopters set the configuration property from the
  * accepted values instead of calling a host's own deep or shallow merge.
  *
- * The surface is built once per instance and operation. The host calls
+ * The surface is built once per instance and coordinate. The host calls
  * these three methods freely and each of them needs the surface, so
  * building on every call meant dispatching the build event several times
  * for one submit; memoizedDataSurface() says why nothing invalidates it.
@@ -49,9 +49,14 @@ trait DataSurfaceConfigurationTrait {
   protected $configuration;
 
   /**
-   * The surfaces this instance has already built, keyed by operation.
+   * The surfaces this instance has already built, keyed by coordinate.
    *
-   * @var array<string, \Drupal\data_surface\DataSurfaceInterface>
+   * Keyed by operation and then by subject, which is the pair a surface
+   * is asked for: two coordinates are two surfaces even when one object
+   * answers for both. The empty string stands for the NULL subject,
+   * because an array key cannot be NULL.
+   *
+   * @var array<string, array<string, \Drupal\data_surface\DataSurfaceInterface>>
    */
   protected array $memoizedDataSurfaces = [];
 
@@ -60,20 +65,23 @@ trait DataSurfaceConfigurationTrait {
    *
    * @param string $operation
    *   The host operation the surface is wanted for.
+   * @param string|null $subject
+   *   The id of the thing the operation is about, or NULL when the
+   *   provider is its own subject.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The surface.
    */
-  abstract public function getDataSurface(string $operation = 'configure'): DataSurfaceInterface;
+  abstract public function getDataSurface(string $operation = 'configure', ?string $subject = NULL): DataSurfaceInterface;
 
   /**
-   * Gets this instance's surface, building it at most once per operation.
+   * Gets this instance's surface, built at most once per coordinate.
    *
    * Every method in this trait needs the surface, and the host calls
    * them freely: one block submit asked for the configuration three
    * times and dispatched the build event three times with it, so three
    * sets of subscribers ran and any of them could have disagreed with
-   * the others. Building once per instance and operation makes the
+   * the others. Building once per instance and coordinate makes the
    * advertisement stable for the life of the object, which is what
    * "the surface is the single authority" has to mean in practice.
    *
@@ -86,12 +94,15 @@ trait DataSurfaceConfigurationTrait {
    *
    * @param string $operation
    *   The host operation the surface is wanted for.
+   * @param string|null $subject
+   *   The id of the thing the operation is about, or NULL when the
+   *   provider is its own subject.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The surface.
    */
-  protected function memoizedDataSurface(string $operation = 'configure'): DataSurfaceInterface {
-    return $this->memoizedDataSurfaces[$operation] ??= $this->getDataSurface($operation);
+  protected function memoizedDataSurface(string $operation = 'configure', ?string $subject = NULL): DataSurfaceInterface {
+    return $this->memoizedDataSurfaces[$operation][(string) $subject] ??= $this->getDataSurface($operation, $subject);
   }
 
   /**

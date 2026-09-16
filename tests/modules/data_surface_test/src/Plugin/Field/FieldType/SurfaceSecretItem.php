@@ -74,7 +74,10 @@ class SurfaceSecretItem extends StringItem implements FieldSurfaceProviderInterf
   /**
    * {@inheritdoc}
    */
-  public function getFieldSurface(): DataSurfaceInterface {
+  public function getFieldSurface(string $operation = FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS, ?string $subject = NULL): DataSurfaceInterface {
+    // The field item is bound to one field config entity, so it is its
+    // own subject and a caller naming another has the wrong item.
+    $this->surfaceSelfSubject($subject);
     return $this->surfaceFactory()->buildFromClass(static::class, NULL, 'field_type:data_surface_secret');
   }
 

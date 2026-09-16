@@ -12,11 +12,14 @@ defaults.
 
 Two things worth reading it for. Locking is the degenerate refinement —
 the same declaration serves add and edit, with the operation as
-build-time context rather than as a second surface. And a value set is
-separate from its storage: one surface writes a config entity and a set
-of base field overrides through one composite target, in an order that
-matters, because on add the bundle does not exist while values are
-prepared.
+build-time context rather than as a second surface. It is also the
+worked example of the coordinate a surface is addressed by: the
+operation `add` with no subject, or `edit` with the content type's
+machine name as its subject, so the verb never carries the identity.
+And a value set is separate from its storage: one surface writes a
+config entity and a set of base field overrides through one composite
+target, in an order that matters, because on add the bundle does not
+exist while values are prepared.
 
 ## How to try it
 

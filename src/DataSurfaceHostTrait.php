@@ -96,6 +96,41 @@ trait DataSurfaceHostTrait {
   }
 
   /**
+   * Holds a provider that is its own subject to the NULL subject.
+   *
+   * The rule the host base classes in this module follow, kept here so
+   * that the four of them and every field item cannot disagree about
+   * it: a plugin instance, a formatter and a field item each describe
+   * themselves, so they have no second thing to be asked about and no
+   * id vocabulary a caller could name one with. Handed a subject
+   * anyway, they refuse it by name rather than serving the surface that
+   * was not asked for, which is what a wire caller addressing the wrong
+   * host needs to be told.
+   *
+   * Only getDataSurface() calls this. An access question is never
+   * answered with an exception, so surfaceAccess() has no opinion about
+   * a subject rather than throwing over one.
+   *
+   * @param string|null $subject
+   *   The subject the caller named, which for a provider that is its
+   *   own subject may only be NULL.
+   *
+   * @throws \InvalidArgumentException
+   *   When a subject was named.
+   *
+   * @see \Drupal\data_surface\DataSurfaceProviderInterface::getDataSurface()
+   */
+  protected function surfaceSelfSubject(?string $subject): void {
+    if ($subject !== NULL) {
+      throw new \InvalidArgumentException(sprintf(
+        '%s is its own subject and has no surface for the subject "%s".',
+        static::class,
+        $subject,
+      ));
+    }
+  }
+
+  /**
    * Answers whether an account may configure this host's values.
    *
    * The default for every host: no opinion. A surface describes what the
@@ -104,12 +139,20 @@ trait DataSurfaceHostTrait {
    * requirement, an entity access handler, a tool's own check — and
    * neutral is how that is said without closing anything.
    *
+   * That is the answer for every operation and every subject alike. A
+   * default that refused a subject it could not place would be a gate,
+   * and a host with nothing to say owns no gate; the surface build is
+   * where a subject nobody can resolve is refused.
+   *
    * A host with an answer of its own overrides this. Forbidden blocks
    * the pipeline's submit before it reads storage; allowed agrees
    * without bypassing the host's own gates.
    *
    * @param string $operation
    *   The host operation the answer is wanted for.
+   * @param string|null $subject
+   *   The id of the thing the operation is about, or NULL when the
+   *   provider is its own subject.
    * @param \Drupal\Core\Session\AccountInterface|null $account
    *   The account to answer for, or NULL for the current user.
    *
@@ -118,7 +161,7 @@ trait DataSurfaceHostTrait {
    *
    * @see \Drupal\data_surface\DataSurfaceProviderInterface::surfaceAccess()
    */
-  public function surfaceAccess(string $operation = 'configure', ?AccountInterface $account = NULL): AccessResultInterface {
+  public function surfaceAccess(string $operation = 'configure', ?string $subject = NULL, ?AccountInterface $account = NULL): AccessResultInterface {
     return AccessResult::neutral();
   }
 

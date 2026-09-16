@@ -50,24 +50,27 @@ use Drupal\node\NodeTypeInterface;
  * depend on the entity, so it lives in a method rather than in an
  * attribute.
  *
- * The provider interface is answered by mapping the operation string:
- * 'add' is the surface for creating a content type and 'edit:<type>' is
- * the surface for one that exists. The alternative, a setter taking the
- * entity, would make a container service stateful — two callers in one
- * request would overwrite each other's subject — and the interface
- * already exists precisely so one provider can own several surfaces and
- * be told apart by operation. surfaceFor() stays as the typed entry
- * point a caller holding the entity uses; getDataSurface() is the
- * spelling for a caller that has only a string, such as a route or an
- * agent.
+ * The provider interface is answered with the operation and subject
+ * pair: 'add' with no subject is the surface for creating a content
+ * type, and 'edit' with a content type machine name is the surface for
+ * one that exists. This is the module that shows why the coordinate has
+ * two halves — the verb says what is being done and the subject says
+ * what it is being done to, so neither has to be parsed out of the
+ * other, and the vocabulary stays two words a discovery document can
+ * list. The alternative, a setter taking the entity, would make a
+ * container service stateful: two callers in one request would overwrite
+ * each other's subject. surfaceFor() stays as the typed entry point a
+ * caller holding the entity uses; the pair is the spelling for a caller
+ * that has only strings, such as a route, an agent, or the endpoint
+ * addressing a surface by host type, host id, operation and subject.
  *
- * The same operation vocabulary carries the access answer.
- * surfaceAccess() states once what the two routes state in YAML and what
- * the operation link asks before it offers itself: the entity's own
- * create or update answer, ANDed with this module's permission. The form
- * hands that answer to the pipeline when it writes, so the gate a person
- * meets on the way in and the gate the values meet on the way out are
- * one gate rather than two spellings of one intention.
+ * The same pair carries the access answer. surfaceAccess() states once
+ * what the two routes state in YAML and what the operation link asks
+ * before it offers itself: the entity's own create or update answer,
+ * ANDed with this module's permission. The form hands that answer to the
+ * pipeline when it writes, so the gate a person meets on the way in and
+ * the gate the values meet on the way out are one gate rather than two
+ * spellings of one intention.
  */
 final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
 
@@ -82,9 +85,13 @@ final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
   public const OPERATION_ADD = 'add';
 
   /**
-   * The prefix of the operation naming one content type to edit.
+   * The operation asking for the surface of a content type that exists.
+   *
+   * A bare verb, and the subject beside it names which content type. The
+   * machine name never rides inside the operation, because an operation
+   * that carries identity is a vocabulary nobody can enumerate.
    */
-  public const OPERATION_EDIT_PREFIX = 'edit:';
+  public const OPERATION_EDIT = 'edit';
 
   /**
    * The permission opening this module's surface-driven way in.
@@ -126,35 +133,71 @@ final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
    * {@inheritdoc}
    *
    * Two operations: 'add' for a content type that does not exist yet,
-   * and 'edit:<type>' for one that does. Anything else is a caller
-   * asking for a surface this provider does not have, which is worth a
-   * refusal rather than a quiet fallback to the add surface. The
-   * parameter's default is 'add' rather than the interface's generic
-   * 'configure', because a content type that is not named yet is the
-   * only surface this provider can build without being told anything.
+   * which is the one surface this provider builds with no subject, and
+   * 'edit' for one that does, whose subject is its machine name.
+   * Anything else is a caller asking for a surface this provider does
+   * not have, which is worth a refusal rather than a quiet fallback to
+   * the add surface. The operation's default is 'add' rather than the
+   * interface's generic 'configure', because a content type that is not
+   * named yet is the only surface this provider can build without being
+   * told anything.
    *
    * @throws \InvalidArgumentException
-   *   When the operation names neither, or names a content type that
-   *   does not exist.
+   *   When the operation is neither, when 'add' is handed a subject it
+   *   has nothing to do with, or when 'edit' names no content type or
+   *   names one that does not exist.
    */
-  public function getDataSurface(string $operation = self::OPERATION_ADD): DataSurfaceInterface {
+  public function getDataSurface(string $operation = self::OPERATION_ADD, ?string $subject = NULL): DataSurfaceInterface {
     if ($operation === self::OPERATION_ADD) {
+      if ($subject !== NULL) {
+        throw new \InvalidArgumentException(sprintf(
+          'The "%s" operation builds the surface for a content type that does not exist yet, so it has no subject; "%s" was named.',
+          self::OPERATION_ADD,
+          $subject,
+        ));
+      }
       return $this->surfaceFor();
     }
-    if (!str_starts_with($operation, self::OPERATION_EDIT_PREFIX)) {
+    if ($operation !== self::OPERATION_EDIT) {
       throw new \InvalidArgumentException(sprintf(
-        'The content type surface is built for "%s" or "%s<type>", not for "%s".',
+        'The content type surface is built for the "%s" or "%s" operation, not for "%s".',
         self::OPERATION_ADD,
-        self::OPERATION_EDIT_PREFIX,
+        self::OPERATION_EDIT,
         $operation,
       ));
     }
-    $type_id = substr($operation, strlen(self::OPERATION_EDIT_PREFIX));
-    $type = $this->entityTypeManager->getStorage('node_type')->load($type_id);
-    if (!$type instanceof NodeTypeInterface) {
-      throw new \InvalidArgumentException(sprintf('There is no "%s" content type to build a surface for.', $type_id));
+    return $this->surfaceFor($this->subjectContentType($subject));
+  }
+
+  /**
+   * Resolves the subject of an edit operation into a content type.
+   *
+   * The whole of what "opaque id" means here: a caller hands over a
+   * string, and this is the one place that says what it is a string of.
+   * A subject naming nothing is refused by name, because a surface for
+   * a content type that is not there is not something to fall back from.
+   *
+   * @param string|null $subject
+   *   The machine name the caller named, or NULL when it named none.
+   *
+   * @return \Drupal\node\NodeTypeInterface
+   *   The content type.
+   *
+   * @throws \InvalidArgumentException
+   *   When no subject was named, or when it names no content type.
+   */
+  protected function subjectContentType(?string $subject): NodeTypeInterface {
+    if ($subject === NULL) {
+      throw new \InvalidArgumentException(sprintf(
+        'The "%s" operation is about one content type, so it has to be given one as its subject.',
+        self::OPERATION_EDIT,
+      ));
     }
-    return $this->surfaceFor($type);
+    $type = $this->entityTypeManager->getStorage('node_type')->load($subject);
+    if (!$type instanceof NodeTypeInterface) {
+      throw new \InvalidArgumentException(sprintf('There is no "%s" content type to build a surface for.', $subject));
+    }
+    return $type;
   }
 
   /**
@@ -176,17 +219,25 @@ final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
    * refusal through DataSurfaceAccess::decisive(). A route reads that
    * neutral as no; the pipeline's gate would read it as "nothing to
    * say", and the two have to agree. An operation this provider has no
-   * surface for is likewise refused: unlike getDataSurface(), which
-   * throws at a caller asking for a surface that does not exist, an
-   * access question is never answered with an exception.
+   * surface for, and a subject it cannot place, are likewise refused:
+   * unlike getDataSurface(), which throws at a caller asking for a
+   * surface that does not exist, an access question is never answered
+   * with an exception.
    *
    * The form, the routes and the operation link all read this, so the
    * gate a person meets and the gate a payload meets cannot drift.
    */
-  public function surfaceAccess(string $operation = self::OPERATION_ADD, ?AccountInterface $account = NULL): AccessResultInterface {
+  public function surfaceAccess(string $operation = self::OPERATION_ADD, ?string $subject = NULL, ?AccountInterface $account = NULL): AccessResultInterface {
     $account ??= $this->currentUser;
     $permission = AccessResult::allowedIfHasPermission($account, self::PERMISSION);
     if ($operation === self::OPERATION_ADD) {
+      if ($subject !== NULL) {
+        return AccessResult::forbidden(sprintf(
+          'The "%s" operation has no subject, so there is nothing "%s" could be an answer about.',
+          self::OPERATION_ADD,
+          $subject,
+        ));
+      }
       $create = $this->entityTypeManager
         ->getAccessControlHandler('node_type')
         ->createAccess(NULL, $account, [], TRUE);
@@ -195,20 +246,25 @@ final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
         'Creating a content type through this module needs both permission to administer content types and the demo module\'s own permission.',
       );
     }
-    if (!str_starts_with($operation, self::OPERATION_EDIT_PREFIX)) {
+    if ($operation !== self::OPERATION_EDIT) {
       return AccessResult::forbidden(sprintf(
-        'The content type surface answers for "%s" or "%s<type>", not for "%s".',
+        'The content type surface answers for the "%s" or "%s" operation, not for "%s".',
         self::OPERATION_ADD,
-        self::OPERATION_EDIT_PREFIX,
+        self::OPERATION_EDIT,
         $operation,
       ));
     }
-    $type_id = substr($operation, strlen(self::OPERATION_EDIT_PREFIX));
-    $type = $this->entityTypeManager->getStorage('node_type')->load($type_id);
+    if ($subject === NULL) {
+      return AccessResult::forbidden(sprintf(
+        'The "%s" operation is about one content type, so it has to be given one as its subject.',
+        self::OPERATION_EDIT,
+      ));
+    }
+    $type = $this->entityTypeManager->getStorage('node_type')->load($subject);
     if (!$type instanceof NodeTypeInterface) {
       // Refused, and cacheable until that content type is created, so
       // the answer stops being no the moment it exists.
-      return AccessResult::forbidden(sprintf('There is no "%s" content type to configure.', $type_id))
+      return AccessResult::forbidden(sprintf('There is no "%s" content type to configure.', $subject))
         ->addCacheTags(['config:node_type_list']);
     }
     return DataSurfaceAccess::decisive(
@@ -218,26 +274,15 @@ final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
   }
 
   /**
-   * Names the operation a content type, or the lack of one, stands for.
-   *
-   * The typed counterpart of the operation strings, so a caller holding
-   * the entity never spells the prefix itself and the surface and the
-   * access answer cannot be asked for different operations by accident.
-   *
-   * @param \Drupal\node\NodeTypeInterface|null $type
-   *   The content type being edited, or NULL when adding.
-   *
-   * @return string
-   *   The operation.
-   */
-  public function operationFor(?NodeTypeInterface $type = NULL): string {
-    return $type === NULL
-      ? self::OPERATION_ADD
-      : self::OPERATION_EDIT_PREFIX . $type->id();
-  }
-
-  /**
    * Builds the surface for a content type, or for creating one.
+   *
+   * The typed counterpart of the pair, and the in-process convenience a
+   * caller already holding the entity uses: ('add', NULL) and
+   * ('edit', $id) both arrive here, so there is one surface build and
+   * two ways of naming it rather than two builds that could drift. It
+   * also serves the one caller the pair cannot: a form holding an
+   * entity the route already loaded, which would otherwise be loaded
+   * again from its own id.
    *
    * @param \Drupal\node\NodeTypeInterface|null $type
    *   The content type being edited, or NULL when adding.

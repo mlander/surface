@@ -119,23 +119,65 @@ class NodeTypeSurfaceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the provider interface's operations name the two surfaces.
+   * Tests that the operation and subject pair names the two surfaces.
+   *
+   * The verb says what is being done and the subject says what it is
+   * being done to, so nothing has to be parsed out of the operation to
+   * find the content type it is about.
    */
   public function testProviderInterfaceMapsTheOperation(): void {
     NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
 
-    // 'add' is the surface for a content type that does not exist yet.
+    // 'add' is the surface for a content type that does not exist yet,
+    // and it is the one operation here with no subject.
     $this->assertFalse($this->provider->getDataSurface('add')->isLocked('type'));
-    // 'edit:<type>' is the surface for one that does, so the identifier
-    // is context rather than an editable value.
-    $edit = $this->provider->getDataSurface('edit:article');
+    // 'edit' with the machine name as its subject is the surface for one
+    // that does, so the identifier is context rather than an editable
+    // value.
+    $edit = $this->provider->getDataSurface('edit', 'article');
     $this->assertTrue($edit->isLocked('type'));
     $this->assertSame('Article', $edit->getDefault('name'));
 
     // A content type that is not there is a refusal, not an add form.
     $this->expectException(\InvalidArgumentException::class);
     $this->expectExceptionMessage('no "ghost" content type');
-    $this->provider->getDataSurface('edit:ghost');
+    $this->provider->getDataSurface('edit', 'ghost');
+  }
+
+  /**
+   * Tests that the pair and the typed entry point are one answer.
+   *
+   * The typed entry point surfaceFor() stays as the in-process
+   * convenience for a caller that already holds the entity, so what it
+   * hands back and what the wire coordinate hands back have to be the
+   * same surface described the same way — otherwise the endpoint and
+   * the form would be describing two different things by one name.
+   */
+  public function testTheTypedEntryPointAndThePairAgree(): void {
+    NodeType::create([
+      'type' => 'article',
+      'name' => 'Article',
+      'help' => 'Some help.',
+    ])->save();
+    $article = NodeType::load('article');
+
+    $typed = $this->provider->surfaceFor($article);
+    $addressed = $this->provider->getDataSurface(
+      NodeTypeSurfaceProvider::OPERATION_EDIT,
+      (string) $article->id(),
+    );
+
+    $this->assertSame($typed->getDefaultValues(), $addressed->getDefaultValues());
+    $this->assertSame(
+      array_keys($typed->getDefinitions()->toArray()),
+      array_keys($addressed->getDefinitions()->toArray()),
+    );
+    $this->assertTrue($addressed->isLocked('type'));
+    $this->assertSame($typed->isLocked('type'), $addressed->isLocked('type'));
+    $this->assertSame(
+      $typed->getDefinition('type')->getConstraints(),
+      $addressed->getDefinition('type')->getConstraints(),
+    );
   }
 
   /**
@@ -145,6 +187,28 @@ class NodeTypeSurfaceTest extends DataSurfaceKernelTestBase {
     $this->expectException(\InvalidArgumentException::class);
     $this->expectExceptionMessage('not for "configure"');
     $this->provider->getDataSurface('configure');
+  }
+
+  /**
+   * Tests that a subject this provider cannot resolve is refused.
+   *
+   * Both halves of the rule: an operation with nothing to name takes no
+   * subject, and one that is about a particular content type cannot do
+   * without it. Either way the refusal says what it was given rather
+   * than falling back to the surface that was not asked for.
+   */
+  public function testProviderInterfaceRefusesAnUnresolvableSubject(): void {
+    try {
+      $this->provider->getDataSurface(NodeTypeSurfaceProvider::OPERATION_ADD, 'article');
+      $this->fail('Adding a content type takes no subject.');
+    }
+    catch (\InvalidArgumentException $e) {
+      $this->assertStringContainsString('"article" was named', $e->getMessage());
+    }
+
+    $this->expectException(\InvalidArgumentException::class);
+    $this->expectExceptionMessage('given one as its subject');
+    $this->provider->getDataSurface(NodeTypeSurfaceProvider::OPERATION_EDIT);
   }
 
   /**
@@ -449,8 +513,15 @@ class NodeTypeSurfaceTest extends DataSurfaceKernelTestBase {
     foreach ($matrix as $who => [$permissions, $allowed]) {
       $account = $this->createUser($permissions);
 
-      $add = $this->provider->surfaceAccess($this->provider->operationFor(), $account);
-      $edit = $this->provider->surfaceAccess($this->provider->operationFor($article), $account);
+      $add = $this->provider->surfaceAccess(
+        NodeTypeSurfaceProvider::OPERATION_ADD,
+        account: $account,
+      );
+      $edit = $this->provider->surfaceAccess(
+        NodeTypeSurfaceProvider::OPERATION_EDIT,
+        (string) $article->id(),
+        $account,
+      );
 
       $this->assertSame($allowed, $add->isAllowed(), $who . ' on the add surface.');
       $this->assertSame($allowed, $edit->isAllowed(), $who . ' on the edit surface.');
@@ -485,10 +556,14 @@ class NodeTypeSurfaceTest extends DataSurfaceKernelTestBase {
   public function testAccessRefusesAnUnknownOperation(): void {
     $account = $this->createUser(['administer content types', NodeTypeSurfaceHooks::PERMISSION]);
 
-    $this->assertTrue($this->provider->surfaceAccess('delete', $account)->isForbidden());
+    $this->assertTrue($this->provider->surfaceAccess('delete', account: $account)->isForbidden());
     // Including an edit operation naming a content type that is not
     // there, which is refused until it is created rather than forever.
-    $missing = $this->provider->surfaceAccess(NodeTypeSurfaceProvider::OPERATION_EDIT_PREFIX . 'ghost', $account);
+    $missing = $this->provider->surfaceAccess(
+      NodeTypeSurfaceProvider::OPERATION_EDIT,
+      'ghost',
+      $account,
+    );
     $this->assertTrue($missing->isForbidden());
     $this->assertContains(
       'config:node_type_list',
@@ -518,7 +593,10 @@ class NodeTypeSurfaceTest extends DataSurfaceKernelTestBase {
       $surface,
       $values,
       $this->provider->targetFor(NULL, 'refused'),
-      access: $this->provider->surfaceAccess($this->provider->operationFor(), $stranger),
+      access: $this->provider->surfaceAccess(
+        NodeTypeSurfaceProvider::OPERATION_ADD,
+        account: $stranger,
+      ),
     );
 
     $this->assertFalse($result->isValid());
@@ -530,7 +608,10 @@ class NodeTypeSurfaceTest extends DataSurfaceKernelTestBase {
       $surface,
       $values,
       $this->provider->targetFor(NULL, 'refused'),
-      access: $this->provider->surfaceAccess($this->provider->operationFor(), $allowed),
+      access: $this->provider->surfaceAccess(
+        NodeTypeSurfaceProvider::OPERATION_ADD,
+        account: $allowed,
+      ),
     );
 
     $this->assertTrue($result->isValid(), ViolationSummary::fromViolations($result->violations));

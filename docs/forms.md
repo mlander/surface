@@ -19,8 +19,8 @@ satisfy one host family's protocol using it.
 | Conditions | `Plugin\Condition\DataSurfaceConditionBase` | The declaration, the refiner, `evaluate()` and `summary()`. |
 | Actions | `Plugin\Action\DataSurfaceActionBase` | The declaration, the refiner, `execute()` and `access()`. |
 | Field formatters | `Plugin\Field\FieldFormatter\DataSurfaceFormatterBase` | The declaration, the refiner, `viewElements()`. |
-| Field types | `Form\DataSurfaceFieldTypeTrait` on the item class | The declaration and `getFieldSurface()`; `getFieldSettingsTarget()` only when the storage shape differs from the input shape. |
-| Any plugin resolving a form class per operation | `Form\DataSurfacePluginForm` | Nothing at all: list the class under a `forms` key. |
+| Field types | `Form\DataSurfaceFieldTypeTrait` on the item class | The declaration and `getFieldSurface()`, which takes the same operation and subject pair with `field_settings` as its verb; `getFieldSettingsTarget()` only when the storage shape differs from the input shape. |
+| Any plugin resolving a form class per operation | `Form\DataSurfacePluginForm` | Nothing at all: list the class under a `forms` key. It is named per operation, so it settles the verb at construction and hands the subject to the plugin unread. |
 | A standalone form | Nothing | Build the container, call `submit()`. |
 
 Under those sit three traits, and it is worth knowing which is which when
@@ -94,9 +94,13 @@ the default) behaves exactly as before. `data_surface_demo_node_type` is
 the worked example: `NodeTypeSurfaceProvider::surfaceAccess()` states
 what its two routes state in YAML, the operation link in the content type
 listing asks it before offering itself, and the form hands it to the
-pipeline when it writes. Nothing in that module spells the permission
-twice, which is the property the test asserts by comparing the provider's
-answer to the route's for the same four accounts.
+pipeline when it writes. All three ask with the same coordinate — the
+operation `add` with no subject, or `edit` with the content type's
+machine name as its subject — which is the pair described in
+[Declaring a surface](declaring-a-surface.md#the-operation-and-subject-pair).
+Nothing in that module spells the permission twice, which is the property
+the test asserts by comparing the provider's answer to the route's for
+the same four accounts.
 
 An access refusal has no element to be flagged on — it belongs to the run
 rather than to a value — so `flagSurfaceErrors()` reports it as a

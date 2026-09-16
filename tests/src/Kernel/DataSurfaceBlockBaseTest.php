@@ -70,6 +70,31 @@ class DataSurfaceBlockBaseTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Tests that a host which is its own subject refuses another.
+   *
+   * The plugin instance is the whole of what its surface describes, so
+   * there is no id a caller could name a second subject with. Handed
+   * one anyway — a wire coordinate addressing the wrong host, a stale
+   * link — the base class says so by name rather than serving the
+   * surface nobody asked for, which is the rule every host base class
+   * in this module follows through surfaceSelfSubject().
+   */
+  public function testUnresolvableSubjectIsRefused(): void {
+    $block = $this->createBlock();
+
+    // The operation it does have, with no subject, is unaffected.
+    $this->assertNotNull($block->getDataSurface()->getDefinition('headline'));
+    $this->assertNotNull($block->getDataSurface('configure')->getDefinition('headline'));
+    // An access question is never answered with an exception, so the
+    // neutral default stays neutral however the coordinate was spelled.
+    $this->assertTrue($block->surfaceAccess('configure', 'article')->isNeutral());
+
+    $this->expectException(\InvalidArgumentException::class);
+    $this->expectExceptionMessage('is its own subject and has no surface for the subject "article"');
+    $block->getDataSurface('configure', 'article');
+  }
+
+  /**
    * Tests that the block host's own keys survive setConfiguration().
    *
    * The keys id, label, label_display and provider belong to the block

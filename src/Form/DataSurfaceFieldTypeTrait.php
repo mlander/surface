@@ -86,12 +86,22 @@ trait DataSurfaceFieldTypeTrait {
    * Named for the settings it describes rather than
    * DataSurfaceProviderInterface's getDataSurface(), because a field
    * type has two surfaces and the provider interface's single method
-   * cannot say which one is meant.
+   * cannot say which one is meant. It takes the same operation and
+   * subject pair, so both provider kinds are addressed one way.
+   *
+   * A field item is its own subject, so an implementation's first line
+   * is surfaceSelfSubject(), which refuses any subject by name.
+   *
+   * @param string $operation
+   *   The operation the surface is wanted for.
+   * @param string|null $subject
+   *   The id of the thing the operation is about, or NULL when the
+   *   field item is its own subject.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The surface.
    */
-  abstract public function getFieldSurface(): DataSurfaceInterface;
+  abstract public function getFieldSurface(string $operation = FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS, ?string $subject = NULL): DataSurfaceInterface;
 
   /**
    * Gets the target the field settings are read from and written to.
@@ -127,15 +137,23 @@ trait DataSurfaceFieldTypeTrait {
    * write and nothing to ask, so it expresses no opinion rather than
    * refusing: the host that reached it has its own gate.
    *
+   * The subject is not read, for the reason an access question never
+   * throws over one: the field config entity this item is bound to is
+   * the subject, and it is what answers however the caller spelled the
+   * coordinate.
+   *
    * @param string $operation
    *   The operation the answer is wanted for.
+   * @param string|null $subject
+   *   The id of the thing the operation is about, or NULL when the
+   *   field item is its own subject.
    * @param \Drupal\Core\Session\AccountInterface|null $account
    *   The account to answer for, or NULL for the current user.
    *
    * @return \Drupal\Core\Access\AccessResultInterface
    *   The access answer.
    */
-  public function surfaceAccess(string $operation = FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS, ?AccountInterface $account = NULL): AccessResultInterface {
+  public function surfaceAccess(string $operation = FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS, ?string $subject = NULL, ?AccountInterface $account = NULL): AccessResultInterface {
     $definition = $this->getFieldDefinition();
     return $definition instanceof FieldConfigInterface
       ? $definition->access('update', $account, TRUE)

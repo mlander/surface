@@ -86,11 +86,14 @@ trait DataSurfaceFormatterTrait {
    *
    * @param string $operation
    *   The host operation the surface is wanted for.
+   * @param string|null $subject
+   *   The id of the thing the operation is about, or NULL when the
+   *   provider is its own subject.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The surface.
    */
-  abstract public function getDataSurface(string $operation = 'configure'): DataSurfaceInterface;
+  abstract public function getDataSurface(string $operation = 'configure', ?string $subject = NULL): DataSurfaceInterface;
 
   /**
    * Reads the static default settings from a class's attribute.

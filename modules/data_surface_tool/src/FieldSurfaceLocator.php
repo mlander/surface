@@ -98,14 +98,19 @@ final class FieldSurfaceLocator {
    *   The field config entity, saved or not.
    * @param string $operation
    *   The operation the answer is wanted for.
+   * @param string|null $subject
+   *   The id of the thing the operation is about, in the operation and
+   *   subject order every provider takes it in. NULL here is the whole
+   *   of the normal case: the field this locator was handed is the
+   *   subject, and the item it builds is already bound to it.
    * @param \Drupal\Core\Session\AccountInterface|null $account
    *   The account to answer for, or NULL for the current user.
    *
    * @return \Drupal\Core\Access\AccessResultInterface
    *   The field type's answer, or no opinion when it declares none.
    */
-  public function accessFor(FieldConfigInterface $field, string $operation = FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS, ?AccountInterface $account = NULL): AccessResultInterface {
-    return $this->fieldItem($field)?->surfaceAccess($operation, $account) ?? AccessResult::neutral();
+  public function accessFor(FieldConfigInterface $field, string $operation = FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS, ?string $subject = NULL, ?AccountInterface $account = NULL): AccessResultInterface {
+    return $this->fieldItem($field)?->surfaceAccess($operation, $subject, $account) ?? AccessResult::neutral();
   }
 
   /**

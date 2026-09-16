@@ -43,16 +43,44 @@ interface FieldSurfaceProviderInterface {
    * they arrive, are a second operation with a second answer, because a
    * site builder may well be allowed to change a label on one bundle and
    * not to change a shape every bundle shares.
+   *
+   * A verb, under the vocabulary rule the provider interface states: it
+   * says what is being configured, never which field. Which field is
+   * settled by the item the method is called on.
    */
   public const OPERATION_FIELD_SETTINGS = 'field_settings';
 
   /**
    * Builds the surface describing this field type's instance settings.
    *
+   * The same operation and subject pair the provider interface takes,
+   * so a caller holding either kind of provider addresses it the same
+   * way and the storage settings verb slots in beside this one without
+   * reshaping the method again.
+   *
+   * A field item is its own subject, and that is the normal case: the
+   * item is bound to the field config entity whose settings it
+   * describes, so there is nothing left for a subject to name and NULL
+   * is what a caller passes. A field type handed any other subject
+   * refuses it by name, exactly as a plugin does.
+   *
+   * @param string $operation
+   *   The operation the surface is wanted for; OPERATION_FIELD_SETTINGS
+   *   unless a field type serves more than the instance settings.
+   * @param string|null $subject
+   *   The id of the thing the operation is about, or NULL when the
+   *   field item is its own subject.
+   *
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The surface.
+   *
+   * @throws \InvalidArgumentException
+   *   When the operation is not one this field type has a surface for,
+   *   or when the subject is one it cannot resolve.
+   *
+   * @see \Drupal\data_surface\DataSurfaceProviderInterface::getDataSurface()
    */
-  public function getFieldSurface(): DataSurfaceInterface;
+  public function getFieldSurface(string $operation = self::OPERATION_FIELD_SETTINGS, ?string $subject = NULL): DataSurfaceInterface;
 
   /**
    * Gets the target the field settings are read from and written to.
@@ -83,6 +111,10 @@ interface FieldSurfaceProviderInterface {
    * @param string $operation
    *   The operation the answer is wanted for; OPERATION_FIELD_SETTINGS
    *   unless a field type serves more than the instance settings.
+   * @param string|null $subject
+   *   The id of the thing the operation is about, or NULL when the
+   *   field item is its own subject. The same opaque id
+   *   getFieldSurface() takes.
    * @param \Drupal\Core\Session\AccountInterface|null $account
    *   The account to answer for, or NULL for the current user.
    *
@@ -91,6 +123,6 @@ interface FieldSurfaceProviderInterface {
    *
    * @see \Drupal\data_surface\DataSurfaceAccess
    */
-  public function surfaceAccess(string $operation = self::OPERATION_FIELD_SETTINGS, ?AccountInterface $account = NULL): AccessResultInterface;
+  public function surfaceAccess(string $operation = self::OPERATION_FIELD_SETTINGS, ?string $subject = NULL, ?AccountInterface $account = NULL): AccessResultInterface;
 
 }
