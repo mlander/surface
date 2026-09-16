@@ -393,8 +393,8 @@ the fully typed version".
 
 `PluginWithFormsInterface` resolves a form class per operation through
 `plugin_form.factory`. Model, now built: one surface per operation,
-`DataSurfaceProviderInterface::getDataSurface(string $operation =
-'configure')`, and one generic `DataSurfacePluginForm` class (extends
+`DataSurfaceProviderInterface::getDataSurface(string $operation, ?string $subject)` (the pair; historically `getDataSurface(string $operation =
+'configure')`), and one generic `DataSurfacePluginForm` class (extends
 `PluginFormBase`, so it is a `PluginFormInterface` and a
 `PluginAwareInterface`) that any plugin can list under any operation in
 its `forms` key. No per-plugin form classes at all. The operation it
