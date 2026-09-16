@@ -1,0 +1,12 @@
+services:
+  data_surface_demo_node_type.provider:
+    class: Drupal\data_surface_demo_node_type\NodeTypeSurfaceProvider
+    arguments:
+      - '@data_surface.factory'
+      - '@entity_type.manager'
+      - '@entity_field.manager'
+      - '@config.typed'
+      - '@current_user'
+  # The hook class is autowired by core's hook discovery, so the provider
+  # it depends on needs a service to resolve its type hint against.
+  Drupal\data_surface_demo_node_type\NodeTypeSurfaceProvider: '@data_surface_demo_node_type.provider'

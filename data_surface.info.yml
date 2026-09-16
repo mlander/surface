@@ -1,0 +1,5 @@
+name: Data Surface
+type: module
+description: 'A runtime definition layer between Form API and storage: groups of refinable core data definitions that drive generated forms, validation, and machine-readable contracts.'
+package: Data Surface
+core_version_requirement: ^11.3 || ^12

@@ -1,0 +1,30 @@
+# Two requirements on each route, and both have to allow.
+#
+# The entity answer is the one that decides whether these values may be
+# written at all: a content type is a content type however it is edited,
+# so this module never grants more than core's own add and edit forms
+# grant. The module's own permission decides whether this second,
+# surface-driven way in is open on this site, which is what keeps the
+# demo from being a back door nobody has reviewed, open to anyone holding
+# "administer content types".
+data_surface_demo_node_type.add:
+  path: '/admin/structure/types/surface-add'
+  defaults:
+    _form: 'Drupal\data_surface_demo_node_type\Form\NodeTypeSurfaceForm'
+    _title: 'Add content type (surface)'
+  requirements:
+    _permission: 'administer data surface node type demo'
+    _entity_create_access: 'node_type'
+
+data_surface_demo_node_type.edit:
+  path: '/admin/structure/types/manage/{node_type}/surface-edit'
+  defaults:
+    _form: 'Drupal\data_surface_demo_node_type\Form\NodeTypeSurfaceForm'
+    _title: 'Edit content type (surface)'
+  requirements:
+    _permission: 'administer data surface node type demo'
+    _entity_access: 'node_type.update'
+  options:
+    parameters:
+      node_type:
+        type: 'entity:node_type'

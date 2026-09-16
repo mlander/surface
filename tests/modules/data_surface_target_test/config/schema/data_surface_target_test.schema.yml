@@ -1,0 +1,11 @@
+# Core expects every third party to describe its own settings, under the
+# config name it stores them in. The config entity target test mounts one
+# setting onto the test configuration entity, so this is what makes that
+# mount legal as far as the config schema is concerned.
+config_test.dynamic.*.third_party.data_surface_target_test:
+  type: mapping
+  label: 'Data surface target test settings'
+  mapping:
+    note:
+      type: string
+      label: 'Note'

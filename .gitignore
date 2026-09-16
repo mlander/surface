@@ -1,0 +1,7 @@
+# Nothing built, fetched or cached belongs in the repository.
+/vendor/
+/composer.lock
+/node_modules/
+phpstan-tmp/
+.phpunit.cache/
+.phpunit.result.cache

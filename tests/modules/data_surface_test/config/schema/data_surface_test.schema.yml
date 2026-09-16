@@ -1,0 +1,107 @@
+# Schema for the test plugins that store configuration. Each one mirrors
+# the definitions its DataSurfaceAware attribute declares, so a test
+# placing the plugin passes strict config schema checking.
+
+block.settings.data_surface_test_block:
+  type: block_settings
+  label: 'Data surface test block settings'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    headline:
+      type: string
+      label: 'Headline'
+    limit:
+      type: integer
+      label: 'Number of items'
+    show_summary:
+      type: boolean
+      label: 'Show summaries'
+    casing:
+      type: string
+      label: 'Casing'
+    variant:
+      type: string
+      label: 'Variant'
+      nullable: true
+
+field.formatter.settings.data_surface_test_formatter:
+  type: mapping
+  label: 'Data surface test formatter settings'
+  mapping:
+    prefix:
+      type: string
+      label: 'Prefix'
+      nullable: true
+    casing:
+      type: string
+      label: 'Casing'
+    variant:
+      type: string
+      label: 'Variant'
+      nullable: true
+
+condition.plugin.data_surface_test_condition:
+  type: condition.plugin
+  label: 'Data surface test condition configuration'
+  mapping:
+    mode:
+      type: string
+      label: 'Comparison'
+    threshold:
+      type: integer
+      label: 'Threshold'
+    reading:
+      type: integer
+      label: 'Reading'
+
+action.configuration.data_surface_test_action:
+  type: mapping
+  label: 'Data surface test action configuration'
+  mapping:
+    message:
+      type: string
+      label: 'Message'
+    level:
+      type: string
+      label: 'Level'
+
+field.storage_settings.data_surface_gated:
+  type: field.storage_settings.string
+  label: 'Gated test field storage settings'
+
+field.field_settings.data_surface_gated:
+  type: mapping
+  label: 'Gated test field settings'
+  mapping:
+    note:
+      type: string
+      label: 'Note'
+      nullable: true
+
+field.value.data_surface_gated:
+  type: field.value.string
+  label: 'Gated test field value'
+
+field.storage_settings.data_surface_secret:
+  type: field.storage_settings.string
+  label: 'Secret-bearing test field storage settings'
+
+field.field_settings.data_surface_secret:
+  type: mapping
+  label: 'Secret-bearing test field settings'
+  mapping:
+    endpoint:
+      type: string
+      label: 'Endpoint'
+      nullable: true
+    token:
+      # Holds the ciphertext the secret codec wrote, which is a string
+      # like any other as far as storage is concerned.
+      type: string
+      label: 'API key'
+      nullable: true
+
+field.value.data_surface_secret:
+  type: field.value.string
+  label: 'Secret-bearing test field value'

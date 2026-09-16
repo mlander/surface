@@ -1,0 +1,10 @@
+name: Data Surface Demo Extras
+type: module
+description: 'A third-party module extending another module''s surface: a namespaced setting and a chained refiner, no form alters.'
+package: Data Surface
+lifecycle: experimental
+lifecycle_link: 'https://git.drupalcode.org/project/data_surface/-/blob/1.0.x/README.md#experimental-submodules'
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - data_surface:data_surface
+  - data_surface:data_surface_demo

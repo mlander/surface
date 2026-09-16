@@ -1,0 +1,43 @@
+# mkdocs configuration for the Data Surface module.
+# Docs live under docs/, entry point docs/index.md.
+# Published to GitLab Pages at the site_url below.
+site_name: Data Surface
+site_url: https://project.pages.drupalcode.org/data_surface
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - search.suggest
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Declaring a surface: declaring-a-surface.md
+  - Values:
+      - The pipeline: pipeline.md
+      - Value semantics: semantics.md
+      - Outputs: outputs.md
+      - Targets: targets.md
+  - Forms:
+      - Generated forms: forms.md
+      - Widgets: widgets.md
+      - Options and resolvers: options.md
+  - Extending a surface:
+      - Refinement and contributions: refinement.md
+  - For core:
+      - Adoption catalogue: adoption.md
+      - Core gaps: core-gaps.md

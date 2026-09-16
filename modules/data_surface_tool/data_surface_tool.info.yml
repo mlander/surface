@@ -1,0 +1,11 @@
+name: Data Surface - Tool API bridge
+type: module
+description: 'Adds field instance tools whose settings input is derived from the field type''s data surface, so an agent is offered typed, labeled, bounded settings instead of a free-form map.'
+package: Data Surface
+lifecycle: experimental
+lifecycle_link: 'https://git.drupalcode.org/project/data_surface/-/blob/1.0.x/README.md#experimental-submodules'
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - data_surface:data_surface
+  - tool:tool
+  - drupal:field

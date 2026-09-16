@@ -1,0 +1,4 @@
+'administer data surface node type demo':
+  title: 'Administer the data surface content type demo'
+  description: 'Use the surface-driven content type add and edit forms this demo module provides. This is a second way into writing content types, so it is granted in addition to, never instead of, "Administer content types".'
+  restrict access: true

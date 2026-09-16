@@ -1,0 +1,7 @@
+services:
+  data_surface_tool.field_surface_locator:
+    class: Drupal\data_surface_tool\FieldSurfaceLocator
+    arguments: ['@typed_data_manager']
+  data_surface_tool.input_definitions:
+    class: Drupal\data_surface_tool\SurfaceInputDefinitions
+    arguments: ['@data_surface.options']

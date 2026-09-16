@@ -1,0 +1,11 @@
+# The demo formatter's surface gains a namespaced setting from this
+# module's build-event subscriber, and core expects every third party to
+# describe the shape it mounts, under the name it mounts it as.
+field.formatter.settings.data_surface_demo_string.third_party.data_surface_demo_extras:
+  type: mapping
+  label: 'Data surface demo extras formatter settings'
+  mapping:
+    badge:
+      type: string
+      label: 'Badge'
+      nullable: true

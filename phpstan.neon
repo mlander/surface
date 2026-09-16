@@ -1,0 +1,48 @@
+# Configuration file for PHPStan static code checking, see https://phpstan.org .
+# Run it from the Drupal root:
+#   vendor/bin/phpstan analyse -c web/modules/custom/data_surface/phpstan.neon
+parameters:
+  level: 6
+  reportUnmatchedIgnoredErrors: false
+  paths:
+    - .
+  fileExtensions:
+    - php
+    - module
+    - inc
+    - install
+  # phpstan-drupal's own bootstrap scans every extension in the site and
+  # parses every service file it finds, so one unrelated contributed
+  # module with a missing class stops the analysis before this module is
+  # read at all. The replacement registers the namespaces the analysis
+  # actually needs, and tolerates the optional address and tool modules
+  # being absent. See phpstan-bootstrap.php.
+  bootstrapFiles!:
+    - phpstan-bootstrap.php
+  ignoreErrors:
+    - identifier: missingType.iterableValue
+    - identifier: missingType.generics
+    # Drupal's plugin factory contract is new static(); the resolvers
+    # that take more services than the base class override create() as
+    # well as the constructor, so the base call is only ever reached by
+    # the resolvers that share its signature.
+    -
+      identifier: new.static
+      path: src/Options/DataSurfaceOptionsResolverBase.php
+    # Core's ContextDefinition documents $label as string|null|Stringable
+    # and $description as string|null, while storing and rendering both
+    # the same way. Passing a plain string would drop the translation.
+    -
+      message: '#^Parameter \$description of class Drupal\\Core\\Plugin\\Context\\ContextDefinition constructor expects string\|null, Drupal\\Core\\StringTranslation\\TranslatableMarkup given\.$#'
+      paths:
+        - modules/data_surface_tool/src/Plugin/tool/Tool/FieldAdd.php
+        - modules/data_surface_tool/src/Plugin/tool/Tool/FieldUpdate.php
+    # An assertion that static analysis can prove today is exactly the
+    # assertion that has to fail when the code it guards changes, so
+    # these stay in the tests rather than being deleted as redundant.
+    -
+      identifier: staticMethod.alreadyNarrowedType
+      path: tests/*
+    -
+      identifier: method.alreadyNarrowedType
+      path: tests/*

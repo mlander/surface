@@ -1,0 +1,11 @@
+name: Data Surface Demo
+type: module
+description: 'Demonstrates surface-generated configuration: a block plugin, a field formatter and a standalone form, each driven entirely by one surface.'
+package: Data Surface
+lifecycle: experimental
+lifecycle_link: 'https://git.drupalcode.org/project/data_surface/-/blob/1.0.x/README.md#experimental-submodules'
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - data_surface:data_surface
+  - drupal:block
+  - drupal:field

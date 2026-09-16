@@ -1,0 +1,8 @@
+name: Data Surface Test
+type: module
+description: 'Test support for data_surface: refiners and a build-event subscriber.'
+package: Testing
+version: VERSION
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - data_surface:data_surface

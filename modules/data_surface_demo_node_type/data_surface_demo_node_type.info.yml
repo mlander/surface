@@ -1,0 +1,10 @@
+name: Data Surface Demo - Node type
+type: module
+description: 'A surface-driven alternative to the content type add/edit form: one surface for both operations, locked machine name on edit, service-backed uniqueness on add, and a composite target writing the node type entity plus its base field overrides.'
+package: Data Surface
+lifecycle: experimental
+lifecycle_link: 'https://git.drupalcode.org/project/data_surface/-/blob/1.0.x/README.md#experimental-submodules'
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - data_surface:data_surface
+  - drupal:node

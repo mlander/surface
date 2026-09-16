@@ -1,0 +1,23 @@
+{
+    "name": "drupal/data_surface",
+    "description": "A runtime definition layer between Form API and storage: groups of refinable core data definitions that drive generated forms, validation, and machine-readable contracts.",
+    "type": "drupal-module",
+    "license": "GPL-2.0-or-later",
+    "homepage": "https://www.drupal.org/project/data_surface",
+    "support": {
+        "issues": "https://www.drupal.org/project/issues/data_surface",
+        "source": "https://git.drupalcode.org/project/data_surface"
+    },
+    "require": {
+        "php": ">=8.3",
+        "drupal/core": "^11.3 || ^12"
+    },
+    "require-dev": {
+        "drupal/address": "^2.0",
+        "drupal/tool": "^1.0@alpha"
+    },
+    "suggest": {
+        "drupal/address": "Enables the data_surface_address submodule, which describes the address field type's instance settings as a surface.",
+        "drupal/tool": "Enables the data_surface_tool submodule, which offers field instance settings to Tool API callers as a described input."
+    }
+}

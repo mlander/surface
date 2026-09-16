@@ -1,0 +1,13 @@
+services:
+  # A generic surface plugin form bound to one named operation: naming a
+  # service ID in a plugin's 'forms' key is how the operation reaches the
+  # form's constructor, since the class resolver builds a bare class with
+  # no arguments.
+  data_surface_test.alternate_form:
+    class: Drupal\data_surface\Form\DataSurfacePluginForm
+    arguments: ['alternate']
+  data_surface_test.surface_subscriber:
+    class: Drupal\data_surface_test\EventSubscriber\TestSurfaceSubscriber
+    arguments: ['@state']
+    tags:
+      - { name: event_subscriber }

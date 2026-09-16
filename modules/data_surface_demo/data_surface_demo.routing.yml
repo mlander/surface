@@ -1,0 +1,7 @@
+data_surface_demo.form:
+  path: '/admin/config/development/data-surface-demo'
+  defaults:
+    _form: 'Drupal\data_surface_demo\Form\DataSurfaceDemoForm'
+    _title: 'Data surface demo'
+  requirements:
+    _permission: 'administer site configuration'

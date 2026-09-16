@@ -1,0 +1,60 @@
+block.settings.data_surface_demo:
+  type: block_settings
+  label: 'Data surface demo block settings'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    headline:
+      type: string
+      label: 'Headline'
+    entity_type:
+      type: string
+      label: 'Entity type'
+    bundle:
+      type: string
+      label: 'Bundle'
+      nullable: true
+    field:
+      type: string
+      label: 'Highlight field'
+      nullable: true
+    limit:
+      type: integer
+      label: 'Number of items'
+    show_summary:
+      type: boolean
+      label: 'Show summaries'
+    # Namespace for surface definitions mounted by other modules through
+    # the build event. Each module describes its own mount under its own
+    # name, which is the core convention for a shape only the mounting
+    # module knows.
+    third_party_settings:
+      type: sequence
+      label: 'Third party settings'
+      requiredKey: false
+      sequence:
+        type: block.settings.data_surface_demo.third_party.[%key]
+
+field.formatter.settings.data_surface_demo_string:
+  type: mapping
+  label: 'Data surface demo formatter settings'
+  mapping:
+    prefix:
+      type: string
+      label: 'Prefix'
+      nullable: true
+    casing:
+      type: string
+      label: 'Casing'
+    variant:
+      type: string
+      label: 'Variant'
+      nullable: true
+    # As above: mounted by the build event, described by the mounting
+    # module under its own name.
+    third_party_settings:
+      type: sequence
+      label: 'Third party settings'
+      requiredKey: false
+      sequence:
+        type: field.formatter.settings.data_surface_demo_string.third_party.[%key]

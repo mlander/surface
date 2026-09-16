@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset name="data_surface">
+  <description>Drupal and DrupalPractice over this module's own code.</description>
+
+  <rule ref="Drupal"/>
+  <rule ref="DrupalPractice"/>
+
+  <arg name="extensions" value="php,module,inc,install,info,yml,test,theme"/>
+  <arg name="colors"/>
+  <arg value="sp"/>
+
+  <file>src</file>
+  <file>modules</file>
+  <file>tests</file>
+  <file>scripts</file>
+  <file>data_surface.api.php</file>
+  <file>data_surface.info.yml</file>
+  <file>data_surface.services.yml</file>
+
+  <!-- Test modules are never packaged by drupal.org, so the version line
+       core's own test modules carry is correct here rather than left out. -->
+  <rule ref="Drupal.InfoFiles.AutoAddedKeys.Version">
+    <exclude-pattern>tests/modules/*</exclude-pattern>
+  </rule>
+</ruleset>
