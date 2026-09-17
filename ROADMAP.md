@@ -164,6 +164,21 @@ which serves the real contract.
    `block.settings.*` and formatter-settings YAML becomes an emitted
    artifact via config schema discovery, deleting the parallel
    declaration every critique named first among Drupalisms.
+   Backbone, added 2026-09-17 after the owner named the gap: **the
+   coordinate space is declared, not free.** A provider declares its
+   operations, and per operation its subject space as a data
+   definition carrying an existence constraint, so the option-resolver
+   machinery enumerates every valid coordinate with labels and
+   cacheability for free; a subject space with no resolvable
+   constraint is marked honestly non-enumerable. Host bases default to
+   one configure operation with no subject. The catalogue enumerates
+   coordinates first; the endpoint validates coordinates against the
+   declaration before dispatching. The rule underneath, stated once:
+   nothing may vary a surface except a declared coordinate or a
+   surface value; no third argument, ever; anything else that would
+   vary the definitions is a new operation, a subject, or a key inside
+   the surface.
+
 6. **The discovery document.** One route serving every surface-aware
    plugin's contract (definitions, defaults, options, refinement
    graph, access verbs, output schema), cheap because the attribute is
