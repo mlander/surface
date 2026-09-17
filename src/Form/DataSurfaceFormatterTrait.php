@@ -9,7 +9,6 @@ use Drupal\Core\Entity\EntityFormInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Field\FormatterInterface;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceInterface;
@@ -364,7 +363,7 @@ trait DataSurfaceFormatterTrait {
     // glued together: a translator sees the whole row, and both halves
     // are escaped by the placeholder mechanism rather than by whatever
     // happens to render the string later.
-    $summary[] = new TranslatableMarkup('@label: @value', [
+    $summary[] = $this->t('@label: @value', [
       '@label' => $label,
       '@value' => $value,
     ]);

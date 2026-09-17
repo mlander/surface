@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Drupal\data_surface\Pipeline;
 
 use Drupal\Core\Access\AccessResultInterface;
-use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
@@ -25,6 +26,8 @@ use Drupal\data_surface\Options\DataSurfaceOptions;
  *   the one exception a secret key makes to them.
  */
 final class DataSurfacePipeline implements DataSurfacePipelineInterface {
+
+  use StringTranslationTrait;
 
   /**
    * The data types the casting table has a rule for.
@@ -48,11 +51,18 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *   list, so the stale rule has to read it from the same place a
    *   generated select does, or a form would stash a value the pipeline
    *   then refused.
+   * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
+   *   The string translation service. The pipeline writes the sentences
+   *   a person reads when a value is refused, so it is handed the
+   *   service rather than letting each message reach the global
+   *   container when it is finally rendered.
    */
   public function __construct(
     protected readonly TypedDataManagerInterface $typedDataManager,
     protected readonly DataSurfaceOptions $options,
+    TranslationInterface $string_translation,
   ) {
+    $this->stringTranslation = $string_translation;
   }
 
   /**
@@ -154,7 +164,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         // was never set is this case whether it is required or not, and
         // it is never stale: there is no value to keep.
         if ($definition->isRequired()) {
-          $errors[] = new SurfaceViolation((string) $name, '', new TranslatableMarkup('@label is required.', [
+          $errors[] = new SurfaceViolation((string) $name, '', $this->t('@label is required.', [
             '@label' => $definition->getLabel() ?? $name,
           ]));
         }
@@ -246,7 +256,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *   The stale entry.
    */
   protected function staleViolation(DataDefinitionInterface $definition, mixed $value, string $name): SurfaceViolation {
-    return new SurfaceViolation($name, '', new TranslatableMarkup('@label keeps the value @value, which is no longer available. Choose a new one when you can.', [
+    return new SurfaceViolation($name, '', $this->t('@label keeps the value @value, which is no longer available. Choose a new one when you can.', [
       '@label' => $definition->getLabel() ?? $name,
       '@value' => (string) $value,
     ]), TRUE);
@@ -263,7 +273,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     $output = Omitted::strip($output);
     $errors = [];
     foreach (array_keys(array_diff_key($output, $definitions->toArray())) as $unknown) {
-      $errors[] = new SurfaceViolation((string) $unknown, '', new TranslatableMarkup('Unknown output key @key.', [
+      $errors[] = new SurfaceViolation((string) $unknown, '', $this->t('Unknown output key @key.', [
         '@key' => $unknown,
       ]));
     }
@@ -274,7 +284,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         // NULL is not this case: NULL is a value and is held to the
         // definition below like any other.
         if ($definition->isRequired()) {
-          $errors[] = new SurfaceViolation($name, '', new TranslatableMarkup('@label was not emitted.', [
+          $errors[] = new SurfaceViolation($name, '', $this->t('@label was not emitted.', [
             '@label' => $definition->getLabel() ?? $name,
           ]));
         }
@@ -364,7 +374,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     $errors = [];
     foreach (array_keys(array_diff_key($value, $properties)) as $unknown) {
       $unknown_path = static::joinPath($path, (string) $unknown);
-      $errors[] = new SurfaceViolation($key, $unknown_path, new TranslatableMarkup('Unknown output key @key.', [
+      $errors[] = new SurfaceViolation($key, $unknown_path, $this->t('Unknown output key @key.', [
         '@key' => $key . '.' . $unknown_path,
       ]));
     }
@@ -448,7 +458,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *   The violation.
    */
   protected function outputShapeViolation(string $key, string $path, string $expected, mixed $value): SurfaceViolation {
-    return new SurfaceViolation($key, $path, new TranslatableMarkup('This value must be of type @expected, @actual given.', [
+    return new SurfaceViolation($key, $path, $this->t('This value must be of type @expected, @actual given.', [
       '@expected' => $expected,
       '@actual' => get_debug_type($value),
     ]));
@@ -846,7 +856,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       $violations[] = new SurfaceViolation(
         (string) $name,
         implode('.', $segments),
-        new TranslatableMarkup('Unknown key @key.', ['@key' => $path]),
+        $this->t('Unknown key @key.', ['@key' => $path]),
       );
     }
     return new ViolationSet($violations);
@@ -868,7 +878,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       new SurfaceViolation(
         (string) $name,
         implode('.', $segments),
-        new TranslatableMarkup('This value must be of type @expected, @actual given.', [
+        $this->t('This value must be of type @expected, @actual given.', [
           '@expected' => $exception->getExpected(),
           '@actual' => $exception->getActual(),
         ]),

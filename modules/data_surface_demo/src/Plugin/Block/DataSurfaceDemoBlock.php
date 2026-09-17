@@ -157,7 +157,7 @@ final class DataSurfaceDemoBlock extends DataSurfaceBlockBase implements Contain
     }
     $definition->addConstraint('LabeledChoice', ['choices' => $choices]);
     if ($definition instanceof DataDefinition) {
-      $definition->setDescription(new TranslatableMarkup('A @entity_type bundle.', [
+      $definition->setDescription($this->t('A @entity_type bundle.', [
         '@entity_type' => $entity_type_id,
       ]));
     }
@@ -189,7 +189,7 @@ final class DataSurfaceDemoBlock extends DataSurfaceBlockBase implements Contain
     }
     $definition->addConstraint('LabeledChoice', ['choices' => $choices]);
     if ($definition instanceof DataDefinition) {
-      $definition->setDescription(new TranslatableMarkup('A field on @entity_type @bundle.', [
+      $definition->setDescription($this->t('A field on @entity_type @bundle.', [
         '@entity_type' => $values['entity_type'],
         '@bundle' => $values['bundle'],
       ]));
@@ -204,7 +204,7 @@ final class DataSurfaceDemoBlock extends DataSurfaceBlockBase implements Contain
     $configuration = $this->getConfiguration();
     $items = [];
     foreach ($this->getDataSurface()->getDefinitions() as $name => $definition) {
-      $items[] = new TranslatableMarkup('@label: @value', [
+      $items[] = $this->t('@label: @value', [
         '@label' => $definition->getLabel() ?? $name,
         '@value' => $this->describeValue($configuration[$name] ?? NULL),
       ]);

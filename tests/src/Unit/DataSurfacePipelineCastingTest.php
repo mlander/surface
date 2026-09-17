@@ -72,7 +72,7 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
     $manager = $this->createMock(TypedDataManagerInterface::class);
     $manager->method('create')->willReturn($typed_data);
     $options = (new \ReflectionClass(DataSurfaceOptions::class))->newInstanceWithoutConstructor();
-    return new DataSurfacePipeline($manager, $options);
+    return new DataSurfacePipeline($manager, $options, $this->getStringTranslationStub());
   }
 
   /**

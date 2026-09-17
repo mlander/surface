@@ -7,6 +7,7 @@ services:
       - '@entity_field.manager'
       - '@config.typed'
       - '@current_user'
+      - '@string_translation'
   # The hook class is autowired by core's hook discovery, so the provider
   # it depends on needs a service to resolve its type hint against.
   Drupal\data_surface_demo_node_type\NodeTypeSurfaceProvider: '@data_surface_demo_node_type.provider'

@@ -1,5 +1,6 @@
 services:
   data_surface_demo_extras.surface_subscriber:
     class: Drupal\data_surface_demo_extras\EventSubscriber\DemoExtrasSurfaceSubscriber
+    arguments: ['@string_translation']
     tags:
       - { name: event_subscriber }

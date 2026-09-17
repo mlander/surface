@@ -248,7 +248,7 @@ $event->builder->setThirdPartyOutputDefinition(
   'my_module',
   'badge',
   DataDefinition::create('string')
-    ->setLabel(new TranslatableMarkup('Badge')),
+    ->setLabel($this->t('Badge')),
 );
 ```
 

@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_demo_extras\EventSubscriber;
 
-use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\data_surface\Event\DataSurfaceBuildEvent;
 use Drupal\data_surface_demo\Plugin\Field\FieldFormatter\DataSurfaceDemoFormatter;
@@ -25,10 +26,23 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
  */
 final class DemoExtrasSurfaceSubscriber implements EventSubscriberInterface {
 
+  use StringTranslationTrait;
+
   /**
    * This module's name, which is the id its contributions carry.
    */
   public const PROVIDER = 'data_surface_demo_extras';
+
+  /**
+   * Constructs a DemoExtrasSurfaceSubscriber.
+   *
+   * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
+   *   The string translation service, which the labels this subscriber
+   *   contributes are built through.
+   */
+  public function __construct(TranslationInterface $string_translation) {
+    $this->stringTranslation = $string_translation;
+  }
 
   /**
    * {@inheritdoc}
@@ -53,12 +67,12 @@ final class DemoExtrasSurfaceSubscriber implements EventSubscriberInterface {
       self::PROVIDER,
       'badge',
       DataDefinition::create('string')
-        ->setLabel(new TranslatableMarkup('Badge'))
-        ->setDescription(new TranslatableMarkup('A badge rendered beside the value.'))
+        ->setLabel($this->t('Badge'))
+        ->setDescription($this->t('A badge rendered beside the value.'))
         ->addConstraint('LabeledChoice', [
           'choices' => [
-            'star' => new TranslatableMarkup('Star'),
-            'flame' => new TranslatableMarkup('Flame'),
+            'star' => $this->t('Star'),
+            'flame' => $this->t('Flame'),
           ],
         ]),
       'star',

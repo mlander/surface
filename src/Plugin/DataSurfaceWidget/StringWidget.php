@@ -105,9 +105,9 @@ final class StringWidget extends DataSurfaceWidgetBase {
   protected function secretElement(DataDefinitionInterface $definition): array {
     $element = $this->baseElement($definition) + ['#type' => 'password'];
     $element['#required'] = FALSE;
-    $note = new TranslatableMarkup('Leave blank to keep the current value.');
+    $note = $this->t('Leave blank to keep the current value.');
     $element['#description'] = isset($element['#description'])
-      ? new TranslatableMarkup('@description @note', [
+      ? $this->t('@description @note', [
         '@description' => $element['#description'],
         '@note' => $note,
       ])

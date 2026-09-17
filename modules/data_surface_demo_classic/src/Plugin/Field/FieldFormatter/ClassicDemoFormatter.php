@@ -212,16 +212,16 @@ final class ClassicDemoFormatter extends FormatterBase {
   public function settingsSummary(): array {
     $summary = [];
     $labels = [
-      'prefix' => new TranslatableMarkup('Prefix'),
-      'casing' => new TranslatableMarkup('Casing'),
-      'variant' => new TranslatableMarkup('Variant'),
+      'prefix' => $this->t('Prefix'),
+      'casing' => $this->t('Casing'),
+      'variant' => $this->t('Variant'),
     ];
     foreach ($labels as $name => $label) {
       $value = $this->getSetting($name);
       if ($value === NULL || $value === '' || $value === []) {
         continue;
       }
-      $summary[] = new TranslatableMarkup('@label: @value', [
+      $summary[] = $this->t('@label: @value', [
         '@label' => $label,
         '@value' => $value,
       ]);

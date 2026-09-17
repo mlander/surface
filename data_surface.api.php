@@ -194,6 +194,8 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  * @code
  * final class MyModuleSurfaceSubscriber implements EventSubscriberInterface {
  *
+ *   use StringTranslationTrait;
+ *
  *   public static function getSubscribedEvents(): array {
  *     return [DataSurfaceBuildEvent::class => 'onSurfaceBuild'];
  *   }
@@ -214,11 +216,11 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  *       'my_module',
  *       'badge',
  *       DataDefinition::create('string')
- *         ->setLabel(new TranslatableMarkup('Badge'))
+ *         ->setLabel($this->t('Badge'))
  *         ->addConstraint('LabeledChoice', [
  *           'choices' => [
- *             'star' => new TranslatableMarkup('Star'),
- *             'flame' => new TranslatableMarkup('Flame'),
+ *             'star' => $this->t('Star'),
+ *             'flame' => $this->t('Flame'),
  *           ],
  *         ]),
  *       'star',
@@ -230,7 +232,7 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  *     // is what records the value as this module's: one value has one owner,
  *     // and contributing one somebody else already has is refused.
  *     $event->builder->extendChoices('variant', [
- *       'ribbon' => new TranslatableMarkup('Ribbon'),
+ *       'ribbon' => $this->t('Ribbon'),
  *     ], 'my_module');
  *
  *     // 3. A refiner for that same key, under the same provider id, which is
@@ -247,7 +249,7 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  *       'my_module',
  *       'badge',
  *       DataDefinition::create('string')
- *         ->setLabel(new TranslatableMarkup('Badge')),
+ *         ->setLabel($this->t('Badge')),
  *     );
  *   }
  *

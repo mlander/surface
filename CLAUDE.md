@@ -84,6 +84,10 @@ npx --yes cspell@8 --config /tmp/merged.json --no-progress --no-summary "**"
   core data definitions are optional by default.
 - Violations are message objects end to end, from the pipeline to the form,
   never pre-rendered strings.
+- Translatable strings: static context constructs `new TranslatableMarkup`
+  because it must, instance context calls `$this->t()` — a container-built
+  class of ours injects `string_translation` for it — and object-oriented
+  code never calls the global `t()`.
 - No closures anywhere a form array or a surface carries — both are
   serialized. Use a service, a callable string, or a class.
 - Iteration order is load-bearing: the definition map is in declaration

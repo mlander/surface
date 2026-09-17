@@ -6,7 +6,9 @@ namespace Drupal\data_surface_tool;
 
 use Drupal\Core\Plugin\Context\ContextDefinition;
 use Drupal\Core\Plugin\Context\ContextDefinitionInterface;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
@@ -69,6 +71,8 @@ use Drupal\tool\TypedData\MapInputDefinition;
  */
 final class SurfaceInputDefinitions {
 
+  use StringTranslationTrait;
+
   /**
    * The constraint the Tool API's normalizer reads an enum from.
    */
@@ -80,10 +84,15 @@ final class SurfaceInputDefinitions {
    * @param \Drupal\data_surface\Options\DataSurfaceOptions $options
    *   The options service, the one place a constraint is read as a list
    *   of allowed values.
+   * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
+   *   The string translation service, which the notes and fallback
+   *   labels this converter writes are built through.
    */
   public function __construct(
     protected readonly DataSurfaceOptions $options,
+    TranslationInterface $string_translation,
   ) {
+    $this->stringTranslation = $string_translation;
   }
 
   /**
@@ -320,11 +329,11 @@ final class SurfaceInputDefinitions {
    *   The description with the note appended.
    */
   protected function secretNote(TranslatableMarkup|string $description): TranslatableMarkup {
-    $note = new TranslatableMarkup('Write only: the stored value is never returned, and sending nothing leaves it unchanged.');
+    $note = $this->t('Write only: the stored value is never returned, and sending nothing leaves it unchanged.');
     if ((string) $description === '') {
       return $note;
     }
-    return new TranslatableMarkup('@description @note', [
+    return $this->t('@description @note', [
       '@description' => $description,
       '@note' => $note,
     ]);
@@ -387,7 +396,7 @@ final class SurfaceInputDefinitions {
   protected function label(DataDefinitionInterface $definition): TranslatableMarkup|string {
     $label = $definition->getLabel();
     if ($label === NULL || (string) $label === '') {
-      return new TranslatableMarkup('@type value', ['@type' => $definition->getDataType()]);
+      return $this->t('@type value', ['@type' => $definition->getDataType()]);
     }
     return $label instanceof TranslatableMarkup ? $label : (string) $label;
   }

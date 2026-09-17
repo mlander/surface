@@ -106,7 +106,7 @@ final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements
         : array_intersect_key($offered, array_flip($declared->values)),
     ]);
     if ($definition instanceof DataDefinition) {
-      $definition->setDescription(new TranslatableMarkup('A @casing display variant.', [
+      $definition->setDescription($this->t('A @casing display variant.', [
         '@casing' => $values['casing'],
       ]));
     }

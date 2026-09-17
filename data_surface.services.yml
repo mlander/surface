@@ -7,7 +7,7 @@ services:
     class: Drupal\data_surface\DataSurfaceAwareness
   data_surface.pipeline:
     class: Drupal\data_surface\Pipeline\DataSurfacePipeline
-    arguments: ['@typed_data_manager', '@data_surface.options']
+    arguments: ['@typed_data_manager', '@data_surface.options', '@string_translation']
   Drupal\data_surface\Pipeline\DataSurfacePipelineInterface: '@data_surface.pipeline'
   plugin.manager.data_surface_widget:
     class: Drupal\data_surface\Widget\DataSurfaceWidgetManager

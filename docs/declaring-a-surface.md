@@ -114,7 +114,7 @@ public function getDataSurface(string $operation = 'configure', ?string $subject
   // when it implements the interface, as its output refiner too.
   $builder = $this->surfaceBuilder();
   $builder->setDefinition('language', DataDefinition::create('string')
-    ->setLabel(new TranslatableMarkup('Language'))
+    ->setLabel($this->t('Language'))
     ->addConstraint('LanguageExists', ['allowLocked' => FALSE]));
   $builder->setDefault('language', $this->languageManager->getDefaultLanguage()->getId());
   if ($operation === 'edit') {
@@ -227,6 +227,46 @@ replaces it rather than on a `use` statement with no explanation.
 
 Both rules exist for the same reason as the host id namespace: the
 module's seams have to be findable from either end.
+
+## Translatable strings
+
+Every human-facing string a surface carries is a translatable object,
+never a concatenation of translated fragments. Which of the two spellings
+to use is decided by one question: is there an instance?
+
+**Static context constructs it raw.** `declareDataSurface()` is static —
+host protocols ask the class, not an object — and so are the helpers a
+declaration calls. There is no `$this`, so there is no
+`StringTranslationTrait` and no injected service, and
+`new TranslatableMarkup('Headline')` is the only spelling available. It
+resolves the translation service at render time, which is correct here
+and costs nothing, because a declaration is not a service.
+
+**Instance context calls `$this->t()`.** Anywhere there is an object —
+a refiner, a settings summary, a form builder, a widget, a cosmetic
+layer, an event subscriber, a provider — the trait is available or can
+be, the spelling is shorter, and the sniffs read it. A class we author
+that is built by the container and writes human-facing strings injects
+`string_translation`, uses `StringTranslationTrait` and calls
+`$this->t()`, so that translation never resolves through the global
+container at render time from our own code. The two spellings render
+identically; what differs is where the service comes from.
+
+The global `t()` function appears nowhere in object-oriented code.
+
+**A demo file showing both is not an inconsistency.** A host class
+usually declares its surface statically and then acts on values in
+instance methods, so
+`\Drupal\data_surface_demo\Plugin\Field\FieldFormatter\DataSurfaceDemoFormatter`
+constructs raw markup all through `declareDataSurface()` and calls
+`$this->t()` in `refineDataDefinition()` a few lines below. Both are
+correct in the place they stand, and the split down the middle of the
+file is the rule made visible.
+
+Two places keep raw construction with an instance in hand, and both say
+why in a docblock: `DataSurfaceBuilder` is a value object that callers
+make with `new`, so there is no constructor to inject through, and
+`DemoVariant` is an enum, which cannot carry the trait's property.
 
 ## Map properties, before seal
 

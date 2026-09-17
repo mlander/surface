@@ -4,4 +4,4 @@ services:
     arguments: ['@typed_data_manager']
   data_surface_tool.input_definitions:
     class: Drupal\data_surface_tool\SurfaceInputDefinitions
-    arguments: ['@data_surface.options']
+    arguments: ['@data_surface.options', '@string_translation']

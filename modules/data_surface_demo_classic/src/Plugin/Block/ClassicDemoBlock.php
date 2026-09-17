@@ -248,7 +248,7 @@ final class ClassicDemoBlock extends BlockBase implements ContainerFactoryPlugin
     $configuration = $this->getConfiguration();
     $items = [];
     foreach ($this->settingLabels() as $name => $label) {
-      $items[] = new TranslatableMarkup('@label: @value', [
+      $items[] = $this->t('@label: @value', [
         '@label' => $label,
         '@value' => $this->describeValue($configuration[$name] ?? NULL),
       ]);
@@ -271,12 +271,12 @@ final class ClassicDemoBlock extends BlockBase implements ContainerFactoryPlugin
    */
   protected function settingLabels(): array {
     return [
-      'headline' => new TranslatableMarkup('Headline'),
-      'entity_type' => new TranslatableMarkup('Entity type'),
-      'bundle' => new TranslatableMarkup('Bundle'),
-      'field' => new TranslatableMarkup('Highlight field'),
-      'limit' => new TranslatableMarkup('Number of items'),
-      'show_summary' => new TranslatableMarkup('Show summaries'),
+      'headline' => $this->t('Headline'),
+      'entity_type' => $this->t('Entity type'),
+      'bundle' => $this->t('Bundle'),
+      'field' => $this->t('Highlight field'),
+      'limit' => $this->t('Number of items'),
+      'show_summary' => $this->t('Show summaries'),
     ];
   }
 

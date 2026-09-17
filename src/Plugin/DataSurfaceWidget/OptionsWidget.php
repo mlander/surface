@@ -140,7 +140,7 @@ final class OptionsWidget extends DataSurfaceWidgetBase implements ContainerFact
       // An optional select offers an empty choice — core only auto-adds
       // one to required selects, which would force a value the
       // definition never demanded.
-      $element['#empty_option'] = new TranslatableMarkup('- None -');
+      $element['#empty_option'] = $this->t('- None -');
       $element['#empty_value'] = '';
     }
     if ($set !== NULL) {

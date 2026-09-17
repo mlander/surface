@@ -11,7 +11,8 @@ use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\data_surface\DataSurfaceAccess;
 use Drupal\data_surface\DataSurfaceBuilder;
@@ -49,6 +50,8 @@ use Drupal\node\NodeTypeInterface;
  * @see docs/forms.md
  */
 final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
+
+  use StringTranslationTrait;
 
   /**
    * The entity type whose bundles this surface configures.
@@ -92,6 +95,9 @@ final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
    * @param \Drupal\Core\Session\AccountInterface $currentUser
    *   The current user, which is who an access question is about when
    *   the caller names no account.
+   * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
+   *   The string translation service, which every label and description
+   *   this provider declares is built through.
    */
   public function __construct(
     protected readonly DataSurfaceFactoryInterface $factory,
@@ -99,7 +105,9 @@ final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
     protected readonly EntityFieldManagerInterface $entityFieldManager,
     protected readonly TypedConfigManagerInterface $typedConfig,
     protected readonly AccountInterface $currentUser,
+    TranslationInterface $string_translation,
   ) {
+    $this->stringTranslation = $string_translation;
   }
 
   /**
@@ -281,13 +289,13 @@ final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
     // grouping relies on this order within each group.
     $definitions = [
       'name' => DataDefinition::create('string')
-        ->setLabel(new TranslatableMarkup('Name'))
-        ->setDescription(new TranslatableMarkup('The human readable name for this content type.'))
+        ->setLabel($this->t('Name'))
+        ->setDescription($this->t('The human readable name for this content type.'))
         ->setRequired(TRUE)
         ->addConstraint('Length', ['max' => 255]),
       'type' => DataDefinition::create('string')
-        ->setLabel(new TranslatableMarkup('Machine name'))
-        ->setDescription(new TranslatableMarkup('Unique machine readable name: lowercase letters, numbers, and underscores only.'))
+        ->setLabel($this->t('Machine name'))
+        ->setDescription($this->t('Unique machine readable name: lowercase letters, numbers, and underscores only.'))
         ->setRequired(TRUE)
         ->addConstraint('Length', ['max' => EntityTypeInterface::BUNDLE_MAX_LENGTH])
         ->addConstraint('Regex', [
@@ -297,46 +305,46 @@ final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
       // Core has no multiline string type, so the definition says so
       // with a setting and the string widget renders a textarea.
       'description' => DataDefinition::create('string')
-        ->setLabel(new TranslatableMarkup('Description'))
-        ->setDescription(new TranslatableMarkup('Displays on the Content types page.'))
+        ->setLabel($this->t('Description'))
+        ->setDescription($this->t('Displays on the Content types page.'))
         ->setSetting('multiline', TRUE),
       // Not stored on the node type: this is the title base field's per
       // bundle label, one of the storage destinations the composite
       // target makes visible.
       'title_label' => DataDefinition::create('string')
-        ->setLabel(new TranslatableMarkup('Title field label'))
-        ->setDescription(new TranslatableMarkup('The label shown for the title field on the content form.'))
+        ->setLabel($this->t('Title field label'))
+        ->setDescription($this->t('The label shown for the title field on the content form.'))
         ->setRequired(TRUE)
         ->addConstraint('Length', ['max' => 255]),
       // Spelled canonically — values as a list, labels beside them —
       // because the values are integers, and an integer-keyed map of
       // labels cannot be told from a list of values.
       'preview_mode' => DataDefinition::create('integer')
-        ->setLabel(new TranslatableMarkup('Preview before submitting'))
+        ->setLabel($this->t('Preview before submitting'))
         ->setRequired(TRUE)
         ->addConstraint('LabeledChoice', [
           'choices' => array_column(NodePreviewMode::cases(), 'value'),
           'labels' => NodePreviewMode::asOptions(),
         ]),
       'help' => DataDefinition::create('string')
-        ->setLabel(new TranslatableMarkup('Explanation or submission guidelines'))
-        ->setDescription(new TranslatableMarkup('Displayed at the top of the page when creating or editing content of this type.'))
+        ->setLabel($this->t('Explanation or submission guidelines'))
+        ->setDescription($this->t('Displayed at the top of the page when creating or editing content of this type.'))
         ->setSetting('multiline', TRUE),
       'status' => DataDefinition::create('boolean')
-        ->setLabel(new TranslatableMarkup('Published'))
-        ->setDescription(new TranslatableMarkup('Whether new content of this type is published by default.')),
+        ->setLabel($this->t('Published'))
+        ->setDescription($this->t('Whether new content of this type is published by default.')),
       'promote' => DataDefinition::create('boolean')
-        ->setLabel(new TranslatableMarkup('Promoted to front page'))
-        ->setDescription(new TranslatableMarkup('Whether new content of this type is promoted by default.')),
+        ->setLabel($this->t('Promoted to front page'))
+        ->setDescription($this->t('Whether new content of this type is promoted by default.')),
       'sticky' => DataDefinition::create('boolean')
-        ->setLabel(new TranslatableMarkup('Sticky at top of lists'))
-        ->setDescription(new TranslatableMarkup('Whether new content of this type is sticky by default.')),
+        ->setLabel($this->t('Sticky at top of lists'))
+        ->setDescription($this->t('Whether new content of this type is sticky by default.')),
       'new_revision' => DataDefinition::create('boolean')
-        ->setLabel(new TranslatableMarkup('Create new revision'))
-        ->setDescription(new TranslatableMarkup('Whether edits create a new revision by default.')),
+        ->setLabel($this->t('Create new revision'))
+        ->setDescription($this->t('Whether edits create a new revision by default.')),
       'display_submitted' => DataDefinition::create('boolean')
-        ->setLabel(new TranslatableMarkup('Display author and date information'))
-        ->setDescription(new TranslatableMarkup('Author username and publish date will be displayed.')),
+        ->setLabel($this->t('Display author and date information'))
+        ->setDescription($this->t('Author username and publish date will be displayed.')),
     ];
 
     if ($type === NULL) {

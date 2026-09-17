@@ -16,6 +16,18 @@ use Drupal\data_surface\Refinement\ChoiceSet;
 /**
  * The mutable stage a surface passes through before it is advertised.
  *
+ * The one place in this module where a human-facing string is still
+ * built as `new TranslatableMarkup` from inside an instance method. The
+ * builder is a value object: hosts, providers and tests all make one
+ * with `new DataSurfaceBuilder(...)`, so there is no constructor to
+ * inject the translation service through and no container that sees
+ * every instance. A `setStringTranslation()` seam would be filled only
+ * for the builders that happen to pass through the factory and left
+ * empty for the rest, which is two behaviors where the point of the
+ * convention is one. So the titles of the third-party containers below
+ * are constructed raw, and translate at render time exactly as an
+ * injected `$this->t()` would.
+ *
  * @see \Drupal\data_surface\DataSurfaceBuilderInterface
  *   For the documentation of every method.
  */

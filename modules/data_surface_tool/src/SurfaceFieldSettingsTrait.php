@@ -11,7 +11,6 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Field\FieldConfigInterface;
 use Drupal\Core\Field\FieldTypePluginManagerInterface;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\DataSurfaceAccess;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Pipeline\ViolationSet;
@@ -253,8 +252,8 @@ trait SurfaceFieldSettingsTrait {
     if ($surface !== NULL) {
       return $this->surfaceInputDefinitions->fromSurface(
         $surface,
-        new TranslatableMarkup('Field instance settings'),
-        new TranslatableMarkup('Settings for this field on this bundle, described by the field type itself: every key, its meaning, the values it allows and what it starts from.'),
+        $this->t('Field instance settings'),
+        $this->t('Settings for this field on this bundle, described by the field type itself: every key, its meaning, the values it allows and what it starts from.'),
         FALSE,
         $default_value,
       );
