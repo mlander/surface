@@ -6,7 +6,6 @@ namespace Drupal\data_surface_tool\Plugin\tool\Tool;
 
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
-use Drupal\Core\Plugin\Context\ContextDefinition;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface_tool\SurfaceFieldSettingsTrait;
@@ -19,6 +18,7 @@ use Drupal\tool\TypedData\InputDefinition;
 use Drupal\tool\TypedData\InputDefinitionInterface;
 use Drupal\tool\TypedData\InputDefinitionRefinerInterface;
 use Drupal\tool\TypedData\MapInputDefinition;
+use Drupal\tool\TypedData\OutputDefinition;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -99,7 +99,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
   // shape SurfaceInputDefinitions converts. Describing it from the
   // surface would advertise a shape this tool does not hand back.
   output_definitions: [
-    'settings' => new ContextDefinition(
+    'settings' => new OutputDefinition(
       data_type: 'map',
       label: new TranslatableMarkup('Stored settings'),
       description: new TranslatableMarkup('The field instance settings as they were stored.'),
