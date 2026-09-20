@@ -171,7 +171,19 @@ which serves the real contract.
    machinery enumerates every valid coordinate with labels and
    cacheability for free; a subject space with no resolvable
    constraint is marked honestly non-enumerable. Host bases default to
-   one configure operation with no subject. The catalogue enumerates
+   one configure operation with no subject. Access has two tiers here, following core's own repeated pattern of
+   subject-less twins (create access beside entity access, field
+   access with null items, permissions beside grants): calling
+   `surfaceAccess($operation, NULL)` on a subject-taking operation
+   answers the GENERAL question, may this account use this operation
+   for any subject, and is never a missing-subject refusal; the
+   concrete subject answer is the runtime tier the endpoint re-asks.
+   Staticness is not a second result type: it is the answer's own
+   cacheability, a permissions-context result is the static tier the
+   catalogue may cache per permissions hash, a subject-tagged or
+   max-age-zero result is runtime. The node type provider's current
+   missing-subject refusal on edit changes to the general answer when
+   this lands. The catalogue enumerates
    coordinates first; the endpoint validates coordinates against the
    declaration before dispatching. The rule underneath, stated once:
    nothing may vary a surface except a declared coordinate or a
