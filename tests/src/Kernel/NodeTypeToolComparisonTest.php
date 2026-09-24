@@ -138,7 +138,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Amount', $amount['title']);
     $this->assertSame(1, $amount['minimum']);
     $unit = $deadline['properties'][NodeTypeReviewSettings::UNIT];
-    $this->assertSame(['hours', 'days', 'weeks'], $unit['enum']);
+    $this->assertSame(['hours', 'days', 'weeks', NodeTypeReviewSettings::BUSINESS_DAYS], $unit['enum']);
     $this->assertSame(NodeTypeReviewSettings::DEFAULT_UNIT, $unit['default']);
 
     $tags = $extras[NodeTypeReviewSettings::TAGS];
@@ -156,9 +156,10 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
   /**
    * Tests what the stored schema alone tells a reader about the deadline.
    *
-   * It is complete, the Range included: an integer from 3600 to 2592000.
-   * What it cannot say is that the integer is seconds, or that a person
-   * meant a week when the form stored 604800.
+   * It is accurate and complete, the Range included: an integer from
+   * 3600 to 2592000. What it does not say is that the integer is seconds,
+   * so a reader of it alone infers the unit from the bounds, and nothing
+   * in it says what a person meant by what the form stored.
    */
   public function testStoredSchemaIsCompleteButSaysNoUnit(): void {
     $definition = $this->container->get('config.typed')->getDefinition('node.type.*.third_party.' . self::EXTRAS);
@@ -306,6 +307,90 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Tests business days, which no reading of the stored schema answers.
+   *
+   * Both sides convert them by the one rule NodeTypeReviewSettings states:
+   * ten business days are twelve calendar days, 1036800 seconds. A
+   * schema-only agent asked for ten business days has no unit to find in
+   * the schema; its best inference, ten days in seconds, is plausible,
+   * inside the Range, accepted by the classic tool and satisfied by the
+   * schema, and not what the form stores for a person who chose ten
+   * business days. The range applies to the converted seconds exactly as
+   * for any other unit, and the stored seconds read back as days, not
+   * business days, because they carry no unit.
+   */
+  public function testBusinessDaysNeedTheContract(): void {
+    $business_days = NodeTypeReviewSettings::BUSINESS_DAYS;
+    // The rule: N + 2 * floor((N - 1) / 5) calendar days of 24 hours.
+    $calendar_days = [1 => 1, 5 => 5, 6 => 8, 10 => 12, 11 => 15, 22 => 30, 23 => 31];
+    foreach ($calendar_days as $amount => $days) {
+      $this->assertSame($days * 86400, NodeTypeReviewSettings::seconds($amount, $business_days), sprintf('%d business days', $amount));
+    }
+    $rule = NodeTypeReviewSettings::seconds(10, $business_days);
+    $this->assertSame(1036800, $rule);
+    $inferred = 10 * 86400;
+    $this->assertSame(864000, $inferred);
+
+    // The surface: the unit is part of the contract, so it is stored by
+    // the rule, and reads back as the same duration in days.
+    $result = $this->runSurfaceTool($this->contentType('business') + $this->extras($this->deadline(10, $business_days), NULL));
+    $this->assertTrue($result->isSuccess(), (string) $result->getMessage());
+    $this->assertSame($rule, $this->stored('business')[NodeTypeReviewSettings::DEADLINE] ?? NULL);
+    $this->assertSchemaHolds('business');
+    $provider = $this->container->get('data_surface_demo_node_type.provider');
+    $loaded = $provider->getDataSurfaceTarget('edit', 'business')->load($provider->getDataSurface('edit', 'business'));
+    $this->assertSame(
+      $this->deadline(12, 'days'),
+      $loaded['third_party_settings'][self::EXTRAS][NodeTypeReviewSettings::DEADLINE],
+    );
+
+    // Core's form, for a person choosing ten business days: the same
+    // seconds, and an edit shows them as twelve days.
+    $form_state = $this->submitClassicForm('business_person', '10', $business_days, '');
+    $this->assertSame([], $form_state->getErrors());
+    $this->assertSame($rule, $this->stored('business_person')[NodeTypeReviewSettings::DEADLINE] ?? NULL);
+    $this->assertSchemaHolds('business_person');
+    $form_object = $this->container->get('entity_type.manager')->getFormObject('node_type', 'edit');
+    $form_object->setEntity(NodeType::load('business_person'));
+    $form = $this->container->get('form_builder')->getForm($form_object);
+    $deadline = $form[self::EXTRAS][NodeTypeReviewSettings::DEADLINE];
+    $this->assertSame(12, $deadline[NodeTypeReviewSettings::AMOUNT]['#default_value']);
+    $this->assertSame('days', $deadline[NodeTypeReviewSettings::UNIT]['#default_value']);
+
+    // The classic tool, from a schema-only agent's best inference: stored,
+    // in range, no complaint from the schema or anything else, and wrong.
+    $result = $this->runClassicTool('business_classic', $this->extras($inferred, NULL));
+    $this->assertTrue($result->isSuccess(), (string) $result->getMessage());
+    $this->assertSame([NodeTypeReviewSettings::DEADLINE => $inferred], $this->stored('business_classic'));
+    $this->assertSame([], $this->constraintViolations('business_classic'));
+    $this->assertSame([], $this->schemaErrors('business_classic'));
+    $this->assertNotSame($rule, $inferred);
+
+    // The surface driven form offers the unit too.
+    $this->serveSurfaceAddRoute();
+    $form_state = $this->submitSurfaceForm('business_surface_form', '10', $business_days, '');
+    $this->assertSame([], $form_state->getErrors());
+    $this->assertSame($rule, $this->stored('business_surface_form')[NodeTypeReviewSettings::DEADLINE] ?? NULL);
+
+    // The range judges the converted seconds: twenty-two business days
+    // are thirty calendar days and accepted, twenty-three are thirty-one
+    // and refused, on the amount, on both sides.
+    $result = $this->runSurfaceTool($this->contentType('business_max') + $this->extras($this->deadline(22, $business_days), NULL));
+    $this->assertTrue($result->isSuccess(), (string) $result->getMessage());
+    $this->assertSame(NodeTypeReviewSettings::DEADLINE_MAX, $this->stored('business_max')[NodeTypeReviewSettings::DEADLINE] ?? NULL);
+    $path = 'third_party_settings.' . self::EXTRAS . '.' . NodeTypeReviewSettings::DEADLINE . '.' . NodeTypeReviewSettings::AMOUNT;
+    $result = $this->runSurfaceTool($this->contentType('business_late') + $this->extras($this->deadline(23, $business_days), NULL));
+    $this->assertFalse($result->isSuccess());
+    $this->assertStringContainsString($path . ': ', (string) $result->getMessage());
+    $this->assertNull(NodeType::load('business_late'));
+    $form_state = $this->submitClassicForm('business_person_max', '22', $business_days, '');
+    $this->assertSame([], $form_state->getErrors());
+    $form_state = $this->submitClassicForm('business_person_late', '23', $business_days, '');
+    $this->assertArrayHasKey(self::EXTRAS . '][' . NodeTypeReviewSettings::DEADLINE . '][' . NodeTypeReviewSettings::AMOUNT, $form_state->getErrors());
+    $this->assertNull(NodeType::load('business_person_late'));
+  }
+
+  /**
    * Tests that a dry run prepares the values and creates nothing.
    */
   public function testDryRunCreatesNothing(): void {
@@ -347,10 +432,10 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
    * closed — and the tool merges whatever it is given into the new
    * entity. So an agent that already knew the key could reach the
    * settings, and nothing between it and storage asks the schema: an
-   * agent that read the schema's integer and sent 7 meaning seven days
-   * stores seven seconds, and one that sent forty-five days' worth
-   * stores that. The schema's own Range refuses both, when something
-   * finally asks it.
+   * agent that inferred the schema's integer counts days and sent 7
+   * meaning seven days stores seven seconds, and one that sent forty-five
+   * days' worth stores that. The schema's own Range refuses both, when
+   * something finally asks it.
    */
   public function testClassicToolStoresWhatTheFormWouldRefuse(): void {
     $result = $this->runClassicTool('classic_seven', $this->extras(7, NULL));
@@ -371,7 +456,9 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
     $errors = $this->schemaErrors('classic_long');
     $this->assertStringContainsString(NodeTypeReviewSettings::TAGS, implode(' ', array_keys($errors)));
 
-    // An agent that knew the unit, and did the arithmetic, is fine.
+    // An agent that inferred the unit from the bounds, rightly, and did
+    // the arithmetic, stores what the form would. Nothing told it it was
+    // right; the stored value is the first sign.
     $result = $this->runClassicTool('classic_week', $this->extras(604800, ['News', 'news ', 'Sports']));
     $this->assertTrue($result->isSuccess(), (string) $result->getMessage());
     $this->assertSame(
@@ -488,7 +575,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
    */
   protected function outcomes(): array {
     $cases = [
-      'One week. Surface: `{"amount": 1, "unit": "weeks"}`; classic: `604800`, by an agent that already knows the unit is seconds; form: 1, Weeks' => [
+      'One week. Surface: `{"amount": 1, "unit": "weeks"}`; classic: `604800`, by a schema-only agent that reads 3600 and 2592000 as an hour and thirty days in seconds and infers the unit, rightly, though nothing tells it so before storage; form: 1, Weeks' => [
         $this->extras($this->deadline(1, 'weeks'), NULL),
         $this->extras(604800, NULL),
         ['1', 'weeks', ''],
@@ -498,10 +585,15 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
         $this->extras(3888000, NULL),
         ['45', 'days', ''],
       ],
-      'An agent reading only the stored schema sends `7`, meaning days. Form: 7, Days, which is what a person meant' => [
+      'A schema-only agent that infers instead that the integer counts days sends `7`, meaning seven. Form: 7, Days, which is what it meant' => [
         $this->extras(7, NULL),
         $this->extras(7, NULL),
         ['7', 'days', ''],
+      ],
+      'Ten business days. Surface: `{"amount": 10, "unit": "business_days"}`; classic: `864000`, a schema-only agent\'s best inference, ten days in seconds: plausible, in range, and wrong, since no reading of the schema says what a business day becomes; form: 10, Business days' => [
+        $this->extras($this->deadline(10, NodeTypeReviewSettings::BUSINESS_DAYS), NULL),
+        $this->extras(864000, NULL),
+        ['10', NodeTypeReviewSettings::BUSINESS_DAYS, ''],
       ],
       'Set the tags `["news", "sports"]`. Form: news, sports' => [
         $this->extras(NULL, ['news', 'sports']),

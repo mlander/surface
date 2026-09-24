@@ -25,7 +25,7 @@ final class ReviewDeadlineConstraintValidator extends ConstraintValidator {
     $unit = $value[NodeTypeReviewSettings::UNIT] ?? NodeTypeReviewSettings::DEFAULT_UNIT;
     // An amount that is not a whole number, or a unit outside the list,
     // is the amount's or the unit's own constraint's to refuse.
-    if (!is_int($amount) || !is_string($unit) || !isset(NodeTypeReviewSettings::UNITS[$unit])) {
+    if (!is_int($amount) || !is_string($unit) || !NodeTypeReviewSettings::isUnit($unit)) {
       return;
     }
     $seconds = NodeTypeReviewSettings::seconds($amount, $unit);

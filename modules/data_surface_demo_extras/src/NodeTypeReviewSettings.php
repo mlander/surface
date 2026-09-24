@@ -66,7 +66,11 @@ final class NodeTypeReviewSettings {
   public const DEFAULT_UNIT = 'days';
 
   /**
-   * The units a deadline may be given in, in seconds, smallest first.
+   * The units stored seconds are read back in, in seconds, smallest first.
+   *
+   * Each is a fixed number of seconds, so an amount of one converts both
+   * ways. Business days are a unit a deadline may be given in too, but
+   * not one of these: see BUSINESS_DAYS.
    */
   public const UNITS = [
     'hours' => 3600,
@@ -75,24 +79,88 @@ final class NodeTypeReviewSettings {
   ];
 
   /**
+   * The unit that counts working days, which has no fixed size.
+   *
+   * The rule, and the only place it is stated: the deadline is counted
+   * from the start of a Monday, one business day per weekday, and ends at
+   * the end of the Nth weekday. Each business day is 24 hours, and every
+   * full run of five business days before the last one crosses a weekend
+   * of two more calendar days, so N business days span
+   * N + 2 * floor((N - 1) / 5) calendar days.
+   *
+   * Five business days are five calendar days, six are eight, ten are
+   * twelve, twenty-two are thirty. There is no calendar, holidays or time
+   * zone in it, so the same N is always the same seconds, on the classic
+   * form and on the surface alike, and the range is checked on those
+   * seconds exactly as for any other unit.
+   *
+   * It does not round-trip to its own unit: stored seconds carry no unit,
+   * so split() reads them back in the largest of UNITS that divides them
+   * exactly. Under this rule that is always days, because a count of
+   * business days never ends on a weekend, so never on a multiple of
+   * seven: ten business days read back as twelve days.
+   */
+  public const BUSINESS_DAYS = 'business_days';
+
+  /**
+   * Every unit a deadline may be given in, in the order they are offered.
+   *
+   * @return list<string>
+   *   The unit keys.
+   */
+  public static function units(): array {
+    return [...array_keys(self::UNITS), self::BUSINESS_DAYS];
+  }
+
+  /**
+   * Whether a deadline may be given in a unit.
+   *
+   * @param string $unit
+   *   The unit key.
+   *
+   * @return bool
+   *   TRUE for one of units().
+   */
+  public static function isUnit(string $unit): bool {
+    return in_array($unit, self::units(), TRUE);
+  }
+
+  /**
    * Turns an amount of a unit into the seconds that are stored.
    *
    * @param int $amount
    *   The amount.
    * @param string $unit
-   *   One of the UNITS keys.
+   *   One of units().
    *
    * @return int
    *   The number of seconds.
    *
    * @throws \InvalidArgumentException
-   *   When the unit is not one of the UNITS keys.
+   *   When the unit is not one of units().
    */
   public static function seconds(int $amount, string $unit): int {
+    if ($unit === self::BUSINESS_DAYS) {
+      return self::businessDaysToCalendarDays($amount) * self::UNITS['days'];
+    }
     if (!isset(self::UNITS[$unit])) {
       throw new \InvalidArgumentException(sprintf('"%s" is not a review deadline unit.', $unit));
     }
     return $amount * self::UNITS[$unit];
+  }
+
+  /**
+   * Counts the calendar days a number of business days spans.
+   *
+   * @param int $business_days
+   *   The number of business days.
+   *
+   * @return int
+   *   The calendar days, by the rule BUSINESS_DAYS states. An amount
+   *   below one comes back below one day, for the range to refuse.
+   */
+  public static function businessDaysToCalendarDays(int $business_days): int {
+    return $business_days + 2 * intdiv($business_days - 1, 5);
   }
 
   /**
@@ -102,9 +170,10 @@ final class NodeTypeReviewSettings {
    *   The stored value.
    *
    * @return array{amount: int, unit: string}|null
-   *   The amount and unit, in the largest unit that divides the seconds
-   *   exactly; NULL when not even whole hours do, which is a value no
-   *   form or surface of this module writes.
+   *   The amount and unit, in the largest of UNITS that divides the
+   *   seconds exactly — never business days, which BUSINESS_DAYS says
+   *   why; NULL when not even whole hours do, which is a value no form
+   *   or surface of this module writes.
    */
   public static function split(int $seconds): ?array {
     foreach (array_reverse(self::UNITS, TRUE) as $unit => $size) {

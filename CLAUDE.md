@@ -22,7 +22,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
   modules/custom/data_surface'
 ```
 
-The baseline as of this writing: **572 tests, 3086 assertions, 0 errors,
+The baseline as of this writing: **573 tests, 3129 assertions, 0 errors,
 2 failures**. The test and assertion counts drift upward as work lands
 and are not the thing to check. **No test may error, and the only tests
 that may fail are the ones in `DataSurfaceRefinementTest`**, for a reason

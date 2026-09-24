@@ -44,8 +44,8 @@ of audience tags.
 - **As contract**, in the same subscriber: mounted on the content type
   surface (host id `entity_type:node_type`, so nothing here depends on
   the module providing it). The deadline is asked for as an amount and a
-  unit — hours, days or weeks — with a constraint on the pair that
-  refuses anything past thirty days on the amount, and
+  unit — hours, days, weeks or business days — with a constraint on the
+  pair that refuses anything past thirty days on the amount, and
   `ReviewDeadlineShape` turns the pair into seconds and back; it is
   handed to the surface with `setThirdPartyShape()`, and the target that
   writes third party settings applies it in prepare. The tags are a
@@ -59,10 +59,17 @@ of audience tags.
   trims, lower cases and de-duplicates the typed tags, and an
   `#entity_builders` callback — what `menu_ui` does to the same form.
 
-The config schema is complete for the deadline — an integer with a Range
-of 3600 to 2592000 — so the classic side is not short of validation.
-What it cannot carry is the unit, and how an amount of hours, days or
-weeks becomes the integer: that lives in the form. For the tags the
+The config schema is accurate and complete for the deadline — an
+integer with a Range of 3600 to 2592000 — so the classic side is not
+short of validation. What it does not carry is the unit, and how an
+amount of hours, days, weeks or business days becomes the integer: that
+lives in the form, and a reader of the schema alone has to infer it.
+Business days follow one rule, stated once in
+`NodeTypeReviewSettings::BUSINESS_DAYS` and used by both sides: counted
+from the start of a Monday, N business days span
+`N + 2 * floor((N - 1) / 5)` calendar days of 24 hours, so ten are
+twelve days. Stored seconds carry no unit, so they read back as days,
+not business days. For the tags the
 schema says only that they are a list of strings; what a tag may be
 lives in the form too, which is the common case.
 

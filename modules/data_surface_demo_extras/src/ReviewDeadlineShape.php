@@ -17,11 +17,15 @@ use Drupal\data_surface\Target\SettingsShapeInterface;
  * module's third party settings applies it, and nothing but this
  * module's namespace passes through it.
  *
- * It round-trips for every value the surface accepts: fromStorage()
- * reads seconds back in the largest unit that divides them exactly, so
- * seven days comes back as one week — the same duration, said once. A
- * stored value that is not whole hours, which neither this surface nor
- * the form alter writes, reads back as no amount.
+ * The conversion is NodeTypeReviewSettings::seconds(), business days
+ * included, the same the form alter uses. fromStorage() reads seconds
+ * back in the largest fixed unit that divides them exactly, so seven
+ * days comes back as one week — the same duration, said once. The
+ * duration always round-trips; the unit does not always: stored seconds
+ * carry no unit, so ten business days come back as twelve days, as
+ * NodeTypeReviewSettings::BUSINESS_DAYS explains. A stored value that is
+ * not whole hours, which neither this surface nor the form alter writes,
+ * reads back as no amount.
  */
 final class ReviewDeadlineShape implements SettingsShapeInterface {
 

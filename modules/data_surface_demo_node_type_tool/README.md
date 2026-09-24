@@ -6,10 +6,13 @@ tool an agent has for the same job without surfaces.
 
 ## What it proves
 
-A value another module adds to a form is invisible to an AI tool unless
-the tool's author knew about it, because what the value means, what it
-may be and how it is turned into what is stored all live in form code.
-A tool that reads a surface picks the extension up with no change at all.
+A value another module adds to a form is not advertised by an AI tool
+unless the tool's author knew about it, and an agent that finds the
+value's stored schema anyway still has to infer what it means, because
+what the value means and how what a person says is turned into what is
+stored live in form code. A tool that reads a surface picks the
+extension up with no change at all, and its caller infers nothing: the
+meaning is part of the contract.
 
 `data_surface_demo_extras` adds two editorial review settings to every
 content type — a review deadline of one hour to thirty days, stored as
@@ -21,7 +24,8 @@ of a content type; `NodeTypeToolComparisonTest` greps the two files to
 keep that true. Enable the extras module and the tool advertises both
 settings — the deadline as an amount and a unit, the tags with their
 pattern — and holds every caller to them, storing one week as the
-604800 seconds core's form would store.
+604800 seconds core's form would store, and ten business days as the
+1036800 seconds core's form stores for them too.
 
 [`COMPARISON.md`](COMPARISON.md) has both tools' advertised schemas and
 a table of what each tool, and core's form, did with the same cases. It
@@ -73,23 +77,39 @@ thing, so it was written to be:
 
 - **The classic form alter is idiomatic and works.** It is what
   `menu_ui` does to the same form: a details element in the vertical
-  tabs; an amount and a unit select (hours, days, weeks) whose
-  `#element_validate` turns them into seconds and refuses anything
+  tabs; an amount and a unit select (hours, days, weeks, business days)
+  whose `#element_validate` turns them into seconds and refuses anything
   outside one hour to thirty days; an `#element_validate` that splits,
   trims, lower cases and de-duplicates the typed tags; and an
   `#entity_builders` callback writing the third party settings. For a
   person filling it in it is arguably friendlier than the surface: it
   quietly fixes "News, news , Sports", where the surface refuses it.
-- **The deadline's schema is complete, validation included.** The
-  extras module ships `node.type.*.third_party.data_surface_demo_extras`
-  with the deadline as an integer carrying its full Range, 3600 to
-  2592000, so the classic side is given every constraint a schema can
-  carry. The gap the comparison shows for the deadline is therefore not
-  validation. It is meaning and transform: the key is `review_deadline`,
-  not named for its unit, the schema cannot say the integer is seconds,
-  and "one week is 604800" lives only in the form's validation callback.
-  An agent reading only the schema sees an integer from 3600 to 2592000
-  and cannot know that 7, meaning seven days, is seven seconds.
+- **The deadline's schema is accurate and complete, validation
+  included.** The extras module ships
+  `node.type.*.third_party.data_surface_demo_extras` with the deadline
+  as an integer carrying its full Range, 3600 to 2592000, so the classic
+  side is given every constraint a schema can carry. The gap the
+  comparison shows for the deadline is therefore not validation. It is
+  meaning: the key is `review_deadline`, not named for its unit, the
+  schema does not say the integer is seconds, and how an amount and a
+  unit become the integer lives only in the form's validation callback.
+- **The demo does not rest on obscurity.** A capable agent reading only
+  the schema will recognize 3600 and 2592000 as an hour and thirty days
+  in seconds, guess the unit, and send 604800 for a week — and be
+  right. The claim is not that it cannot; it is that it has to infer.
+  The stored schema is accurate but carries no meaning, so a
+  schema-only agent's correct guess is still unverified inference,
+  found right or wrong only after the value is stored, while the
+  surface's caller never infers, because the unit is part of the
+  contract. The table records the right guess as well as a wrong one.
+- **Business days are the case no reading of the schema answers.**
+  Both sides offer them and convert them by one rule, stated once in
+  `NodeTypeReviewSettings::BUSINESS_DAYS`: counted from the start of a
+  Monday, N business days of 24 hours span `N + 2 * floor((N - 1) / 5)`
+  calendar days, so ten are twelve, 1036800 seconds. A schema-only
+  agent asked for ten business days has no unit to find; its best
+  inference, ten days in seconds, 864000, is plausible, inside the
+  Range, accepted by the classic tool, and not what the form stores.
 - **The tags' schema says the stored shape and nothing more.** A
   sequence of strings. What a tag may look like, and the split, trim,
   lower casing and de-duplication, live in the form, which is the
@@ -99,11 +119,14 @@ thing, so it was written to be:
   but its `properties` map is open and it merges whatever it receives
   into the new entity, so the settings can be reached by an agent that
   already knows the key. The test sends them that way and records what
-  is stored: `7` for an agent that meant a week, `3888000` for
-  forty-five days, and the unsplit string `"News, Sports"`. Nothing on
-  the classic write path asks the schema, so all three are stored; the
-  test then asks the schema itself and records that it refuses the two
-  deadlines on its Range and the string on its type.
+  is stored: `604800` for an agent that inferred seconds for a week,
+  `7` for one that guessed the integer counts days, `3888000` for
+  forty-five days, `864000` for ten business days read as ten days, and
+  the unsplit string `"News, Sports"`. Nothing on the classic write path
+  asks the schema, so all of them are stored; the test then asks the
+  schema itself and records that it refuses `7` and `3888000` on its
+  Range and the string on its type. It has nothing to say about
+  `864000`, which is a valid number of seconds, only not the right one.
 - **The test-only schema checker is lifted for the classic tool's call
   alone.** Core's config save does not validate against schema on a
   real site, so leaving the checker in place would have credited the
@@ -121,6 +144,13 @@ carries it, and `ConfigEntityTarget` — the target that writes third
 party settings — applies it to that provider's namespace only:
 `toStorage()` in prepare, before its config schema check, and
 `fromStorage()` on load, so an edit reads 604800 back as one week.
+Business days convert by the same `NodeTypeReviewSettings::seconds()`
+the form uses, and do not round-trip to their own unit: stored seconds
+carry no unit, so `fromStorage()` reads them back in the largest of
+hours, days or weeks that divides them exactly. Under the business day
+rule that is always days, since a count of business days never ends on
+a weekend: ten business days read back as twelve days. The duration is
+kept; the way it was said is not.
 Neither the node type provider nor its composite target knows the extras
 module exists; the translation travels with the contribution, the same
 way `FieldSettingsTarget` finds a surface's secret keys on the surface it
@@ -131,7 +161,9 @@ caller sent, in the caller's units
 (`third_party_settings.data_surface_demo_extras.review_deadline.amount`),
 through a constraint on the amount and unit together; and the target's
 config schema check, run on the seconds about to be stored, enforces the
-schema's own Range as a second gate.
+schema's own Range as a second gate. Both judge business days on their
+converted seconds, like any other unit: twenty-two are thirty calendar
+days and accepted, twenty-three are thirty-one and refused.
 
 ## The one deliberate difference
 

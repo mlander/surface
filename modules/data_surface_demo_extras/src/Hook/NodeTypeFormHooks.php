@@ -24,15 +24,18 @@ use Drupal\node\NodeTypeInterface;
  * outside one hour to thirty days; the tags field takes "Local news,
  * Sports, sports" and stores ["local news", "sports"].
  *
- * The config schema this module provides is as complete as a schema can
- * be: the deadline is an integer with its Range, one hour to thirty days
- * in seconds. What it cannot carry is meaning. That the integer is
- * seconds, that a person picks hours, days or weeks, and that "one week"
- * is 604800 live in this class's validation callback and entity builder,
- * as does everything done to the tags. A caller that never renders this
- * form — an agent creating a content type through a tool — sees at best
- * an integer between 3600 and 2592000, and has no way to learn that 7
- * meant a week to the person who would have typed it.
+ * The config schema this module provides is accurate and as complete as
+ * a schema can be: the deadline is an integer with its Range, one hour
+ * to thirty days in seconds. What it does not carry is meaning. That the
+ * integer is seconds, that a person picks hours, days, weeks or business
+ * days, and how each becomes the integer live in this class's element
+ * validator, as does everything done to the tags. A caller that never
+ * renders this form — an agent creating a content type through a tool —
+ * sees at best an integer between 3600 and 2592000 and has to infer the
+ * unit. A capable one will read the bounds as an hour and thirty days
+ * in seconds and guess right; the guess is still inference, and nothing
+ * tells it whether it was right until after the value is stored. No
+ * reading of the integer says what ten business days become.
  *
  * @see \Drupal\data_surface_demo_extras\EventSubscriber\DemoExtrasSurfaceSubscriber::extendNodeType()
  *   The same two settings, said as contract.
@@ -102,6 +105,7 @@ final class NodeTypeFormHooks {
             'hours' => $this->t('Hours'),
             'days' => $this->t('Days'),
             'weeks' => $this->t('Weeks'),
+            NodeTypeReviewSettings::BUSINESS_DAYS => $this->t('Business days'),
           ],
           '#default_value' => $deadline[NodeTypeReviewSettings::UNIT] ?? NodeTypeReviewSettings::DEFAULT_UNIT,
         ],
@@ -121,9 +125,11 @@ final class NodeTypeFormHooks {
   /**
    * Element validator: turns the amount and unit into stored seconds.
    *
-   * Refuses a deadline shorter than an hour or longer than thirty days,
-   * then replaces the pair with the one integer the entity builder
-   * stores, or NULL when no amount was given.
+   * The conversion, business days included, is
+   * NodeTypeReviewSettings::seconds(), the same the surface's storage
+   * shape uses. Refuses a deadline shorter than an hour or longer than
+   * thirty days on those seconds, then replaces the pair with the one
+   * integer the entity builder stores, or NULL when no amount was given.
    *
    * @param array $element
    *   The deadline fieldset.
@@ -137,7 +143,7 @@ final class NodeTypeFormHooks {
       return;
     }
     $unit = (string) $element[NodeTypeReviewSettings::UNIT]['#value'];
-    $seconds = NodeTypeReviewSettings::seconds((int) $amount, isset(NodeTypeReviewSettings::UNITS[$unit]) ? $unit : NodeTypeReviewSettings::DEFAULT_UNIT);
+    $seconds = NodeTypeReviewSettings::seconds((int) $amount, NodeTypeReviewSettings::isUnit($unit) ? $unit : NodeTypeReviewSettings::DEFAULT_UNIT);
     if ($seconds < NodeTypeReviewSettings::DEADLINE_MIN || $seconds > NodeTypeReviewSettings::DEADLINE_MAX) {
       $form_state->setError($element[NodeTypeReviewSettings::AMOUNT], $this->t('The review deadline must be between one hour and thirty days.'));
       return;

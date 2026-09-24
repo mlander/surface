@@ -16,19 +16,31 @@ the same rules:
   hour to thirty days — or nothing. The config schema says all of that
   except the unit: it declares an integer with a Range of 3600 to
   2592000, and the key is not named for what it counts. Core's form asks
-  a person for an amount and a unit, hours, days or weeks, and turns the
-  pair into seconds in its entity builder. The surface asks for the same
-  amount and unit, and the same conversion is a storage shape the extras
-  module hands the surface, which the target applies when it prepares
-  what it writes.
+  a person for an amount and a unit, hours, days, weeks or business
+  days, and turns the pair into seconds in its element validator. The
+  surface asks for the same amount and unit, and the same conversion is
+  a storage shape the extras module hands the surface, which the target
+  applies when it prepares what it writes. Business days follow one
+  rule on both sides: counted from the start of a Monday, N business
+  days of 24 hours span `N + 2 * floor((N - 1) / 5)` calendar days, so
+  ten are twelve days, 1036800 seconds.
 - `audience_tags`, a list of lower case tags, each once. Core's form
   takes them as comma-separated text and splits, trims, lower cases and
   de-duplicates what a person typed; the schema says only that it is a
   list of strings.
 
-So the classic side has a complete schema for the deadline, and the gap
-it leaves is not validation. It is meaning: what the stored integer
-counts, and how what a person says becomes it, live only in form code.
+So the classic side has an accurate, complete schema for the deadline,
+and the gap it leaves is not validation. It is meaning: what the stored
+integer counts, and how what a person says becomes it, live only in form
+code, so an agent reading the schema alone has to infer them. A capable
+agent will read 3600 and 2592000 as an hour and thirty days in seconds
+and guess the unit right; the table records that it does. The claim is
+not that it cannot, but that a correct guess is still unverified
+inference, found right or wrong only after the value is stored, while
+the surface's caller never infers, because the unit is part of the
+contract. Business days are the case no reading of the schema can
+answer: the schema-only agent's best inference is in range, accepted,
+and wrong.
 
 Neither tool below was written with those settings in mind.
 `data_surface:node_type_add` names no key of a content type at all: its
@@ -60,9 +72,10 @@ caller sends that.
 
 | Case | `data_surface:node_type_add` | `tool_belt:entity_bundle_add` | Core's content type form, for a person |
 | --- | --- | --- | --- |
-| One week. Surface: `{"amount": 1, "unit": "weeks"}`; classic: `604800`, by an agent that already knows the unit is seconds; form: 1, Weeks | Created. Stored `{"review_deadline":604800,"audience_tags":[]}`. | Created. Stored `{"review_deadline":604800}`. | Stored `{"review_deadline":604800,"audience_tags":[]}`. |
+| One week. Surface: `{"amount": 1, "unit": "weeks"}`; classic: `604800`, by a schema-only agent that reads 3600 and 2592000 as an hour and thirty days in seconds and infers the unit, rightly, though nothing tells it so before storage; form: 1, Weeks | Created. Stored `{"review_deadline":604800,"audience_tags":[]}`. | Created. Stored `{"review_deadline":604800}`. | Stored `{"review_deadline":604800,"audience_tags":[]}`. |
 | Forty-five days, past the ceiling. Surface: `{"amount": 45, "unit": "days"}`; classic: `3888000`; form: 45, Days | Refused; nothing created. `third_party_settings.data_surface_demo_extras.review_deadline.amount`: A review deadline is at least one hour and at most thirty days; 45 days is outside that. | Created. Stored `{"review_deadline":3888000}`. The stored schema refuses it (This value should be between 3600 and 2592000.), but nothing on the write path asked. | Refused: The review deadline must be between one hour and thirty days. |
-| An agent reading only the stored schema sends `7`, meaning days. Form: 7, Days, which is what a person meant | Refused; nothing created. `third_party_settings.data_surface_demo_extras.review_deadline`: The Review deadline input is invalid: Invalid values given. Values must be represented as an associative array. | Created. Stored `{"review_deadline":7}`. The stored schema refuses it (This value should be between 3600 and 2592000.), but nothing on the write path asked. | Stored `{"review_deadline":604800,"audience_tags":[]}`. |
+| A schema-only agent that infers instead that the integer counts days sends `7`, meaning seven. Form: 7, Days, which is what it meant | Refused; nothing created. `third_party_settings.data_surface_demo_extras.review_deadline`: The Review deadline input is invalid: Invalid values given. Values must be represented as an associative array. | Created. Stored `{"review_deadline":7}`. The stored schema refuses it (This value should be between 3600 and 2592000.), but nothing on the write path asked. | Stored `{"review_deadline":604800,"audience_tags":[]}`. |
+| Ten business days. Surface: `{"amount": 10, "unit": "business_days"}`; classic: `864000`, a schema-only agent's best inference, ten days in seconds: plausible, in range, and wrong, since no reading of the schema says what a business day becomes; form: 10, Business days | Created. Stored `{"review_deadline":1036800,"audience_tags":[]}`. | Created. Stored `{"review_deadline":864000}`. | Stored `{"review_deadline":1036800,"audience_tags":[]}`. |
 | Set the tags `["news", "sports"]`. Form: news, sports | Created. Stored `{"review_deadline":null,"audience_tags":["news","sports"]}`. | Created. Stored `{"audience_tags":["news","sports"]}`. | Stored `{"review_deadline":null,"audience_tags":["news","sports"]}`. |
 | Tags as a person types them: `["News", "news ", "Sports"]`. Form: News, news , Sports | Refused; nothing created. `third_party_settings.data_surface_demo_extras.audience_tags.0`, `third_party_settings.data_surface_demo_extras.audience_tags.1`, `third_party_settings.data_surface_demo_extras.audience_tags.2`: An audience tag is lower case letters and digits, words joined by one space or one hyphen, with nothing around it. | Created. Stored `{"audience_tags":["News","news ","Sports"]}`. | Stored `{"review_deadline":null,"audience_tags":["news","sports"]}`. |
 | Unsplit tags: `"News, Sports"`. Form: the same text | Refused; nothing created. `third_party_settings.data_surface_demo_extras.audience_tags.0`: An audience tag is lower case letters and digits, words joined by one space or one hyphen, with nothing around it. | Created. Stored `{"audience_tags":"News, Sports"}`. Not the type the stored schema declares. | Stored `{"review_deadline":null,"audience_tags":["news","sports"]}`. |
@@ -239,7 +252,8 @@ caller sends that.
                                             "enum": [
                                                 "hours",
                                                 "days",
-                                                "weeks"
+                                                "weeks",
+                                                "business_days"
                                             ],
                                             "description": "Unit",
                                             "title": "Unit"

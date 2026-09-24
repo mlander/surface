@@ -107,8 +107,12 @@ final class DemoExtrasSurfaceSubscriber implements EventSubscriberInterface {
    *   a unit, and stored as the seconds the classic form stores. The
    *   conversion is a storage shape handed to the surface, which the
    *   target that writes third party settings applies to this module's
-   *   namespace in prepare; the classic form does the same arithmetic in
-   *   its entity builder, where nobody else can see it. The range is
+   *   namespace in prepare; the classic form does the same arithmetic,
+   *   NodeTypeReviewSettings::seconds(), in its element validator, where
+   *   no caller that skips the form reads it. The unit is part of the
+   *   contract, so a caller names it rather than inferring it from the
+   *   stored integer's bounds, and business days, which no reading of
+   *   those bounds can answer, are one more choice. The range is
    *   checked twice, and both gates hold: on the amount and unit a
    *   caller sent, in the caller's units, and on the stored seconds by
    *   the config schema's own Range when the target validates what it
@@ -134,11 +138,12 @@ final class DemoExtrasSurfaceSubscriber implements EventSubscriberInterface {
     $unit = DataDefinition::create('string')
       ->setLabel($this->t('Unit'))
       ->addConstraint('LabeledChoice', [
-        'choices' => array_keys(NodeTypeReviewSettings::UNITS),
+        'choices' => NodeTypeReviewSettings::units(),
         'labels' => [
           'hours' => $this->t('Hours'),
           'days' => $this->t('Days'),
           'weeks' => $this->t('Weeks'),
+          NodeTypeReviewSettings::BUSINESS_DAYS => $this->t('Business days'),
         ],
       ]);
     DefinitionMetadata::setDefaultValue($unit, NodeTypeReviewSettings::DEFAULT_UNIT);

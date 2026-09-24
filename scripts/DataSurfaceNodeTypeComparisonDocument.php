@@ -108,19 +108,31 @@ the same rules:
   hour to thirty days — or nothing. The config schema says all of that
   except the unit: it declares an integer with a Range of 3600 to
   2592000, and the key is not named for what it counts. Core's form asks
-  a person for an amount and a unit, hours, days or weeks, and turns the
-  pair into seconds in its entity builder. The surface asks for the same
-  amount and unit, and the same conversion is a storage shape the extras
-  module hands the surface, which the target applies when it prepares
-  what it writes.
+  a person for an amount and a unit, hours, days, weeks or business
+  days, and turns the pair into seconds in its element validator. The
+  surface asks for the same amount and unit, and the same conversion is
+  a storage shape the extras module hands the surface, which the target
+  applies when it prepares what it writes. Business days follow one
+  rule on both sides: counted from the start of a Monday, N business
+  days of 24 hours span `N + 2 * floor((N - 1) / 5)` calendar days, so
+  ten are twelve days, 1036800 seconds.
 - `audience_tags`, a list of lower case tags, each once. Core's form
   takes them as comma-separated text and splits, trims, lower cases and
   de-duplicates what a person typed; the schema says only that it is a
   list of strings.
 
-So the classic side has a complete schema for the deadline, and the gap
-it leaves is not validation. It is meaning: what the stored integer
-counts, and how what a person says becomes it, live only in form code.
+So the classic side has an accurate, complete schema for the deadline,
+and the gap it leaves is not validation. It is meaning: what the stored
+integer counts, and how what a person says becomes it, live only in form
+code, so an agent reading the schema alone has to infer them. A capable
+agent will read 3600 and 2592000 as an hour and thirty days in seconds
+and guess the unit right; the table records that it does. The claim is
+not that it cannot, but that a correct guess is still unverified
+inference, found right or wrong only after the value is stored, while
+the surface's caller never infers, because the unit is part of the
+contract. Business days are the case no reading of the schema can
+answer: the schema-only agent's best inference is in range, accepted,
+and wrong.
 
 Neither tool below was written with those settings in mind.
 `data_surface:node_type_add` names no key of a content type at all: its

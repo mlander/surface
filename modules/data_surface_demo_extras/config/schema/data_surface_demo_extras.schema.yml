@@ -14,14 +14,14 @@ field.formatter.settings.data_surface_demo_string.third_party.data_surface_demo_
 # from either of the two ways it adds them: the content type surface, and
 # core's own content type form.
 #
-# The deadline's schema is complete, range included, so the classic side
-# is not handicapped on validation: a validator reading this schema will
-# refuse a stored value outside one hour to thirty days. What no schema
-# can say is what the integer means. It is seconds; a person picks an
-# amount of hours, days or weeks, and the form turns that into seconds.
-# The key is not named for its unit, and on purpose: that is what a
-# stored value looks like when the form is the only place the unit is
-# spelled.
+# The deadline's schema is accurate and complete, range included, so the
+# classic side is not handicapped on validation: a validator reading this
+# schema will refuse a stored value outside one hour to thirty days. What
+# it does not say is what the integer means, so a reader of it alone has
+# to infer that. It is seconds; a person picks an amount of hours, days,
+# weeks or business days, and the form turns that into seconds. The key
+# is not named for its unit, and on purpose: that is what a stored value
+# looks like when the form is the only place the unit is spelled.
 #
 # The tags' schema says what shape is stored and nothing more. What a
 # tag may look like, and the split, trim, lower casing and

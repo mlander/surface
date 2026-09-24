@@ -241,13 +241,20 @@ content type at all, advertises both — the deadline as the amount and
 unit a person says, the tags with their pattern — and holds every caller
 to them. The classic side is given the most a schema can say: the
 deadline's config schema is an integer with its full Range, 3600 to
-2592000. What it cannot say is that the integer is seconds. Tool Belt's
+2592000. That schema is accurate but does not say the integer is
+seconds, so an agent reading it alone has to infer the unit. A capable
+one will read the bounds as an hour and thirty days and guess right; the
+claim is not that it cannot, but that its guess is unverified inference,
+found right or wrong only after the value is stored, where the surface's
+caller names the unit because it is part of the contract. Tool Belt's
 `entity_bundle_add` does not advertise the settings at all; an agent
 that already knew the key can still send them through its open
-`properties` map, and one that read the stored schema and sent `7`
-meaning seven days stores seven seconds, because nothing on the classic
-write path asks the schema. The surface stores one week as 604800
-through a storage shape the extras module hands the surface, and refuses
+`properties` map, and nothing on the classic write path asks the schema.
+Business days are the case no reading of the schema answers: both sides
+convert ten of them to twelve calendar days, 1036800 seconds, by one
+rule, while a schema-only agent's best inference, 864000, is in range,
+accepted by the classic tool, and wrong. The surface stores both through
+a storage shape the extras module hands the surface, and refuses
 forty-five days on the amount, in the caller's own units.
 
 The schemas and a table of outcomes, each cell observed rather than
