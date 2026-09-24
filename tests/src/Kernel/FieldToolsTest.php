@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Core\Access\AccessResultInterface;
-use Drupal\Core\Plugin\Context\ContextDefinitionInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
@@ -16,9 +15,11 @@ use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\field\FieldConfigInterface;
 use Drupal\tool\Tool\ToolManager;
-use Drupal\tool\TypedData\ListContextDefinition;
-use Drupal\tool\TypedData\MapContextDefinition;
+use Drupal\tool\TypedData\ListInputDefinition;
+use Drupal\tool\TypedData\ListOutputDefinition;
 use Drupal\tool\TypedData\MapInputDefinition;
+use Drupal\tool\TypedData\MapOutputDefinition;
+use Drupal\tool\TypedData\OutputDefinitionInterface;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
@@ -151,7 +152,9 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
 
     // The vocabulary a caller would otherwise have to guess, with the
     // labels the surface carries and the defaults it declares.
-    $overrides = $properties['field_overrides']->getPropertyDefinitions();
+    $field_overrides = $properties['field_overrides'];
+    $this->assertInstanceOf(MapInputDefinition::class, $field_overrides);
+    $overrides = $field_overrides->getPropertyDefinitions();
     $this->assertArrayHasKey('givenName', $overrides);
     $this->assertSame('Organization', (string) $overrides['organization']->getLabel());
     $this->assertSame(
@@ -163,9 +166,11 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
       array_map('strval', $overrides['organization']->getConstraint('LabeledChoice')['choices']),
     );
     $this->assertSame([], $properties['available_countries']->getDefaultValue());
+    $available_countries = $properties['available_countries'];
+    $this->assertInstanceOf(ListInputDefinition::class, $available_countries);
     $this->assertContains(
       'US',
-      $properties['available_countries']->getItemDefinition()->getConstraint('Choice')['choices'],
+      $available_countries->getItemDefinition()->getConstraint('Choice')['choices'],
     );
   }
 
@@ -402,7 +407,7 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
    * Tests that a surface's outputs convert to the Tool API's own type.
    *
    * The other direction of the bridge. A tool declares its outputs with
-   * plain context definitions rather than input definitions, and rightly
+   * output definitions rather than input definitions, and rightly
    * so: an output is never rendered as a form element, never refined by
    * a caller's other answers and never locked. What has to survive is
    * everything a consumer reads — the type, the label, the help text,
@@ -416,7 +421,7 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
    * wants the narrowed answer converts a surface it has already put
    * through refineOutputs().
    */
-  public function testOutputsConvertToContextDefinitions(): void {
+  public function testOutputsConvertToOutputDefinitions(): void {
     $meta = MapDataDefinition::create()->setLabel(new TranslatableMarkup('Meta'));
     $meta->setPropertyDefinition('count', DataDefinition::create('integer')
       ->setLabel(new TranslatableMarkup('Count'))
@@ -447,7 +452,7 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
 
     $this->assertSame(['text', 'note', 'meta', 'tags'], array_keys($outputs));
     foreach ($outputs as $definition) {
-      $this->assertInstanceOf(ContextDefinitionInterface::class, $definition);
+      $this->assertInstanceOf(OutputDefinitionInterface::class, $definition);
       // An output carries no default, so the conversion has none to
       // carry: there is no value a caller can fail to send.
       $this->assertNull($definition->getDefaultValue());
@@ -468,11 +473,11 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['short', 'long'], $outputs['note']->getConstraint('LabeledChoice')['choices']);
 
     // Structure becomes the Tool API's own structured definitions.
-    $this->assertInstanceOf(MapContextDefinition::class, $outputs['meta']);
+    $this->assertInstanceOf(MapOutputDefinition::class, $outputs['meta']);
     $count = $outputs['meta']->getPropertyDefinition('count');
     $this->assertSame('integer', $count->getDataType());
     $this->assertTrue($count->isRequired());
-    $this->assertInstanceOf(ListContextDefinition::class, $outputs['tags']);
+    $this->assertInstanceOf(ListOutputDefinition::class, $outputs['tags']);
     $this->assertSame('string', $outputs['tags']->getItemDefinition()->getDataType());
   }
 

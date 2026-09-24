@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_tool;
 
-use Drupal\Core\Plugin\Context\ContextDefinition;
-use Drupal\Core\Plugin\Context\ContextDefinitionInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
@@ -15,12 +13,15 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Options\DataSurfaceOptions;
+use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\tool\TypedData\InputDefinition;
 use Drupal\tool\TypedData\InputDefinitionInterface;
-use Drupal\tool\TypedData\ListContextDefinition;
 use Drupal\tool\TypedData\ListInputDefinition;
-use Drupal\tool\TypedData\MapContextDefinition;
+use Drupal\tool\TypedData\ListOutputDefinition;
 use Drupal\tool\TypedData\MapInputDefinition;
+use Drupal\tool\TypedData\MapOutputDefinition;
+use Drupal\tool\TypedData\OutputDefinition;
+use Drupal\tool\TypedData\OutputDefinitionInterface;
 
 /**
  * Turns a data surface into the Tool API's definitions.
@@ -53,7 +54,7 @@ use Drupal\tool\TypedData\MapInputDefinition;
  *   context definition does not, and rebuilds its data definition from
  *   the data type alone, so settings are dropped too.
  *
- * The surface's outputs convert the same way, into the plain context
+ * The surface's outputs convert the same way, into the output
  * definitions the Tool API declares outputs with; outputsFromSurface()
  * says what that direction loses on top of these two.
  *
@@ -104,9 +105,9 @@ final class SurfaceInputDefinitions {
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The surface to convert.
-   * @param \Drupal\Core\StringTranslation\TranslatableMarkup $label
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup|string $label
    *   The label of the resulting map input.
-   * @param \Drupal\Core\StringTranslation\TranslatableMarkup $description
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup|string $description
    *   The description of the resulting map input.
    * @param bool $required
    *   Whether the resulting map input is required.
@@ -122,7 +123,7 @@ final class SurfaceInputDefinitions {
    * @return \Drupal\tool\TypedData\MapInputDefinition
    *   The map input definition.
    */
-  public function fromSurface(DataSurfaceInterface $surface, TranslatableMarkup $label, TranslatableMarkup $description, bool $required = FALSE, mixed $default_value = NULL): MapInputDefinition {
+  public function fromSurface(DataSurfaceInterface $surface, TranslatableMarkup|string $label, TranslatableMarkup|string $description, bool $required = FALSE, mixed $default_value = NULL): MapInputDefinition {
     $properties = [];
     $definitions = $surface->getDefinitions();
     foreach ($definitions as $name => $definition) {
@@ -149,9 +150,9 @@ final class SurfaceInputDefinitions {
   /**
    * Converts a surface's outputs into the Tool API's output definitions.
    *
-   * The same bridge in the other direction. A tool's outputs are plain
-   * context definitions rather than input definitions — the Tool API
-   * says so, and it is right to: an output is never rendered as a form
+   * The same bridge in the other direction. A tool's outputs are the
+   * Tool API's output definitions rather than its input definitions —
+   * and rightly so: an output is never rendered as a form
    * element, never refined by a caller's other answers, and never
    * locked, so the three things an input definition adds are all
    * meaningless here.
@@ -182,7 +183,7 @@ final class SurfaceInputDefinitions {
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The surface whose outputs to convert.
    *
-   * @return array<string, \Drupal\Core\Plugin\Context\ContextDefinitionInterface>
+   * @return array<string, \Drupal\tool\TypedData\OutputDefinitionInterface>
    *   The output definitions, keyed by output name, in the order the
    *   surface declares them. Empty for a surface that declares no
    *   outputs, which is what a tool with nothing to add should pass
@@ -202,17 +203,17 @@ final class SurfaceInputDefinitions {
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition to convert.
    *
-   * @return \Drupal\Core\Plugin\Context\ContextDefinitionInterface
-   *   The context definition.
+   * @return \Drupal\tool\TypedData\OutputDefinitionInterface
+   *   The output definition.
    */
-  public function outputFromDefinition(DataDefinitionInterface $definition): ContextDefinitionInterface {
+  public function outputFromDefinition(DataDefinitionInterface $definition): OutputDefinitionInterface {
     $label = $this->label($definition);
     $description = $this->description($definition);
     $constraints = $this->constraints($definition);
     $required = $definition->isRequired();
 
     if ($definition instanceof ListDataDefinitionInterface) {
-      return new ListContextDefinition(
+      return new ListOutputDefinition(
         label: $label,
         required: $required,
         description: $description,
@@ -228,7 +229,7 @@ final class SurfaceInputDefinitions {
       foreach ($properties as $name => $property_definition) {
         $property_definitions[$name] = $this->outputFromDefinition($property_definition);
       }
-      return new MapContextDefinition(
+      return new MapOutputDefinition(
         label: $label,
         required: $required,
         description: $description,
@@ -239,7 +240,7 @@ final class SurfaceInputDefinitions {
     // No default value argument anywhere above, and none here: an
     // output carries none, which is the one place the two directions of
     // this bridge differ in substance rather than in class.
-    return new ContextDefinition(
+    return new OutputDefinition(
       data_type: $definition->getDataType(),
       label: $label,
       required: $required,
@@ -261,7 +262,7 @@ final class SurfaceInputDefinitions {
     $label = $this->label($definition);
     $description = $this->description($definition);
     $constraints = $this->constraints($definition);
-    $required = $definition->isRequired();
+    $required = $this->requiredInPayload($definition);
     $secret = DefinitionMetadata::isSecret($definition);
     // A secret carries no default across. A default is a value the
     // advertised schema shows to every caller, and a secret's whole
@@ -309,6 +310,39 @@ final class SurfaceInputDefinitions {
       default_value: $default,
       constraints: $constraints,
     );
+  }
+
+  /**
+   * Answers whether a caller has to send a value for a key at all.
+   *
+   * The two vocabularies mean different things by "required", and the
+   * difference is where this bridge has to translate rather than copy. A
+   * surface says a required key must hold a configured value once the
+   * pipeline's accept() has merged the declared default, what storage
+   * holds and the input, in that order. The Tool API, and the JSON Schema
+   * it advertises, say a required property must be present in the
+   * payload: its map validation refuses an absent one before the tool
+   * runs, whatever the definition defaults to.
+   *
+   * So a required key whose declared default is itself configured — a
+   * title label that starts as "Title", a preview mode that starts as
+   * optional — is satisfied by a payload that says nothing about it, and
+   * converts as not required. Advertising it as required would demand a
+   * value the pipeline never asked for; it stays required on the
+   * surface, so a caller that sends it empty is still refused, by the
+   * pipeline, with the surface's own message. A required key with no
+   * default, or with a default that holds nothing, stays required here
+   * too.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to read.
+   *
+   * @return bool
+   *   TRUE when a payload that omits the key would be refused.
+   */
+  protected function requiredInPayload(DataDefinitionInterface $definition): bool {
+    return $definition->isRequired()
+      && !ValueState::isConfigured(DefinitionMetadata::defaultOf($definition));
   }
 
   /**

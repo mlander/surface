@@ -42,6 +42,14 @@ use Drupal\data_surface\Pipeline\PreparedValues;
  * added at build time are written through the same interface core has
  * always offered and nothing has to know they came from a surface.
  *
+ * A provider that asks for its settings in one shape and stores them in
+ * another says so at build time with setThirdPartyShape(), and this
+ * target applies that shape to that provider's namespace and nothing
+ * else: toStorage() before the settings are set on the entity, so the
+ * schema check below judges what will actually be stored, and
+ * fromStorage() when they are read back. The owner who built this target
+ * never has to know the contributor exists.
+ *
  * @see docs/targets.md
  */
 final class ConfigEntityTarget implements DataSurfaceTargetInterface {
@@ -138,7 +146,7 @@ final class ConfigEntityTarget implements DataSurfaceTargetInterface {
     $values = [];
     foreach ($this->properties as $key => $property) {
       if ($key === static::THIRD_PARTY) {
-        $values[$key] = $this->loadThirdParty();
+        $values[$key] = $this->loadThirdParty($surface);
         continue;
       }
       $values[$key] = $this->entity->get(is_string($property) ? $property : $key);
@@ -165,7 +173,7 @@ final class ConfigEntityTarget implements DataSurfaceTargetInterface {
         continue;
       }
       if ($key === static::THIRD_PARTY) {
-        $this->applyThirdParty($entity, $values[$key]);
+        $this->applyThirdParty($surface, $entity, $values[$key]);
         continue;
       }
       if (is_string($property)) {
@@ -213,14 +221,19 @@ final class ConfigEntityTarget implements DataSurfaceTargetInterface {
   /**
    * Reads every provider's third party settings off the entity.
    *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The surface, which carries each provider's storage shape.
+   *
    * @return array<string, array>
-   *   Provider => setting key => value; empty when the entity carries
-   *   none.
+   *   Provider => setting key => value, in the shape the surface
+   *   describes; empty when the entity carries none.
    */
-  protected function loadThirdParty(): array {
+  protected function loadThirdParty(DataSurfaceInterface $surface): array {
     $settings = [];
     foreach ($this->entity->getThirdPartyProviders() as $provider) {
-      $settings[$provider] = $this->entity->getThirdPartySettings($provider);
+      $stored = $this->entity->getThirdPartySettings($provider);
+      $shape = $surface->getThirdPartyShape($provider);
+      $settings[$provider] = $shape === NULL ? $stored : $shape->fromStorage($stored);
     }
     return $settings;
   }
@@ -228,6 +241,8 @@ final class ConfigEntityTarget implements DataSurfaceTargetInterface {
   /**
    * Writes the third party mount onto an entity, provider by provider.
    *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The surface, which carries each provider's storage shape.
    * @param \Drupal\Core\Config\Entity\ConfigEntityInterface $entity
    *   The entity being shaped, which is the clone, never the original.
    * @param mixed $value
@@ -235,13 +250,17 @@ final class ConfigEntityTarget implements DataSurfaceTargetInterface {
    *   else means the surface had nothing mounted, and nothing is
    *   written.
    */
-  protected function applyThirdParty(ConfigEntityInterface $entity, mixed $value): void {
+  protected function applyThirdParty(DataSurfaceInterface $surface, ConfigEntityInterface $entity, mixed $value): void {
     if (!is_array($value)) {
       return;
     }
     foreach ($value as $provider => $settings) {
       if (!is_array($settings)) {
         continue;
+      }
+      $shape = $surface->getThirdPartyShape((string) $provider);
+      if ($shape !== NULL) {
+        $settings = $shape->toStorage($settings);
       }
       foreach ($settings as $key => $setting) {
         $entity->setThirdPartySetting((string) $provider, (string) $key, $setting);

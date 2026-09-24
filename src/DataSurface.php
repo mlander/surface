@@ -12,6 +12,7 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\data_surface\Refinement\ChoiceSet;
 use Drupal\data_surface\Refinement\Narrowing;
+use Drupal\data_surface\Target\SettingsShapeInterface;
 
 /**
  * The immutable surface a builder seals.
@@ -71,6 +72,9 @@ final class DataSurface implements DataSurfaceInterface {
    * @param \Drupal\data_surface\DataSurfaceOutputRefinerInterface|null $outputRefiner
    *   The provider's output refiner, first in the chain for every
    *   output.
+   * @param array<string, \Drupal\data_surface\Target\SettingsShapeInterface> $thirdPartyShapes
+   *   How each provider's mounted third-party settings are stored, by
+   *   provider; a provider not listed stores them as described.
    *
    * @internal
    *   Build a surface with DataSurfaceBuilder and seal it. The
@@ -87,7 +91,15 @@ final class DataSurface implements DataSurfaceInterface {
     protected readonly CacheableMetadata $cacheability = new CacheableMetadata(),
     protected readonly DefinitionMap $outputs = new DefinitionMap([]),
     protected readonly ?DataSurfaceOutputRefinerInterface $outputRefiner = NULL,
+    protected readonly array $thirdPartyShapes = [],
   ) {
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getThirdPartyShape(string $provider): ?SettingsShapeInterface {
+    return $this->thirdPartyShapes[$provider] ?? NULL;
   }
 
   /**
@@ -193,7 +205,7 @@ final class DataSurface implements DataSurfaceInterface {
       $changed = TRUE;
     }
     return $changed
-      ? new self($definitions, $this->refiner, $this->filters, $cacheability, $this->outputs, $this->outputRefiner)
+      ? new self($definitions, $this->refiner, $this->filters, $cacheability, $this->outputs, $this->outputRefiner, $this->thirdPartyShapes)
       : $this;
   }
 
@@ -225,7 +237,7 @@ final class DataSurface implements DataSurfaceInterface {
       $changed = TRUE;
     }
     return $changed
-      ? new self($this->definitions, $this->refiner, $this->filters, $cacheability, $outputs, $this->outputRefiner)
+      ? new self($this->definitions, $this->refiner, $this->filters, $cacheability, $outputs, $this->outputRefiner, $this->thirdPartyShapes)
       : $this;
   }
 

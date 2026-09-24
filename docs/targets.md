@@ -245,6 +245,30 @@ An implementation must be pure shape: no services, no current user, no
 site state. The two halves are expected to round-trip, and where they
 cannot the implementation says so in its own documentation.
 
+### A shape for settings another module mounted
+
+A contributor that mounts settings with `setThirdPartyDefinition()` may
+ask for a value in one shape and store it in another. It does not build
+the owner's target, so it hands the translation to the surface instead:
+
+```php
+$event->builder->setThirdPartyShape('my_module', new MyModuleShape());
+```
+
+The sealed surface carries the shape, refinement keeps it, and
+`getThirdPartyShape($provider)` answers it. `ConfigEntityTarget` applies
+it to that provider's namespace and nothing else: `toStorage()` in
+prepare, before the config schema check, so the schema judges what will
+actually be stored; `fromStorage()` on load. The shape sees only the
+provider's own settings, keyed by the keys it mounted. Sealing refuses a
+shape for a provider that mounts nothing.
+
+`data_surface_demo_extras` is the worked example: it asks for a content
+type's review deadline as an amount and a unit and stores seconds,
+through the node type demo's composite target, which knows nothing about
+it. Only `ConfigEntityTarget` writes third party settings today, so it
+is the only target that reads the shape.
+
 ## Secrets at the codec
 
 A surface key declared secret

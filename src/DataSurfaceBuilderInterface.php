@@ -6,6 +6,7 @@ namespace Drupal\data_surface;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\data_surface\Target\SettingsShapeInterface;
 
 /**
  * The mutable stage a surface passes through before it is advertised.
@@ -237,6 +238,37 @@ interface DataSurfaceBuilderInterface {
    *   When the builder is already sealed.
    */
   public function setThirdPartyDefinition(string $provider, string $key, DataDefinitionInterface $definition, mixed $default = NULL): static;
+
+  /**
+   * Says how a provider's mounted settings are written down.
+   *
+   * A contributor may ask a caller for a value in one shape and store it
+   * in another — a duration asked for as an amount and a unit and stored
+   * as a number of seconds. The owner's target cannot know that, and the
+   * contributor does not build the target, so the translation travels on
+   * the surface: a target that writes third-party settings applies the
+   * provider's shape to that provider's namespace, toStorage() on the
+   * way in and fromStorage() on the way out, and to nothing else.
+   *
+   * The shape sees the provider's settings only, keyed by the keys the
+   * provider mounted, and must be pure — the SettingsShapeInterface
+   * contract — because the surface carrying it is serialized with every
+   * form that renders it.
+   *
+   * @param string $provider
+   *   The module whose mounted settings the shape translates. It must
+   *   mount at least one definition before the surface is sealed.
+   * @param \Drupal\data_surface\Target\SettingsShapeInterface $shape
+   *   The translation.
+   *
+   * @return $this
+   *
+   * @throws \LogicException
+   *   When the builder is already sealed.
+   *
+   * @see \Drupal\data_surface\Target\ConfigEntityTarget
+   */
+  public function setThirdPartyShape(string $provider, SettingsShapeInterface $shape): static;
 
   /**
    * Gets an output definition, so alters can inspect or modify it.

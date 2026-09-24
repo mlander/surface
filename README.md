@@ -151,7 +151,9 @@ their configuration may change without a deprecation path.
   README counting what each costs. Depends on nothing from this module.
 - **Data Surface Demo Extras** (`data_surface_demo_extras`) — a
   third-party module extending someone else's surface through the build
-  event, with no form alter anywhere.
+  event, with no form alter anywhere; and, for content types, the same
+  two settings added to core's own form the classic way, so the two can
+  be compared.
 - **Data Surface Demo - Node type** (`data_surface_demo_node_type`) — one
   surface serving an add form and an edit form, with a composite target,
   and two routes that name the generic provider form rather than a form
@@ -162,6 +164,11 @@ their configuration may change without a deprecation path.
 - **Data Surface - Tool API bridge** (`data_surface_tool`) — the same
   surface serving a non-form caller. Needs
   [Tool](https://www.drupal.org/project/tool).
+- **Data Surface Demo - Node type tool**
+  (`data_surface_demo_node_type_tool`) — a content type add tool whose
+  input is the content type surface, so a setting another module mounts
+  on it reaches an agent with no change to the tool; with a generated
+  comparison against Tool Belt's bundle tool and core's form.
 
 Each submodule's README says what it shows, how to try it, and what gates
 it.

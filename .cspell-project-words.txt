@@ -21,8 +21,9 @@ refinements
 refiner
 refiners
 requiredness
-SECRETBOX
 secretbox
+SECRETBOX
+staticness
 subform
 subforms
 superfences

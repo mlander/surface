@@ -12,6 +12,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Refinement\ChoiceSet;
+use Drupal\data_surface\Target\SettingsShapeInterface;
 
 /**
  * The mutable stage a surface passes through before it is advertised.
@@ -60,6 +61,13 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
    * @var array<string, array<string, \Drupal\Core\TypedData\DataDefinitionInterface>>
    */
   protected array $thirdPartyOutputs = [];
+
+  /**
+   * How each provider's mounted settings are written down, by provider.
+   *
+   * @var array<string, \Drupal\data_surface\Target\SettingsShapeInterface>
+   */
+  protected array $thirdPartyShapes = [];
 
   /**
    * Output refiner chains keyed by output key, then by contributor.
@@ -233,6 +241,15 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * {@inheritdoc}
    */
+  public function setThirdPartyShape(string $provider, SettingsShapeInterface $shape): static {
+    $this->assertMutable();
+    $this->thirdPartyShapes[$provider] = $shape;
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function setThirdPartyDefinition(string $provider, string $key, DataDefinitionInterface $definition, mixed $default = NULL): static {
     $this->assertMutable();
     $this->thirdParty[$provider][$key] = $definition;
@@ -348,6 +365,13 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
       return $this->sealed;
     }
     $this->assertNoRefinementCycle();
+    $unmounted = array_diff_key($this->thirdPartyShapes, $this->thirdParty);
+    if ($unmounted !== []) {
+      throw new \LogicException(sprintf(
+        'A storage shape was given for the third-party settings of %s, which mount nothing on this surface.',
+        implode(', ', array_keys($unmounted)),
+      ));
+    }
     $definitions = $this->definitions;
     if ($this->thirdParty !== []) {
       $definitions['third_party_settings'] = $this->mountedMap($this->thirdParty, FALSE);
@@ -383,6 +407,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
         dependency_names: array_keys($definitions),
       ),
       $this->outputRefiner,
+      $this->thirdPartyShapes,
     );
   }
 

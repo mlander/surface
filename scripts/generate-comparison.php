@@ -3,35 +3,42 @@
 
 /**
  * @file
- * Regenerates the data_surface_tool module's COMPARISON.md.
+ * Regenerates the two generated COMPARISON.md documents.
  *
- * The document puts two settings inputs for one field type side by side:
- * the one a tool derives from the field type's config schema, and the one
- * it derives from the field type's surface. Both are produced the way an
- * invoker produces them, by the Tool API's own definition serializer, so
- * the file is a record of what a real MCP client would be handed.
+ * The data_surface_tool module's document puts two settings inputs for
+ * one field type side by side: the one a tool derives from the field
+ * type's config schema, and the one it derives from the field type's
+ * surface. The data_surface_demo_node_type_tool module's does the same
+ * for creating a content type that another module has extended, and
+ * records what each tool, and core's own form, did with the same cases.
+ * Every schema is produced the way an invoker produces it, by the Tool
+ * API's own definition serializer, so both files are a record of what a
+ * real MCP client would be handed.
  *
  * Run it from anywhere inside the site:
  * @code
  *   ddev exec php web/modules/custom/data_surface/scripts/generate-comparison.php
  * @endcode
  *
- * The generator needs a Drupal kernel carrying seven modules that are not
+ * The generator needs a Drupal kernel carrying modules that are not
  * installed on an ordinary site — entity_test among them — plus an address
- * field to describe. That is a kernel test environment, and Drupal has
- * exactly one supported way to boot one, so this script asks PHPUnit for
- * it and lets FieldToolsComparisonTest do the work. What the test writes
- * is rendered by DataSurfaceComparisonDocument, and what the test asserts
- * on every ordinary run is that the checked-in file still matches that
- * same renderer. There is one generator, and the file cannot drift away
- * from it unnoticed.
+ * field or a set of content types to describe. That is a kernel test
+ * environment, and Drupal has exactly one supported way to boot one, so
+ * this script asks PHPUnit for it and lets FieldToolsComparisonTest and
+ * NodeTypeToolComparisonTest do the work. What each test writes is
+ * rendered by the renderer beside this script, and what each test
+ * asserts on every ordinary run is that its checked-in file still matches
+ * that same renderer. There is one generator per document, and neither
+ * file can drift away from it unnoticed.
  *
  * Including this file defines nothing and runs nothing; the block below
  * fires only when the file is the entry point, so the renderer beside it
  * can be included from anywhere without starting a second PHPUnit.
  *
  * @see scripts/DataSurfaceComparisonDocument.php
+ * @see scripts/DataSurfaceNodeTypeComparisonDocument.php
  * @see \Drupal\Tests\data_surface\Kernel\FieldToolsComparisonTest
+ * @see \Drupal\Tests\data_surface\Kernel\NodeTypeToolComparisonTest
  */
 
 declare(strict_types=1);
@@ -51,17 +58,25 @@ if (!is_file($phpunit)) {
   exit(1);
 }
 
-$command = sprintf(
-  'cd %s && %s=1 SIMPLETEST_DB=%s SIMPLETEST_BASE_URL=%s %s -c core --filter %s %s',
-  escapeshellarg($web_root),
-  DataSurfaceComparisonDocument::WRITE_VARIABLE,
-  escapeshellarg(getenv('SIMPLETEST_DB') ?: 'mysql://db:db@db/db'),
-  escapeshellarg(getenv('SIMPLETEST_BASE_URL') ?: 'http://localhost'),
-  escapeshellarg($phpunit),
-  escapeshellarg('testComparisonHasNotDrifted'),
-  escapeshellarg($module . '/tests/src/Kernel/FieldToolsComparisonTest.php'),
-);
-
-fwrite(STDOUT, "Regenerating modules/data_surface_tool/COMPARISON.md ...\n");
-passthru($command, $status);
-exit($status);
+$documents = [
+  'modules/data_surface_tool/COMPARISON.md' => 'FieldToolsComparisonTest',
+  'modules/data_surface_demo_node_type_tool/COMPARISON.md' => 'NodeTypeToolComparisonTest',
+];
+foreach ($documents as $document => $test) {
+  $command = sprintf(
+    'cd %s && %s=1 SIMPLETEST_DB=%s SIMPLETEST_BASE_URL=%s %s -c core --filter %s %s',
+    escapeshellarg($web_root),
+    DataSurfaceComparisonDocument::WRITE_VARIABLE,
+    escapeshellarg(getenv('SIMPLETEST_DB') ?: 'mysql://db:db@db/db'),
+    escapeshellarg(getenv('SIMPLETEST_BASE_URL') ?: 'http://localhost'),
+    escapeshellarg($phpunit),
+    escapeshellarg('testComparisonHasNotDrifted'),
+    escapeshellarg($module . '/tests/src/Kernel/' . $test . '.php'),
+  );
+  fwrite(STDOUT, "Regenerating $document ...\n");
+  passthru($command, $status);
+  if ($status !== 0) {
+    exit($status);
+  }
+}
+exit(0);

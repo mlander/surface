@@ -12,6 +12,7 @@ use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DataSurfaceFactoryInterface;
 use Drupal\data_surface\Plugin\Validation\Constraint\LabeledChoiceConstraint;
+use Drupal\data_surface\Target\SettingsShapeInterface;
 use Drupal\data_surface_test\CasingVariantRefiner;
 use Drupal\data_surface_test\VariantPolicyFilter;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -87,6 +88,7 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
       'lock' => static fn (DataSurfaceBuilderInterface $b) => $b->lock('casing'),
       'extendChoices' => static fn (DataSurfaceBuilderInterface $b) => $b->extendChoices('casing', ['lowercase'], 'other'),
       'setThirdPartyDefinition' => static fn (DataSurfaceBuilderInterface $b) => $b->setThirdPartyDefinition('other', 'badge', clone $definition),
+      'setThirdPartyShape' => fn (DataSurfaceBuilderInterface $b) => $b->setThirdPartyShape('other', $this->shape()),
       'addRefinement' => static fn (DataSurfaceBuilderInterface $b) => $b->addRefinement('casing', ['extras']),
       'addRefiner' => static fn (DataSurfaceBuilderInterface $b) => $b->addRefiner('casing', new CasingVariantRefiner()),
       'addFilter' => static fn (DataSurfaceBuilderInterface $b) => $b->addFilter(new VariantPolicyFilter('casing', ['none'])),
@@ -106,6 +108,55 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
       // The advertised surface is what it was: nothing half-applied.
       $this->assertSame(['casing', 'extras'], $surface->getDefinitions()->names());
     }
+  }
+
+  /**
+   * Tests that a provider's storage shape travels with the surface.
+   *
+   * It is asked for by provider, survives refinement, which builds a new
+   * surface, and is refused at seal time for a provider that mounts
+   * nothing: a translation for settings the surface never describes
+   * would be applied to nothing, or to somebody else's.
+   */
+  public function testThirdPartyShapeTravelsWithTheSurface(): void {
+    $shape = $this->shape();
+    $builder = $this->builder()
+      ->setThirdPartyDefinition('other', 'badge', DataDefinition::create('string'))
+      ->setThirdPartyShape('other', $shape);
+    $surface = $builder->seal();
+    $this->assertSame($shape, $surface->getThirdPartyShape('other'));
+    $this->assertNull($surface->getThirdPartyShape('data_surface_test'));
+    $this->assertSame($shape, $surface->refine(['casing' => 'uppercase'])->getThirdPartyShape('other'));
+
+    $this->expectException(\LogicException::class);
+    $this->expectExceptionMessage('mount nothing');
+    $this->builder()->setThirdPartyShape('nobody', $this->shape())->seal();
+  }
+
+  /**
+   * Builds a storage shape that translates nothing.
+   *
+   * @return \Drupal\data_surface\Target\SettingsShapeInterface
+   *   The shape.
+   */
+  protected function shape(): SettingsShapeInterface {
+    return new class() implements SettingsShapeInterface {
+
+      /**
+       * {@inheritdoc}
+       */
+      public function toStorage(array $values): array {
+        return $values;
+      }
+
+      /**
+       * {@inheritdoc}
+       */
+      public function fromStorage(array $settings): array {
+        return $settings;
+      }
+
+    };
   }
 
   /**

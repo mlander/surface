@@ -213,8 +213,9 @@ implements `formatValue()`, writes no render array, and emits
 ### The tool bridge
 
 `SurfaceInputDefinitions::outputsFromSurface()` converts an output map
-into the Tool API's output definitions, which are plain
-`ContextDefinition` objects rather than input definitions — an output is
+into the Tool API's output definitions — `OutputDefinition`, and
+`ListOutputDefinition` or `MapOutputDefinition` for structure — rather
+than input definitions: an output is
 never rendered as a form element, never refined by a caller's other
 answers, and never locked.
 

@@ -1,0 +1,10 @@
+name: Data Surface Demo - Node type tool
+type: module
+description: 'A content type add tool whose input is the node type surface, so a setting another module mounts on that surface reaches an agent with no change to the tool.'
+package: Data Surface
+lifecycle: experimental
+lifecycle_link: 'https://git.drupalcode.org/project/data_surface/-/blob/1.0.x/README.md#experimental-submodules'
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - data_surface:data_surface_tool
+  - data_surface:data_surface_demo_node_type

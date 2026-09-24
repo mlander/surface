@@ -9,3 +9,39 @@ field.formatter.settings.data_surface_demo_string.third_party.data_surface_demo_
       type: string
       label: 'Badge'
       nullable: true
+
+# The editorial review settings this module stores on every content type,
+# from either of the two ways it adds them: the content type surface, and
+# core's own content type form.
+#
+# The deadline's schema is complete, range included, so the classic side
+# is not handicapped on validation: a validator reading this schema will
+# refuse a stored value outside one hour to thirty days. What no schema
+# can say is what the integer means. It is seconds; a person picks an
+# amount of hours, days or weeks, and the form turns that into seconds.
+# The key is not named for its unit, and on purpose: that is what a
+# stored value looks like when the form is the only place the unit is
+# spelled.
+#
+# The tags' schema says what shape is stored and nothing more. What a
+# tag may look like, and the split, trim, lower casing and
+# de-duplication that produce one, live in the form, which is the
+# common case.
+node.type.*.third_party.data_surface_demo_extras:
+  type: mapping
+  label: 'Data surface demo extras content type settings'
+  mapping:
+    review_deadline:
+      type: integer
+      label: 'Review deadline'
+      nullable: true
+      constraints:
+        Range:
+          min: 3600
+          max: 2592000
+    audience_tags:
+      type: sequence
+      label: 'Audience tags'
+      sequence:
+        type: string
+        label: 'Audience tag'

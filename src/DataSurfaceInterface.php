@@ -6,6 +6,7 @@ namespace Drupal\data_surface;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\data_surface\Target\SettingsShapeInterface;
 
 /**
  * A runtime description of the values something accepts.
@@ -142,6 +143,20 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
    *   TRUE when the key's value is fixed.
    */
   public function isLocked(string $name): bool;
+
+  /**
+   * Gets how one provider's mounted third-party settings are stored.
+   *
+   * @param string $provider
+   *   The module that mounted the settings.
+   *
+   * @return \Drupal\data_surface\Target\SettingsShapeInterface|null
+   *   The shape the provider declared at build time, or NULL when its
+   *   settings are stored exactly as the surface describes them.
+   *
+   * @see \Drupal\data_surface\DataSurfaceBuilderInterface::setThirdPartyShape()
+   */
+  public function getThirdPartyShape(string $provider): ?SettingsShapeInterface;
 
   /**
    * Gets the default value for one key.
