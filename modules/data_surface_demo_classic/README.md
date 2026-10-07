@@ -11,7 +11,7 @@ each plugin, behaving the same way, written two ways.
 
 | The classic way | The surface way |
 | --- | --- |
-| [`ClassicDemoBlock`](src/Plugin/Block/ClassicDemoBlock.php) | [`DataSurfaceDemoBlock`](../data_surface_demo/src/Plugin/Block/DataSurfaceDemoBlock.php) |
+| [`ClassicDemoBlock`](src/Plugin/Block/ClassicDemoBlock.php) | [`DataSurfaceDemoBlock`](../data_surface_demo/src/Plugin/Block/DataSurfaceDemoBlock.php) and its [`DemoBlockSurface`](../data_surface_demo/src/Surface/DemoBlockSurface.php) |
 | [`ClassicDemoFormatter`](src/Plugin/Field/FieldFormatter/ClassicDemoFormatter.php) | [`DataSurfaceDemoFormatter`](../data_surface_demo/src/Plugin/Field/FieldFormatter/DataSurfaceDemoFormatter.php) |
 
 The classic side is written to be good code, not to lose. It uses the
@@ -42,13 +42,14 @@ prose.
 | | Classic | | Surface | |
 | --- | ---: | ---: | ---: | ---: |
 | | **lines** | **code** | **lines** | **code** |
-| Block plugin | 375 | 219 | 242 | 148 |
+| Block plugin and its surface | 375 | 219 | 186 | 103 |
+| Field list (constraint, validator, resolver) | — | — | 198 | 103 |
 | Formatter plugin | 285 | 167 | 151 | 101 |
 | Variant vocabulary | — | — | 116 | 40 |
 | Config schema | 45 | 41 | 60 | 53 |
-| **Total** | **705** | **427** | **569** | **342** |
+| **Total** | **705** | **427** | **711** | **400** |
 
-Three of those rows are worth a sentence.
+Four of those rows are worth a sentence.
 
 - The **variant vocabulary** is `DemoVariant`, an enum the surface
   formatter shares between its declaration and its refiner. It is counted
@@ -61,9 +62,15 @@ Three of those rows are worth a sentence.
   Both versions hand-maintain a schema file; the surface one also
   declares the `third_party_settings` namespace other modules mount into,
   which the classic version has no way to offer.
-- The **block plugin** difference is smaller than the formatter's,
-  because both block files carry the same forty-odd lines of dependency
-  injection, which neither approach changes.
+- The **block plugin** is two files on the surface side: the plugin,
+  which only renders, and `DemoBlockSurface`, which its `#[UsesSurface]`
+  names. Neither holds a service.
+- The **field list** is where the services went. A surface refiner
+  points at a list rather than fetching it, and no core constraint names
+  a bundle's fields, so the demo brings one, its validator, and the
+  options resolver that reads it — more lines than the classic block
+  spends fetching the same list inline. The bundle list needs nothing of
+  the kind, because core's `EntityBundleExists` already says it.
 
 ## Concepts, which is the real difference
 
@@ -84,11 +91,12 @@ approach changes.
 | Default values written out | 6 | 0 |
 | Validation written by hand | 1 | 0 |
 | Label lists kept in step with the form | 1 | 0 |
-| Live option lists read from the site | 3 | 2 |
-| Surface declaration | 0 | 1 |
-| Refiner method dispatching to those lists | 0 | 1 |
+| Live option lists read from the site | 3 | 1 |
+| Constraint naming a list, with its validator | 0 | 1 |
+| Surface class | 0 | 1 |
+| Refiner methods pointing at those lists | 0 | 2 |
 | Config schema files | 1 | 1 |
-| **Distinct mechanisms in play** | **8** | **4** |
+| **Distinct mechanisms in play** | **8** | **5** |
 
 ### The formatter
 
@@ -105,7 +113,7 @@ approach changes.
 | Config schema files | 1 | 1 |
 | **Distinct mechanisms in play** | **8** | **4** |
 
-Eight against four on the block, eight against four on the formatter. The
+Eight against five on the block, eight against four on the formatter. The
 mechanisms the classic version sheds — form elements, AJAX, storage,
 defaults, validation — are also the ones that have to agree with each
 other, and nothing checks that they do: a key added to

@@ -33,6 +33,22 @@ contribution narrowed to:
 | `uppercase` | bold, strong | ribbon | bold, strong, ribbon |
 | `lowercase` | quiet, muted | none | quiet, muted |
 
+## The demo block, in the new spelling
+
+The demo block's configuration is a surface class,
+`DemoBlockSurface`, and this module alters it the new way: one class in
+`src/SurfaceAlter`, `DemoBlockAlter`, carrying
+`#[AltersSurface(DemoBlockSurface::class)]`. Nothing registers it;
+discovery finds it and builds it as an autowired service.
+
+- `alterInputs()` adds the same `badge` the formatter gets, which the
+  build mounts at `third_party_settings.data_surface_demo_extras.badge`.
+- `#[RefinesInput('limit')]` on `shortWithSummaries()` watches
+  `show_summary`, by parameter name, and caps the number of items at
+  twenty while summaries are shown.
+
+`Kernel\SurfaceBuildTest` asserts both.
+
 ## The same extension, written twice
 
 For content types this module adds two editorial review settings,

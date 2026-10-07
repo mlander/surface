@@ -7,6 +7,7 @@ namespace Drupal\data_surface\Plugin\Block;
 use Drupal\Core\Block\BlockBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DataSurfaceConfigurationTrait;
 use Drupal\data_surface\DataSurfaceDeclarationInterface;
 use Drupal\data_surface\DataSurfaceInterface;
@@ -17,10 +18,11 @@ use Drupal\data_surface\Form\DataSurfaceHostFormTrait;
 /**
  * Base class for blocks whose settings are described by a surface.
  *
- * A block extending this contains its declaration, its refiner if it has
- * one, and its output. Nothing else: no defaultConfiguration, no
- * blockForm, no blockValidate, no blockSubmit. Everything those would
- * have said is in the surface.
+ * A block extending this contains its output and, in the new spelling,
+ * #[UsesSurface] naming the surface class its configuration is; in the
+ * old spelling, its declaration and its refiner if it has one. Nothing
+ * else: no defaultConfiguration, no blockForm, no blockValidate, no
+ * blockSubmit. Everything those would have said is in the surface.
  *
  * The class itself only composes the two traits and translates the
  * block host's names and quirks:
@@ -57,10 +59,14 @@ abstract class DataSurfaceBlockBase extends BlockBase implements DataSurfaceProv
   /**
    * {@inheritdoc}
    *
-   * The surface is whatever the class declares in declareDataSurface(),
-   * with this plugin as the refiner. A block whose surface needs live site
-   * state to describe itself overrides this and builds the surface here
-   * instead, which is the one other legal home for it.
+   * The surface the block's #[UsesSurface] names, when its definition
+   * carries one: built in the block host's `configure` context, and
+   * stored, as before, in the block's configuration through the plugin
+   * configuration target this host supplies. Otherwise whatever the
+   * class declares in declareDataSurface(), with this plugin as the
+   * refiner. A block whose surface needs live site state to describe
+   * itself overrides this and builds the surface here instead, which is
+   * the one other legal home for it in the old spelling.
    *
    * A block is its own subject: the plugin instance is the whole of
    * what this surface describes, so the subject is NULL, and any
@@ -73,7 +79,21 @@ abstract class DataSurfaceBlockBase extends BlockBase implements DataSurfaceProv
     // The host id is namespaced by plugin type, so a subscriber
     // matching on it cannot pick up a host of another kind that
     // happens to share a plugin id.
-    return $this->declaredSurface('block:' . $this->getPluginId());
+    return $this->hostedSurface('block:' . $this->getPluginId(), $operation);
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * A block that names its surface with #[UsesSurface] declares nothing
+   * here, so the base answers for it; a block in the old spelling
+   * overrides this, as it always had to.
+   */
+  public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
+    throw new \LogicException(sprintf(
+      '%s declares no surface: name one with #[UsesSurface] on the class, or override declareDataSurface().',
+      static::class,
+    ));
   }
 
   /**

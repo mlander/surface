@@ -28,3 +28,13 @@ services:
   logger.channel.data_surface:
     parent: logger.channel_base
     arguments: ['data_surface']
+  # The new spelling: surfaces discovered in src/Surface and src/SurfaceAlter
+  # by SurfaceCollectorPass, and the build step that seals them through the
+  # factory above.
+  data_surface.surface_registry:
+    class: Drupal\data_surface\SurfaceBuild\SurfaceRegistry
+    arguments: ['%data_surface.surface_classes%', '@cache.discovery']
+  data_surface.surfaces:
+    class: Drupal\data_surface\SurfaceBuild\Surfaces
+    arguments: ['@data_surface.surface_registry', '@data_surface.factory', '@typed_data_manager', '@class_resolver', '@current_user']
+  Drupal\data_surface\SurfaceBuild\SurfacesInterface: '@data_surface.surfaces'

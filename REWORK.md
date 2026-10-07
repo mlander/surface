@@ -19,6 +19,14 @@ Rules for the whole rework:
   listed in CLAUDE.md, as long as nothing errors silently.
 - Two spellings may coexist while consumers migrate. The old one is
   deleted in step 5, not before.
+- Where a decision has to be made that the sketch does not address, it
+  is flagged in the code at the point of decision, so it can be grepped
+  and the sketch amended or the decision confirmed:
+
+      // SKETCH GAP: <what the sketch did not say, and what was decided>
+
+  Sparingly, for real gaps only. Each step's report lists the ones it
+  wrote.
 
 ## Sequence
 
@@ -36,6 +44,31 @@ Rules for the whole rework:
    seals through the existing factory. First consumer: the demo block
    through `#[UsesSurface]`. `attach()`/`attachBy()` are declared and
    throw "not yet" until step 2.
+
+   **Done.** The API is in `src/Surface/`; the bridge in
+   `src/SurfaceBuild/`: `SurfaceCollectorPass` (registered by
+   `DataSurfaceServiceProvider`) lists the classes into a container
+   parameter and registers alters, targets and access classes as autowired services;
+   `SurfaceRegistry` (`data_surface.surface_registry`) reads their
+   attributes into the discovery cache; `Surfaces`
+   (`data_surface.surfaces`) is the build step. Seams: the owner's shape
+   writes straight into `DataSurfaceBuilder`; an alter's keys are
+   mounted under `third_party_settings.<module>` (and
+   `third_party_outputs.<module>`), not beside the owner's; each class's
+   `#[RefinesInput]` methods become one `RefinesInputRefiner` link in
+   the owner's chain of each key, with `addRefinement()` edges, so the
+   engine gates per key on the union of what its methods watch; a
+   refiner watching nothing runs once at build; known identity becomes
+   default plus `lock()`, starting values become defaults and are
+   refused on a context that does not create; the build event still
+   fires last, with the host class and id the caller passes, which is
+   how old-spelling subscribers reach new-spelling surfaces. Deviations
+   from the sketch: `build()` takes an optional host class and host id;
+   `#[UsesSurface]` reaches the plugin definition through
+   `SurfacePluginHooks` (block only); the demo needed a constraint and
+   resolver of its own for a bundle's fields. Every undecided point is a
+   `SKETCH GAP:` comment in the code. The extras module had no demo
+   block branch to convert, so `DemoBlockAlter` is new.
 2. **Subsurfaces.** `attach()`, `attachBy()`, open slots filled by
    `#[SurfaceVariant]`, narrowing inside maps, targets composing along
    the tree. Consumers: the field tools' settings as a child resolved

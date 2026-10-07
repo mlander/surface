@@ -9,7 +9,24 @@ storage. The rule the whole module turns on is that refinement may only
 Where to look: **`docs/`** is the current documentation, and the only place
 kept true (start at `docs/index.md`). **`ROADMAP.md`** is what is next.
 **`PLAN.md`**, **`ADOPTION.md`**, **`HARDENING.md`** are design history —
-read them for why, never as a description of today.
+read them for why, never as a description of today. **`REWORK.md`** is
+the rework in progress on this branch, toward the spelling in `sketch/`.
+
+## Two spellings
+
+Until step 5 of `REWORK.md`, a surface can be written two ways, and both
+seal through the same factory into the same `DataSurfaceInterface`. The
+**new spelling** is a class in a module's `src/Surface/` carrying
+`#[Surface]`, with `defineInputs()` and `#[RefinesInput]` methods, alters
+in `src/SurfaceAlter/` carrying `#[AltersSurface]`, and `#[Situation]`
+static methods; a plugin names its surface with `#[UsesSurface]`. It is
+discovered by `SurfaceBuild\SurfaceCollectorPass` and built by the
+`data_surface.surfaces` service (`docs/surfaces.md`). The **old
+spelling** is `declareDataSurface()`, provider services and build event
+subscribers, and the build event still fires for new-spelling surfaces,
+so an old subscriber extends a new surface. The demo block is the one
+consumer moved so far. A decision the sketch does not cover is marked
+`// SKETCH GAP:` where it is made; grep for it.
 
 ## Running the suite
 
@@ -22,8 +39,14 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
   modules/custom/data_surface'
 ```
 
-The baseline as of this writing: **573 tests, 3129 assertions, 0 errors,
-2 failures**. The test and assertion counts drift upward as work lands
+The baseline as of this writing: **602 tests, 3474 assertions, 0 errors,
+9 failures** — the two below, plus seven in `FieldToolsComparisonTest`
+and `NodeTypeToolComparisonTest` that fail identically on the step's
+base commit (796f278): the `tool` module's own update of 2026-10-07
+(488f4c7, violation paths and schema enums) changed what both tools
+advertise, so both generated COMPARISON.md files and those assertions
+need an owner's decision to regenerate. They are not this module's
+regression, and `scripts/check.sh` stops on them until then. The test and assertion counts drift upward as work lands
 and are not the thing to check. **No test may error, and the only tests
 that may fail are the ones in `DataSurfaceRefinementTest`**, for a reason
 that is not this module's:
@@ -75,8 +98,13 @@ npx --yes cspell@8 --config /tmp/merged.json --no-progress --no-summary "**"
 
 - Contracts are objects; payloads are arrays. Never pass a definition as an
   array or a value bag as an object.
-- A surface is declared in one place: `declareDataSurface()`, or entirely at
-  runtime in `getDataSurface()`. Never half of each.
+- A surface is declared in one place: a `#[Surface]` class, or (old
+  spelling) `declareDataSurface()`, or entirely at runtime in
+  `getDataSurface()`. Never half of each.
+- A `#[Surface]` class has no constructor and holds no service; a refiner
+  points at a list with a constraint and the options resolver fetches.
+  Alters, targets and access classes are autowired services and may hold
+  services.
 - Refiners narrow a definition, contributors widen the surface at build
   time, filters remove keys. Those are three different jobs; do not blur.
 - Requiredness appears only when it says something: `setRequired(TRUE)` on
@@ -118,6 +146,9 @@ See `docs/declaring-a-surface.md` for all four in full.
 
 ```
 src/                     Surface, builder, factory, definition map, host trait.
+src/Surface/             The new spelling's API and attributes (Attribute/).
+src/SurfaceBuild/        Discovery pass, registry, build step, adapters.
+src/Hook/                #[UsesSurface] into plugin definitions.
 src/Pipeline/            Access, accept, validate, prepare, commit; results.
 src/Target/              Where accepted values are written; storage shapes.
 src/Form/                Form builder, host traits, the generic provider form.

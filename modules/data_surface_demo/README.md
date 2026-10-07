@@ -8,15 +8,19 @@ same surface.
 
 ### The block: `data_surface_demo`
 
-A configurable block that declares its settings in one
-`declareDataSurface()` method and writes no form code at all — no
+The first consumer of the new spelling. The plugin only renders; its
+configuration is `Surface\DemoBlockSurface`, which the plugin names with
+`#[UsesSurface]`, and it writes no form code at all — no
 `defaultConfiguration()`,
 no `blockForm()`, no `blockValidate()`, no `blockSubmit()`. The entity
 type is a `PluginExists` constraint naming its manager and interface,
 which the options resolver reads as a select of content entity types, so
-the list that validates and the list that is offered are one list. Bundle
-refines against entity type and the field refines against both, live from
-site state, through the one refiner method on the class.
+the list that validates and the list that is offered are one list. The
+bundle refines against the entity type and the field against both,
+through two `#[RefinesInput]` methods that point at a list with a
+constraint rather than fetch one: core's `EntityBundleExists` for the
+bundle, and this module's `DataSurfaceDemoBundleField`, with its options
+resolver, for the field. See [docs/surfaces.md](../../docs/surfaces.md).
 
 ### The formatter: `data_surface_demo_string`
 

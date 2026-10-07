@@ -82,6 +82,10 @@ means constructing an object graph by hand.
 
 ## Where to start
 
+- **Writing a surface as a class**, the spelling the module is moving
+  to — a class in `src/Surface/`, alters in `src/SurfaceAlter/`,
+  situations for add and edit: [Surfaces as classes](surfaces.md). The
+  pages below describe the older spelling, which still works beside it.
 - **Adopting a surface on a plugin you own**: [Declaring a
   surface](declaring-a-surface.md), then [Generated forms](forms.md).
 - **Understanding what a value will become**: [The

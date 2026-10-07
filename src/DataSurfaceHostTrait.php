@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface;
 
+use Drupal\Component\Plugin\PluginInspectionInterface;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
@@ -12,6 +13,9 @@ use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
+use Drupal\data_surface\Surface\Attribute\UsesSurface;
+use Drupal\data_surface\Surface\SurfaceContext;
+use Drupal\data_surface\SurfaceBuild\SurfacesInterface;
 
 /**
  * The few things every host-side adoption trait needs.
@@ -73,6 +77,84 @@ trait DataSurfaceHostTrait {
   protected function surfaceFactory(): DataSurfaceFactoryInterface {
     // @phpstan-ignore globalDrupalDependencyInjection.useDependencyInjection
     return \Drupal::service('data_surface.factory');
+  }
+
+  /**
+   * Gets the build step for surfaces written in the new spelling.
+   *
+   * Fetched under the same documented exception as the factory: a block
+   * asks for its surface from inside its own constructor.
+   *
+   * @return \Drupal\data_surface\SurfaceBuild\SurfacesInterface
+   *   The build step.
+   */
+  protected function surfaces(): SurfacesInterface {
+    // @phpstan-ignore globalDrupalDependencyInjection.useDependencyInjection
+    return \Drupal::service('data_surface.surfaces');
+  }
+
+  /**
+   * Gets the surface class #[UsesSurface] names on this plugin.
+   *
+   * Read from the plugin definition, where the plugin type's definition
+   * alter copied it, so a plugin constructed with a hand-made definition
+   * that carries no such key is taken at its definition's word.
+   *
+   * @return class-string|null
+   *   The surface class, or NULL when the definition names none.
+   *
+   * @see \Drupal\data_surface\Hook\SurfacePluginHooks
+   */
+  protected function usedSurface(): ?string {
+    if (!$this instanceof PluginInspectionInterface) {
+      return NULL;
+    }
+    $definition = $this->getPluginDefinition();
+    $surface = is_array($definition) ? ($definition[UsesSurface::DEFINITION_KEY] ?? NULL) : NULL;
+    return is_string($surface) ? $surface : NULL;
+  }
+
+  /**
+   * Gets the context this host asks for its surface in.
+   *
+   * A plugin host knows nothing a situation would: the instance is the
+   * whole subject, and its configuration is loaded by the host, so the
+   * context is the operation and nothing else.
+   *
+   * @param string $operation
+   *   The host operation.
+   *
+   * @return \Drupal\data_surface\Surface\SurfaceContext
+   *   The context.
+   */
+  protected function surfaceContext(string $operation): SurfaceContext {
+    // phpcs:ignore Drupal.Files.LineLength.TooLong
+    // SKETCH GAP: the sketch says the host "supplies the situation" without naming one; a plugin host supplies a bare context whose operation is the host's own verb (configure), which is no declared situation.
+    return new SurfaceContext($operation);
+  }
+
+  /**
+   * Builds this host's surface, in whichever spelling the plugin uses.
+   *
+   * The surface #[UsesSurface] names, built in this host's context, when
+   * the plugin definition carries one; otherwise the class's own
+   * declareDataSurface(). Either way through the factory, with this
+   * class and the host id on the build event, so a subscriber matching
+   * the host keeps matching it whichever spelling the plugin moved to.
+   *
+   * @param string $host_id
+   *   The namespaced identifier for the host, `<host type>:<id>`.
+   * @param string $operation
+   *   The host operation.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The advertised surface, alters applied.
+   */
+  protected function hostedSurface(string $host_id, string $operation = 'configure'): DataSurfaceInterface {
+    $surface = $this->usedSurface();
+    return $surface === NULL
+      ? $this->declaredSurface($host_id)
+      : $this->surfaces()->build($surface, $this->surfaceContext($operation), static::class, $host_id);
   }
 
   /**

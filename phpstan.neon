@@ -6,6 +6,11 @@ parameters:
   reportUnmatchedIgnoredErrors: false
   paths:
     - .
+  # The sketch is the target spelling for the rework, written against
+  # modules this site does not have and never executed; REWORK.md deletes
+  # it in step 6, once the docs say everything it does.
+  excludePaths:
+    - sketch
   fileExtensions:
     - php
     - module

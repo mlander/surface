@@ -550,8 +550,12 @@ final class DataSurface implements DataSurfaceInterface {
    *   The definition handed over.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $to
    *   What came back.
+   *
+   * @internal
+   *   Public only for the surface build step, which runs a refiner that
+   *   watches nothing once, at build time, under the same rules.
    */
-  protected static function carryMetadata(DataDefinitionInterface $from, DataDefinitionInterface $to): void {
+  public static function carryMetadata(DataDefinitionInterface $from, DataDefinitionInterface $to): void {
     if ($from === $to) {
       return;
     }
@@ -584,8 +588,13 @@ final class DataSurface implements DataSurfaceInterface {
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface
    *   The deep clone.
+   *
+   * @internal
+   *   Public only for the surface build step, which keeps a pre-image of
+   *   what a situation narrows and of what a build-time refiner returns,
+   *   for the same narrowing check refinement makes here.
    */
-  protected static function deepClone(DataDefinitionInterface $definition): DataDefinitionInterface {
+  public static function deepClone(DataDefinitionInterface $definition): DataDefinitionInterface {
     $clone = clone $definition;
     if ($clone instanceof MapDataDefinition) {
       foreach ($clone->getPropertyDefinitions() as $name => $property) {
