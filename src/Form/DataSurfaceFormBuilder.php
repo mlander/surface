@@ -108,6 +108,15 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
    * {@inheritdoc}
    */
   public function buildSurfaceForm(DataSurfaceInterface $surface, array $values, FormStateInterface $form_state, string $wrapper_key = 'data-surface'): array {
+    // Two views of one overlay. The surface is refined against the keys
+    // as they stand, an orphan held unanswered; each element is rendered
+    // with what it holds, an orphan standing for its stored value, so its
+    // select comes up on the empty option with that value behind it.
+    $shown = $values;
+    foreach ($values[self::STANDING_KEY] ?? [] as $dotted => $standing) {
+      NestedArray::setValue($shown, explode('.', (string) $dotted), $standing, TRUE);
+    }
+    unset($values[self::STANDING_KEY], $shown[self::STANDING_KEY]);
     $surface = $surface->refine($values);
     // One id per built container, not one per plugin. Two placements of
     // the same block on one page, or one block rendered twice by Layout
@@ -160,7 +169,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
         // widget that knows better than to.
         DefinitionMetadata::isSecret($definition) => NULL,
         $definitions->isLocked($name) => $surface->getDefault($name),
-        default => $values[$name] ?? $surface->getDefault($name),
+        default => $shown[$name] ?? $surface->getDefault($name),
       };
       if ($slot !== NULL) {
         // Rendered for the variant now chosen, from that variant's
@@ -201,12 +210,49 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
    * {@inheritdoc}
    */
   public function discardedRefinementInput(DataSurfaceInterface $surface, array $stored, array $input): array {
-    $discarded = $this->discardedInFrame($surface, $stored, $input);
+    return $this->settle($surface, $stored, $input)[0];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function refinementOverlay(DataSurfaceInterface $surface, array $stored, array $input): array {
+    [$discarded, $orphaned] = $this->settle($surface, $stored, $input);
+    foreach ($discarded as $dotted) {
+      NestedArray::unsetValue($input, explode('.', $dotted));
+    }
+    $values = array_replace($stored, $input);
+    foreach (array_keys($orphaned) as $dotted) {
+      NestedArray::setValue($values, explode('.', (string) $dotted), NULL, TRUE);
+    }
+    if ($orphaned !== []) {
+      $values[self::STANDING_KEY] = $orphaned;
+    }
+    return $values;
+  }
+
+  /**
+   * Settles a rebuild's input: what it drops, and what it leaves orphaned.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The surface or child surface, as advertised.
+   * @param array $stored
+   *   What is stored for its keys.
+   * @param array $input
+   *   The in-progress input for its keys.
+   *
+   * @return array{0: string[], 1: array<string, mixed>}
+   *   The keys, or dotted paths into a child, whose input is dropped; and
+   *   the keys, or dotted paths, held unanswered, each mapped to the
+   *   stored value its element stands for.
+   */
+  protected function settle(DataSurfaceInterface $surface, array $stored, array $input): array {
+    [$discarded, $orphaned] = $this->settleFrame($surface, $stored, $input);
     // A child refines in its own frame, under its own names, so what its
     // own refiners orphan is asked of the child, against the value the
     // parent's input now holds for it. A key discarded whole above has
     // nothing left inside it to ask about.
-    $values = array_replace($stored, array_diff_key($input, array_flip($discarded)));
+    $values = static::frameValues($stored, $input, $discarded, $orphaned);
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
       $name = (string) $name;
       if (!$entry->isNested() || in_array($name, $discarded, TRUE) || !is_array($input[$name] ?? NULL)) {
@@ -223,15 +269,30 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
         $held = NULL;
       }
       $child_stored = array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
-      foreach ($this->discardedRefinementInput($child, $child_stored, $input[$name]) as $path) {
+      [$child_discarded, $child_orphaned] = $this->settle($child, $child_stored, $input[$name]);
+      foreach ($child_discarded as $path) {
         $discarded[] = $name . '.' . $path;
       }
+      foreach ($child_orphaned as $path => $value) {
+        $orphaned[$name . '.' . $path] = $value;
+      }
     }
-    return $discarded;
+    return [$discarded, $orphaned];
   }
 
   /**
-   * Names the keys of one frame whose in-progress input a rebuild drops.
+   * Settles one frame, to a fixed point.
+   *
+   * Two moves, each of which changes what the other keys refine against,
+   * so neither is asked once. An input the narrowed definition no longer
+   * offers, or one whose own dependency moved under it, is dropped, and
+   * the key falls back to what is stored. A key that falls back to a
+   * stored value the edit orphaned is held unanswered, which moves
+   * whatever refines against it in turn. The loop runs until neither
+   * finds anything new; each pass adds a key to one of two sets drawn
+   * from the frame's refinement targets and never takes one away, so it
+   * ends within twice the number of targets, and in practice within the
+   * depth of the longest dependency chain.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The surface or child surface, as advertised.
@@ -240,25 +301,30 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
    * @param array $input
    *   The in-progress input for its keys.
    *
-   * @return string[]
-   *   The keys, in the order they were found orphaned.
+   * @return array{0: string[], 1: array<string, mixed>}
+   *   The keys whose input is dropped, in the order they were found; and
+   *   the keys held unanswered, each mapped to the stored value it
+   *   stands for.
    */
-  protected function discardedInFrame(DataSurfaceInterface $surface, array $stored, array $input): array {
-    $targets = array_intersect_key($surface->getDefinitions()->refinements(), $input);
-    if ($targets === []) {
-      return [];
+  protected function settleFrame(DataSurfaceInterface $surface, array $stored, array $input): array {
+    $refinements = $surface->getDefinitions()->refinements();
+    if ($refinements === []) {
+      return [[], []];
     }
+    $targets = array_intersect_key($refinements, $input);
     // What the person has in front of them right now, before anything is
     // taken away. Every "did this move?" question below is asked against
     // this, so a key is only ever judged against the edit it was made
     // under.
     $overlay = array_replace($stored, $input);
     $discarded = [];
+    $orphaned = [];
     do {
-      $values = array_replace($stored, array_diff_key($input, $discarded));
+      $values = static::frameValues($stored, $input, array_values($discarded), $orphaned);
       $refined = $surface->refine($values);
       $again = FALSE;
       foreach ($targets as $name => $dependencies) {
+        $name = (string) $name;
         if (isset($discarded[$name]) || $this->stillStands($refined, $name, $dependencies, $input[$name], $overlay, $values)) {
           continue;
         }
@@ -269,8 +335,123 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
         // length settles inside one rebuild.
         $again = TRUE;
       }
+      if ($again) {
+        // What a drop falls back to is only known once the surface is
+        // refined against it.
+        continue;
+      }
+      foreach ($refinements as $name => $dependencies) {
+        $name = (string) $name;
+        // Only a key standing on what is stored: input that is still
+        // there was just judged to stand.
+        if (isset($orphaned[$name]) || (array_key_exists($name, $input) && !isset($discarded[$name]))) {
+          continue;
+        }
+        if ($this->isOrphaned($refined, $name, $dependencies, $values, $stored)) {
+          $orphaned[$name] = $values[$name];
+          $again = TRUE;
+        }
+      }
     } while ($again);
-    return array_values($discarded);
+    return [array_values($discarded), $orphaned];
+  }
+
+  /**
+   * Builds one frame's values as they stand partway through settling.
+   *
+   * @param array $stored
+   *   What is stored for the frame's keys.
+   * @param array $input
+   *   The in-progress input for them.
+   * @param string[] $discarded
+   *   The keys whose input is dropped so far.
+   * @param array<string, mixed> $orphaned
+   *   The keys held unanswered so far.
+   *
+   * @return array
+   *   Stored underneath, the input that still stands on top, nothing at
+   *   each orphaned key.
+   */
+  protected static function frameValues(array $stored, array $input, array $discarded, array $orphaned): array {
+    return array_replace(
+      $stored,
+      array_diff_key($input, array_flip($discarded)),
+      array_fill_keys(array_map('strval', array_keys($orphaned)), NULL),
+    );
+  }
+
+  /**
+   * Answers whether a key's stored value was orphaned by the edit.
+   *
+   * The pipeline's line between stale and refused, asked of a form still
+   * being edited. A stored value the narrowed list no longer offers while
+   * every key it refines against still holds what is stored is stale: the
+   * site moved, it is kept, and what refines against it still does. One
+   * whose dependency the edit moved is this edit's own orphan: a save
+   * from here refuses it, its select is empty, and nothing below it may
+   * go on being narrowed by it — a capacity capped by a room no longer on
+   * the screen.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $refined
+   *   The surface refined against the values as they now stand.
+   * @param string $name
+   *   The target key.
+   * @param string[] $dependencies
+   *   The keys the target refines against.
+   * @param array $values
+   *   The values as they now stand; the target's is what is stored.
+   * @param array $stored
+   *   What is stored for the frame's keys.
+   *
+   * @return bool
+   *   TRUE when the key is to be held unanswered.
+   */
+  protected function isOrphaned(DataSurfaceInterface $refined, string $name, array $dependencies, array $values, array $stored): bool {
+    $value = $values[$name] ?? NULL;
+    if ((!is_int($value) && !is_string($value)) || !ValueState::isConfigured($value)) {
+      return FALSE;
+    }
+    $moved = FALSE;
+    foreach ($dependencies as $dependency) {
+      $moved = $moved || !static::sameAnswer($values[$dependency] ?? NULL, $stored[$dependency] ?? NULL);
+    }
+    if (!$moved) {
+      return FALSE;
+    }
+    $definition = $refined->getDefinition($name);
+    if ($definition === NULL || $definition instanceof ListDataDefinitionInterface || $refined->getDefinitions()->entry($name)?->slot !== NULL) {
+      return FALSE;
+    }
+    $set = $this->options->resolve($definition);
+    return $set !== NULL && !$set->allows($value);
+  }
+
+  /**
+   * Compares an answer with what is stored, as a form posts it.
+   *
+   * A browser posts every scalar as a string, so a stored 1 and a posted
+   * "1" are the same answer, and an unanswered key the same whichever
+   * empty spelling it arrives in.
+   *
+   * @param mixed $answer
+   *   The value as it now stands.
+   * @param mixed $stored
+   *   What is stored.
+   *
+   * @return bool
+   *   TRUE when the two say the same thing.
+   */
+  protected static function sameAnswer(mixed $answer, mixed $stored): bool {
+    if (!ValueState::isConfigured($answer) || !ValueState::isConfigured($stored)) {
+      return ValueState::isConfigured($answer) === ValueState::isConfigured($stored);
+    }
+    if (is_bool($answer) || is_bool($stored)) {
+      return (bool) $answer === (bool) $stored;
+    }
+    if (is_scalar($answer) && is_scalar($stored)) {
+      return (string) $answer === (string) $stored;
+    }
+    return $answer === $stored;
   }
 
   /**

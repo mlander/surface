@@ -203,6 +203,45 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Tests the orphan cascade settles all three links in one rebuild.
+   *
+   * Stored on node's article and its title; the entity type moves to
+   * user with the bundle and field still posted. The bundle falls back to
+   * the stored article, which user does not offer, so it comes up on its
+   * empty option standing for it; and the field below it is refined as
+   * the bundle is seen — unanswered — so it is open again, not a list of
+   * user's fields narrowed by a bundle no longer on the screen.
+   */
+  public function testTheOrphanCascadeReachesTheField(): void {
+    $block = $this->createBlock(['entity_type' => 'node', 'bundle' => 'article', 'field' => 'title']);
+    $form_state = new FormState();
+    $form_state->setTriggeringElement(['#parents' => ['settings', 'entity_type']]);
+    $form_state->setUserInput(['settings' => ['entity_type' => 'user', 'bundle' => 'article', 'field' => 'title']]);
+
+    $form = $block->buildConfigurationForm([], $form_state);
+
+    $this->assertSame(['user' => 'User'], array_map('strval', $form['bundle']['#options']));
+    $this->assertSame('', $form['bundle']['#default_value']);
+    $this->assertSame('article', $form['bundle'][DataSurfaceWidgetBase::STALE_KEY]);
+    // Refined against no bundle at all: open, with no options and the
+    // description it was declared with.
+    $this->assertSame('textfield', $form['field']['#type']);
+    $this->assertArrayNotHasKey('#options', $form['field']);
+    $this->assertSame('Choose a bundle to pick from its fields.', (string) $form['field']['#description']);
+    // Both inputs withdrawn, in the one pass; nothing stored was touched.
+    $settings = $form_state->getUserInput()['settings'];
+    $this->assertArrayNotHasKey('bundle', $settings);
+    $this->assertArrayNotHasKey('field', $settings);
+    $this->assertSame('article', $block->getConfiguration()['bundle']);
+    // The builder names both, asked directly.
+    $this->assertSame(['bundle', 'field'], $this->formBuilder()->discardedRefinementInput(
+      $block->getDataSurface(),
+      $block->getConfiguration(),
+      ['entity_type' => 'user', 'bundle' => 'article', 'field' => 'title'],
+    ));
+  }
+
+  /**
    * Tests that configuration is validated at the boundary, not trusted.
    *
    * With one exception, and it is the one item 11 decided: a value the

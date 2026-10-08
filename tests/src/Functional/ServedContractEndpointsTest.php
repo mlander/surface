@@ -160,8 +160,10 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $this->assertSame(['riverside_main', 'riverside_east'], $this->offered($room));
     $this->assertTrue($room['x-surface']['refined']);
     // The library's room is orphaned by the new venue: discarded, shown
-    // on the empty option, its stored value kept on the server.
-    $this->assertSame(['room'], $refined['discarded']);
+    // on the empty option, its stored value kept on the server. The
+    // capacity was answered under that room, so its input goes with it:
+    // the discard cascade's fixed point.
+    $this->assertSame(['room', 'capacity'], $refined['discarded']);
     $this->assertTrue($room['x-surface']['stale']);
     $this->assertNull($refined['values']['room']);
     $this->assertSame(['room'], $refined['stale']);

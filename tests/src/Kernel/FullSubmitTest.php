@@ -367,6 +367,32 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Tests a full submit caps the capacity by the room it submits.
+   *
+   * The full-submit half of the orphan cascade, pinned: nothing is
+   * discarded on Save, so the capacity is refined against the room this
+   * submission chose — the new venue's main hall, 400 seats — and not
+   * against the stored upper deck's 150, on the element the submission
+   * is processed against and in the pipeline alike.
+   */
+  public function testFullSubmitRefinesTheCapacityAgainstTheSubmittedRoom(): void {
+    $this->actAsAnonymousAdministrator();
+
+    $state = $this->postStepTwo(['venue' => 'riverside', 'room' => 'riverside_main', 'capacity' => '300']);
+    $this->assertSame(400, $state->getCompleteForm()['surface']['capacity']['#max']);
+    $this->assertSame([], array_map('strval', $state->getErrors()));
+    $this->assertSame(['The changes have been saved.'], $this->messages('status'));
+    $stored = $this->storedStepTwo();
+    $this->assertSame(['riverside', 'riverside_main', 300], [$stored['venue'], $stored['room'], $stored['capacity']]);
+
+    // Over the submitted room's own limit, refused on the capacity.
+    $state = $this->postStepTwo(['venue' => 'harbour', 'room' => 'harbour_deck', 'capacity' => '160']);
+    $this->assertSame(150, $state->getCompleteForm()['surface']['capacity']['#max']);
+    $this->assertArrayHasKey('surface][capacity', $state->getErrors());
+    $this->assertSame('riverside_main', $this->storedStepTwo()['room']);
+  }
+
+  /**
    * Tests an untouched save keeps a room the site narrowed away.
    *
    * The venue did not move, so the room left on the empty option is the

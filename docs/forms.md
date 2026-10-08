@@ -375,6 +375,20 @@ is **dropped from the input**, and the key falls back, in this order:
    here;
 3. **nothing chosen**: the empty option, with nothing behind it.
 
+In the second case the key is an **orphan** of the edit: a key it
+refines against moved away from what is stored, and the stored value is
+not among what the moved key now offers. Its select stands for the
+stored value, but nothing below it is refined against that value: the
+overlay holds the key unanswered, the same as the empty select the
+person is looking at, and records what it stands for under
+`DataSurfaceFormBuilderInterface::STANDING_KEY` for the element alone.
+So in the registration example, moving the venue away from a stored
+room leaves the room standing for it and the capacity back at its
+declared limit — not still capped, and described, by a room no longer
+on the screen. A stored value the site narrowed away under a dependency
+nobody moved is not an orphan: it is stale, kept, and what refines
+against it still does, exactly as when the form was first built.
+
 An empty input is never discarded: it is the person having said
 "nothing" under a parent that has not moved.
 
@@ -388,11 +402,19 @@ Three rules keep it honest:
   dotted paths of the child's own keys its own refiners orphaned, asked
   of the child in its own frame; a stored value is never touched by it. A rule that could reach
   storage would be the stale model with the safety taken off.
-- **The chain settles in one rebuild.** Dropping a value moves what the
-  next target refines against, which invalidates that target's input the
-  same way, so the question is asked again until nothing more moves.
-  Changing the first of three links resets all three in the one rebuild
-  the person is waiting on.
+- **The chain settles in one rebuild, to a fixed point.** Dropping a
+  value moves what the next target refines against, and so does holding
+  an orphan unanswered; either invalidates that target's input the same
+  way. So the surface is refined again after every drop and every
+  orphan, and the question asked again, until neither finds anything
+  new. Each round adds a key to one of the two sets and none takes one
+  away, so it ends within the depth of the longest chain. Changing the
+  first of three links resets all three in the one rebuild the person is
+  waiting on: the demo block's entity type moved with a bundle and field
+  still posted leaves the bundle standing for the stored one and the
+  field open again, refined against no bundle at all.
+  `DataSurfaceFormBuilder::settleFrame()` is the loop, per frame, and a
+  child's own frame is settled the same way.
 - **A programmatic submission is exempt.** Its caller said every value on
   purpose, in one statement, so a value the surface refuses is refused
   rather than quietly dropped. Discarding is for the half-finished edit
@@ -402,6 +424,16 @@ The drop reaches the raw input as well as the overlay, because Form API
 resolves an element's `#value` from the input before it ever looks at
 `#default_value`. An input left in place would put the orphaned value
 straight back into the rebuilt select.
+
+The settling lives in the form builder, behind two calls:
+`discardedRefinementInput()` names what is dropped, and
+`refinementOverlay()` returns the values to build from — stored
+underneath, the input that stands on top, orphans unanswered, with
+`STANDING_KEY` beside them. `surfaceFormValues()` uses both on every
+host's rebuild; `buildSurfaceForm()` refines against the overlay and
+renders each orphan standing for its stored value. A full submit
+settles nothing: every value was sent on purpose, and the elements and
+the pipeline both refine against what was submitted.
 
 ## Stale values on a form
 

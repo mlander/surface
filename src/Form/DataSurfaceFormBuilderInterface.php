@@ -44,6 +44,23 @@ interface DataSurfaceFormBuilderInterface {
   public const STALE_MARKER_KEY = '@stale';
 
   /**
+   * Key in the values a container is built from: what an orphan stood for.
+   *
+   * A refinement rebuild that moves a dependency can leave a dependent
+   * falling back to a stored value the new dependency no longer offers.
+   * Its select comes up on the empty option standing for that value, so
+   * the value is not what anything below it refines against: the
+   * overlay holds the key unanswered, and this key maps its dotted path
+   * to the stored value, which the element is rendered standing for.
+   * Read by buildSurfaceForm() and by nothing that refines.
+   *
+   * In the reserved "@" namespace, which no definition is named in.
+   *
+   * @see \Drupal\data_surface\Form\DataSurfaceFormBuilderInterface::refinementOverlay()
+   */
+  public const STANDING_KEY = '@standing';
+
+  /**
    * Render key on a wired refinement dependency: where it sits, what moves.
    *
    * An array with 'path', the element's own path below the container as
@@ -127,11 +144,40 @@ interface DataSurfaceFormBuilderInterface {
    *   attached child or a chosen slot variant, the dotted paths of the
    *   child's own keys its own refiners orphaned. A chain settles in one
    *   call: discarding a dependency's input invalidates whatever refines
-   *   against it, however many links deep.
+   *   against it, however many links deep, and so does a dependency
+   *   falling back to a stored value the edit orphaned, which answers
+   *   nothing below it.
    *
    * @see docs/forms.md
    */
   public function discardedRefinementInput(DataSurfaceInterface $surface, array $stored, array $input): array;
+
+  /**
+   * Builds the values a refinement rebuild's container is built from.
+   *
+   * Stored underneath, the in-progress input on top, with what
+   * discardedRefinementInput() names dropped from it. A key that falls
+   * back to a stored value the edit itself orphaned — a dependency of it
+   * moved away from what is stored, and the narrowed definition no
+   * longer offers the stored value — is held unanswered, so every key
+   * below it refines as though nothing were chosen there, which is what
+   * the person sees; what it stood for is kept under STANDING_KEY for
+   * the element to be rendered standing for. The same fixed point the
+   * discard rule reaches, in the same pass.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The surface, as advertised.
+   * @param array $stored
+   *   What the host stores for the surface's keys.
+   * @param array $input
+   *   The in-progress input, keyed by surface key, before anything is
+   *   discarded from it.
+   *
+   * @return array
+   *   The values, keyed by surface key, with STANDING_KEY when anything
+   *   was orphaned.
+   */
+  public function refinementOverlay(DataSurfaceInterface $surface, array $stored, array $input): array;
 
   /**
    * Merges a surface container into a host's own form element.

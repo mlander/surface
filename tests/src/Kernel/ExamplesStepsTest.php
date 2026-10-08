@@ -372,6 +372,131 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Posts a step's form as the AJAX request a changed select sends.
+   *
+   * @param string $step
+   *   The step's number.
+   * @param array $stored
+   *   What the step's configuration holds, over its installed values.
+   * @param array $input
+   *   The surface's input as the browser sent it.
+   * @param string $trigger
+   *   The surface key that was changed.
+   *
+   * @return \Drupal\Core\Form\FormStateInterface
+   *   The form state after the rebuild.
+   */
+  protected function rebuildStep(string $step, array $stored, array $input, string $trigger): FormStateInterface {
+    $config = $this->config('data_surface_examples.registration_step' . $step);
+    foreach ($stored as $key => $value) {
+      $config->set($key, $value);
+    }
+    $config->save();
+    // Anonymous, given the permission, so the form carries no token a
+    // test would have to forge.
+    $this->installConfig(['user']);
+    Role::load(RoleInterface::ANONYMOUS_ID)?->grantPermission('administer site configuration')->save();
+    $this->container->get('current_user')->setAccount(new AnonymousUserSession());
+    $this->serveRoute('data_surface_examples.step' . $step, 'POST');
+    $form_state = new FormState();
+    $form_state->setUserInput([
+      'form_id' => 'data_surface_situation_form_data_surface_examples_step' . $step,
+      'surface' => $input,
+      '_triggering_element_name' => 'surface[' . $trigger . ']',
+    ]);
+    $this->container->get('form_builder')->buildForm(DataSurfaceSituationForm::class, $form_state);
+    $this->assertTrue($form_state->isRebuilding());
+    $this->assertSame([], $form_state->getErrors());
+    return $form_state;
+  }
+
+  /**
+   * Tests a room the venue change orphaned caps no capacity.
+   *
+   * The report: stored at the riverside's east room, the venue moved to
+   * the harbour with the room still posted. The room comes up on its
+   * empty option standing for the stored room, and the capacity below it
+   * is refined as the person sees the room — unanswered — so it is back
+   * to its declared limit, not still capped by a room no longer on the
+   * screen.
+   */
+  public function testAnOrphanedRoomNoLongerCapsTheCapacity(): void {
+    $state = $this->rebuildStep('2', ['venue' => 'riverside', 'room' => 'riverside_east', 'capacity' => 50], [
+      'title' => 'Spring meetup',
+      'open' => '1',
+      'venue' => 'harbour',
+      'room' => 'riverside_east',
+      'capacity' => '20',
+    ], 'venue');
+    $container = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY];
+    $this->assertSame(['', 'harbour_auditorium', 'harbour_deck'], array_keys($container['room']['#options']));
+    $this->assertSame('', $container['room']['#value']);
+    $this->assertSame('riverside_east', $container['room'][DataSurfaceWidgetBase::STALE_KEY]);
+    $this->assertSame('room', $container[DataSurfaceFormBuilderInterface::STALE_MARKER_KEY]['#value']);
+    $this->assertSame(1000, $container['capacity']['#max']);
+    $this->assertArrayNotHasKey('#description', $container['capacity']);
+
+    $response = $this->ajaxResponse($state);
+    $capacity = $this->wrapperSelector($container['capacity']);
+    $this->assertSame([
+      $this->wrapperSelector($container['room']),
+      $capacity,
+      $this->wrapperSelector($container[DataSurfaceSituationForm::PANEL_KEY]),
+    ], $this->ajaxSelectors($response, 'replaceWith'));
+    $markup = $this->ajaxMarkup($response, $capacity);
+    $this->assertStringContainsString('max="1000"', $markup);
+    $this->assertStringNotContainsString('max="120"', $markup);
+    $this->assertStringNotContainsString('Up to', $markup);
+    // The panel beside it says the same thing.
+    $rows = [];
+    foreach ($container[DataSurfaceSituationForm::PANEL_KEY]['keys']['#rows'] as $row) {
+      $rows[$row['data-surface-key']] = $row['data'];
+    }
+    $this->assertSame('from 1 to 1000', $rows['capacity'][5]);
+
+    // The room stays stored: a rebuild is not a submit.
+    $this->assertSame('riverside_east', $this->config('data_surface_examples.registration_step2')->get('room'));
+  }
+
+  /**
+   * Tests the orphan cascade stops at the keys the venue decides.
+   *
+   * Step 3 has a slot and an attached part beside the venue chain. The
+   * venue moving orphans the room and frees the capacity; the ticket and
+   * the contact refine against nothing it moved, so they are neither
+   * replaced nor reset.
+   */
+  public function testTheOrphanCascadeLeavesTheTicketAndContactAlone(): void {
+    $state = $this->rebuildStep('3', ['venue' => 'riverside', 'room' => 'riverside_east'], [
+      'title' => 'Spring meetup',
+      'open' => '1',
+      'venue' => 'harbour',
+      'room' => 'riverside_east',
+      'capacity' => '20',
+      'pricing' => 'free',
+      'ticket' => ['note' => 'Bring a badge'],
+      'contact' => ['email' => 'desk@example.com', 'phone' => '555 0100'],
+    ], 'venue');
+    $container = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY];
+    $this->assertSame('riverside_east', $container['room'][DataSurfaceWidgetBase::STALE_KEY]);
+    $this->assertSame(1000, $container['capacity']['#max']);
+    $this->assertArrayNotHasKey('#description', $container['capacity']);
+    $this->assertSame('Bring a badge', $container['ticket']['note']['#value']);
+    $this->assertSame('desk@example.com', $container['contact']['email']['#value']);
+    $this->assertSame('555 0100', $container['contact']['phone']['#value']);
+
+    $response = $this->ajaxResponse($state);
+    $this->assertSame([
+      $this->wrapperSelector($container['room']),
+      $this->wrapperSelector($container['capacity']),
+      $this->wrapperSelector($container[DataSurfaceSituationForm::PANEL_KEY]),
+    ], $this->ajaxSelectors($response, 'replaceWith'));
+    $settings = $state->getUserInput()['surface'];
+    $this->assertSame(['note' => 'Bring a badge'], $settings['ticket']);
+    $this->assertSame(['email' => 'desk@example.com', 'phone' => '555 0100'], $settings['contact']);
+  }
+
+  /**
    * Tests the line counts the landing page shows stay screen sized.
    */
   public function testEachStepFitsOnOneScreen(): void {

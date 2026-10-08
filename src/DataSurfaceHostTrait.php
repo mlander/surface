@@ -289,7 +289,10 @@ trait DataSurfaceHostTrait {
    * Form API resolves an element's #value from the input before it ever
    * looks at #default_value, so an input left in place would put the
    * orphaned value straight back into the rebuilt select and undo the
-   * whole thing.
+   * whole thing. A key that falls back to a stored value the edit
+   * orphaned is held unanswered in the overlay, with what it stands for
+   * beside it under DataSurfaceFormBuilderInterface::STANDING_KEY, so
+   * nothing below it is refined against a value no longer on the screen.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The surface being built.
@@ -344,18 +347,21 @@ trait DataSurfaceHostTrait {
     // and the same line the stale model draws: chosen, therefore judged.
     // Discarding is for the half-finished edit a browser is still in the
     // middle of.
-    if (!$state->isProgrammed()) {
-      $discarded = $this->surfaceFormBuilder()->discardedRefinementInput($surface, $stored, $input);
-      if ($discarded !== []) {
-        $this->forgetSurfaceInput($discarded, $form_state);
-        // A key, or a dotted path to one inside an attached child or a
-        // slot: the child's own refiners orphan the child's own keys.
-        foreach ($discarded as $dotted) {
-          NestedArray::unsetValue($input, explode('.', $dotted));
-        }
-      }
+    if ($state->isProgrammed()) {
+      return array_replace($stored, $input);
     }
-    return $input === [] ? $stored : array_replace($stored, $input);
+    $builder = $this->surfaceFormBuilder();
+    // A key, or a dotted path to one inside an attached child or a slot:
+    // the child's own refiners orphan the child's own keys.
+    $discarded = $builder->discardedRefinementInput($surface, $stored, $input);
+    if ($discarded !== []) {
+      $this->forgetSurfaceInput($discarded, $form_state);
+    }
+    // The overlay itself comes from the same settling, so that a key
+    // falling back to a stored value this edit orphaned answers nothing
+    // below it: the elements are built from the surface refined as the
+    // person sees it, to the fixed point, not as it was posted.
+    return $builder->refinementOverlay($surface, $stored, $input);
   }
 
   /**
