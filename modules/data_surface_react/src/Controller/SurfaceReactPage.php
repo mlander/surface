@@ -122,10 +122,10 @@ final class SurfaceReactPage implements ContainerInjectionInterface {
    */
   public function title(string $surface, string $situation): string {
     try {
-      return (string) $this->registry->getSituation($surface, $situation)->label;
+      return (string) $this->t('React: @label', ['@label' => $this->registry->getSituation($surface, $situation)->label]);
     }
     catch (\InvalidArgumentException) {
-      return (string) $this->t('Surface');
+      return (string) $this->t('React: surface');
     }
   }
 

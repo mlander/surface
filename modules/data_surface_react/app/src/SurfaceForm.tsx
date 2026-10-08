@@ -24,7 +24,7 @@ const browserNavigate = (url: string): void => window.location.assign(url);
 
 /** What the summary above the form says: a rehearsal's or a write's answer. */
 interface Summary {
-  kind: 'validate' | 'submit';
+  kind: 'submit';
   valid: boolean;
   violations: Violation[];
   stale: Violation[];
@@ -47,12 +47,10 @@ function byPath(violations: Violation[]): Record<string, string[]> {
  * comes back, the way the situation form rebuilds over AJAX: a value the
  * person has touched since the request left is kept, everything else
  * takes the server's answer, so an orphaned dependent comes back on its
- * empty option, standing for the stored value the server kept. Validate
- * sends the values to /validate, which rehearses the write and saves
- * nothing, and shows what it refused beside each field and in a summary.
- * Submit sends them, with the fingerprint of what was stored when the
- * contract was loaded, to /submit: a refusal shows as Validate's does; a
- * write says so, with any stale value it kept, and re-renders from the
+ * empty option, standing for the stored value the server kept. Submit
+ * sends the values, with the fingerprint of what was stored when the
+ * contract was loaded, to /submit: a refusal shows beside each field and
+ * in a summary, with nothing written; a write says so, with any stale value it kept, and re-renders from the
  * contract the answer carries; a write that created something moves to
  * the page where it now lives.
  */
@@ -161,17 +159,6 @@ export function SurfaceForm({
     [watched, refine, refineDelay],
   );
 
-  const validate = useCallback(async () => {
-    try {
-      const result = await api.validate(current.current, stale.current);
-      setErrors(byPath(result.violations));
-      setSummary({ kind: 'validate', valid: result.valid, violations: result.violations, stale: result.stale });
-    }
-    catch (error) {
-      setFailure((error as Error).message);
-    }
-  }, [api]);
-
   const submit = useCallback(async () => {
     clearTimeout(timer.current);
     setSubmitting(true);
@@ -266,9 +253,6 @@ export function SurfaceForm({
       ) : null}
       <Properties schema={contract.schema} values={values} prefix="" onChange={onChange} errors={errors} />
       <div className="dsr-actions">
-        <button type="button" className="dsr-button" onClick={() => void validate()} disabled={submitting}>
-          Validate
-        </button>
         <button type="submit" className="dsr-button dsr-button--primary" disabled={submitting}>
           Submit
         </button>

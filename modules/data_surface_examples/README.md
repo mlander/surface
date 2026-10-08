@@ -499,11 +499,10 @@ and `maximum`, the ticket slot as a conditional on the pricing, and an
 Change the venue on example 2: the app posts the answers to `/refine`,
 which re-narrows the contract the way the form's AJAX rebuild does, and
 the room comes back on its empty option, standing for the stored room,
-which stays on the server. Press Validate: the answers go to `/validate`,
-the pipeline's dry run, and what it refuses shows beside each field and
-in a summary, with nothing written. Press Submit to save: the answers go
-to `/submit`, which writes what the form's Save writes, refuses what it
-refuses (shown the same way as Validate's), and answers with the
+which stays on the server. Press Submit to save: the answers go to
+`/submit`, which writes what the form's Save writes, refuses what it
+refuses (each refusal beside its field and in a summary, with nothing
+written), and answers with the
 contract as now stored, which the app re-renders from. If someone saved
 the example since the page loaded, the submit is refused rather than
 overwriting them. The collapsed Contract panel under the form is the

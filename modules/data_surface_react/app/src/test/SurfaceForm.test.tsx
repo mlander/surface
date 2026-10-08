@@ -150,15 +150,17 @@ describe('the React form of example 2', () => {
     expect(chosen.values.room).toBe('riverside_east');
   });
 
-  it('validates, showing what was refused inline and in a summary', async () => {
+  it('a refused submit shows what was refused inline and in a summary', async () => {
     const { calls, fetcher } = server({
       '/surface-api/registration.step2/configure/refine': () => riverside,
-      '/surface-api/registration.step2/configure/validate': () => ({
+      '/surface-api/registration.step2/configure/submit': () => ({
+        committed: false,
         valid: false,
         violations: [{ path: 'room', message: 'The value you selected is not a valid choice.' }],
         stale: [],
-        values: {},
-        prepared: null,
+        outputs: {},
+        contract: null,
+        created: null,
       }),
       '/surface-api/registration.step2/configure': () => example2,
     });
@@ -166,15 +168,15 @@ describe('the React form of example 2', () => {
     await userEvent.selectOptions(await screen.findByLabelText(/Venue/), 'Riverside Hall');
     await waitFor(() => expect(screen.getByLabelText(/Room/)).toHaveDisplayValue('- Select -'));
 
-    await userEvent.click(screen.getByRole('button', { name: 'Validate' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
     const summary = await screen.findByRole('status');
     expect(summary).toHaveTextContent('One value was refused. Nothing was written.');
     expect(summary).toHaveTextContent('room: The value you selected is not a valid choice.');
     expect(screen.getByLabelText(/Room/)).toHaveAccessibleDescription('The value you selected is not a valid choice.');
 
     // The stale room went back as its path, never as its value.
-    const validate = calls.find((call) => call.url.endsWith('/validate'));
-    const body = JSON.parse(String(validate?.init?.body));
+    const submit = calls.find((call) => call.url.endsWith('/submit'));
+    const body = JSON.parse(String(submit?.init?.body));
     expect(body.stale).toEqual(['room']);
     expect(body.values.room).toBeNull();
   });

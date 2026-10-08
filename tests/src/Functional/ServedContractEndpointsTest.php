@@ -115,7 +115,7 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     }
     $this->drupalGet('surface-react/registration.step2/configure');
     $this->assertSession()->statusCodeEquals(200);
-    $this->assertSession()->titleEquals('Configure registration | Drupal');
+    $this->assertSession()->titleEquals('React: Configure registration | Drupal');
     $this->assertSession()->elementExists('css', '#data-surface-react');
     $settings = $this->getDrupalSettings()['dataSurfaceReact'];
     $this->assertSame('registration.step2', $settings['surface']);

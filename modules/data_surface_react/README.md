@@ -48,11 +48,9 @@ and so on.
 - **Refines** on a change to any key something depends on: it posts the
   values to `/refine` (debounced) and re-renders from the answer,
   keeping what was touched since the request left.
-- **Validates**: the Validate button posts to `/validate` and shows each
-  refusal beside its field, by path, and in a summary.
 - **Saves**: Submit posts the values, the stale paths and the
   fingerprint the contract was loaded with to `/submit`. A refusal shows
-  as Validate's does, inline and in the summary; a refusal at path `''`
+  beside its field, by path, and in a summary; a refusal at path `''`
   (someone else saved since the form was loaded) shows in the summary
   alone. A write says "Saved", lists any stale value it kept, and
   re-renders from the contract the answer carries, whose fingerprint the
