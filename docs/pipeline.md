@@ -7,7 +7,7 @@ pass the same stages.
 
 ```
          ──access──▶ ──accept──▶ values ──validate──▶ values ──prepare──▶ prepared ──commit──▶ storage
-input    (provider)  (surface)            (surface)             (target)              (target)
+input    (surface)   (surface)            (surface)             (target)              (target)
 ```
 
 Beside those, and running the other way, is `conformOutput()`: the same
@@ -30,53 +30,56 @@ values first, which a caller holding only a surface could forget to do.
 ### access
 
 ```php
-public function surfaceAccess(string $operation = 'configure', ?string $subject = NULL, ?AccountInterface $account = NULL): AccessResultInterface;
+public function access(string $surface, SurfaceContext $context, ?AccountInterface $account = NULL): AccessResultInterface;
 ```
 
-Not a method on the pipeline: it is a method on the **provider**, and the
-pipeline is one of its callers. One answer per coordinate and account,
-resolved once, read by the generated form, a Drush command, a config
-action, an agent and the future endpoint — which is what keeps a route's
-gate and a payload's gate from becoming two different rules.
+Not a method on the pipeline: it is `SurfacesInterface::access()`, on
+the build step, and the pipeline is one of its callers. One answer per
+surface, context and account, read by the generated form, a route, a
+generated tool, a Drush command and an agent — which is what keeps a
+route's gate and a payload's gate from becoming two different rules.
 
-The coordinate is the same pair `getDataSurface()` takes, in the same
-order: a verb that never carries identity, then an opaque subject id the
-provider resolves for itself, `NULL` when the provider is its own
-subject. It is what the Phase B endpoint will address a surface by, so
-the surface a payload asks for and the answer that gates it are named
-one way. See
-[the operation and subject pair](declaring-a-surface.md#the-operation-and-subject-pair).
-An operation or a subject the provider cannot place is **refused** here
-rather than thrown over, because something has to be told no.
+It is two tiers. The situation's permission first, from
+`#[Situation(permission:)]`, its `%key` placeholders filled from the
+identity the context knows; then, only if that allows, the surface's
+access class, `#[Surface(access:)]`, which may hold services and asks
+the thing itself. A context whose operation is no declared situation —
+a plugin host's `configure` — has no permission to check, so the access
+class is the whole answer, and a surface with neither answers neutral.
+Each subsurface the context resolves whose class names an access class
+of its own is asked too, and may refuse; a child never allows on its
+parent's behalf. A plugin host asks through its own `surfaceAccess()`,
+which takes the account and the host's operation and nothing else.
 
 The answer is core's `AccessResultInterface`, so it carries a reason and
 its own cacheability, and the third state carries weight:
 
 | Answer | Means | Effect |
 | --- | --- | --- |
-| **Forbidden** | The provider refuses this operation. | `submit()` stops **before `$target->load()`**. Nothing is read, accepted, prepared or written. |
+| **Forbidden** | The surface refuses. | `submit()` stops **before `$target->load()`**. Nothing is read, accepted, prepared or written. |
 | **Neutral** | No opinion. | Nothing changes. The host's own gates stand exactly as they stood. |
 | **Allowed** | An affirmative grant. | Nothing is bypassed: the host's gates and every later stage still apply. |
 
-Neutral is the default, on `DataSurfaceHostTrait`, so a provider that has
-not answered for itself behaves exactly as it did before this stage
-existed. `NULL` for the account means the current user.
+Neutral is what a surface with no access class answers in a host's
+context, so a plugin whose surface says nothing about access behaves
+exactly as it did before this stage existed. `NULL` for the account
+means the current user.
 
-Combining a host's own answer with a provider's is one call, and writing
-it by hand is the way to get it wrong — `allowed()->andIf(neutral())` is
-neutral, and neutral is not allowed, so every provider that never adopted
-the method would silently close its host's door:
+Combining a host's own answer with the surface's is one call, and
+writing it by hand is the way to get it wrong —
+`allowed()->andIf(neutral())` is neutral, and neutral is not allowed, so
+every surface that says nothing would silently close its host's door:
 
 ```php
 use Drupal\data_surface\DataSurfaceAccess;
 
 $access = DataSurfaceAccess::gate(
   $field->access('update', $account, TRUE),   // What the host decided.
-  $item->surfaceAccess(account: $account),    // What the provider says.
+  $item->surfaceAccess(account: $account),    // What the surface says.
 );
 ```
 
-A provider may **refuse** what a host allowed. It may never **allow**
+The surface may **refuse** what a host allowed. It may never **allow**
 what a host refused.
 
 One trap worth stating, because core's helpers set it:
@@ -84,22 +87,22 @@ One trap worth stating, because core's helpers set it:
 both answer **neutral** when the answer is no, since another checker
 might still allow it. A route reads that neutral as a refusal — a route
 requires allowed — while this gate reads it as "nothing to say". A
-provider that is where the rule is written down therefore says no out
-loud, or the same account is turned away by the route and let through by
-the payload:
+caller that owns the operation therefore says no out loud, or the same
+account is turned away by the route and let through by the payload:
 
 ```php
-return DataSurfaceAccess::decisive(
-  $type->access('update', $account, TRUE)->andIf($permission),
-  'Editing a content type through this module needs both permissions.',
+$result = $pipeline->submit($surface, $values, $target,
+  access: DataSurfaceAccess::decisive($access, 'The surface this form configures may not be written by this account.'),
 );
 ```
 
 `decisive()` returns an allowed or already-forbidden answer untouched,
 and turns neutral into a refusal that keeps the assembled answer's
-cacheability. It is for the provider that owns the operation, and only
-for it: a host trait's neutral default is still the right answer for
-every provider that owns nothing.
+cacheability. A situation owns its operation, so the situation form and
+the generated tools make the answer decisive before they hand it to the
+pipeline, as the route requirement does by requiring allowed. A plugin
+host's neutral is still the right answer for a surface that owns
+nothing.
 
 `setConfiguration()` deliberately does not consult access. A host
 constructs its plugins from what it has already stored — core's block,
@@ -166,10 +169,13 @@ config schema reported them interleaved.
 
 `$current` is what storage holds, and it is what makes one refusal not a
 refusal. A value that the refined surface will not take, which is
-*exactly what is stored* for that key, and which is no longer among the
-values the key offers, is **stale**: nothing about this run tried to
-change it, so refusing it would punish a caller for something the site
-did. The full rule and its two deliberate boundaries are in
+*exactly what is stored* for that key, whose dependencies this run left
+as they are stored, and which is no longer among the values the key
+offers, is **stale**: nothing about this run tried to change it, so
+refusing it would punish a caller for something the site did. A run that
+moves a dependency — the venue — and sends back the dependent stored
+under the old one — the room — has narrowed the list itself, and is
+refused. The full rule and its two deliberate boundaries are in
 [value semantics](semantics.md#stale-values-the-third-state).
 
 A stale entry is a `SurfaceViolation` with its `stale` flag set, and the
@@ -204,13 +210,13 @@ the same stored values it extracted against.
 ### conformOutput
 
 ```php
-public function conformOutput(DataSurfaceInterface $surface, array $output, array $input_values = []): ViolationSet;
+public function conformOutput(DataSurfaceInterface $surface, array $output): ViolationSet;
 ```
 
 The output half of `validate()`, and the only stage that runs after the
-host has done its work rather than before. It refines the surface's
-[output definitions](outputs.md) against the input values, strips the
-`Omitted` sentinel, refuses keys no output declares, and checks what is
+host has done its work rather than before. It holds what was emitted to
+the surface's [output definitions](outputs.md), which are never
+refined: it strips the `Omitted` sentinel, refuses keys no output declares, and checks what is
 left against each definition's type and constraints — answering with the
 same `ViolationSet` everything else answers with.
 
@@ -263,18 +269,19 @@ travel on rather than being replaced by an empty set, because that is
 how a caller with no form in front of it learns there is something to
 re-choose.
 
-The access answer is the caller's own, already resolved, rather than a
-provider the pipeline would have to hold — no closures, and nothing in
-the pipeline that knows what a provider is. A host asks its provider for
-the coordinate it is running — the operation, and the subject when the
-provider owns more than itself — and hands the answer over:
+The access answer is the caller's own, already resolved, rather than
+something the pipeline would have to hold — no closures, and nothing in
+the pipeline that knows what a surface class or a host is. A caller asks
+for the context it is running and hands the answer over:
 
 ```php
+$surfaces = \Drupal::service('data_surface.surfaces');
+$context = $surfaces->situation(NodeTypeSurface::class, 'edit', ['type' => 'article']);
 $result = $pipeline->submit(
-  $surface,
+  $surfaces->build(NodeTypeSurface::class, $context),
   $values,
-  $target,
-  access: $provider->surfaceAccess($operation, $subject),
+  $surfaces->target(NodeTypeSurface::class, $context),
+  access: DataSurfaceAccess::decisive($surfaces->access(NodeTypeSurface::class, $context)),
 );
 ```
 
@@ -306,7 +313,7 @@ if ($result->access !== NULL) {
 }
 ```
 
-"This provider had nothing to say" is a conclusion like any other: it can
+"This surface had nothing to say" is a conclusion like any other: it can
 stop being true when a permission or a config entity changes, so its
 cacheability is as real as a refusal's.
 
@@ -317,34 +324,36 @@ cacheability is as real as a refusal's.
 Nothing has been written, and the caller has the exact object a commit
 would have stored.
 
-For the config object target there is a stronger kind of dry run: a
-`Config` holds the storage it was constructed with, so one pointed at a
-memory storage with a private event dispatcher commits for real into a
-bin nobody else reads. Config entities have no equivalent. Both are in
+Config entities write through the container's config factory, so an
+entity cannot be pointed at another bin for one call: an unsaved clone,
+held to the schema, is as far as a dry run goes. See
 [Targets](targets.md#dry-runs).
 
 ## Who asks the access question
 
-The provider answers; the host decides when to ask. The rule that keeps
-the two halves honest is that a host must never spell the question twice:
+The surface answers; the caller decides when to ask. The rule that keeps
+the two halves honest is that nothing spells the question twice:
 
-- **`data_surface_demo_node_type`** states its two route requirements
-  once, in `NodeTypeSurfaceProvider::surfaceAccess()` — the entity's own
-  create or update answer, ANDed with the module's permission — and the
-  routes, the operation link in the content type listing, and the form's
-  own write all read that one answer, asking for it with the same pair:
-  `('add', NULL)` or `('edit', <machine name>)`.
-- **The field tools** ask the field item's `surfaceAccess()` beside the
-  entity and field checks they already ran, in both `checkAccess()` and
-  `doExecute()`, because `execute()` is callable from PHP with no check
-  in front of it.
-- **Blocks, formatters, conditions and actions** keep the neutral
-  default. A host's own `access()`, where it has one, is a different
+- **`data_surface_demo_node_type`** states its gate once: the
+  situations' permission on `NodeTypeSurface`, and the node type
+  entity's own create or update answer in `NodeTypeAccess`. The routes'
+  `_data_surface_situation_access` requirement, the operation link in
+  the content type listing, the situation form's own write and the
+  generated tools all read `SurfacesInterface::access()` in the same
+  situation.
+- **The field tools** ask the field instance surface's access in their
+  situation, which reaches the settings variant's access class too, in
+  both `checkAccess()` and `doExecute()`, because `execute()` is
+  callable from PHP with no check in front of it. A field type's Field
+  UI host asks the field config entity, then the same access class.
+- **Blocks, formatters, conditions and actions** ask their surface's
+  access class in the `configure` context, which is neutral when it
+  names none. A host's own `access()`, where it has one, is a different
   question: an action's asks whether the action may be *executed* on an
   object and a block's asks whether the block may be *seen*, while
   `surfaceAccess()` asks whether an account may *configure* the values.
   An action anyone may run is very often one only an administrator may
-  reconfigure. (That collision is also why the provider method is not
+  reconfigure. (That collision is also why the host method is not
   called `access()`: `ActionInterface` and `BlockPluginInterface` already
   own that name with incompatible signatures.)
 
@@ -369,14 +378,16 @@ exception messages, because PHP has nowhere to put an object in one.
 | --- | --- | --- |
 | `UnknownKeysException` | `accept()` | The input carries a key no definition declares, at any depth. |
 | `ShapeMismatchException` | `accept()` | The input carries a value in a shape its definition cannot hold — a string where a map was advertised. Names the dotted path and what was expected. |
+| `VariantMismatchException` | `accept()` | A slot's value carries keys the chosen variant does not declare and another variant does. Names the slot, the deciding key and the misplaced keys. |
 | `TargetViolationsException` | `prepare()` | The target's storage refuses the values; a config schema, usually. |
 
-All three render their message through `Pipeline\ViolationSummary`, which
-names the first five entries and counts the rest; the full list is still
-on the exception. `DataSurfaceConfigurationTrait::setConfiguration()`
-throws a fourth refusal the same way.
+`UnknownKeysException` and `TargetViolationsException` render their
+message through `Pipeline\ViolationSummary`, which names the first five
+entries and counts the rest; the full list is still on the exception.
+`DataSurfaceConfigurationTrait::setConfiguration()` throws its refusal
+the same way.
 
-`submit()` catches all three and turns them into ordinary violations on
+`submit()` catches all four and turns them into ordinary violations on
 the surface keys that carried them, rather than letting them escape. So a
 caller that sends a misspelled key, the wrong shape, or something the
 config schema refuses gets the same path-aware report as one that sends

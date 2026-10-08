@@ -9,7 +9,6 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\data_surface_demo_extras\EventSubscriber\DemoExtrasSurfaceSubscriber;
 use Drupal\data_surface_demo_extras\NodeTypeReviewSettings;
 use Drupal\node\NodeTypeInterface;
 
@@ -37,7 +36,7 @@ use Drupal\node\NodeTypeInterface;
  * tells it whether it was right until after the value is stored. No
  * reading of the integer says what ten business days become.
  *
- * @see \Drupal\data_surface_demo_extras\EventSubscriber\DemoExtrasSurfaceSubscriber::extendNodeType()
+ * @see \Drupal\data_surface_demo_extras\SurfaceAlter\NodeTypeAlter
  *   The same two settings, said as contract.
  */
 final class NodeTypeFormHooks {
@@ -47,7 +46,7 @@ final class NodeTypeFormHooks {
   /**
    * The form element and form state key the two settings live under.
    */
-  protected const ELEMENT = DemoExtrasSurfaceSubscriber::PROVIDER;
+  protected const ELEMENT = NodeTypeReviewSettings::MODULE;
 
   /**
    * Constructs a NodeTypeFormHooks object.
@@ -76,7 +75,7 @@ final class NodeTypeFormHooks {
     if (!$type instanceof NodeTypeInterface) {
       return;
     }
-    $provider = DemoExtrasSurfaceSubscriber::PROVIDER;
+    $provider = NodeTypeReviewSettings::MODULE;
     $tags = $type->getThirdPartySetting($provider, NodeTypeReviewSettings::TAGS, []);
     $seconds = $type->getThirdPartySetting($provider, NodeTypeReviewSettings::DEADLINE);
     $deadline = is_int($seconds) ? NodeTypeReviewSettings::split($seconds) : NULL;
@@ -194,7 +193,7 @@ final class NodeTypeFormHooks {
    *   The form state.
    */
   public function buildNodeType(string $entity_type_id, NodeTypeInterface $type, array &$form, FormStateInterface $form_state): void {
-    $provider = DemoExtrasSurfaceSubscriber::PROVIDER;
+    $provider = NodeTypeReviewSettings::MODULE;
     $deadline = $form_state->getValue([self::ELEMENT, NodeTypeReviewSettings::DEADLINE]);
     $tags = $form_state->getValue([self::ELEMENT, NodeTypeReviewSettings::TAGS]);
     $type->setThirdPartySetting($provider, NodeTypeReviewSettings::DEADLINE, is_int($deadline) ? $deadline : NULL);

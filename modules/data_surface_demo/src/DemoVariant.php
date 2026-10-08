@@ -31,7 +31,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
  * vocabulary is enumerated.
  *
  * @see \Drupal\data_surface_demo\Plugin\Field\FieldFormatter\DataSurfaceDemoFormatter
- * @see \Drupal\data_surface_demo_extras\DemoExtrasVariantRefiner
+ * @see \Drupal\data_surface_demo_extras\SurfaceAlter\DemoFormatterAlter
  */
 enum DemoVariant: string {
 

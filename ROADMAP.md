@@ -244,6 +244,12 @@ which serves the real contract.
    field-of-bundle stop costing an imperative refiner per plugin. The
    object refiner remains the checked escape hatch, and the emitter
    reports it as runtime-narrowed.
+   - **Options alters** (later concept, from the sketch): a class in
+     `src/OptionsAlter/` changing one list of allowed values everywhere
+     it is used, not per surface.
+   - **Remove-only policy** (later concept, beside options alters): a
+     site hiding an owner's key, and an options alter removing an entry
+     stored values use; both need the stale rule (item 11).
 9. **A closed vocabulary of dependent effects** (the Laravel negative
    result made policy). Declared edge effects on the refinement map:
    narrow-choices-to, required-when, excluded-when, locked-when, as
@@ -339,6 +345,31 @@ which serves the real contract.
     `getDefinitions()->contributions()` into `calculateDependencies()` so
     uninstalling a contributor cleans up its keys.
 21. **Retire `config_surface`** once the functional suite runs in CI.
+
+## After the rework
+
+The concepts the surface pattern deferred, in the order they come
+next. `docs/pattern.md` (Deferred) records the position each is held
+to.
+
+1. **Collections**: `attachList()` / `attachListBy()`, an ordered list
+   whose items are a child surface, delta as position, stable identity
+   an identity key on the child, weights the target's business.
+2. **Input shapes**: another way to enter the same value, converted to
+   one canonical value; the widget alter layer on the `variants` branch.
+3. **Options**: options sources, the `OptionsList` constraint naming
+   one, and options alters changing a list everywhere it is used;
+   naming undecided.
+4. **Remove-only policy**: a site hiding an owner's key, and an options
+   alter removing an entry; already recorded under item 8.
+5. **Per-method refinement gating**, if a case needs it: today a key's
+   refiners wait for the union of what they watch.
+6. **Partial updates of a collection item**: changing one item without
+   resending the list, probably a situation on the child.
+7. **Plugin hosts overlay a full submission**: a host supplies its
+   subform's parents to `surfaceSubmissionPath()`, so a save without
+   JavaScript that moves a parent and its dependent together is not
+   refused by Form API (`docs/decisions.md`).
 
 ## Rejected, on the record
 

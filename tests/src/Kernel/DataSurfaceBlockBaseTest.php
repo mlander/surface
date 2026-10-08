@@ -5,16 +5,17 @@ declare(strict_types=1);
 namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Core\Form\FormState;
-use Drupal\data_surface\DataSurfaceBuilder;
+use Drupal\data_surface\Surface\Attribute\UsesSurface;
 use Drupal\data_surface_test\Plugin\Block\DataSurfaceTestBlock;
+use Drupal\data_surface_test\Surface\TestBlockSurface;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
  * Tests progressive adoption on a block, the busiest group A host.
  *
- * The test block declares its surface in one method, plus one refiner
- * method and build(); everything asserted here — defaults, validation at the
+ * The test block names its surface with #[UsesSurface] and writes
+ * build(); everything asserted here — defaults, validation at the
  * configuration boundary, a generated form, refinement over AJAX, and
  * storage through the pipeline — comes from the base class and its
  * traits, which is the claim the adoption layer makes.
@@ -68,31 +69,6 @@ class DataSurfaceBlockBaseTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Featured', $configuration['headline']);
     $this->assertSame(10, $configuration['limit']);
     $this->assertTrue($configuration['show_summary']);
-  }
-
-  /**
-   * Tests that a host which is its own subject refuses another.
-   *
-   * The plugin instance is the whole of what its surface describes, so
-   * there is no id a caller could name a second subject with. Handed
-   * one anyway — a wire coordinate addressing the wrong host, a stale
-   * link — the base class says so by name rather than serving the
-   * surface nobody asked for, which is the rule every host base class
-   * in this module follows through surfaceSelfSubject().
-   */
-  public function testUnresolvableSubjectIsRefused(): void {
-    $block = $this->createBlock();
-
-    // The operation it does have, with no subject, is unaffected.
-    $this->assertNotNull($block->getDataSurface()->getDefinition('headline'));
-    $this->assertNotNull($block->getDataSurface('configure')->getDefinition('headline'));
-    // An access question is never answered with an exception, so the
-    // neutral default stays neutral however the coordinate was spelled.
-    $this->assertTrue($block->surfaceAccess('configure', 'article')->isNeutral());
-
-    $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('is its own subject and has no surface for the subject "article"');
-    $block->getDataSurface('configure', 'article');
   }
 
   /**
@@ -250,41 +226,32 @@ class DataSurfaceBlockBaseTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the class is readable as surface-aware without booting it.
+   * Tests that the plugin is listed by its surface without booting it.
    *
-   * Detection, and only detection: the provider interface is visible
-   * from the plugin definition's class name, which is cached, so a
-   * catalogue lists the configurable plugins on a site without booting
-   * one. What each surface holds is the built surface's answer, which
-   * costs an instance and is asserted everywhere else in this class.
+   * #[UsesSurface] is copied into the plugin definition, which is
+   * cached, so a catalogue lists the configurable plugins on a site
+   * without booting one. What each surface holds is the built surface's
+   * answer, which costs an instance and is asserted everywhere else in
+   * this class.
    */
-  public function testAwarenessReadsTheClass(): void {
-    $awareness = $this->container->get('data_surface.awareness');
+  public function testThePluginIsListedByItsSurface(): void {
+    $plugins = $this->container->get('data_surface.surface_plugins');
 
-    $this->assertTrue($awareness->isSurfaceAware(DataSurfaceTestBlock::class));
-
-    $aware = $awareness->filterDefinitions($this->container->get('plugin.manager.block')->getDefinitions());
-    $this->assertArrayHasKey('data_surface_test_block', $aware);
-    $this->assertSame(DataSurfaceTestBlock::class, $aware['data_surface_test_block']->class);
-    // A block that knows nothing about surfaces is not in the list.
-    $this->assertArrayNotHasKey('system_powered_by_block', $aware);
+    $this->assertContains('block:data_surface_test_block', $plugins->usedBy(TestBlockSurface::class));
+    $this->assertSame(TestBlockSurface::class, $this->container->get('plugin.manager.block')
+      ->getDefinition('data_surface_test_block')[UsesSurface::DEFINITION_KEY]);
   }
 
   /**
-   * Tests that the declaration alone answers for the refinement edges.
+   * Tests that the refiner's signature is the refinement edge.
    *
-   * The edge the awareness service used to answer from an attribute. It
-   * is still readable without a container — the declaration is static —
-   * but it is read from the one home every other part of the surface
-   * comes from rather than from a second, partial description beside it.
+   * The variant's #[RefinesInput] method takes the casing, and that
+   * parameter is the edge the block host's AJAX rebuild rides.
    */
-  public function testTheDeclarationCarriesTheRefinementEdges(): void {
-    $builder = new DataSurfaceBuilder();
-    DataSurfaceTestBlock::declareDataSurface($builder);
-
+  public function testTheRefinerSignatureIsTheRefinementEdge(): void {
     $this->assertSame(
       ['casing'],
-      $builder->seal()->getDefinitions()->entry('variant')?->dependencies,
+      $this->createBlock()->getDataSurface()->getDefinitions()->entry('variant')?->dependencies,
     );
   }
 

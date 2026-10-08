@@ -10,9 +10,9 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\DataSurfaceResult;
 
 /**
- * The bespoke part of a generated provider form.
+ * The bespoke part of a generated situation form.
  *
- * DataSurfaceProviderForm builds every element from the surface, which
+ * DataSurfaceSituationForm builds every element from the surface, which
  * leaves exactly three things a form still has an opinion about and a
  * surface never will: how the elements are arranged on the page, what a
  * person is told when the write succeeds, and where they are sent
@@ -20,20 +20,15 @@ use Drupal\data_surface\Pipeline\DataSurfaceResult;
  * cosmetic layer that cannot change what a value means, because it runs
  * after the container is built and its return is rendered, not read.
  *
- * Two ways to supply one, both named on the route:
- * - A service id or class in the route's own cosmetics default, which
- *   the class resolver instantiates. This is the spelling for a layer
- *   that is genuinely about one route.
- * - The provider itself implementing this interface, which needs no
- *   route default at all. This is the spelling for a provider whose
- *   presentation is the same wherever it is served from.
+ * The route names it, as a service id or class in its cosmetics
+ * default, which the class resolver instantiates.
  *
  * Every method may decline, by returning the form it was given or by
  * returning NULL, and the generic form then does what it would have
  * done on its own. A cosmetic layer is never obliged to have an opinion
  * about all three.
  *
- * @see \Drupal\data_surface\Form\DataSurfaceProviderForm
+ * @see \Drupal\data_surface\Form\DataSurfaceSituationForm
  * @see docs/forms.md
  */
 interface DataSurfaceFormCosmeticsInterface {
@@ -49,7 +44,7 @@ interface DataSurfaceFormCosmeticsInterface {
    *
    * An implementation that needs to change what a value MEANS — its
    * allowed values, its default, whether it is required — is in the
-   * wrong place, and the surface build event is the right one.
+   * wrong place: that is the surface's, or a surface alter's.
    *
    * Borrowing an element type for what it draws borrows what it checks
    * as well, and that half has to go: an element's own #element_validate
@@ -69,8 +64,8 @@ interface DataSurfaceFormCosmeticsInterface {
    * @param string $operation
    *   The operation the form is serving.
    * @param string|null $subject
-   *   The subject the form is serving, or NULL when the provider is its
-   *   own subject.
+   *   The raw value of the situation's first route parameter, or NULL
+   *   when the situation takes none.
    *
    * @return array
    *   The form, arranged.

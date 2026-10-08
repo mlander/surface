@@ -169,11 +169,12 @@ more — a bundle that was deleted, a plugin whose module was uninstalled,
 a value a refinement has since narrowed away. The third state is not
 something any caller did, and that is what the rules turn on.
 
-A value is **stale** when all three of these hold at once:
+A value is **stale** when all four of these hold at once:
 
 | Condition | Why it is in the test |
 | --- | --- |
 | It is exactly what storage holds for that key | A value that differs was chosen by whoever sent it, so it is refused however far outside the list it falls. This is the whole line between "re-choose this" and "that is not a valid answer". |
+| Every key it refines against also holds exactly what storage holds | A run that moves a dependency is what narrowed the list away from the stored value: a venue moved, and the room stored under the old venue is sent back. That refusal is about this run's own answers, not about the site, so it blocks. |
 | The key offers a list of values at all | Read from the options service — the same list a generated select renders. A key with no list has no membership to have fallen out of. |
 | The value is not in that list | If it is, the refusal came from some other constraint, and that is an ordinary refusal of a value the key still offers. |
 

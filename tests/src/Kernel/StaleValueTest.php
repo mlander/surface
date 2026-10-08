@@ -188,8 +188,14 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
     $this->assertArrayHasKey('keep', $element['#options']);
     $this->assertArrayHasKey('other', $element['#options']);
     // The description says what leaving it alone will do, where a screen
-    // reader reaches it rather than only in the option label.
-    $this->assertStringContainsString('is kept until you choose another', (string) $element['#description']);
+    // reader reaches it rather than only in the option label — and only
+    // what is true whether or not this edit moved what the key depends
+    // on, because a save keeps the value only when it did not.
+    $this->assertStringContainsString(
+      'Choose another; saving keeps it only if nothing it depends on has changed.',
+      (string) $element['#description'],
+    );
+    $this->assertStringNotContainsString('kept until you choose another', (string) $element['#description']);
     $this->assertContains('data-surface-stale', $element['#attributes']['class']);
   }
 

@@ -3,8 +3,8 @@
 A surface has two halves. The definitions a host **accepts** are the
 input half, and everything else in these docs is about them. The
 definitions a host **emits** are the output half, declared in the same
-vocabulary, sealed into the same collection type, and held to the same
-narrowing rule.
+vocabulary and sealed into the same collection type, but never
+refined.
 
 ```php
 $surface->getDefinitions();        // What may be sent.
@@ -23,44 +23,47 @@ way.
 
 ## Declaring outputs
 
-In the same declaration as the inputs, on the same builder:
+Beside the inputs, in the same class, on `HasOutputsInterface`:
 
 ```php
-public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
-  $builder->setDefinition('variant', DataDefinition::create('string')
-    ->setLabel(new TranslatableMarkup('Variant')));
+#[Surface('field_formatter.data_surface_demo_string')]
+final class DemoFormatterSurface implements SurfaceInterface, HasOutputsInterface {
 
-  $builder->setOutputDefinition('text', DataDefinition::create('string')
-    ->setLabel(new TranslatableMarkup('Text'))
-    ->setDescription(new TranslatableMarkup('What is shown.'))
-    ->setRequired(TRUE));
+  public function defineOutputs(ShapeInterface $outputs): void {
+    $outputs->add('text', 'string', new TranslatableMarkup('Text'))
+      ->setDescription(new TranslatableMarkup('The field value, prefixed and cased as the settings ask.'))
+      ->setRequired(TRUE);
+    $outputs->addDefinition('classes', (new ListDataDefinition(['type' => 'list'], DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Class'))))
+      ->setLabel(new TranslatableMarkup('Classes'))
+      ->setDescription(new TranslatableMarkup('The classes the chosen variant puts on the wrapper. Absent when no variant is chosen.')));
+  }
 
-  $classes = new ListDataDefinition(['type' => 'list'], DataDefinition::create('string'));
-  $classes->setLabel(new TranslatableMarkup('Classes'));
-  $builder->setOutputDefinition('classes', $classes);
-  $builder->addOutputRefinement('classes', ['variant']);
 }
 ```
 
-A surface built at runtime says the same thing on its own builder, and
-adds an output refiner that is not the host itself the same way:
-
-```php
-$builder->addOutputRefiner('classes', new MyOutputRefiner());
-```
+The interface is optional, because most surfaces only ask, so
+`defineInputs()` reads as "what this asks for" and a surface that never
+mentions outputs answers with an empty map. Outputs take the same tool
+as inputs. Inputs and outputs are separate namespaces: a key may appear
+in both with different meanings.
 
 Three differences from an input, all of them enforced rather than
 documented:
 
 | | Input | Output |
 | --- | --- | --- |
-| **Default value** | Declared, merged under stored values by `accept()`. | Refused. A default is what a value starts from when nobody sent one, and nobody sends an output. A definition carrying `default_value`, at any depth, is refused at declaration and again at seal. |
+| **Default value** | Declared, merged under stored values by `accept()`. | Refused. A default is what a value starts from when nobody sent one, and nobody sends an output. A definition carrying `default_value`, at any depth, is refused when it is added and again at seal. |
 | **Locking** | Fixes the value to what storage holds. | Refused. Locking narrows what a caller may send. |
-| **Refinement edges** | Name sibling **input** keys. | Name **input** keys too: what is emitted is decided by what was given. An output never refines against another output, because outputs are produced in one act by code that already knows all of them. |
+| **Refinement** | `#[RefinesInput]` methods narrow it against its siblings. | Refused: a `#[RefinesInput]` naming an output key is refused when the surface is built. A refinement narrows what may be sent, and nobody sends an output. |
 
-The edges are checked against the input map at seal, so an output that
-refines against something the surface never accepts is refused there
-rather than silently never refining.
+An output whose shape depends on an input value would be a variant,
+declared with `attachBy()` on that input key, exactly as for an input
+slot. Outputs hold no subsurface yet: `attach()` and `attachBy()` on an
+output are refused by name, so until they can, an output that would
+vary is advertised at its widest: the demo
+formatter's `classes` is an open list of class names, whatever variant
+is chosen.
 
 ## Absent, NULL, and the Omitted sentinel
 
@@ -95,67 +98,18 @@ every depth — a map output's properties are outputs too — and closes
 the gap an omitted list item leaves, because a list with a hole in it
 is not a shape any consumer expects.
 
-## Refinement against the inputs
-
-```php
-$surface->refineOutputs($input_values);   // A surface with narrowed outputs.
-```
-
-An output refines when every input key it depends on holds a configured
-value — the same rule `refine()` applies to inputs, from the same place.
-A host that narrows its outputs implements
-`DataSurfaceOutputRefinerInterface`:
-
-```php
-public function refineOutputDefinition(string $name, DataDefinitionInterface $definition, array $input_values): DataDefinitionInterface {
-  if ($name === 'classes' && ($input_values['variant'] ?? NULL) !== NULL) {
-    $definition->getItemDefinition()->addConstraint('Choice', [
-      'choices' => ['v-' . $input_values['variant']],
-    ]);
-  }
-  return $definition;
-}
-```
-
-It is a **separate interface** from `DataSurfaceRefinerInterface`, not a
-second method on it, so that every host base class and every refiner
-already written stays exactly as thin as it was. A host that refines
-both halves implements both, and the builder recognizes one object
-serving as both without being told.
-
-Every link is held to the same narrowing check as an input refiner, by
-the same `Refinement\Narrowing`: a refined output must accept only what
-the definition it was handed already accepted. On the output side that
-rule reads as "a consumer that read the advertisement is never handed a
-value the advertisement ruled out", which is the whole reason for
-declaring outputs.
-
-`refineOutputs()` is deliberately not folded into `refine()`. The two
-narrow different halves against the same values, but they are asked at
-different moments: `validate()` refines the inputs on every submission,
-while the outputs only matter once the host has run. Folding them would
-run every output refiner on every validation for an answer nothing in
-that path reads.
-
-Output refiner chains are flat, unlike the input side's per-contributor
-chains. An output's value space has exactly one owner, because nothing
-can extend an output's choices — a contributor mounts an output of its
-own instead — so there is no space to divide and no union to take.
-
 ## Conformance
 
 ```php
-$violations = $pipeline->conformOutput($surface, $emitted, $input_values);
+$violations = $pipeline->conformOutput($surface, $emitted);
 ```
 
 What it does, in order:
 
-1. Refines the outputs against the input values, so the definitions the
-   emitted values are held to are the ones those inputs selected.
-2. Strips every `Omitted` key, at every depth.
-3. Refuses keys no output definition declares, at any depth, in the same
+1. Strips every `Omitted` key, at every depth.
+2. Refuses keys no output definition declares, at any depth, in the same
    spirit `accept()` refuses unknown input keys.
-4. Checks every present value against its definition's type and
+3. Checks every present value against its definition's type and
    constraints, through typed data, with path-aware violations.
 
 It answers with the same `ViolationSet` of `SurfaceViolation` objects
@@ -206,9 +160,12 @@ because the data step stays separately callable — by a test, by a JSON
 representation, by an agent asking what this formatter would show — and
 separately checkable against the contract.
 
-The demo formatter is the worked example: it declares two outputs,
-implements `formatValue()`, writes no render array, and emits
-`Omitted::value()` for its classes when no variant is chosen.
+The demo formatter is the worked example: its surface,
+`DemoFormatterSurface`, declares two outputs in `defineOutputs()`; the
+formatter implements `formatValue()`, writes no render array, and emits
+`Omitted::value()` for its classes when no variant is chosen. Its
+`classes` output is advertised open whatever variant is chosen, because
+outputs are never refined.
 
 ### The tool bridge
 
@@ -224,38 +181,32 @@ flag, the constraints, and the enum, through the same treatment the
 inputs get. What is lost, on top of the two the inputs already lose
 (example values and type settings, both Tool API gaps):
 
-- **The refinement edges.** The Tool API has `input_definition_refiners`
-  and no output counterpart, so there is nowhere to say "this output
-  narrows when that input is sent". Convert a surface already put
-  through `refineOutputs()` to advertise the narrowed answer instead.
 - **The `Omitted` marker itself**, which is a PHP marker and not a
   value. The statement it makes survives as `required`.
 - **Who contributed what.** A mounted third-party output arrives as an
   ordinary property of the `third_party_outputs` map.
 
-The two field tools in `data_surface_tool` still declare their outputs
-by hand, and both halves of that are deliberate: the `#[Tool]` attribute
-takes outputs statically, and what those tools emit is the *stored*
-settings, which is storage shape and belongs to the target rather than
-the surface shape this bridge converts.
+The tools `data_surface_tool` derives from situations answer with the
+accepted `values`, `committed`, and the surface's own outputs converted
+here; a dry run answers with what prepare rehearsed, in storage shape,
+as `prepared`.
 
 ## Contributing an output
 
 A module that owns neither the host nor its execution can still add to
-what the host emits, under its own namespace, at build time:
+what the host emits, at build time: its alter implements
+`AltersOutputsInterface` beside `SurfaceAlterInterface`.
 
 ```php
-$event->builder->setThirdPartyOutputDefinition(
-  'my_module',
-  'badge',
-  DataDefinition::create('string')
-    ->setLabel($this->t('Badge')),
-);
+public function alterOutputs(ShapeAdditionsInterface $outputs): void {
+  $outputs->add('badge', 'string', $this->t('Badge'));
+}
 ```
 
-The value lands at `third_party_outputs.my_module.badge` — advertised,
+What the alter adds is mounted under its module's name, so the value
+lands at `third_party_outputs.my_module.badge` — advertised,
 conformance checked, and machine-visible — and cannot collide with the
 owner's outputs or with another contributor's. The owner may not declare
-an output of that name; the key belongs to whoever mounts under it.
-Policy filters do not apply to outputs: a filter speaks about what a
-site allows a caller to configure, and nothing configures an output.
+an output of that name; the key belongs to whoever mounts under it. An
+alter cannot offer more values on an output with `extendChoices()`:
+nobody sends one.

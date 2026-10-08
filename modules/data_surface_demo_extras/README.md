@@ -11,27 +11,52 @@ both ways, so the two can be compared.
   is advertised, validated and rendered like any other, where the
   form-alter era gave an element no machine could see.
 - It contributes one more value, `ribbon`, to the formatter's `variant`
-  key, and registers a refiner under its own provider id to say when that
-  value is offered — here, only in upper case.
+  key, with `extendChoices()`, and narrows it with a `#[RefinesInput]`
+  method of its own to say when that value is offered — here, only in
+  upper case.
 
-Both live in one event subscriber on `DataSurfaceBuildEvent`, which fires
-while the surface is still mutable. Nothing here alters a form, and every
-consumer of the surface — form, validation, defaults, and any
-machine-readable contract — sees the same extended surface.
+Both live in one surface alter, `SurfaceAlter\DemoFormatterAlter`,
+carrying `#[AltersSurface(DemoFormatterSurface::class)]`. Nothing
+registers it; discovery finds it and builds it as an autowired service.
+Nothing here alters a form, and every consumer of the surface — form,
+validation, defaults, and any machine-readable contract — sees the same
+extended surface.
 
 The contribution is the part worth reading twice. The value is added at
 build time, so it is part of what the surface advertises rather than
-something a refiner smuggles in afterwards; and the refiner registered
-with it is handed that one value and nothing else, so it cannot narrow
-away a variant the formatter owns, and cannot hand back a value it was
-never given. What the refined surface offers is the union of what each
-contribution narrowed to:
+something a refiner smuggles in afterwards; and the alter's method on a
+key it offered more values on is that contribution's refiner, handed
+that one value and nothing else, so it cannot narrow away a variant the
+formatter owns, and cannot hand back a value it was never given. What
+the refined surface offers is the union of what each contribution
+narrowed to:
 
 | Casing | The formatter's variants | This module's | Offered |
 | --- | --- | --- | --- |
 | `none` | all of them | none | bold, strong, quiet, muted |
 | `uppercase` | bold, strong | ribbon | bold, strong, ribbon |
 | `lowercase` | quiet, muted | none | quiet, muted |
+
+## The demo block
+
+The demo block's configuration is a surface class,
+`DemoBlockSurface`, and this module alters it the same way: one class in
+`src/SurfaceAlter`, `DemoBlockAlter`, carrying
+`#[AltersSurface(DemoBlockSurface::class)]`. Nothing registers it;
+discovery finds it and builds it as an autowired service.
+
+- `alterInputs()` adds the same `badge` the formatter gets, which the
+  build mounts at `third_party_settings.data_surface_demo_extras.badge`.
+- `#[RefinesInput('limit')]` on `shortInGrid()` watches
+  `presentation`, by parameter name, and caps the number of items at
+  twenty while the block is a grid. It used to watch `show_summary`;
+  that key now lives inside the list presentation's subsurface, and an
+  alter of the block cannot see into a child.
+- `describe('headline', ...)` rewords the headline's help text, the one
+  change to an existing key an alter may make.
+
+`Kernel\SurfaceBuildTest` and `Kernel\SurfaceDiscoveryTest` assert
+them.
 
 ## The same extension, written twice
 
@@ -41,17 +66,19 @@ deadline of one hour to thirty days, stored as one integer of seconds
 under a key, `review_deadline`, that does not name its unit; and a list
 of audience tags.
 
-- **As contract**, in the same subscriber: mounted on the content type
-  surface (host id `entity_type:node_type`, so nothing here depends on
-  the module providing it). The deadline is asked for as an amount and a
+- **As contract**, in `SurfaceAlter\NodeTypeAlter`, carrying
+  `#[AltersSurface(NodeTypeSurface::class)]`: discovery finds it, and
+  skips it on a site without the node type demo, so nothing here
+  depends on that module. The deadline is asked for as an amount and a
   unit — hours, days, weeks or business days — with a constraint on the
   pair that refuses anything past thirty days on the amount, and
-  `ReviewDeadlineShape` turns the pair into seconds and back; it is
-  handed to the surface with `setThirdPartyShape()`, and the target that
-  writes third party settings applies it in prepare. The tags are a
-  list, with a pattern for each tag and a uniqueness constraint. It
-  brings a comma-separated widget for the list, because the stock
-  widgets draw a list only as a multiple select.
+  `ReviewDeadlineShape` turns the pair into seconds and back; the alter
+  hands it to the surface by implementing `HasStorageShapeInterface`,
+  and the target adapter applies it to this module's settings before
+  the content type's target writes them and after it reads them. The
+  tags are a list, with a pattern for each tag and a uniqueness
+  constraint. It brings a comma-separated widget for the list, because
+  the stock widgets draw a list only as a multiple select.
 - **The classic way**, in `Hook\NodeTypeFormHooks`: a
   `hook_form_node_type_form_alter` on core's own content type form, with
   an amount and a unit select whose `#element_validate` turns them into

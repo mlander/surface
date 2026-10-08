@@ -10,6 +10,17 @@ field.formatter.settings.data_surface_demo_string.third_party.data_surface_demo_
       label: 'Badge'
       nullable: true
 
+# The demo block's surface gains the same badge from this module's
+# surface alter, which the build mounts under this module's name.
+block.settings.data_surface_demo.third_party.data_surface_demo_extras:
+  type: mapping
+  label: 'Data surface demo extras block settings'
+  mapping:
+    badge:
+      type: string
+      label: 'Badge'
+      nullable: true
+
 # The editorial review settings this module stores on every content type,
 # from either of the two ways it adds them: the content type surface, and
 # core's own content type form.

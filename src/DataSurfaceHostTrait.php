@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface;
 
+use Drupal\Component\Plugin\PluginInspectionInterface;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
@@ -11,7 +12,11 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
+use Drupal\data_surface\Hook\SurfacePluginHooks;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
+use Drupal\data_surface\Surface\Attribute\UsesSurface;
+use Drupal\data_surface\Surface\SurfaceContext;
+use Drupal\data_surface\SurfaceBuild\SurfacesInterface;
 
 /**
  * The few things every host-side adoption trait needs.
@@ -35,10 +40,14 @@ use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
  * for a host whose constructor calls us; it stays a documented exception
  * rather than a habit.
  *
- * The surface factory is fetched here for the same reason and under the
- * same exception: a base class asked for its surface from inside its own
- * constructor has no injected factory yet, and the factory is where the
- * build event and the seal live.
+ * The build step is fetched here for the same reason and under the same
+ * exception: a base class asked for its surface from inside its own
+ * constructor has no injected build step yet.
+ *
+ * Every host names its surface the one way, with #[UsesSurface] on the
+ * plugin class, and builds it in the context the host supplies: the
+ * host's own verb as the operation, since a plugin instance is the whole
+ * subject and no situation describes it.
  */
 trait DataSurfaceHostTrait {
 
@@ -65,14 +74,102 @@ trait DataSurfaceHostTrait {
   }
 
   /**
-   * Gets the surface factory.
+   * Gets the build step.
    *
-   * @return \Drupal\data_surface\DataSurfaceFactoryInterface
-   *   The factory.
+   * Fetched under the documented exception: a block asks for its surface
+   * from inside its own constructor.
+   *
+   * @return \Drupal\data_surface\SurfaceBuild\SurfacesInterface
+   *   The build step.
    */
-  protected function surfaceFactory(): DataSurfaceFactoryInterface {
+  protected function surfaces(): SurfacesInterface {
     // @phpstan-ignore globalDrupalDependencyInjection.useDependencyInjection
-    return \Drupal::service('data_surface.factory');
+    return \Drupal::service('data_surface.surfaces');
+  }
+
+  /**
+   * Gets the surface class #[UsesSurface] names on this plugin.
+   *
+   * Read from the plugin definition, where the plugin type's definition
+   * alter copied it, so a plugin constructed with a hand-made definition
+   * that carries no such key is taken at its definition's word.
+   *
+   * @return class-string|null
+   *   The surface class, or NULL when the definition names none.
+   *
+   * @see \Drupal\data_surface\Hook\SurfacePluginHooks
+   */
+  protected function usedSurface(): ?string {
+    if (!$this instanceof PluginInspectionInterface) {
+      return NULL;
+    }
+    $definition = $this->getPluginDefinition();
+    $surface = is_array($definition) ? ($definition[UsesSurface::DEFINITION_KEY] ?? NULL) : NULL;
+    return is_string($surface) ? $surface : NULL;
+  }
+
+  /**
+   * Gets the context this host asks for its surface in.
+   *
+   * A plugin host knows nothing a situation would: the instance is the
+   * whole subject, and its configuration is loaded by the host, so the
+   * context is the operation and nothing else.
+   *
+   * @param string $operation
+   *   The host operation.
+   *
+   * @return \Drupal\data_surface\Surface\SurfaceContext
+   *   The context.
+   */
+  protected function surfaceContext(string $operation): SurfaceContext {
+    // Decision: see docs/decisions.md#a-plugin-hosts-context.
+    return new SurfaceContext($operation);
+  }
+
+  /**
+   * Builds the surface this host's plugin names, in the host's context.
+   *
+   * @param string $operation
+   *   The host operation.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The surface, alters applied.
+   *
+   * @throws \LogicException
+   *   When the plugin names no surface with #[UsesSurface].
+   */
+  protected function hostedSurface(string $operation = 'configure'): DataSurfaceInterface {
+    $surface = $this->usedSurface() ?? throw new \LogicException(sprintf(
+      '%s names no surface: put #[UsesSurface] on the class, naming a #[Surface] class in a module\'s src/Surface.',
+      static::class,
+    ));
+    return $this->surfaces()->build($surface, $this->surfaceContext($operation));
+  }
+
+  /**
+   * Answers whether an account may configure this host's values.
+   *
+   * The surface's own answer in the host's context: its access class,
+   * when it names one, since a host verb is no situation and has no
+   * permission tier; neutral when it names none, which leaves the
+   * question to whoever asked — a route requirement, an entity access
+   * handler, a tool's own check. Forbidden blocks the pipeline's submit
+   * before it reads storage; allowed agrees without bypassing the host's
+   * own gates.
+   *
+   * @param \Drupal\Core\Session\AccountInterface|null $account
+   *   The account to answer for, or NULL for the current user.
+   * @param string $operation
+   *   The host operation the answer is wanted for.
+   *
+   * @return \Drupal\Core\Access\AccessResultInterface
+   *   The access answer.
+   */
+  public function surfaceAccess(?AccountInterface $account = NULL, string $operation = 'configure'): AccessResultInterface {
+    $surface = $this->usedSurface();
+    return $surface === NULL
+      ? AccessResult::neutral()
+      : $this->surfaces()->access($surface, $this->surfaceContext($operation), $this->surfaceAccount($account));
   }
 
   /**
@@ -96,205 +193,17 @@ trait DataSurfaceHostTrait {
   }
 
   /**
-   * Holds a provider that is its own subject to the NULL subject.
-   *
-   * The rule the host base classes in this module follow, kept here so
-   * that the four of them and every field item cannot disagree about
-   * it: a plugin instance, a formatter and a field item each describe
-   * themselves, so they have no second thing to be asked about and no
-   * id vocabulary a caller could name one with. Handed a subject
-   * anyway, they refuse it by name rather than serving the surface that
-   * was not asked for, which is what a wire caller addressing the wrong
-   * host needs to be told.
-   *
-   * Only getDataSurface() calls this. An access question is never
-   * answered with an exception, so surfaceAccess() has no opinion about
-   * a subject rather than throwing over one.
-   *
-   * @param string|null $subject
-   *   The subject the caller named, which for a provider that is its
-   *   own subject may only be NULL.
-   *
-   * @throws \InvalidArgumentException
-   *   When a subject was named.
-   *
-   * @see \Drupal\data_surface\DataSurfaceProviderInterface::getDataSurface()
-   */
-  protected function surfaceSelfSubject(?string $subject): void {
-    if ($subject !== NULL) {
-      throw new \InvalidArgumentException(sprintf(
-        '%s is its own subject and has no surface for the subject "%s".',
-        static::class,
-        $subject,
-      ));
-    }
-  }
-
-  /**
-   * Answers whether an account may configure this host's values.
-   *
-   * The default for every host: no opinion. A surface describes what the
-   * values may be, not who may write them, so a host that has not been
-   * taught otherwise leaves the question to whoever asked — a route
-   * requirement, an entity access handler, a tool's own check — and
-   * neutral is how that is said without closing anything.
-   *
-   * That is the answer for every operation and every subject alike. A
-   * default that refused a subject it could not place would be a gate,
-   * and a host with nothing to say owns no gate; the surface build is
-   * where a subject nobody can resolve is refused.
-   *
-   * A host with an answer of its own overrides this. Forbidden blocks
-   * the pipeline's submit before it reads storage; allowed agrees
-   * without bypassing the host's own gates.
-   *
-   * @param string $operation
-   *   The host operation the answer is wanted for.
-   * @param string|null $subject
-   *   The id of the thing the operation is about, or NULL when the
-   *   provider is its own subject.
-   * @param \Drupal\Core\Session\AccountInterface|null $account
-   *   The account to answer for, or NULL for the current user.
-   *
-   * @return \Drupal\Core\Access\AccessResultInterface
-   *   The access answer.
-   *
-   * @see \Drupal\data_surface\DataSurfaceProviderInterface::surfaceAccess()
-   */
-  public function surfaceAccess(string $operation = 'configure', ?string $subject = NULL, ?AccountInterface $account = NULL): AccessResultInterface {
-    return AccessResult::neutral();
-  }
-
-  /**
-   * Gets the refiner a surface built here is bound to.
-   *
-   * A plugin that narrows its own definitions refines them itself, which
-   * is the ordinary case and the reason the host base classes implement
-   * the refiner interface. A host that does not — a field item, whose
-   * settings depend on nothing else it holds — binds none rather than
-   * binding an object with nothing to say.
-   *
-   * @return \Drupal\data_surface\DataSurfaceRefinerInterface|null
-   *   This host, when it refines; NULL when it does not.
-   */
-  protected function surfaceRefiner(): ?DataSurfaceRefinerInterface {
-    return $this instanceof DataSurfaceRefinerInterface ? $this : NULL;
-  }
-
-  /**
-   * Gets a fresh builder with this host bound as its refiner.
-   *
-   * The starting point for a surface built in a method: one call, and
-   * the builder already knows who narrows the definitions about to be
-   * declared into it. A host that also refines its outputs is bound as
-   * the output refiner too, because the builder takes a refiner
-   * implementing both interfaces as both.
-   *
-   * A builder describes one surface and dispatches one build event, so
-   * this hands back a new one every time rather than a shared one.
-   *
-   * @return \Drupal\data_surface\DataSurfaceBuilderInterface
-   *   The unsealed builder.
-   */
-  protected function surfaceBuilder(): DataSurfaceBuilderInterface {
-    return new DataSurfaceBuilder(refiner: $this->surfaceRefiner());
-  }
-
-  /**
-   * Seals a builder into the surface this host advertises.
-   *
-   * Through the factory, always: a surface that did not come from there
-   * was never offered to subscribers, so nothing may assume it is
-   * complete.
-   *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
-   *   The builder to seal.
-   * @param string $host_id
-   *   The namespaced identifier for the host, `<host type>:<id>`.
-   *
-   * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The advertised surface, alters applied.
-   */
-  protected function builtSurface(DataSurfaceBuilderInterface $builder, string $host_id): DataSurfaceInterface {
-    return $this->surfaceFactory()->build($builder, static::class, $host_id);
-  }
-
-  /**
-   * Builds the surface this class declares, sealed through the factory.
-   *
-   * The whole of what a host base class does for a plugin that declares
-   * its surface: a fresh builder with this instance as its refiner, the
-   * class's own declaration said into it, and the build event before the
-   * seal.
-   *
-   * @param string $host_id
-   *   The namespaced identifier for the host, `<host type>:<id>`.
-   *
-   * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The advertised surface, alters applied.
-   *
-   * @throws \LogicException
-   *   When the class declares no surface.
-   */
-  protected function declaredSurface(string $host_id): DataSurfaceInterface {
-    $builder = static::surfaceDeclarationBuilder(static::class, $this->surfaceRefiner());
-    return $this->builtSurface($builder, $host_id);
-  }
-
-  /**
-   * Fills a builder with what a class declares, without sealing it.
-   *
-   * Shared by the instance path and by the static defaults shim below,
-   * so that the surface a host advertises and the defaults its host
-   * protocol reads statically come from the same sentence.
-   *
-   * @param class-string $class
-   *   The fully qualified class name.
-   * @param \Drupal\data_surface\DataSurfaceRefinerInterface|null $refiner
-   *   The refiner to bind, or NULL when nothing is being built — a
-   *   declaration describes, and reading one needs no refiner.
-   *
-   * @return \Drupal\data_surface\DataSurfaceBuilderInterface
-   *   The unsealed builder holding the declaration.
-   *
-   * @throws \LogicException
-   *   When the class declares no surface.
-   */
-  protected static function surfaceDeclarationBuilder(string $class, ?DataSurfaceRefinerInterface $refiner = NULL): DataSurfaceBuilderInterface {
-    if (!is_a($class, DataSurfaceDeclarationInterface::class, TRUE)) {
-      throw new \LogicException(sprintf(
-        '%s declares no surface: implement %s, or build the surface in getDataSurface() and answer the host\'s static protocols there.',
-        $class,
-        DataSurfaceDeclarationInterface::class,
-      ));
-    }
-    $builder = new DataSurfaceBuilder(refiner: $refiner);
-    $class::declareDataSurface($builder);
-    return $builder;
-  }
-
-  /**
-   * Reads the default values a class declares.
+   * Reads the default values the surface a class names declares.
    *
    * Several host protocols ask for their defaults statically — a
    * formatter's defaultSettings(), a field type's defaultFieldSettings()
-   * — and a static method cannot consult an instance surface. A class
-   * that declares its surface can still answer, because a declaration is
-   * static; this is the one rule for doing so, kept here rather than in
-   * each host's trait so the several static-defaults shims cannot
-   * disagree about what a declared default is.
-   *
-   * What is read is the declaration alone, sealed on the spot and thrown
-   * away: no build event, no container, and no subscriber's contribution
-   * — the same answer the class itself would give. The defaults a
-   * contributor mounts are advertised on the built surface and reach
-   * storage under the third party namespace the host protocol already
-   * knows about.
-   *
-   * A class whose surface needs live site state to describe itself has
-   * no declaration to read, so it answers its host's static protocol
-   * itself. The exception says so rather than returning a quietly empty
-   * array.
+   * — and a static method cannot consult an instance surface. The class
+   * names its surface statically, with #[UsesSurface], so it can still
+   * answer: from that surface's own shape alone, with no alter and no
+   * context. The defaults an alter mounts are advertised on the built
+   * surface and reach storage under the third party namespace the host
+   * protocol already knows about. Kept here rather than in each host's
+   * trait so the several static-defaults shims cannot disagree.
    *
    * @param class-string $class
    *   The fully qualified class name.
@@ -303,10 +212,17 @@ trait DataSurfaceHostTrait {
    *   The declared defaults keyed by surface key.
    *
    * @throws \LogicException
-   *   When the class declares no surface.
+   *   When the class names no surface.
    */
   protected static function surfaceDeclaredDefaults(string $class): array {
-    return static::surfaceDeclarationBuilder($class)->seal()->getDefaultValues();
+    $surface = SurfacePluginHooks::usedSurfaceOf($class) ?? throw new \LogicException(sprintf(
+      '%s names no surface with #[UsesSurface], so it has no declared defaults to read.',
+      $class,
+    ));
+    // Fetched from the container under the documented exception: a
+    // static method has no instance to have been handed anything.
+    // @phpstan-ignore globalDrupalDependencyInjection.useDependencyInjection
+    return \Drupal::service('data_surface.surfaces')->defaults($surface);
   }
 
   /**
@@ -358,6 +274,9 @@ trait DataSurfaceHostTrait {
   /**
    * Merges stored values with the input an AJAX rebuild is refining on.
    *
+   * Or, on the build a full submission is processed against, with what
+   * that submission sent: see surfaceSubmittedInput().
+   *
    * The one overlay every host builds its surface form from, so that the
    * order — stored underneath, in-progress edit on top — and the rule
    * for what the edit invalidates are said once rather than per host.
@@ -382,13 +301,33 @@ trait DataSurfaceHostTrait {
    */
   protected function surfaceFormValues(DataSurfaceInterface $surface, array $stored, FormStateInterface $form_state): array {
     $input = $this->surfaceRefinementInput($surface, $form_state);
+    if ($input === []) {
+      // Not a rebuild, so either nothing was submitted or this is the
+      // build a submission is about to be processed against. In the
+      // second case the elements have to be the ones the submitted
+      // answers ask for: a select offering the stored venue's rooms
+      // refuses the new venue's room as a choice it was never offered,
+      // before the surface is ever asked, and a slot rendered as the
+      // stored variant has no element for the chosen variant's keys to
+      // arrive in.
+      // Nothing is discarded: the person pressed the button, so every
+      // value was said on purpose and is judged rather than dropped.
+      return array_replace($stored, static::withoutStaleMarkers($this->surfaceSubmittedInput($surface, $form_state), $stored));
+    }
+    // A rebuild reads the marker the same way. The discard rule only
+    // looks at refinement targets, so a stale key that is none — a venue
+    // the site took away, posted back on the placeholder while the room
+    // was touched — would otherwise be overlaid as the marker itself, and
+    // its rebuilt element would stash the marker as the value it stands
+    // for.
+    $input = static::withoutStaleMarkers($input, $stored);
     // A programmatic submission is not a rebuild. Its caller said every
     // value on purpose, in one statement, and a value the surface
     // refuses is refused rather than quietly dropped — the payload rule,
     // and the same line the stale model draws: chosen, therefore judged.
     // Discarding is for the half-finished edit a browser is still in the
     // middle of.
-    if ($input !== [] && !static::surfaceCompleteFormState($form_state)->isProgrammed()) {
+    if (!static::surfaceCompleteFormState($form_state)->isProgrammed()) {
       $discarded = $this->surfaceFormBuilder()->discardedRefinementInput($surface, $stored, $input);
       if ($discarded !== []) {
         $this->forgetSurfaceInput($discarded, $form_state);
@@ -396,6 +335,86 @@ trait DataSurfaceHostTrait {
       }
     }
     return $input === [] ? $stored : array_replace($stored, $input);
+  }
+
+  /**
+   * Reads what a submission sent for the surface, before it is processed.
+   *
+   * The build a submission is processed against runs before Form API has
+   * found the triggering element, so the container cannot be located the
+   * way a rebuild locates it. Only a host that knows where its container
+   * sits in the input can answer, through surfaceSubmissionPath(); every
+   * other host answers nothing, and its elements are built from what is
+   * stored as before.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The surface being built.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state of the containing form.
+   *
+   * @return array
+   *   Submitted input keyed by surface key; empty when nothing of this
+   *   form was submitted.
+   */
+  protected function surfaceSubmittedInput(DataSurfaceInterface $surface, FormStateInterface $form_state): array {
+    $state = static::surfaceCompleteFormState($form_state);
+    $path = $this->surfaceSubmissionPath($state);
+    if ($path === NULL) {
+      return [];
+    }
+    $tree = NestedArray::getValue($state->getUserInput(), $path);
+    return is_array($tree) ? array_intersect_key($tree, $surface->getDefinitions()->toArray()) : [];
+  }
+
+  /**
+   * Gets where this form's surface sits in a submission's input.
+   *
+   * @param \Drupal\Core\Form\FormStateInterface $state
+   *   The complete form state.
+   *
+   * @return string[]|null
+   *   The input path of the surface container when the form state holds
+   *   a submission of this form, NULL otherwise. NULL here: a host
+   *   nested inside another form cannot know its position before Form
+   *   API assigns it.
+   */
+  protected function surfaceSubmissionPath(FormStateInterface $state): ?array {
+    return NULL;
+  }
+
+  /**
+   * Puts the stored value back wherever the stale marker was submitted.
+   *
+   * The marker is a placeholder, not a value: a select that came up on
+   * it and was left alone submits it back, and it means "what is
+   * stored". Building an element from the marker itself would stash the
+   * marker as the value it stands for, and the stored value would be
+   * lost on the way back out.
+   *
+   * @param array $input
+   *   Submitted input for one level.
+   * @param array $stored
+   *   What that level holds.
+   *
+   * @return array
+   *   The input, each marker replaced by the stored value at its place,
+   *   or dropped where nothing is stored.
+   */
+  protected static function withoutStaleMarkers(array $input, array $stored): array {
+    foreach ($input as $key => $value) {
+      if ($value === DataSurfacePipelineInterface::KEEP_STALE) {
+        if (array_key_exists($key, $stored)) {
+          $input[$key] = $stored[$key];
+        }
+        else {
+          unset($input[$key]);
+        }
+      }
+      elseif (is_array($value)) {
+        $input[$key] = static::withoutStaleMarkers($value, is_array($stored[$key] ?? NULL) ? $stored[$key] : []);
+      }
+    }
+    return $input;
   }
 
   /**

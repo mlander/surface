@@ -8,24 +8,41 @@ same surface.
 
 ### The block: `data_surface_demo`
 
-A configurable block that declares its settings in one
-`declareDataSurface()` method and writes no form code at all — no
+The plugin only renders; its
+configuration is `Surface\DemoBlockSurface`, which the plugin names with
+`#[UsesSurface]`, and it writes no form code at all — no
 `defaultConfiguration()`,
 no `blockForm()`, no `blockValidate()`, no `blockSubmit()`. The entity
 type is a `PluginExists` constraint naming its manager and interface,
 which the options resolver reads as a select of content entity types, so
-the list that validates and the list that is offered are one list. Bundle
-refines against entity type and the field refines against both, live from
-site state, through the one refiner method on the class.
+the list that validates and the list that is offered are one list. The
+bundle refines against the entity type and the field against both,
+through two `#[RefinesInput]` methods that point at a list with a
+constraint rather than fetch one: core's `EntityBundleExists` for the
+bundle, and this module's `DataSurfaceDemoBundleField`, with its options
+resolver, for the field. Its presentation settings are a slot: a list
+and a grid need different things, so each is a surface of its own,
+`ListPresentationSurface` and `GridPresentationSurface`, each marked
+`#[SurfaceVariant]` for one value of the `presentation` key, which
+chooses the `presentation_settings` slot the block's surface makes with
+`attachBy()`; the form swaps them over AJAX and
+the config schema picks the mapping with `[%parent.presentation]`. See
+[docs/surfaces.md](../../docs/surfaces.md).
 
 ### The formatter: `data_surface_demo_string`
 
 Adoption on a host protocol with no validate and no submit hook. Field UI
 asks for a settings form, harvests the raw values itself, and prunes what
-it saves against a static defaults array. `defaultSettings()` is not
-written here: the base class derives it from the same declaration the
-surface is built from, `third_party_settings` included, so settings other
-modules mount at build time survive the display save.
+it saves against a static defaults array. The plugin only shows a value,
+in `formatValue()`; its settings and what it emits are
+`Surface\DemoFormatterSurface`, which the plugin names with
+`#[UsesSurface]`, with its inputs in `defineInputs()`, its outputs in
+`defineOutputs()` and the variant narrowed by the casing in one
+`#[RefinesInput]` method. `defaultSettings()` is not written here: the
+base class reads the surface's own shape, `third_party_settings`
+included, so settings other modules mount at build time survive the
+display save. Outputs are never refined, so the class list it emits is
+advertised open whatever variant is chosen.
 
 ### The standalone form
 
@@ -53,16 +70,18 @@ read the two side by side; its README counts the lines and the separate
 mechanisms each version costs, and `Kernel\ClassicParityTest` holds the
 two to the same behavior.
 
-`data_surface_demo_extras` extends the formatter's surface from outside,
-with no form alter anywhere. Install it and the variant select gains a
-value and a mounted badge setting.
+`data_surface_demo_extras` extends the formatter's and the block's
+surfaces from outside, with surface alters and no form alter anywhere.
+Install it and the variant select gains a value and a mounted badge
+setting.
 
 ## What gates it
 
 | Test | Covers |
 | --- | --- |
 | `Kernel\DemoBlockTest` | The block's surface, refinement and configuration round trip. |
-| `Kernel\DemoFormatterTest` | The formatter's settings protocol, including the extras module's contribution. |
+| `Kernel\DemoFormatterTest` | The formatter's settings protocol, the host reading `#[UsesSurface]`, and the extras module's contribution. |
+| `Kernel\UsesSurfaceHostsTest` | Every plugin host reading its surface from the attribute. |
 | `Kernel\DemoFormTest` | The standalone form against `StateTarget`. |
 | `Kernel\ClassicParityTest` | That the block and the formatter still match their hand-written twins. |
 | `FunctionalJavascript\DataSurfaceRefinementTest` | The AJAX rebuild in a real browser. |

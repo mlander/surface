@@ -17,12 +17,47 @@ reasoning, is in `ADOPTION.md` at the module root.
 | --- | --- | --- |
 | [A](#group-a-the-plain-plugin-triple) | `ConfigurableInterface` plus the `PluginFormInterface` triple | **Built.** Three families ported. |
 | [B](#group-b-settings-protocols-with-no-hook) | A settings form the host harvests itself, with no validate or submit hook | **Built.** Formatters ported. |
-| [C](#group-c-one-plugin-two-surfaces) | Field types: two surfaces on one plugin | **Half built.** Instance settings ported; storage settings not. |
+| [C](#group-c-one-plugin-two-surfaces) | Field types: two surfaces on one plugin | **Half built.** Instance settings ported; storage settings described and written by the field tools, with no Field UI host. |
 | [D](#group-d-multiple-named-forms) | A form class resolved per operation | **Built.** One generic form class. |
 | [E](#group-e-config-entities) | Config entity forms | **Built for one.** Node types ported. |
-| [F](#group-f-simple-config-forms) | `ConfigFormBase` with `#config_target` | **Target built**, no adopter yet. |
+| [F](#group-f-simple-config-forms) | `ConfigFormBase` with `#config_target` | **Not built.** The engine target was removed for want of an adopter. |
 | [G](#group-g-field-widgets-collecting-content) | A widget as the form bridge for a field item's values | **Designed, not built.** |
 | [H](#group-h-different-shape-later) | Families whose shape does not fit yet | Out of scope. |
+
+## What adopting means
+
+Every built group adopts the same way, in two files:
+
+1. **The surface**, a class in the adopting module's `src/Surface/`
+   carrying `#[Surface]`: its keys in `defineInputs()`, one
+   `#[RefinesInput]` method per key whose allowed values depend on
+   another, and, when it is asked for on its own rather than through a
+   plugin, `#[Situation]` static methods, a target and an access class
+   on the attribute. See [Declaring a surface](declaring-a-surface.md).
+2. **The host**, which keeps doing what only it does — rendering,
+   evaluating, executing — and names the surface with
+   `#[UsesSurface(SomeSurface::class)]` on the plugin class, extending
+   the group's base class or using its trait. The host supplies the
+   context and the target, because only it holds the instance.
+
+```php
+#[Condition(id: 'data_surface_test_condition', label: new TranslatableMarkup('Data surface test condition'))]
+#[UsesSurface(TestConditionSurface::class)]
+final class DataSurfaceTestCondition extends DataSurfaceConditionBase {
+
+  public function evaluate() { /* ... */ }
+
+  public function summary() { /* ... */ }
+
+}
+```
+
+A config entity or a simple config object has no plugin host. Its
+surface names its own target and access class and declares the
+situations it is asked in, and a route serves it through the generic
+situation form (Group E). A class you do not own is adopted by
+subclassing it, naming the surface on the subclass, and swapping the
+subclass in (Group C).
 
 ## Group A: the plain plugin triple
 
@@ -58,13 +93,14 @@ are close relatives with their own defaults spellings.
 
 **Built.** `DataSurfaceFormatterTrait` runs the whole pipeline in an
 `#element_validate` on the surface container, plus a static defaults shim
-reading the class's declaration. `DataSurfaceFormatterBase` is that trait
-and one line.
+reading the surface the class names. `DataSurfaceFormatterBase` is that
+trait and one line.
 
 Two host realities it had to absorb. `defaultSettings()` is static and
-cannot consult an instance surface, so it is answered from
-`declareDataSurface()`, which is static for that reason. And the host
-prunes what it saves
+cannot consult an instance surface, so it is answered from the
+`#[UsesSurface]` attribute, which is readable off the class, through
+`SurfacesInterface::defaults()`: the surface's own shape alone. And the
+host prunes what it saves
 against that same static array — `EntityDisplayBase::setComponent()`
 intersects through `prepareConfiguration()` — so keys another module
 mounts onto the surface at build time have to appear in it too, which is
@@ -89,10 +125,22 @@ than the form".
 
 **Half built.** `DataSurfaceFieldTypeTrait` plus `FieldSettingsTarget`
 covers instance settings, and `data_surface_address` is the worked
-example — the address field type's settings declared in one method on
-the item class, with Field UI rendering the generated form and the
-address module unmodified. Storage settings and the `$has_data` lock are
-the untouched half; address has no storage settings.
+example — the address field type's settings declared as a surface
+class, `AddressFieldSettingsSurface`, which the swapped item class builds
+for Field UI and which fills the field instance surface's settings slot
+for the tool bridge, with the address module unmodified.
+
+Storage settings are described but have no Field UI host.
+`FieldStorageSurface` in `data_surface_tool` fills its `settings` slot by
+field type, from a `#[SurfaceVariant]` or, for every other field type
+the UI offers, from `field.storage_settings.<type>` through
+`FieldStorageSettingsSchemaVariants`, so the field tools set and edit
+them: a string's `max_length` is `storage.settings.max_length` on
+`data_surface:field.instance:add`. `$has_data` is read where it bites:
+the storage's edit situation keeps cardinality from shrinking, and
+`FieldStorageTarget` refuses at prepare a settings change that alters
+the columns of a field with data. What is untouched is the field type's own
+`storageSettingsForm()`; address has no storage settings.
 
 Address was chosen because its settings form has no dependent settings at
 all, so everything a caller can get wrong is meaning and shape — which is
@@ -108,13 +156,13 @@ and silently overrules another.
 types (`configure`, `state`, `transition`), icon extractors, media
 sources.
 
-**Built.** One surface per coordinate through
-`DataSurfaceProviderInterface::getDataSurface(string $operation, ?string $subject)`,
-and one generic `DataSurfacePluginForm` any plugin can list under any
-operation. No per-plugin form classes at all. The operation is a
-constructor argument, so an operation other than `configure` names a
-service id in the `forms` key rather than the bare class, which is how
-the class resolver passes the operation along.
+**Built.** The plugin names one surface with `#[UsesSurface]`, and one
+generic `DataSurfacePluginForm` any plugin can list under any operation
+builds it in a context whose operation is the form's. No per-plugin form
+classes at all. The operation is a constructor argument, so an
+operation other than `configure` names a service id in the `forms` key
+rather than the bare class, which is how the class resolver passes the
+operation along.
 
 ## Group E: config entities
 
@@ -126,18 +174,20 @@ entity untyped, config entities have no `validate()`, and
 properties or setter methods, applies mounted third-party settings
 through `setThirdPartySetting()`, runs typed-config validation on the
 unsaved entity's export array, and commits with `save()`.
-`data_surface_demo_node_type` is the exemplar: one surface serving add
-and edit, the machine name locked on edit, and a composite target writing
-the node type entity plus its base field overrides.
+`data_surface_demo_node_type` is the exemplar: one surface,
+`NodeTypeSurface`, with an add and an edit situation, the machine name
+locked on edit because the edit situation knows it, and a target
+writing the node type entity plus its base field overrides; two routes
+serve it through `DataSurfaceSituationForm`, with no form class.
 
 Two things that port settled, and both generalize. Ordering is part of a
 composite's contract — a bundle-scoped target must come after the target
 that creates the bundle, and must resolve its field definitions lazily,
 because on add the bundle does not exist while values are prepared. And a
 surface key can be the identity of the thing a sibling target writes
-into, so when the bundle id is a surface value the target cannot be built
-from stored state alone and the provider builds it from the accepted
-values.
+into, so when the bundle id is a surface value the target cannot write
+from stored state alone and builds what it writes from the accepted
+values in `prepare()`.
 
 Next candidates: bundle entities generally, then image styles and text
 formats, which are collections of Group A plugins and prove nesting.
@@ -149,10 +199,13 @@ defaults from config, `toConfig` and `fromConfig` transforms,
 typed-config validation, violations mapped to elements. What it lacks is
 a form that is *generated* and a contract readable outside PHP.
 
-**Target built, no adopter yet.** `ConfigObjectTarget` mirrors
-`ConfigTarget` one for one, callables in each direction included, so a
-form already carrying `#config_target` metadata describes the same thing
-and the two can be ported into each other. Note that
+**Not built.** An engine `ConfigObjectTarget`, mirroring `ConfigTarget`
+one for one, was built and then removed, because nothing used it. A
+surface over a config object today names a target of its own, a
+`Surface\SurfaceTargetInterface` class that loads, prepares and commits
+the object; the engine target can be restored when an adopter appears,
+so that a form already carrying `#config_target` metadata and a surface
+describe the same thing. Note that
 `ConfigFormBase::copyFormValuesToConfig()` is private static, so a
 surface-driven config form cannot extend it; it replaces it.
 
@@ -185,7 +238,7 @@ rules need an entity-level surface, which is a later design.
 | --- | --- |
 | Views plugins | `defineOptions()` is a definition language of its own; state is `$this->options`, forms are by reference. Worth ingesting eventually, but not an adapter job. |
 | Menu link forms | Write to the menu tree table, not config, and have their own `extractFormValues()`. |
-| Image toolkits | Write to a `system.image.<toolkit>` config object with no plugin configuration. `ConfigObjectTarget` fits once Group F exists. |
+| Image toolkits | Write to a `system.image.<toolkit>` config object with no plugin configuration. A config object target fits once Group F exists. |
 | Migrate | No configuration forms at all. |
 | Layout Builder inline blocks | Configuration holds a serialized content entity. |
 
@@ -208,10 +261,15 @@ prepare and commit is the callers that never render anything.
 
 ### The Tool API A/B
 
-`data_surface_tool` is the recorded experiment.
-`data_surface:field_add` and `data_surface:field_update` mirror Tool
-Belt's `field_add` and `field_update` input for input; the difference is
-the answer to "what may the settings be?".
+`data_surface_tool` is the recorded experiment. Its field tools are
+generated from the field instance surface's situations —
+`data_surface:field.instance:add`, `:reuse` and `:edit` — and
+`data_surface:field.instance:reuse` answers the question Tool Belt's
+`field_add` answers, adding an existing storage's field to a bundle; the
+difference is the answer to "what may the settings be?". A field type
+with a settings surface answers from it; every other field type offered
+in the UI answers from its config schema, through derived variants, so
+the tools add any field the UI can.
 
 Tool Belt refines `settings` from the field type's config schema, which
 for the address field type yields three types, a nested `override` key
@@ -234,10 +292,11 @@ in that submodule's README and summarized in [Core gaps](core-gaps.md).
 The field tools compare two descriptions of settings the tool's author
 knew about. `data_surface_demo_node_type_tool` compares what happens to
 settings nobody told the tool about. `data_surface_demo_extras` adds two
-review settings to every content type, once through the content type
-surface's build event and once through an ordinary form alter on core's
-content type form. `data_surface:node_type_add`, which names no key of a
-content type at all, advertises both — the deadline as the amount and
+review settings to every content type, once through an alter of the
+content type surface and once through an ordinary form alter on core's
+content type form. `data_surface:node.type:add`, a tool generated from
+the content type surface's add situation that names no key of a content
+type at all, advertises both — the deadline as the amount and
 unit a person says, the tags with their pattern — and holds every caller
 to them. The classic side is given the most a schema can say: the
 deadline's config schema is an integer with its full Range, 3600 to

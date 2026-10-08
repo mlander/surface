@@ -12,25 +12,28 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Refinement\ChoiceSet;
+use Drupal\data_surface\Refinement\Narrowing;
 use Drupal\data_surface\Target\SettingsShapeInterface;
 
 /**
- * The mutable stage a surface passes through before it is advertised.
+ * The mutable stage a surface passes through before it is sealed.
+ *
+ * Internal to the build step: Surfaces fills one per surface it builds,
+ * through the shape adapters an author's defineInputs() and an alter's
+ * alterInputs() are handed, and seals it. Nothing else constructs one
+ * outside the engine's own tests.
  *
  * The one place in this module where a human-facing string is still
  * built as `new TranslatableMarkup` from inside an instance method. The
- * builder is a value object: hosts, providers and tests all make one
- * with `new DataSurfaceBuilder(...)`, so there is no constructor to
- * inject the translation service through and no container that sees
- * every instance. A `setStringTranslation()` seam would be filled only
- * for the builders that happen to pass through the factory and left
- * empty for the rest, which is two behaviors where the point of the
- * convention is one. So the titles of the third-party containers below
- * are constructed raw, and translate at render time exactly as an
- * injected `$this->t()` would.
+ * builder is a value object made with `new DataSurfaceBuilder()`, so
+ * there is no constructor to inject the translation service through. So
+ * the titles of the third-party containers below are constructed raw,
+ * and translate at render time exactly as an injected `$this->t()` would.
  *
  * @see \Drupal\data_surface\DataSurfaceBuilderInterface
  *   For the documentation of every method.
+ *
+ * @internal
  */
 final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
 
@@ -70,18 +73,18 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   protected array $thirdPartyShapes = [];
 
   /**
-   * Output refiner chains keyed by output key, then by contributor.
+   * Children fixed at a key, keyed by surface key.
    *
-   * @var array<string, array<string, \Drupal\data_surface\DataSurfaceOutputRefinerInterface[]>>
+   * @var array<string, \Drupal\data_surface\SurfaceAttachment>
    */
-  protected array $outputRefiners = [];
+  protected array $attachments = [];
 
   /**
-   * Policy filters, in registration order.
+   * Slots, keyed by surface key: the deciding key and the variants.
    *
-   * @var \Drupal\data_surface\DataSurfaceFilterInterface[]
+   * @var array<string, array{by: string, variants: array<string, \Drupal\data_surface\SurfaceAttachment>}>
    */
-  protected array $filters = [];
+  protected array $slots = [];
 
   /**
    * Locked surface keys.
@@ -109,35 +112,18 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
    * Constructs a DataSurfaceBuilder.
    *
    * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $definitions
-   *   The provider's own definitions, keyed by surface key.
+   *   The owner's own definitions, keyed by surface key.
    * @param array<string, string[]> $refinements
    *   Refinement dependencies: target => dependency names.
-   * @param \Drupal\data_surface\DataSurfaceRefinerInterface|null $refiner
-   *   The provider's refiner, first in the owner's chain for every
-   *   target.
    * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $outputs
-   *   The provider's own output definitions, keyed by output key.
-   * @param array<string, string[]> $outputRefinements
-   *   Output refinement dependencies: output key => input key names.
-   * @param \Drupal\data_surface\DataSurfaceOutputRefinerInterface|null $outputRefiner
-   *   The provider's output refiner, first in the owner's chain for
-   *   every output. Left out for the ordinary case where the provider
-   *   refines its outputs with the same object it refines its inputs
-   *   with: a refiner that implements both interfaces is taken as both,
-   *   so a host declares nothing extra to be heard.
+   *   The owner's own output definitions, keyed by output key.
    */
   public function __construct(
     protected array $definitions = [],
     protected array $refinements = [],
-    protected ?DataSurfaceRefinerInterface $refiner = NULL,
     protected array $outputs = [],
-    protected array $outputRefinements = [],
-    protected ?DataSurfaceOutputRefinerInterface $outputRefiner = NULL,
   ) {
     $this->cacheability = new CacheableMetadata();
-    if ($this->outputRefiner === NULL && $refiner instanceof DataSurfaceOutputRefinerInterface) {
-      $this->outputRefiner = $refiner;
-    }
   }
 
   /**
@@ -153,27 +139,6 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   public function setDefinition(string $name, DataDefinitionInterface $definition): static {
     $this->assertMutable();
     $this->definitions[$name] = $definition;
-    return $this;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function setPropertyDefinitions(string $key, array $property_definitions): static {
-    $this->assertMutable();
-    $complex = $this->complex($key);
-    foreach ($property_definitions as $property => $definition) {
-      $complex->setPropertyDefinition((string) $property, $definition);
-    }
-    return $this;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function setPropertyDefinition(string $key, string $property, DataDefinitionInterface $definition): static {
-    $this->assertMutable();
-    $this->complex($key)->setPropertyDefinition($property, $definition);
     return $this;
   }
 
@@ -262,6 +227,68 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * {@inheritdoc}
    */
+  public function attach(string $key, SurfaceAttachment $attachment): static {
+    $this->assertMutable();
+    $this->assertNotNested($key);
+    $this->definitions[$key] = $this->shellFor($key);
+    $this->attachments[$key] = $attachment;
+    $this->cacheability->addCacheableDependency($attachment->child);
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function attachBy(string $key, string $by, array $variants): static {
+    $this->assertMutable();
+    $this->assertNotNested($key);
+    if ($by === $key) {
+      throw new \InvalidArgumentException(sprintf('The "%s" slot cannot choose its own variant: the deciding key is a sibling.', $key));
+    }
+    $deciding = $this->named($by);
+    if ($deciding instanceof ListDataDefinitionInterface || $deciding instanceof ComplexDataDefinitionInterface) {
+      throw new \InvalidArgumentException(sprintf('The "%s" slot is chosen by "%s", which is a %s: a deciding key holds one value.', $key, $by, $deciding->getDataType()));
+    }
+    $ids = array_map('strval', array_keys($variants));
+    $before = DataSurface::deepClone($deciding);
+    $set = ChoiceSet::of($deciding);
+    if ($set === NULL) {
+      // The complete set of values the slot can be chosen by is part of
+      // what it advertises, so the deciding key says it in its own
+      // vocabulary.
+      $deciding->addConstraint('Choice', ['choices' => $ids]);
+    }
+    else {
+      // A variant its deciding key never allowed would be a shape nobody
+      // can reach, and declaring one is a mistake worth hearing now.
+      $unoffered = array_diff($ids, array_map('strval', $set->values));
+      if ($unoffered !== []) {
+        throw new \LogicException(sprintf(
+          'The "%s" slot has the %s %s, which "%s" does not allow: a variant its deciding key cannot choose would never be reached.',
+          $key,
+          implode(', ', $unoffered),
+          count($unoffered) === 1 ? 'variant' : 'variants',
+          $by,
+        ));
+      }
+      $set->withValues(array_values(array_filter(
+        $set->values,
+        static fn (mixed $value): bool => in_array((string) $value, $ids, TRUE),
+      )))->applyTo($deciding);
+    }
+    Narrowing::assertNarrows($by, sprintf('the "%s" slot', $key), $before, $deciding);
+    $this->definitions[$key] = $this->shellFor($key);
+    $this->slots[$key] = ['by' => $by, 'variants' => $variants];
+    $this->refinements[$key] = array_values(array_unique(array_merge($this->refinements[$key] ?? [], [$by])));
+    foreach ($variants as $variant) {
+      $this->cacheability->addCacheableDependency($variant->child);
+    }
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function getOutputDefinition(string $name): ?DataDefinitionInterface {
     return $this->outputs[$name] ?? NULL;
   }
@@ -296,6 +323,15 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * {@inheritdoc}
    */
+  public function getThirdPartyDefinition(string $provider, string $key, bool $output = FALSE): ?DataDefinitionInterface {
+    return $output
+      ? ($this->thirdPartyOutputs[$provider][$key] ?? NULL)
+      : ($this->thirdParty[$provider][$key] ?? NULL);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function addRefinement(string $target, array $dependencies): static {
     $this->assertMutable();
     $this->refinements[$target] = array_values(array_unique(array_merge($this->refinements[$target] ?? [], $dependencies)));
@@ -314,47 +350,10 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * {@inheritdoc}
    */
-  public function addOutputRefinement(string $output, array $dependencies): static {
-    $this->assertMutable();
-    $this->outputRefinements[$output] = array_values(array_unique(array_merge(
-      $this->outputRefinements[$output] ?? [],
-      $dependencies,
-    )));
-    return $this;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function addOutputRefiner(string $output, DataSurfaceOutputRefinerInterface $refiner, ?string $contributor = NULL): static {
-    $this->assertMutable();
-    $this->outputRefiners[$output][$contributor ?? DataSurfaceInterface::OWNER][] = $refiner;
-    return $this;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function addFilter(DataSurfaceFilterInterface $filter): static {
-    $this->assertMutable();
-    $this->filters[] = $filter;
-    return $this;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function addCacheableDependency(CacheableDependencyInterface $dependency): static {
     $this->assertMutable();
     $this->cacheability->addCacheableDependency($dependency);
     return $this;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function isSealed(): bool {
-    return $this->sealed !== NULL;
   }
 
   /**
@@ -373,6 +372,21 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
       ));
     }
     $definitions = $this->definitions;
+    foreach ($this->attachments as $key => $attachment) {
+      $definitions[$key] = SurfaceAttachment::mapOf($this->assertShell((string) $key), $attachment->child);
+    }
+    $slots = [];
+    foreach ($this->slots as $key => ['by' => $by, 'variants' => $variants]) {
+      $slot = new SurfaceSlot($by, $this->assertShell((string) $key), $variants);
+      $slots[$key] = $slot;
+      // A locked deciding key has its one value already, so the slot is
+      // that variant from the start: what the surface advertises is the
+      // shape the caller will actually be held to.
+      $chosen = in_array($by, $this->locked, TRUE)
+        ? $slot->chosen(DefinitionMetadata::defaultOf($this->named($by)))
+        : NULL;
+      $definitions[$key] = $chosen === NULL ? $slot->placeholder() : $slot->definitionFor($chosen);
+    }
     if ($this->thirdParty !== []) {
       $definitions['third_party_settings'] = $this->mountedMap($this->thirdParty, FALSE);
     }
@@ -393,20 +407,11 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
         locked: $this->locked,
         refiners: $this->refiners,
         contributions: $this->contributions,
+        attachments: $this->attachments,
+        slots: $slots,
       ),
-      $this->refiner,
-      $this->filters,
       $this->cacheability,
-      DefinitionMap::fromArrays(
-        definitions: $outputs,
-        refinements: $this->outputRefinements,
-        refiners: $this->outputRefiners,
-        // An output's edges leave the map: they name the input keys the
-        // output refines against, so they are checked against those
-        // rather than against the outputs beside them.
-        dependency_names: array_keys($definitions),
-      ),
-      $this->outputRefiner,
+      DefinitionMap::fromArrays(definitions: $outputs),
       $this->thirdPartyShapes,
     );
   }
@@ -449,6 +454,75 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
       $providers->setPropertyDefinition((string) $provider, $provider_map);
     }
     return $providers;
+  }
+
+  /**
+   * Gets the map describing a subsurface key, before it is filled.
+   *
+   * A key may be described before it is attached, with an empty map
+   * carrying its label and description, and that map is kept; otherwise
+   * a bare one is made.
+   *
+   * @param string $key
+   *   The surface key.
+   *
+   * @return \Drupal\Core\TypedData\MapDataDefinition
+   *   The shell.
+   *
+   * @throws \InvalidArgumentException
+   *   When the key already holds anything but an empty map.
+   */
+  protected function shellFor(string $key): MapDataDefinition {
+    $existing = $this->definitions[$key] ?? NULL;
+    if ($existing === NULL) {
+      return MapDataDefinition::create();
+    }
+    if (!$existing instanceof MapDataDefinition || $existing->getPropertyDefinitions() !== []) {
+      throw new \InvalidArgumentException(sprintf(
+        'The "%s" key already holds a %s definition. An attached child is the whole of what the key holds; describe the key beforehand with an empty map, if at all.',
+        $key,
+        $existing->getDataType(),
+      ));
+    }
+    return $existing;
+  }
+
+  /**
+   * Checks that a subsurface key still holds an empty map at seal.
+   *
+   * @param string $key
+   *   The surface key.
+   *
+   * @return \Drupal\Core\TypedData\MapDataDefinition
+   *   The shell.
+   *
+   * @throws \LogicException
+   *   When something replaced the shell or gave it properties.
+   */
+  protected function assertShell(string $key): MapDataDefinition {
+    $shell = $this->definitions[$key] ?? NULL;
+    if (!$shell instanceof MapDataDefinition || $shell->getPropertyDefinitions() !== []) {
+      throw new \LogicException(sprintf(
+        'The "%s" key is a subsurface, so what it holds is its child\'s to say: its definition was replaced or given properties of its own after it was attached.',
+        $key,
+      ));
+    }
+    return $shell;
+  }
+
+  /**
+   * Refuses to attach at a key twice.
+   *
+   * @param string $key
+   *   The surface key.
+   *
+   * @throws \LogicException
+   *   When the key is already attached or a slot.
+   */
+  protected function assertNotNested(string $key): void {
+    if (isset($this->attachments[$key]) || isset($this->slots[$key])) {
+      throw new \LogicException(sprintf('The "%s" key is already a subsurface: one key holds one child, or one set of variants.', $key));
+    }
   }
 
   /**
@@ -611,37 +685,6 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   protected function named(string $name): DataDefinitionInterface {
     return $this->definitions[$name]
       ?? throw new \InvalidArgumentException(sprintf('Unknown surface definition "%s".', $name));
-  }
-
-  /**
-   * Gets a definition whose properties can be set, or fails saying why not.
-   *
-   * Core's only complex definition that takes properties from outside is
-   * MapDataDefinition: the others (a field item's definition, say)
-   * compute their properties from the thing they describe and have no
-   * setter at all. So a surface key whose properties are supplied here
-   * is a map, and anything else is refused by name rather than by a
-   * missing method.
-   *
-   * @param string $name
-   *   The surface key.
-   *
-   * @return \Drupal\Core\TypedData\MapDataDefinition
-   *   The map definition.
-   *
-   * @throws \InvalidArgumentException
-   *   When the key is unknown, or its definition takes no properties.
-   */
-  protected function complex(string $name): MapDataDefinition {
-    $definition = $this->named($name);
-    if (!$definition instanceof MapDataDefinition) {
-      throw new \InvalidArgumentException(sprintf(
-        'The "%s" definition is a %s, which does not take property definitions; only a map does.',
-        $name,
-        $definition->getDataType(),
-      ));
-    }
-    return $definition;
   }
 
   /**

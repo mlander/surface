@@ -10,8 +10,10 @@ caller agree about what was accepted.
 
 This module is that place. A surface is built once, sealed, and then
 read: a generated form renders it, a pipeline accepts and validates
-values against it, and a target writes the accepted values to config, to
-a config entity, to base field overrides, or to state. The same surface
+values against it, and a target writes the accepted values where they
+live — a plugin's configuration, a field's settings, a content type and
+its base field overrides, a config object, or state; a surface names
+its own target class, and a plugin's host supplies one. The same surface
 answers a form submit, a Drush command, an agent call and a test without
 any of them owning a second copy of the rules. When a value depends on
 another — a bundle list that only makes sense once an entity type is
@@ -44,40 +46,45 @@ and Tool integrations and the submodules.
 
 ## Quick start
 
-Declare the surface in one method on the class whose values it
+Declare the surface as a class, name it on the plugin whose values it
 describes, and delete the form code:
 
 ```php
-#[Block(id: 'my_teaser', admin_label: new TranslatableMarkup('Teaser'))]
-final class TeaserBlock extends DataSurfaceBlockBase {
+#[Surface('block.my_teaser')]
+final class TeaserBlockSurface implements SurfaceInterface {
 
-  public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
-    $builder->setDefinition('headline', DataDefinition::create('string')
-      ->setLabel(new TranslatableMarkup('Headline'))
+  public function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('headline', 'string', new TranslatableMarkup('Headline'), default: 'Featured content')
       ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 50]));
-    $builder->setDefault('headline', 'Featured content');
-
-    $builder->setDefinition('limit', DataDefinition::create('integer')
-      ->setLabel(new TranslatableMarkup('Number of items'))
+      ->addConstraint('Length', ['max' => 50]);
+    $inputs->add('limit', 'integer', new TranslatableMarkup('Number of items'), default: 10)
       ->setRequired(TRUE)
-      ->addConstraint('Range', ['min' => 1, 'max' => 50]));
-    $builder->setDefault('limit', 10);
-  }
-
-  public function build(): array {
-    return ['#markup' => $this->configuration['headline']];
+      ->addConstraint('Range', ['min' => 1, 'max' => 50]);
   }
 
 }
 ```
 
-That block has no `defaultConfiguration()`, no `blockForm()`, no
-`blockValidate()` and no `blockSubmit()`. The block configuration form is
-generated from the definitions, with a maxlength on the headline and a
-number spinner bounded at 1 and 50.
+```php
+#[Block(id: 'my_teaser', admin_label: new TranslatableMarkup('Teaser'))]
+#[UsesSurface(TeaserBlockSurface::class)]
+final class TeaserBlock extends DataSurfaceBlockBase {
 
-The same declaration answers a caller that never renders anything:
+  public function build(): array {
+    return ['#markup' => $this->getConfiguration()['headline']];
+  }
+
+}
+```
+
+The surface class goes in the module's `src/Surface/`, where it is
+discovered; nothing is registered by hand. The block has no
+`defaultConfiguration()`, no `blockForm()`, no `blockValidate()` and no
+`blockSubmit()`. The block configuration form is generated from the
+definitions, with a maxlength on the headline and a number spinner
+bounded at 1 and 50.
+
+The same surface answers a caller that never renders anything:
 
 ```php
 $result = \Drupal::service('data_surface.pipeline')->submit(
@@ -94,47 +101,68 @@ would have shown.
 
 ## Glossary
 
-The module uses these seven words in exactly one sense each.
+The module uses these ten words in exactly one sense each.
 
 - **Surface** — an immutable group of data definitions, plus the map of
-  which definitions depend on which others and the refiner chains that
-  narrow them. Built through a builder, sealed, then only read. A
-  surface has two halves: what a host **accepts**, and what its
-  execution **emits**, declared in the same vocabulary — see
-  [Outputs](docs/outputs.md).
+  which definitions depend on which others and the refiners that narrow
+  them. Declared as a class carrying `#[Surface]`, built by the build
+  step in a context, sealed, then only read. A surface has two halves:
+  what a host **accepts**, and what its execution **emits**, declared in
+  the same vocabulary — see [Outputs](docs/outputs.md).
 - **Definition** — one core `DataDefinitionInterface` describing a single
   value: its type, label, description, constraints, whether it is
   required, and the interim default and example metadata the module
   carries until core lands its own.
-- **Refiner** — an object that returns a narrower definition for one key
-  given the values its dependencies currently hold. A refiner may
-  restrict what a definition allows; it may never widen it.
+- **Refiner** — a `#[RefinesInput]` method that returns a narrower
+  definition for one key given the values of the siblings it watches. A
+  refiner may restrict what a definition allows; it may never widen it.
 - **Resolver** — a `DataSurfaceOptionsResolver` plugin that turns a
   constraint into a value/label list with its cacheability, so the list
   that validates a value and the list that is offered as form options are
   the same list, derived rather than repeated.
 - **Target** — the destination accepted values are written to, and the
   place that knows the distance between the shape a surface describes and
-  the shape storage wants. Config objects, config entities, base field
-  overrides, state, and compositions of those.
-- **Host** — the thing whose values the surface describes and whose
-  protocol it has to satisfy: a block plugin, a field formatter, an
-  action, a condition, a field type, a standalone form.
-- **Provider** — a class that answers with a surface, and with the target
-  that surface writes to, for a given **operation and subject**: a verb
-  from the host type's vocabulary that never carries identity, beside an
-  opaque id the provider resolves itself, which is NULL when the provider
-  is its own subject. That pair is the coordinate a surface is addressed
-  by, on the wire as in process. A host that cannot carry its own
-  declaration delegates to a provider. A provider also answers **who may
-  run an operation**, with core's `AccessResult`, and the pipeline
-  consults that answer before it reads or writes anything — so a form, a
-  Drush command, a config action and an agent resolve one gate rather
-  than four. Surface, access and target all resolve from the same
-  coordinate, which is why a route naming a provider and an operation is
-  a working form with no form class behind it:
-  `Form\DataSurfaceProviderForm` serves any provider, and what stays
-  bespoke is the cosmetic layer.
+  the shape storage wants. A surface names its own, a
+  `SurfaceTargetInterface` with `load()`, `prepare()` (rehearse the write,
+  no side effects) and `commit()`; a plugin's host supplies one of the
+  engine's (plugin configuration, field settings). Targets compose along
+  the subsurface tree.
+- **Host** — the plugin whose configuration a surface is, and whose
+  protocol it has to satisfy: a block, a field formatter, an action, a
+  condition, a field type, any configurable plugin. It names the
+  surface with `#[UsesSurface]` and supplies the context and the target,
+  because only it holds the instance.
+- **Situation** — one way a surface is asked for: add, edit, reuse. A
+  static method on the surface class carrying `#[Situation]`, returning
+  a context that says which identity keys are already known (and
+  locked), and carrying the permission that gates it. Situations are
+  what routes and tools are generated from: a route naming a surface
+  class and a situation is a working form with no form class behind it,
+  through `Form\DataSurfaceSituationForm`, and `data_surface_tool`
+  derives one tool per situation that can be asked on its own. Who may
+  submit is the situation's permission and then the surface's access
+  class, and the pipeline consults that answer before it reads or writes
+  anything — so a form, a tool and the agent or Drush command calling it
+  resolve one gate rather than several.
+- **Context** — a `SurfaceContext`: where a surface is being asked for.
+  Its operation (the situation id, or a host's own verb such as
+  `configure`), whether it creates, which identity keys are known, and
+  any narrowing, starting values or child contexts the situation adds.
+  Built by a situation (or bare, by a plugin host), applied once by the
+  build step, and never seen by a shape method or a refiner.
+- **Alter** — another module's class in its `src/SurfaceAlter/`,
+  carrying `#[AltersSurface]`. It adds keys (mounted under
+  `third_party_settings.<module>`), rewords a label with `describe()`,
+  offers more values on a fixed list with `extendChoices()`, and narrows
+  with `#[RefinesInput]` methods, on the owner's keys or its own. It
+  never removes a key or a value, never retypes, and cannot attach.
+- **Slot** — a subsurface a sibling key chooses, declared with
+  `attachBy($key, by: $sibling)`. Always open: the parent names no
+  child, and every surface marked `#[SurfaceVariant]` for it fills it
+  for one value, as do derived variants. Until the sibling has a value
+  it is an `any` placeholder, which refinement narrows to the chosen
+  variant's map. (`attach()` is the fixed kind: one child, always
+  there.)
 
 ## Experimental submodules
 
@@ -143,32 +171,44 @@ architectural decisions are visible in practice, and they double as the
 fixtures the tests run against, so they are supported but their APIs and
 their configuration may change without a deprecation path.
 
-- **Data Surface Demo** (`data_surface_demo`) — one surface driving a
-  block, a field formatter and a standalone form.
+- **Data Surface Demo** (`data_surface_demo`) — two surfaces and three
+  hosts: `DemoBlockSurface` drives a block and a standalone form,
+  `DemoFormatterSurface` a field formatter.
 - **Data Surface Demo - Classic** (`data_surface_demo_classic`) — the
   same block and the same formatter written the pre-surface way, by
   hand, with a parity test holding the two to the same behavior and a
   README counting what each costs. Depends on nothing from this module.
 - **Data Surface Demo Extras** (`data_surface_demo_extras`) — a
-  third-party module extending someone else's surface through the build
-  event, with no form alter anywhere; and, for content types, the same
+  third-party module extending someone else's surface through surface
+  alters, with no form alter anywhere; and, for content types, the same
   two settings added to core's own form the classic way, so the two can
   be compared.
 - **Data Surface Demo - Node type** (`data_surface_demo_node_type`) — one
-  surface serving an add form and an edit form, with a composite target,
-  and two routes that name the generic provider form rather than a form
-  class. Adds its own permission; see its README.
+  surface serving an add form and an edit form through two situations,
+  with a target of its own, and two routes that name the generic
+  situation form rather than a form class. Adds its own permission; see its README.
 - **Data Surface - Address field settings** (`data_surface_address`) — a
   contributed field type adopting a surface without being forked. Needs
   [Address](https://www.drupal.org/project/address).
-- **Data Surface - Tool API bridge** (`data_surface_tool`) — the same
-  surface serving a non-form caller. Needs
-  [Tool](https://www.drupal.org/project/tool).
+- **Data Surface - Tool API bridge** (`data_surface_tool`) — one
+  derived tool per situation of every surface that names a target and
+  that no plugin uses, `data_surface:<surface>:<situation>`; the field
+  surfaces and their settings derived from config schema; the contract
+  panel; and a generated comparison of the field tools against Tool
+  Belt's. Needs [Tool](https://www.drupal.org/project/tool).
 - **Data Surface Demo - Node type tool**
-  (`data_surface_demo_node_type_tool`) — a content type add tool whose
-  input is the content type surface, so a setting another module mounts
-  on it reaches an agent with no change to the tool; with a generated
-  comparison against Tool Belt's bundle tool and core's form.
+  (`data_surface_demo_node_type_tool`) — no code of its own: the
+  generated comparison between `data_surface:node.type:add`, the tool
+  derived from the content type surface, and Tool Belt's bundle tool and
+  core's form, once another module has extended content types.
+- **Data Surface Examples** (`data_surface_examples`) — one surface
+  that grows, one idea per step, at `/surface-examples`: each step a
+  form beside the contract it emits, a classic twin for step 1, and
+  step 3 called as a tool with no form. Needs
+  [Tool](https://www.drupal.org/project/tool).
+- **Data Surface Examples - Compliance**
+  (`data_surface_examples_compliance`) — step 4 of the examples: one
+  alter class changing step 3's surface, which does not know it.
 
 Each submodule's README says what it shows, how to try it, and what gates
 it.
@@ -180,21 +220,26 @@ Full documentation is under [`docs/`](docs/).
 | Page | What it covers |
 | --- | --- |
 | [Home](docs/index.md) | What a surface is, and where each concept lives in the code. |
+| [The pattern](docs/pattern.md) | What an author writes, where it goes, and why it is shaped that way. |
+| [How it fits](docs/how-it-fits.md) | One build followed from the caller to a sealed surface. |
+| [Decisions](docs/decisions.md) | The points the pattern left open, and how the module settled them. |
 | [Installation](docs/installation.md) | Install, integrations, submodules. |
-| [Declaring a surface](docs/declaring-a-surface.md) | Attribute versus runtime, defaults, locking, required. |
+| [Declaring a surface](docs/declaring-a-surface.md) | The surface class, adopting it on a plugin, defaults, locking, secrets, required. |
+| [Surfaces as classes](docs/surfaces.md) | Situations, alters, subsurfaces and variants, access, targets, tools, the catalogue. |
+| [Surface catalogue](docs/catalogue.md) | Every surface the modules here declare, generated from the static layer. |
 | [The pipeline](docs/pipeline.md) | Access, accept, validate, prepare, commit; dry runs; exceptions. |
-| [Value semantics](docs/semantics.md) | Configured or not, the casting table, shape mismatches. |
-| [Outputs](docs/outputs.md) | Declaring what a host emits, the Omitted sentinel, conformance. |
-| [Targets](docs/targets.md) | The seven shipped targets and the serialization rule. |
-| [Generated forms](docs/forms.md) | Host families, the generic provider form and its cosmetic seam, the merge rule, AJAX, extraction. |
+| [Value semantics](docs/semantics.md) | Configured or not, the casting table, secrets, stale values, shape mismatches, required, locked keys. |
+| [Outputs](docs/outputs.md) | Declaring what a host emits, the Omitted sentinel, conformance, its two consumers, an alter's outputs. |
+| [Targets](docs/targets.md) | What a target is, prepare and commit, the six engine targets, config schema, settings shapes, secrets, the serialization rule. |
+| [Generated forms](docs/forms.md) | Host families, the merge rule, AJAX, extraction, stale values, the situation form with its panel and cosmetic seam. |
 | [Widgets](docs/widgets.md) | The widget plugin type, and writing one. |
 | [Options and resolvers](docs/options.md) | `LabeledChoice`, the resolver plugin type, the stock resolvers. |
-| [Refinement](docs/refinement.md) | Contributions, the narrowing table, cacheability. |
+| [Refinement](docs/refinement.md) | An alter offering values and a refiner narrowing them, the narrowing table, cacheability, a worked example, and what it does not reach yet. |
 | [Adoption catalogue](docs/adoption.md) | Where core can adopt this, group by group. |
 | [Core gaps](docs/core-gaps.md) | The interim spellings and the upstream issues. |
 
-`data_surface.api.php` documents the build event and the two plugin
-types for the API reference.
+`data_surface.api.php` documents surface classes, alters and the two
+plugin types for the API reference.
 
 ## Development
 
@@ -204,6 +249,9 @@ passing run looks like.
 
 The design history is kept beside this file: [PLAN.md](PLAN.md) for the
 gaps and phases as they were reasoned through, [ADOPTION.md](ADOPTION.md)
-for the full core survey, and [HARDENING.md, and the forward plan in ROADMAP.md](HARDENING.md) for the audit
-findings and the decisions taken on them. The current documentation is
-`docs/`.
+for the full core survey, [HARDENING.md](HARDENING.md) for the audit
+findings and the decisions taken on them, and [REWORK.md](REWORK.md) for
+the rework that brought the module to the surface pattern;
+[ROADMAP.md](ROADMAP.md) is the forward plan. The current documentation
+is `docs/`, and the decisions the pattern left open are in
+[docs/decisions.md](docs/decisions.md).

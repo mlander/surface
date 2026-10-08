@@ -201,10 +201,10 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
           'kind' => $kind,
           'detail' => DataDefinition::create('string')->setLabel('Detail'),
         ],
+        refiners: ['detail' => [DataSurfaceInterface::OWNER => [new CasingVariantRefiner()]]],
         refinements: ['detail' => ['kind']],
         locked: ['kind'],
       ),
-      refiner: new CasingVariantRefiner(),
     );
     // data_surface_test not installed here; the test class loader still
     // finds the refiner class, and it never fires for these keys.
@@ -390,9 +390,9 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
           'scope' => DataDefinition::create('string')->setLabel('Scope'),
           'mode' => $mode,
         ],
+        refiners: ['mode' => [DataSurfaceInterface::OWNER => [new ModeSubsetRefiner()]]],
         refinements: ['mode' => ['scope']],
       ),
-      refiner: new ModeSubsetRefiner(),
     );
 
     $full = $this->formBuilder()->buildSurfaceForm($surface, ['scope' => 'full'], new FormState());
@@ -585,9 +585,9 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
           'extras' => $map,
           'detail' => DataDefinition::create('string')->setLabel('Detail'),
         ],
+        refiners: ['detail' => [DataSurfaceInterface::OWNER => [new CasingVariantRefiner()]]],
         refinements: ['detail' => ['extras']],
       ),
-      refiner: new CasingVariantRefiner(),
     );
 
     $form = $this->formBuilder()->buildSurfaceForm($surface, [], new FormState());
@@ -796,9 +796,9 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
           'kind' => DataDefinition::create('string')->setLabel('Kind'),
           'detail' => DataDefinition::create('string')->setLabel('Detail'),
         ],
+        refiners: ['detail' => [DataSurfaceInterface::OWNER => [new CasingVariantRefiner()]]],
         refinements: ['detail' => ['kind']],
       ),
-      refiner: new CasingVariantRefiner(),
     );
   }
 

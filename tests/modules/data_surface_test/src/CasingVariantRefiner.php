@@ -8,7 +8,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceRefinerInterface;
 
 /**
- * The provider-side refiner: variant choices depend on casing.
+ * The owner's refiner in engine tests: variant choices depend on casing.
  */
 final class CasingVariantRefiner implements DataSurfaceRefinerInterface {
 

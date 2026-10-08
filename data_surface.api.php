@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Hooks, events and plugin types provided by the Data Surface module.
+ * Hooks, attributes and plugin types provided by the Data Surface module.
  *
  * The prose documentation is under docs/, published from mkdocs.yml.
  * Start at docs/index.md; docs/declaring-a-surface.md is the entry point
@@ -55,262 +55,193 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
 }
 
 /**
- * @defgroup data_surface_provider Addressing a surface
+ * @defgroup data_surface_surface Declaring a surface
  * @{
- * The coordinate every provider answers to: an operation and a subject.
+ * A surface is a class, discovered, built in a context and sealed.
  *
- * \Drupal\data_surface\DataSurfaceProviderInterface takes the two in this
- * order, and so does its field type counterpart,
- * \Drupal\data_surface\Form\FieldSurfaceProviderInterface:
- * - The *operation* is a closed verb from the host type's own vocabulary —
- *   configure, add, edit, field_settings — and it never carries identity. An
- *   operation that names the thing it acts on is a vocabulary nobody can
- *   enumerate.
- * - The *subject* is an opaque string id the provider resolves for itself.
- *   Nothing between the caller and the provider parses it, and NULL means the
- *   provider is its own subject, which every plugin, formatter and field item
- *   is.
+ * A class in a module's src/Surface/ carrying
+ * \Drupal\data_surface\Surface\Attribute\Surface is a surface. It is found
+ * the way core finds a class in src/Hook, so nothing registers it, and the
+ * build step, \Drupal\data_surface\SurfaceBuild\SurfacesInterface (service
+ * data_surface.surfaces), is the only thing that builds it. The class has no
+ * constructor and holds no service: a list that depends on the site is a
+ * constraint whose options resolver fetches it.
  *
- * The pair is the wire coordinate a surface is addressed by — host type, host
- * id, operation, subject — so identity stays out of the verb and a discovery
- * document can list the verbs a host type has.
+ * Each part of a surface has one home:
+ * - Its keys, in defineInputs(): a flat list, no conditionals, never naming
+ *   a sibling. add() takes a name, a type and a label and returns the core
+ *   definition, so the rest is core API.
+ * - A key whose allowed values depend on another key's value, in a method
+ *   carrying \Drupal\data_surface\Surface\Attribute\RefinesInput. It takes
+ *   the key's definition first and one parameter per sibling it watches,
+ *   and returns the definition narrowed. The framework checks it narrowed.
+ * - How much is already known, in static methods carrying
+ *   \Drupal\data_surface\Surface\Attribute\Situation, each returning a
+ *   \Drupal\data_surface\Surface\SurfaceContext. An identity key the
+ *   context knows is locked; one it does not know stays open.
+ * - Where the values are stored and what may refuse, on the attribute:
+ *   target names a \Drupal\data_surface\Surface\SurfaceTargetInterface and
+ *   access a \Drupal\data_surface\Surface\SurfaceAccessInterface, both
+ *   autowired services.
+ * - What it emits, in defineOutputs(), on
+ *   \Drupal\data_surface\Surface\HasOutputsInterface. Never refined.
  *
- * A provider that owns several subjects resolves the id itself, and refuses
- * one it cannot place rather than falling back to a surface nobody asked for:
  * @code
- * final class ExampleProvider implements DataSurfaceProviderInterface {
+ * #[Surface('example.thing',
+ *   identity: ['id'],
+ *   target: ExampleTarget::class,
+ *   access: ExampleAccess::class,
+ * )]
+ * final class ExampleSurface implements SurfaceInterface {
  *
- *   public function getDataSurface(string $operation = 'add', ?string $subject = NULL): DataSurfaceInterface {
- *     if ($operation === 'add') {
- *       // The thing does not exist yet, so this operation has no subject.
- *       return $this->surfaceFor();
- *     }
- *     if ($operation !== 'edit') {
- *       throw new \InvalidArgumentException(sprintf('No "%s" surface here.', $operation));
- *     }
- *     return $this->surfaceFor($this->resolve($subject));
+ *   public const PERMISSION = 'administer things';
+ *
+ *   #[Situation('add', label: 'Add a thing', permission: self::PERMISSION)]
+ *   public static function add(): SurfaceContext {
+ *     return new SurfaceContext('add', creates: TRUE);
  *   }
  *
- *   public function surfaceAccess(string $operation = 'add', ?string $subject = NULL, ?AccountInterface $account = NULL): AccessResultInterface {
- *     // The same coordinate, and a refusal rather than an exception: an
- *     // access question is never answered by throwing, because something
- *     // has to be told no.
- *     return $this->answerFor($operation, $subject, $account);
+ *   #[Situation('edit', label: 'Edit a thing', permission: self::PERMISSION)]
+ *   public static function edit(ExampleInterface $thing): SurfaceContext {
+ *     return new SurfaceContext('edit', known: ['id' => $thing->id()]);
  *   }
  *
- *   public function getDataSurfaceTarget(string $operation = 'add', ?string $subject = NULL): DataSurfaceTargetInterface {
- *     // The third answer about the same coordinate, refused in the same
- *     // words as the surface: where these values are read from and
- *     // written to. A provider whose operation has a surface but no
- *     // destination — a read-only one, or a host that owns the write —
- *     // throws \LogicException rather than handing back a target that
- *     // would report values stored and store nothing.
- *     return $this->targetFor($operation === 'add' ? NULL : $this->resolve($subject));
+ *   public function defineInputs(ShapeInterface $inputs): void {
+ *     $inputs->add('id', 'string', new TranslatableMarkup('Machine name'))
+ *       ->setRequired(TRUE);
+ *     $inputs->add('entity_type', 'string',
+ *       new TranslatableMarkup('Entity type'), default: 'user')
+ *       ->setRequired(TRUE)
+ *       ->addConstraint('PluginExists', [
+ *         'manager' => 'entity_type.manager',
+ *         'interface' => ContentEntityInterface::class,
+ *       ]);
+ *     $inputs->add('bundle', 'string', new TranslatableMarkup('Bundle'));
+ *   }
+ *
+ *   #[RefinesInput('bundle')]
+ *   public function bundleOfEntityType(
+ *     DataDefinitionInterface $bundle,
+ *     string $entity_type,
+ *   ): DataDefinitionInterface {
+ *     return $bundle->addConstraint('EntityBundleExists', [
+ *       'entityTypeId' => $entity_type,
+ *     ]);
  *   }
  *
  * }
  * @endcode
  *
- * Surface, access and target from one coordinate is what makes a provider
- * servable without a form class: a route naming the provider service, the
- * operation and the route parameter the subject is read from is a working
- * page through \Drupal\data_surface\Form\DataSurfaceProviderForm, and what
- * stays hand-written is the cosmetic layer.
+ * Subsurfaces are attach() for a fixed child and attachBy() for a slot a
+ * sibling key chooses. Both return the map definition at the key, which the
+ * owner labels with the core setters. A slot is always open: every surface
+ * carrying \Drupal\data_surface\Surface\Attribute\SurfaceVariant for it
+ * fills it, and the deciding key's allowed values become exactly those. A
+ * service tagged data_surface.derived_variants implementing
+ * \Drupal\data_surface\SurfaceBuild\DerivedVariantsInterface fills it for
+ * the values no variant class fills.
  *
- * A provider that is its own subject — a block, a condition, an action, a
- * formatter, a field item — inherits the rule from
- * \Drupal\data_surface\DataSurfaceHostTrait::surfaceSelfSubject(), which
- * refuses a named subject by name. The host base classes call it on the first
- * line of getDataSurface(), so an adopting plugin writes nothing.
- *
- * What such a plugin does write is its declaration.
- * \Drupal\data_surface\DataSurfaceDeclarationInterface::declareDataSurface() is
- * handed a fresh builder with the plugin already bound as its refiner, and is
- * the one home for everything the surface says — definitions, defaults, locks,
- * refinement edges, map properties and outputs:
+ * A plugin whose configuration is a surface names it with
+ * \Drupal\data_surface\Surface\Attribute\UsesSurface and extends the host
+ * base class for its type, which builds the surface in the host's own
+ * context, supplies the target and answers the static defaults:
  * @code
+ * #[Block(id: 'example', admin_label: new TranslatableMarkup('Example'))]
+ * #[UsesSurface(ExampleBlockSurface::class)]
  * final class ExampleBlock extends DataSurfaceBlockBase {
  *
- *   public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
- *     $builder->setDefinition('headline', DataDefinition::create('string')
- *       ->setLabel(new TranslatableMarkup('Headline'))
- *       ->setRequired(TRUE)
- *       ->addConstraint('Length', ['max' => 50]));
- *     $builder->setDefault('headline', 'Featured content');
+ *   public function build(): array {
+ *     return ['#markup' => $this->getConfiguration()['headline']];
  *   }
  *
  * }
  * @endcode
  *
- * The method is static because several host protocols ask a class for its
- * defaults with no instance to ask — a formatter's defaultSettings(), a field
- * type's defaultFieldSettings() — and one declaration answering both them and
- * the instance is what keeps a hand-maintained defaults array from coming
- * back. A host whose surface needs live site state to describe itself at all
- * builds it in getDataSurface() instead, through
- * \Drupal\data_surface\DataSurfaceHostTrait::surfaceBuilder() and
- * \Drupal\data_surface\DataSurfaceHostTrait::builtSurface(), and answers its
- * host's static protocols itself.
+ * A surface that names a target and is no plugin's is served at a route by
+ * \Drupal\data_surface\Form\DataSurfaceSituationForm, from the route
+ * defaults _data_surface_surface and _data_surface_situation, and gated by
+ * the _data_surface_situation_access requirement.
  *
- * @see \Drupal\data_surface\DataSurfaceProviderInterface
- * @see \Drupal\data_surface\DataSurfaceDeclarationInterface
- * @see \Drupal\data_surface\Form\FieldSurfaceProviderInterface
- * @see \Drupal\data_surface\Form\DataSurfaceProviderForm
- * @see \Drupal\data_surface\DataSurfaceHostTrait::surfaceSelfSubject()
+ * @see \Drupal\data_surface\Surface\SurfaceInterface
+ * @see \Drupal\data_surface\Surface\ShapeInterface
+ * @see \Drupal\data_surface\SurfaceBuild\SurfacesInterface
+ * @see \Drupal\data_surface\Form\DataSurfaceSituationForm
  * @see docs/declaring-a-surface.md
- * @see docs/pipeline.md
+ * @see docs/surfaces.md
  * @}
  */
 
 /**
- * @defgroup data_surface_build_event Extending someone else's surface
+ * @defgroup data_surface_alter Extending someone else's surface
  * @{
  * Adding to a surface at build time, where the addition is advertised.
  *
- * \Drupal\data_surface\Event\DataSurfaceBuildEvent is dispatched by the surface
- * factory while the builder is still mutable and before the surface is sealed,
- * which is the one moment a surface may grow. What a subscriber adds is part of
- * the contract every later consumer reads: the generated form renders it, the
- * pipeline accepts and validates it, the target writes it, and a
- * machine-readable schema emitted from the surface advertises it. That is the
- * difference from hook_form_alter(), which could only add a form element
- * nothing else could see.
+ * A class in a module's src/SurfaceAlter/ carrying
+ * \Drupal\data_surface\Surface\Attribute\AltersSurface is an alter of the
+ * surface it names, optionally only in some of its situations. It is found
+ * and autowired as a service, so it may hold services. What it adds is part
+ * of the contract every later consumer reads: the generated form renders
+ * it, the pipeline accepts and validates it, the target writes it, and a
+ * machine-readable schema emitted from the surface advertises it. That is
+ * the difference from hook_form_alter(), which could only add a form
+ * element nothing else could see.
  *
- * Pick the surfaces to extend with $event->appliesTo(), which asks with is_a()
- * so a host's subclasses keep what their parent was given, or with
- * $event->hostId, which is namespaced `<host type>:<id>` — `block:my_block`,
- * `field_formatter:my_formatter`, `field_type:address`,
- * `entity_type:node_type`.
+ * An alter may:
+ * - add keys, which are mounted under its module's name, at
+ *   third_party_settings.<module>.<key>, so they cannot collide with the
+ *   owner's or anyone else's;
+ * - reword a label or a description with describe();
+ * - offer more values on a key whose owner declared a fixed list, with
+ *   extendChoices(), the one widening verb; a value already offered by
+ *   anyone is refused;
+ * - narrow any key with #[RefinesInput] methods of its own. On a key it
+ *   offered more values on, a method is handed this module's values alone,
+ *   so it can neither narrow away a value the owner offers nor hand back
+ *   one it was not given; what is offered is the union.
+ * Nothing an alter does removes a key or a value.
  *
- * Three roles, one permission each:
- * - A *contributor* adds at build time: definitions under its own provider
- *   namespace, never bare top-level keys; more choices on an existing key; a
- *   refiner for what it added; defaults on its own definitions.
- * - A *contribution refiner* narrows only what its own contribution added, and
- *   may read any key to decide.
- * - A *policy filter* runs last, and may only remove.
- *
- * All three ways of contributing, in one subscriber:
  * @code
- * final class MyModuleSurfaceSubscriber implements EventSubscriberInterface {
+ * #[AltersSurface(DemoFormatterSurface::class)]
+ * final class MyModuleFormatterAlter implements SurfaceAlterInterface {
  *
  *   use StringTranslationTrait;
  *
- *   public static function getSubscribedEvents(): array {
- *     return [DataSurfaceBuildEvent::class => 'onSurfaceBuild'];
+ *   public function alterInputs(ShapeAdditionsInterface $inputs): void {
+ *     $inputs->add('badge', 'string', $this->t('Badge'), default: 'star')
+ *       ->addConstraint('LabeledChoice', [
+ *         'choices' => [
+ *           'star' => $this->t('Star'),
+ *           'flame' => $this->t('Flame'),
+ *         ],
+ *       ]);
+ *     $inputs->extendChoices('variant', ['ribbon' => $this->t('Ribbon')]);
  *   }
  *
- *   public function onSurfaceBuild(DataSurfaceBuildEvent $event): void {
- *     // Asked with appliesTo() rather than by class equality, so a block
- *     // subclassing the example one is still the example block here.
- *     if (!$event->appliesTo(ExampleBlock::class)) {
- *       return;
- *     }
- *
- *     // 1. A definition of this module's own, mounted under this module's
- *     // namespace, with its default. It is stored, advertised, rendered and
- *     // validated like any other key, and its name cannot collide with the
- *     // host's or anyone else's — which is why a contribution never adds a
- *     // bare top-level key.
- *     $event->builder->setThirdPartyDefinition(
- *       'my_module',
- *       'badge',
- *       DataDefinition::create('string')
- *         ->setLabel($this->t('Badge'))
- *         ->addConstraint('LabeledChoice', [
- *           'choices' => [
- *             'star' => $this->t('Star'),
- *             'flame' => $this->t('Flame'),
- *           ],
- *         ]),
- *       'star',
- *     );
- *
- *     // 2. One more value on a list the host declared. Widening is legal here
- *     // and nowhere later: nothing has been advertised yet, so every consumer
- *     // reads the extended list rather than a variant of it. The provider id
- *     // is what records the value as this module's: one value has one owner,
- *     // and contributing one somebody else already has is refused.
- *     $event->builder->extendChoices('variant', [
- *       'ribbon' => $this->t('Ribbon'),
- *     ], 'my_module');
- *
- *     // 3. A refiner for that same key, under the same provider id, which is
- *     // what scopes it to the contribution above.
- *     $event->builder->addRefiner('variant', new MyModuleVariantRefiner(), 'my_module');
- *
- *     // 4. And the same move on the other half of the contract: one more
- *     // value this host emits, mounted under this module's namespace, so it
- *     // lands at third_party_outputs.my_module.badge — advertised,
- *     // conformance checked, and impossible to collide with the host's own
- *     // outputs. An output carries no default and cannot be locked, because
- *     // nothing sends an output.
- *     $event->builder->setThirdPartyOutputDefinition(
- *       'my_module',
- *       'badge',
- *       DataDefinition::create('string')
- *         ->setLabel($this->t('Badge')),
- *     );
+ *   #[RefinesInput('variant')]
+ *   public function ribbonInUpperCase(
+ *     DataDefinitionInterface $variant,
+ *     string $casing,
+ *   ): DataDefinitionInterface {
+ *     return $casing === 'uppercase'
+ *       ? $variant
+ *       : $variant->addConstraint('LabeledChoice', ['choices' => []]);
  *   }
  *
  * }
  * @endcode
  *
- * A contribution's refiner is answerable for its own value and for nothing
- * else, and that is enforced rather than asked for: it is handed a definition
- * holding the values this module contributed and no others, so it can neither
- * narrow away a value the host owns nor hand back one it was not given. What
- * the refined surface offers is the union of what each contribution narrowed
- * to. Refiners ride along in cached forms, so a refiner has to be a named,
- * serializable class; an anonymous class is fatal on the first AJAX rebuild.
- * @code
- * final class MyModuleVariantRefiner implements DataSurfaceRefinerInterface {
+ * The same move on the other half of the contract is alterOutputs(), on
+ * \Drupal\data_surface\Surface\AltersOutputsInterface: an output the alter
+ * adds lands at third_party_outputs.<module>.<key>. An alter whose keys
+ * are asked for in one shape and stored in another implements
+ * \Drupal\data_surface\Surface\HasStorageShapeInterface. Another module's
+ * situation for a surface is a static method carrying #[Situation] with
+ * of: naming the surface, in that module's src/SurfaceAlter/.
  *
- *   public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
- *     if (($values['casing'] ?? NULL) !== 'quiet') {
- *       // Everything this module contributed stays on offer.
- *       return $definition;
- *     }
- *     // And here it does not, which takes nothing else with it.
- *     $definition->addConstraint('LabeledChoice', ['choices' => []]);
- *     return $definition;
- *   }
- *
- * }
- * @endcode
- *
- * That is the single-key spelling, and a contribution refiner is always
- * single-key: it refines the key it contributed to. A host refining several
- * keys of its own gets one method for all of them, and dispatches with a
- * match on the name rather than a run of guards, one protected method per
- * key:
- * @code
- * public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
- *   return match ($name) {
- *     'bundle' => $this->refineBundle($definition, $values),
- *     'field' => $this->refineField($definition, $values),
- *     default => $definition,
- *   };
- * }
- * @endcode
- * The same shape serves refineOutputDefinition(). See docs/refinement.md.
- *
- * The third role is the policy filter, registered the same way and run last,
- * over every key, once every contribution has spoken:
- * @code
- * $event->builder->addFilter(new MySitePolicyFilter());
- * @endcode
- * A filter may only remove, and what it hands back is held to that against
- * what it was given. A refiner that declares cacheability, by also
- * implementing core's CacheableDependencyInterface, has it merged into the
- * refined surface whenever it runs.
- *
- * @see \Drupal\data_surface\Event\DataSurfaceBuildEvent
- * @see \Drupal\data_surface\DataSurfaceBuilderInterface
- * @see \Drupal\data_surface\DataSurfaceFilterInterface
- * @see \Drupal\data_surface\DataSurfaceFactoryInterface::build()
+ * @see \Drupal\data_surface\Surface\SurfaceAlterInterface
+ * @see \Drupal\data_surface\Surface\ShapeAdditionsInterface
  * @see docs/refinement.md
- * @see docs/declaring-a-surface.md
+ * @see docs/surfaces.md
  * @}
  */
 

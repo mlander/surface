@@ -7,7 +7,10 @@ namespace Drupal\Tests\data_surface\Kernel;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Access\AccessResultReasonInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\data_surface\Surface\Attribute\UsesSurface;
 use Drupal\data_surface_test\Plugin\Field\FieldType\SurfaceGatedItem;
+use Drupal\data_surface_test\Surface\GatedFieldSettingsSurface;
+use Drupal\data_surface_tool\SituationInputs;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\tool\Tool\ToolManager;
@@ -19,17 +22,23 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Tests that the field tools honor the field type's own access answer.
  *
  * The tools already ask what core asks: may this account administer this
- * entity type's fields, and may it update this field. What is new is the
- * third question, asked of the field type itself, and the only way to
- * see it is a field type that refuses while everything else allows. So
- * the account below holds the field administration permission the whole
- * time and the refusal comes from the surface alone — in both places a
- * tool answers, the access check an invoker runs and the execute method
- * that writes, because execute() is callable from PHP with no check in
- * front of it.
+ * entity type's fields. What is new is the third question, asked of the
+ * field type itself through the access class of its settings surface,
+ * and the only way to see it is a field type that refuses while
+ * everything else allows. So the account below holds the field
+ * administration permission the whole time and the refusal comes from
+ * the surface alone — in both places a tool answers, the access check
+ * an invoker runs and the execute method that writes, because execute()
+ * is callable from PHP with no check in front of it. And in the field
+ * type's own host, which Field UI asks.
  *
- * @see \Drupal\data_surface_test\Plugin\Field\FieldType\SurfaceGatedItem
- * @see \Drupal\data_surface_tool\SurfaceFieldSettingsTrait
+ * The derived tools reach the field type's surface as the field
+ * instance surface's settings slot, resolved by the field type the
+ * situation knows; a resolved child's access class may refuse its
+ * parent.
+ *
+ * @see \Drupal\data_surface_test\Surface\GatedFieldSettingsSurface
+ * @see \Drupal\data_surface_test\Access\GatedFieldSettingsAccess
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -93,7 +102,7 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Creates the field instance the update tool works on.
+   * Creates the field instance the edit tool works on.
    *
    * @return \Drupal\field\Entity\FieldConfig
    *   The saved field.
@@ -110,27 +119,10 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Builds a tool with the three inputs its settings refine against.
+   * Asks a tool's own access check, bypassing input validation.
    *
    * @param string $id
    *   The tool plugin identifier.
-   *
-   * @return \Drupal\tool\Tool\ToolInterface
-   *   The tool.
-   */
-  protected function createTool(string $id) {
-    $tool = $this->toolManager->createInstance($id);
-    $tool->setInputValue('entity_type_id', 'entity_test');
-    $tool->setInputValue('bundle', 'entity_test');
-    $tool->setInputValue('field_name', 'field_gated');
-    return $tool;
-  }
-
-  /**
-   * Asks a tool's own access check, bypassing input validation.
-   *
-   * @param \Drupal\tool\Tool\ToolInterface $tool
-   *   The tool.
    * @param array $values
    *   The values to check access against.
    * @param \Drupal\Core\Session\AccountInterface $account
@@ -139,44 +131,31 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
    * @return \Drupal\Core\Access\AccessResultInterface
    *   The access result.
    */
-  protected function checkAccess($tool, array $values, AccountInterface $account): AccessResultInterface {
+  protected function checkAccess(string $id, array $values, AccountInterface $account): AccessResultInterface {
+    $tool = $this->toolManager->createInstance($id);
     return (new \ReflectionMethod($tool, 'checkAccess'))->invoke($tool, $values, $account, TRUE);
-  }
-
-  /**
-   * The values both tools are asked about.
-   *
-   * @return array
-   *   The input values.
-   */
-  protected function values(): array {
-    return [
-      'entity_type_id' => 'entity_test',
-      'bundle' => 'entity_test',
-      'field_name' => 'field_gated',
-    ];
   }
 
   /**
    * Tests that the field type alone can refuse both tools' access check.
    */
   public function testAccessIsRefusedByTheFieldTypeAlone(): void {
-    $this->createField();
     $account = $this->createUser([self::PERMISSION]);
-    $add = $this->createTool('data_surface:field_add');
-    $update = $this->createTool('data_surface:field_update');
+    $reuse = ['storage' => 'entity_test.field_gated', 'bundle' => 'entity_test'];
+    $edit = ['field' => 'entity_test.entity_test.field_gated'];
 
     // Holding everything core asks for, both tools are allowed.
-    $this->assertTrue($this->checkAccess($add, $this->values(), $account)->isAllowed());
-    $this->assertTrue($this->checkAccess($update, $this->values(), $account)->isAllowed());
+    $this->assertTrue($this->checkAccess('data_surface:field.instance:reuse', $reuse, $account)->isAllowed());
+    $this->createField();
+    $this->assertTrue($this->checkAccess('data_surface:field.instance:edit', $edit, $account)->isAllowed());
 
     // The field type refuses, and nothing else changed.
     $this->setFieldTypeRefusal(TRUE);
-    $refused = $this->checkAccess($update, $this->values(), $account);
+    $refused = $this->checkAccess('data_surface:field.instance:edit', $edit, $account);
     $this->assertTrue($refused->isForbidden());
     $reason = $refused instanceof AccessResultReasonInterface ? (string) $refused->getReason() : '';
     $this->assertStringContainsString('gated test field type', $reason);
-    $this->assertTrue($this->checkAccess($add, $this->values(), $account)->isForbidden());
+    $this->assertTrue($this->checkAccess('data_surface:field.instance:reuse', $reuse, $account)->isForbidden());
     // The permission is still held, which is what makes this the
     // surface's refusal rather than core's.
     $this->assertTrue($account->hasPermission(self::PERMISSION));
@@ -188,8 +167,9 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
   public function testExecuteIsRefusedAndWritesNothing(): void {
     $field = $this->createField();
     $this->setFieldTypeRefusal(TRUE);
-    $tool = $this->createTool('data_surface:field_update');
-    $tool->setInputValue('settings', ['note' => 'Refused.']);
+    $tool = $this->toolManager->createInstance('data_surface:field.instance:edit');
+    $tool->setInputValue('field', 'entity_test.entity_test.field_gated');
+    $tool->setInputValue(SituationInputs::VALUES, ['settings' => ['note' => 'Refused.']]);
 
     $tool->execute();
 
@@ -208,12 +188,14 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
    *
    * The other half of the claim: the refusal is the field type's answer
    * and nothing else, so the identical payload goes through when the
-   * answer changes and only when it changes.
+   * answer changes and only when it changes. The settings surface has
+   * no target, so the field stores them, under its settings.
    */
   public function testTheSameCallSucceedsWhenTheFieldTypeAllows(): void {
     $this->createField();
-    $tool = $this->createTool('data_surface:field_update');
-    $tool->setInputValue('settings', ['note' => 'Allowed.']);
+    $tool = $this->toolManager->createInstance('data_surface:field.instance:edit');
+    $tool->setInputValue('field', 'entity_test.entity_test.field_gated');
+    $tool->setInputValue(SituationInputs::VALUES, ['settings' => ['note' => 'Allowed.']]);
 
     $tool->execute();
 
@@ -221,6 +203,29 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
     $this->container->get('entity_field.manager')->clearCachedFieldDefinitions();
     $stored = FieldConfig::loadByName('entity_test', 'entity_test', 'field_gated');
     $this->assertSame('Allowed.', $stored->getSetting('note'));
+  }
+
+  /**
+   * Tests the field type's own host: the attribute, and the same gate.
+   *
+   * SurfaceGatedItem names its settings surface with #[UsesSurface] and
+   * writes nothing else; the field type trait reads the attribute from
+   * the field type's definition, builds the surface for Field UI, reads
+   * the static defaults from it, and asks its access class.
+   */
+  public function testTheFieldTypeHostReadsTheAttribute(): void {
+    $field = $this->createField();
+    $definition = $this->container->get('plugin.manager.field.field_type')->getDefinition('data_surface_gated');
+    $this->assertSame(GatedFieldSettingsSurface::class, $definition[UsesSurface::DEFINITION_KEY]);
+    $this->assertSame(['note' => NULL], SurfaceGatedItem::defaultFieldSettings());
+
+    $item = $this->container->get('typed_data_manager')->create($field->getItemDefinition());
+    $this->assertInstanceOf(SurfaceGatedItem::class, $item);
+    $this->assertSame(['note'], $item->getFieldSurface()->getDefinitions()->names());
+    $account = $this->createUser([self::PERMISSION]);
+    $this->assertTrue($item->surfaceAccess(account: $account)->isAllowed());
+    $this->setFieldTypeRefusal(TRUE);
+    $this->assertTrue($item->surfaceAccess(account: $account)->isForbidden());
   }
 
 }

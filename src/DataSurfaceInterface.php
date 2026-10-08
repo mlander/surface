@@ -19,8 +19,8 @@ use Drupal\data_surface\Target\SettingsShapeInterface;
  *
  * All of that is one DefinitionMap of SurfaceEntry objects. A second map
  * of the same type holds the other half of the contract: what the host's
- * execution emits, declared in the same vocabulary, narrowed against the
- * values it accepted, and checked by the pipeline's conformOutput(). The
+ * execution emits, declared in the same vocabulary, never refined, and
+ * checked by the pipeline's conformOutput(). The
  * rule the module holds itself to, once: contracts are objects, payloads
  * are arrays. What a surface says is read off typed objects; the values that
  * flow through accept, validate, prepare and commit are plain arrays,
@@ -34,13 +34,15 @@ use Drupal\data_surface\Target\SettingsShapeInterface;
  *
  * A surface is pure data. It reaches no service and holds no behavior
  * beyond reading its own definitions and applying the refiners it was
- * sealed with, which is what lets it ride along in a cached form and be
- * read by a caller that has no container. Anything needing a service —
+ * sealed with (the #[RefinesInput] methods the build step bound), which
+ * is what lets it ride along in a cached form and be read by a caller
+ * that has no container. Anything needing a service —
  * validation above all — belongs to
  * \Drupal\data_surface\Pipeline\DataSurfacePipelineInterface.
  *
- * Surfaces are built by a builder and sealed; nothing else constructs
- * one.
+ * Surfaces are built by the build step,
+ * \Drupal\data_surface\SurfaceBuild\SurfacesInterface, which seals a
+ * builder; nothing else constructs one.
  *
  * A surface is also a cacheable dependency. What it advertises is
  * computed from live site state — option lists read from entity types,
@@ -57,13 +59,13 @@ use Drupal\data_surface\Target\SettingsShapeInterface;
 interface DataSurfaceInterface extends CacheableDependencyInterface {
 
   /**
-   * The contributor id standing for the surface's own provider.
+   * The contributor id standing for the surface's owner.
    *
    * The owner is the first contributor: its definitions, its refinement
-   * map and its refiner are contribution number one, and it is held to
-   * the same rules as everybody who arrives later. The id is spelled so
-   * that no module can claim it, because a module name never contains a
-   * '#'.
+   * map and its #[RefinesInput] methods are contribution number one, and
+   * it is held to the same rules as everybody who arrives later. The id
+   * is spelled so that no module can claim it, because a module name
+   * never contains a '#'.
    */
   const OWNER = '#owner';
 
@@ -86,17 +88,16 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
    *
    * The other half of the contract, in the same vocabulary and the same
    * collection type as the inputs: one entry per output key, carrying
-   * its definition, who introduced it, the *input* keys it refines
-   * against and its refiner chains. A surface that declares no outputs
-   * answers with an empty map, which is what every surface written
-   * before outputs existed does, so nothing has to ask first.
+   * its definition and who introduced it. A surface that declares no
+   * outputs answers with an empty map, so nothing has to ask first.
    *
    * What differs from the input map, and why:
    * - No defaults. A default is what a value starts from when nobody
    *   sent one, and nobody sends an output.
    * - No locking. Locking narrows what a caller may send.
-   * - An entry's dependencies name input keys, because an output is
-   *   decided by what the host was given.
+   * - No refinement. A refinement narrows what may be sent, and nobody
+   *   sends an output; an output whose shape depends on an input value
+   *   is a variant, declared with attachBy() on that input.
    *
    * An output key the producer has nothing to say about is **absent**
    * from the emitted array, never NULL; Pipeline\Omitted is how a
@@ -188,7 +189,7 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
    * checkbox that is off and a list with no items are answers a refiner
    * can narrow against.
    *
-   * What refinement does with those values, in five lines:
+   * What refinement does with those values, in four lines:
    * 1. Deep-clone the advertised definition and divide its list of
    *    allowed values into the owner's — everything nobody contributed —
    *    and one slice per contributor.
@@ -196,10 +197,8 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
    * 3. Run each contributor's refiners over that contributor's slice.
    * 4. The refined definition is the owner's, with its list of allowed
    *    values replaced by the union of every narrowed slice.
-   * 5. The policy filters then run over every key, each held to
-   *    remove-only against the union it was handed.
    *
-   * Every link and every filter is held to the narrowing contract
+   * Every link is held to the narrowing contract
    * against what it was handed, so nothing can hand back a value it was
    * not given. The 'any' data type is the declared escape hatch: it may
    * refine to a concrete type. A refiner that declares cacheability, by
@@ -213,41 +212,9 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
    *   A refined surface, or the same surface when nothing refines.
    *
    * @throws \LogicException
-   *   When a refiner or a filter returns a definition that accepts more
+   *   When a refiner returns a definition that accepts more
    *   than the one it was given.
    */
   public function refine(array $values): static;
-
-  /**
-   * Returns a surface whose outputs are refined against input values.
-   *
-   * Deliberately not folded into refine(). The two narrow different
-   * halves of the contract against the same values, and they are asked
-   * at different moments by different callers: validate() refines the
-   * inputs on every submission, while the outputs matter only once the
-   * host has actually run. Folding them would run every output refiner
-   * on every validation, for an answer nothing in that path reads.
-   *
-   * An output refines when every input key it declares as a dependency
-   * holds a configured value — the same rule refine() applies, from the
-   * same place. The narrowing contract is the same one and is checked on
-   * every link; a refiner that declares cacheability has it merged into
-   * the returned surface.
-   *
-   * The inputs come back untouched. What changes is
-   * getOutputDefinitions(), which is what conformOutput() reads.
-   *
-   * @param array $input_values
-   *   The accepted input values, keyed by surface key.
-   *
-   * @return static
-   *   A surface with refined outputs, or the same surface when nothing
-   *   refines.
-   *
-   * @throws \LogicException
-   *   When an output refiner returns a definition that accepts more
-   *   than the one it was given.
-   */
-  public function refineOutputs(array $input_values): static;
 
 }

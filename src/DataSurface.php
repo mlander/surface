@@ -26,10 +26,9 @@ use Drupal\data_surface\Target\SettingsShapeInterface;
  * Everything the surface knows about one key lives on that key's
  * SurfaceEntry inside the DefinitionMap, so there are no parallel arrays
  * left to fall out of step. The outputs are a second map of the same
- * type, read the same way and narrowed by refineOutputs() against the
- * values the inputs accepted. What is not per key — the provider's own
- * refiner, the policy filters, the cacheability of the whole surface —
- * stays here.
+ * type, read the same way and never refined. What is not per key — the
+ * cacheability of the whole surface and the storage shapes of what
+ * alters mounted — stays here.
  *
  * Default values live on the definitions themselves, read through
  * DefinitionMetadata so they move to core's own methods when those land
@@ -54,43 +53,28 @@ final class DataSurface implements DataSurfaceInterface {
    *   order, carrying the definition, the contributor, the locked flag,
    *   the refinement edges, the contributed values and the refiner
    *   chains.
-   * @param \Drupal\data_surface\DataSurfaceRefinerInterface|null $refiner
-   *   The provider's refiner, first in the owner's chain for every
-   *   target.
-   * @param \Drupal\data_surface\DataSurfaceFilterInterface[] $filters
-   *   Policy filters, run over every key after the contributions have
-   *   been merged into one list.
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
    *   What the surface itself depends on: everything the builder was
    *   told at build time, plus what each refiner that ran declared.
    * @param \Drupal\data_surface\DefinitionMap $outputs
    *   What the host's execution emits: one entry per output key, in
-   *   declaration order, carrying the definition, the contributor, the
-   *   input keys it refines against and its refiner chains. Empty for
-   *   the surfaces that declare no outputs, which is every surface
-   *   written before outputs existed.
-   * @param \Drupal\data_surface\DataSurfaceOutputRefinerInterface|null $outputRefiner
-   *   The provider's output refiner, first in the chain for every
-   *   output.
+   *   declaration order, carrying the definition and the contributor.
+   *   Empty for a surface that declares no outputs.
    * @param array<string, \Drupal\data_surface\Target\SettingsShapeInterface> $thirdPartyShapes
    *   How each provider's mounted third-party settings are stored, by
    *   provider; a provider not listed stores them as described.
    *
    * @internal
-   *   Build a surface with DataSurfaceBuilder and seal it. The
-   *   constructor stays public only because refine() reconstructs the
-   *   surface with narrowed definitions, and because tests assert on
-   *   surfaces that were never meant to pass through the alter stage;
-   *   nothing outside this class and its own tests may call it, and a
-   *   surface built here has never been offered to subscribers.
+   *   A surface is built by the build step, which seals a
+   *   DataSurfaceBuilder. The constructor stays public only because
+   *   refine() reconstructs the surface with narrowed definitions, and
+   *   because the engine's own tests assert on surfaces no build step
+   *   made; nothing else may call it.
    */
   public function __construct(
     protected readonly DefinitionMap $definitions,
-    protected readonly ?DataSurfaceRefinerInterface $refiner = NULL,
-    protected readonly array $filters = [],
     protected readonly CacheableMetadata $cacheability = new CacheableMetadata(),
     protected readonly DefinitionMap $outputs = new DefinitionMap([]),
-    protected readonly ?DataSurfaceOutputRefinerInterface $outputRefiner = NULL,
     protected readonly array $thirdPartyShapes = [],
   ) {
   }
@@ -134,8 +118,8 @@ final class DataSurface implements DataSurfaceInterface {
    * {@inheritdoc}
    */
   public function getDefault(string $name): mixed {
-    $definition = $this->definitions->get($name);
-    return $definition === NULL ? NULL : DefinitionMetadata::defaultOf($definition);
+    $entry = $this->definitions->entry($name);
+    return $entry === NULL ? NULL : $this->defaultOf($entry);
   }
 
   /**
@@ -143,10 +127,35 @@ final class DataSurface implements DataSurfaceInterface {
    */
   public function getDefaultValues(): array {
     $defaults = [];
-    foreach ($this->definitions as $name => $definition) {
-      $defaults[$name] = DefinitionMetadata::defaultOf($definition);
+    foreach ($this->definitions->entries() as $name => $entry) {
+      $defaults[$name] = $this->defaultOf($entry);
     }
     return $defaults;
+  }
+
+  /**
+   * Reads what one key starts from.
+   *
+   * An attached child starts from its own defaults, read from the child
+   * so its own subsurfaces answer for themselves. A slot starts from the
+   * defaults of the variant its deciding key's default chooses, and from
+   * nothing when that chooses none.
+   *
+   * @param \Drupal\data_surface\SurfaceEntry $entry
+   *   The key.
+   *
+   * @return mixed
+   *   The default.
+   */
+  protected function defaultOf(SurfaceEntry $entry): mixed {
+    if ($entry->attachment !== NULL) {
+      return $entry->attachment->child->getDefaultValues();
+    }
+    if ($entry->slot !== NULL) {
+      $chosen = $entry->slot->chosen($this->getDefault($entry->slot->by));
+      return $chosen === NULL ? NULL : $entry->slot->defaultsOf($chosen);
+    }
+    return DefinitionMetadata::defaultOf($entry->definition);
   }
 
   /**
@@ -175,139 +184,99 @@ final class DataSurface implements DataSurfaceInterface {
    */
   public function refine(array $values): static {
     $refines = $this->refines();
-    if (!$refines && $this->filters === []) {
+    $nested = $this->definitions->hasNested();
+    if (!$refines && !$nested) {
       return $this;
     }
     $definitions = $this->definitions;
     $cacheability = CacheableMetadata::createFromObject($this);
     $changed = FALSE;
-    if ($refines) {
-      foreach ($this->definitions->entries() as $entry) {
-        if ($entry->dependencies === []) {
-          continue;
+    foreach ($this->definitions->entries() as $entry) {
+      if ($entry->isNested()) {
+        // A subsurface is refined by its child, in the child's frame, and
+        // by nothing in the parent: no parent refiner can name it.
+        $resolved = $this->refineNested($entry, $values, $cacheability);
+        if ($resolved !== NULL) {
+          $definitions = $definitions->with($entry->withDefinition($resolved));
+          $changed = TRUE;
         }
-        $dependency_values = $this->dependencyValues($entry->dependencies, $values);
-        if ($dependency_values === NULL) {
-          continue;
-        }
-        $chains = $this->chainsFor($entry);
-        if ($chains === [] && $entry->contributions === []) {
-          continue;
-        }
-        $definitions = $definitions->with($entry->withDefinition(
-          $this->unionOfContributions($entry, $chains, $dependency_values, $cacheability),
-        ));
-        $changed = TRUE;
-      }
-    }
-    if ($this->filters !== []) {
-      $definitions = $this->applyFilters($definitions, $values, $cacheability);
-      $changed = TRUE;
-    }
-    return $changed
-      ? new self($definitions, $this->refiner, $this->filters, $cacheability, $this->outputs, $this->outputRefiner, $this->thirdPartyShapes)
-      : $this;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function refineOutputs(array $input_values): static {
-    if (count($this->outputs) === 0) {
-      return $this;
-    }
-    $outputs = $this->outputs;
-    $cacheability = CacheableMetadata::createFromObject($this);
-    $changed = FALSE;
-    foreach ($this->outputs->entries() as $entry) {
-      if ($entry->dependencies === []) {
         continue;
       }
-      $dependency_values = $this->dependencyValues($entry->dependencies, $input_values);
+      if (!$refines || $entry->dependencies === []) {
+        continue;
+      }
+      $dependency_values = $this->dependencyValues($entry->dependencies, $values);
       if ($dependency_values === NULL) {
         continue;
       }
-      $chain = $this->outputChainFor($entry);
-      if ($chain === []) {
+      $chains = $this->chainsFor($entry);
+      if ($chains === [] && $entry->contributions === []) {
         continue;
       }
-      $outputs = $outputs->with($entry->withDefinition(
-        $this->runOutputChain($entry, $chain, $dependency_values, $cacheability),
+      $definitions = $definitions->with($entry->withDefinition(
+        $this->unionOfContributions($entry, $chains, $dependency_values, $cacheability),
       ));
       $changed = TRUE;
     }
     return $changed
-      ? new self($this->definitions, $this->refiner, $this->filters, $cacheability, $outputs, $this->outputRefiner, $this->thirdPartyShapes)
+      ? new self($definitions, $cacheability, $this->outputs, $this->thirdPartyShapes)
       : $this;
   }
 
   /**
-   * Collects one output's refiner chain, the owner's links first.
+   * Refines one subsurface in its child's own frame.
    *
-   * Flat, unlike the input side's chains: an output's value space has
-   * one owner, because nothing can extend an output's choices — a
-   * contributor mounts an output of its own instead. So there is no
-   * space to divide by contributor and no union to take, and the links
-   * simply run in order, each held to narrowing against what the one
-   * before it produced.
+   * The child is refined against the value at this key, merged over the
+   * child's own defaults, under the child's own key names: no parent
+   * refiner reaches into it and its refiners never see a parent value.
+   * What comes back is the key's definition for these values — the
+   * child's refined map for an attached child, and for a slot the chosen
+   * variant's refined map, or nothing while no variant is chosen.
    *
-   * @param \Drupal\data_surface\SurfaceEntry $entry
-   *   The output being refined.
-   *
-   * @return array<int, array{0: string, 1: \Drupal\data_surface\DataSurfaceOutputRefinerInterface}>
-   *   The links, each with the name of whoever registered it, in words.
-   */
-  protected function outputChainFor(SurfaceEntry $entry): array {
-    $chain = [];
-    if ($this->outputRefiner !== NULL) {
-      $chain[] = ['the surface owner', $this->outputRefiner];
-    }
-    foreach ($entry->refiners[self::OWNER] ?? [] as $link) {
-      $chain[] = ['the surface owner', $link];
-    }
-    foreach ($entry->refiners as $contributor => $links) {
-      if ($contributor === self::OWNER) {
-        continue;
-      }
-      foreach ($links as $link) {
-        $chain[] = [sprintf('the %s contribution', $contributor), $link];
-      }
-    }
-    return $chain;
-  }
-
-  /**
-   * Runs one output's refiner chain, checking every link.
+   * The result is held to the same narrowing check as any refiner link,
+   * against what the key advertises. For an attached child that is the
+   * map rule: the same properties, each no wider. For a slot it is the
+   * one resolution refinement allows from a placeholder: `any`, to the
+   * map of a variant declared before anything was chosen.
    *
    * @param \Drupal\data_surface\SurfaceEntry $entry
-   *   The output being refined, as the surface advertises it.
-   * @param array<int, array{0: string, 1: \Drupal\data_surface\DataSurfaceOutputRefinerInterface}> $chain
-   *   The links, each with the name of whoever registered it.
+   *   The key, as advertised.
    * @param array $values
-   *   The input values the output's dependencies hold.
+   *   The values the surface is being refined against.
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
-   *   Collects what the refiners declare they depend on.
+   *   Collects what the child's refinement depended on.
    *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface
-   *   The narrowed definition.
-   *
-   * @throws \LogicException
-   *   When a link hands back more than it was given.
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
+   *   The key's definition for these values, or NULL when nothing about
+   *   it changes.
    */
-  protected function runOutputChain(SurfaceEntry $entry, array $chain, array $values, CacheableMetadata $cacheability): DataDefinitionInterface {
-    $definition = $entry->definition;
-    foreach ($chain as [$who, $link]) {
-      // A copy out, the original kept as the pre-image: an object
-      // compared with itself has of course never changed, so without one
-      // the narrowing check would pass everything.
-      $refined = $link->refineOutputDefinition($entry->name, static::deepClone($definition), $values);
-      Narrowing::assertNarrows($entry->name, $who, $definition, $refined);
-      static::carryMetadata($definition, $refined);
-      if ($link instanceof CacheableDependencyInterface) {
-        $cacheability->addCacheableDependency($link);
-      }
-      $definition = $refined;
+  protected function refineNested(SurfaceEntry $entry, array $values, CacheableMetadata $cacheability): ?DataDefinitionInterface {
+    $child = $entry->childFor($values);
+    if ($child === NULL) {
+      return NULL;
     }
+    $value = $values[$entry->name] ?? NULL;
+    $chosen = $entry->slot?->chosen($values[$entry->slot->by] ?? NULL);
+    if ($chosen !== NULL && !$entry->slot->fits($chosen, $value)) {
+      // A value left behind by another variant says nothing about this
+      // one, so the variant is refined from its own defaults.
+      $value = [];
+    }
+    $refined = $child->refine(array_replace($child->getDefaultValues(), is_array($value) ? $value : []));
+    $cacheability->addCacheableDependency($refined);
+    if ($chosen !== NULL) {
+      $definition = $entry->slot->definitionFor($chosen, $refined);
+    }
+    elseif ($refined === $child) {
+      return NULL;
+    }
+    elseif ($entry->definition instanceof MapDataDefinition) {
+      $definition = SurfaceAttachment::mapOf($entry->definition, $refined);
+    }
+    else {
+      throw new \LogicException(sprintf('The "%s" subsurface no longer holds a map, so its child has nowhere to be written.', $entry->name));
+    }
+    Narrowing::assertNarrows($entry->name, 'the surface attached there', $entry->definition, $definition);
     return $definition;
   }
 
@@ -323,7 +292,7 @@ final class DataSurface implements DataSurfaceInterface {
    */
   protected function refines(): bool {
     $has_edges = FALSE;
-    $has_refiners = $this->refiner !== NULL;
+    $has_refiners = FALSE;
     foreach ($this->definitions->entries() as $entry) {
       $has_edges = $has_edges || $entry->dependencies !== [];
       $has_refiners = $has_refiners || $entry->refiners !== [];
@@ -363,8 +332,7 @@ final class DataSurface implements DataSurfaceInterface {
   /**
    * Collects one target's refiner chains, keyed by contributor.
    *
-   * The owner's chain comes first and starts with the provider's own
-   * refiner, which is its first contribution.
+   * The owner's chain comes first.
    *
    * @param \Drupal\data_surface\SurfaceEntry $entry
    *   The key being refined.
@@ -374,10 +342,7 @@ final class DataSurface implements DataSurfaceInterface {
    */
   protected function chainsFor(SurfaceEntry $entry): array {
     $registered = $entry->refiners;
-    $owner = $this->refiner !== NULL ? [$this->refiner] : [];
-    foreach ($registered[self::OWNER] ?? [] as $link) {
-      $owner[] = $link;
-    }
+    $owner = $registered[self::OWNER] ?? [];
     $chains = $owner === [] ? [] : [self::OWNER => $owner];
     foreach ($registered as $contributor => $links) {
       if ($contributor !== self::OWNER) {
@@ -501,43 +466,6 @@ final class DataSurface implements DataSurfaceInterface {
   }
 
   /**
-   * Runs the policy filters over every definition.
-   *
-   * Filters see every key rather than only the refinement targets: a
-   * policy is not a dependency of anything, and the key it has an
-   * opinion about need not be one that narrows.
-   *
-   * @param \Drupal\data_surface\DefinitionMap $definitions
-   *   The definitions, with every contribution already merged in.
-   * @param array $values
-   *   The values the surface is being refined against.
-   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
-   *   Collects what the filters declare they depend on.
-   *
-   * @return \Drupal\data_surface\DefinitionMap
-   *   The filtered definitions.
-   *
-   * @throws \LogicException
-   *   When a filter hands back more than it was given.
-   */
-  protected function applyFilters(DefinitionMap $definitions, array $values, CacheableMetadata $cacheability): DefinitionMap {
-    foreach ($this->filters as $filter) {
-      $who = sprintf('the policy filter %s', get_class($filter));
-      if ($filter instanceof CacheableDependencyInterface) {
-        $cacheability->addCacheableDependency($filter);
-      }
-      foreach ($definitions->entries() as $entry) {
-        $definition = $entry->definition;
-        $filtered = $filter->filterDataDefinition($entry->name, static::deepClone($definition), $values);
-        Narrowing::assertNarrows($entry->name, $who, $definition, $filtered);
-        static::carryMetadata($definition, $filtered);
-        $definitions = $definitions->with($entry->withDefinition($filtered));
-      }
-    }
-    return $definitions;
-  }
-
-  /**
    * Carries the metadata a refiner cannot be expected to copy.
    *
    * A refiner that mutates the definition it was handed keeps both by
@@ -550,8 +478,12 @@ final class DataSurface implements DataSurfaceInterface {
    *   The definition handed over.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $to
    *   What came back.
+   *
+   * @internal
+   *   Public only for the surface build step, which runs a refiner that
+   *   watches nothing once, at build time, under the same rules.
    */
-  protected static function carryMetadata(DataDefinitionInterface $from, DataDefinitionInterface $to): void {
+  public static function carryMetadata(DataDefinitionInterface $from, DataDefinitionInterface $to): void {
     if ($from === $to) {
       return;
     }
@@ -584,8 +516,13 @@ final class DataSurface implements DataSurfaceInterface {
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface
    *   The deep clone.
+   *
+   * @internal
+   *   Public only for the surface build step, which keeps a pre-image of
+   *   what a situation narrows and of what a build-time refiner returns,
+   *   for the same narrowing check refinement makes here.
    */
-  protected static function deepClone(DataDefinitionInterface $definition): DataDefinitionInterface {
+  public static function deepClone(DataDefinitionInterface $definition): DataDefinitionInterface {
     $clone = clone $definition;
     if ($clone instanceof MapDataDefinition) {
       foreach ($clone->getPropertyDefinitions() as $name => $property) {

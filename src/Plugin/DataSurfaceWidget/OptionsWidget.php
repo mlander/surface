@@ -176,9 +176,18 @@ final class OptionsWidget extends DataSurfaceWidgetBase implements ContainerFact
    *
    * The select says what the value was; the description says what
    * happens next, because a person who reads only the option list has
-   * been told that something is missing and not that their setting is
-   * safe. The same reasoning as the locked note: the reason goes where
-   * every user reaches it rather than in a visual cue.
+   * been told that something is missing and not what saving will do.
+   * The same reasoning as the locked note: the reason goes where every
+   * user reaches it rather than in a visual cue.
+   *
+   * One wording for both ways a value comes to be shown here, because
+   * the element cannot tell them apart: it is built from the values as
+   * they now stand and never sees what is stored. A value the site took
+   * away under an unmoved parent is kept by a save; the same value shown
+   * because this edit moved its parent is refused by a save, since the
+   * stale rule never excuses a value whose dependency the run moved
+   * (DataSurfacePipeline::isStale()). So the note promises only what is
+   * true of both.
    *
    * @param array $element
    *   The stale element.
@@ -189,7 +198,7 @@ final class OptionsWidget extends DataSurfaceWidgetBase implements ContainerFact
    *   The element, with the note appended to its description.
    */
   protected static function describeStale(array $element, mixed $value): array {
-    $note = new TranslatableMarkup('The stored value @value is no longer available. It is kept until you choose another.', [
+    $note = new TranslatableMarkup('The stored value @value is no longer available. Choose another; saving keeps it only if nothing it depends on has changed.', [
       '@value' => (string) $value,
     ]);
     $element['#description'] = isset($element['#description'])

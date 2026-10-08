@@ -8,12 +8,15 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
+use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Pipeline\ValueState;
+use Drupal\data_surface\SurfaceEntry;
+use Drupal\data_surface\SurfaceSlot;
 use Drupal\tool\TypedData\InputDefinition;
 use Drupal\tool\TypedData\InputDefinitionInterface;
 use Drupal\tool\TypedData\ListInputDefinition;
@@ -58,9 +61,15 @@ use Drupal\tool\TypedData\OutputDefinitionInterface;
  * definitions the Tool API declares outputs with; outputsFromSurface()
  * says what that direction loses on top of these two.
  *
+ * Subsurfaces convert by what they are. An attached child, and a slot
+ * whose deciding key already chose (or is locked), are a map like any
+ * other: a nested map input whose properties are the child's keys. An
+ * unresolved slot is the one shape the Tool API cannot say, and
+ * fromSlot() says why and what is emitted instead.
+ *
  * One Tool API gap is worth naming here rather than in a method
- * docblock, because it is why the two tools in this module still
- * declare their outputs by hand: outputs are declared statically on the
+ * docblock, because it is why a derived tool declares its outputs as
+ * the deriver writes them: outputs are declared statically on the
  * #[Tool] attribute, and there is no output_definition_refiners beside
  * input_definition_refiners, so a tool cannot say "this output is
  * whatever the subject turns out to describe" the way it can for an
@@ -126,8 +135,8 @@ final class SurfaceInputDefinitions {
   public function fromSurface(DataSurfaceInterface $surface, TranslatableMarkup|string $label, TranslatableMarkup|string $description, bool $required = FALSE, mixed $default_value = NULL): MapInputDefinition {
     $properties = [];
     $definitions = $surface->getDefinitions();
-    foreach ($definitions as $name => $definition) {
-      $property = $this->fromDefinition($definition);
+    foreach ($definitions->entries() as $name => $entry) {
+      $property = $this->fromEntry($entry);
       if ($definitions->isLocked($name)) {
         // A locked surface key has exactly one legal value, and the Tool
         // API has the same idea for a whole input. It has no effect on a
@@ -143,6 +152,125 @@ final class SurfaceInputDefinitions {
       description: $description,
       required: $required,
       default_value: $default_value,
+      property_definitions: $properties,
+    );
+  }
+
+  /**
+   * Converts one key of a surface, subsurfaces included.
+   *
+   * @param \Drupal\data_surface\SurfaceEntry $entry
+   *   The key.
+   *
+   * @return \Drupal\tool\TypedData\InputDefinitionInterface
+   *   The input definition.
+   */
+  protected function fromEntry(SurfaceEntry $entry): InputDefinitionInterface {
+    if ($entry->slot !== NULL && DefinitionMetadata::slotOf($entry->definition) !== NULL) {
+      return $this->fromSlot($entry->slot, $entry->definition);
+    }
+    $child = $entry->attachment?->child;
+    if ($child === NULL || !$entry->definition instanceof ComplexDataDefinitionInterface) {
+      return $this->fromDefinition($entry->definition);
+    }
+    // An attached child is a map whose properties are the child's own
+    // keys, converted the way the child's own entries say: a slot inside
+    // the child is still a slot.
+    $map = $this->fromDefinition($entry->definition);
+    if ($map instanceof MapInputDefinition) {
+      $properties = $entry->definition->getPropertyDefinitions();
+      foreach ($child->getDefinitions()->entries() as $name => $child_entry) {
+        $map->setPropertyDefinition((string) $name, $child_entry->slot !== NULL && isset($properties[$name]) && DefinitionMetadata::slotOf($properties[$name]) !== NULL
+          ? $this->fromSlot($child_entry->slot, $properties[$name])
+          : $this->fromDefinition($properties[$name] ?? $child_entry->definition));
+      }
+    }
+    return $map;
+  }
+
+  /**
+   * Converts a slot whose deciding key has chosen nothing.
+   *
+   * The widest honest schema, and a known Tool API gap. What a slot is
+   * — "this map is exactly variant A's when the sibling is a, exactly
+   * variant B's when it is b" — is a union keyed by a sibling. JSON
+   * Schema can say it, but only on the parent: an `if` naming the
+   * sibling's `const` and a `then` naming this property's schema, once
+   * per variant, or a `oneOf` over whole parent objects. The Tool API's
+   * definitions have no place for either. A context definition carries
+   * one data type, constraints and, for a map, its property definitions;
+   * MapInputDefinition has no union, no conditional and no `oneOf`, and
+   * its normalizer emits one schema per property with no reference to a
+   * sibling. And `oneOf` on the slot's own schema would not do: the
+   * deciding key is not inside the slot's value, so nothing in that
+   * value could select a branch.
+   *
+   * So the slot is advertised as a map holding every key any variant
+   * declares, in variant order, none of them required and none with a
+   * default (both depend on the variant), each annotated with the values
+   * of the deciding key it belongs to, and the whole table said in the
+   * slot's own description. Nothing is promised that the pipeline does
+   * not keep: it refuses a key from another variant by name, and judges
+   * the chosen variant's keys by that variant's own rules. A key two
+   * variants share is advertised with the first variant's definition.
+   *
+   * @param \Drupal\data_surface\SurfaceSlot $slot
+   *   The slot's variant table.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $placeholder
+   *   The placeholder the slot advertises.
+   *
+   * @return \Drupal\tool\TypedData\MapInputDefinition
+   *   The union map.
+   */
+  public function fromSlot(SurfaceSlot $slot, DataDefinitionInterface $placeholder): MapInputDefinition {
+    $owners = [];
+    $first = [];
+    $table = [];
+    foreach ($slot->variants as $id => $variant) {
+      $keys = [];
+      foreach ($variant->child->getDefinitions() as $name => $definition) {
+        $owners[$name][] = (string) $id;
+        $first[$name] ??= $definition;
+        $keys[] = $name;
+      }
+      $table[] = $this->t('@value: @keys', [
+        '@value' => $id,
+        '@keys' => $keys === [] ? $this->t('nothing') : implode(', ', $keys),
+      ]);
+    }
+    $properties = [];
+    foreach ($first as $name => $definition) {
+      // A copy, said the way the union means it: optional, with no
+      // default, and the variants it belongs to named. Only its own
+      // flags change, so a shallow clone leaves the variant untouched.
+      $union = clone $definition;
+      $note = $this->t('Only when @by is @values.', [
+        '@by' => $slot->by,
+        '@values' => implode(', ', $owners[$name]),
+      ]);
+      $description = (string) $this->description($definition);
+      if ($union instanceof DataDefinition) {
+        $union->setRequired(FALSE);
+        $union->setDescription($description === '' ? $note : $this->t('@description @note', [
+          '@description' => $description,
+          '@note' => $note,
+        ]));
+      }
+      DefinitionMetadata::setDefaultValue($union, NULL);
+      $properties[$name] = $this->fromDefinition($union);
+    }
+    $note = $this->t('Its keys depend on @by. @table.', [
+      '@by' => $slot->by,
+      '@table' => $table === [] ? $this->t('No variant fills it') : implode('; ', array_map('strval', $table)),
+    ]);
+    $description = (string) $this->description($placeholder);
+    return new MapInputDefinition(
+      label: $this->label($placeholder),
+      description: $description === '' ? $note : $this->t('@description @note', [
+        '@description' => $description,
+        '@note' => $note,
+      ]),
+      required: $this->requiredInPayload($placeholder),
       property_definitions: $properties,
     );
   }
@@ -170,13 +298,6 @@ final class SurfaceInputDefinitions {
    *   `required`, which is what `required` converts to, so the
    *   statement survives — but the Omitted sentinel itself does not
    *   travel, because it is a PHP marker and not a value.
-   * - The refinement edges. An output that narrows once an input is
-   *   known is converted as advertised, not as refined: the Tool API
-   *   has input_definition_refiners and no output counterpart, so
-   *   there is nowhere to say "this output narrows when that input is
-   *   sent". Convert a surface that has already been through
-   *   DataSurfaceInterface::refineOutputs() to advertise the narrowed
-   *   answer instead.
    * - Who contributed what. A mounted third-party output arrives as an
    *   ordinary property of the third_party_outputs map.
    *
@@ -376,8 +497,9 @@ final class SurfaceInputDefinitions {
   /**
    * Copies a definition's constraints, teaching the enum one to travel.
    *
-   * The constraints are carried across untouched, so a Drupal constraint
-   * plugin goes on validating exactly as it did on the surface. The one
+   * The constraints are carried across by name, with the same options, so
+   * a Drupal constraint plugin goes on validating exactly as it did on
+   * the surface. The one
    * addition is the enum: the Tool API's schema normalizer reads Choice
    * and AllowedValues and nothing else, so a value list declared as
    * anything else — the labeled choice constraint, an existence
@@ -399,23 +521,82 @@ final class SurfaceInputDefinitions {
    * A definition that already carries a Choice keeps it: it is its own
    * enum, and the options service would only hand back what it says.
    *
+   * Every option value is then made a scalar (scalarOptions() says how
+   * and why), so a LabeledChoice's labels travel as the strings they
+   * read as rather than as TranslatableMarkup.
+   *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition to read.
    *
    * @return array<string, mixed>
    *   The constraints, keyed by constraint name.
+   *
+   * @throws \LogicException
+   *   When an option holds an object that has no scalar spelling.
    */
   protected function constraints(DataDefinitionInterface $definition): array {
     $constraints = $definition->getConstraints();
-    if (isset($constraints[self::CHOICE])) {
-      return $constraints;
+    if (!isset($constraints[self::CHOICE])) {
+      $set = $this->options->resolve($definition);
+      if ($set !== NULL && $set->options !== []) {
+        $constraints[self::CHOICE] = ['choices' => array_keys($set->options)];
+      }
     }
-    $set = $this->options->resolve($definition);
-    if ($set === NULL || $set->options === []) {
-      return $constraints;
+    foreach ($constraints as $name => $options) {
+      $constraints[$name] = $this->scalarOptions($options, (string) $name);
     }
-    $constraints[self::CHOICE] = ['choices' => array_keys($set->options)];
     return $constraints;
+  }
+
+  /**
+   * Spells a constraint's options with scalars and arrays alone.
+   *
+   * A tool definition's constraint options are config-schema shaped:
+   * the Tool API copies them into the config schema it suggests for a
+   * tool, and Tool Explorer prints that schema with Yaml::encode(), which
+   * refuses an object. A surface's own constraints may hold objects — a
+   * LabeledChoice's labels and descriptions are TranslatableMarkup —
+   * because the surface is the PHP side and they validate the same
+   * either way. So a stringable object converts to the string it reads
+   * as, a backed enum to its value, and anything else is refused here,
+   * by name, rather than as an encoding error on a page that has nothing
+   * to do with it.
+   *
+   * What the string costs: a tool definition is cached once for every
+   * language, so a label is in the language discovery ran in. It costs
+   * nothing an invoker reads today, because the Tool API's normalizer
+   * advertises a value list from Choice alone and never these labels;
+   * the tool's own label and description stay TranslatableMarkup, which
+   * the Tool API takes as such.
+   *
+   * @param mixed $options
+   *   A constraint's options, or one value inside them.
+   * @param string $path
+   *   Where the value is, for the message.
+   *
+   * @return mixed
+   *   The same options, with no object anywhere in them.
+   *
+   * @throws \LogicException
+   *   When an object is neither stringable nor a backed enum.
+   */
+  protected function scalarOptions(mixed $options, string $path): mixed {
+    if (is_array($options)) {
+      foreach ($options as $key => $value) {
+        $options[$key] = $this->scalarOptions($value, $path . '.' . $key);
+      }
+      return $options;
+    }
+    if (!is_object($options)) {
+      return $options;
+    }
+    if ($options instanceof \BackedEnum) {
+      return $options->value;
+    }
+    if ($options instanceof \Stringable) {
+      return (string) $options;
+    }
+    throw new \LogicException(sprintf('The constraint option %s holds a %s, which a tool definition cannot carry: its constraint options are config schema, scalars and arrays only.', $path, get_class($options)));
   }
 
   /**

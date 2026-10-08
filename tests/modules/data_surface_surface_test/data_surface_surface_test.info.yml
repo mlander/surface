@@ -1,0 +1,8 @@
+name: Data Surface Surface Test
+type: module
+description: 'Test support for surfaces: surfaces, situations and alters found by discovery, some of them deliberately broken.'
+package: Testing
+version: VERSION
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - data_surface:data_surface

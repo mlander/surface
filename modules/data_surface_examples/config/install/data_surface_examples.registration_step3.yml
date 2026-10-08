@@ -1,0 +1,11 @@
+title: 'Spring meetup'
+capacity: 50
+open: true
+venue: library
+room: library_reading
+pricing: free
+ticket:
+  note: ''
+contact:
+  email: 'events@example.com'
+  phone: ''

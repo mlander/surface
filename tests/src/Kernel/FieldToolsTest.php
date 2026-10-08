@@ -11,9 +11,14 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DataSurfaceBuilder;
+use Drupal\data_surface_tool\SituationInputs;
+use Drupal\data_surface_address\Surface\AddressFieldSettingsSurface;
+use Drupal\data_surface_tool\Surface\FieldInstanceSurface;
+use Drupal\data_surface\Surface\SurfaceContext;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\field\FieldConfigInterface;
+use Drupal\field\FieldStorageConfigInterface;
 use Drupal\tool\Tool\ToolManager;
 use Drupal\tool\TypedData\ListInputDefinition;
 use Drupal\tool\TypedData\ListOutputDefinition;
@@ -25,16 +30,19 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * Tests the two field tools the Tool API bridge adds.
+ * Tests the field tools, derived from the field instance surface.
  *
- * What has to hold is that a tool contributes nothing of its own to the
- * settings: the field type's surface says what the values may be, the
- * pipeline accepts, validates, prepares and commits them, and the tool
- * is the caller. So a valid payload reaches storage in the shape the
- * field type reads back, an invalid one is refused with the path that
- * names it and leaves nothing behind, and a partial update changes only
- * the keys it carries — including clearing one by sending it as null,
- * which is the thing a null-stripping merge cannot express.
+ * `data_surface:field.instance:add`, `:reuse` and `:edit`, one per
+ * situation of FieldInstanceSurface, replace the two hand-written tools
+ * this module used to ship. What has to hold is what held for them: a
+ * tool contributes nothing of its own to the settings. The field type's
+ * settings surface says what the values may be, the pipeline accepts,
+ * validates, prepares and commits them, and the tool is the caller. So a
+ * valid payload reaches storage in the shape the field type reads back,
+ * an invalid one is refused with the path that names it and leaves
+ * nothing behind, and a partial edit changes only the keys it carries —
+ * including clearing one by sending it as null, which is the thing a
+ * null-stripping merge cannot express.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -48,6 +56,21 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
   protected const PERMISSION = 'administer entity_test fields';
 
   /**
+   * The tool adding a field with a storage of its own.
+   */
+  protected const ADD = 'data_surface:field.instance:add';
+
+  /**
+   * The tool adding an existing storage's field to a bundle.
+   */
+  protected const REUSE = 'data_surface:field.instance:reuse';
+
+  /**
+   * The tool editing a field.
+   */
+  protected const EDIT = 'data_surface:field.instance:edit';
+
+  /**
    * {@inheritdoc}
    */
   protected static $modules = [
@@ -55,7 +78,7 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
     'user',
     'field',
     // Present for its permissions alone: 'administer entity_test fields'
-    // is a Field UI permission, and it is the answer both tools want.
+    // is a Field UI permission, and it is the answer the tools want.
     'field_ui',
     'entity_test',
     'address',
@@ -78,9 +101,9 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
     parent::setUp();
     $this->installEntitySchema('user');
     $this->installEntitySchema('entity_test');
-    // Both tools write, so both refuse an account that may not
-    // administer this entity type's fields. Every round trip below is
-    // run as somebody who may.
+    // The tools write, so they refuse an account that may not administer
+    // this entity type's fields. Every round trip below is run as
+    // somebody who may.
     $this->setUpCurrentUser([], [self::PERMISSION]);
     $this->toolManager = $this->container->get('plugin.manager.tool');
     FieldStorageConfig::create([
@@ -91,97 +114,133 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Creates a tool with the three inputs its settings refine against.
+   * Creates a field tool with its situation's parameters set.
    *
    * @param string $id
    *   The tool plugin identifier.
    *
    * @return \Drupal\tool\Tool\ToolInterface
-   *   The tool, ready for a settings value.
+   *   The tool, ready for its values.
    */
   protected function createTool(string $id) {
     $tool = $this->toolManager->createInstance($id);
-    $tool->setInputValue('entity_type_id', 'entity_test');
-    $tool->setInputValue('bundle', 'entity_test');
-    $tool->setInputValue('field_name', 'field_address');
+    $parameters = match ($id) {
+      self::ADD => ['entity_type_id' => 'entity_test', 'bundle' => 'entity_test'],
+      self::REUSE => ['storage' => 'entity_test.field_address', 'bundle' => 'entity_test'],
+      self::EDIT => ['field' => 'entity_test.entity_test.field_address'],
+      default => throw new \InvalidArgumentException($id . ' is not a field tool.'),
+    };
+    foreach ($parameters as $name => $value) {
+      $tool->setInputValue($name, $value);
+    }
     return $tool;
   }
 
   /**
-   * Reloads the field config, so stored settings come from storage.
+   * Reloads a field config, so stored settings come from storage.
+   *
+   * @param string $field_name
+   *   The field name.
    *
    * @return \Drupal\field\FieldConfigInterface|null
    *   The field, or NULL when it was never created.
    */
-  protected function reloadField(): ?FieldConfigInterface {
+  protected function reloadField(string $field_name = 'field_address'): ?FieldConfigInterface {
     $this->container->get('entity_field.manager')->clearCachedFieldDefinitions();
-    return FieldConfig::loadByName('entity_test', 'entity_test', 'field_address');
+    $this->container->get('entity_type.manager')->getStorage('field_config')->resetCache();
+    return FieldConfig::loadByName('entity_test', 'entity_test', $field_name);
   }
 
   /**
-   * Adds the field with the settings the round trip starts from.
+   * Adds the address field with the settings the round trip starts from.
    *
    * @return \Drupal\tool\Tool\ToolInterface
    *   The executed tool.
    */
   protected function addField() {
-    $tool = $this->createTool('data_surface:field_add');
-    $tool->setInputValue('label', 'Address');
-    $tool->setInputValue('settings', [
-      'available_countries' => ['US', 'CA'],
-      'field_overrides' => ['organization' => 'hidden'],
+    $tool = $this->createTool(self::REUSE);
+    $tool->setInputValue(SituationInputs::VALUES, [
+      'label' => 'Address',
+      'settings' => [
+        'available_countries' => ['US', 'CA'],
+        'field_overrides' => ['organization' => 'hidden'],
+      ],
     ]);
     $tool->execute();
     return $tool;
   }
 
   /**
+   * Reads the settings input a tool advertises, refined to its subject.
+   *
+   * @param \Drupal\tool\Tool\ToolInterface $tool
+   *   The tool, its parameters set.
+   *
+   * @return array<string, \Drupal\tool\TypedData\InputDefinitionInterface>
+   *   The settings' properties.
+   */
+  protected function settingsProperties($tool): array {
+    $values = $tool->getInputDefinition(SituationInputs::VALUES);
+    $this->assertInstanceOf(MapInputDefinition::class, $values);
+    $settings = $values->getPropertyDefinitions()['settings'];
+    $this->assertInstanceOf(MapInputDefinition::class, $settings);
+    return $settings->getPropertyDefinitions();
+  }
+
+  /**
    * Tests that the settings input is the surface, not a free-form map.
    */
   public function testSettingsInputIsDescribed(): void {
-    $tool = $this->createTool('data_surface:field_add');
-    $definition = $tool->getInputDefinition('settings');
-    assert($definition instanceof MapInputDefinition);
-    $properties = $definition->getPropertyDefinitions();
+    foreach ([self::REUSE, self::EDIT] as $id) {
+      if ($id === self::EDIT) {
+        $this->addField();
+      }
+      $properties = $this->settingsProperties($this->createTool($id));
+      $this->assertSame(
+        ['available_countries', 'langcode_override', 'field_overrides'],
+        array_keys($properties),
+        $id,
+      );
+      $this->assertArrayNotHasKey('fields', $properties);
 
-    $this->assertSame(
-      ['available_countries', 'langcode_override', 'field_overrides'],
-      array_keys($properties),
-    );
-    $this->assertArrayNotHasKey('fields', $properties);
-
-    // The vocabulary a caller would otherwise have to guess, with the
-    // labels the surface carries and the defaults it declares.
-    $field_overrides = $properties['field_overrides'];
-    $this->assertInstanceOf(MapInputDefinition::class, $field_overrides);
-    $overrides = $field_overrides->getPropertyDefinitions();
-    $this->assertArrayHasKey('givenName', $overrides);
-    $this->assertSame('Organization', (string) $overrides['organization']->getLabel());
-    $this->assertSame(
-      ['hidden', 'optional', 'required'],
-      $overrides['organization']->getConstraint('Choice')['choices'],
-    );
-    $this->assertSame(
-      ['hidden' => 'Hidden', 'optional' => 'Optional', 'required' => 'Required'],
-      array_map('strval', $overrides['organization']->getConstraint('LabeledChoice')['choices']),
-    );
-    $this->assertSame([], $properties['available_countries']->getDefaultValue());
-    $available_countries = $properties['available_countries'];
-    $this->assertInstanceOf(ListInputDefinition::class, $available_countries);
-    $this->assertContains(
-      'US',
-      $available_countries->getItemDefinition()->getConstraint('Choice')['choices'],
-    );
+      // The vocabulary a caller would otherwise have to guess, with the
+      // labels the surface carries and the defaults it declares.
+      $field_overrides = $properties['field_overrides'];
+      $this->assertInstanceOf(MapInputDefinition::class, $field_overrides);
+      $overrides = $field_overrides->getPropertyDefinitions();
+      $this->assertArrayHasKey('givenName', $overrides);
+      $this->assertSame('Organization', (string) $overrides['organization']->getLabel());
+      $this->assertSame(
+        ['hidden', 'optional', 'required'],
+        $overrides['organization']->getConstraint('Choice')['choices'],
+      );
+      $this->assertSame(
+        ['hidden' => 'Hidden', 'optional' => 'Optional', 'required' => 'Required'],
+        array_map('strval', $overrides['organization']->getConstraint('LabeledChoice')['choices']),
+      );
+      $available_countries = $properties['available_countries'];
+      $this->assertInstanceOf(ListInputDefinition::class, $available_countries);
+      $this->assertContains(
+        'US',
+        $available_countries->getItemDefinition()->getConstraint('Choice')['choices'],
+      );
+    }
+    $this->assertSame([], $this->settingsProperties($this->createTool(self::REUSE))['available_countries']->getDefaultValue());
   }
 
   /**
    * Tests that a valid payload reaches storage in the storage shape.
+   *
+   * The settings are written by the address settings surface's own
+   * target, after the field's, and the field is placed on the bundle's
+   * default form and view displays as Field UI places a new field.
    */
-  public function testAddStoresTheStorageShape(): void {
+  public function testReuseStoresTheStorageShape(): void {
     $tool = $this->addField();
 
     $result = $tool->getResult();
     $this->assertTrue($result->isSuccess(), (string) $tool->getResultMessage());
+    $this->assertTrue($result->getContextValues()[SituationInputs::COMMITTED]);
 
     $settings = $this->reloadField()->getSettings();
     $this->assertSame(['US' => 'US', 'CA' => 'CA'], $settings['available_countries']);
@@ -190,7 +249,117 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
     // Written empty every time, so the deprecated key can never shadow
     // the overrides the surface just wrote.
     $this->assertSame([], $settings['fields']);
-    $this->assertSame($settings, $result->getContextValues()['settings']);
+    // The accepted values come back in the surface's shape.
+    $this->assertSame(
+      ['US', 'CA'],
+      $result->getContextValues()[SituationInputs::VALUES]['settings']['available_countries'],
+    );
+
+    $display_repository = $this->container->get('entity_display.repository');
+    $this->assertNotNull($display_repository->getFormDisplay('entity_test', 'entity_test')->getComponent('field_address'));
+    $this->assertNotNull($display_repository->getViewDisplay('entity_test', 'entity_test')->getComponent('field_address'));
+  }
+
+  /**
+   * Tests adding a field with a storage of its own, settings and all.
+   *
+   * One submission of the whole field instance surface: the storage
+   * child is written first, then the field, then the settings variant
+   * the field type chose, after validation has passed for all three.
+   */
+  public function testAddWritesTheStorageTheFieldAndItsSettings(): void {
+    $tool = $this->createTool(self::ADD);
+    $tool->setInputValue(SituationInputs::VALUES, [
+      'field_type' => 'address',
+      'field_name' => 'field_home',
+      'label' => 'Home',
+      'storage' => ['cardinality' => 2],
+      'settings' => ['available_countries' => ['DE']],
+    ]);
+    $tool->execute();
+
+    $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResultMessage());
+    $this->assertSame(2, FieldStorageConfig::loadByName('entity_test', 'field_home')?->getCardinality());
+    $field = $this->reloadField('field_home');
+    $this->assertSame('Home', $field->getLabel());
+    $this->assertSame(['DE' => 'DE'], $field->getSettings()['available_countries']);
+  }
+
+  /**
+   * Tests a dry run: every part rehearsed, nothing written.
+   *
+   * Prepare builds each part as storage would be handed it and holds it
+   * to its config schema: the field under `own`, and the storage and
+   * the settings, each stored apart, under `children`.
+   */
+  public function testDryRunPreviewsEveryPartAndWritesNothing(): void {
+    $tool = $this->createTool(self::ADD);
+    $tool->setInputValue(SituationInputs::VALUES, [
+      'field_type' => 'address',
+      'field_name' => 'field_home',
+      'label' => 'Home',
+      'storage' => ['cardinality' => 2],
+      'settings' => ['field_overrides' => ['organization' => 'hidden']],
+    ]);
+    $tool->setInputValue(SituationInputs::DRY_RUN, TRUE);
+    $tool->execute();
+
+    $result = $tool->getResult();
+    $this->assertTrue($result->isSuccess(), (string) $tool->getResultMessage());
+    $this->assertFalse($result->getContextValues()[SituationInputs::COMMITTED]);
+    $prepared = $result->getContextValues()[SituationInputs::PREPARED];
+    $this->assertSame('entity_test.entity_test.field_home', $prepared['own']['id']);
+    $this->assertSame('Home', $prepared['own']['label']);
+    $this->assertSame(['storage', 'settings'], array_keys($prepared['children']));
+    $this->assertSame('entity_test.field_home', $prepared['children']['storage']['id']);
+    $this->assertSame(2, $prepared['children']['storage']['cardinality']);
+    $this->assertSame(['organization' => ['override' => 'hidden']], $prepared['children']['settings']['field_overrides']);
+
+    $this->assertNull(FieldStorageConfig::loadByName('entity_test', 'field_home'));
+    $this->assertNull($this->reloadField('field_home'));
+  }
+
+  /**
+   * Tests that what storage would refuse is refused at prepare.
+   *
+   * The surface limits nothing about a field's label but that it is
+   * there; the field's config schema says a label holds no line break.
+   * A dry run meets the refusal a write would, filed under the surface
+   * key, and nothing is written.
+   */
+  public function testTheSchemaRefusesAtPrepare(): void {
+    foreach ([TRUE, FALSE] as $dry_run) {
+      $tool = $this->createTool(self::ADD);
+      $tool->setInputValue(SituationInputs::VALUES, [
+        'field_type' => 'address',
+        'field_name' => 'field_home',
+        'label' => "Two\nlines",
+      ]);
+      $tool->setInputValue(SituationInputs::DRY_RUN, $dry_run);
+      $tool->execute();
+
+      $this->assertFalse($tool->getResult()->isSuccess());
+      $this->assertStringContainsString('label: Labels are not allowed to span multiple lines', (string) $tool->getResultMessage());
+    }
+    $this->assertNull(FieldStorageConfig::loadByName('entity_test', 'field_home'));
+    $this->assertNull($this->reloadField('field_home'));
+  }
+
+  /**
+   * Tests that a machine name storage could not hold is the surface's.
+   */
+  public function testAnInvalidMachineNameIsRefused(): void {
+    $tool = $this->createTool(self::ADD);
+    $tool->setInputValue(SituationInputs::VALUES, [
+      'field_type' => 'address',
+      'field_name' => 'Field Home',
+      'label' => 'Home',
+    ]);
+    $tool->execute();
+
+    $this->assertFalse($tool->getResult()->isSuccess());
+    $this->assertStringContainsString('field_name', (string) $tool->getResultMessage());
+    $this->assertNull(FieldStorageConfig::loadByName('entity_test', 'Field Home'));
   }
 
   /**
@@ -204,13 +373,14 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
    * map, which is what a caller needs to correct itself.
    */
   public function testInvalidOverrideValueCreatesNothing(): void {
-    $tool = $this->createTool('data_surface:field_add');
-    $tool->setInputValue('label', 'Address');
-    $tool->setInputValue('settings', ['field_overrides' => ['organization' => 'mandatory']]);
+    $tool = $this->createTool(self::REUSE);
+    $tool->setInputValue(SituationInputs::VALUES, [
+      'label' => 'Address',
+      'settings' => ['field_overrides' => ['organization' => 'mandatory']],
+    ]);
     $tool->execute();
 
-    $result = $tool->getResult();
-    $this->assertFalse($result->isSuccess());
+    $this->assertFalse($tool->getResult()->isSuccess());
     $message = (string) $tool->getResultMessage();
     $this->assertStringContainsString('field_overrides', $message);
     $this->assertStringContainsString('organization', $message);
@@ -222,29 +392,29 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
    * Tests that a key the surface does not declare is refused.
    */
   public function testUnknownSettingKeyCreatesNothing(): void {
-    $tool = $this->createTool('data_surface:field_add');
-    $tool->setInputValue('label', 'Address');
-    $tool->setInputValue('settings', ['field_overrides' => ['country_code' => 'hidden']]);
+    $tool = $this->createTool(self::REUSE);
+    $tool->setInputValue(SituationInputs::VALUES, [
+      'label' => 'Address',
+      'settings' => ['field_overrides' => ['country_code' => 'hidden']],
+    ]);
     $tool->execute();
 
     $this->assertFalse($tool->getResult()->isSuccess());
-    $this->assertStringContainsString('field_overrides.country_code', (string) $tool->getResultMessage());
+    $this->assertStringContainsString('country_code', (string) $tool->getResultMessage());
     $this->assertNull($this->reloadField());
   }
 
   /**
-   * Tests a partial update clearing one key and keeping its siblings.
+   * Tests a partial edit clearing one key and keeping its siblings.
    */
-  public function testUpdateClearsOneOverrideAndKeepsTheCountries(): void {
+  public function testEditClearsOneOverrideAndKeepsTheCountries(): void {
     $this->addField();
 
-    $tool = $this->createTool('data_surface:field_update');
-    $tool->setInputValue('settings', ['field_overrides' => ['organization' => NULL]]);
+    $tool = $this->createTool(self::EDIT);
+    $tool->setInputValue(SituationInputs::VALUES, ['settings' => ['field_overrides' => ['organization' => NULL]]]);
     $tool->execute();
 
-    $result = $tool->getResult();
-    $this->assertTrue($result->isSuccess(), (string) $tool->getResultMessage());
-
+    $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResultMessage());
     $settings = $this->reloadField()->getSettings();
     $this->assertSame([], $settings['field_overrides']);
     // Untouched by a payload that never mentioned them: the pipeline
@@ -253,15 +423,17 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that an update writes the label and the settings in one save.
+   * Tests that an edit writes the label and the settings in one run.
    */
-  public function testUpdateAppliesLabelAlongsideSettings(): void {
+  public function testEditAppliesLabelAlongsideSettings(): void {
     $this->addField();
 
-    $tool = $this->createTool('data_surface:field_update');
-    $tool->setInputValue('label', 'Postal address');
-    $tool->setInputValue('required', TRUE);
-    $tool->setInputValue('settings', ['available_countries' => ['DE']]);
+    $tool = $this->createTool(self::EDIT);
+    $tool->setInputValue(SituationInputs::VALUES, [
+      'label' => 'Postal address',
+      'required' => TRUE,
+      'settings' => ['available_countries' => ['DE']],
+    ]);
     $tool->execute();
 
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResultMessage());
@@ -276,14 +448,16 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that an update refusing the settings writes nothing at all.
+   * Tests that an edit refusing the settings writes nothing at all.
    */
-  public function testUpdateRefusesInvalidSettingsWithoutWriting(): void {
+  public function testEditRefusesInvalidSettingsWithoutWriting(): void {
     $this->addField();
 
-    $tool = $this->createTool('data_surface:field_update');
-    $tool->setInputValue('label', 'Never stored');
-    $tool->setInputValue('settings', ['available_countries' => ['US', 'ZZ']]);
+    $tool = $this->createTool(self::EDIT);
+    $tool->setInputValue(SituationInputs::VALUES, [
+      'label' => 'Never stored',
+      'settings' => ['available_countries' => ['US', 'ZZ']],
+    ]);
     $tool->execute();
 
     $this->assertFalse($tool->getResult()->isSuccess());
@@ -294,37 +468,217 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that a field type without a surface still works.
+   * Tests that a field type with no settings surface is derived from schema.
    *
-   * The bridge is generic: a field type that declares no surface falls
-   * back to the serialized config schema, which is what the free-form
-   * tools offer for every field type.
+   * The field instance surface's settings slot is filled by every field
+   * type's settings surface, and, for every field type offered in the UI
+   * that has none, by a variant derived from its config schema,
+   * `field.field_settings.<field type>`. The declared variant wins where
+   * there is one: the address field type's settings are still its own
+   * surface.
    */
-  public function testFieldTypeWithoutSurfaceFallsBack(): void {
-    FieldStorageConfig::create([
-      'field_name' => 'field_plain',
-      'entity_type' => 'entity_test',
-      'type' => 'string',
-    ])->save();
+  public function testFieldTypeWithoutSettingsSurfaceIsDerivedFromSchema(): void {
+    $tool = $this->createTool(self::ADD);
+    $values = $tool->getInputDefinition(SituationInputs::VALUES);
+    $this->assertInstanceOf(MapInputDefinition::class, $values);
+    $choices = $values->getPropertyDefinitions()['field_type']->getConstraint('Choice')['choices'];
+    $this->assertContains('address', $choices);
+    $this->assertContains('string', $choices);
+    $this->assertContains('integer', $choices);
 
-    $tool = $this->toolManager->createInstance('data_surface:field_add');
-    $tool->setInputValue('entity_type_id', 'entity_test');
-    $tool->setInputValue('bundle', 'entity_test');
-    $tool->setInputValue('field_name', 'field_plain');
-    $tool->setInputValue('label', 'Plain');
-    $definition = $tool->getInputDefinition('settings');
-    assert($definition instanceof MapInputDefinition);
-    // The string field type's instance settings schema is empty, so
-    // there is nothing to describe and nothing to guess either.
-    $this->assertSame([], $definition->getPropertyDefinitions());
-
-    $tool->execute();
-    $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResultMessage());
-    $this->assertNotNull(FieldConfig::loadByName('entity_test', 'entity_test', 'field_plain'));
+    $surface = $this->container->get('data_surface.surfaces')->build(FieldInstanceSurface::class, new SurfaceContext('configure'));
+    $slot = $surface->getDefinitions()->entry('settings')?->slot;
+    $this->assertNotNull($slot);
+    $this->assertSame(AddressFieldSettingsSurface::class, $slot->variant('address')->source);
+    $this->assertNull($slot->variant('string')->source);
+    $this->assertSame([], $slot->variant('string')->child->getDefinitions()->names());
+    $this->assertSame(['min', 'max', 'prefix', 'suffix'], $slot->variant('integer')->child->getDefinitions()->names());
   }
 
   /**
-   * Tests that neither tool runs for an account without the permission.
+   * Tests that a plain string field is added and edited by the tools.
+   */
+  public function testStringFieldIsAddedAndEdited(): void {
+    $tool = $this->createTool(self::ADD);
+    $tool->setInputValue(SituationInputs::VALUES, [
+      'field_type' => 'string',
+      'field_name' => 'field_plain',
+      'label' => 'Plain',
+    ]);
+    $tool->execute();
+    $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResultMessage());
+    $this->assertSame('string', FieldStorageConfig::loadByName('entity_test', 'field_plain')?->getType());
+
+    $tool = $this->toolManager->createInstance(self::EDIT);
+    $tool->setInputValue('field', 'entity_test.entity_test.field_plain');
+    $tool->setInputValue(SituationInputs::VALUES, ['label' => 'Plainer', 'required' => TRUE]);
+    $tool->execute();
+    $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResultMessage());
+    $field = $this->reloadField('field_plain');
+    $this->assertSame('Plainer', $field->getLabel());
+    $this->assertTrue($field->isRequired());
+  }
+
+  /**
+   * Tests that derived settings are typed by the schema, and stored.
+   */
+  public function testDerivedSettingsAreTypedAndStored(): void {
+    $tool = $this->createTool(self::ADD);
+    $tool->setInputValue(SituationInputs::VALUES, [
+      'field_type' => 'integer',
+      'field_name' => 'field_count',
+      'label' => 'Count',
+      'settings' => ['max' => 10, 'suffix' => ' items'],
+    ]);
+    $tool->execute();
+    $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResultMessage());
+    $settings = $this->reloadField('field_count')->getSettings();
+    $this->assertSame(10, $settings['max']);
+    $this->assertSame(' items', $settings['suffix']);
+
+    $tool = $this->toolManager->createInstance(self::EDIT);
+    $tool->setInputValue('field', 'entity_test.entity_test.field_count');
+    $tool->setInputValue(SituationInputs::VALUES, ['settings' => ['max' => 'ten']]);
+    $tool->execute();
+    $this->assertFalse($tool->getResult()->isSuccess());
+    $this->assertSame(10, $this->reloadField('field_count')->getSettings()['max']);
+  }
+
+  /**
+   * Adds a string field with a short storage, through the add tool.
+   *
+   * @return \Drupal\tool\Tool\ToolInterface
+   *   The executed tool.
+   */
+  protected function addShortStringField() {
+    $tool = $this->createTool(self::ADD);
+    $tool->setInputValue(SituationInputs::VALUES, [
+      'field_type' => 'string',
+      'field_name' => 'field_code',
+      'label' => 'Code',
+      'storage' => [
+        'field_type' => 'string',
+        'settings' => ['max_length' => 64],
+      ],
+    ]);
+    $tool->execute();
+    return $tool;
+  }
+
+  /**
+   * Edits the short string field's storage through its own tool.
+   *
+   * @param array $values
+   *   The storage values to send.
+   *
+   * @return \Drupal\tool\Tool\ToolInterface
+   *   The executed tool.
+   */
+  protected function editCodeStorage(array $values) {
+    $tool = $this->toolManager->createInstance('data_surface:field.storage:edit');
+    $tool->setInputValue('storage', 'entity_test.field_code');
+    $tool->setInputValue(SituationInputs::VALUES, $values);
+    $tool->execute();
+    return $tool;
+  }
+
+  /**
+   * Reloads the short string field's storage.
+   *
+   * @return \Drupal\field\FieldStorageConfigInterface|null
+   *   The storage, or NULL when it was never created.
+   */
+  protected function reloadCodeStorage(): ?FieldStorageConfigInterface {
+    $this->container->get('entity_type.manager')->getStorage('field_storage_config')->resetCache();
+    return FieldStorageConfig::loadByName('entity_test', 'field_code');
+  }
+
+  /**
+   * Tests that a storage setting is set when a field is added.
+   *
+   * The storage's settings are a slot its field type chooses, filled for
+   * `string` from `field.storage_settings.string`. Adding a field leaves
+   * the type open on both levels, so a caller describing the storage's
+   * settings names it on the storage too; a type other than the field's
+   * is refused when the storage is prepared, and nothing is written.
+   */
+  public function testStorageSettingsAreSetWhenTheFieldIsAdded(): void {
+    $values = $this->createTool(self::ADD)->getInputDefinition(SituationInputs::VALUES);
+    $this->assertInstanceOf(MapInputDefinition::class, $values);
+    $storage = $values->getPropertyDefinitions()['storage'];
+    $this->assertInstanceOf(MapInputDefinition::class, $storage);
+    $this->assertSame(['field_type', 'cardinality', 'translatable', 'settings'], array_keys($storage->getPropertyDefinitions()));
+
+    $tool = $this->addShortStringField();
+    $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResultMessage());
+    $this->assertSame(64, $this->reloadCodeStorage()?->getSetting('max_length'));
+
+    $tool = $this->createTool(self::ADD);
+    $tool->setInputValue(SituationInputs::VALUES, [
+      'field_type' => 'string',
+      'field_name' => 'field_mixed',
+      'label' => 'Mixed',
+      'storage' => ['field_type' => 'integer'],
+    ]);
+    $tool->execute();
+    $this->assertFalse($tool->getResult()->isSuccess());
+    $this->assertStringContainsString('field_type', (string) $tool->getResultMessage());
+    $this->assertNull(FieldStorageConfig::loadByName('entity_test', 'field_mixed'));
+  }
+
+  /**
+   * Tests that the storage tool changes a storage setting.
+   *
+   * Editing knows the field type, so it is locked and left out of the
+   * tool's values, and the settings are the string's from the start.
+   */
+  public function testStorageEditChangesOneStorageSetting(): void {
+    $this->addShortStringField();
+
+    $tool = $this->toolManager->createInstance('data_surface:field.storage:edit');
+    $tool->setInputValue('storage', 'entity_test.field_code');
+    $values = $tool->getInputDefinition(SituationInputs::VALUES);
+    $this->assertInstanceOf(MapInputDefinition::class, $values);
+    $this->assertSame(['cardinality', 'translatable', 'settings'], array_keys($values->getPropertyDefinitions()));
+    $settings = $values->getPropertyDefinitions()['settings'];
+    $this->assertInstanceOf(MapInputDefinition::class, $settings);
+    $this->assertContains('max_length', array_keys($settings->getPropertyDefinitions()));
+
+    $tool = $this->editCodeStorage(['settings' => ['max_length' => 32]]);
+    $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResultMessage());
+    $this->assertSame(32, $this->reloadCodeStorage()?->getSetting('max_length'));
+  }
+
+  /**
+   * Tests that a storage with data keeps its cardinality and its columns.
+   *
+   * The edit situation still constrains cardinality not to shrink; a
+   * settings change that would alter the database columns is refused at
+   * prepare, where the SQL storage would otherwise throw on save.
+   */
+  public function testStorageWithDataKeepsItsCardinalityAndColumns(): void {
+    $this->addShortStringField();
+    $this->editCodeStorage(['cardinality' => 2]);
+    $this->container->get('entity_type.manager')->getStorage('entity_test')
+      ->create(['field_code' => ['A1', 'B2']])
+      ->save();
+
+    $tool = $this->editCodeStorage(['cardinality' => 1]);
+    $this->assertFalse($tool->getResult()->isSuccess());
+    $this->assertStringContainsString('cardinality', (string) $tool->getResultMessage());
+
+    $tool = $this->editCodeStorage(['settings' => ['max_length' => 16]]);
+    $this->assertFalse($tool->getResult()->isSuccess());
+    $this->assertStringContainsString('has data', (string) $tool->getResultMessage());
+
+    $storage = $this->reloadCodeStorage();
+    $this->assertNotNull($storage);
+    $this->assertSame(2, $storage->getCardinality());
+    $this->assertSame(64, $storage->getSetting('max_length'));
+  }
+
+  /**
+   * Tests that no tool runs for an account without the permission.
    *
    * Two layers, because execute() runs no access check of its own: the
    * tool's access() answer, which is what an invoker asks, and the
@@ -335,72 +689,51 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
     $this->addField();
     $stranger = $this->createUser();
 
-    $add = $this->createTool('data_surface:field_add');
-    $add->setInputValue('field_name', 'field_plain');
-    $add->setInputValue('label', 'Plain');
-    $this->assertFalse($add->access($stranger));
+    foreach ([self::ADD, self::REUSE, self::EDIT] as $id) {
+      $tool = $this->createTool($id);
+      $this->assertFalse($tool->access($stranger), $id);
+    }
 
-    $update = $this->createTool('data_surface:field_update');
-    $update->setInputValue('label', 'Renamed');
-    $this->assertFalse($update->access($stranger));
-
-    // The same two tools run as the stranger anyway.
+    // The edit tool run as the stranger anyway.
     $this->setCurrentUser($stranger);
-    $update = $this->createTool('data_surface:field_update');
-    $update->setInputValue('label', 'Renamed');
-    $update->execute();
-    $this->assertFalse($update->getResult()->isSuccess());
+    $edit = $this->createTool(self::EDIT);
+    $edit->setInputValue(SituationInputs::VALUES, ['label' => 'Renamed']);
+    $edit->execute();
+    $this->assertFalse($edit->getResult()->isSuccess());
     $this->assertSame('Address', $this->reloadField()->label());
   }
 
   /**
-   * Tests that a privileged account is allowed by both tools.
+   * Tests that a privileged account is allowed by every tool.
    */
   public function testAccessIsAllowedWithFieldAdministration(): void {
     $this->addField();
     $account = $this->createUser([self::PERMISSION]);
 
-    $add = $this->createTool('data_surface:field_add');
-    $add->setInputValue('field_name', 'field_plain');
-    $add->setInputValue('label', 'Plain');
-    $this->assertTrue($add->access($account));
-
-    $update = $this->createTool('data_surface:field_update');
-    $update->setInputValue('label', 'Renamed');
-    $this->assertTrue($update->access($account));
+    $this->assertTrue($this->createTool(self::EDIT)->access($account));
+    // The two that create take values that are required, so their own
+    // access check is asked directly, with the parameters alone.
+    $this->assertTrue($this->toolAccess(self::ADD, ['entity_type_id' => 'entity_test', 'bundle' => 'entity_test'], $account)->isAllowed());
+    $reuse = ['storage' => 'entity_test.field_address', 'bundle' => 'entity_test'];
+    $this->assertTrue($this->toolAccess(self::REUSE, $reuse, $account)->isAllowed());
   }
 
   /**
-   * Tests that an entity type id naming nothing is refused, not spelled.
+   * Tests that a subject naming nothing is refused, not spelled.
    *
-   * The guard behind the input constraint, and the one the permission
-   * name depends on: no permission is assembled out of an id until the
-   * entity type manager has said the id names something. The input
-   * constraint refuses such an id before access() is reached, so the
-   * check is asked directly here — which is also how doExecute() and any
-   * PHP caller reach it.
+   * The permission is named from the identity the situation's context
+   * knows. An entity type that does not exist names a permission nobody
+   * holds; a field or a storage that does not exist builds no context at
+   * all, and the refusal says nothing about why.
    */
-  public function testAccessIsDeniedForAnUnknownEntityType(): void {
+  public function testAccessIsDeniedForAnUnknownSubject(): void {
     $account = $this->createUser([self::PERMISSION]);
-    $values = [
-      'entity_type_id' => 'no_such_entity_type',
-      'bundle' => 'entity_test',
-      'field_name' => 'field_address',
-    ];
 
-    foreach (['data_surface:field_add', 'data_surface:field_update'] as $id) {
-      $result = $this->toolAccess($id, $values, $account);
-      $this->assertTrue($result->isForbidden(), $id . ' refuses an unknown entity type.');
-    }
-
-    // And a field that does not exist is refused by the update tool with
-    // no reason attached, so the refusal says nothing about the field.
-    $result = $this->toolAccess('data_surface:field_update', [
-      'entity_type_id' => 'entity_test',
-      'bundle' => 'entity_test',
-      'field_name' => 'field_nothing',
-    ], $account);
-    $this->assertTrue($result->isForbidden());
+    $add = ['entity_type_id' => 'no_such_entity_type', 'bundle' => 'entity_test'];
+    $this->assertTrue($this->toolAccess(self::ADD, $add, $account)->isForbidden());
+    $reuse = ['storage' => 'entity_test.field_nothing', 'bundle' => 'entity_test'];
+    $this->assertTrue($this->toolAccess(self::REUSE, $reuse, $account)->isForbidden());
+    $this->assertTrue($this->toolAccess(self::EDIT, ['field' => 'entity_test.entity_test.field_nothing'], $account)->isForbidden());
   }
 
   /**
@@ -415,11 +748,8 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
    *
    * What cannot survive is stated where it is lost, in
    * SurfaceInputDefinitions::outputsFromSurface(): example values and
-   * type settings, which the Tool API has nowhere to put, and the
-   * refinement edges, because the Tool API has an
-   * input_definition_refiners and no output counterpart. A caller that
-   * wants the narrowed answer converts a surface it has already put
-   * through refineOutputs().
+   * type settings, which the Tool API has nowhere to put. Outputs are
+   * never refined, so there are no refinement edges to lose.
    */
   public function testOutputsConvertToOutputDefinitions(): void {
     $meta = MapDataDefinition::create()->setLabel(new TranslatableMarkup('Meta'));

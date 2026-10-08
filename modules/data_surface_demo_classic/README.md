@@ -11,7 +11,7 @@ each plugin, behaving the same way, written two ways.
 
 | The classic way | The surface way |
 | --- | --- |
-| [`ClassicDemoBlock`](src/Plugin/Block/ClassicDemoBlock.php) | [`DataSurfaceDemoBlock`](../data_surface_demo/src/Plugin/Block/DataSurfaceDemoBlock.php) |
+| [`ClassicDemoBlock`](src/Plugin/Block/ClassicDemoBlock.php) | [`DataSurfaceDemoBlock`](../data_surface_demo/src/Plugin/Block/DataSurfaceDemoBlock.php) and its [`DemoBlockSurface`](../data_surface_demo/src/Surface/DemoBlockSurface.php) |
 | [`ClassicDemoFormatter`](src/Plugin/Field/FieldFormatter/ClassicDemoFormatter.php) | [`DataSurfaceDemoFormatter`](../data_surface_demo/src/Plugin/Field/FieldFormatter/DataSurfaceDemoFormatter.php) |
 
 The classic side is written to be good code, not to lose. It uses the
@@ -42,13 +42,14 @@ prose.
 | | Classic | | Surface | |
 | --- | ---: | ---: | ---: | ---: |
 | | **lines** | **code** | **lines** | **code** |
-| Block plugin | 375 | 219 | 242 | 148 |
-| Formatter plugin | 285 | 167 | 151 | 101 |
-| Variant vocabulary | — | — | 116 | 40 |
-| Config schema | 45 | 41 | 60 | 53 |
-| **Total** | **705** | **427** | **569** | **342** |
+| Block plugin and its surfaces | 434 | 264 | 264 | 142 |
+| Field list (constraint, validator, resolver) | — | — | 198 | 103 |
+| Formatter plugin and its surface | 285 | 167 | 168 | 95 |
+| Variant vocabulary | — | — | 120 | 40 |
+| Config schema | 64 | 58 | 81 | 70 |
+| **Total** | **783** | **489** | **831** | **450** |
 
-Three of those rows are worth a sentence.
+Five of those rows are worth a sentence.
 
 - The **variant vocabulary** is `DemoVariant`, an enum the surface
   formatter shares between its declaration and its refiner. It is counted
@@ -57,13 +58,31 @@ Three of those rows are worth a sentence.
   same vocabulary inline in `variants()` and `variantsFor()`, beside a
   `casings()` list the surface side gets from its declaration, and those
   lines are already inside its 285.
+- The **formatter** is two files on the surface side: the plugin,
+  which only shows a value (`formatValue()`), and
+  `DemoFormatterSurface`, which its `#[UsesSurface]` names and which
+  declares its settings and its outputs side by side. Its refiner is one
+  `#[RefinesInput]` method, and its outputs have none, because outputs
+  are never refined.
 - The **config schema** is *longer* on the surface side, not shorter.
   Both versions hand-maintain a schema file; the surface one also
   declares the `third_party_settings` namespace other modules mount into,
   which the classic version has no way to offer.
-- The **block plugin** difference is smaller than the formatter's,
-  because both block files carry the same forty-odd lines of dependency
-  injection, which neither approach changes.
+- The **block plugin** is four files on the surface side: the plugin,
+  which only renders; `DemoBlockSurface`, which its `#[UsesSurface]`
+  names; and the two presentation surfaces its slot names,
+  `ListPresentationSurface` and `GridPresentationSurface`. None holds a
+  service. The slot is where the classic block grew most: a third
+  AJAX-wired select, a details element whose children depend on it,
+  per-presentation defaults, and storage written per presentation, all
+  by hand. On the surface side it is one `attachBy()` and two classes of
+  a few lines each.
+- The **field list** is where the services went. A surface refiner
+  points at a list rather than fetching it, and no core constraint names
+  a bundle's fields, so the demo brings one, its validator, and the
+  options resolver that reads it — more lines than the classic block
+  spends fetching the same list inline. The bundle list needs nothing of
+  the kind, because core's `EntityBundleExists` already says it.
 
 ## Concepts, which is the real difference
 
@@ -78,17 +97,19 @@ approach changes.
 
 | What the author has to touch | Classic | Surface |
 | --- | ---: | ---: |
-| Form API element definitions | 8 | 0 |
-| AJAX wiring (`#ajax` arrays, callbacks, wrappers) | 4 | 0 |
-| Value casting and storage assignments | 7 | 0 |
-| Default values written out | 6 | 0 |
+| Form API element definitions | 11 | 0 |
+| AJAX wiring (`#ajax` arrays, callbacks, wrappers) | 5 | 0 |
+| Value casting and storage assignments | 8 | 0 |
+| Default values written out | 8 | 0 |
+| Variant swapping by hand (rebuild read, per-variant defaults and storage) | 3 | 0 |
 | Validation written by hand | 1 | 0 |
 | Label lists kept in step with the form | 1 | 0 |
-| Live option lists read from the site | 3 | 2 |
-| Surface declaration | 0 | 1 |
-| Refiner method dispatching to those lists | 0 | 1 |
+| Live option lists read from the site | 3 | 1 |
+| Constraint naming a list, with its validator | 0 | 1 |
+| Surface classes (the block's, and its slot's two children) | 0 | 3 |
+| Refiner methods pointing at those lists | 0 | 2 |
 | Config schema files | 1 | 1 |
-| **Distinct mechanisms in play** | **8** | **4** |
+| **Distinct mechanisms in play** | **9** | **5** |
 
 ### The formatter
 
@@ -100,12 +121,12 @@ approach changes.
 | Vocabulary lists kept in step | 4 | 1 |
 | Default values written out | 3 | 0 |
 | Settings summary assembled by hand | 1 | 0 |
-| Surface declaration (settings and outputs together) | 0 | 1 |
-| Refiner methods (input and output) | 0 | 2 |
+| Surface class (settings and outputs together) | 0 | 1 |
+| Refiner methods | 0 | 1 |
 | Config schema files | 1 | 1 |
 | **Distinct mechanisms in play** | **8** | **4** |
 
-Eight against four on the block, eight against four on the formatter. The
+Nine against five on the block, eight against four on the formatter. The
 mechanisms the classic version sheds — form elements, AJAX, storage,
 defaults, validation — are also the ones that have to agree with each
 other, and nothing checks that they do: a key added to

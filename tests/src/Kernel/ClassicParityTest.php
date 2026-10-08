@@ -91,7 +91,8 @@ class ClassicParityTest extends DataSurfaceKernelTestBase {
       'field' => NULL,
       'headline' => 'Featured content',
       'limit' => 10,
-      'show_summary' => TRUE,
+      'presentation' => 'list',
+      'presentation_settings' => ['show_summary' => TRUE],
     ], $this->settingsOf($surface));
   }
 
@@ -106,11 +107,13 @@ class ClassicParityTest extends DataSurfaceKernelTestBase {
    *   The submitted values.
    * @param array $expected
    *   The configuration both blocks must end up holding.
+   * @param array $start
+   *   The configuration both blocks hold when their form is built.
    */
   #[DataProvider('blockSubmissions')]
-  public function testBlocksStoreTheSameConfiguration(array $input, array $expected): void {
-    $surface = $this->submitBlock($this->createBlock('data_surface_demo'), $input);
-    $classic = $this->submitBlock($this->createBlock('data_surface_demo_classic'), $input);
+  public function testBlocksStoreTheSameConfiguration(array $input, array $expected, array $start = []): void {
+    $surface = $this->submitBlock($this->createBlock('data_surface_demo', $start), $input);
+    $classic = $this->submitBlock($this->createBlock('data_surface_demo_classic', $start), $input);
 
     $this->assertSame($expected, $surface);
     $this->assertSame($classic, $surface);
@@ -119,8 +122,10 @@ class ClassicParityTest extends DataSurfaceKernelTestBase {
   /**
    * Supplies submissions and the configuration each must produce.
    *
-   * @return array<string, array{array, array}>
-   *   The submitted values and the expected settings, keyed by case.
+   * @return array<string, array{0: array, 1: array, 2?: array}>
+   *   The submitted values, the expected settings and, for a case that
+   *   needs one, the configuration the form is built from, keyed by
+   *   case.
    */
   public static function blockSubmissions(): array {
     return [
@@ -131,7 +136,8 @@ class ClassicParityTest extends DataSurfaceKernelTestBase {
           'bundle' => 'article',
           'field' => 'title',
           'limit' => '5',
-          'show_summary' => 0,
+          'presentation' => 'list',
+          'presentation_settings' => ['show_summary' => 0],
         ],
         [
           'bundle' => 'article',
@@ -139,7 +145,8 @@ class ClassicParityTest extends DataSurfaceKernelTestBase {
           'field' => 'title',
           'headline' => 'Latest articles',
           'limit' => 5,
-          'show_summary' => FALSE,
+          'presentation' => 'list',
+          'presentation_settings' => ['show_summary' => FALSE],
         ],
       ],
       'optional selects left alone' => [
@@ -149,7 +156,8 @@ class ClassicParityTest extends DataSurfaceKernelTestBase {
           'bundle' => '',
           'field' => '',
           'limit' => '1',
-          'show_summary' => 1,
+          'presentation' => 'list',
+          'presentation_settings' => ['show_summary' => 1],
         ],
         [
           'bundle' => NULL,
@@ -157,7 +165,8 @@ class ClassicParityTest extends DataSurfaceKernelTestBase {
           'field' => NULL,
           'headline' => 'Everything',
           'limit' => 1,
-          'show_summary' => TRUE,
+          'presentation' => 'list',
+          'presentation_settings' => ['show_summary' => TRUE],
         ],
       ],
       'a bundle with no fields to pick from' => [
@@ -167,7 +176,8 @@ class ClassicParityTest extends DataSurfaceKernelTestBase {
           'bundle' => 'user',
           'field' => '',
           'limit' => '50',
-          'show_summary' => '1',
+          'presentation' => 'list',
+          'presentation_settings' => ['show_summary' => '1'],
         ],
         [
           'bundle' => 'user',
@@ -175,8 +185,30 @@ class ClassicParityTest extends DataSurfaceKernelTestBase {
           'field' => NULL,
           'headline' => 'People',
           'limit' => 50,
-          'show_summary' => TRUE,
+          'presentation' => 'list',
+          'presentation_settings' => ['show_summary' => TRUE],
         ],
+      ],
+      'a grid, its settings in place of the list\'s' => [
+        [
+          'headline' => 'Gallery',
+          'entity_type' => 'user',
+          'bundle' => '',
+          'field' => '',
+          'limit' => '12',
+          'presentation' => 'grid',
+          'presentation_settings' => ['columns' => '4'],
+        ],
+        [
+          'bundle' => NULL,
+          'entity_type' => 'user',
+          'field' => NULL,
+          'headline' => 'Gallery',
+          'limit' => 12,
+          'presentation' => 'grid',
+          'presentation_settings' => ['columns' => 4],
+        ],
+        ['presentation' => 'grid', 'presentation_settings' => ['columns' => 3]],
       ],
     ];
   }
@@ -190,7 +222,8 @@ class ClassicParityTest extends DataSurfaceKernelTestBase {
       'entity_type' => 'node',
       'bundle' => 'article',
       'limit' => 5,
-      'show_summary' => FALSE,
+      'presentation' => 'list',
+      'presentation_settings' => ['show_summary' => FALSE],
     ];
     $surface = $this->createBlock('data_surface_demo', $configuration)->build();
     $classic = $this->createBlock('data_surface_demo_classic', $configuration)->build();

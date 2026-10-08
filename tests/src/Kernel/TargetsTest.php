@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
-use Drupal\Core\Config\Config;
-use Drupal\Core\Config\MemoryStorage;
-use Drupal\Core\Form\ToConfig;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\data_surface\DataSurface;
 use Drupal\data_surface\DefinitionMap;
@@ -18,20 +15,17 @@ use Drupal\data_surface\Pipeline\PreparedValues;
 use Drupal\data_surface\Pipeline\TargetViolationsException;
 use Drupal\data_surface\Target\CompositeTarget;
 use Drupal\data_surface\Target\ConfigEntityTarget;
-use Drupal\data_surface\Target\ConfigObjectTarget;
 use Drupal\data_surface\Target\SchemaViolations;
 use Drupal\data_surface\Target\StateTarget;
 use Drupal\data_surface_test\RecordingTarget;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
-use Symfony\Component\EventDispatcher\EventDispatcher;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * Tests the config object, config entity and composite targets.
+ * Tests the config entity and composite targets.
  *
- * The three destinations the pipeline needs before any real form can go
- * through it: a simple config object, a config entity, and several of
- * those at once. What each one has to prove is the same: it reads its
+ * Two of the engine's destinations: a config entity, and several
+ * targets at once. What each one has to prove is the same: it reads its
  * own storage back in surface shape, it shapes values without writing,
  * it folds the config schema's opinion into the same violation shape the
  * surface uses, and it writes only when told to.
@@ -56,19 +50,16 @@ class TargetsTest extends DataSurfaceKernelTestBase {
   protected const STATE_KEY = 'data_surface.targets';
 
   /**
+   * The state key a second state target writes to.
+   */
+  protected const OTHER_STATE_KEY = 'data_surface.targets_other';
+
+  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
     parent::setUp();
     $this->installConfig(['system']);
-    // A real site's system.site carries a site identifier and a name,
-    // and the schema says so. The config shipped with the module leaves
-    // both empty, which is not much like the thing under test.
-    $this->config('system.site')
-      ->set('uuid', $this->container->get('uuid')->generate())
-      ->set('name', 'Drupal')
-      ->set('slogan', '')
-      ->save();
   }
 
   /**
@@ -82,11 +73,9 @@ class TargetsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Builds the surface the config object target is tested against.
+   * Builds the surface the composite target is tested against.
    *
-   * A site name and a slogan, both of which the config schema describes
-   * as labels, so the storage has an opinion about them that the surface
-   * itself never states.
+   * A site name and a slogan: two keys, for two destinations.
    */
   protected function siteSurface(): DataSurfaceInterface {
     $definitions = [
@@ -96,199 +85,6 @@ class TargetsTest extends DataSurfaceKernelTestBase {
     DefinitionMetadata::setDefaultValue($definitions['name'], 'Drupal');
     DefinitionMetadata::setDefaultValue($definitions['slogan'], '');
     return new DataSurface(DefinitionMap::fromArrays(definitions: $definitions));
-  }
-
-  /**
-   * Builds a config object target pointed at the active system.site.
-   *
-   * @param array $to_config
-   *   Callables turning surface values into stored values.
-   *
-   * @return \Drupal\data_surface\Target\ConfigObjectTarget
-   *   The target.
-   */
-  protected function siteTarget(array $to_config = []): ConfigObjectTarget {
-    return new ConfigObjectTarget(
-      $this->config('system.site'),
-      ['name', 'slogan'],
-      $this->typedConfig(),
-      $to_config,
-    );
-  }
-
-  /**
-   * Tests reading, preparing and writing one simple config object.
-   */
-  public function testConfigObjectRoundTrip(): void {
-    $surface = $this->siteSurface();
-    $target = $this->siteTarget();
-
-    $this->assertSame(['name' => 'Drupal', 'slogan' => ''], $target->load($surface));
-
-    $result = $this->pipeline()->submit($surface, ['name' => 'Surface site', 'slogan' => 'One way in'], $target);
-
-    $this->assertTrue($result->isValid());
-    $this->assertTrue($result->committed);
-    $this->assertInstanceOf(Config::class, $result->prepared->artifact);
-    $this->assertSame([], $result->prepared->dependencies);
-
-    $stored = $this->container->get('config.factory')->get('system.site');
-    $this->assertSame('Surface site', $stored->get('name'));
-    $this->assertSame('One way in', $stored->get('slogan'));
-    // Everything the surface says nothing about is still there.
-    $this->assertSame('/user/login', $stored->get('page.front'));
-
-    // And a second target reads back exactly what the first wrote.
-    $this->assertSame(
-      ['name' => 'Surface site', 'slogan' => 'One way in'],
-      $this->siteTarget()->load($surface),
-    );
-  }
-
-  /**
-   * Tests a to_config callable, including the one that clears a key.
-   */
-  public function testConfigObjectCallables(): void {
-    $surface = $this->siteSurface();
-    $shout = static fn (mixed $value): mixed => is_string($value) && $value !== ''
-      ? strtoupper($value)
-      : ToConfig::DeleteKey;
-
-    $this->pipeline()->submit(
-      $surface,
-      ['name' => 'Surface site', 'slogan' => 'one way in'],
-      $this->siteTarget(['slogan' => $shout]),
-    );
-    $this->assertSame('ONE WAY IN', $this->container->get('config.factory')->get('system.site')->get('slogan'));
-
-    // An empty slogan asks for the key to go away rather than to be
-    // stored as an empty string.
-    $this->pipeline()->submit(
-      $surface,
-      ['name' => 'Surface site', 'slogan' => ''],
-      $this->siteTarget(['slogan' => $shout]),
-    );
-    $raw = $this->container->get('config.factory')->get('system.site')->getRawData();
-    $this->assertArrayNotHasKey('slogan', $raw);
-    $this->assertArrayHasKey('name', $raw);
-
-    // A callable may also decline to say anything at all.
-    $this->pipeline()->submit(
-      $surface,
-      ['name' => 'Surface site', 'slogan' => 'ignored'],
-      $this->siteTarget(['slogan' => static fn (): ToConfig => ToConfig::NoOp]),
-    );
-    $this->assertArrayNotHasKey('slogan', $this->container->get('config.factory')->get('system.site')->getRawData());
-  }
-
-  /**
-   * Tests the config schema refusing a value the surface allowed.
-   */
-  public function testConfigObjectSchemaViolations(): void {
-    $surface = $this->siteSurface();
-    $target = $this->siteTarget();
-    // A site name is a label, and a label may not span lines. The
-    // surface says nothing about that: it is the storage's own opinion,
-    // and it arrives through the target.
-    $values = $this->pipeline()->accept($surface, ['name' => "Two\nlines", 'slogan' => 'Fine']);
-    $this->assertCount(0, $this->pipeline()->validate($surface, $values));
-
-    try {
-      $this->pipeline()->prepare($surface, $values, $target);
-      $this->fail('Expected a TargetViolationsException.');
-    }
-    catch (TargetViolationsException $e) {
-      $violations = $e->getViolations();
-      $this->assertSame(['name'], $violations->keys());
-      $this->assertSame('', $violations->byKey('name')[0]->path);
-      $this->assertStringContainsString('multiple lines', (string) $violations->byKey('name')[0]->message);
-    }
-
-    // Nothing was written: prepare only shapes.
-    $this->assertSame('Drupal', $this->container->get('config.factory')->get('system.site')->get('name'));
-  }
-
-  /**
-   * Tests that shaping does not dirty the config object it was handed.
-   *
-   * The config object a target is given is nearly always the one the
-   * config factory has cached and the rest of the request is reading, so
-   * a rehearsal that set values on it would be visible site-wide and any
-   * later unrelated save of it would persist a submission nobody
-   * accepted.
-   */
-  public function testConfigObjectDryRunLeavesTheCallersConfigAlone(): void {
-    $surface = $this->siteSurface();
-    $config = $this->config('system.site');
-    $target = new ConfigObjectTarget($config, ['name', 'slogan'], $this->typedConfig());
-
-    $result = $this->pipeline()->submit($surface, ['name' => 'Rehearsed', 'slogan' => 'Not yet'], $target, TRUE);
-
-    $this->assertTrue($result->isValid());
-    $this->assertFalse($result->committed);
-    $this->assertSame('Rehearsed', $result->prepared->artifact->get('name'));
-    // The caller's object, and the active storage behind it, are as they
-    // were.
-    $this->assertSame('Drupal', $config->get('name'));
-    $this->assertSame('Drupal', $this->container->get('config.factory')->get('system.site')->get('name'));
-  }
-
-  /**
-   * Tests a foreign violation not blocking a write it has nothing to do with.
-   *
-   * The probed bug: system.site's front page is a required path, so a
-   * config object holding an empty one refused every submission of the
-   * site name, naming a key the surface never declared.
-   */
-  public function testConfigObjectIgnoresForeignViolations(): void {
-    $surface = $this->siteSurface();
-    // The site's notification address is not something this surface
-    // declares, and it is not valid.
-    $this->config('system.site')->set('mail', 'not an address')->save();
-
-    $result = $this->pipeline()->submit($surface, ['name' => 'Unaffected', 'slogan' => ''], $this->siteTarget());
-
-    $this->assertCount(0, $result->violations);
-    $this->assertTrue($result->committed);
-    $this->assertSame('Unaffected', $this->container->get('config.factory')->get('system.site')->get('name'));
-
-    // Asked for the whole picture, the schema still has its say.
-    $everything = SchemaViolations::collect(
-      $this->typedConfig(),
-      'system.site',
-      $this->container->get('config.factory')->get('system.site')->getRawData(),
-      ['name' => 'name', 'slogan' => 'slogan'],
-      FALSE,
-    );
-    $this->assertContains('mail', $everything->keys());
-  }
-
-  /**
-   * Tests a dry run into a config object built on a memory storage.
-   *
-   * The one genuine per-object storage swap the config system offers: a
-   * Config holds the storage it was given, so this commit is a real
-   * write that the active storage never hears about. The rehearsal gets
-   * its own event dispatcher too, so the save it performs does not reach
-   * the listeners the live config factory keeps.
-   */
-  public function testConfigObjectDryRunIntoMemoryStorage(): void {
-    $surface = $this->siteSurface();
-    $active = $this->container->get('config.storage');
-    $storage = new MemoryStorage();
-    $config = new Config('system.site', $storage, new EventDispatcher(), $this->typedConfig());
-    $config->initWithData($active->read('system.site'));
-    $target = new ConfigObjectTarget($config, ['name', 'slogan'], $this->typedConfig());
-
-    $result = $this->pipeline()->submit($surface, ['name' => 'Rehearsal', 'slogan' => 'Not for real'], $target);
-
-    $this->assertTrue($result->isValid());
-    $this->assertTrue($result->committed);
-    $this->assertSame('Rehearsal', $storage->read('system.site')['name']);
-    // The active storage was never touched, and neither was the view of
-    // it the rest of the site reads.
-    $this->assertSame('Drupal', $active->read('system.site')['name']);
-    $this->assertSame('Drupal', $this->container->get('config.factory')->get('system.site')->get('name'));
   }
 
   /**
@@ -643,12 +439,13 @@ class TargetsTest extends DataSurfaceKernelTestBase {
     $surface = $this->siteSurface();
     $state = $this->container->get('state');
     $composite = new CompositeTarget([
-      [$this->siteTarget(), ['name']],
+      [new StateTarget($state, self::OTHER_STATE_KEY), ['name']],
       [new StateTarget($state, self::STATE_KEY), ['slogan']],
     ]);
 
     // Loading is the two children's answers side by side, each child
     // speaking only for the keys it owns.
+    $state->set(self::OTHER_STATE_KEY, ['name' => 'Drupal']);
     $state->set(self::STATE_KEY, ['slogan' => 'From state']);
     $this->assertSame(['name' => 'Drupal', 'slogan' => 'From state'], $composite->load($surface));
 
@@ -656,13 +453,13 @@ class TargetsTest extends DataSurfaceKernelTestBase {
 
     $this->assertTrue($result->isValid());
     $this->assertTrue($result->committed);
-    $this->assertSame('Both places', $this->container->get('config.factory')->get('system.site')->get('name'));
-    // The state child was given only the key it was listed with.
+    // Each child was given only the key it was listed with.
+    $this->assertSame(['name' => 'Both places'], $state->get(self::OTHER_STATE_KEY));
     $this->assertSame(['slogan' => 'Said once'], $state->get(self::STATE_KEY));
 
     // The artifact is one prepared set per child, in the listed order.
     $this->assertCount(2, $result->prepared->artifact);
-    $this->assertInstanceOf(Config::class, $result->prepared->artifact[0]->artifact);
+    $this->assertSame(['name' => 'Both places'], $result->prepared->artifact[0]->artifact);
     $this->assertSame(['slogan' => 'Said once'], $result->prepared->artifact[1]->artifact);
   }
 
@@ -691,7 +488,7 @@ class TargetsTest extends DataSurfaceKernelTestBase {
   public function testCompositeRefusesDoubleClaimedKeys(): void {
     $state = $this->container->get('state');
     $composite = new CompositeTarget([
-      [$this->siteTarget(), ['name', 'slogan']],
+      [new StateTarget($state, self::OTHER_STATE_KEY), ['name', 'slogan']],
       [new StateTarget($state, self::STATE_KEY), ['slogan']],
     ]);
 
@@ -709,7 +506,7 @@ class TargetsTest extends DataSurfaceKernelTestBase {
    */
   public function testCompositeAllowsUndeclaredKeys(): void {
     $composite = new CompositeTarget([
-      [$this->siteTarget(), ['name', 'slogan', 'third_party_settings']],
+      [new StateTarget($this->container->get('state'), self::STATE_KEY), ['name', 'slogan', 'third_party_settings']],
     ]);
 
     $prepared = $composite->prepare($this->siteSurface(), ['name' => 'Fine', 'slogan' => '']);

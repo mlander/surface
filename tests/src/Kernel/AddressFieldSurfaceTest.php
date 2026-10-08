@@ -10,12 +10,13 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\address\LabelHelper;
-use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Form\FieldSurfaceProviderInterface;
 use Drupal\data_surface\Pipeline\DataSurfaceTargetInterface;
+use Drupal\data_surface\Surface\SurfaceContext;
 use Drupal\data_surface_address\Plugin\Field\FieldType\SurfaceAddressItem;
+use Drupal\data_surface_address\Surface\AddressFieldSettingsSurface;
 use Drupal\entity_test\Entity\EntityTest;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
@@ -519,28 +520,26 @@ class AddressFieldSurfaceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the whole contract is readable from the class alone.
+   * Tests that the whole contract is the surface class, built on its own.
    *
-   * The point of the declaration being static: a deriver, a
-   * documentation generator or an agent enumerating field types reads
-   * these settings without a container, a field, or an instantiated
-   * item, and so do the static host protocols that ask a field type for
-   * its default settings. Nothing below asks the site for anything —
-   * the builder is filled and sealed on the spot, with no factory and
-   * no build event, which is exactly what the static defaults shim
-   * does.
+   * The settings are AddressFieldSettingsSurface: a
+   * class whose shape needs no field, no item and no service, built by
+   * the build step in a bare context. The live lists are named as
+   * constraints rather than built into the definitions, which is the
+   * whole reason it can be.
    */
   public function testSurfaceIsDeclaredOnTheClass(): void {
-    $builder = new DataSurfaceBuilder();
-    SurfaceAddressItem::declareDataSurface($builder);
-    $declared = $builder->seal()->getDefinitions()->toArray();
+    $declared = $this->container->get('data_surface.surfaces')
+      ->build(AddressFieldSettingsSurface::class, new SurfaceContext('field_settings'))
+      ->getDefinitions()
+      ->toArray();
 
     $this->assertSame(
       ['available_countries', 'langcode_override', 'field_overrides'],
       array_keys($declared),
     );
     // The live lists are named as constraints rather than built into the
-    // definitions, which is the whole reason this can be static: the
+    // definitions, which is what lets the surface hold no service: the
     // country list and the language list are resolved from these two,
     // and neither is repeated as a labeled choice anywhere.
     $countries = $this->itemOf($declared['available_countries'])->getConstraints();

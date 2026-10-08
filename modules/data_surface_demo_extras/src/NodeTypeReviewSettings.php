@@ -10,26 +10,22 @@ namespace Drupal\data_surface_demo_extras;
  * Two settings, stored as this module's third party settings on the
  * node type: a review deadline, stored as a number of seconds, and the
  * audiences content of the type is written for. They are added twice
- * on purpose — once to the content type surface through the build
- * event, and once to core's own content type form through a form alter
+ * on purpose — once to the content type surface through an alter, and
+ * once to core's own content type form through a form alter
  * — so that the two ways of extending a content type can be compared
  * with the same rules on both sides. The rules are here, once, so
  * neither side can be the stricter one by accident; what differs is only
  * where each side puts them and who can see them there.
  *
- * @see \Drupal\data_surface_demo_extras\EventSubscriber\DemoExtrasSurfaceSubscriber
+ * @see \Drupal\data_surface_demo_extras\SurfaceAlter\NodeTypeAlter
  * @see \Drupal\data_surface_demo_extras\Hook\NodeTypeFormHooks
  */
 final class NodeTypeReviewSettings {
 
   /**
-   * The host id the content type surface is built under.
-   *
-   * Matched by id rather than by the provider's class, so this module
-   * extends the content type surface without depending on the module
-   * that provides it.
+   * This module's name: the third party the settings are stored under.
    */
-  public const HOST_ID = 'entity_type:node_type';
+  public const MODULE = 'data_surface_demo_extras';
 
   /**
    * The key holding the review deadline.

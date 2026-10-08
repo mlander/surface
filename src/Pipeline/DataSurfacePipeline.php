@@ -6,6 +6,7 @@ namespace Drupal\data_surface\Pipeline;
 
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
@@ -15,6 +16,7 @@ use Drupal\data_surface\DataSurfaceAccess;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Options\DataSurfaceOptions;
+use Drupal\data_surface\SurfaceEntry;
 
 /**
  * The one entry point from raw values to stored values.
@@ -69,34 +71,158 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * {@inheritdoc}
    */
   public function accept(DataSurfaceInterface $surface, array $input, array $current = []): array {
+    return $this->acceptLevel($surface, $input, $current, '');
+  }
+
+  /**
+   * Accepts one surface's values, at the top or inside a subsurface.
+   *
+   * A subsurface's value is accepted by the child surface describing it,
+   * through this same method, so its locked keys, secrets and defaults
+   * answer for themselves exactly as they would on their own. Slots are
+   * accepted after everything else, because the variant is read from the
+   * accepted value of the deciding key; the result keeps declaration
+   * order.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The surface describing this level.
+   * @param array $input
+   *   The raw input for this level.
+   * @param array $current
+   *   What this level already holds.
+   * @param string $prefix
+   *   The dotted path of this level; '' at the top.
+   *
+   * @return array
+   *   The accepted values, in declaration order.
+   *
+   * @throws \Drupal\data_surface\Pipeline\UnknownKeysException
+   *   When an input key is not a definition at any depth.
+   * @throws \Drupal\data_surface\Pipeline\ShapeMismatchException
+   *   When the input cannot be held by the definition at all.
+   * @throws \Drupal\data_surface\Pipeline\VariantMismatchException
+   *   When a slot's value is shaped for a variant other than the chosen.
+   */
+  protected function acceptLevel(DataSurfaceInterface $surface, array $input, array $current, string $prefix): array {
     $definitions = $surface->getDefinitions();
     $unknown = array_keys(array_diff_key($input, $definitions->toArray()));
     if ($unknown !== []) {
-      throw new UnknownKeysException(array_map('strval', $unknown));
+      throw new UnknownKeysException(array_map('strval', $unknown), $prefix);
     }
-    $values = [];
-    foreach ($definitions as $name => $definition) {
-      // What the key already holds: the stored value when storage has
-      // one, and the declared default only when it has none. A stored
-      // NULL is a stored value, so array_key_exists rather than ??.
-      $fallback = array_key_exists($name, $current) ? $current[$name] : $surface->getDefault($name);
-      if ($surface->isLocked($name)) {
-        // A locked key's value space is narrowed to exactly one value,
-        // so input cannot move it. That one value is whatever storage
-        // holds; the declared default is only the starting point for a
-        // key storage has never held.
-        $values[$name] = $fallback;
+    $values = array_fill_keys($definitions->names(), NULL);
+    $slots = [];
+    foreach ($definitions->entries() as $name => $entry) {
+      if ($entry->slot !== NULL) {
+        $slots[] = $entry;
         continue;
       }
-      if (!array_key_exists($name, $input)) {
-        $values[$name] = $fallback;
-        continue;
-      }
-      $values[$name] = DefinitionMetadata::isSecret($definition)
-        ? $this->acceptSecret($definition, $input[$name], $fallback, (string) $name)
-        : $this->acceptValue($definition, $input[$name], $fallback, (string) $name);
+      $values[$name] = $this->acceptKey($surface, $entry, $input, $current, $prefix, $values);
+    }
+    foreach ($slots as $entry) {
+      $values[$entry->name] = $this->acceptKey($surface, $entry, $input, $current, $prefix, $values);
     }
     return $values;
+  }
+
+  /**
+   * Accepts the value of one key.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The surface the key belongs to.
+   * @param \Drupal\data_surface\SurfaceEntry $entry
+   *   The key.
+   * @param array $input
+   *   The raw input for the key's level.
+   * @param array $current
+   *   What the key's level already holds.
+   * @param string $prefix
+   *   The dotted path of the key's level.
+   * @param array $values
+   *   The values accepted at this level so far, which is where a slot
+   *   reads its deciding key.
+   *
+   * @return mixed
+   *   The accepted value.
+   */
+  protected function acceptKey(DataSurfaceInterface $surface, SurfaceEntry $entry, array $input, array $current, string $prefix, array $values): mixed {
+    $name = $entry->name;
+    $path = static::joinPath($prefix, $name);
+    // What the key already holds: the stored value when storage has
+    // one, and the declared default only when it has none. A stored
+    // NULL is a stored value, so array_key_exists rather than ??.
+    $fallback = array_key_exists($name, $current) ? $current[$name] : $surface->getDefault($name);
+    $chosen = $entry->slot?->chosen($values[$entry->slot->by] ?? NULL);
+    if ($chosen !== NULL && !$entry->slot->fits($chosen, $fallback)) {
+      // What the slot held was written for another variant, and the
+      // deciding key has moved on: it starts again from the chosen
+      // variant's defaults rather than carrying keys that mean nothing
+      // here.
+      $fallback = $entry->slot->defaultsOf($chosen);
+    }
+    if ($entry->locked) {
+      // A locked key's value space is narrowed to exactly one value,
+      // so input cannot move it. That one value is whatever storage
+      // holds; the declared default is only the starting point for a
+      // key storage has never held.
+      return $fallback;
+    }
+    $child = $entry->childFor($values);
+    if (!array_key_exists($name, $input)) {
+      // A subsurface the input says nothing about still holds a whole
+      // value of the child's shape, the child's defaults beneath what
+      // the level already holds, so a stored value missing a key the
+      // child added since reads the way a fresh one would.
+      return $child !== NULL && is_array($fallback)
+        ? $this->acceptLevel($child, [], $fallback, $path)
+        : $fallback;
+    }
+    if ($child !== NULL) {
+      return $this->acceptChild($entry, $child, $input[$name], $fallback, $path, $chosen);
+    }
+    return DefinitionMetadata::isSecret($entry->definition)
+      ? $this->acceptSecret($entry->definition, $input[$name], $fallback, $path)
+      : $this->acceptValue($entry->definition, $input[$name], $fallback, $path);
+  }
+
+  /**
+   * Accepts a subsurface's value through the child surface describing it.
+   *
+   * @param \Drupal\data_surface\SurfaceEntry $entry
+   *   The attached or slot key.
+   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   *   The child answering for it: the attached one, or the chosen
+   *   variant.
+   * @param mixed $input
+   *   The raw input for the key.
+   * @param mixed $fallback
+   *   What the key already holds.
+   * @param string $path
+   *   The dotted path of the key.
+   * @param string|null $chosen
+   *   The chosen variant of a slot; NULL for an attached child.
+   *
+   * @return array|null
+   *   The accepted map, or NULL for input that holds nothing.
+   *
+   * @throws \Drupal\data_surface\Pipeline\ShapeMismatchException
+   *   When the input is not a map.
+   * @throws \Drupal\data_surface\Pipeline\VariantMismatchException
+   *   When the input carries another variant's keys.
+   */
+  protected function acceptChild(SurfaceEntry $entry, DataSurfaceInterface $child, mixed $input, mixed $fallback, string $path, ?string $chosen): ?array {
+    if (!ValueState::isConfigured($input)) {
+      return NULL;
+    }
+    if (!is_array($input)) {
+      throw new ShapeMismatchException($path, 'map', get_debug_type($input));
+    }
+    if ($entry->slot !== NULL && $chosen !== NULL) {
+      $owners = $entry->slot->owners($entry->slot->strangers($chosen, $input), $chosen);
+      if ($owners !== []) {
+        throw new VariantMismatchException($path, $entry->slot->by, $chosen, $owners);
+      }
+    }
+    return $this->acceptLevel($child, $input, is_array($fallback) ? $fallback : [], $path);
   }
 
   /**
@@ -153,10 +279,33 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * {@inheritdoc}
    */
   public function validate(DataSurfaceInterface $surface, array $values, array $current = []): ViolationSet {
+    return new ViolationSet($this->validateLevel($surface, $values, $current));
+  }
+
+  /**
+   * Validates one surface's values, at the top or inside a subsurface.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The surface describing this level.
+   * @param array $values
+   *   The accepted values of this level.
+   * @param array $current
+   *   What this level holds in storage, for the stale rule.
+   *
+   * @return \Drupal\data_surface\Pipeline\SurfaceViolation[]
+   *   The violations, filed under this level's keys.
+   */
+  protected function validateLevel(DataSurfaceInterface $surface, array $values, array $current): array {
     $refined = $surface->refine($values);
     $errors = [];
-    foreach ($refined->getDefinitions() as $name => $definition) {
+    foreach ($refined->getDefinitions()->entries() as $name => $entry) {
+      $name = (string) $name;
+      $definition = $entry->definition;
       $value = $values[$name] ?? NULL;
+      // Decision: see docs/decisions.md#required-inside-a-plain-map.
+      $missing = $entry->attachment === NULL && $entry->slot === NULL
+        ? $this->missingInMap($definition, is_array($value) ? $value : [])
+        : [];
       if (!ValueState::isConfigured($value)) {
         // Not configured: nothing to hold to a constraint, and for a
         // required key the surface's own message rather than whichever
@@ -164,8 +313,28 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         // was never set is this case whether it is required or not, and
         // it is never stale: there is no value to keep.
         if ($definition->isRequired()) {
-          $errors[] = new SurfaceViolation((string) $name, '', $this->t('@label is required.', [
+          $errors[] = new SurfaceViolation($name, '', $this->t('@label is required.', [
             '@label' => $definition->getLabel() ?? $name,
+          ]));
+        }
+        foreach ($missing as $path => $label) {
+          $errors[] = new SurfaceViolation($name, $path, $this->t('@label is required.', ['@label' => $label]));
+        }
+        continue;
+      }
+      $child = $entry->childFor($values);
+      if ($child !== NULL) {
+        $errors = array_merge($errors, $this->validateChild($entry, $child, $value, $current[$name] ?? [], $values));
+        continue;
+      }
+      if ($entry->slot !== NULL) {
+        // A slot holding a value with no variant to read it by. When the
+        // deciding key holds a value that names none, that key's own
+        // Choice says so; when it holds nothing, this does.
+        if (!ValueState::isConfigured($values[$entry->slot->by] ?? NULL)) {
+          $errors[] = new SurfaceViolation($name, '', $this->t('@label depends on @by, which holds no value.', [
+            '@label' => $definition->getLabel() ?? $name,
+            '@by' => $refined->getDefinition($entry->slot->by)?->getLabel() ?? $entry->slot->by,
           ]));
         }
         continue;
@@ -173,37 +342,169 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       $typed_data = $this->typedDataManager->create($definition, $value, $name);
       $refusals = [];
       foreach ($typed_data->validate() as $violation) {
+        $path = (string) $violation->getPropertyPath();
+        if (isset($missing[$path])) {
+          // Said below, in the surface's own words.
+          continue;
+        }
         // The message stays the object the constraint built. Flattening
         // it here would render its placeholders once, as plain text, and
         // whatever reads the violation afterwards would escape that text
         // a second time; a form error, a tool result and a log line each
         // render it themselves, at their own boundary.
-        $refusals[] = new SurfaceViolation((string) $name, (string) $violation->getPropertyPath(), $violation->getMessage());
+        $refusals[] = new SurfaceViolation($name, $path, $violation->getMessage());
       }
-      if ($refusals !== [] && $this->isStale($definition, $value, (string) $name, $current)) {
+      foreach ($missing as $path => $label) {
+        $refusals[] = new SurfaceViolation($name, $path, $this->t('@label is required.', ['@label' => $label]));
+      }
+      if ($refusals !== [] && $this->isStale($definition, $value, $name, $current, $refined->getDefinitions()->dependencies($name), $values)) {
         // The whole key is reported as stale and not re-judged. What
         // else its constraints would say is about a value this run is
         // not changing and could not have chosen — it is what storage
         // holds — and saying it would read as a list of things to fix
         // where there is exactly one: choose again.
-        $errors[] = $this->staleViolation($definition, $value, (string) $name);
+        $errors[] = $this->staleViolation($definition, $value, $name);
         continue;
       }
       $errors = array_merge($errors, $refusals);
     }
-    return new ViolationSet($errors);
+    return $errors;
+  }
+
+  /**
+   * Finds the required properties of a plain map that hold no value.
+   *
+   * A plain map is not a subsurface, so no child judges its keys; without
+   * this, a required property inside one would be held only to typed
+   * data's NotNull, which an empty string passes and an absent map never
+   * reaches. The surface's rule for a key, applied to the map's own
+   * properties: required and not configured is refused, with the same
+   * message. A mounted key an alter made required is the case it is for.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition.
+   * @param array $value
+   *   The key's value, or an empty array when it holds none.
+   * @param string $prefix
+   *   The property path so far.
+   *
+   * @return array<string, string|\Stringable>
+   *   The labels of the missing properties, keyed by property path.
+   */
+  protected function missingInMap(DataDefinitionInterface $definition, array $value, string $prefix = ''): array {
+    if (!$definition instanceof ComplexDataDefinitionInterface || $definition instanceof ListDataDefinitionInterface) {
+      return [];
+    }
+    $missing = [];
+    foreach ($definition->getPropertyDefinitions() as $property => $property_definition) {
+      $path = $prefix . $property;
+      $held = $value[$property] ?? NULL;
+      if ($property_definition instanceof ComplexDataDefinitionInterface) {
+        $missing += $this->missingInMap($property_definition, is_array($held) ? $held : [], $path . '.');
+        continue;
+      }
+      if ($property_definition->isRequired() && !ValueState::isConfigured($held)) {
+        $missing[$path] = $property_definition->getLabel() ?? $property;
+      }
+    }
+    return $missing;
+  }
+
+  /**
+   * Validates a subsurface's value through the child describing it.
+   *
+   * The child judges its own keys by its own rules — the required
+   * message, the stale rule, its refiners, in its own frame — and every
+   * violation it reports is filed back under the parent's key with the
+   * child's key at the front of its path, so `columns` inside
+   * `presentation_settings` reads as `presentation_settings.columns` to
+   * whoever reads the set. Dotted paths into a child exist here and in
+   * emitted schemas, and nowhere a refiner could name them.
+   *
+   * @param \Drupal\data_surface\SurfaceEntry $entry
+   *   The attached or slot key.
+   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   *   The child answering for it, as advertised.
+   * @param mixed $value
+   *   The key's value, configured.
+   * @param mixed $current
+   *   What storage holds for the key.
+   * @param array $values
+   *   The values of the key's own level, for a slot's deciding key.
+   *
+   * @return \Drupal\data_surface\Pipeline\SurfaceViolation[]
+   *   The violations, filed under the key.
+   */
+  protected function validateChild(SurfaceEntry $entry, DataSurfaceInterface $child, mixed $value, mixed $current, array $values): array {
+    $name = $entry->name;
+    if (!is_array($value)) {
+      return [
+        new SurfaceViolation($name, '', $this->t('This value must be of type @expected, @actual given.', [
+          '@expected' => 'map',
+          '@actual' => get_debug_type($value),
+        ])),
+      ];
+    }
+    $errors = [];
+    if ($entry->slot !== NULL) {
+      $chosen = (string) $entry->slot->chosen($values[$entry->slot->by] ?? NULL);
+      $strangers = $entry->slot->strangers($chosen, $value);
+      $owners = $entry->slot->owners($strangers, $chosen);
+      foreach ($strangers as $stranger) {
+        $errors[] = new SurfaceViolation($name, $stranger, isset($owners[$stranger])
+          ? $this->variantMismatchMessage($name . '.' . $stranger, $entry->slot->by, $chosen, $owners[$stranger])
+          : $this->t('Unknown key @key.', ['@key' => $name . '.' . $stranger]));
+      }
+      // Judged as the variant would judge it on its own: the keys it
+      // declares, and nothing it does not.
+      $value = array_diff_key($value, array_flip($strangers));
+    }
+    foreach ($this->validateLevel($child, $value, is_array($current) ? $current : []) as $violation) {
+      $errors[] = new SurfaceViolation($name, $violation->fullPath(), $violation->message, $violation->stale);
+    }
+    return $errors;
+  }
+
+  /**
+   * Says that a key belongs to a variant the deciding key did not choose.
+   *
+   * @param string $path
+   *   The full dotted path of the misplaced key.
+   * @param string $by
+   *   The deciding key.
+   * @param string $chosen
+   *   The variant it chose.
+   * @param string[] $owners
+   *   The variants that do declare the key.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   The message.
+   */
+  protected function variantMismatchMessage(string $path, string $by, string $chosen, array $owners): TranslatableMarkup {
+    return $this->t('@path belongs to the @owners variant, but @by chose @chosen.', [
+      '@path' => $path,
+      '@owners' => implode(', ', $owners),
+      '@by' => $by,
+      '@chosen' => $chosen,
+    ]);
   }
 
   /**
    * Answers whether a refused value is a stale reference.
    *
-   * Three things have to be true at once, and each of them rules out a
+   * Four things have to be true at once, and each of them rules out a
    * case that is not stale:
    *
    * - The value is exactly what storage holds for that key. A value that
    *   differs was chosen by whoever sent it, so it is refused however
    *   far outside the list it falls. This is the whole line between
    *   "re-choose this" and "that is not a valid answer".
+   * - Every key it refines against also holds exactly what storage
+   *   holds. A run that moves a dependency is what narrowed the list
+   *   away from the stored value — a venue changed, and the room stored
+   *   under the old one is not among the new one's — so the refusal is
+   *   about this run's own answers, not about the site, and it blocks.
+   *   Stale is for what the site did; this is what the caller did.
    * - The key offers a list of values at all, read from the options
    *   service, which is the same list a generated select renders. A key
    *   with no list has no membership to fall outside of; whatever its
@@ -226,16 +527,25 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *   The surface key.
    * @param array $current
    *   The stored values, in surface shape.
+   * @param string[] $dependencies
+   *   The keys the key refines against.
+   * @param array $values
+   *   The values of this run, at the key's own level.
    *
    * @return bool
    *   TRUE when the refusal is a stale reference.
    */
-  protected function isStale(DataDefinitionInterface $definition, mixed $value, string $name, array $current): bool {
+  protected function isStale(DataDefinitionInterface $definition, mixed $value, string $name, array $current, array $dependencies, array $values): bool {
     if ($definition instanceof ListDataDefinitionInterface) {
       return FALSE;
     }
     if (!array_key_exists($name, $current) || $current[$name] !== $value) {
       return FALSE;
+    }
+    foreach ($dependencies as $dependency) {
+      if (($values[$dependency] ?? NULL) !== ($current[$dependency] ?? NULL)) {
+        return FALSE;
+      }
     }
     $set = $this->options->resolve($definition);
     return $set !== NULL && !$set->allows($value);
@@ -265,8 +575,8 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   /**
    * {@inheritdoc}
    */
-  public function conformOutput(DataSurfaceInterface $surface, array $output, array $input_values = []): ViolationSet {
-    $definitions = $surface->refineOutputs($input_values)->getOutputDefinitions();
+  public function conformOutput(DataSurfaceInterface $surface, array $output): ViolationSet {
+    $definitions = $surface->getOutputDefinitions();
     // Omitted is the producer's way of saying "this key is not emitted"
     // from inside an array literal, so it is resolved into absence
     // before anything else looks at the array.
@@ -513,6 +823,9 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     }
     catch (ShapeMismatchException $e) {
       return new DataSurfaceResult($current, $this->shapeMismatchViolations($e), access: $access);
+    }
+    catch (VariantMismatchException $e) {
+      return new DataSurfaceResult($current, $this->variantMismatchViolations($e), access: $access);
     }
     // What storage holds is what the stale rule is judged against, and
     // it was loaded a moment ago for the merge, so the question costs
@@ -857,6 +1170,33 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         (string) $name,
         implode('.', $segments),
         $this->t('Unknown key @key.', ['@key' => $path]),
+      );
+    }
+    return new ViolationSet($violations);
+  }
+
+  /**
+   * Turns a slot value shaped for another variant into violations.
+   *
+   * One per misplaced key, each on its own path inside the slot, filed
+   * under the surface key that carries the slot, so a form flags the
+   * slot and a caller reads exactly which keys to move.
+   *
+   * @param \Drupal\data_surface\Pipeline\VariantMismatchException $exception
+   *   The refusal from accept().
+   *
+   * @return \Drupal\data_surface\Pipeline\ViolationSet
+   *   The violations.
+   */
+  protected function variantMismatchViolations(VariantMismatchException $exception): ViolationSet {
+    $segments = explode('.', $exception->getPath());
+    $name = (string) array_shift($segments);
+    $violations = [];
+    foreach ($exception->getOwners() as $key => $owners) {
+      $violations[] = new SurfaceViolation(
+        $name,
+        implode('.', [...$segments, $key]),
+        $this->variantMismatchMessage($exception->getPath() . '.' . $key, $exception->getBy(), $exception->getChosen(), $owners),
       );
     }
     return new ViolationSet($violations);

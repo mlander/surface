@@ -10,140 +10,69 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\DataSurfaceTargetInterface;
 
 /**
- * A field item whose instance settings are described by a surface.
+ * A field item that hosts the surface its #[UsesSurface] names.
  *
- * The field type counterpart of DataSurfaceProviderInterface, which
- * cannot serve here because a field type has two surfaces — instance
- * settings and storage settings — and one getDataSurface() cannot say
- * which is meant.
+ * The field type host's one public face. A plugin host is its own
+ * caller, but the field type host is not: Field UI's settings form
+ * validates in a static #element_validate callback, which rebuilds the
+ * item from the field it was handed and has to ask that item for its
+ * surface and its target. This interface is what the callback checks
+ * the rebuilt item against, and what lets a field type supply a target
+ * of its own (SurfaceAddressItem hands the field settings target its
+ * storage shape).
  *
- * Both methods are public because a field item is not the only caller. A
- * settings form is a method on the item's own class and could reach a
- * protected accessor, but a bridge cannot: the tool module's field tools
- * describe and write the same settings from outside the class, and so
- * would a REST resource, a config action or an agent. An interface with
- * two public methods is how that is said out loud, and it replaces the
- * reflection the bridge used to need.
- *
- * DataSurfaceFieldTypeTrait implements both methods; a field item using
- * it declares that it implements this interface, which is the statement
- * consumers type-check.
+ * DataSurfaceFieldTypeTrait implements all three methods; a field item
+ * using it declares that it implements this interface.
  *
  * @see \Drupal\data_surface\Form\DataSurfaceFieldTypeTrait
- * @see \Drupal\data_surface\DataSurfaceProviderInterface
  */
 interface FieldSurfaceProviderInterface {
 
   /**
-   * The operation naming a field type's per instance settings.
+   * The host operation a field type's per instance settings are asked in.
    *
-   * A field type has two surfaces, so "configure" would not say which
-   * one is meant here any more than getDataSurface() would. This is the
-   * operation the instance settings answer for; storage settings, when
-   * they arrive, are a second operation with a second answer, because a
-   * site builder may well be allowed to change a label on one bundle and
-   * not to change a shape every bundle shares.
-   *
-   * A verb, under the vocabulary rule the provider interface states: it
-   * says what is being configured, never which field. Which field is
-   * settled by the item the method is called on.
+   * The context's operation when the field type host builds its surface:
+   * a host verb, not a situation, since the field config entity the item
+   * is bound to is the whole subject.
    */
   public const OPERATION_FIELD_SETTINGS = 'field_settings';
 
   /**
    * Builds the surface describing this field type's instance settings.
    *
-   * The same operation and subject pair the provider interface takes,
-   * so a caller holding either kind of provider addresses it the same
-   * way and the storage settings verb slots in beside this one without
-   * reshaping the method again.
-   *
-   * A field item is its own subject, and that is the normal case: the
-   * item is bound to the field config entity whose settings it
-   * describes, so there is nothing left for a subject to name and NULL
-   * is what a caller passes. A field type handed any other subject
-   * refuses it by name, exactly as a plugin does.
-   *
-   * @param string $operation
-   *   The operation the surface is wanted for; OPERATION_FIELD_SETTINGS
-   *   unless a field type serves more than the instance settings.
-   * @param string|null $subject
-   *   The id of the thing the operation is about, or NULL when the
-   *   field item is its own subject.
-   *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface.
-   *
-   * @throws \InvalidArgumentException
-   *   When the operation is not one this field type has a surface for,
-   *   or when the subject is one it cannot resolve.
-   *
-   * @see \Drupal\data_surface\DataSurfaceProviderInterface::getDataSurface()
+   *   The surface #[UsesSurface] names, built in the host's context.
    */
-  public function getFieldSurface(string $operation = self::OPERATION_FIELD_SETTINGS, ?string $subject = NULL): DataSurfaceInterface;
+  public function getFieldSurface(): DataSurfaceInterface;
 
   /**
    * Gets the target the field settings are read from and written to.
    *
    * The target is bound to one field config entity: the surface is the
    * same for every instance of the field type, and the target is the
-   * instance being described.
-   *
-   * Spelled exactly as DataSurfaceProviderInterface spells it, name and
-   * pair alike, unlike getFieldSurface(). There is no ambiguity for the
-   * operation to resolve away here — a target is a destination, and the
-   * operation argument is what says which of a field type's two sets of
-   * settings is meant — so a caller holding either kind of provider asks
-   * for a destination one way, as it already does for an access answer.
-   *
-   * @param string $operation
-   *   The operation the target is wanted for; OPERATION_FIELD_SETTINGS
-   *   unless a field type serves more than the instance settings.
-   * @param string|null $subject
-   *   The id of the thing the operation is about, or NULL when the
-   *   field item is its own subject. The same opaque id
-   *   getFieldSurface() takes.
+   * instance being described. The host supplies it, since only the item
+   * holds the field config Field UI is editing, unsaved changes and all.
    *
    * @return \Drupal\data_surface\Pipeline\DataSurfaceTargetInterface
    *   The target.
-   *
-   * @throws \InvalidArgumentException
-   *   When the operation is not one this field type has a target for, or
-   *   when the subject is one it cannot resolve.
-   *
-   * @see \Drupal\data_surface\DataSurfaceProviderInterface::getDataSurfaceTarget()
    */
-  public function getDataSurfaceTarget(string $operation = self::OPERATION_FIELD_SETTINGS, ?string $subject = NULL): DataSurfaceTargetInterface;
+  public function getDataSurfaceTarget(): DataSurfaceTargetInterface;
 
   /**
    * Answers whether an account may configure these settings.
    *
-   * The same question, the same tri-state and the same rules as
-   * DataSurfaceProviderInterface::surfaceAccess(): forbidden blocks the
-   * pipeline before it reads anything, neutral expresses no opinion and
-   * blocks nothing, and allowed agrees without bypassing a host's own
-   * gate. One spelling for both provider kinds, so a caller holding
-   * either asks the same way.
+   * Forbidden blocks the pipeline before it reads anything, neutral
+   * expresses no opinion and blocks nothing, and allowed agrees without
+   * bypassing a host's own gate.
    *
-   * DataSurfaceFieldTypeTrait answers it from the field config entity
-   * the settings belong to, which is where core already spells who may
-   * administer a field.
-   *
-   * @param string $operation
-   *   The operation the answer is wanted for; OPERATION_FIELD_SETTINGS
-   *   unless a field type serves more than the instance settings.
-   * @param string|null $subject
-   *   The id of the thing the operation is about, or NULL when the
-   *   field item is its own subject. The same opaque id
-   *   getFieldSurface() takes.
    * @param \Drupal\Core\Session\AccountInterface|null $account
    *   The account to answer for, or NULL for the current user.
+   * @param string $operation
+   *   The host operation the answer is wanted for.
    *
    * @return \Drupal\Core\Access\AccessResultInterface
    *   The access answer, with its reason and its cacheability.
-   *
-   * @see \Drupal\data_surface\DataSurfaceAccess
    */
-  public function surfaceAccess(string $operation = self::OPERATION_FIELD_SETTINGS, ?string $subject = NULL, ?AccountInterface $account = NULL): AccessResultInterface;
+  public function surfaceAccess(?AccountInterface $account = NULL, string $operation = self::OPERATION_FIELD_SETTINGS): AccessResultInterface;
 
 }

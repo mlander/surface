@@ -1,304 +1,278 @@
 # Declaring a surface
 
-A surface is built by a builder and sealed. Nothing else constructs one,
-and once it is sealed every mutator on the builder throws. Where the
-building happens is the only real choice: in the class's own
-`declareDataSurface()`, or at runtime in `getDataSurface()`.
+A surface is declared in one place: a class in a module's
+`src/Surface/` carrying `#[Surface]`. Discovery finds it the way core
+finds a class in `src/Hook`, the build step (`data_surface.surfaces`)
+builds it in a context and seals it, and nothing else constructs one. A
+plugin whose configuration it is only names it, with `#[UsesSurface]`.
 
-## One home, never split
+This page is the class and what it says. [Surfaces as
+classes](surfaces.md) has situations, alters, subsurfaces, access,
+targets and the tools generated from them.
 
-The rule is short and it is the one to get right:
-
-> A surface that can be written down without asking the site anything is
-> declared entirely in `declareDataSurface()`. A surface that needs live
-> site state to describe itself at all is built entirely in
-> `getDataSurface()`. Never half of each.
-
-A class whose contract is half in one method and half in another has no
-single place to read it, which defeats the point of having one.
-
-**The declaration** is worth reaching for, because it is static: several
-host protocols ask a class for its defaults with no instance to ask. A
-field formatter's `defaultSettings()` and a field type's
-`defaultFieldSettings()` are static methods that have to answer with the
-defaults of the very surface the instance advertises, and a static
-declaration is what lets them, with no second copy of the defaults
-anywhere. It is also what a deriver, a documentation page or an agent
-reads when it wants a class's contract without booting a plugin.
-
-Note that "static" is decided by runtime *dependence*, not by structure.
-A constraint such as `PluginExists`, whose allowed values are resolved
-live from a plugin manager, still has a static spelling, so a definition
-carrying it belongs in the declaration. What forces a runtime build is a
-surface whose definitions cannot be written down without calling a
-service — a `LabeledChoice` whose list is assembled from the country
-repository, say. When you find yourself in that position, read [Options
-and resolvers](options.md): saying it as an existence constraint plus a
-resolver is usually what turns a runtime surface back into a literal one.
-
-### The declaration
-
-`DataSurfaceDeclarationInterface` is one static method taking the
-builder. Everything a surface says goes into it: definitions, defaults,
-refinement edges, locks, map properties, and [outputs](outputs.md).
+## The class
 
 ```php
-#[Block(
-  id: 'my_teaser',
-  admin_label: new TranslatableMarkup('Teaser'),
-)]
-final class TeaserBlock extends DataSurfaceBlockBase {
+#[Surface('block.data_surface_demo')]
+final class DemoBlockSurface implements SurfaceInterface {
 
-  public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
-    $headline = DataDefinition::create('string')
-      ->setLabel(new TranslatableMarkup('Headline'))
-      ->setDescription(new TranslatableMarkup('Shown above the items.'))
+  public function defineInputs(ShapeInterface $inputs): void {
+    $headline = $inputs->add('headline', 'string', new TranslatableMarkup('Headline'), default: 'Featured content')
+      ->setDescription(new TranslatableMarkup('Shown above the featured content.'))
       ->setRequired(TRUE)
       ->addConstraint('Length', ['max' => 50]);
     DefinitionMetadata::setExamples($headline, ['Quarterly report']);
-    $builder->setDefinition('headline', $headline);
-    $builder->setDefault('headline', 'Featured content');
-
-    $builder->setDefinition('entity_type', DataDefinition::create('string')
-      ->setLabel(new TranslatableMarkup('Entity type'))
+    $inputs->add('entity_type', 'string', new TranslatableMarkup('Entity type'), default: 'user')
       ->setRequired(TRUE)
       ->addConstraint('PluginExists', [
         'manager' => 'entity_type.manager',
         'interface' => ContentEntityInterface::class,
-      ]));
-
-    $builder->setDefinition('bundle', DataDefinition::create('string')
-      ->setLabel(new TranslatableMarkup('Bundle')));
-    // The edge sits beside the key it belongs to.
-    $builder->addRefinement('bundle', ['entity_type']);
+      ]);
+    $inputs->add('bundle', 'string', new TranslatableMarkup('Bundle'));
+    // ...
   }
 
-  public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
-    if ($name === 'bundle') {
-      $definition->addConstraint('EntityBundleExists', ['entityTypeId' => $values['entity_type']]);
-    }
-    return $definition;
-  }
-
-  public function build(): array {
-    // $this->configuration holds the accepted values.
+  /**
+   * The bundle must be one of the chosen entity type's bundles.
+   */
+  #[RefinesInput('bundle')]
+  public function bundleOfEntityType(DataDefinitionInterface $bundle, string $entity_type): DataDefinitionInterface {
+    return $bundle->addConstraint('EntityBundleExists', ['entityTypeId' => $entity_type]);
   }
 
 }
 ```
 
-Nothing else is needed. `DataSurfaceBlockBase::getDataSurface()` hands
-this method a fresh builder with the plugin already bound as the refiner
-and seals the result through the factory, so the block above has no
-`defaultConfiguration()`, no `blockForm()`, no `blockValidate()` and no
-`blockSubmit()`. See [Generated forms](forms.md) for the equivalent base
-class or trait per host family.
+That is `DemoBlockSurface` in `data_surface_demo`, shortened. Each part
+of a surface has one home:
 
-The declaration may consult nothing but itself: no `$this`, no
-container. That is the price of being readable from the class, and it is
-the same price the static host protocols pay.
+| What | Where |
+| --- | --- |
+| Its id, and which keys say which thing it is | `#[Surface('id', identity: [...])]` |
+| Its keys: type, label, default, constraints | `defineInputs(ShapeInterface $inputs)` |
+| What it emits | `defineOutputs()`, on `HasOutputsInterface`; see [Outputs](outputs.md) |
+| A key whose allowed values depend on another key's value | a `#[RefinesInput('key')]` method |
+| How much is already known: add, edit, reuse | `#[Situation]` static methods returning a `SurfaceContext` |
+| Where its values are stored | `#[Surface(target:)]`, a `SurfaceTargetInterface` |
+| What may refuse once the situation's permission allows | `#[Surface(access:)]`, a `SurfaceAccessInterface` |
+| Its parts | `attach()` and `attachBy()` in `defineInputs()`, and `#[SurfaceVariant]` on each variant |
 
-### At runtime
+`FieldInstanceSurface` in `data_surface_tool` uses every row but
+outputs, which `DemoFormatterSurface` declares; the test module's
+`TestBlockSurface` uses two.
 
-A host whose surface needs services builds it in `getDataSurface()` and
-routes it through the factory, which is what dispatches the build event
-and seals the result. Two helpers on `DataSurfaceHostTrait` are the whole
-of the ceremony:
+- **`defineInputs()` is a flat list.** No `if`, no loop, and it never
+  mentions a sibling. A constraint written there is fully known with no
+  values. Anything that reads another key's value is a `#[RefinesInput]`
+  method.
+- **`add()` takes name, type and label** and returns the core
+  definition, so the rest is plain core API: `setRequired()`,
+  `setDescription()`, `addConstraint()`, `setSetting()`.
+  `addDefinition()` is the long form, for a map or a list.
+- **A `#[RefinesInput]` method takes the key's definition first, then one
+  parameter per sibling it watches**, matched by name, or listed as
+  `watches:` when a renamed parameter should be refused rather than
+  silently stop watching. Its signature is its dependency declaration.
+  One rule per method, its docblock stating the rule.
+- **The class has no constructor and holds no service.** That is what
+  lets the build step make it with `new`, and what keeps a surface pure
+  data. Targets, access classes and alters are autowired services and
+  may hold services.
+
+### Nothing live in the shape
+
+A list of allowed values that depends on the site is a constraint whose
+options resolver fetches it, never a list the surface assembles. "Live"
+is decided by runtime dependence, not by structure: `PluginExists`,
+whose values are resolved from a plugin manager, is still written down
+as a literal constraint, and so is `EntityBundleExists`, handed the
+entity type by a refiner. A refiner points; the resolver fetches. When
+no core constraint names the list, a module adds one with its resolver,
+as the demo does with `DataSurfaceDemoBundleField`; see [Options and
+resolvers](options.md).
+
+A shape that does depend on site state — a key offered only while a
+module is installed, a label read from configuration — says so with
+`ShapeInterface::addCacheableDependency()`, so a form rendered from it
+is cached no longer than its shape holds.
+
+## On a plugin
+
+A plugin keeps rendering and names its surface:
 
 ```php
-public function getDataSurface(string $operation = 'configure', ?string $subject = NULL): DataSurfaceInterface {
-  // This plugin is its own subject, so there is nothing a subject could
-  // name and one is refused rather than ignored.
-  $this->surfaceSelfSubject($subject);
-  // A fresh builder, with this plugin already bound as its refiner and,
-  // when it implements the interface, as its output refiner too.
-  $builder = $this->surfaceBuilder();
-  $builder->setDefinition('language', DataDefinition::create('string')
-    ->setLabel($this->t('Language'))
-    ->addConstraint('LanguageExists', ['allowLocked' => FALSE]));
-  $builder->setDefault('language', $this->languageManager->getDefaultLanguage()->getId());
-  if ($operation === 'edit') {
-    $builder->lock('id');
+#[Block(
+  id: 'data_surface_demo',
+  admin_label: new TranslatableMarkup('Data surface demo'),
+)]
+#[UsesSurface(DemoBlockSurface::class)]
+final class DataSurfaceDemoBlock extends DataSurfaceBlockBase {
+
+  public function build(): array {
+    $configuration = $this->getConfiguration();
+    // ...
   }
-  return $this->builtSurface($builder, 'block:' . $this->getPluginId());
+
 }
 ```
 
-A class that builds here answers its host's static protocols itself:
-there is no declaration for `defaultSettings()` to read, and the shim
-says so with an exception rather than returning a quietly empty array.
+Nothing else is needed. The block has no `defaultConfiguration()`, no
+`blockForm()`, no `blockValidate()` and no `blockSubmit()`:
+`DataSurfaceBlockBase` builds the surface the definition names, in the
+host's context, and stores what the pipeline accepts in the block's
+configuration. The same holds for a condition (`DataSurfaceConditionBase`,
+writing `evaluate()` and `summary()`), an action (`DataSurfaceActionBase`,
+writing `execute()` and `access()`) and a formatter
+(`DataSurfaceFormatterBase`, writing `formatValue()`). Any configurable
+plugin with no base class of this module's lists `DataSurfacePluginForm`
+under its `forms` key. [Generated forms](forms.md) has the table.
 
-A surface that did not come from the factory was never offered to
-subscribers, so nothing may assume it is complete. Build through the
-factory even when you are sure nobody is listening.
+A field type implements `FieldSurfaceProviderInterface` and uses
+`DataSurfaceFieldTypeTrait`. Its static defaults are one line, because
+`defaultFieldSettings()` is asked of the class:
 
-The `$operation` argument is how one class serves more than one form: a
-host that resolves a form class per operation asks for the surface by
-name, and the same class can lock a key on `edit` that it leaves open on
-`add`. The default is `configure`.
+```php
+#[FieldType(id: 'data_surface_gated', /* ... */)]
+#[UsesSurface(GatedFieldSettingsSurface::class)]
+class SurfaceGatedItem extends StringItem implements FieldSurfaceProviderInterface {
 
-### History: the attribute
+  use DataSurfaceFieldTypeTrait;
 
-Until Phase B a class could declare the flat part of its surface in a
-`#[DataSurfaceAware]` attribute instead, and the factory harvested it.
-The attribute is gone, and the argument for removing it is worth keeping:
-the static harvest it was built for had shrunk to detection, which the
-provider interface already provides, and the sketch it held was a lie of
-omission next to what the factory builds. Its costs were real —
-array constructors only, so no fluent `DataDefinition::create()`; no map
-property definitions, which is why the address field type needed a
-before-seal callback; no translatable constants; and two homes for one
-contract. A declaration in a method says all of it in one place, so
-plugins and standalone providers now author identically.
+  public static function defaultFieldSettings(): array {
+    return static::surfaceDefaultFieldSettings(static::class) + parent::defaultFieldSettings();
+  }
 
-### The operation and subject pair
+}
+```
 
-`getDataSurface()` and `surfaceAccess()` take one coordinate in two
-halves, and the same two halves in the same order everywhere:
+A field type whose storage shape differs from the shape a caller is
+asked for overrides `getDataSurfaceTarget()` and hands the field
+settings target a shape, as `SurfaceAddressItem` does.
 
-- **`$operation`** is a closed verb from the host type's own
-  vocabulary — `configure`, `add`, `edit`, `field_settings` — and it
-  **never carries identity**. An operation that names the thing it acts
-  on is a vocabulary nobody can enumerate, and a discovery document
-  cannot list it.
-- **`$subject`** is an **opaque string id the provider resolves for
-  itself**. Nothing between the caller and the provider parses it: it is
-  a content type machine name to one provider and a workflow state to
-  the next.
+What a host supplies, and why the surface does not:
 
-`NULL` for the subject means **the provider is its own subject**, which
-is the ordinary case: a block, a condition, an action, a formatter and a
-field item each describe themselves, and there is nothing left to name.
-Those hosts refuse any other subject by name —
-`DataSurfaceHostTrait::surfaceSelfSubject()` is the one line that does
-it — rather than serving the surface nobody asked for. A provider that
-owns several subjects resolves the id itself and throws
-`\InvalidArgumentException` naming one it cannot place.
+- **The context.** A plugin instance is the whole of what it describes,
+  so the host builds in `new SurfaceContext('configure')` — or
+  `field_settings` for a field type: its own verb, which is no declared
+  situation, and nothing known.
+- **The target.** Only the host holds the instance: the plugin's
+  configuration array, or the field config Field UI is editing. A
+  formatter's settings are stored by the display, so its
+  `getDataSurfaceTarget()` throws.
+- **Static defaults.** `defaultSettings()` and `defaultFieldSettings()`
+  read `#[UsesSurface]` off the class and take
+  `SurfacesInterface::defaults()`: the surface's own shape alone, with
+  no alter, context or refiner.
 
-An access question is never answered with an exception, so
-`surfaceAccess()` **refuses** an operation or a subject it cannot place
-instead of throwing; the neutral host default has no opinion about
-either.
+`#[UsesSurface]` is copied into the plugin definition, so the catalogue
+lists which plugins use a surface without instantiating one, and a
+surface any plugin uses is never generated as a tool of its own.
 
-`data_surface_demo_node_type` is the worked example: `('add', NULL)`
-builds the surface for a content type that does not exist yet and
-`('edit', 'article')` the surface for one that does, and the provider's
-`surfaceFor(?NodeTypeInterface)` stays beside them as the typed,
-in-process convenience for a caller that already holds the entity.
+## Operations and identity
 
-**This pair is the wire coordinate**: the Phase B discovery route and
-the dry-run endpoint address any surface by host type, host id,
-operation and subject, which is why identity is not allowed to hide
-inside the verb.
+A context's **operation** is either a situation id — `add`, `edit`,
+`reuse` — or a host's own verb — `configure`, `field_settings`. It
+**never carries identity**. An operation that names the thing it acts
+on is a vocabulary nobody can enumerate, and a discovery document cannot
+list it.
 
-### Host ids
+Identity is the keys `#[Surface(identity:)]` names, and a context says
+which of them it knows. An identity key the context knows is locked to
+that value; one it does not know stays open. That is the whole
+difference between add and edit, and it is why a situation, a route and
+a tool address a surface the same way: by its id and a situation id,
+`data_surface:node.type:edit`, with the situation's parameters saying
+which content type.
 
-The factory takes a host id with every build, and it is namespaced
-`<host type>:<id>` — `block:my_teaser`, `field_formatter:my_formatter`,
-`field_type:address`, `entity_type:node_type`. The namespace is what
-keeps two hosts of different kinds that happen to share a plugin id from
-looking like one host to a subscriber. It is part of a host's public
-surface, because subscribers match on it; a host whose kind core has no
-name for picks one and keeps it.
+## Names
 
-## Class names
+Four naming rules, so that a reader who has only a grep finds the rest
+of the story.
 
-Two class-naming rules, so that a reader who has only a grep finds the
-rest of the story.
-
-**A standalone provider ends in `SurfaceProvider`.** A class that
-implements `DataSurfaceProviderInterface` without being a host of its own
-— it answers with a surface, a target and an access result for an
-operation and subject — is named for what it provides:
-`NodeTypeSurfaceProvider`. A host that carries its own declaration is
-named for the host, not for the surface, because the surface is not the
-thing it is.
+**A surface class ends in `Surface`, and its id is dotted.**
+`NodeTypeSurface` is `node.type`, `FieldInstanceSurface` is
+`field.instance`, `DemoBlockSurface` is `block.data_surface_demo`. An
+alter ends in `Alter`, a target in `Target`, an access class in
+`Access`.
 
 **A class-swap adopter prefixes the swapped class with `Surface`, and
-says so in the hook.** Adopting a class you do not own means subclassing
-it and swapping the subclass in through an info alter — the address field
-type is the shipped example, where
-`\Drupal\address\Plugin\Field\FieldType\AddressItem` becomes
-`SurfaceAddressItem`. The prefix makes the pair legible at a glance, and
-the hook implementation's docblock **must name the replacement class**,
-so that grepping for the original class name lands on the one line that
-replaces it rather than on a `use` statement with no explanation.
-`AddressSurfaceHooks::fieldInfoAlter()` is the pattern to copy.
+says so in the hook.** Adopting a plugin class you do not own means
+subclassing it, naming the surface on the subclass, and swapping the
+subclass in through an info alter — the address field type is the
+shipped example, where `\Drupal\address\Plugin\Field\FieldType\AddressItem`
+becomes `SurfaceAddressItem`. The prefix makes the pair legible at a
+glance, and the hook implementation's docblock **must name the
+replacement class**, so that grepping for the original class name lands
+on the one line that replaces it rather than on a `use` statement with
+no explanation. `AddressSurfaceHooks::fieldInfoAlter()` is the pattern
+to copy.
 
-Both rules exist for the same reason as the host id namespace: the
-module's seams have to be findable from either end.
+**The catalogue names a plugin `<host type>:<plugin id>`** —
+`block:data_surface_demo`, `field_formatter:data_surface_demo_string`,
+`field_type:address`. The host type keeps two plugins of different
+kinds that share an id apart.
+
+**An operation is a verb.** See above.
 
 ## Translatable strings
 
 Every human-facing string a surface carries is a translatable object,
-never a concatenation of translated fragments. Which of the two spellings
-to use is decided by one question: is there an instance?
+never a concatenation of translated fragments. Which of the two forms
+to use is decided by one question: is there an instance with a
+container behind it?
 
-**Static context constructs it raw.** `declareDataSurface()` is static —
-host protocols ask the class, not an object — and so are the helpers a
-declaration calls. There is no `$this`, so there is no
-`StringTranslationTrait` and no injected service, and
-`new TranslatableMarkup('Headline')` is the only spelling available. It
-resolves the translation service at render time, which is correct here
-and costs nothing, because a declaration is not a service.
+**A surface class constructs it raw.** It has no constructor, so
+nothing can inject the translation service, and `#[Situation]` methods
+and attribute arguments are static. `new TranslatableMarkup('Headline')`
+is the only spelling available. It resolves the translation service at
+render time, which is correct here and costs nothing.
 
-**Instance context calls `$this->t()`.** Anywhere there is an object —
-a refiner, a settings summary, a form builder, a widget, a cosmetic
-layer, an event subscriber, a provider — the trait is available or can
-be, the spelling is shorter, and the sniffs read it. A class we author
-that is built by the container and writes human-facing strings injects
-`string_translation`, uses `StringTranslationTrait` and calls
-`$this->t()`, so that translation never resolves through the global
-container at render time from our own code. The two spellings render
-identically; what differs is where the service comes from.
+**Everything the container builds calls `$this->t()`.** An alter, a
+target, an access class, a widget, a cosmetic layer: the trait is
+available or can be, the spelling is shorter, and the sniffs read it. A
+class we author that is built by the container and writes human-facing
+strings injects `string_translation`, uses `StringTranslationTrait` and
+calls `$this->t()`, so that translation never resolves through the
+global container at render time from our own code. The two forms
+render identically; what differs is where the service comes from.
 
 The global `t()` function appears nowhere in object-oriented code.
 
-**A demo file showing both is not an inconsistency.** A host class
-usually declares its surface statically and then acts on values in
-instance methods, so
-`\Drupal\data_surface_demo\Plugin\Field\FieldFormatter\DataSurfaceDemoFormatter`
-constructs raw markup all through `declareDataSurface()` and calls
-`$this->t()` in `refineDataDefinition()` a few lines below. Both are
-correct in the place they stand, and the split down the middle of the
-file is the rule made visible.
+So the split is between files, not inside one: `DemoFormatterSurface`
+constructs raw markup, and `DemoFormatterAlter`, an alter of it, calls
+`$this->t()`.
 
 Two places keep raw construction with an instance in hand, and both say
-why in a docblock: `DataSurfaceBuilder` is a value object that callers
-make with `new`, so there is no constructor to inject through, and
-`DemoVariant` is an enum, which cannot carry the trait's property.
+why in a docblock: `DataSurfaceBuilder`, the engine under the build
+step, is a value object made with `new`, so there is no constructor to
+inject through, and `DemoVariant` is an enum, which cannot carry the
+trait's property.
 
-## Map properties, before seal
+## Maps and lists
 
 Core's `MapDataDefinition` takes only its own definition array in its
-constructor and gains its property definitions through a setter.
-`ListDataDefinition` has no such problem: its item definition is a
-constructor argument.
-
-The builder is where a map's properties are supplied, and the timing is
-the whole point — **before seal**, so that subscribers and every later
-consumer see one complete surface rather than one the host filled in
-afterwards. That is one more line of the declaration:
+constructor and gains its property definitions through a setter. Set
+them on the definition before handing it to the shape, with the core
+setter:
 
 ```php
-public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
-  $builder->setDefinition('field_overrides', MapDataDefinition::create()
-    ->setLabel(new TranslatableMarkup('Field overrides')));
-  $builder->setDefault('field_overrides', []);
-  $builder->setPropertyDefinitions('field_overrides', static::fieldOverrideDefinitions());
+$overrides = MapDataDefinition::create()
+  ->setLabel(new TranslatableMarkup('Field overrides'));
+foreach (self::fieldOverrideDefinitions() as $field_name => $definition) {
+  $overrides->setPropertyDefinition($field_name, $definition);
 }
+$inputs->addDefinition('field_overrides', $overrides, default: []);
 ```
 
-`setPropertyDefinitions()` replaces properties of the same name and keeps
-the rest; `setPropertyDefinition()` does one at a time. Both refuse a key
-the builder does not hold, and a key whose definition takes no
-properties. The address field type's item class is the worked example.
+`AddressFieldSettingsSurface` is the worked example. A map whose
+properties are another surface's keys is a subsurface instead:
+`attach()` or `attachBy()`.
 
 A list is constructed around its item definition rather than described
 into one, so write `new ListDataDefinition(['type' => 'list'], $item)`
 and describe the list fluently afterwards. Core's
 `ListDataDefinition::create()` asks the typed data manager for the item,
-and a declaration reaches for no service.
+and a surface class reaches for no service.
 
 ## Defaults and examples
 
@@ -308,7 +282,7 @@ keys the core draft proposes, through `DefinitionMetadata`:
 
 | What | Definition array key | Written with |
 | --- | --- | --- |
-| Default value | `default_value` | `DefinitionMetadata::setDefaultValue()`, or `DataSurfaceBuilderInterface::setDefault()` as sugar |
+| Default value | `default_value` | the `default:` argument of `add()` and `addDefinition()`, or `DefinitionMetadata::setDefaultValue()` |
 | Examples | `examples` | `DefinitionMetadata::setExamples()` |
 
 Each accessor delegates to the definition's own core method when one
@@ -317,11 +291,15 @@ version. Read them back with `hasDefaultValue()`, `getDefaultValue()`,
 `defaultOf()` — which assembles a complex definition's default from its
 property definitions — and `getExamples()`.
 
-`NULL` is a declared default and is distinct from declaring none. What
-consumers do with each: the surface's `getDefault()` and
-`getDefaultValues()` read them, `accept()` merges them under the stored
+Passed to `add()` or `addDefinition()`, `NULL` declares no default,
+which is what core definitions already say. Written with
+`DefinitionMetadata::setDefaultValue()`, `NULL` is a declared default
+and is distinct from declaring none. What consumers do with a declared
+one: the surface's `getDefault()` and
+`getDefaultValues()` read it, `accept()` merges it under the stored
 values, and the string and number widgets render the first example as
-`#placeholder`.
+`#placeholder`. A situation that creates may give starting values with
+`withStarting()`, which become the key's defaults in that context.
 
 Two consequences worth knowing before you declare one. A map's declared
 default merges *over* the defaults its properties declare rather than
@@ -331,20 +309,19 @@ list rather than falling back to its default. Both rules, and why, are in
 
 ## Locking
 
-`DataSurfaceBuilderInterface::lock()` fixes a key's value. It is the
-degenerate refinement: the value space narrowed to exactly one value.
-That value is **whatever storage already holds**, and the declared
-default only for a key storage has never held.
+A locked key's value is fixed. It is the degenerate refinement: the
+value space narrowed to exactly one value. A surface class never locks a
+key itself; an identity key the context knows is locked, to the value
+the context knows, and stays locked whatever is submitted for it.
 
 A locked key stays advertised. It renders disabled in a generated form,
 and submitted input for it is ignored — not an error, just not a way to
-move the value. This is why editing an entity whose id is locked does not
-reset it to the default.
+move the value. `DataSurfaceInterface::isLocked()` answers it.
 
-Locking is build-time context rather than an intrinsic property of a
-definition, which is why it lives on the surface rather than on the
-definition: the same machine name key is locked on the edit operation and
-open on the add operation, and one class declares both.
+Locking is context rather than an intrinsic property of a definition,
+which is why it lives on the surface rather than on the definition: the
+same machine name key is locked in the edit situation and open in the
+add situation, and one class declares both.
 
 ## Secrets
 
@@ -352,11 +329,12 @@ A key whose stored value must never be read back to whoever writes it —
 an API token, a password, a signing key — is declared secret:
 
 ```php
-$key = DataDefinition::create('string')
-  ->setLabel(new TranslatableMarkup('API key'))
-  ->setRequired(TRUE);
-DefinitionMetadata::setSecret($key);
+$token = $inputs->add('token', 'string', new TranslatableMarkup('API key'), default: '')
+  ->setDescription(new TranslatableMarkup('The key this field authenticates with.'));
+DefinitionMetadata::setSecret($token);
 ```
+
+That is the test module's `SecretFieldSettingsSurface`.
 
 It is one flag on the definition, written the same way as defaults and
 examples, and it is read in four places so that declaring it is all an
@@ -398,7 +376,8 @@ flag, and a secret key carries the write-only note.
 It is worth being plain about the edges:
 
 - **It is not access control.** A caller who may configure the surface
-  may set the secret. Who may configure it is `surfaceAccess()`.
+  may set the secret. Who may configure it is the situation's
+  permission and the surface's access class.
 - **It does not hide the key.** The key, its label and its constraints
   stay advertised, which is the point: a caller has to know the secret
   exists to send one.
@@ -417,7 +396,7 @@ definitions are **optional by default**.
 > where there is none, and a reader scanning for the required keys has to
 > read the falsy ones to rule them out.
 
-This module's declarations follow that rule throughout, so a
+This module's surfaces follow that rule throughout, so a
 `setRequired()` anywhere in a surface is a `TRUE`. The one place the
 opposite is written down is a definition that did not start optional: the
 Tool API's `InputDefinition` defaults to *required*, so

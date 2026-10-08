@@ -102,9 +102,9 @@ class DataSurfaceTest extends DataSurfaceKernelTestBase {
           'kind' => DataDefinition::create('string'),
           'value' => DataDefinition::create('any'),
         ],
+        refiners: ['value' => [DataSurfaceInterface::OWNER => [new AnyToIntegerRefiner()]]],
         refinements: ['value' => ['kind']],
       ),
-      refiner: new AnyToIntegerRefiner(),
     );
     $refined = $surface->refine(['kind' => 'count']);
     $this->assertSame('integer', $refined->getDefinition('value')->getDataType());

@@ -1,7 +1,28 @@
 services:
-  data_surface_tool.field_surface_locator:
-    class: Drupal\data_surface_tool\FieldSurfaceLocator
-    arguments: ['@typed_data_manager']
   data_surface_tool.input_definitions:
     class: Drupal\data_surface_tool\SurfaceInputDefinitions
     arguments: ['@data_surface.options', '@string_translation']
+  # What a tool generated for one situation of one surface takes and
+  # answers with; the deriver writes it statically, the tool refines it.
+  data_surface_tool.situation_inputs:
+    class: Drupal\data_surface_tool\SituationInputs
+    arguments: ['@data_surface.surfaces', '@data_surface.situation_arguments', '@data_surface_tool.input_definitions', '@string_translation']
+  # Fills the field instance surface's settings slot from config schema
+  # for every field type no #[SurfaceVariant] fills.
+  data_surface_tool.field_settings_schema_variants:
+    class: Drupal\data_surface_tool\FieldSettingsSchemaVariants
+    arguments: ['@plugin.manager.field.field_type', '@config.typed', '@typed_data_manager']
+    tags:
+      - { name: data_surface.derived_variants }
+  # The same, for the field storage surface's settings slot, from
+  # field.storage_settings.<type>.
+  data_surface_tool.field_storage_settings_schema_variants:
+    class: Drupal\data_surface_tool\FieldStorageSettingsSchemaVariants
+    arguments: ['@plugin.manager.field.field_type', '@config.typed', '@typed_data_manager']
+    tags:
+      - { name: data_surface.derived_variants }
+  # A read-only panel a situation route can name in _data_surface_panel:
+  # the contract the form's surface emits, rebuilt with the form.
+  data_surface_tool.contract_panel:
+    class: Drupal\data_surface_tool\SurfaceContractPanel
+    arguments: ['@data_surface.surface_registry', '@data_surface.options', '@plugin.manager.tool', '@tool.definition_serializer', '@string_translation']

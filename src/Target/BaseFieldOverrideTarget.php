@@ -46,19 +46,25 @@ use Drupal\data_surface\Pipeline\PreparedValues;
  * override entity. Skipping NULL, as this target used to, made an
  * override impossible to undo through a surface at all.
  *
- * Ordering rule, and the reason this target usually has a sibling. A
- * bundle's overrides belong to a bundle, so on an add operation the
- * bundle does not exist while the values are being prepared. That is
- * legal here: preparing builds unsaved override entities from the entity
- * type's base field definitions, which is what a brand new bundle starts
- * from anyway. Committing is the part that needs the bundle to be real,
- * because an override declares a config dependency on it. So inside a
- * CompositeTarget this target must come AFTER the target that creates
- * the bundle, and it resolves its field definitions lazily and drops
- * that resolution on commit, so the next read sees the bundle that now
- * exists.
+ * Ordering rule, and the reason this target is usually written beside
+ * another. A bundle's overrides belong to a bundle, so on an add
+ * operation the bundle does not exist while the values are being
+ * prepared. That is legal here: preparing rehearses each override on an
+ * unsaved copy built from the entity type's base field definitions,
+ * which is what a brand new bundle starts from anyway, and plans it as
+ * the override's exported array, which is what config storage would be
+ * handed. Committing is the part that needs the bundle to be real,
+ * because an override declares a config dependency on it. So it is
+ * written AFTER the bundle, and it resolves the bundle's field
+ * definitions afresh to write the plan onto, so it writes onto the
+ * bundle that now exists.
  *
- * @see \Drupal\data_surface\Target\CompositeTarget
+ * A surface target with a bundle of its own to write delegates here
+ * through plan() and write(), the three verbs' bodies without the
+ * pipeline's wrapping: NodeTypeTarget writes a content type's title
+ * label and workflow defaults this way.
+ *
+ * @see \Drupal\data_surface_demo_node_type\Target\NodeTypeTarget
  * @see docs/targets.md
  */
 final class BaseFieldOverrideTarget implements DataSurfaceTargetInterface {
@@ -76,12 +82,12 @@ final class BaseFieldOverrideTarget implements DataSurfaceTargetInterface {
   public const DEFAULT_VALUE = 'default_value';
 
   /**
-   * The artifact key holding the overrides to write.
+   * The plan key holding the overrides to write, as exported arrays.
    */
   public const SAVE = 'save';
 
   /**
-   * The artifact key holding the overrides to remove.
+   * The plan key holding the base field names whose override goes.
    */
   public const DELETE = 'delete';
 
@@ -125,6 +131,34 @@ final class BaseFieldOverrideTarget implements DataSurfaceTargetInterface {
    * {@inheritdoc}
    */
   public function load(DataSurfaceInterface $surface): array {
+    return $this->values();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function prepare(DataSurfaceInterface $surface, array $values): PreparedValues {
+    return new PreparedValues($values, $this->plan($values));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function commit(PreparedValues $prepared): void {
+    if (!is_array($prepared->artifact)) {
+      throw new \InvalidArgumentException('The prepared values did not come from a base field override target.');
+    }
+    $this->write($prepared->artifact);
+  }
+
+  /**
+   * Reads what each mapped key says for the bundle now.
+   *
+   * @return array<string, mixed>
+   *   The current value of every key in the map, in the surface's shape;
+   *   NULL for a field the bundle does not have.
+   */
+  public function values(): array {
     $values = [];
     foreach ($this->map as $key => $target) {
       $field = $this->field((string) $key, $target['field']);
@@ -134,9 +168,23 @@ final class BaseFieldOverrideTarget implements DataSurfaceTargetInterface {
   }
 
   /**
-   * {@inheritdoc}
+   * Plans the overrides some values would move, writing nothing.
+   *
+   * @param array $values
+   *   Accepted values; a mapped key that is absent says nothing, and one
+   *   that is NULL clears its field's override.
+   *
+   * @return array{save: array<string, array>, delete: list<string>}
+   *   Under SAVE, each override that would be written, as its exported
+   *   array, keyed by base field name; under DELETE, the base field
+   *   names whose stored override would be removed.
+   *
+   * @throws \LogicException
+   *   When a mapped field is not one the entity type has.
+   * @throws \InvalidArgumentException
+   *   When one field is both cleared and set.
    */
-  public function prepare(DataSurfaceInterface $surface, array $values): PreparedValues {
+  public function plan(array $values): array {
     $overrides = [];
     $deletions = [];
     foreach ($this->map as $key => $target) {
@@ -153,9 +201,8 @@ final class BaseFieldOverrideTarget implements DataSurfaceTargetInterface {
         // Stop overriding this field: the stored override goes, and the
         // bundle reads what the base field says again. Nothing to remove
         // means nothing to do.
-        $stored = $field->getConfig($this->bundle);
-        if (!$stored->isNew()) {
-          $deletions[$target['field']] = $stored;
+        if (!$field->getConfig($this->bundle)->isNew()) {
+          $deletions[$target['field']] = $target['field'];
         }
         continue;
       }
@@ -168,9 +215,8 @@ final class BaseFieldOverrideTarget implements DataSurfaceTargetInterface {
         continue;
       }
       // Cloned because an existing override IS the definition the field
-      // manager handed over, and preparing may not change what the rest
-      // of the request reads. The clone is the artifact; commit saves
-      // it and drops the stale resolution.
+      // manager handed over, and planning may not change what the rest
+      // of the request reads.
       $override = $overrides[$target['field']] ??= clone $field->getConfig($this->bundle);
       if ($property === self::LABEL) {
         $override->setLabel($value);
@@ -190,46 +236,68 @@ final class BaseFieldOverrideTarget implements DataSurfaceTargetInterface {
     // The overrides depend on the bundle, not the bundle on them, so
     // there is nothing here for a host's calculateDependencies() to
     // collect: each override declares its own when it is saved.
-    return new PreparedValues($values, [
-      self::SAVE => array_values($overrides),
+    return [
+      self::SAVE => array_map(static fn (FieldConfigInterface $override): array => $override->toArray(), $overrides),
       self::DELETE => array_values($deletions),
-    ]);
+    ];
   }
 
   /**
-   * {@inheritdoc}
+   * Writes a plan onto the bundle as it now exists.
+   *
+   * The bundle's field definitions are resolved afresh, because on an
+   * add operation the bundle only came into being a moment ago, and each
+   * planned override's label and default value are set on the override
+   * the bundle answers with.
+   *
+   * @param array $plan
+   *   What plan() returned.
+   *
+   * @throws \InvalidArgumentException
+   *   When the plan did not come from plan().
    */
-  public function commit(PreparedValues $prepared): void {
-    if (!is_array($prepared->artifact) || !isset($prepared->artifact[self::SAVE], $prepared->artifact[self::DELETE])) {
+  public function write(array $plan): void {
+    if (!is_array($plan[self::SAVE] ?? NULL) || !is_array($plan[self::DELETE] ?? NULL)) {
       throw new \InvalidArgumentException('The prepared values did not come from a base field override target.');
     }
-    foreach ($prepared->artifact[self::SAVE] as $override) {
-      $this->assertOverride($override)->save();
+    $this->fieldManager->clearCachedFieldDefinitions();
+    $this->fields = NULL;
+    foreach ($plan[self::SAVE] as $name => $record) {
+      $override = $this->assertPlanned($this->fields()[$name] ?? NULL)->getConfig($this->bundle);
+      if (array_key_exists('label', $record)) {
+        $override->setLabel((string) $record['label']);
+      }
+      if (array_key_exists('default_value', $record)) {
+        $override->set('default_value', $record['default_value']);
+      }
+      $override->save();
     }
-    foreach ($prepared->artifact[self::DELETE] as $override) {
-      $this->assertOverride($override)->delete();
+    foreach ($plan[self::DELETE] as $name) {
+      $override = $this->assertPlanned($this->fields()[$name] ?? NULL)->getConfig($this->bundle);
+      if (!$override->isNew()) {
+        $override->delete();
+      }
     }
-    // The bundle's definitions have moved, and on an add operation the
-    // bundle itself only came into being a moment ago, so whatever this
-    // target resolved earlier describes a world that is gone.
+    // The bundle's definitions have moved, so whatever was resolved to
+    // write them describes a world that is gone.
     $this->fieldManager->clearCachedFieldDefinitions();
     $this->fields = NULL;
   }
 
   /**
-   * Refuses anything in an artifact that is not an override entity.
+   * Refuses a planned field the bundle does not have.
    *
-   * @param mixed $override
-   *   The artifact entry.
+   * @param mixed $field
+   *   The bundle's definition of a planned field.
    *
-   * @return \Drupal\Core\Field\FieldConfigInterface
-   *   The same entry, typed.
+   * @return \Drupal\Core\Field\FieldDefinitionInterface
+   *   The same definition, typed.
    */
-  protected function assertOverride(mixed $override): FieldConfigInterface {
-    if (!$override instanceof FieldConfigInterface) {
+  protected function assertPlanned(mixed $field): FieldDefinitionInterface {
+    if (!$field instanceof FieldDefinitionInterface) {
       throw new \InvalidArgumentException('The prepared values did not come from a base field override target.');
     }
-    return $override;
+    return $field;
   }
 
   /**

@@ -5,27 +5,23 @@ declare(strict_types=1);
 namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Core\Cache\CacheableMetadata;
-use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
-use Drupal\data_surface\DataSurfaceFactoryInterface;
 use Drupal\data_surface\Plugin\Validation\Constraint\LabeledChoiceConstraint;
 use Drupal\data_surface\Target\SettingsShapeInterface;
 use Drupal\data_surface_test\CasingVariantRefiner;
-use Drupal\data_surface_test\VariantPolicyFilter;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * Tests the builder: the seal guard, map properties, and contributions.
+ * Tests the builder: the seal guard and contributions.
  *
  * The claim these tests hold the code to is the one the module makes
  * loudest: a surface is immutable once advertised. That means the
  * builder behind it has to refuse every later change rather than
- * quietly accept one, and the factory has to refuse to advertise the
- * same builder twice — otherwise "immutable after seal" is a convention
+ * quietly accept one — otherwise "immutable after seal" is a convention
  * and not a contract.
  */
 #[Group('data_surface')]
@@ -36,16 +32,6 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
    * {@inheritdoc}
    */
   protected static $modules = ['system', 'data_surface', 'data_surface_test'];
-
-  /**
-   * Gets the surface factory.
-   *
-   * @return \Drupal\data_surface\DataSurfaceFactoryInterface
-   *   The factory.
-   */
-  protected function factory(): DataSurfaceFactoryInterface {
-    return $this->container->get('data_surface.factory');
-  }
 
   /**
    * Builds a builder holding one flat key, one map, and one choice list.
@@ -70,8 +56,6 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
 
     $sealed = $builder->seal();
 
-    $this->assertFalse($this->builder()->isSealed());
-    $this->assertTrue($builder->isSealed());
     $this->assertSame($sealed, $builder->seal());
   }
 
@@ -82,8 +66,6 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
     $definition = DataDefinition::create('string');
     $mutations = [
       'setDefinition' => static fn (DataSurfaceBuilderInterface $b) => $b->setDefinition('added', clone $definition),
-      'setPropertyDefinitions' => static fn (DataSurfaceBuilderInterface $b) => $b->setPropertyDefinitions('extras', ['badge' => clone $definition]),
-      'setPropertyDefinition' => static fn (DataSurfaceBuilderInterface $b) => $b->setPropertyDefinition('extras', 'badge', clone $definition),
       'setDefault' => static fn (DataSurfaceBuilderInterface $b) => $b->setDefault('casing', 'none'),
       'lock' => static fn (DataSurfaceBuilderInterface $b) => $b->lock('casing'),
       'extendChoices' => static fn (DataSurfaceBuilderInterface $b) => $b->extendChoices('casing', ['lowercase'], 'other'),
@@ -91,7 +73,6 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
       'setThirdPartyShape' => fn (DataSurfaceBuilderInterface $b) => $b->setThirdPartyShape('other', $this->shape()),
       'addRefinement' => static fn (DataSurfaceBuilderInterface $b) => $b->addRefinement('casing', ['extras']),
       'addRefiner' => static fn (DataSurfaceBuilderInterface $b) => $b->addRefiner('casing', new CasingVariantRefiner()),
-      'addFilter' => static fn (DataSurfaceBuilderInterface $b) => $b->addFilter(new VariantPolicyFilter('casing', ['none'])),
       'addCacheableDependency' => static fn (DataSurfaceBuilderInterface $b) => $b->addCacheableDependency(new CacheableMetadata()),
     ];
 
@@ -157,55 +138,6 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
       }
 
     };
-  }
-
-  /**
-   * Tests that the factory refuses to advertise one builder twice.
-   */
-  public function testFactoryRefusesSealedBuilder(): void {
-    $builder = $this->builder();
-
-    $this->factory()->build($builder, static::class, 'data_surface_builder_test');
-
-    $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('already been sealed');
-    $this->factory()->build($builder, static::class, 'data_surface_builder_test');
-  }
-
-  /**
-   * Tests that map properties set before seal reach the sealed surface.
-   */
-  public function testPropertyDefinitionsReachTheSealedSurface(): void {
-    $builder = $this->builder();
-    $badge = DataDefinition::create('string')->setLabel('Badge');
-    $note = DataDefinition::create('string')->setLabel('Note');
-
-    $builder->setPropertyDefinitions('extras', ['badge' => $badge]);
-    $builder->setPropertyDefinition('extras', 'note', $note);
-    $surface = $this->factory()->build($builder, static::class, 'data_surface_builder_test');
-
-    $extras = $surface->getDefinition('extras');
-    $this->assertInstanceOf(ComplexDataDefinitionInterface::class, $extras);
-    $this->assertSame(['badge', 'note'], array_keys($extras->getPropertyDefinitions()));
-    $this->assertSame('Badge', (string) $extras->getPropertyDefinitions()['badge']->getLabel());
-  }
-
-  /**
-   * Tests that a key with no properties to set is refused by name.
-   */
-  public function testPropertyDefinitionsRefuseFlatKey(): void {
-    $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('does not take property definitions');
-    $this->builder()->setPropertyDefinitions('casing', ['badge' => DataDefinition::create('string')]);
-  }
-
-  /**
-   * Tests that property definitions on an unknown key are refused.
-   */
-  public function testPropertyDefinitionsRefuseAnUnknownKey(): void {
-    $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('Unknown surface definition "nothing"');
-    $this->builder()->setPropertyDefinitions('nothing', []);
   }
 
   /**
