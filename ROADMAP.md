@@ -153,9 +153,16 @@ subject-capturing refiner pattern is the same everywhere. Tooling that
 wanted containerless indexing uses the discovery document instead,
 which serves the real contract.
 
-4. **Emission as a plugin type.** Per-constraint schema normalizers,
-   ordered, matched by constraint (by `instanceof`, not plugin id,
-   which also resolves the Tool API normalizer thread), so third
+4. **Emission as a plugin type.** — DELIVERED 2026-10-08 as the main
+   module's emitter, `data_surface.contract_emitter`: JSON Schema
+   2020-12, labeled options as `oneOf` const/title, each slot as `if`/
+   `then` on its deciding sibling, dependency edges and locking under
+   `x-surface`, widget hints only when a renderer asks
+   (`docs/served-contract.md`). Still open: the constraints it knows
+   are a list in the emitter, not yet a plugin type. Original spec:
+   per-constraint schema normalizers, ordered, matched by constraint
+   (by `instanceof`, not plugin id, which also resolves the Tool API
+   normalizer thread), so third
    parties teach the emitter about their constraints. Output: JSON
    Schema 2020-12; labeled options as `oneOf` const/title; refinement
    edges as `dependentSchemas`/`if-then` where declared, honestly

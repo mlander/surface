@@ -22,8 +22,11 @@ a refusal. The three POSTs want the session's CSRF token from
 contract's `fingerprint`; when it is sent and storage changed since, the
 submit is refused and nothing is written.
 
-The contract format, the endpoints' bodies and the widget mapping are in
-[the served contract](../../docs/served-contract.md).
+The contract is the main module's: this submodule asks
+`data_surface.contract_emitter` for it with the widget hints
+(`x-surface.widget`) its app draws from, which the canonical contract
+leaves out. The contract format, the endpoints' bodies and the widget
+mapping are in [the served contract](../../docs/served-contract.md).
 
 ```bash
 drush pm:install data_surface_react
@@ -84,7 +87,7 @@ Run them on the host, not inside ddev. The library
 
 | Test | Covers |
 | --- | --- |
-| `Kernel\ServedContractTest` | The emitter over examples 1 to 3, the content type surface and the demo block surface: labels, `oneOf` titles, bounds, the venue to room dependency, the slot's conditional, the locked machine name on edit; every schema checked by opis/json-schema (draft 2020-12) and against the vendored draft-07 meta-schema. |
+| `Kernel\ServedContractTest` | The main module's emitter over examples 1 to 3, the content type surface and the demo block surface: labels, `oneOf` titles, bounds, the venue to room dependency, the slot's conditional, the locked machine name on edit, the widget hints off by default and on for this submodule's endpoint; every schema checked by opis/json-schema (draft 2020-12) and against the vendored draft-07 meta-schema. |
 | `Functional\ServedContractEndpointsTest` | 200 and 403, the JSON shape, refine narrowing the room by the venue, validate refusing a wrong room and a capacity over the room's and accepting a valid payload, nothing written; the landing page's React links. |
 | `Functional\ServedSubmitEndpointTest` | Submit writing example 2 and answering the fresh contract; a wrong room refused with nothing written; anonymous, token-less and malformed posts; a stale fingerprint refused with nothing written, and no fingerprint meaning the last write wins; a content type added through it answering `created` at `edit` with its `type`, then edited and deleted. |
 | `app/src/test/widgets.test.tsx` | Each widget from a schema fragment, the empty option rule, locked, slot resolution, the list. |

@@ -49,6 +49,12 @@ services:
     arguments: ['@data_surface.surfaces', '@data_surface.surface_registry', '@data_surface.situation_arguments']
     tags:
       - { name: access_check, applies_to: _data_surface_situation_access }
+  # Turns a sealed surface and its values into the served contract: JSON
+  # Schema 2020-12 with the x-surface extension, values and stale paths;
+  # widget hints only when a renderer asks for them.
+  data_surface.contract_emitter:
+    class: Drupal\data_surface\Contract\ContractEmitter
+    arguments: ['@data_surface.options', '@string_translation']
   # Every discovered surface, its situations, alters and variants, as one
   # array: what docs/catalogue.md is generated from.
   data_surface.surface_catalogue:

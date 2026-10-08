@@ -1,9 +1,4 @@
 services:
-  # Turns a sealed surface and its values into the served contract: JSON
-  # Schema 2020-12 with the x-surface extension, values and stale paths.
-  data_surface_react.contract_emitter:
-    class: Drupal\data_surface_react\ContractEmitter
-    arguments: ['@data_surface.options', '@string_translation']
   # Resolves a surface id, a situation id and its parameters into the
   # context, the built surface and its target, and answers access.
   data_surface_react.served_situations:

@@ -22,7 +22,8 @@ services:
     tags:
       - { name: data_surface.derived_variants }
   # A read-only panel a situation route can name in _data_surface_panel:
-  # the contract the form's surface emits, rebuilt with the form.
+  # the contract the form's surface emits, rebuilt with the form, and what
+  # the derived tool can advertise of it.
   data_surface_tool.contract_panel:
     class: Drupal\data_surface_tool\SurfaceContractPanel
-    arguments: ['@data_surface.surface_registry', '@data_surface.options', '@plugin.manager.tool', '@tool.definition_serializer', '@string_translation']
+    arguments: ['@data_surface.surface_registry', '@data_surface.options', '@data_surface.contract_emitter', '@plugin.manager.tool', '@tool.definition_serializer', '@string_translation']

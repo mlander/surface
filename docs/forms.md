@@ -633,8 +633,10 @@ ever taken for a value.
 `data_surface_tool.contract_panel` (`SurfaceContractPanel`) is the one
 this repository ships: every key with its type, label, requiredness,
 default, what it allows in words, what it depends on and whether it is
-narrowed right now, children and mounted keys included, and, collapsed,
-the JSON Schema the derived tool for the same situation advertises. The
+narrowed right now, children and mounted keys included; and, collapsed,
+the contract as JSON Schema from `data_surface.contract_emitter`
+([The served contract](served-contract.md)), then what the derived tool
+for the same situation can advertise through the Tool API. The
 examples' routes name it.
 
 ### Access, twice

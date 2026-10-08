@@ -146,6 +146,17 @@ once `storage` names an address storage. Compare with
 `drush tool:info tool_belt:field_add` on the same site, or read
 [`COMPARISON.md`](COMPARISON.md), which has both.
 
+`tool:info` shows the Tool API's rendering of a situation, not the
+surface's whole contract. The Tool API cannot say a shape chosen by a
+sibling key, so a slot is flattened to one map: the variant the stored
+values choose (example 3's ticket, as the free ticket while `pricing`
+is `free`), or every variant's keys with none required before anything
+chooses. The full contract, each slot an `if`/`then` per variant on the
+key that chooses it, is the main module's `data_surface.contract_emitter`:
+see it in the contract panel below, or, with `data_surface_react`
+enabled, at `/surface-api/{surface}/{situation}`
+([`docs/served-contract.md`](../../docs/served-contract.md)).
+
 ## The contract panel
 
 `SurfaceContractPanel`, the service `data_surface_tool.contract_panel`,
@@ -153,9 +164,15 @@ is a read-only panel any situation route can name in
 `_data_surface_panel`. The generic situation form places it inside the
 surface, so it rebuilds with the form: every key with its type, label,
 requiredness, default, what it allows in words, what it depends on, and
-whether it is narrowed right now; and, collapsed, the JSON Schema the
-derived tool for the same situation advertises. The routes of
-`data_surface_examples` name it.
+whether it is narrowed right now. Below the table, collapsed, are two
+JSON Schema documents: "The contract, as JSON Schema", which
+`data_surface.contract_emitter` emits for the situation and the form's
+values as they stand (slots as `allOf` of `if`/`then`, titled `oneOf`,
+`x-surface` with dependsOn and locked, no widget hints); and "What the
+Tool API can advertise", the derived tool's input schema as `tool:info`
+prints it, with a sentence on what it cannot say. It stays in this
+submodule because that second block needs the Tool API's serializer.
+The routes of `data_surface_examples` name it.
 
 ## What gates it
 
@@ -167,7 +184,7 @@ derived tool for the same situation advertises. The routes of
 | `Kernel\FieldInstanceSurfaceTest` | The three situations, the storage child (its keys, its locked type) and its has-data constraint, the settings slot, starting values. |
 | `Kernel\SituationToolsTest` | The generated tools: which exist, the two derivation rules, what they advertise, refinement to the thing a parameter names, execution, dry run, access, the storage tool's has-data constraint. |
 | `Kernel\SurfaceCatalogueTest` | The catalogue read from the static layer, and `docs/catalogue.md` against it, where each derived slot is listed. |
-| `Kernel\ExamplesStepsTest` | The contract panel: its rows as the answers narrow them, and the tool's schema beside them. |
+| `Kernel\ExamplesStepsTest` | The contract panel: its rows as the answers narrow them, the contract's slot conditionals, and the tool's schema below them. |
 | `Kernel\ExamplesToolTest` | `data_surface:registration.step3:configure`: the example calls, its definition (required as the surface says, defaulting to what is stored, and current again after a write), and a partial update the Tool API refuses. |
 
 ## Who may run them

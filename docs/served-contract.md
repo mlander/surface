@@ -3,26 +3,48 @@
 A surface built in one of its situations, served as a JSON document a
 client with no PHP can render a form from, re-narrow as answers change,
 validate against before anything is written, and then write through. The
-emitter, the four endpoints and a React app that renders from them are
-the experimental submodule `data_surface_react`.
+emitter is the main module's; the four endpoints and a React app that
+renders from them are the experimental submodule `data_surface_react`.
 
 This is the roadmap's "served contract" in its first shape: one
 situation at a time, read, rehearsed and written.
 
 ## Where the emitter lives
 
-`Drupal\data_surface_react\ContractEmitter` (`data_surface_react.contract_emitter`)
-reads any sealed surface and nothing else, so it could live in the main
-module. It lives in the submodule because of one keyword: `x-surface.widget`
-is presentation, the Form API mapping said out loud for a renderer, and
-the roadmap rejects widget vocabulary in *the* contract. A widget-free
-emitter in the main module is roadmap item 4; this one is the React
-renderer's.
+`Drupal\data_surface\Contract\ContractEmitter`, the service
+`data_surface.contract_emitter`, is the module's canonical contract: it
+reads any sealed surface and nothing else, and `emit()` answers a
+`ServedContract` (the document, and its cacheability beside it). The
+contract names no widget. `x-surface.widget` (and `multiple`, its
+qualifier on a list of allowed values) is presentation, the Form API
+mapping said out loud for a renderer, and the roadmap rejects widget
+vocabulary in the contract, so it is written only when a caller asks:
+`emit(..., widgets: TRUE)`. `data_surface_react` is that caller; its
+endpoints serve the contract with the hints, for its app to draw from.
+Everything else under `x-surface` is the surface's own reading of a key
+and is always there.
 
 It is this module's own emitter, not the Tool API's: the Tool API's
 context definitions have no place for labelled values, a conditional on
 a sibling, or anything the form knows about a key, so the tool bridge's
 JSON Schema cannot say them. This one can.
+
+## Where to see it
+
+- **Under a situation form.** `data_surface_tool`'s contract panel,
+  which the examples' routes name, shows it collapsed as "The contract,
+  as JSON Schema", emitted for the situation and the form's values as
+  they stand, so it rebuilds with the form. Below it, "What the Tool
+  API can advertise" shows the derived tool's schema for comparison.
+- **Over HTTP.** `GET /surface-api/{surface}/{situation}` with
+  `data_surface_react` enabled: the whole document, widget hints
+  included.
+- **Not `drush tool:info`.** That prints the Tool API's rendering of the
+  derived tool, which cannot say a shape keyed by a sibling: a slot is
+  flattened to one map, the variant the stored values choose, or every
+  variant's keys with none required before anything chooses
+  ([surfaces](surfaces.md), "Emission"). The `allOf` of `if`/`then`
+  below is only in this contract.
 
 ## The document
 
@@ -67,13 +89,13 @@ is an object with `properties` in declaration order, `required`, and
 
 | Keyword | Holds |
 | --- | --- |
-| `widget` | The Form API-equivalent hint: `select`, `radios`, `checkbox`, `number`, `text`, `textarea`, `email`, `fieldset`, `slot`, `list`; `null` when no widget would claim the key. |
+| `widget` | Only when the caller asks for widget hints (`data_surface_react` does). The Form API-equivalent hint: `select`, `radios`, `checkbox`, `number`, `text`, `textarea`, `email`, `fieldset`, `slot`, `list`; `null` when no widget would claim the key. |
 | `locked` | Identity the situation knows: shown, never changed. |
 | `dependsOn` | The sibling keys this key's refiners watch, in its own frame; a key an alter mounted, which only that alter may watch, by its dotted path in that frame (`third_party_settings.<module>.<key>`). A client refines when one of them changes. |
 | `refined` | Whether the key is narrowed right now, compared with what the surface advertises in this situation. |
 | `stale` | The stored value is no longer offered; the key is shown on its empty option, standing for it. |
 | `emptyOption` | On a single select: `{show, label}`, by [the empty option rule](decisions.md#the-empty-option-rule): always for an optional select (`- None -`), for a required one only while no valid choice is selected (`- Select -`). |
-| `multiple` | On a list of allowed values: a multiple select. |
+| `multiple` | With the widget hints, on a list of allowed values: a multiple select. |
 | `by`, `variants`, `chosen` | On a slot: the deciding key, the values that choose a variant, and the one chosen now. |
 | `variant` | On a slot's variant schema: which value it is for. |
 | `checkedOnServer` | Constraints no keyword states. |
@@ -83,7 +105,12 @@ is an object with `properties` in declaration order, `required`, and
 A slot's own property fixes no shape. Each variant is a `then` on the
 parent, under an `if` naming the deciding key's value as a `const`, so a
 validator applies exactly the chosen variant's rules and a renderer reads
-the shape the current value selects. Example 3's ticket, abbreviated:
+the shape the current value selects. There is no OpenAPI `discriminator`
+beside it: OpenAPI's names a property inside the object whose
+alternatives it picks, and a slot's deciding key is a sibling of it
+([decision](decisions.md#no-openapi-discriminator-on-a-slot)). Example
+3's ticket, abbreviated, as `/surface-api` serves it (with the widget
+hints):
 
 ```json
 "ticket": {
@@ -109,7 +136,7 @@ the shape the current value selects. Example 3's ticket, abbreviated:
 ### Example 2, abbreviated
 
 The venue narrows the room and the room the capacity, for the stored
-library and its reading room:
+library and its reading room, as `/surface-api` serves it:
 
 ```json
 {
@@ -143,8 +170,9 @@ library and its reading room:
 
 ## The widget mapping
 
-What the emitter's `widget` mirrors is `DataSurfaceWidgetManager`'s
-choice, in its weight order ([Widgets](widgets.md)).
+What the emitter's `widget`, when asked for, mirrors is
+`DataSurfaceWidgetManager`'s choice, in its weight order
+([Widgets](widgets.md)).
 
 | Definition | Form API element | `x-surface.widget` | React component |
 | --- | --- | --- | --- |

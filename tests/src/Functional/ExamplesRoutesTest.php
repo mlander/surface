@@ -77,7 +77,8 @@ class ExamplesRoutesTest extends BrowserTestBase {
 
     $this->drupalGet('surface-examples/3');
     $assert->pageTextContains('The contract, as it stands');
-    $assert->pageTextContains('JSON Schema the tool data_surface:registration.step3:configure advertises');
+    $assert->pageTextContains('The contract, as JSON Schema');
+    $assert->pageTextContains('What the Tool API can advertise: data_surface:registration.step3:configure');
     $this->submitForm(['surface[title]' => 'Harvest fair'], 'Save');
     $assert->pageTextContains('The changes have been saved.');
     $this->assertSame('Harvest fair', $this->config('data_surface_examples.registration_step3')->get('title'));

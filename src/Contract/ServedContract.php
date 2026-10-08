@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface_react;
+namespace Drupal\data_surface\Contract;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Cache\CacheableMetadata;
@@ -14,7 +14,7 @@ use Drupal\Core\Cache\CacheableMetadata;
  * was read from carries cacheability, which travels beside it rather
  * than inside it, so a response can say it in HTTP terms.
  *
- * @see \Drupal\data_surface_react\ContractEmitter
+ * @see \Drupal\data_surface\Contract\ContractEmitter
  */
 final class ServedContract implements CacheableDependencyInterface {
 

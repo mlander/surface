@@ -9,12 +9,12 @@ use Drupal\Core\Cache\CacheableJsonResponse;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
+use Drupal\data_surface\Contract\ContractEmitter;
+use Drupal\data_surface\Contract\ServedContract;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Pipeline\SurfaceViolation;
 use Drupal\data_surface\SurfaceBuild\SurfaceTargetAdapter;
-use Drupal\data_surface_react\ContractEmitter;
-use Drupal\data_surface_react\ServedContract;
 use Drupal\data_surface_react\ServedSituation;
 use Drupal\data_surface_react\ServedSituations;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -60,8 +60,8 @@ final class SurfaceApiController implements ContainerInjectionInterface {
    *
    * @param \Drupal\data_surface_react\ServedSituations $servedSituations
    *   What reads a situation off a request.
-   * @param \Drupal\data_surface_react\ContractEmitter $emitter
-   *   The contract emitter.
+   * @param \Drupal\data_surface\Contract\ContractEmitter $emitter
+   *   The main module's contract emitter, asked for its widget hints.
    * @param \Drupal\data_surface\Form\DataSurfaceFormBuilderInterface $formBuilder
    *   The form builder, whose discard rule refine applies.
    * @param \Drupal\data_surface\Pipeline\DataSurfacePipelineInterface $pipeline
@@ -85,7 +85,7 @@ final class SurfaceApiController implements ContainerInjectionInterface {
   public static function create(ContainerInterface $container): static {
     return new static(
       $container->get('data_surface_react.served_situations'),
-      $container->get('data_surface_react.contract_emitter'),
+      $container->get('data_surface.contract_emitter'),
       $container->get('data_surface.form_builder'),
       $container->get('data_surface.pipeline'),
       $container->get('string_translation'),
@@ -344,16 +344,19 @@ final class SurfaceApiController implements ContainerInjectionInterface {
   /**
    * Emits the contract of a served situation for some values.
    *
+   * With the widget hints: the app draws each key from its
+   * `x-surface.widget`, which the canonical contract leaves out.
+   *
    * @param \Drupal\data_surface_react\ServedSituation $served
    *   The situation.
    * @param array $values
    *   The values.
    *
-   * @return \Drupal\data_surface_react\ServedContract
+   * @return \Drupal\data_surface\Contract\ServedContract
    *   The contract.
    */
   protected function emit(ServedSituation $served, array $values): ServedContract {
-    return $this->emitter->emit($served->surface, $values, $served->definition->id, $served->situation->id, $served->situation->label);
+    return $this->emitter->emit($served->surface, $values, $served->definition->id, $served->situation->id, $served->situation->label, widgets: TRUE);
   }
 
   /**
@@ -367,7 +370,7 @@ final class SurfaceApiController implements ContainerInjectionInterface {
    *
    * @param \Drupal\data_surface_react\ServedSituation $served
    *   The situation.
-   * @param \Drupal\data_surface_react\ServedContract $contract
+   * @param \Drupal\data_surface\Contract\ServedContract $contract
    *   The contract.
    * @param array $extra
    *   More top level keys for the document.

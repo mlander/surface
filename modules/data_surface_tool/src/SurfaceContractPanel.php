@@ -10,6 +10,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\data_surface\Contract\ContractEmitter;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Form\DataSurfaceFormPanelInterface;
@@ -32,9 +33,17 @@ use Drupal\tool\Tool\ToolManager;
  * inside the surface container, so the AJAX rebuild a refinement
  * triggers rebuilds the panel too.
  *
- * Below the table, collapsed, is the JSON Schema the derived tool for
- * the same situation advertises, normalized by the Tool API's own
- * serializer: the contract a caller with no form is handed.
+ * Below the table, collapsed, are two JSON Schema documents. First the
+ * contract itself, from the main module's emitter for the situation and
+ * the values as they stand: a slot as an `if`/`then` per variant keyed
+ * on its deciding sibling, allowed values as titled `oneOf`, and what
+ * each key depends on and whether it is locked under `x-surface`. Then
+ * what the derived tool for the same situation advertises, normalized by
+ * the Tool API's own serializer: the rendering `tool:info` prints, which
+ * cannot say a shape keyed by a sibling and so shows a slot as one map,
+ * the variant chosen when the tool was derived or every variant's keys
+ * before anything chooses. The panel needs the Tool API for that second
+ * block, which is why it lives in this submodule.
  *
  * Everything here is read from the two surfaces the form already holds,
  * the one built in the situation's context and the same one refined by
@@ -58,6 +67,8 @@ final class SurfaceContractPanel implements DataSurfaceFormPanelInterface {
    *   What discovery found, for the surface's id.
    * @param \Drupal\data_surface\Options\DataSurfaceOptions $options
    *   The options service, which reads a value list off a constraint.
+   * @param \Drupal\data_surface\Contract\ContractEmitter $emitter
+   *   The main module's contract emitter.
    * @param \Drupal\tool\Tool\ToolManager $toolManager
    *   The tool plugin manager.
    * @param \Drupal\tool\Normalizer\ToolDefinitionSerializer $definitionSerializer
@@ -68,6 +79,7 @@ final class SurfaceContractPanel implements DataSurfaceFormPanelInterface {
   public function __construct(
     protected readonly SurfaceRegistry $registry,
     protected readonly DataSurfaceOptions $options,
+    protected readonly ContractEmitter $emitter,
     protected readonly ToolManager $toolManager,
     protected readonly ToolDefinitionSerializer $definitionSerializer,
     TranslationInterface $string_translation,
@@ -84,7 +96,8 @@ final class SurfaceContractPanel implements DataSurfaceFormPanelInterface {
     foreach ($refined->getDefinitions()->entries() as $name => $entry) {
       $this->entryRows($rows, (string) $name, $entry, $declared->getDefinition((string) $name), $refined, $values);
     }
-    $tool_id = 'data_surface:' . $this->registry->getDefinition($served->surface)->id . ':' . $served->situation->id;
+    $surface_id = $this->registry->getDefinition($served->surface)->id;
+    $tool_id = 'data_surface:' . $surface_id . ':' . $served->situation->id;
     $panel = [
       '#type' => 'details',
       '#open' => FALSE,
@@ -111,23 +124,46 @@ final class SurfaceContractPanel implements DataSurfaceFormPanelInterface {
         '#attributes' => ['class' => ['data-surface-contract-keys']],
       ],
     ];
+    $contract = $this->emitter->emit($declared, $values, $surface_id, $served->situation->id, $served->situation->label);
+    $panel['contract'] = [
+      '#type' => 'details',
+      '#open' => FALSE,
+      '#title' => $this->t('The contract, as JSON Schema'),
+      'note' => [
+        '#markup' => '<p>' . $this->t('What the surface states for the answers as they stand: each slot as one conditional per variant on the key that chooses it, allowed values with their labels, and under <code>x-surface</code> what each key depends on and whether it is locked. It is the document data_surface_react serves at <code>/surface-api</code>, less the widget hints that renderer asks for.') . '</p>',
+      ],
+      'json' => $this->json($contract->document['schema']),
+    ];
     if ($this->toolManager->hasDefinition($tool_id)) {
       $tool = $this->toolManager->createInstance($tool_id);
-      $panel['schema'] = [
+      $panel['tool'] = [
         '#type' => 'details',
         '#open' => FALSE,
-        '#title' => $this->t('JSON Schema the tool @tool advertises', ['@tool' => $tool_id]),
+        '#title' => $this->t('What the Tool API can advertise: @tool', ['@tool' => $tool_id]),
         'note' => [
-          '#markup' => '<p>' . $this->t('The contract as declared, before any answer arrives. The tool narrows it the same way the form does once values are sent.') . '</p>',
+          '#markup' => '<p>' . $this->t("The input schema of the tool for the same situation, as <code>tool:info</code> prints it. The Tool API cannot say a shape chosen by a sibling key, so a slot appears as one map, not as a conditional on the key that chooses it: the variant the stored values choose, or, before anything chooses, every variant's keys with none required.") . '</p>',
         ],
-        'json' => [
-          '#type' => 'html_tag',
-          '#tag' => 'pre',
-          '#value' => htmlspecialchars((string) json_encode($this->definitionSerializer->normalizeInputSchema($tool), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)),
-        ],
+        'json' => $this->json($this->definitionSerializer->normalizeInputSchema($tool)),
       ];
     }
     return $panel;
+  }
+
+  /**
+   * Shows a schema as pretty-printed JSON.
+   *
+   * @param array $schema
+   *   The schema.
+   *
+   * @return array
+   *   A render array: the JSON in a `pre`, escaped.
+   */
+  protected function json(array $schema): array {
+    return [
+      '#type' => 'html_tag',
+      '#tag' => 'pre',
+      '#value' => htmlspecialchars((string) json_encode($schema, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)),
+    ];
   }
 
   /**

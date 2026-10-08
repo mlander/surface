@@ -4,25 +4,30 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
+use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Surface\SurfaceContext;
 use Drupal\data_surface_demo\Surface\DemoBlockSurface;
+use Drupal\data_surface_react\Controller\SurfaceApiController;
 use Drupal\node\Entity\NodeType;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Opis\JsonSchema\Validator;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
- * Tests the contract data_surface_react serves, over five surfaces.
+ * Tests the served contract the main module emits, over five surfaces.
  *
  * Examples 1 to 3, the content type surface in both its situations, and
  * the demo block's surface built the way its host builds it. What is
  * asserted is what a client reads: titles from labels, allowed values as
  * `oneOf` with their labels, bounds, the dependency edges, the slot as a
  * conditional on the deciding key, the locked machine name, and the
- * x-surface reading of each key. Every schema is then held to two
+ * x-surface reading of each key, widget hints included where the React
+ * renderer asks for them and left out otherwise. Every schema is then
+ * held to two
  * validators already in the site's vendor directory: opis/json-schema,
  * which compiles it under draft 2020-12 and validates the contract's own
  * values against it (and refuses values the surface refuses), and the
@@ -80,19 +85,22 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    *   The situation's parameters.
    * @param array $values
    *   Values over what the situation is served with.
+   * @param bool $widgets
+   *   Whether to ask for the widget hints, as the React renderer does.
    *
    * @return array
    *   The contract, through JSON and back.
    */
-  protected function contract(string $surface, string $situation, array $parameters = [], array $values = []): array {
+  protected function contract(string $surface, string $situation, array $parameters = [], array $values = [], bool $widgets = TRUE): array {
     $served = $this->container->get('data_surface_react.served_situations');
     $situation = $served->resolve($surface, $situation, $parameters);
-    $contract = $this->container->get('data_surface_react.contract_emitter')->emit(
+    $contract = $this->container->get('data_surface.contract_emitter')->emit(
       $situation->surface,
       array_replace($served->current($situation), $values),
       $situation->definition->id,
       $situation->situation->id,
       $situation->situation->label,
+      $widgets,
     );
     return json_decode((string) json_encode($contract->document), TRUE);
   }
@@ -360,6 +368,93 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Collects every `x-surface` keyword in a schema, by where it sits.
+   *
+   * @param array $schema
+   *   The schema.
+   * @param string $at
+   *   Where the schema sits, as a JSON pointer.
+   *
+   * @return array<string, array>
+   *   Each keyword, keyed by the pointer of the schema carrying it.
+   */
+  protected function extensions(array $schema, string $at = ''): array {
+    $found = isset($schema['x-surface']) ? [$at => $schema['x-surface']] : [];
+    foreach ($schema as $key => $value) {
+      if ($key !== 'x-surface' && is_array($value)) {
+        $found += $this->extensions($value, $at . '/' . $key);
+      }
+    }
+    return $found;
+  }
+
+  /**
+   * Tests the widget hints are off by default and on for the React app.
+   *
+   * The canonical contract names no widget; everything else under
+   * `x-surface` is the surface's own reading and stays. The React
+   * submodule's endpoint asks the same service for the hints.
+   */
+  public function testWidgetHintsAreTheRenderersAlone(): void {
+    $surface = $this->container->get('data_surface.surfaces')->build(DemoBlockSurface::class, new SurfaceContext('configure'));
+    $default = $this->container->get('data_surface.contract_emitter')
+      ->emit($surface, $surface->getDefaultValues(), 'block.data_surface_demo')
+      ->document;
+    $plain = json_decode((string) json_encode($default['schema']), TRUE);
+    $this->assertSame($plain, $this->contractOf($surface, FALSE));
+    $this->assertNotSame($plain, $this->contractOf($surface, TRUE));
+
+    $canonical = $this->contract('registration.step3', 'configure', widgets: FALSE);
+    $schema = $canonical['schema'];
+    $extensions = $this->extensions($schema);
+    $this->assertNotEmpty($extensions);
+    foreach ($extensions as $at => $extension) {
+      $this->assertArrayNotHasKey('widget', $extension, $at . ' names no widget.');
+      $this->assertArrayNotHasKey('multiple', $extension, $at . ' names no widget.');
+      $this->assertSame(['locked', 'dependsOn', 'refined', 'stale'], array_slice(array_keys($extension), 0, 4), $at . ' keeps the surface\'s own reading.');
+    }
+    $ticket = $schema['properties']['ticket']['x-surface'];
+    $this->assertSame('pricing', $ticket['by']);
+    $this->assertSame(['free', 'paid'], $ticket['variants']);
+    $this->assertSame('free', $ticket['chosen']);
+    $this->assertSame(['venue'], $schema['properties']['room']['x-surface']['dependsOn']);
+    $this->assertArrayHasKey('emptyOption', $schema['properties']['venue']['x-surface']);
+    $this->assertSame('paid', $this->variant($schema, 'pricing', 'paid', 'ticket')['x-surface']['variant']);
+    // The hints are the only difference.
+    $hinted = $this->contract('registration.step3', 'configure');
+    $this->assertSame(array_keys($this->extensions($hinted['schema'])), array_keys($extensions));
+    $this->assertSame($canonical['values'], $hinted['values']);
+    $this->assertWellFormed($schema);
+    $this->assertTrue($this->validates($schema, $canonical['values']));
+
+    // The React endpoint asks for them.
+    $controller = $this->container->get('class_resolver')->getInstanceFromDefinition(SurfaceApiController::class);
+    $served = json_decode((string) $controller->contract(Request::create('/surface-api/registration.step3/configure'), 'registration.step3', 'configure')->getContent(), TRUE);
+    $this->assertSame('slot', $served['schema']['properties']['ticket']['x-surface']['widget']);
+    $this->assertSame('select', $served['schema']['properties']['venue']['x-surface']['widget']);
+    $this->assertSame('fieldset', $this->variant($served['schema'], 'pricing', 'paid', 'ticket')['x-surface']['widget']);
+    $this->assertSame($hinted['schema'], $served['schema']);
+  }
+
+  /**
+   * Emits a surface asked for in no situation, its schema decoded.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The surface.
+   * @param bool $widgets
+   *   Whether to ask for the widget hints.
+   *
+   * @return array
+   *   The schema, through JSON and back.
+   */
+  protected function contractOf(DataSurfaceInterface $surface, bool $widgets): array {
+    $document = $this->container->get('data_surface.contract_emitter')
+      ->emit($surface, $surface->getDefaultValues(), 'block.data_surface_demo', NULL, NULL, $widgets)
+      ->document;
+    return json_decode((string) json_encode($document['schema']), TRUE);
+  }
+
+  /**
    * Tests example 4 on example 3: the capacity depends on the licence.
    *
    * The compliance alter's method on the capacity watches the licence the
@@ -421,8 +516,8 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    */
   public function testDemoBlock(): void {
     $surface = $this->container->get('data_surface.surfaces')->build(DemoBlockSurface::class, new SurfaceContext('configure'));
-    $document = $this->container->get('data_surface_react.contract_emitter')
-      ->emit($surface, $surface->getDefaultValues(), 'block.data_surface_demo')
+    $document = $this->container->get('data_surface.contract_emitter')
+      ->emit($surface, $surface->getDefaultValues(), 'block.data_surface_demo', widgets: TRUE)
       ->document;
     $contract = json_decode((string) json_encode($document), TRUE);
     $this->assertNull($contract['situation']);
@@ -464,8 +559,8 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $this->assertWellFormed($this->contract('node.type', 'add')['schema']);
 
     $surface = $this->container->get('data_surface.surfaces')->build(DemoBlockSurface::class, new SurfaceContext('configure'));
-    $document = $this->container->get('data_surface_react.contract_emitter')
-      ->emit($surface, $surface->getDefaultValues(), 'block.data_surface_demo')
+    $document = $this->container->get('data_surface.contract_emitter')
+      ->emit($surface, $surface->getDefaultValues(), 'block.data_surface_demo', widgets: TRUE)
       ->document;
     $contract = json_decode((string) json_encode($document), TRUE);
     $this->assertWellFormed($contract['schema']);

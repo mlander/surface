@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface_react;
+namespace Drupal\data_surface\Contract;
 
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
@@ -23,9 +23,9 @@ use Drupal\data_surface\SurfaceEntry;
  *
  * The contract is JSON Schema 2020-12 for the inputs, with one extension
  * keyword, `x-surface`, on every property for what JSON Schema has no
- * word for, plus the values the schema describes right now. It is this
- * module's own emitter rather than the Tool API's, so it can say what a
- * Tool API context definition cannot carry:
+ * word for, plus the values the schema describes right now. It is the
+ * module's canonical contract, and its own emitter rather than the Tool
+ * API's, so it can say what a Tool API context definition cannot carry:
  *
  * - allowed values as `oneOf: [{const, title}]`, labels included, read
  *   from the options service: the same list a generated select renders
@@ -33,28 +33,31 @@ use Drupal\data_surface\SurfaceEntry;
  * - a slot as a real conditional on its parent, one `if` naming the
  *   deciding key's `const` and one `then` naming the slot's shape per
  *   variant, so the union is stated where JSON Schema can state it;
- * - per key, the generated form's own reading of it (`x-surface`):
- *   whether it is locked, which siblings its refiners watch, whether it
- *   is narrowed right now, which widget the Form API mapping gives it,
- *   whether a select shows its empty option and under what label, and
- *   whether the value it holds has gone stale.
+ * - per key, what the surface knows about it beyond its shape
+ *   (`x-surface`): whether it is locked, which siblings its refiners
+ *   watch, whether it is narrowed right now, whether a select shows its
+ *   empty option and under what label, and whether the value it holds
+ *   has gone stale.
  *
  * Everything is read from the surface: the declared shape for what it
  * advertises, the same surface refined against the values for what it
  * allows now, each subsurface in its own frame. Nothing names a surface
  * or a key, and nothing here reaches storage: the values are handed in.
  *
- * The widget hint mirrors DataSurfaceWidgetManager's selection in its
- * weight order, so the React app renders what the situation form would:
- * a non-empty option list is a select (a list of them, a multiple
- * select); a map with properties is a fieldset; a string is a textarea
- * when its definition says multiline, an email input for the email
- * type, a text input otherwise; a number is a number input; a boolean a
- * checkbox. Two hints have no Form API counterpart here: `slot` for a
- * key a sibling chooses the shape of, and `list` for a list with no
- * option list, which no stock widget claims. `radios` is in the
- * vocabulary for a consumer to honour, and is never chosen by this
- * emitter, because the Form API mapping never renders radios.
+ * The contract carries no widget vocabulary unless a renderer asks for
+ * it (emit()'s $widgets). Then `x-surface.widget` mirrors
+ * DataSurfaceWidgetManager's selection in its weight order, so a
+ * renderer such as data_surface_react's app draws what the situation
+ * form would: a non-empty option list is a select (a list of them, a
+ * multiple select, said by `multiple`); a map with properties is a
+ * fieldset; a string is a textarea when its definition says multiline,
+ * an email input for the email type, a text input otherwise; a number is
+ * a number input; a boolean a checkbox. Two hints have no Form API
+ * counterpart here: `slot` for a key a sibling chooses the shape of, and
+ * `list` for a list with no option list, which no stock widget claims.
+ * `radios` is in the vocabulary for a consumer to honour, and is never
+ * chosen by this emitter, because the Form API mapping never renders
+ * radios.
  */
 final class ContractEmitter {
 
@@ -130,16 +133,24 @@ final class ContractEmitter {
    *   The situation id, or NULL for a surface asked for in no situation.
    * @param string|\Stringable|null $label
    *   The situation's label, which titles the schema.
+   * @param bool $widgets
+   *   Whether to add the renderer's widget hints, `x-surface.widget` and,
+   *   on a list of allowed values, `x-surface.multiple`. Off by default:
+   *   the contract itself names no widget, and a renderer that draws
+   *   from it, as data_surface_react does, asks for them.
    *
-   * @return \Drupal\data_surface_react\ServedContract
+   * @return \Drupal\data_surface\Contract\ServedContract
    *   The contract, and what it depends on.
    */
-  public function emit(DataSurfaceInterface $surface, array $values, string $surface_id, ?string $situation_id = NULL, string|\Stringable|null $label = NULL): ServedContract {
+  public function emit(DataSurfaceInterface $surface, array $values, string $surface_id, ?string $situation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE): ServedContract {
     $cacheability = new CacheableMetadata();
     $stale = [];
     $standing = $values[DataSurfaceFormBuilderInterface::STANDING_KEY] ?? [];
     unset($values[DataSurfaceFormBuilderInterface::STANDING_KEY]);
     [$schema, $shown] = $this->frame($surface, $values, '', $cacheability, $stale, is_array($standing) ? $standing : []);
+    if (!$widgets) {
+      $schema = $this->withoutWidgets($schema);
+    }
     $title = $label === NULL ? [] : ['title' => (string) $label];
     $document = [
       'surface' => $surface_id,
@@ -805,6 +816,36 @@ final class ContractEmitter {
       }
     }
     return FALSE;
+  }
+
+  /**
+   * Strips the widget hints from a schema, at every depth.
+   *
+   * The hints are written while the schema is built, because the widget
+   * a key gets is read from the same definition and option list as its
+   * shape; taking them out afterwards keeps that one pass.
+   *
+   * @param array $schema
+   *   A schema this emitter wrote.
+   *
+   * @return array
+   *   The schema, its `x-surface` keywords without `widget` and
+   *   `multiple`.
+   */
+  protected function withoutWidgets(array $schema): array {
+    foreach ($schema as $key => $value) {
+      if (!is_array($value)) {
+        continue;
+      }
+      if ($key === self::EXTENSION) {
+        unset($value['widget'], $value['multiple']);
+        $schema[$key] = $value;
+      }
+      else {
+        $schema[$key] = $this->withoutWidgets($value);
+      }
+    }
+    return $schema;
   }
 
   /**

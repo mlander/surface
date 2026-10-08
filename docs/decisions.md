@@ -567,13 +567,39 @@ code true.
 
 ## Served contract
 
-### The emitter is the React module's
+### The emitter is the main module's, and widgets are asked for
 
-The served contract's emitter reads any sealed surface and could live in
-the main module, but it writes `x-surface.widget`, the Form API mapping
-said for a renderer, and the roadmap rejects widget vocabulary in the
-contract. So it is `data_surface_react`'s, and a widget-free emitter in
-the main module stays roadmap item 4. (`ContractEmitter`)
+The served contract's emitter reads any sealed surface and nothing else,
+so it is the main module's (`data_surface.contract_emitter`), the
+canonical contract the situation form's contract panel shows and
+`/surface-api` serves. The roadmap rejects widget vocabulary in the
+contract, so `x-surface.widget`, the Form API mapping said for a
+renderer, and `multiple`, its qualifier, are written only when a caller
+passes `widgets: TRUE`; `data_surface_react` does, for its app. The rest
+of `x-surface` (locked, dependsOn, refined, stale, emptyOption, a slot's
+by, variants and chosen, a variant's id, checkedOnServer) is the
+surface's own reading of a key, not a widget, and is always written.
+The hints are stripped after the schema is built rather than threaded
+through it, so the widget a key gets is still read in the same pass as
+its shape. (`Contract\ContractEmitter::emit()`)
+
+### No OpenAPI discriminator on a slot
+
+A slot is an `allOf` of `if`/`then` on its parent, and carries no
+OpenAPI `discriminator` beside it, because there is no place where
+OpenAPI's meaning would be true. A discriminator sits on a schema whose
+`oneOf`/`anyOf` (or `allOf` inheritance) lists whole alternatives of
+that same object, and names a property inside it, mapped by its string
+value to a named or referenced schema. A slot's deciding key is a
+sibling: on the slot (`ticket`) the property does not exist, and on the
+parent the alternatives are not whole objects but conditionals that
+each constrain only the slot, so a reader would resolve `free` and
+`paid` as component schema names, which they are not. A parent with two
+slots keyed by two siblings would need two discriminators on one
+object. Restating the parent as a `oneOf` of whole objects would make it
+legal and multiply the parent per variant, per slot. The `if`/`then` is
+the JSON Schema statement, and `x-surface.by` names the key for a
+reader that wants it. (`ContractEmitter::slot()`)
 
 ### A served contract is never stored
 

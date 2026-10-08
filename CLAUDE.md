@@ -91,7 +91,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
   modules/custom/data_surface'
 ```
 
-The baseline as of this writing: **729 tests, 7165 assertions, 0 errors,
+The baseline as of this writing: **730 tests, 7255 assertions, 0 errors,
 3 failures** — the three tests of the one class below. The test and
 assertion counts drift upward as work lands and are not the thing to
 check. **No test may error,
@@ -143,11 +143,17 @@ npx --yes cspell@8 --config /tmp/merged.json --no-progress --no-summary "**"
 
 ## The React submodule and its app
 
-`modules/data_surface_react` is the served contract: `ContractEmitter`
-turns a sealed surface and its values into JSON Schema 2020-12 with an
-`x-surface` keyword per property; `/surface-api/{surface}/{situation}`
-serves it, `/refine` re-narrows it (the AJAX rebuild's equivalent,
-emitted from the form builder's `refinementOverlay()`, so an orphan is
+The served contract's emitter is the main module's:
+`Contract\ContractEmitter` (`data_surface.contract_emitter`) turns a
+sealed surface and its values into JSON Schema 2020-12 with an
+`x-surface` keyword per property, each slot an `allOf` of `if`/`then`
+on its deciding sibling. It names no widget unless asked
+(`emit(..., widgets: TRUE)`); `data_surface_tool`'s contract panel shows
+it without, beside what the Tool API can advertise (which flattens a
+slot, and is what `tool:info` prints). `modules/data_surface_react`
+serves it with the widget hints, through the main module's service:
+`/surface-api/{surface}/{situation}` serves it, `/refine` re-narrows it
+(the AJAX rebuild's equivalent, emitted from the form builder's `refinementOverlay()`, so an orphan is
 held unanswered and listed `stale`), `/validate` runs the pipeline
 dry and `/submit` writes, answering a refusal as 200 data
 (`committed: false`), a write with the rebuilt contract, and a create
@@ -158,7 +164,7 @@ sends it back is refused when storage changed since, and one that sends
 none is not checked (opt-in; the app sends it).
 `/surface-react/{surface}/{situation}` renders it with a React app.
 `docs/served-contract.md` has the format, `docs/decisions.md` (Served
-contract) the six points it settled.
+contract) the seven points it settled.
 
 The app is `modules/data_surface_react/app/`: Vite, React 18 and
 TypeScript, every version pinned exactly. Run npm on the host, never
@@ -246,6 +252,7 @@ src/SurfaceBuild/        Discovery pass, registry, build step, adapters,
 src/Hook/                #[UsesSurface] into plugin definitions.
 src/Pipeline/            Access, accept, validate, prepare, commit; results.
 src/Target/              Where accepted values are written; storage shapes.
+src/Contract/            The served contract's emitter (JSON Schema).
 src/Form/                Form builder, host traits, the situation form.
 src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constraints.
 src/Options/             Option sets, the resolver plugin base and manager.

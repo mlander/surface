@@ -313,13 +313,36 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     $this->assertSame('the paid variant', $rows['ticket'][7]);
     $this->assertSame(['ticket.price', 'float', 'Price', 'yes', '—', 'at least 0.01', '—', 'as declared'], $rows['ticket.price']);
 
-    // The panel names the tool and its schema.
+    // The panel shows the contract itself: the ticket as one conditional
+    // per variant, keyed on the pricing beside it, and no widget hints.
     $this->serveRoute('data_surface_examples.step3');
     $form = $this->container->get('form_builder')->getForm(DataSurfaceSituationForm::class);
     $panel = $form[DataSurfaceSituationForm::SURFACE_KEY][DataSurfaceSituationForm::PANEL_KEY];
-    $this->assertStringContainsString('data_surface:registration.step3:configure', (string) $panel['schema']['#title']);
-    $schema = json_decode(htmlspecialchars_decode((string) $panel['schema']['json']['#value']), TRUE);
+    $this->assertSame('The contract, as JSON Schema', (string) $panel['contract']['#title']);
+    $contract = json_decode(htmlspecialchars_decode((string) $panel['contract']['json']['#value']), TRUE);
+    $this->assertSame('https://json-schema.org/draft/2020-12/schema', $contract['$schema']);
+    $branches = [];
+    foreach ($contract['allOf'] as $branch) {
+      $this->assertSame(['pricing'], $branch['if']['required']);
+      $branches[$branch['if']['properties']['pricing']['const']] = $branch['then']['properties']['ticket'];
+    }
+    $this->assertSame(['free', 'paid'], array_keys($branches));
+    $this->assertSame(['note'], array_keys($branches['free']['properties']));
+    $this->assertSame(['price', 'currency'], $branches['paid']['required']);
+    $this->assertSame(['EUR', 'GBP', 'USD'], array_column($branches['paid']['properties']['currency']['oneOf'], 'title'));
+    $ticket = $contract['properties']['ticket']['x-surface'];
+    $this->assertSame(['pricing', ['free', 'paid'], 'free'], [$ticket['by'], $ticket['variants'], $ticket['chosen']]);
+    $this->assertArrayNotHasKey('widget', $ticket);
+    $this->assertSame(['venue'], $contract['properties']['room']['x-surface']['dependsOn']);
+
+    // Below it, labelled, what the derived tool can advertise.
+    $this->assertSame(['contract', 'tool'], array_values(array_intersect(Element::children($panel), ['contract', 'tool'])));
+    $this->assertStringContainsString('What the Tool API can advertise', (string) $panel['tool']['#title']);
+    $this->assertStringContainsString('data_surface:registration.step3:configure', (string) $panel['tool']['#title']);
+    $this->assertStringContainsString('cannot say a shape chosen by a sibling key', (string) $panel['tool']['note']['#markup']);
+    $schema = json_decode(htmlspecialchars_decode((string) $panel['tool']['json']['#value']), TRUE);
     $this->assertSame(['values', 'dry_run'], array_keys($schema['properties']));
+    $this->assertArrayNotHasKey('allOf', $schema['properties']['values']);
   }
 
   /**
