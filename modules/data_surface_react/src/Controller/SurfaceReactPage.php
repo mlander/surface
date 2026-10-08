@@ -94,6 +94,7 @@ final class SurfaceReactPage implements ContainerInjectionInterface {
           'dataSurfaceReact' => [
             'mount' => self::MOUNT,
             'apiBase' => $request->getBasePath() . '/surface-api',
+            'pageBase' => $request->getBasePath() . '/surface-react',
             'surface' => $served->definition->id,
             'situation' => $served->situation->id,
             'parameters' => array_filter($served->parameters, 'is_scalar'),

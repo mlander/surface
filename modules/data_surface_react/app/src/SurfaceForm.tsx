@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createApi, type Fetcher, type Settings } from './api';
+import { createApi, pageOf, SEND_FINGERPRINT, type Fetcher, type Settings } from './api';
 import type { Contract, Values, Violation } from './contract';
 import { watchedPaths, setAt } from './contract';
 import { ContractPanel } from './ContractPanel';
@@ -18,6 +18,17 @@ function same(a: unknown, b: unknown): boolean {
  * render, and the contract would be fetched again on every one.
  */
 const browserFetch: Fetcher = (input, init) => fetch(input, init);
+
+/** Moves the browser to another page: where a created thing now lives. */
+const browserNavigate = (url: string): void => window.location.assign(url);
+
+/** What the summary above the form says: a rehearsal's or a write's answer. */
+interface Summary {
+  kind: 'validate' | 'submit';
+  valid: boolean;
+  violations: Violation[];
+  stale: Violation[];
+}
 
 /** Files violations by path, for the fields to show inline. */
 function byPath(violations: Violation[]): Record<string, string[]> {
@@ -39,25 +50,36 @@ function byPath(violations: Violation[]): Record<string, string[]> {
  * empty option, standing for the stored value the server kept. Validate
  * sends the values to /validate, which rehearses the write and saves
  * nothing, and shows what it refused beside each field and in a summary.
+ * Submit sends them, with the fingerprint of what was stored when the
+ * contract was loaded, to /submit: a refusal shows as Validate's does; a
+ * write says so, with any stale value it kept, and re-renders from the
+ * contract the answer carries; a write that created something moves to
+ * the page where it now lives.
  */
 export function SurfaceForm({
   settings,
   fetcher = browserFetch,
   refineDelay = REFINE_DELAY,
+  navigate = browserNavigate,
 }: {
   settings: Settings;
   fetcher?: Fetcher;
   refineDelay?: number;
+  navigate?: (url: string) => void;
 }): JSX.Element {
   const api = useMemo(() => createApi(settings, fetcher), [settings, fetcher]);
   const [contract, setContract] = useState<Contract | null>(null);
   const [values, setValues] = useState<Values>({});
   const [failure, setFailure] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
-  const [summary, setSummary] = useState<{ valid: boolean; violations: Violation[]; stale: Violation[] } | null>(null);
+  const [summary, setSummary] = useState<Summary | null>(null);
   const [refining, setRefining] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const current = useRef<Values>({});
   const stale = useRef<string[]>([]);
+  // What storage held when the contract was loaded, or last written; a
+  // refine re-reads storage, so it never replaces this.
+  const fingerprint = useRef<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const sequence = useRef(0);
 
@@ -71,7 +93,12 @@ export function SurfaceForm({
   useEffect(() => {
     let live = true;
     api.contract().then(
-      (loaded) => live && show(loaded, loaded.values),
+      (loaded) => {
+        if (live) {
+          fingerprint.current = loaded.fingerprint ?? null;
+          show(loaded, loaded.values);
+        }
+      },
       (error: Error) => live && setFailure(error.message),
     );
     return () => {
@@ -138,12 +165,44 @@ export function SurfaceForm({
     try {
       const result = await api.validate(current.current, stale.current);
       setErrors(byPath(result.violations));
-      setSummary({ valid: result.valid, violations: result.violations, stale: result.stale });
+      setSummary({ kind: 'validate', valid: result.valid, violations: result.violations, stale: result.stale });
     }
     catch (error) {
       setFailure((error as Error).message);
     }
   }, [api]);
+
+  const submit = useCallback(async () => {
+    clearTimeout(timer.current);
+    setSubmitting(true);
+    try {
+      const send = settings.sendFingerprint ?? SEND_FINGERPRINT;
+      const result = await api.submit(current.current, stale.current, send ? fingerprint.current : null);
+      setFailure(null);
+      setErrors(byPath(result.violations));
+      setSummary({ kind: 'submit', valid: result.committed, violations: result.violations, stale: result.stale });
+      if (!result.committed) {
+        return;
+      }
+      if (result.created !== null) {
+        navigate(pageOf(settings, result.created));
+        return;
+      }
+      if (result.contract !== null) {
+        // A refine still out was asked of what is now overwritten.
+        sequence.current++;
+        setRefining(false);
+        fingerprint.current = result.contract.fingerprint ?? null;
+        show(result.contract, result.contract.values);
+      }
+    }
+    catch (error) {
+      setFailure((error as Error).message);
+    }
+    finally {
+      setSubmitting(false);
+    }
+  }, [api, settings, navigate, show]);
 
   if (contract === null) {
     return failure === null
@@ -152,7 +211,15 @@ export function SurfaceForm({
   }
 
   return (
-    <form className="dsr" noValidate onSubmit={(event) => event.preventDefault()} aria-busy={refining || undefined}>
+    <form
+      className="dsr"
+      noValidate
+      onSubmit={(event) => {
+        event.preventDefault();
+        void submit();
+      }}
+      aria-busy={refining || submitting || undefined}
+    >
       {failure !== null ? (
         <div className="dsr-summary dsr-summary--error" role="alert">
           {failure}
@@ -161,7 +228,11 @@ export function SurfaceForm({
       {summary !== null ? (
         <div className={`dsr-summary ${summary.valid ? 'dsr-summary--valid' : 'dsr-summary--error'}`} role="status">
           {summary.valid ? (
-            <p>Valid: these values would be accepted. Nothing was written.</p>
+            summary.kind === 'submit' ? (
+              <p>Saved: the values were written.</p>
+            ) : (
+              <p>Valid: these values would be accepted. Nothing was written.</p>
+            )
           ) : (
             <>
               <p>
@@ -171,7 +242,12 @@ export function SurfaceForm({
               <ul>
                 {summary.violations.map((violation) => (
                   <li key={`${violation.path}:${violation.message}`}>
-                    <code>{violation.path}</code>: {violation.message}
+                    {violation.path === '' ? null : (
+                      <>
+                        <code>{violation.path}</code>:{' '}
+                      </>
+                    )}
+                    {violation.message}
                   </li>
                 ))}
               </ul>
@@ -190,15 +266,12 @@ export function SurfaceForm({
       ) : null}
       <Properties schema={contract.schema} values={values} prefix="" onChange={onChange} errors={errors} />
       <div className="dsr-actions">
-        <button type="button" className="dsr-button dsr-button--primary" onClick={() => void validate()}>
+        <button type="button" className="dsr-button" onClick={() => void validate()} disabled={submitting}>
           Validate
         </button>
-        <button type="submit" className="dsr-button" disabled aria-describedby="dsr-submit-note">
+        <button type="submit" className="dsr-button dsr-button--primary" disabled={submitting}>
           Submit
         </button>
-        <p className="dsr-note" id="dsr-submit-note">
-          Writing is not wired yet: Validate rehearses the write through the pipeline and saves nothing.
-        </p>
       </div>
       <ContractPanel contract={contract} values={values} />
     </form>

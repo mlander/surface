@@ -1,23 +1,26 @@
 # Data Surface - React
 
 A surface's form, rendered in React from a contract the module serves.
-One situation of one surface becomes three endpoints and a page:
+One situation of one surface becomes four endpoints and a page:
 
 | | Path | What it does |
 | --- | --- | --- |
 | Page | `GET /surface-react/{surface}/{situation}` | Mounts the React app, titled with the situation's label. |
-| Contract | `GET /surface-api/{surface}/{situation}` | The JSON contract with the values the form opens with. |
+| Contract | `GET /surface-api/{surface}/{situation}` | The JSON contract with the values the form opens with, and the stored values' `fingerprint`. |
 | Refine | `POST /surface-api/{surface}/{situation}/refine` | The contract re-narrowed against in-progress values: the AJAX rebuild's equivalent. |
 | Validate | `POST /surface-api/{surface}/{situation}/validate` | The pipeline's dry run: `{valid, violations, stale, values, prepared}`, nothing written. |
+| Submit | `POST /surface-api/{surface}/{situation}/submit` | The write: `{committed, valid, violations, stale, outputs, contract, created}`; a refusal is 200 with `committed: false`. |
 
 `{surface}` is the `#[Surface]` id (`registration.step2`), `{situation}`
 the situation id (`configure`). A situation's parameters arrive in the
 query string by the situation method's parameter names, or in a POST
 body's `parameters`: `/surface-react/node.type/edit?type=article`.
-Access on all four is the situation's: its permission, then the
+Access on all five is the situation's: its permission, then the
 surface's access class through `Surfaces::access()`, no opinion read as
-a refusal. The two POSTs want the session's CSRF token from
-`/session/token` in an `X-CSRF-Token` header.
+a refusal. The three POSTs want the session's CSRF token from
+`/session/token` in an `X-CSRF-Token` header. A submit may send back the
+contract's `fingerprint`; when it is sent and storage changed since, the
+submit is refused and nothing is written.
 
 The contract format, the endpoints' bodies and the widget mapping are in
 [the served contract](../../docs/served-contract.md).
@@ -47,8 +50,17 @@ and so on.
   keeping what was touched since the request left.
 - **Validates**: the Validate button posts to `/validate` and shows each
   refusal beside its field, by path, and in a summary.
-- **Does not write.** Submit is present and disabled. What a real write
-  needs is at the end of [the served contract](../../docs/served-contract.md#what-a-write-needs).
+- **Saves**: Submit posts the values, the stale paths and the
+  fingerprint the contract was loaded with to `/submit`. A refusal shows
+  as Validate's does, inline and in the summary; a refusal at path `''`
+  (someone else saved since the form was loaded) shows in the summary
+  alone. A write says "Saved", lists any stale value it kept, and
+  re-renders from the contract the answer carries, whose fingerprint the
+  next submit sends. A write that created something (`node.type/add`)
+  moves to the page where it now lives, `/surface-react/node.type/edit?type=…`.
+  The fingerprint is on by default (`SEND_FINGERPRINT` in `api.ts`); a
+  page turns it off with `sendFingerprint: false` in its
+  `drupalSettings.dataSurfaceReact`.
 
 Below the form, collapsed, the contract: a row per key, as the PHP
 contract panel shows it, then the JSON.
@@ -76,5 +88,6 @@ Run them on the host, not inside ddev. The library
 | --- | --- |
 | `Kernel\ServedContractTest` | The emitter over examples 1 to 3, the content type surface and the demo block surface: labels, `oneOf` titles, bounds, the venue to room dependency, the slot's conditional, the locked machine name on edit; every schema checked by opis/json-schema (draft 2020-12) and against the vendored draft-07 meta-schema. |
 | `Functional\ServedContractEndpointsTest` | 200 and 403, the JSON shape, refine narrowing the room by the venue, validate refusing a wrong room and a capacity over the room's and accepting a valid payload, nothing written; the landing page's React links. |
+| `Functional\ServedSubmitEndpointTest` | Submit writing example 2 and answering the fresh contract; a wrong room refused with nothing written; anonymous, token-less and malformed posts; a stale fingerprint refused with nothing written, and no fingerprint meaning the last write wins; a content type added through it answering `created` at `edit` with its `type`, then edited and deleted. |
 | `app/src/test/widgets.test.tsx` | Each widget from a schema fragment, the empty option rule, locked, slot resolution, the list. |
-| `app/src/test/SurfaceForm.test.tsx` | The app against a mocked server serving the emitter's own contracts: refine on a dependency, the stale room, validate's inline and summary messages. |
+| `app/src/test/SurfaceForm.test.tsx` | The app against a mocked server serving the emitter's own contracts: refine on a dependency, the stale room, validate's inline and summary messages; submit's success with stale warnings and the re-render, a refusal, the fingerprint sent and its refusal, the toggle off, and the move to a created thing's page. |

@@ -2,12 +2,12 @@
 
 A surface built in one of its situations, served as a JSON document a
 client with no PHP can render a form from, re-narrow as answers change,
-and validate against before anything is written. The emitter, the three
-endpoints and a React app that renders from them are the experimental
-submodule `data_surface_react`.
+validate against before anything is written, and then write through. The
+emitter, the four endpoints and a React app that renders from them are
+the experimental submodule `data_surface_react`.
 
 This is the roadmap's "served contract" in its first shape: one
-situation at a time, read and rehearsed, not yet written.
+situation at a time, read, rehearsed and written.
 
 ## Where the emitter lives
 
@@ -35,6 +35,7 @@ JSON Schema cannot say them. This one can.
 | `values` | The values the schema describes now: what the target holds over the surface's defaults (which carry a situation's starting values and known identity), with any in-progress answers over that. Every key is present. A secret is `null`; a stale value is `null`. |
 | `stale` | The dotted paths shown on the empty option in place of a stored value. |
 | `outputs` | The output schema, when the surface declares outputs. |
+| `fingerprint` | On the GET and in a submit's answer: a keyed hash of the stored values the document was built from, for a submit to send back ([the fingerprint rule](#the-fingerprint-rule)); `null` for a surface with no target. Not on a refine. |
 | `discarded` | On a refine only: the keys whose answer the new choices orphaned. |
 
 ### The schema
@@ -162,16 +163,18 @@ choice, in its weight order ([Widgets](widgets.md)).
 
 ## The endpoints
 
-All four routes take the situation's parameters from the query string
+All five routes take the situation's parameters from the query string
 (and a POST body's `parameters`), and are gated by
 `_data_surface_react_access`: the situation's permission, then the
 surface's access class, through `Surfaces::access()`, with no opinion
 read as a refusal. A surface, situation or parameter that names nothing
 is refused. The POSTs require `X-CSRF-Token` from `/session/token`
-(`_csrf_request_header_token`).
+(`_csrf_request_header_token`). A POST body that is not a JSON object is
+a 400: the access check reads the situation from the query string alone
+when it cannot read the body, and the controller refuses the body.
 
 **`GET /surface-api/{surface}/{situation}`** answers the document for
-the values the situation form would open with.
+the values the situation form would open with, and their `fingerprint`.
 
 **`POST .../refine`**, body `{values, stale}`, answers the document
 re-narrowed against the values, which is what the form's AJAX rebuild
@@ -212,6 +215,100 @@ boundary; `stale` the non-blocking stale references; `values` what
 `accept()` made of the input; `prepared` what the target rehearsed
 writing, when the run reached prepare. Nothing is written.
 
+**`POST .../submit`**, body `{values, stale, parameters, fingerprint?}`,
+is the same run, not dry: validate's body, validate's stale rule, the
+same access answer handed to `submit()`, and a write when nothing is
+refused. A refusal is data, not an error: the answer is 200 with
+`committed: false`, and nothing is written
+([decision](decisions.md#a-refused-submit-is-an-answer)). 403 is for a
+request access refuses, or that carries no token; 400 for a malformed
+body (not an object; `values` or `parameters` not an object; `stale`
+not a list of strings; `fingerprint` neither a string nor `null`) or a
+surface with no target. Every key is always present:
+
+| Key | Holds |
+| --- | --- |
+| `committed` | Whether the values were written. |
+| `valid` | Whether nothing was refused; on this endpoint the same answer as `committed`. |
+| `violations` | Each refusal, `{path, message}`, as validate's. |
+| `stale` | Each stale reference the write kept, `{path, message}`: the situation form's warning, said out loud. Present on a write as on a refusal. |
+| `outputs` | The surface's declared outputs as its target reads them back after the write (`SurfaceTargetAdapter::outputs()`), the tool's same answer; `{}` when the surface declares none, as the examples, the content type and the field do. |
+| `contract` | On a write, the whole document rebuilt from what is stored now, `fingerprint` included, so a client re-renders without a second request; `null` on a refusal. |
+| `created` | On a write by a situation that creates, where the created thing now lives: `{surface, situation, parameters}`; otherwise `null`. |
+
+A refused example 2, the library's garden room sent with the harbour:
+
+```json
+{
+  "committed": false, "valid": false,
+  "violations": [{"path": "room", "message": "The value you selected is not a valid choice."}],
+  "stale": [], "outputs": {}, "contract": null, "created": null
+}
+```
+
+The harbour's deck, written:
+
+```json
+{
+  "committed": true, "valid": true, "violations": [], "stale": [], "outputs": {},
+  "contract": {
+    "surface": "registration.step2", "situation": "configure", "label": "Configure registration",
+    "schema": {...},
+    "values": {"title": "Autumn meetup", "open": true, "venue": "harbour", "room": "harbour_deck", "capacity": 90},
+    "stale": [],
+    "fingerprint": "Bczjfcce6B4UTbwYT4FM8ZU3kl8Ue4_ZUuFfgBv72DY"
+  },
+  "created": null
+}
+```
+
+A content type added at `node.type/add` as `served_demo` answers the
+same, with the add situation's empty contract, and:
+
+```json
+"created": {"surface": "node.type", "situation": "edit", "parameters": {"type": "served_demo"}}
+```
+
+The situation form's cosmetic message and redirect are its route's, and
+the API has no route default to read them from; their JSON equivalents
+are `committed` and `created`, and the client says the rest.
+
+### Where a created thing lives
+
+`ServedSituations::created()` answers only for a situation whose
+context `creates`. It takes the surface's situations in declaration
+order and picks the first that does not create and whose every required
+parameter is supplied, by name, from the outputs the target read back,
+then from the identity keys the write accepted, then from the identity
+the creating situation already knew. The answer is checked, not
+assumed: the situation is built from those parameters (an entity
+parameter loads what its id names), its context must not create, and
+every identity key it knows must equal what was written. The content
+type's `edit(NodeTypeInterface $type)` is answered by the `type` the
+write accepted. A field added at `field.instance:add` gets `null`: its
+`edit(FieldConfigInterface $field)` takes the field's own id
+(`node.article.field_x`), which neither its outputs (it declares none)
+nor its identity keys carry by that name; declaring a `field` output
+would answer it. Example 2's `configure` creates nothing, so `null`.
+
+### The fingerprint rule
+
+Optional, and off unless a client sends one. The GET contract carries
+`fingerprint`, an HMAC (the site's hash salt) of the surface id and the
+stored values `load()` returned, narrowed to the surface's keys
+(`ServedSituations::fingerprint()`). A submit body may send it back.
+When it is sent and no longer matches what storage holds when the
+submit arrives, the submit is refused before the pipeline runs:
+`committed: false` and one violation at path `''`, "The stored values
+changed since this form was loaded. Reload it to see them, then make
+your changes again.", with nothing written. When it is not sent (absent
+or `null`), the last write wins, as on the situation form
+([decision](decisions.md#a-fingerprint-is-opt-in)). A refine never
+carries one: it re-reads storage, so a client that took its fingerprint
+would always match. A write's answer carries the new one, for the next
+submit. It is a check, not a lock: a write between the comparison and
+the commit, a few milliseconds, still wins.
+
 ### Cacheability
 
 The contract carries what the refined surface and every option list in
@@ -222,14 +319,19 @@ long what it loaded holds ([decision](decisions.md#a-served-contract-is-never-st
 
 ## What a write needs
 
-Submit is present and disabled. Wiring it is a fourth endpoint and
-little else, because every piece already exists:
+What this list asked for before Submit was wired, and where each is now:
 
 - `POST .../submit` running `submit()` without `dry_run`, the same body
-  and the same stale rule as validate; on success the situation
-  form's cosmetic message and redirect, or their JSON equivalents.
+  and the same stale rule as validate. **Done**; the cosmetic message
+  and redirect have JSON equivalents in `committed` and `created`, and
+  the app says "Saved" itself.
 - Its stale references said out loud, as the form's warning is.
+  **Done**: `stale` on every answer.
 - A situation that creates (`add`) answering where the created thing now
-  lives, so the app can move to its `edit` situation's page.
-- A decision on concurrent edits: today the last write wins, as on the
-  form.
+  lives, so the app can move to its `edit` situation's page. **Done**
+  for any surface whose non-creating situation's parameters the outputs
+  or identity answer (the content type); not for the field instance,
+  [above](#where-a-created-thing-lives).
+- A decision on concurrent edits. **Done**: the opt-in
+  [fingerprint](#the-fingerprint-rule); without it the last write wins,
+  as on the form.

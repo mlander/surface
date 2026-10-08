@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { Settings } from '../api';
+import { pageOf, type Settings } from '../api';
 import type { Contract } from '../contract';
 import { SurfaceForm } from '../SurfaceForm';
 import example2 from './fixtures/example2.json';
@@ -102,7 +102,6 @@ describe('the React form of example 2', () => {
     await userEvent.selectOptions(await screen.findByLabelText(/Venue/), 'Riverside Hall');
     await waitFor(() => expect(screen.getByLabelText(/Room/)).toHaveDisplayValue('- Select -'));
 
-    expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
     await userEvent.click(screen.getByRole('button', { name: 'Validate' }));
     const summary = await screen.findByRole('status');
     expect(summary).toHaveTextContent('One value was refused. Nothing was written.');
@@ -124,6 +123,129 @@ describe('the React form of example 2', () => {
     expect(panel).not.toHaveAttribute('open');
     expect(panel?.querySelector('tr[data-surface-key="room"]')).toHaveTextContent('narrowed');
     expect(panel?.querySelector('tr[data-surface-key="room"]')).toHaveTextContent('venue');
+  });
+});
+
+describe('submitting example 2', () => {
+  const loaded = { ...(example2 as unknown as Contract), fingerprint: 'fp-loaded' };
+  const refused = (violations: { path: string; message: string }[]) => ({
+    committed: false,
+    valid: false,
+    violations,
+    stale: [],
+    outputs: {},
+    contract: null,
+    created: null,
+  });
+
+  it('writes, says so with the stale warnings, and re-renders from the contract it answers with', async () => {
+    const written = { ...loaded, values: { ...loaded.values, title: 'Spring meetup, as stored' }, fingerprint: 'fp-written' };
+    const { calls, fetcher } = server({
+      '/surface-api/registration.step2/configure/submit': () => ({
+        committed: true,
+        valid: true,
+        violations: [],
+        stale: [{ path: 'room', message: 'The stored room is no longer offered; it was kept.' }],
+        outputs: {},
+        contract: written,
+        created: null,
+      }),
+      '/surface-api/registration.step2/configure': () => loaded,
+    });
+    const navigate = vi.fn();
+    render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} navigate={navigate} />);
+    await userEvent.type(await screen.findByLabelText(/Event title/), '!');
+
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    const summary = await screen.findByRole('status');
+    expect(summary).toHaveTextContent('Saved: the values were written.');
+    expect(summary).toHaveTextContent('room: The stored room is no longer offered; it was kept.');
+    expect(screen.getByLabelText(/Event title/)).toHaveValue('Spring meetup, as stored');
+    expect(navigate).not.toHaveBeenCalled();
+
+    const submitted = calls.filter((call) => call.url.endsWith('/submit'));
+    expect(submitted[0].init?.method).toBe('POST');
+    expect((submitted[0].init?.headers as Record<string, string>)['X-CSRF-Token']).toBe('the-token');
+    const body = JSON.parse(String(submitted[0].init?.body));
+    expect(body.values.title).toBe('Spring meetup!');
+    expect(body.stale).toEqual([]);
+    expect(body.fingerprint).toBe('fp-loaded');
+
+    // The next submit is checked against what this one wrote.
+    await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    await waitFor(() => expect(calls.filter((call) => call.url.endsWith('/submit'))).toHaveLength(2));
+    expect(JSON.parse(String(calls.filter((call) => call.url.endsWith('/submit'))[1].init?.body)).fingerprint).toBe('fp-written');
+  });
+
+  it('shows a refusal inline and in a summary, as Validate does', async () => {
+    const { fetcher } = server({
+      '/surface-api/registration.step2/configure/submit': () =>
+        refused([{ path: 'room', message: 'The value you selected is not a valid choice.' }]),
+      '/surface-api/registration.step2/configure': () => loaded,
+    });
+    render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Submit' }));
+    const summary = await screen.findByRole('status');
+    expect(summary).toHaveTextContent('One value was refused. Nothing was written.');
+    expect(summary).toHaveTextContent('room: The value you selected is not a valid choice.');
+    expect(screen.getByLabelText(/Room/)).toHaveAccessibleDescription('The value you selected is not a valid choice.');
+    // The answers stay as they were sent.
+    expect(screen.getByLabelText(/Event title/)).toHaveValue('Spring meetup');
+  });
+
+  it('refuses a submit after someone else saved, the message without a path', async () => {
+    const message = 'The stored values changed since this form was loaded. Reload it to see them, then make your changes again.';
+    const { calls, fetcher } = server({
+      '/surface-api/registration.step2/configure/submit': () => refused([{ path: '', message }]),
+      '/surface-api/registration.step2/configure': () => loaded,
+    });
+    render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Submit' }));
+    const summary = await screen.findByRole('status');
+    expect(summary).toHaveTextContent(`One value was refused. Nothing was written.${message}`);
+    expect(summary.querySelector('li code')).toBeNull();
+    expect(JSON.parse(String(calls.find((call) => call.url.endsWith('/submit'))?.init?.body)).fingerprint).toBe('fp-loaded');
+  });
+
+  it('sends no fingerprint when the page turns it off', async () => {
+    const { calls, fetcher } = server({
+      '/surface-api/registration.step2/configure/submit': () => refused([{ path: 'room', message: 'No.' }]),
+      '/surface-api/registration.step2/configure': () => loaded,
+    });
+    render(<SurfaceForm settings={{ ...settings, sendFingerprint: false }} fetcher={fetcher} refineDelay={0} />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Submit' }));
+    await screen.findByRole('status');
+    expect(JSON.parse(String(calls.find((call) => call.url.endsWith('/submit'))?.init?.body))).not.toHaveProperty('fingerprint');
+  });
+});
+
+describe('submitting a situation that creates', () => {
+  it('moves to the page where the created thing now lives', async () => {
+    const add: Settings = { ...settings, surface: 'node.type', situation: 'add', pageBase: '/base/surface-react' };
+    const { fetcher } = server({
+      '/surface-api/node.type/add/submit': () => ({
+        committed: true,
+        valid: true,
+        violations: [],
+        stale: [],
+        outputs: {},
+        contract: { ...(example2 as unknown as Contract), fingerprint: 'fp-after' },
+        created: { surface: 'node.type', situation: 'edit', parameters: { type: 'recipe' } },
+      }),
+      '/surface-api/node.type/add': () => ({ ...(example2 as unknown as Contract), fingerprint: 'fp-before' }),
+    });
+    const navigate = vi.fn();
+    render(<SurfaceForm settings={add} fetcher={fetcher} refineDelay={0} navigate={navigate} />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Submit' }));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/base/surface-react/node.type/edit?type=recipe'));
+    expect(screen.getByRole('status')).toHaveTextContent('Saved: the values were written.');
+  });
+
+  it('finds the pages beside the API when the page names no page base', () => {
+    expect(pageOf({ ...settings, apiBase: '/sub/surface-api' }, { surface: 'node.type', situation: 'edit', parameters: { type: 'a b' } })).toBe(
+      '/sub/surface-react/node.type/edit?type=a+b',
+    );
   });
 });
 

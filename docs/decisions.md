@@ -573,3 +573,30 @@ The Tool API bridge copies the same flag unchanged (see "Required is
 the surface's, and defaults are what is stored"); the served contract's
 `values` always carry every key, so presence is never the question
 there. (`ContractEmitter::frame()`)
+
+### A refused submit is an answer
+
+`POST .../submit` answers a refusal with 200 and `committed: false`,
+the violations as data, never 422 or 400: a value the pipeline refuses
+is the expected outcome of asking, exactly as `/validate` reports it and
+as the situation form shows it beside the field, and a client renders
+both the same way from the same keys. A status code is kept for what is
+not an answer about the values: 403 when access refuses the request
+before it runs, 400 when the body cannot be read. Access refused inside
+the pipeline (a forbidden answer the route did not already give) is
+still filed as the `@access` violation, the pipeline's own rule.
+(`SurfaceApiController::submit()`)
+
+### A fingerprint is opt-in
+
+The contract carries a fingerprint of the stored values it was built
+from, and a submit that sends it back is refused, nothing written, when
+storage no longer matches. A submit that sends none is not checked, and
+the last write wins, which is what the situation form, the tool and
+every PHP caller of the pipeline do. Opt-in, because making it required
+would refuse every client that never asked for a contract first (a
+script, an agent calling the tool's twin) and would put a rule on the
+API the form does not have. The React app opts in; a page can turn it
+off with `sendFingerprint: false`. A check, not a lock: it narrows the
+window to the moment between the comparison and the commit.
+(`ServedSituations::fingerprint()`)

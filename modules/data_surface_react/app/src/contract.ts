@@ -81,6 +81,8 @@ export interface Contract {
   values: Values;
   stale: string[];
   outputs?: Schema;
+  /** The stored values' fingerprint, on a GET and a submit's contract. */
+  fingerprint?: string | null;
   discarded?: string[];
 }
 
@@ -95,6 +97,24 @@ export interface Validation {
   stale: Violation[];
   values: Values;
   prepared: unknown;
+}
+
+/** Where a created thing now lives: a situation and its parameters. */
+export interface Created {
+  surface: string;
+  situation: string;
+  parameters: Record<string, string | number>;
+}
+
+/** What /submit answers: refused, or written with the fresh contract. */
+export interface Submission {
+  committed: boolean;
+  valid: boolean;
+  violations: Violation[];
+  stale: Violation[];
+  outputs: Values;
+  contract: Contract | null;
+  created: Created | null;
 }
 
 /** The JSON type a schema is, null aside. */

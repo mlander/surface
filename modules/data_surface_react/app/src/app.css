@@ -113,11 +113,6 @@
   margin: 1.5rem 0;
 }
 
-.dsr-actions .dsr-note {
-  flex-basis: 100%;
-  margin: 0;
-}
-
 .dsr-button {
   padding: 0.5rem 1rem;
   border: 1px solid currentColor;

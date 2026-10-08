@@ -372,8 +372,9 @@ to.
    refused by Form API (`docs/decisions.md`).
 8. **Served contract, first shape** — DONE 2026-10-08: `data_surface_react`
    serves one situation as JSON Schema 2020-12 with `x-surface`, refine
-   and validate (dry run) endpoints, and a React form rendered from it;
-   no write yet (`docs/served-contract.md`).
+   and validate (dry run) endpoints, and a React form rendered from it
+   (`docs/served-contract.md`). Writes since: `/submit`, with `created`
+   for a situation that creates and an opt-in stored-values fingerprint.
 
 ## Rejected, on the record
 

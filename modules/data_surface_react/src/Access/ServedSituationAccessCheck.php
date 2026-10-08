@@ -47,17 +47,23 @@ final class ServedSituationAccessCheck implements AccessInterface {
    * @return \Drupal\Core\Access\AccessResultInterface
    *   The situation's answer. A surface, situation or parameter that
    *   names nothing is refused rather than thrown: an access question is
-   *   never answered with an exception.
+   *   never answered with an exception. A POST body that is not a JSON
+   *   object is not an access question: the situation is read from the
+   *   query string alone, and if that is allowed the controller refuses
+   *   the body with a 400.
    */
   public function access(RouteMatchInterface $route_match, Request $request, AccountInterface $account): AccessResultInterface {
+    $surface = (string) $route_match->getRawParameter('surface');
+    $situation = (string) $route_match->getRawParameter('situation');
     try {
-      $served = $this->servedSituations->fromRequest(
-        (string) $route_match->getRawParameter('surface'),
-        (string) $route_match->getRawParameter('situation'),
-        $request,
-      );
+      try {
+        $served = $this->servedSituations->fromRequest($surface, $situation, $request);
+      }
+      catch (BadRequestHttpException) {
+        $served = $this->servedSituations->fromRequest($surface, $situation, $request, FALSE);
+      }
     }
-    catch (\InvalidArgumentException | BadRequestHttpException $e) {
+    catch (\InvalidArgumentException $e) {
       return AccessResult::forbidden($e->getMessage())->setCacheMaxAge(0);
     }
     return $this->servedSituations->access($served, $account);

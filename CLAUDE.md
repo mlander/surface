@@ -91,7 +91,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
   modules/custom/data_surface'
 ```
 
-The baseline as of this writing: **710 tests, 6808 assertions, 0 errors,
+The baseline as of this writing: **714 tests, 6897 assertions, 0 errors,
 3 failures** — the three tests of the one class below. The test and
 assertion counts drift upward as work lands and are not the thing to
 check. **No test may error,
@@ -147,10 +147,17 @@ npx --yes cspell@8 --config /tmp/merged.json --no-progress --no-summary "**"
 turns a sealed surface and its values into JSON Schema 2020-12 with an
 `x-surface` keyword per property; `/surface-api/{surface}/{situation}`
 serves it, `/refine` re-narrows it (the AJAX rebuild's equivalent, the
-form builder's discard rule included) and `/validate` runs the pipeline
-dry; `/surface-react/{surface}/{situation}` renders it with a React app.
+form builder's discard rule included), `/validate` runs the pipeline
+dry and `/submit` writes, answering a refusal as 200 data
+(`committed: false`), a write with the rebuilt contract, and a create
+with the situation the created thing now lives at (`created`, from the
+outputs or identity, checked by building that situation). The GET
+contract carries a `fingerprint` of the stored values; a submit that
+sends it back is refused when storage changed since, and one that sends
+none is not checked (opt-in; the app sends it).
+`/surface-react/{surface}/{situation}` renders it with a React app.
 `docs/served-contract.md` has the format, `docs/decisions.md` (Served
-contract) the four points it settled.
+contract) the six points it settled.
 
 The app is `modules/data_surface_react/app/`: Vite, React 18 and
 TypeScript, every version pinned exactly. Run npm on the host, never

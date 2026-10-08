@@ -501,8 +501,13 @@ which re-narrows the contract the way the form's AJAX rebuild does, and
 the room comes back on its empty option, standing for the stored room,
 which stays on the server. Press Validate: the answers go to `/validate`,
 the pipeline's dry run, and what it refuses shows beside each field and
-in a summary. Nothing is written; Submit is there and disabled. The
-collapsed Contract panel under the form is the contract as it stands.
+in a summary, with nothing written. Press Submit to save: the answers go
+to `/submit`, which writes what the form's Save writes, refuses what it
+refuses (shown the same way as Validate's), and answers with the
+contract as now stored, which the app re-renders from. If someone saved
+the example since the page loaded, the submit is refused rather than
+overwriting them. The collapsed Contract panel under the form is the
+contract as it stands.
 [The served contract](../../docs/served-contract.md) has the format.
 
 ## Example 6: every door
@@ -526,4 +531,5 @@ Drush commands are checked against `ExampleCalls`.
 | `Unit\ExamplesReadmeTest` | This page against the files it quotes, and its Drush commands. |
 | `Functional\ExamplesRoutesTest` | Every route answers an administrator and refuses anonymous; the landing page; a save through example 3. |
 | `Functional\ServedContractEndpointsTest` | In React: the landing page's links, and example 2's contract, refine and validate over HTTP. |
+| `Functional\ServedSubmitEndpointTest` | In React: example 2 saved over HTTP, refused, and refused after someone else saved. |
 | `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files. |

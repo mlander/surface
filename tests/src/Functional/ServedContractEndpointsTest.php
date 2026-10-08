@@ -126,7 +126,8 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $this->drupalGet('surface-api/registration.step2/configure');
     $this->assertSession()->statusCodeEquals(200);
     $contract = json_decode($this->getSession()->getPage()->getContent(), TRUE);
-    $this->assertSame(['surface', 'situation', 'label', 'schema', 'values', 'stale'], array_keys($contract));
+    $this->assertSame(['surface', 'situation', 'label', 'schema', 'values', 'stale', 'fingerprint'], array_keys($contract));
+    $this->assertIsString($contract['fingerprint']);
     $this->assertSame('registration.step2', $contract['surface']);
     $this->assertSame('https://json-schema.org/draft/2020-12/schema', $contract['schema']['$schema']);
     $this->assertSame(['venue'], $contract['schema']['properties']['room']['x-surface']['dependsOn']);
