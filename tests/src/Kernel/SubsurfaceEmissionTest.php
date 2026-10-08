@@ -51,7 +51,7 @@ class SubsurfaceEmissionTest extends DataSurfaceKernelTestBase {
   protected function schema(DataSurfaceInterface $surface): array {
     $definition = $this->container->get('data_surface_tool.input_definitions')->fromSurface($surface, 'Pantry', '');
     $this->assertInstanceOf(InputDefinitionInterface::class, $definition);
-    $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:field_add');
+    $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:field.instance:add');
     return $this->container->get('tool.definition_serializer')->normalizeInputDefinition($tool, 'pantry', $definition);
   }
 

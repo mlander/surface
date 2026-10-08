@@ -21,14 +21,17 @@ Four pieces:
   `settings` slot for the address field type, by
   `#[SurfaceVariant(of: FieldInstanceSurface::class, key: 'settings', value: 'address')]`,
   so the tool bridge's field surface never names it.
-- `SurfaceAddressItem` — the Field UI host. It builds that surface
-  through the build step in `getFieldSurface()` (no field type host reads
-  `#[UsesSurface]` yet) and supplies the target bound to the field config
-  entity Field UI is editing.
+- `SurfaceAddressItem` — the Field UI host. It names that surface with
+  `#[UsesSurface]`, which the field type trait reads from the field
+  type's definition to build it, and supplies the target bound to the
+  field config entity Field UI is editing. It writes no surface code of
+  its own.
 - `Target\AddressFieldSettingsTarget` — the surface's own target, for a
   caller that addresses the field by its identity rather than holding
   it: the field instance surface routes its settings here, after the
-  field itself is stored.
+  field itself is stored. Its prepare holds the settings, in the shape
+  the field stores, to the address field type's settings schema, so a
+  dry run previews them.
 - `AddressSettingsShape::toStorage()` / `fromStorage()` — the shape transform between the input
   shape and the stored shape. It is not new logic: it is the settings
   form's validate handler (strip the rows with an empty override) plus

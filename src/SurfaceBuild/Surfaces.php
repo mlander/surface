@@ -6,6 +6,7 @@ namespace Drupal\data_surface\SurfaceBuild;
 
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
+use Drupal\Core\Cache\RefinableCacheableDependencyInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
@@ -134,7 +135,7 @@ final class Surfaces implements SurfacesInterface {
       $owner->defineOutputs($outputs);
     }
 
-    $links = [[$owner, $definition->refiners]];
+    $links = [[$owner, $definition->refiners, NULL]];
     $additions = [];
     foreach ($definition->alters as $alter) {
       if (!$alter->appliesIn($context->operation)) {
@@ -152,7 +153,7 @@ final class Surfaces implements SurfacesInterface {
         // SKETCH GAP: the sketch has no storage shape for what an alter mounts; an alter implementing HasStorageShapeInterface hands one for its own module's mount, which the builder refuses for a module that mounts nothing and SurfaceTargetAdapter applies.
         $builder->setThirdPartyShape($alter->module, $instance->storageShape());
       }
-      $links[] = [$instance, $alter->refiners];
+      $links[] = [$instance, $alter->refiners, $alter->module];
     }
 
     $input_keys = $inputs->keys();
@@ -180,8 +181,9 @@ final class Surfaces implements SurfacesInterface {
     $slots = $this->slotsOf($definition, $inputs, $input_keys);
 
     $this->applyContext($builder, $definition, $context, $input_keys, $subsurfaces);
-    foreach ($links as [$instance, $refiners]) {
-      $this->bindRefiners($builder, $definition, $instance, $refiners, $input_keys, $outputs->keys(), $subsurfaces, $ancestry === [] ? NULL : $ancestry[count($ancestry) - 1]);
+    foreach ($links as [$instance, $refiners, $module]) {
+      $extended = $module !== NULL && isset($additions[$module][0]) ? $additions[$module][0]->extended() : [];
+      $this->bindRefiners($builder, $definition, $instance, $refiners, $input_keys, $outputs->keys(), $subsurfaces, $ancestry === [] ? NULL : $ancestry[count($ancestry) - 1], $module, $extended);
     }
 
     // The children, each through this same build step in its own frame:
@@ -345,6 +347,41 @@ final class Surfaces implements SurfacesInterface {
   public function access(string $surface, SurfaceContext $context, ?AccountInterface $account = NULL): AccessResultInterface {
     $definition = $this->registry->getDefinition($surface);
     $account ??= $this->currentUser;
+    $answer = $this->ownAccess($definition, $context, $account);
+    if ($answer->isForbidden() || !$this->childrenMayAnswer($definition)) {
+      return $answer;
+    }
+    // phpcs:ignore Drupal.Files.LineLength.TooLong
+    // SKETCH GAP: the sketch gives a surface an access class but does not say whether a subsurface's counts; a child the context resolves is asked in its own context and may refuse, never allow, so a field type's settings can refuse the field they belong to.
+    $answers = $this->childAnswers($context, $account, $this->build($definition->class, $context));
+    foreach ($answers as $child) {
+      if ($child->isForbidden()) {
+        return $answer->andIf($child);
+      }
+    }
+    // A child that did not refuse still varied by what it read.
+    if ($answer instanceof RefinableCacheableDependencyInterface) {
+      foreach ($answers as $child) {
+        $answer->addCacheableDependency($child);
+      }
+    }
+    return $answer;
+  }
+
+  /**
+   * Answers access for one surface alone: its permission, its class.
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $definition
+   *   The surface.
+   * @param \Drupal\data_surface\Surface\SurfaceContext $context
+   *   The context.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account.
+   *
+   * @return \Drupal\Core\Access\AccessResultInterface
+   *   The answer.
+   */
+  protected function ownAccess(SurfaceDefinition $definition, SurfaceContext $context, AccountInterface $account): AccessResultInterface {
     // phpcs:ignore Drupal.Files.LineLength.TooLong
     // SKETCH GAP: the sketch does not cover a context whose operation is no declared situation (a plugin host's 'configure'); it has no permission tier, so the access class alone answers, or neutral.
     $permission = $this->registry->getSituations($definition->class)[$context->operation]->permission ?? NULL;
@@ -370,6 +407,77 @@ final class Surfaces implements SurfacesInterface {
     }
     $answer = $this->instance($definition->access, SurfaceAccessInterface::class)->access($context, $account);
     return $permission === NULL ? $answer : $result->andIf($answer);
+  }
+
+  /**
+   * Says whether any other discovered surface has an access class.
+   *
+   * Building a surface to find its children costs a build, so it is done
+   * only when some child could have something to say.
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $definition
+   *   The surface being asked about.
+   *
+   * @return bool
+   *   TRUE when some other surface names an access class.
+   */
+  protected function childrenMayAnswer(SurfaceDefinition $definition): bool {
+    foreach ($this->registry->getDefinitions() as $other) {
+      if ($other->class !== $definition->class && $other->access !== NULL) {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
+
+  /**
+   * Asks every child a context resolves that has an access class.
+   *
+   * An attached child, and a slot's variant when its deciding key is
+   * locked, each in the context the parent's hands it, recursively.
+   *
+   * @param \Drupal\data_surface\Surface\SurfaceContext $context
+   *   The parent's context.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account.
+   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   *   The parent, built in that context.
+   *
+   * @return \Drupal\Core\Access\AccessResultInterface[]
+   *   The children's answers, outermost first.
+   */
+  protected function childAnswers(SurfaceContext $context, AccountInterface $account, DataSurfaceInterface $built): array {
+    $answers = [];
+    foreach ($built->getDefinitions()->entries() as $key => $entry) {
+      $attachment = $entry->attachment;
+      if ($attachment === NULL && $entry->slot !== NULL && $built->isLocked($entry->slot->by)) {
+        $chosen = $entry->slot->chosen($built->getDefault($entry->slot->by));
+        $attachment = $chosen === NULL ? NULL : $entry->slot->variant($chosen);
+      }
+      if ($attachment?->source === NULL) {
+        continue;
+      }
+      $child = $this->registry->getDefinition($attachment->source);
+      $child_context = static::childContext($context, (string) $key);
+      if ($child->access !== NULL) {
+        $answers[] = $this->instance($child->access, SurfaceAccessInterface::class)->access($child_context, $account);
+      }
+      array_push($answers, ...$this->childAnswers($child_context, $account, $attachment->child));
+    }
+    return $answers;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function defaults(string $surface): array {
+    $definition = $this->registry->getDefinition($surface);
+    $builder = new DataSurfaceBuilder();
+    $this->instance($definition->class, SurfaceInterface::class)
+      ->defineInputs(new SurfaceShape($builder, $this->typedDataManager));
+    // phpcs:ignore Drupal.Files.LineLength.TooLong
+    // SKETCH GAP: the sketch has no static defaults; a plugin host whose protocol asks a class for its defaults statically reads the owner's shape alone, sealed on the spot with no alter, context or build event, as the old spelling's declaration did.
+    return $builder->seal()->getDefaultValues();
   }
 
   /**
@@ -529,12 +637,17 @@ final class Surfaces implements SurfacesInterface {
    *   The owner's subsurface keys.
    * @param array{class: class-string, id: string, key: string, inputs: string[]}|null $parent
    *   The surface this one is attached inside, or NULL.
+   * @param string|null $module
+   *   The module of an alter, or NULL for the surface itself.
+   * @param string[] $extended
+   *   The owner's keys that alter offered more values on with
+   *   extendChoices(): its methods on those keys narrow its own values.
    *
    * @throws \LogicException
    *   When a method fails a seal-time check, or one that watches nothing
    *   widens what it was given.
    */
-  protected function bindRefiners(DataSurfaceBuilderInterface $builder, SurfaceDefinition $definition, object $instance, array $refiners, array $input_keys, array $output_keys, array $subsurfaces = [], ?array $parent = NULL): void {
+  protected function bindRefiners(DataSurfaceBuilderInterface $builder, SurfaceDefinition $definition, object $instance, array $refiners, array $input_keys, array $output_keys, array $subsurfaces = [], ?array $parent = NULL, ?string $module = NULL, array $extended = []): void {
     if ($refiners === []) {
       return;
     }
@@ -555,8 +668,11 @@ final class Surfaces implements SurfacesInterface {
     $link = new RefinesInputRefiner($instance, $bindings);
     foreach (array_keys($bindings) as $key) {
       // phpcs:ignore Drupal.Files.LineLength.TooLong
-      // SKETCH GAP: the sketch lets an alter tighten an owner's key but the engine's contributor chains only see contributed choices; alters' links go in the owner's chain, after the surface's.
-      $builder->addRefiner((string) $key, $link);
+      // SKETCH GAP: the sketch lets an alter tighten an owner's key but the engine's contributor chains only see contributed choices; alters' links go in the owner's chain, after the surface's, except on a key the alter offered more values on, where they are its contribution's chain.
+      // An alter's method on a key it offered more values on is that
+      // contribution's refiner: the engine hands it the alter's values
+      // only, and the union of both chains is what is offered.
+      $builder->addRefiner((string) $key, $link, in_array($key, $extended, TRUE) ? $module : NULL);
     }
     // A method that watches nothing has nothing to wait for, so its one
     // run is now, and what it returns is what the surface advertises.

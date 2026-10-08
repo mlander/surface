@@ -59,16 +59,20 @@ final class DataSurfaceCatalogueDocument {
       $document .= '- Identity: ' . self::codes($surface['identity']) . "\n";
       $document .= '- Target: ' . ($surface['target'] === NULL ? 'none; its host or its parent stores it' : '`' . $surface['target'] . '`') . "\n";
       $document .= '- Access: ' . ($surface['access'] === NULL ? 'the situation\'s permission alone' : '`' . $surface['access'] . '`') . "\n";
+      if ($surface['plugins'] !== []) {
+        $document .= '- Used by: ' . self::codes($surface['plugins']) . "; configured through the plugin's host, never on its own.\n";
+      }
       if ($surface['situations'] !== []) {
-        $document .= "\n| Situation | Label | Needs | Creates | Permission | Provided by |\n| --- | --- | --- | --- | --- | --- |\n";
+        $document .= "\n| Situation | Label | Needs | Creates | Permission | On its own | Provided by |\n| --- | --- | --- | --- | --- | --- | --- |\n";
         foreach ($surface['situations'] as $situation) {
           $document .= sprintf(
-            "| `%s` | %s | %s | %s | %s | `%s` (`%s`) |\n",
+            "| `%s` | %s | %s | %s | %s | %s | `%s` (`%s`) |\n",
             $situation['id'],
             $situation['label'],
             $situation['parameters'] === [] ? 'nothing' : self::codes($situation['parameters']),
             $situation['creates'] === NULL ? 'once given what it needs' : ($situation['creates'] ? 'yes' : 'no'),
             $situation['permission'] === NULL ? 'none' : '`' . $situation['permission'] . '`',
+            self::standalone($surface, $situation),
             self::short($situation['provider']),
             $situation['module'],
           );
@@ -112,12 +116,35 @@ methods and what each needs, the `#[AltersSurface]` classes and the
 the situation returns — so it is known only for a situation that needs
 nothing to start from.
 
-Every situation of a surface that names a target is also a tool,
+A situation that can be asked "on its own" is also a tool,
 `data_surface:<surface>:<situation>`, when `data_surface_tool` is
-enabled. `docs/surfaces.md` says how each part works.
+enabled: its surface names a target, no plugin's configuration is the
+surface, and every `%key` placeholder in its permission can be supplied
+by one of its parameters. A surface a plugin uses is configured through
+the plugin's host. `docs/surfaces.md` says how each part works.
 
 
 MARKDOWN;
+  }
+
+  /**
+   * Says whether a situation can be asked on its own, and why not.
+   *
+   * @param array $surface
+   *   The surface, as the catalogue describes it.
+   * @param array $situation
+   *   The situation, as the catalogue describes it.
+   *
+   * @return string
+   *   "yes", or "no" and the first reason.
+   */
+  private static function standalone(array $surface, array $situation): string {
+    return match (TRUE) {
+      $situation['standalone'] => 'yes',
+      $surface['target'] === NULL => 'no: no target',
+      $surface['plugins'] !== [] => 'no: a plugin\'s',
+      default => 'no: nothing supplies ' . self::codes(array_map(static fn (string $key): string => '%' . $key, $situation['unresolvable'])),
+    };
   }
 
   /**

@@ -54,4 +54,15 @@ services:
   # array: what docs/catalogue.md is generated from.
   data_surface.surface_catalogue:
     class: Drupal\data_surface\SurfaceBuild\SurfaceCatalogue
-    arguments: ['@data_surface.surface_registry', '@data_surface.surfaces']
+    arguments: ['@data_surface.surface_registry', '@data_surface.surfaces', '@data_surface.surface_plugins']
+  # Which plugins name which surface with #[UsesSurface], read from the
+  # definitions of every host that reads the attribute (the keys of
+  # SurfacePluginHooks::HOSTS).
+  data_surface.surface_plugins:
+    class: Drupal\data_surface\SurfaceBuild\SurfacePlugins
+    arguments:
+      - block: '@plugin.manager.block'
+        field_formatter: '@plugin.manager.field.formatter'
+        condition: '@plugin.manager.condition'
+        action: '@plugin.manager.action'
+        field_type: '@plugin.manager.field.field_type'

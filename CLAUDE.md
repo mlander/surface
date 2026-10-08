@@ -25,19 +25,29 @@ discovered by `SurfaceBuild\SurfaceCollectorPass` and built by the
 spelling** is `declareDataSurface()`, provider services and build event
 subscribers, and the build event still fires for new-spelling surfaces,
 so an old subscriber extends a new surface. Moved so far: the demo
-block (with its presentation slot), the field instance surface in
-`data_surface_tool` (with its storage child and add/reuse/edit), the
-address settings that fill its slot, and the content type surface in
-`data_surface_demo_node_type` (with the extras module's alter). A
-decision the sketch does not cover is marked `// SKETCH GAP:` where it
-is made; grep for it.
+block (with its presentation slot) and the demo formatter, the field
+instance surface in `data_surface_tool` (with its storage child and
+add/reuse/edit), the address settings that fill its slot and the
+address field type that names them, the content type surface in
+`data_surface_demo_node_type`, and every extras module extension (three
+alters, no subscriber). Every plugin host reads `#[UsesSurface]` from
+the plugin definition: block, formatter, condition, action, field type,
+and `DataSurfacePluginForm` for any configurable plugin. A target has
+three verbs, `load()`, `prepare()` (rehearse the write with storage's
+own checks, no side effects) and `commit()` of what prepare returned; a
+dry run stops after prepare and reports it. A decision the sketch does
+not cover is marked `// SKETCH GAP:` where it is made; grep for it.
 
 Situations are what routes and tools are generated from. A route names
 `_data_surface_surface` and `_data_surface_situation` and maps its
 parameters onto the situation's by name (`SituationRoute`), gated by
 `_data_surface_situation_access`; `DataSurfaceProviderForm` serves it.
-`data_surface_tool` derives one tool per situation of every surface
-with a target, `data_surface:<surface>:<situation>`.
+`data_surface_tool` derives one tool per situation that can be asked
+on its own, `data_surface:<surface>:<situation>`: its surface names a
+target, no plugin uses it, and every `%key` in its permission can be
+supplied by a parameter (`SurfaceCatalogue::standalone()`). The field
+tools are `data_surface:field.instance:add` / `:reuse` / `:edit`; the
+hand-written `field_add` / `field_update` are gone.
 `data_surface.surface_catalogue` lists the static layer; `docs/catalogue.md`
 is generated from it by `scripts/generate-catalogue.php`. The old
 provider spelling of the form stays for `NodeTypeSurfaceProvider`
@@ -62,7 +72,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
   modules/custom/data_surface'
 ```
 
-The baseline as of this writing: **657 tests, 4104 assertions, 0 errors,
+The baseline as of this writing: **675 tests, 4344 assertions, 0 errors,
 2 failures** — the two below. The test and assertion counts drift upward
 as work lands and are not the thing to check. **No test may error,
 and the only tests that may fail are the ones in

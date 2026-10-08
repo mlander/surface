@@ -6,9 +6,11 @@
  * Regenerates the two generated COMPARISON.md documents.
  *
  * The data_surface_tool module's document puts two settings inputs for
- * one field type side by side: the one a tool derives from the field
- * type's config schema, and the one it derives from the field type's
- * surface. The data_surface_demo_node_type_tool module's does the same
+ * one field type side by side: the one Tool Belt's field_add derives
+ * from the field type's config schema, and the one
+ * data_surface:field.instance:reuse, the tool generated from the field
+ * instance surface's reuse situation, takes from the field type's
+ * settings surface. The data_surface_demo_node_type_tool module's does the same
  * for creating a content type that another module has extended, and
  * records what each tool, and core's own form, did with the same cases.
  * Every schema is produced the way an invoker produces it, by the Tool

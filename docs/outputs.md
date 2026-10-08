@@ -206,9 +206,14 @@ because the data step stays separately callable — by a test, by a JSON
 representation, by an agent asking what this formatter would show — and
 separately checkable against the contract.
 
-The demo formatter is the worked example: it declares two outputs,
-implements `formatValue()`, writes no render array, and emits
-`Omitted::value()` for its classes when no variant is chosen.
+The demo formatter is the worked example: its surface,
+`DemoFormatterSurface`, declares two outputs in `defineOutputs()`; the
+formatter implements `formatValue()`, writes no render array, and emits
+`Omitted::value()` for its classes when no variant is chosen. In the new
+spelling outputs are never refined (a refinement narrows what may be
+sent, and nobody sends an output), so its `classes` output is advertised
+open whatever variant is chosen; output refiners belong to the old
+spelling until step 5 of the rework.
 
 ### The tool bridge
 
@@ -233,11 +238,10 @@ inputs get. What is lost, on top of the two the inputs already lose
 - **Who contributed what.** A mounted third-party output arrives as an
   ordinary property of the `third_party_outputs` map.
 
-The two field tools in `data_surface_tool` still declare their outputs
-by hand, and both halves of that are deliberate: the `#[Tool]` attribute
-takes outputs statically, and what those tools emit is the *stored*
-settings, which is storage shape and belongs to the target rather than
-the surface shape this bridge converts.
+The tools `data_surface_tool` derives from situations answer with the
+accepted `values`, `committed`, and the surface's own outputs converted
+here; a dry run answers with what prepare rehearsed, in storage shape,
+as `prepared`.
 
 ## Contributing an output
 

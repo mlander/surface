@@ -11,22 +11,26 @@ both ways, so the two can be compared.
   is advertised, validated and rendered like any other, where the
   form-alter era gave an element no machine could see.
 - It contributes one more value, `ribbon`, to the formatter's `variant`
-  key, and registers a refiner under its own provider id to say when that
-  value is offered — here, only in upper case.
+  key, with `extendChoices()`, and narrows it with a `#[RefinesInput]`
+  method of its own to say when that value is offered — here, only in
+  upper case.
 
-Both live in one event subscriber on `DataSurfaceBuildEvent`, which fires
-while the surface is still mutable — the old spelling, which the
-formatter still uses. Nothing here alters a form, and every
-consumer of the surface — form, validation, defaults, and any
-machine-readable contract — sees the same extended surface.
+Both live in one surface alter, `SurfaceAlter\DemoFormatterAlter`,
+carrying `#[AltersSurface(DemoFormatterSurface::class)]`. Nothing
+registers it; discovery finds it and builds it as an autowired service.
+Nothing here alters a form, and every consumer of the surface — form,
+validation, defaults, and any machine-readable contract — sees the same
+extended surface. (Until step 4 of the rework this was a build event
+subscriber in the old spelling; the module has none left.)
 
 The contribution is the part worth reading twice. The value is added at
 build time, so it is part of what the surface advertises rather than
-something a refiner smuggles in afterwards; and the refiner registered
-with it is handed that one value and nothing else, so it cannot narrow
-away a variant the formatter owns, and cannot hand back a value it was
-never given. What the refined surface offers is the union of what each
-contribution narrowed to:
+something a refiner smuggles in afterwards; and the alter's method on a
+key it offered more values on is that contribution's refiner, handed
+that one value and nothing else, so it cannot narrow away a variant the
+formatter owns, and cannot hand back a value it was never given. What
+the refined surface offers is the union of what each contribution
+narrowed to:
 
 | Casing | The formatter's variants | This module's | Offered |
 | --- | --- | --- | --- |

@@ -16,8 +16,8 @@ use Drupal\data_surface_demo\Surface\DemoBlockSurface;
 /**
  * This module's additions to the demo block, in the new spelling.
  *
- * Both of an alter's jobs, side by side with the build event subscriber
- * that still does the same for the demo formatter in the old one:
+ * Both of an alter's jobs, side by side with DemoFormatterAlter, which
+ * does the same for the demo formatter:
  *
  * - It adds a key. A badge, the block twin of the formatter's, which the
  *   build mounts under this module's name, at
@@ -37,7 +37,7 @@ use Drupal\data_surface_demo\Surface\DemoBlockSurface;
  * so it is translated through the injected service like any other class
  * of ours the container builds. Nothing registers it.
  *
- * @see \Drupal\data_surface_demo_extras\EventSubscriber\DemoExtrasSurfaceSubscriber
+ * @see \Drupal\data_surface_demo_extras\SurfaceAlter\DemoFormatterAlter
  */
 #[AltersSurface(DemoBlockSurface::class)]
 final class DemoBlockAlter implements SurfaceAlterInterface {

@@ -172,6 +172,67 @@ Rules for the whole rework:
 4. **Plugins and remaining hosts.** Every demo plugin, the address field
    type, and the formatter, condition and action hosts move to
    `#[UsesSurface]` with their surface in `src/Surface`.
+
+   **Done.** Targets prepare: `SurfaceTargetInterface` gained
+   `prepare(SurfaceContext, array $values): array` (rehearse the write
+   with every check storage makes, no side effects, return what would be
+   stored) and `commit()` now takes what prepare returned.
+   `SurfaceTargetAdapter::prepare()` runs the target's prepare over the
+   storage-shaped values, then each routed child's in its context plus
+   the parent's accepted identity, files a child's refusals under its key
+   and throws them all at once as `TargetViolationsException`;
+   `preview()` turns a prepared result into plain arrays (`own`,
+   `children`), which a derived tool's dry run answers with as
+   `prepared`. `NodeTypeTarget` builds the unsaved node type and each
+   moving base field override and holds them to their config schema
+   (`node.type.*` is fully validatable; for a config entity that is its
+   entity validation too), storing an empty description or help as NULL
+   as core's form does; `FieldInstanceTarget`, `FieldStorageTarget` and
+   `AddressFieldSettingsTarget` likewise. Every plugin host reads
+   `#[UsesSurface]`: `SurfacePluginHooks` alters block, formatter,
+   condition, action and field type definitions (last, so a swapped class
+   is read), `DataSurfaceHostTrait::hostedSurface()` builds the named
+   surface for each base class and the field type trait,
+   `SurfacesInterface::defaults()` answers the static defaults
+   protocols, the field type host asks the surface's access class, and
+   `DataSurfacePluginForm` serves a plugin that only names a surface.
+   Migrated: the demo formatter (`DemoFormatterSurface`, with the
+   extras module's `DemoFormatterAlter`), `SurfaceAddressItem`, and the
+   test module's `SurfaceGatedItem` (`GatedFieldSettingsSurface`, a
+   settings variant with an access class); the demo modules have no
+   condition or action, so the new hosts are pinned by
+   `ThresholdCondition`, `ThresholdAction`, `PinnedNoteBlock` and
+   `PlainThresholdPlugin` in `data_surface_surface_test`. Deleted:
+   `DemoExtrasSurfaceSubscriber` and its services file,
+   `DemoExtrasVariantRefiner`, `FieldAdd`, `FieldUpdate`,
+   `SurfaceFieldSettingsTrait`, `FieldSurfaceLocator` and its service.
+   The field tools are the derived `data_surface:field.instance:add`,
+   `:reuse` and `:edit`; `COMPARISON.md` compares `:reuse` with Tool
+   Belt's `field_add`. Two derivation rules, in
+   `SurfaceCatalogue::standalone()` and the deriver: a situation whose
+   permission has a `%key` no parameter can supply is no tool
+   (`field.storage:add`), and a surface any plugin uses is no tool. The
+   catalogue lists each surface's plugins (`SurfacePlugins`,
+   `data_surface.surface_plugins`) and whether each situation stands on
+   its own. Seams: an alter's `extendChoices()` (new on
+   `ShapeAdditionsInterface`) is the engine's contribution, and the
+   alter's `#[RefinesInput]` method on that key is bound as the
+   contribution's refiner; `Surfaces::access()` builds the surface and
+   lets each child the context resolves (an attachment, a slot whose
+   deciding key is locked) refuse through its own access class; a scalar
+   situation parameter named for a surface key is described as that key
+   in a tool. Deviations: the demo formatter's `classes` output is no
+   longer refined by the variant, because the sketch never refines
+   outputs (its test now asserts the open list); the derived field tools
+   do not offer a field type whose settings are no surface (the old
+   tools fell back to the config schema, which is Tool Belt's job), and
+   `field_name` gained the storage's own Regex and Length so a bad name
+   is a violation rather than a `FieldException`; `FieldInstanceTarget`
+   places a new field on the default form and view displays, as the old
+   add tool did; `FieldInstanceTarget` loads and writes the field's own
+   settings, not `getSettings()`, which mixes in the storage's; the
+   `PROVIDER` constant moved to `NodeTypeReviewSettings::MODULE`. Every
+   undecided point is a `SKETCH GAP:` comment.
 5. **Delete the old spelling.** `DataSurfaceDeclarationInterface`,
    `DataSurfaceProviderInterface`, the host trait's declaration paths,
    the build event and its subscribers, the attribute directory, and

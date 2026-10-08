@@ -24,8 +24,9 @@ meaning is part of the contract.
 
 `data_surface_demo_extras` adds two editorial review settings to every
 content type — a review deadline of one hour to thirty days, stored as
-seconds, and a list of audience tags — and adds them twice: to the content type surface through
-the build event, and to core's own content type form through an
+seconds, and a list of audience tags — and adds them twice: to the
+content type surface through its alter, `NodeTypeAlter`, and to core's
+own content type form through an
 ordinary `hook_form_node_type_form_alter`. Nothing in this module, and
 nothing in the tool's base class, names either setting, or any other key
 of a content type; `NodeTypeToolComparisonTest` greps the two files to
@@ -49,7 +50,9 @@ reads the content type surface's `add` situation and derives
 - **Inputs.** The situation's parameters — `add()` has none — then one
   `values` map, the surface built in the add situation, converted by
   `SurfaceInputDefinitions`, and an optional `dry_run` boolean that
-  stops the pipeline after prepare. Because the add situation needs
+  stops the pipeline after prepare, where the content type is built and
+  held to its config schema, and answers with what would be stored as
+  `prepared`. Because the add situation needs
   nothing, that map is the exact contract in the static plugin
   definition: every consumer, `drush tool:info` and the AI connector's
   deriver included, sees the extras module's settings.

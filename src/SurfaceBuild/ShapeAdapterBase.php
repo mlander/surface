@@ -107,6 +107,19 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
 
   /**
    * {@inheritdoc}
+   *
+   * The owner's shape lists its own values in the key's constraint, so
+   * only an alter's shape offers more.
+   */
+  public function extendChoices(string $key, array $choices): static {
+    throw new \LogicException(sprintf(
+      'extendChoices() was asked to widen "%s" from the shape of the surface that declares it. An owner lists its own values in the key\'s constraint; extendChoices() is how an alter offers more.',
+      $key,
+    ));
+  }
+
+  /**
+   * {@inheritdoc}
    */
   public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL): static {
     $definition = $this->find($key);

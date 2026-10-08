@@ -12,9 +12,12 @@ methods and what each needs, the `#[AltersSurface]` classes and the
 the situation returns — so it is known only for a situation that needs
 nothing to start from.
 
-Every situation of a surface that names a target is also a tool,
+A situation that can be asked "on its own" is also a tool,
 `data_surface:<surface>:<situation>`, when `data_surface_tool` is
-enabled. `docs/surfaces.md` says how each part works.
+enabled: its surface names a target, no plugin's configuration is the
+surface, and every `%key` placeholder in its permission can be supplied
+by one of its parameters. A surface a plugin uses is configured through
+the plugin's host. `docs/surfaces.md` says how each part works.
 
 | Surface | Class | Identity | Situations |
 | --- | --- | --- | --- |
@@ -24,6 +27,7 @@ enabled. `docs/surfaces.md` says how each part works.
 | [`field.instance`](#fieldinstance) | `FieldInstanceSurface` | `entity_type_id`, `bundle`, `field_name`, `field_type` | `add`, `reuse`, `edit` |
 | [`field.settings.address`](#fieldsettingsaddress) | `AddressFieldSettingsSurface` | none | none |
 | [`field.storage`](#fieldstorage) | `FieldStorageSurface` | none | `add`, `edit` |
+| [`field_formatter.data_surface_demo_string`](#field_formatterdata_surface_demo_string) | `DemoFormatterSurface` | none | none |
 | [`node.type`](#nodetype) | `NodeTypeSurface` | `type` | `add`, `edit` |
 
 ## block.data_surface_demo
@@ -33,6 +37,7 @@ enabled. `docs/surfaces.md` says how each part works.
 - Identity: none
 - Target: none; its host or its parent stores it
 - Access: the situation's permission alone
+- Used by: `block:data_surface_demo`; configured through the plugin's host, never on its own.
 
 - Altered by `Drupal\data_surface_demo_extras\SurfaceAlter\DemoBlockAlter` (`data_surface_demo_extras`), in every situation.
 
@@ -60,11 +65,11 @@ enabled. `docs/surfaces.md` says how each part works.
 - Target: `Drupal\data_surface_tool\Target\FieldInstanceTarget`
 - Access: `Drupal\data_surface_tool\Access\FieldInstanceAccess`
 
-| Situation | Label | Needs | Creates | Permission | Provided by |
-| --- | --- | --- | --- | --- | --- |
-| `add` | Add a field to a bundle | `string $entity_type_id`, `string $bundle` | once given what it needs | `administer %entity_type_id fields` | `FieldInstanceSurface::add()` (`data_surface_tool`) |
-| `reuse` | Add an existing field to another bundle | `FieldStorageConfigInterface $storage`, `string $bundle` | once given what it needs | `administer %entity_type_id fields` | `FieldInstanceSurface::reuse()` (`data_surface_tool`) |
-| `edit` | Edit a field | `FieldConfigInterface $field` | once given what it needs | `administer %entity_type_id fields` | `FieldInstanceSurface::edit()` (`data_surface_tool`) |
+| Situation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `add` | Add a field to a bundle | `string $entity_type_id`, `string $bundle` | once given what it needs | `administer %entity_type_id fields` | yes | `FieldInstanceSurface::add()` (`data_surface_tool`) |
+| `reuse` | Add an existing field to another bundle | `FieldStorageConfigInterface $storage`, `string $bundle` | once given what it needs | `administer %entity_type_id fields` | yes | `FieldInstanceSurface::reuse()` (`data_surface_tool`) |
+| `edit` | Edit a field | `FieldConfigInterface $field` | once given what it needs | `administer %entity_type_id fields` | yes | `FieldInstanceSurface::edit()` (`data_surface_tool`) |
 
 - Slot `settings` is filled by: `address` → `Drupal\data_surface_address\Surface\AddressFieldSettingsSurface`.
 
@@ -75,6 +80,7 @@ enabled. `docs/surfaces.md` says how each part works.
 - Identity: none
 - Target: `Drupal\data_surface_address\Target\AddressFieldSettingsTarget`
 - Access: the situation's permission alone
+- Used by: `field_type:address`; configured through the plugin's host, never on its own.
 
 ## field.storage
 
@@ -84,10 +90,21 @@ enabled. `docs/surfaces.md` says how each part works.
 - Target: `Drupal\data_surface_tool\Target\FieldStorageTarget`
 - Access: the situation's permission alone
 
-| Situation | Label | Needs | Creates | Permission | Provided by |
-| --- | --- | --- | --- | --- | --- |
-| `add` | New field storage | nothing | yes | `administer %entity_type_id fields` | `FieldStorageSurface::add()` (`data_surface_tool`) |
-| `edit` | Edit a field storage | `FieldStorageConfigInterface $storage` | once given what it needs | `administer %entity_type_id fields` | `FieldStorageSurface::edit()` (`data_surface_tool`) |
+| Situation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `add` | New field storage | nothing | yes | `administer %entity_type_id fields` | no: nothing supplies `%entity_type_id` | `FieldStorageSurface::add()` (`data_surface_tool`) |
+| `edit` | Edit a field storage | `FieldStorageConfigInterface $storage` | once given what it needs | `administer %entity_type_id fields` | yes | `FieldStorageSurface::edit()` (`data_surface_tool`) |
+
+## field_formatter.data_surface_demo_string
+
+`Drupal\data_surface_demo\Surface\DemoFormatterSurface`, in `data_surface_demo`.
+
+- Identity: none
+- Target: none; its host or its parent stores it
+- Access: the situation's permission alone
+- Used by: `field_formatter:data_surface_demo_string`; configured through the plugin's host, never on its own.
+
+- Altered by `Drupal\data_surface_demo_extras\SurfaceAlter\DemoFormatterAlter` (`data_surface_demo_extras`), in every situation.
 
 ## node.type
 
@@ -97,9 +114,9 @@ enabled. `docs/surfaces.md` says how each part works.
 - Target: `Drupal\data_surface_demo_node_type\Target\NodeTypeTarget`
 - Access: `Drupal\data_surface_demo_node_type\Access\NodeTypeAccess`
 
-| Situation | Label | Needs | Creates | Permission | Provided by |
-| --- | --- | --- | --- | --- | --- |
-| `add` | Add a content type | nothing | yes | `administer data surface node type demo` | `NodeTypeSurface::add()` (`data_surface_demo_node_type`) |
-| `edit` | Edit a content type | `NodeTypeInterface $type` | once given what it needs | `administer data surface node type demo` | `NodeTypeSurface::edit()` (`data_surface_demo_node_type`) |
+| Situation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `add` | Add a content type | nothing | yes | `administer data surface node type demo` | yes | `NodeTypeSurface::add()` (`data_surface_demo_node_type`) |
+| `edit` | Edit a content type | `NodeTypeInterface $type` | once given what it needs | `administer data surface node type demo` | yes | `NodeTypeSurface::edit()` (`data_surface_demo_node_type`) |
 
 - Altered by `Drupal\data_surface_demo_extras\SurfaceAlter\NodeTypeAlter` (`data_surface_demo_extras`), in every situation.

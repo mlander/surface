@@ -63,7 +63,7 @@ of them is meant to replace core's own forms on a production site.
 | --- | --- |
 | `data_surface_demo` | One surface driving three hosts: a block, a field formatter, and a standalone form. |
 | `data_surface_demo_classic` | The same block and formatter written the pre-surface way, for the side-by-side comparison. Depends on nothing from Data Surface. |
-| `data_surface_demo_extras` | A third-party module extending someone else's surface through the build event, with no form alter; and, for content types, the same two settings added to core's own form the classic way, for comparison. |
+| `data_surface_demo_extras` | A third-party module extending someone else's surfaces with surface alters, with no form alter; and, for content types, the same two settings added to core's own form the classic way, for comparison. |
 | `data_surface_demo_node_type` | One surface serving an add form and an edit form, with a composite target. Adds its own permission. |
 | `data_surface_address` | A contributed field type adopting a surface without being forked. Needs Address. |
 | `data_surface_tool` | The same surface serving a non-form caller. Needs Tool. |

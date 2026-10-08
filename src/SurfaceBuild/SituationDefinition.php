@@ -61,6 +61,34 @@ final class SituationDefinition {
   }
 
   /**
+   * Lists the permission's placeholders no parameter can supply.
+   *
+   * A `%key` placeholder is filled from the identity the situation's
+   * context knows, and that context is built from the parameters, so a
+   * placeholder can be filled only when a parameter could supply it: one
+   * named for it, or an entity, whose situation reads identity off it.
+   * A situation with one that none can is never allowed on its own; it
+   * is asked only as the child of a surface that hands it that identity.
+   *
+   * @return string[]
+   *   The placeholder keys, in the order the permission names them;
+   *   empty when every one can be supplied, or there is no permission.
+   */
+  public function unresolvablePlaceholders(): array {
+    if ($this->permission === NULL || !preg_match_all('/%([A-Za-z0-9_]+)/', $this->permission, $matches)) {
+      return [];
+    }
+    $names = [];
+    foreach ($this->parameters as $parameter) {
+      if ($parameter->takesObject()) {
+        return [];
+      }
+      $names[] = $parameter->name;
+    }
+    return array_values(array_diff(array_unique($matches[1]), $names));
+  }
+
+  /**
    * Names the provider the way a message about it should.
    *
    * @return string

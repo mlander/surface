@@ -8,6 +8,7 @@ use Drupal\Core\Condition\ConditionPluginBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceConfigurationTrait;
+use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DataSurfaceDeclarationInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DataSurfaceProviderInterface;
@@ -17,8 +18,9 @@ use Drupal\data_surface\Form\DataSurfacePluginFormTrait;
 /**
  * Base class for conditions whose settings are described by a surface.
  *
- * A condition extending this contains its declaration, its refiner if it
- * has one, and its output: evaluate() and summary(). No
+ * A condition extending this contains #[UsesSurface] naming the surface
+ * class its configuration is (in the old spelling, its declaration and
+ * its refiner if it has one), and its output: evaluate() and summary(). No
  * defaultConfiguration, no buildConfigurationForm, no
  * validateConfigurationForm, no submitConfigurationForm.
  *
@@ -60,10 +62,13 @@ abstract class DataSurfaceConditionBase extends ConditionPluginBase implements D
   /**
    * {@inheritdoc}
    *
-   * The surface is whatever the class declares in declareDataSurface(),
-   * with this plugin as the refiner. A condition whose surface needs
-   * live site state to describe itself overrides this and builds the
-   * surface here instead, which is the one other legal home for it.
+   * The surface the class's #[UsesSurface] names, when its definition
+   * carries one: built in the host's `configure` context, and stored as
+   * the host always stored it. Otherwise whatever the class declares in
+   * declareDataSurface(), with this plugin as the refiner. A condition
+   * whose surface needs live site state to describe itself overrides
+   * this and builds the surface here instead, which is the one other
+   * legal home for it in the old spelling.
    *
    * A condition is its own subject: the plugin instance is the whole of
    * what this surface describes, so the subject is NULL, and any
@@ -76,7 +81,21 @@ abstract class DataSurfaceConditionBase extends ConditionPluginBase implements D
     // The host id is namespaced by plugin type, so a subscriber
     // matching on it cannot pick up a host of another kind that
     // happens to share a plugin id.
-    return $this->declaredSurface('condition:' . $this->getPluginId());
+    return $this->hostedSurface('condition:' . $this->getPluginId(), $operation);
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * A condition that names its surface with #[UsesSurface] declares
+   * nothing here, so the base answers for it; a condition in the old
+   * spelling overrides this, as it always had to.
+   */
+  public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
+    throw new \LogicException(sprintf(
+      '%s declares no surface: name one with #[UsesSurface] on the class, or override declareDataSurface().',
+      static::class,
+    ));
   }
 
   /**

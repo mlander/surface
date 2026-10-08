@@ -12,6 +12,8 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DataSurfaceProviderInterface;
 use Drupal\data_surface\Pipeline\DataSurfaceTargetInterface;
+use Drupal\data_surface\Surface\Attribute\UsesSurface;
+use Drupal\data_surface\Target\PluginConfigurationTarget;
 
 /**
  * A reusable plugin form generated entirely from the plugin's surface.
@@ -25,7 +27,11 @@ use Drupal\data_surface\Pipeline\DataSurfaceTargetInterface;
  *
  * All three bodies come from the plugin form trait; this class only says
  * where the surface and the configuration array come from, which is the
- * plugin rather than itself.
+ * plugin rather than itself. A plugin that provides a surface is asked
+ * for it. A plugin that only names one with #[UsesSurface] — any
+ * configurable plugin, with no base class of this module's — has that
+ * surface built here, in this form's operation, and its configuration
+ * array as the target: the plugin keeps rendering and writes no form.
  *
  * Declaring it, with the operation it serves:
  * @code
@@ -87,14 +93,16 @@ class DataSurfacePluginForm extends PluginFormBase {
    *   The plugin's surface for this form's operation.
    */
   public function getDataSurface(string $operation = 'configure', ?string $subject = NULL): DataSurfaceInterface {
-    if (!$this->plugin instanceof DataSurfaceProviderInterface) {
-      throw new \LogicException(sprintf(
-        '%s requires a plugin implementing DataSurfaceProviderInterface; %s given.',
-        static::class,
-        get_debug_type($this->plugin),
-      ));
+    if ($this->plugin instanceof DataSurfaceProviderInterface) {
+      return $this->plugin->getDataSurface($this->operation, $subject);
     }
-    return $this->plugin->getDataSurface($this->operation, $subject);
+    $this->surfaceSelfSubject($subject);
+    return $this->surfaces()->build(
+      $this->pluginSurface(),
+      $this->surfaceContext($this->operation),
+      get_class($this->plugin),
+      'plugin:' . $this->plugin->getPluginId(),
+    );
   }
 
   /**
@@ -119,9 +127,13 @@ class DataSurfacePluginForm extends PluginFormBase {
    *   provider — which the surface build refuses in its own words.
    */
   public function surfaceAccess(string $operation = 'configure', ?string $subject = NULL, ?AccountInterface $account = NULL): AccessResultInterface {
-    return $this->plugin instanceof DataSurfaceProviderInterface
-      ? $this->plugin->surfaceAccess($this->operation, $subject, $account)
-      : AccessResult::neutral();
+    if ($this->plugin instanceof DataSurfaceProviderInterface) {
+      return $this->plugin->surfaceAccess($this->operation, $subject, $account);
+    }
+    $surface = $this->pluginDefinitionSurface();
+    return $surface === NULL
+      ? AccessResult::neutral()
+      : $this->surfaces()->access($surface, $this->surfaceContext($this->operation), $this->surfaceAccount($account));
   }
 
   /**
@@ -148,14 +160,41 @@ class DataSurfacePluginForm extends PluginFormBase {
    *   same refusal getDataSurface() makes.
    */
   public function getDataSurfaceTarget(string $operation = 'configure', ?string $subject = NULL): DataSurfaceTargetInterface {
-    if (!$this->plugin instanceof DataSurfaceProviderInterface) {
-      throw new \LogicException(sprintf(
-        '%s requires a plugin implementing DataSurfaceProviderInterface; %s given.',
-        static::class,
-        get_debug_type($this->plugin),
-      ));
+    if ($this->plugin instanceof DataSurfaceProviderInterface) {
+      return $this->plugin->getDataSurfaceTarget($this->operation, $subject);
     }
-    return $this->plugin->getDataSurfaceTarget($this->operation, $subject);
+    $this->pluginSurface();
+    $this->surfaceSelfSubject($subject);
+    return new PluginConfigurationTarget($this->surfaceConfigurable());
+  }
+
+  /**
+   * Gets the surface the plugin's definition names, or refuses.
+   *
+   * @return class-string
+   *   The surface class.
+   *
+   * @throws \LogicException
+   *   When the plugin neither provides a surface nor names one.
+   */
+  protected function pluginSurface(): string {
+    return $this->pluginDefinitionSurface() ?? throw new \LogicException(sprintf(
+      '%s requires a plugin implementing DataSurfaceProviderInterface or naming its surface with #[UsesSurface]; %s does neither.',
+      static::class,
+      get_debug_type($this->plugin),
+    ));
+  }
+
+  /**
+   * Reads the surface #[UsesSurface] names, from the plugin's definition.
+   *
+   * @return class-string|null
+   *   The surface class, or NULL when the definition names none.
+   */
+  protected function pluginDefinitionSurface(): ?string {
+    $definition = $this->plugin->getPluginDefinition();
+    $surface = is_array($definition) ? ($definition[UsesSurface::DEFINITION_KEY] ?? NULL) : NULL;
+    return is_string($surface) ? $surface : NULL;
   }
 
   /**

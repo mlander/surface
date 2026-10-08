@@ -238,35 +238,68 @@ opinion is a refusal, as it is on a route.
 
 ## Targets
 
-`#[Surface(target:)]` names a `SurfaceTargetInterface` with `load()` and
-`commit()`. It loads by the identity the context knows, so the context
-never carries an entity, and creates or updates by the context's
-`creates`. `SurfacesInterface::target()` adapts it to the pipeline's
-target and composes it along the tree:
+`#[Surface(target:)]` names a `SurfaceTargetInterface` with three verbs:
+`load()`, `prepare()` and `commit()`. It loads by the identity the
+context knows, so the context never carries an entity, and creates or
+updates by the context's `creates`. `SurfacesInterface::target()` adapts
+it to the pipeline's target and composes it along the tree:
 
-- A subsurface whose class names a target is loaded from and committed
-  to it, in the context its parent's hands it, plus the identity the
-  parent accepted that it did not already know. An attached child (a
-  field's storage) is committed **before** its parent, which is built on
-  it; a slot's variant (a field's settings) **after**, since it lives on
-  what the parent writes.
+- A subsurface whose class names a target is loaded from, prepared for
+  and committed to it, in the context its parent's hands it, plus the
+  identity the parent accepted that it did not already know. An
+  attached child (a field's storage) is committed **before** its parent,
+  which is built on it; a slot's variant (a field's settings) **after**,
+  since it lives on what the parent writes.
 - A subsurface without one is stored by its parent under its key.
 - An alter whose keys are asked for in one shape and stored in another
   implements `HasStorageShapeInterface`. Its shape is applied to that
   module's mount, `third_party_settings.<module>`, and nothing else:
-  `toStorage()` before the target writes, `fromStorage()` after it
+  `toStorage()` before the target prepares, `fromStorage()` after it
   reads. `NodeTypeAlter` in the extras module asks for a review
   deadline as an amount and a unit; `NodeTypeTarget` writes the seconds
   core's form writes, and never knows the extras module exists.
-- A target has no prepare step: a dry run accepts and validates, and
-  writes nothing, but a target's own storage checks (a config schema)
-  run only on commit.
+
+## Prepare
+
+`prepare(SurfaceContext $context, array $values): array` rehearses the
+write. It builds what `commit()` would store, in storage's own shape,
+holds it to every check storage itself would make — the config schema,
+which for a config entity is also its entity validation — and has no
+side effects. It returns that array, and `commit(SurfaceContext
+$context, array $prepared)` writes exactly it.
+
+- **A dry run stops after prepare** and reports what it returned. The
+  pipeline's result carries it as `PreparedValues`; the adapter's
+  `preview()` turns it into plain arrays (a surface with routed children
+  reports its own under `own` and each child's under `children`, by the
+  key it sits at), and a derived tool's dry run answers with it as the
+  `prepared` output.
+- **A real submit prepares first**, so `commit()` is never the first to
+  find out storage would refuse. A refusal is a
+  `TargetViolationsException` carrying violations filed under the
+  surface keys that own them, which the pipeline returns like its own;
+  a routed child's are filed under the key it sits at. Every level is
+  prepared before anything is thrown, so one answer names them all.
+- What each target here checks: `NodeTypeTarget` builds the unsaved
+  node type (a copy of the stored one, or a new one) and each base field
+  override that would move, and holds them to `node.type.*` (fully
+  validatable: a name with a line break is refused, as core's form
+  refuses it) and to the override's schema; empty description and help
+  are stored as none, as core's form stores them. `FieldStorageTarget`
+  and `FieldInstanceTarget` build the unsaved storage and field (a field
+  being added on a storage being added beside it is checked against an
+  unsaved stand-in built from the same identity) and hold them to
+  `field.storage.*` and `field.field.*`. `AddressFieldSettingsTarget`
+  holds the settings, in the shape the field stores, to
+  `field.field_settings.address`.
+- What a prepare returns is what is stored: the node type's prepared
+  array is the config the commit writes, uuid included.
 
 ## Tools
 
-With `data_surface_tool` enabled, every situation of every surface that
-names a target is a tool, `data_surface:<surface id>:<situation id>`,
-derived by `SurfaceSituationToolDeriver` from the static layer alone:
+With `data_surface_tool` enabled, a situation that can be asked on its
+own is a tool, `data_surface:<surface id>:<situation id>`, derived by
+`SurfaceSituationToolDeriver` from the static layer alone:
 
 | Tool | Inputs |
 | --- | --- |
@@ -275,33 +308,54 @@ derived by `SurfaceSituationToolDeriver` from the static layer alone:
 | `data_surface:field.instance:add` | `entity_type_id`, `bundle`, `values`, `dry_run` |
 | `data_surface:field.instance:reuse` | `storage` (its id), `bundle`, `values`, `dry_run` |
 | `data_surface:field.instance:edit` | `field` (its id), `values`, `dry_run` |
+| `data_surface:field.storage:edit` | `storage` (its id), `values`, `dry_run` |
 
 - **Inputs** are the situation's parameters, by name — an entity
-  parameter as the entity's id, resolved when the tool runs — then
-  `values`, the surface's keys less the identity keys the situation
-  knows, then `dry_run`. Nothing in `values` is required unless the
-  situation creates. The definition is static, which is what situations
-  make possible: a situation that needs nothing is the exact contract
-  before anyone calls, and one that needs a subject refines `values`
-  to its real context (a field's settings become its type's) through
-  the Tool API's own input refiners once the subject arrives.
-- **Access** is the situation's, decisively.
+  parameter as the entity's id, resolved when the tool runs; a scalar
+  parameter named for one of the surface's keys described as that key,
+  with its label, meaning and allowed values — then `values`, the
+  surface's keys less the identity keys the situation knows, then
+  `dry_run`. Nothing in `values` is required unless the situation
+  creates. The definition is static, which is what situations make
+  possible: a situation that needs nothing is the exact contract before
+  anyone calls, and one that needs a subject refines `values` to its
+  real context (a field's settings become its type's) through the Tool
+  API's own input refiners once the subject arrives.
+- **Access** is the situation's, decisively, then each subsurface the
+  context resolves may refuse through its own access class.
 - **Execution** is the situation, the build, and one pipeline submit to
-  the composed target.
+  the composed target; a dry run stops after prepare.
 - **Outputs** are the accepted `values`, `committed`, and the surface's
-  own outputs, as its target reads them back after the write.
+  own outputs, as its target reads them back after the write; a dry run
+  answers with `prepared`, what prepare rehearsed, instead.
 
-A surface without a target has no tool: its host supplies the target.
+Two rules say what is not a tool, and the catalogue applies the same
+two (`SurfaceCatalogue::standalone()`):
+
+1. **A permission nothing can name.** A situation whose permission has a
+   `%key` placeholder that none of its parameters can supply — one named
+   for it, or an entity its situation reads identity off — could never
+   be allowed, so it is no tool. `field.storage`'s `add` needs nothing
+   and asks `administer %entity_type_id fields`: only a field adding its
+   storage can ask it, as that field's child.
+2. **A plugin's surface.** A surface with no target of its own, or one
+   any plugin names with `#[UsesSurface]`, is configured through its
+   host, which holds the instance and supplies the target. It gets no
+   tool, whatever it declares.
+
 A surface or situation that cannot be described is left out and logged.
 
 ## Catalogue
 
 `data_surface.surface_catalogue` (`SurfaceCatalogue::describe()`) lists
 every discovered surface with its id, class, identity, target, access
-class, situations (id, label, parameters, whether it creates,
-permission), alters and variants, without building anything. Whether a
-situation creates is on the context it returns, so it is known only for
-a situation that needs nothing. [`catalogue.md`](catalogue.md) is that
+class, the plugins whose configuration it is (`<host type>:<plugin id>`,
+from the plugin definitions, through `data_surface.surface_plugins`),
+situations (id, label, parameters, whether it creates, permission, the
+placeholders nothing supplies, whether it can be asked on its own),
+alters and variants, without building anything. Whether a situation
+creates is on the context it returns, so it is known only for a
+situation that needs nothing. [`catalogue.md`](catalogue.md) is that
 array for this repository's modules, generated by
 `scripts/generate-catalogue.php` and held to it by
 `SurfaceCatalogueTest`.
@@ -309,11 +363,10 @@ array for this repository's modules, generated by
 ## Plugins
 
 A plugin keeps rendering; its configuration is a surface in
-`src/Surface/`, named by `#[UsesSurface]` on the plugin class. The
-attribute is copied into the plugin definition, so a tool can list the
-surfaced plugins without instantiating one. The host supplies the
-context (`configure`, knowing nothing) and the target (the plugin's own
-configuration), because only it holds the instance:
+`src/Surface/`, named by `#[UsesSurface]` on the plugin class. The host
+supplies the context (`configure`, knowing nothing) and the target (the
+plugin's own configuration, or for a field type the field config Field
+UI is editing), because only it holds the instance:
 
 ```php
 #[Block(id: 'data_surface_demo', admin_label: new TranslatableMarkup('Data surface demo'))]
@@ -325,7 +378,43 @@ final class DataSurfaceDemoBlock extends DataSurfaceBlockBase {
 }
 ```
 
-Blocks do this today. Formatters, conditions and actions follow.
+Every host reads it the same way:
+
+| Host | Base or trait | Host id | Target |
+| --- | --- | --- | --- |
+| Block | `DataSurfaceBlockBase` | `block:<id>` | the block's configuration |
+| Formatter | `DataSurfaceFormatterBase` | `field_formatter:<id>` | none: the display stores it |
+| Condition | `DataSurfaceConditionBase` | `condition:<id>` | the condition's configuration |
+| Action | `DataSurfaceActionBase` | `action:<id>` | the action's configuration |
+| Field type | `DataSurfaceFieldTypeTrait` | `field_type:<type>` | the field config's settings |
+| Any configurable plugin | `DataSurfacePluginForm` | `plugin:<id>` | its configuration |
+
+- **Into the definition.** `SurfacePluginHooks` copies the attribute
+  into each host's plugin definitions, under `UsesSurface::DEFINITION_KEY`,
+  with one definition alter per host, run last so a class another
+  module swapped in (`SurfaceAddressItem` for `AddressItem`) is the one
+  read. A field item reaches it as its typed data definition, which core
+  derives from the field type's. So the catalogue lists which plugins
+  use a surface without instantiating one.
+- **The build.** `DataSurfaceHostTrait::hostedSurface()` builds the
+  surface the definition names, in the host's context, with the host
+  class and host id on the build event; a plugin naming none falls back
+  to its own `declareDataSurface()` until step 5.
+- **Static defaults.** A formatter's `defaultSettings()` and a field
+  type's `defaultFieldSettings()` are asked of the class, so they read
+  the attribute off the class and take `SurfacesInterface::defaults()`:
+  the surface's own shape alone, no alter, context or build event.
+- **Access.** A field type's host asks the field config entity, then
+  the surface's access class, which may refuse. The gated test field
+  type refuses that way, in Field UI and in the derived field tools
+  alike.
+- **No base class needed.** `DataSurfacePluginForm` serves any
+  configurable plugin whose definition names a surface: it builds that
+  surface in its operation and stores into the configuration array.
+
+Moved: the demo block, the demo formatter, the address field type and
+the gated test field type. A plugin surface is never a tool (see
+Tools).
 
 ## Surface alters
 
@@ -337,6 +426,15 @@ mounted under its own module's name — at
 storage and schema never have to know a contributor's keys. Its
 `#[RefinesInput]` methods tighten the owner's keys, running after the
 owner's own.
+
+The one widening an alter may make is `extendChoices()`: more values on
+a key whose owner declared a list of allowed values. The values are the
+alter's module's contribution, advertised under its name, and an
+`#[RefinesInput]` method of the same alter on that key is that
+contribution's refiner: it is handed the alter's values only, the
+owner's methods never see them, and what is offered is the union.
+`DemoFormatterAlter` offers a ribbon variant on the demo formatter and
+keeps it to upper case.
 
 `DemoBlockAlter` in the demo extras module does all three things an
 alter can: it adds a badge, rewords the headline's help text with
@@ -365,7 +463,8 @@ its name, and another alter's key by its mounted path,
 
 A build event subscriber written for the older spelling still runs on a
 surface built this way, after the alters and the context, so the two
-spellings extend each other while consumers move over.
+spellings extend each other while consumers move over. None ships in
+the demo modules any more; the test module's still does.
 
 ## What is checked when a surface is built
 

@@ -7,6 +7,7 @@ namespace Drupal\data_surface\Plugin\Action;
 use Drupal\Core\Action\ConfigurableActionBase;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceConfigurationTrait;
+use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DataSurfaceDeclarationInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DataSurfaceProviderInterface;
@@ -16,10 +17,12 @@ use Drupal\data_surface\Form\DataSurfacePluginFormTrait;
 /**
  * Base class for actions whose settings are described by a surface.
  *
- * An action extending this contains its declaration, its refiner if it
- * has one, and its output: execute() and access(). The thinnest group A
- * host there is, because the action host owns no configuration keys of
- * its own — what is stored under an action's configuration is the
+ * An action extending this contains #[UsesSurface] naming the surface
+ * class its configuration is (in the old spelling, its declaration and
+ * its refiner if it has one), and its output: execute() and access().
+ * The thinnest group A host there is, because the action host owns no
+ * configuration keys of its own — what is stored under an action's
+ * configuration is the
  * plugin's alone — and it supplies neither a build nor a submit of its
  * own for the surface to compose with. So the two traits are the whole
  * adoption: storage from the configuration trait, the plugin triple from
@@ -67,10 +70,13 @@ abstract class DataSurfaceActionBase extends ConfigurableActionBase implements D
   /**
    * {@inheritdoc}
    *
-   * The surface is whatever the class declares in declareDataSurface(),
-   * with this plugin as the refiner. An action whose surface needs live site
-   * state to describe itself overrides this and builds the surface here
-   * instead, which is the one other legal home for it.
+   * The surface the class's #[UsesSurface] names, when its definition
+   * carries one: built in the host's `configure` context, and stored as
+   * the host always stored it. Otherwise whatever the class declares in
+   * declareDataSurface(), with this plugin as the refiner. An action
+   * whose surface needs live site state to describe itself overrides
+   * this and builds the surface here instead, which is the one other
+   * legal home for it in the old spelling.
    *
    * An action is its own subject: the plugin instance is the whole of
    * what this surface describes, so the subject is NULL, and any
@@ -83,7 +89,21 @@ abstract class DataSurfaceActionBase extends ConfigurableActionBase implements D
     // The host id is namespaced by plugin type, so a subscriber
     // matching on it cannot pick up a host of another kind that
     // happens to share a plugin id.
-    return $this->declaredSurface('action:' . $this->getPluginId());
+    return $this->hostedSurface('action:' . $this->getPluginId(), $operation);
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * An action that names its surface with #[UsesSurface] declares
+   * nothing here, so the base answers for it; an action in the old
+   * spelling overrides this, as it always had to.
+   */
+  public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
+    throw new \LogicException(sprintf(
+      '%s declares no surface: name one with #[UsesSurface] on the class, or override declareDataSurface().',
+      static::class,
+    ));
   }
 
   /**

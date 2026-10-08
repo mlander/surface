@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
+use Drupal\data_surface_tool\SituationInputs;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\tool\Tool\ToolManager;
 use Drupal\tool\TypedData\MapInputDefinition;
@@ -13,11 +14,14 @@ use PHPUnit\Framework\Attributes\Group;
 /**
  * Compares the settings input two field tools advertise for one field type.
  *
- * Both tools take the same seven inputs and both answer the same
- * question: given an entity type, a bundle and a field name, what may
- * the settings be? One derives its answer from the field type's config
- * schema, the other from the field type's surface, and the two answers
- * are put side by side in the data_surface_tool module's COMPARISON.md.
+ * Both tools answer the same question: given an existing field storage
+ * and a bundle to add its field to, what may the settings be? Tool
+ * Belt's field_add derives its answer from the field type's config
+ * schema; data_surface:field.instance:reuse, the tool derived from the
+ * field instance surface's reuse situation, from the field type's
+ * settings surface, which fills that surface's settings slot. The two
+ * answers are put side by side in the data_surface_tool module's
+ * COMPARISON.md.
  * That file is written by scripts/generate-comparison.php; the last test
  * here asserts on every ordinary run that it still says what the
  * generator would say.
@@ -74,6 +78,38 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * The tool derived from the field instance surface's reuse situation.
+   */
+  protected const SURFACE_TOOL = 'data_surface:field.instance:reuse';
+
+  /**
+   * The free-form tool it is compared with.
+   */
+  protected const BELT_TOOL = 'tool_belt:field_add';
+
+  /**
+   * Creates one of the two tools, told which field it is about.
+   *
+   * @param string $id
+   *   The tool plugin identifier.
+   *
+   * @return \Drupal\tool\Tool\ToolInterface
+   *   The tool.
+   */
+  protected function tool(string $id) {
+    $tool = $this->toolManager->createInstance($id);
+    if ($id === self::SURFACE_TOOL) {
+      $tool->setInputValue('storage', 'entity_test.field_address');
+      $tool->setInputValue('bundle', 'entity_test');
+      return $tool;
+    }
+    $tool->setInputValue('entity_type_id', 'entity_test');
+    $tool->setInputValue('bundle', 'entity_test');
+    $tool->setInputValue('field_name', 'field_address');
+    return $tool;
+  }
+
+  /**
    * Builds the settings schema one tool advertises for the address field.
    *
    * @param string $id
@@ -83,19 +119,18 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
    *   The JSON Schema of the tool's settings input, refined.
    */
   protected function settingsSchema(string $id): array {
-    $tool = $this->toolManager->createInstance($id);
-    $tool->setInputValue('entity_type_id', 'entity_test');
-    $tool->setInputValue('bundle', 'entity_test');
-    $tool->setInputValue('field_name', 'field_address');
+    $tool = $this->tool($id);
     $schema = $this->container->get('tool.definition_serializer')->normalizeInputSchema($tool);
-    return $schema['properties']['settings'];
+    return $id === self::SURFACE_TOOL
+      ? $schema['properties'][SituationInputs::VALUES]['properties']['settings']
+      : $schema['properties']['settings'];
   }
 
   /**
    * Tests what the surface derived settings input says.
    */
   public function testSurfaceSchemaCarriesMeaning(): void {
-    $schema = $this->settingsSchema('data_surface:field_add');
+    $schema = $this->settingsSchema(self::SURFACE_TOOL);
 
     // Every address property that may be overridden is named, so a
     // caller never has to guess the vocabulary.
@@ -129,10 +164,54 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Tests that the derived tools say at least what the retired ones did.
+   *
+   * The hand-written data_surface:field_add advertised an entity type
+   * with its vocabulary, a label, help text and a required flag, each
+   * with a sentence saying what it is, and the address settings. The
+   * tools derived from the field instance surface's situations say all
+   * of it, from the surface, and more: the storage's cardinality with
+   * its range, and the field name's shape.
+   */
+  public function testTheDerivedToolsSayAtLeastWhatTheRetiredOnesDid(): void {
+    $add = $this->toolManager->createInstance('data_surface:field.instance:add');
+    $add->setInputValue('entity_type_id', 'entity_test');
+    $add->setInputValue('bundle', 'entity_test');
+    $schema = $this->container->get('tool.definition_serializer')->normalizeInputSchema($add);
+    // A situation parameter named for a surface key is that key.
+    $entity_type = $schema['properties']['entity_type_id'];
+    $this->assertSame('Entity type', $entity_type['title']);
+    $this->assertStringContainsString('The machine name of the entity type', $entity_type['description']);
+    $this->assertContains('entity_test', $entity_type['enum']);
+    $this->assertSame(['entity_type_id', 'bundle', SituationInputs::VALUES], $schema['required']);
+    $values = $schema['properties'][SituationInputs::VALUES]['properties'];
+    $this->assertSame(['address'], $values['field_type']['enum']);
+    $this->assertSame('^[_a-z]+[_a-z0-9]*$', $values['field_name']['pattern']);
+    $this->assertSame(32, $values['field_name']['maxLength']);
+
+    $schema = $this->container->get('tool.definition_serializer')->normalizeInputSchema($this->tool(self::SURFACE_TOOL));
+    $values = $schema['properties'][SituationInputs::VALUES];
+    $this->assertSame(['label'], $values['required']);
+    $this->assertSame('Label', $values['properties']['label']['title']);
+    $this->assertStringContainsString('The human readable label for the field on this bundle.', $values['properties']['label']['description']);
+    $this->assertSame('Help text', $values['properties']['description']['title']);
+    $this->assertStringContainsString('Help text to display for the field.', $values['properties']['description']['description']);
+    $this->assertSame('Required field', $values['properties']['required']['title']);
+    $this->assertStringContainsString('Whether the field is required.', $values['properties']['required']['description']);
+    $this->assertSame(-1, $values['properties']['storage']['properties']['cardinality']['minimum']);
+    $this->assertSame(1, $values['properties']['storage']['properties']['cardinality']['default']);
+    // A false default does not survive the normalizer; the definition
+    // carries it.
+    $values = $this->tool(self::SURFACE_TOOL)->getInputDefinition(SituationInputs::VALUES);
+    $this->assertInstanceOf(MapInputDefinition::class, $values);
+    $this->assertFalse($values->getPropertyDefinitions()['required']->getDefaultValue());
+  }
+
+  /**
    * Tests what the config schema derived settings input says.
    */
   public function testSchemaDerivedInputSaysLess(): void {
-    $schema = $this->settingsSchema('tool_belt:field_add');
+    $schema = $this->settingsSchema(self::BELT_TOOL);
 
     // Three types and a deprecated fourth key, with no hint that it
     // overrules the third whenever it is not empty.
@@ -165,11 +244,9 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
    * the next consumer can pick them up.
    */
   public function testDefaultsSurviveTheConversionButNotTheSchema(): void {
-    $tool = $this->toolManager->createInstance('data_surface:field_add');
-    $tool->setInputValue('entity_type_id', 'entity_test');
-    $tool->setInputValue('bundle', 'entity_test');
-    $tool->setInputValue('field_name', 'field_address');
-    $definition = $tool->getInputDefinition('settings');
+    $values = $this->tool(self::SURFACE_TOOL)->getInputDefinition(SituationInputs::VALUES);
+    assert($values instanceof MapInputDefinition);
+    $definition = $values->getPropertyDefinitions()['settings'];
     assert($definition instanceof MapInputDefinition);
     $properties = $definition->getPropertyDefinitions();
 
@@ -177,7 +254,7 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
     $this->assertSame([], $properties['field_overrides']->getDefaultValue());
     $this->assertNull($properties['langcode_override']->getDefaultValue());
 
-    $schema = $this->settingsSchema('data_surface:field_add');
+    $schema = $this->settingsSchema(self::SURFACE_TOOL);
     $this->assertArrayNotHasKey('default', $schema['properties']['available_countries']);
   }
 
@@ -198,8 +275,8 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
    * first, which is what the script does.
    */
   public function testComparisonHasNotDrifted(): void {
-    $surface = $this->settingsSchema('data_surface:field_add');
-    $belt = $this->settingsSchema('tool_belt:field_add');
+    $surface = $this->settingsSchema(self::SURFACE_TOOL);
+    $belt = $this->settingsSchema(self::BELT_TOOL);
     $this->assertNotSame($surface, $belt);
 
     $document = \DataSurfaceComparisonDocument::render($surface, $belt);

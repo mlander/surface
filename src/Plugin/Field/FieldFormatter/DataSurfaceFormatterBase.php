@@ -8,6 +8,7 @@ use Drupal\Core\Field\FieldItemInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FormatterBase;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DataSurfaceDeclarationInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DataSurfaceProviderInterface;
@@ -18,15 +19,17 @@ use Drupal\data_surface\Pipeline\Omitted;
 /**
  * Base class for field formatters whose settings come from a surface.
  *
- * A formatter extending this contains its declaration, its refiner if it
- * has one, and one method per delta that says what it shows. The
- * settings form, the settings summary, validation and the static
- * defaults all come from the surface.
+ * A formatter extending this contains #[UsesSurface] naming the surface
+ * class its settings are (in the old spelling, its declaration and its
+ * refiner if it has one), and one method per delta that says what it
+ * shows. The settings form, the settings summary, validation and the
+ * static defaults all come from the surface.
  *
  * The class composes the formatter trait, absorbs the one host quirk the
  * trait cannot — defaultSettings() is static, so it is answered here
- * from the class's own declaration, which is static for exactly this
- * reason; a formatter whose surface is built at runtime overrides it —
+ * from the surface class's own shape, or the class's own declaration,
+ * both static for exactly this reason; a formatter whose surface is
+ * built at runtime overrides it —
  * and splits viewing in two.
  *
  * ## The split, and why it is here
@@ -70,8 +73,10 @@ abstract class DataSurfaceFormatterBase extends FormatterBase implements DataSur
   /**
    * {@inheritdoc}
    *
-   * The surface is whatever the class declares in declareDataSurface(),
-   * with this formatter as the refiner.
+   * The surface the class's #[UsesSurface] names, when its definition
+   * carries one: built in the host's `configure` context, and stored as
+   * the host always stored it. Otherwise whatever the class declares in
+   * declareDataSurface(), with this formatter as the refiner.
    *
    * A formatter is its own subject: the plugin instance is the whole of
    * what this surface describes, so the subject is NULL, and any
@@ -84,7 +89,21 @@ abstract class DataSurfaceFormatterBase extends FormatterBase implements DataSur
     // The host id is namespaced by plugin type, so a subscriber
     // matching on it cannot pick up a host of another kind that
     // happens to share a plugin id.
-    return $this->declaredSurface('field_formatter:' . $this->getPluginId());
+    return $this->hostedSurface('field_formatter:' . $this->getPluginId(), $operation);
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * A formatter that names its surface with #[UsesSurface] declares
+   * nothing here, so the base answers for it; a formatter in the old
+   * spelling overrides this, as it always had to.
+   */
+  public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
+    throw new \LogicException(sprintf(
+      '%s declares no surface: name one with #[UsesSurface] on the class, or override declareDataSurface().',
+      static::class,
+    ));
   }
 
   /**

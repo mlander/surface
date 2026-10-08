@@ -15,6 +15,7 @@ use Drupal\data_surface\Surface\SurfaceContext;
 use Drupal\data_surface\Surface\SurfaceInterface;
 use Drupal\data_surface_tool\Access\FieldInstanceAccess;
 use Drupal\data_surface_tool\Target\FieldInstanceTarget;
+use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\field\FieldConfigInterface;
 use Drupal\field\FieldStorageConfigInterface;
 
@@ -117,18 +118,32 @@ final class FieldInstanceSurface implements SurfaceInterface {
   public function defineInputs(ShapeInterface $inputs): void {
     // Which field this is.
     $inputs->add('entity_type_id', 'string', new TranslatableMarkup('Entity type'))->setRequired(TRUE)
+      ->setDescription(new TranslatableMarkup('The machine name of the entity type the field is on.'))
       ->addConstraint('PluginExists', [
         'manager' => 'entity_type.manager',
         'interface' => FieldableEntityInterface::class,
       ]);
-    $inputs->add('bundle', 'string', new TranslatableMarkup('Bundle'))->setRequired(TRUE);
-    $inputs->add('field_type', 'string', new TranslatableMarkup('Field type'))->setRequired(TRUE);
-    $inputs->add('field_name', 'string', new TranslatableMarkup('Machine name'))->setRequired(TRUE);
+    $inputs->add('bundle', 'string', new TranslatableMarkup('Bundle'))->setRequired(TRUE)
+      ->setDescription(new TranslatableMarkup('The bundle the field is on, for example article or page.'));
+    $inputs->add('field_type', 'string', new TranslatableMarkup('Field type'))->setRequired(TRUE)
+      ->setDescription(new TranslatableMarkup('The field type, which decides what the settings are.'));
+    // What a field storage's name may be, which its constructor refuses
+    // otherwise with an exception rather than a violation.
+    $inputs->add('field_name', 'string', new TranslatableMarkup('Machine name'))->setRequired(TRUE)
+      ->setDescription(new TranslatableMarkup('The machine name of the field storage, for example field_tags.'))
+      ->addConstraint('Length', ['max' => FieldStorageConfig::NAME_MAX_LENGTH])
+      ->addConstraint('Regex', [
+        'pattern' => '/^[_a-z]+[_a-z0-9]*$/',
+        'message' => 'The machine name must start with a lowercase letter or underscore, and contain only lowercase letters, numbers and underscores.',
+      ]);
 
     // The field itself.
-    $inputs->add('label', 'string', new TranslatableMarkup('Label'))->setRequired(TRUE);
-    $inputs->add('description', 'string', new TranslatableMarkup('Help text'));
-    $inputs->add('required', 'boolean', new TranslatableMarkup('Required field'), default: FALSE);
+    $inputs->add('label', 'string', new TranslatableMarkup('Label'))->setRequired(TRUE)
+      ->setDescription(new TranslatableMarkup('The human readable label for the field on this bundle.'));
+    $inputs->add('description', 'string', new TranslatableMarkup('Help text'))
+      ->setDescription(new TranslatableMarkup('Help text to display for the field.'));
+    $inputs->add('required', 'boolean', new TranslatableMarkup('Required field'), default: FALSE)
+      ->setDescription(new TranslatableMarkup('Whether the field is required.'));
 
     // Its parts.
     $inputs->attach('storage', FieldStorageSurface::class);

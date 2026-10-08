@@ -47,9 +47,12 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   so an answer with no opinion is a refusal.
  * - **Execution**: the situation builds the context, the surface is
  *   built in it, and the pipeline submits `values` to the surface's
- *   composed target, or stops after prepare for a dry run.
+ *   composed target, or stops after prepare for a dry run. Prepare is
+ *   where storage's own checks run, so a dry run is refused for what a
+ *   write would be refused for.
  * - **Outputs**: the accepted values, whether they were written, and the
- *   surface's own outputs as its target reads them back.
+ *   surface's own outputs as its target reads them back; for a dry run,
+ *   instead of outputs, what prepare rehearsed.
  *
  * @see \Drupal\data_surface_tool\Plugin\Derivative\SurfaceSituationToolDeriver
  * @see \Drupal\data_surface_tool\SituationInputs
@@ -164,6 +167,11 @@ final class SurfaceSituationTool extends ToolBase implements InputDefinitionRefi
     $outputs = $result->committed && $target instanceof SurfaceTargetAdapter
       ? $target->outputs($built, $result->values)
       : [];
+    // A dry run stops after prepare, and what prepare rehearsed is the
+    // preview: what storage would have been handed.
+    if (!$result->committed && $result->prepared !== NULL && $target instanceof SurfaceTargetAdapter) {
+      $outputs = [SituationInputs::PREPARED => $target->preview($result->prepared)];
+    }
     $stale = $this->staleReferences($result->violations);
     return ExecutableResult::success(
       $result->committed

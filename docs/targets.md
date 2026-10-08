@@ -32,6 +32,15 @@ argument of [the pipeline's `accept()`](pipeline.md#accept), so a key
 nobody sent keeps what it holds instead of falling back to its declared
 default.
 
+A surface written in the new spelling names its target with
+`#[Surface(target:)]`, a `Surface\SurfaceTargetInterface` with the same
+three verbs over the context instead of the surface: `load($context)`,
+`prepare($context, $values)`, which returns the storage-shaped array
+after storage's own checks, and `commit($context, $prepared)`.
+`SurfaceTargetAdapter` binds the context and makes it this interface;
+[Surfaces as classes](surfaces.md#prepare) says what each target here
+checks.
+
 ## Asking a provider for one
 
 A target is the third answer of the provider contract's triple, beside

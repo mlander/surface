@@ -9,9 +9,11 @@ use Drupal\Core\Form\FormState;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\DataSurfaceTargetInterface;
+use Drupal\data_surface\Pipeline\TargetViolationsException;
 use Drupal\data_surface\Pipeline\ViolationSummary;
 use Drupal\data_surface\Surface\SurfaceContext;
 use Drupal\data_surface\SurfaceBuild\SurfacesInterface;
+use Drupal\data_surface\SurfaceBuild\SurfaceTargetAdapter;
 use Drupal\data_surface_demo_extras\NodeTypeReviewSettings;
 use Drupal\data_surface_demo_extras\SurfaceAlter\NodeTypeAlter;
 use Drupal\data_surface_demo_node_type\Access\NodeTypeAccess;
@@ -300,15 +302,91 @@ class NodeTypeSurfaceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests a dry run, which writes nothing.
+   * Tests a dry run: the prepared storage shape, and nothing written.
+   *
+   * Prepare rehearses the write: the node type's exported array, as
+   * config storage would be handed it, and one exported override per base
+   * field that would move — the title label and promote here, and not
+   * status, whose default did not move.
    */
-  public function testDryRunWritesNothing(): void {
+  public function testDryRunReturnsThePreparedStorageShapeAndWritesNothing(): void {
     [$surface, $target] = $this->served(NodeTypeSurface::add());
-    $result = $this->submit($surface, $target, ['name' => 'Dry run', 'type' => 'dry_run', 'promote' => 1], TRUE);
+    $result = $this->submit($surface, $target, [
+      'name' => 'Dry run',
+      'type' => 'dry_run',
+      'title_label' => 'Dish',
+      'promote' => 1,
+      'description' => '',
+    ], TRUE);
     $this->assertTrue($result->isValid(), ViolationSummary::fromViolations($result->violations));
     $this->assertFalse($result->committed);
+
+    $this->assertInstanceOf(SurfaceTargetAdapter::class, $target);
+    $prepared = $target->preview($result->prepared);
+    $this->assertSame([NodeTypeTarget::NODE_TYPE, NodeTypeTarget::OVERRIDES], array_keys($prepared));
+    $node_type = $prepared[NodeTypeTarget::NODE_TYPE];
+    $this->assertSame('Dry run', $node_type['name']);
+    $this->assertSame('dry_run', $node_type['type']);
+    // Stored as core's own form stores an empty description: as none.
+    $this->assertNull($node_type['description']);
+    $this->assertTrue($node_type['new_revision']);
+    $overrides = $prepared[NodeTypeTarget::OVERRIDES];
+    $this->assertSame(['title', 'promote'], array_keys($overrides));
+    $this->assertSame('node.dry_run.title', $overrides['title']['id']);
+    $this->assertSame('Dish', $overrides['title']['label']);
+    $this->assertSame([['value' => TRUE]], $overrides['promote']['default_value']);
+
     $this->assertNull(NodeType::load('dry_run'));
+    $this->assertNull($this->baseFieldOverride('title', 'dry_run'));
     $this->assertNull($this->baseFieldOverride('promote', 'dry_run'));
+
+    // And what is rehearsed is what a real submit stores.
+    $result = $this->submit($surface, $target, [
+      'name' => 'Dry run',
+      'type' => 'dry_run',
+      'title_label' => 'Dish',
+      'promote' => 1,
+    ]);
+    $this->assertTrue($result->committed, ViolationSummary::fromViolations($result->violations));
+    $stored = $this->container->get('config.factory')->get('node.type.dry_run')->getRawData();
+    $this->assertSame(
+      array_diff_key($result->prepared->artifact[NodeTypeTarget::NODE_TYPE], ['dependencies' => TRUE]),
+      array_diff_key($stored, ['dependencies' => TRUE]),
+    );
+    $this->assertSame('Dish', (string) $this->nodeFields('dry_run')['title']->getLabel());
+  }
+
+  /**
+   * Tests the config schema refusing, at prepare, what the surface let in.
+   *
+   * The surface only limits the name's length; the node type's schema is
+   * fully validatable, and a required label may not hold a line break.
+   * Prepare holds the rehearsed entity to that schema, so the refusal is
+   * the schema's own message, filed under the surface key, and it arrives
+   * for a dry run as it does for a real submit, before anything is
+   * written.
+   */
+  public function testSchemaRefusesAnInvalidNodeTypeAtPrepare(): void {
+    [$surface, $target] = $this->served(NodeTypeSurface::add());
+    $values = ['name' => "Two\nlines", 'type' => 'two_lines'];
+    // The surface itself has nothing against it.
+    $this->assertTrue($this->pipeline()->validate($surface, $this->pipeline()->accept($surface, $values, []))->isEmpty());
+
+    foreach ([TRUE, FALSE] as $dry_run) {
+      $result = $this->submit($surface, $target, $values, $dry_run);
+      $this->assertFalse($result->isValid());
+      $this->assertFalse($result->committed);
+      $this->assertNull($result->prepared);
+      $this->assertSame(['name'], $result->violations->keys());
+      $this->assertSame('Labels are not allowed to span multiple lines or contain control characters.', (string) $result->violations->byKey('name')[0]->message);
+    }
+    $this->assertNull(NodeType::load('two_lines'));
+
+    // The target alone says the same, with nothing else in between.
+    $this->expectException(TargetViolationsException::class);
+    $this->expectExceptionMessage('Labels are not allowed to span multiple lines or contain control characters.');
+    $this->container->get('class_resolver')->getInstanceFromDefinition(NodeTypeTarget::class)
+      ->prepare(NodeTypeSurface::add(), ['name' => "Two\nlines", 'type' => 'two_lines']);
   }
 
   /**

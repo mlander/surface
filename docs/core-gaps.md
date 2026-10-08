@@ -125,8 +125,9 @@ executing, in one request.
 
 The workaround here is to build items from
 `FieldConfigBase::getItemDefinition()`, which a field config caches on
-itself and binds to itself. `data_surface_tool`'s `FieldSurfaceLocator`
-and `DataSurfaceFieldTypeTrait` both do that. It is a candidate core
+itself and binds to itself. `DataSurfaceFieldTypeTrait` does that (and
+did `data_surface_tool`'s `FieldSurfaceLocator`, retired with the
+hand-written field tools). It is a candidate core
 issue in its own right; nothing about it is specific to surfaces.
 
 ## Tool API: constraints matched by name, not by `instanceof`

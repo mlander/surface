@@ -256,12 +256,13 @@ The global `t()` function appears nowhere in object-oriented code.
 
 **A demo file showing both is not an inconsistency.** A host class
 usually declares its surface statically and then acts on values in
-instance methods, so
-`\Drupal\data_surface_demo\Plugin\Field\FieldFormatter\DataSurfaceDemoFormatter`
-constructs raw markup all through `declareDataSurface()` and calls
-`$this->t()` in `refineDataDefinition()` a few lines below. Both are
-correct in the place they stand, and the split down the middle of the
-file is the rule made visible.
+instance methods, so an old-spelling plugin constructs raw markup all
+through `declareDataSurface()` and calls `$this->t()` in
+`refineDataDefinition()` a few lines below. Both are correct in the
+place they stand. In the new spelling the split is between files: a
+`#[Surface]` class has no constructor, so it constructs raw markup
+(`DemoFormatterSurface`), and an alter is a container-built service, so
+it calls `$this->t()` (`DemoFormatterAlter`).
 
 Two places keep raw construction with an instance in hand, and both say
 why in a docblock: `DataSurfaceBuilder` is a value object that callers

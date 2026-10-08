@@ -12,6 +12,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
+use Drupal\data_surface\Hook\SurfacePluginHooks;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Surface\Attribute\UsesSurface;
 use Drupal\data_surface\Surface\SurfaceContext;
@@ -378,6 +379,10 @@ trait DataSurfaceHostTrait {
    * itself. The exception says so rather than returning a quietly empty
    * array.
    *
+   * A class naming its surface with #[UsesSurface] is answered from that
+   * surface's own shape, read the same way: no alter, no context, no
+   * build event.
+   *
    * @param class-string $class
    *   The fully qualified class name.
    *
@@ -388,6 +393,15 @@ trait DataSurfaceHostTrait {
    *   When the class declares no surface.
    */
   protected static function surfaceDeclaredDefaults(string $class): array {
+    $surface = SurfacePluginHooks::usedSurfaceOf($class);
+    if ($surface !== NULL) {
+      // The new spelling's answer to the same static question: the
+      // surface #[UsesSurface] names, its own shape alone. Fetched from
+      // the container under the documented exception: a static method
+      // has no instance to have been handed anything.
+      // @phpstan-ignore globalDrupalDependencyInjection.useDependencyInjection
+      return \Drupal::service('data_surface.surfaces')->defaults($surface);
+    }
     return static::surfaceDeclarationBuilder($class)->seal()->getDefaultValues();
   }
 

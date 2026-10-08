@@ -30,7 +30,10 @@ use Drupal\data_surface\Target\FieldSettingsTarget;
  *
  * A class using this trait declares that it implements
  * FieldSurfaceProviderInterface: both accessors are public, because the
- * settings form is not their only caller.
+ * settings form is not their only caller. In the new spelling it names
+ * its surface with #[UsesSurface] and writes nothing else: the trait
+ * builds that surface, answers access through its access class, and
+ * hands the field settings target the host supplies.
  *
  * Two host realities it absorbs, both inherited from group B and one of
  * them sharper here:
@@ -89,8 +92,10 @@ trait DataSurfaceFieldTypeTrait {
    * cannot say which one is meant. It takes the same operation and
    * subject pair, so both provider kinds are addressed one way.
    *
-   * A field item is its own subject, so an implementation's first line
-   * is surfaceSelfSubject(), which refuses any subject by name.
+   * The surface the field type's #[UsesSurface] names, read from its
+   * definition, built in the host's context with the operation as its
+   * verb; otherwise the class's own declareDataSurface(). A field item
+   * is its own subject, so any other subject is refused by name.
    *
    * @param string $operation
    *   The operation the surface is wanted for.
@@ -101,7 +106,15 @@ trait DataSurfaceFieldTypeTrait {
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The surface.
    */
-  abstract public function getFieldSurface(string $operation = FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS, ?string $subject = NULL): DataSurfaceInterface;
+  public function getFieldSurface(string $operation = FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS, ?string $subject = NULL): DataSurfaceInterface {
+    // The field item is bound to one field config entity, so it is its
+    // own subject and a caller naming another has the wrong item.
+    $this->surfaceSelfSubject($subject);
+    // Namespaced by host type, as every host id is, so a subscriber
+    // matching on it cannot pick up a block or a formatter of the same
+    // name.
+    return $this->hostedSurface('field_type:' . $this->getFieldDefinition()->getType(), $operation);
+  }
 
   /**
    * Gets the target the field settings are read from and written to.
@@ -151,6 +164,9 @@ trait DataSurfaceFieldTypeTrait {
    * write and nothing to ask, so it expresses no opinion rather than
    * refusing: the host that reached it has its own gate.
    *
+   * A field type naming its surface with #[UsesSurface] is then asked
+   * through that surface's access class, which may refuse.
+   *
    * The subject is not read, for the reason an access question never
    * throws over one: the field config entity this item is bound to is
    * the subject, and it is what answers however the caller spelled the
@@ -169,9 +185,18 @@ trait DataSurfaceFieldTypeTrait {
    */
   public function surfaceAccess(string $operation = FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS, ?string $subject = NULL, ?AccountInterface $account = NULL): AccessResultInterface {
     $definition = $this->getFieldDefinition();
-    return $definition instanceof FieldConfigInterface
+    $answer = $definition instanceof FieldConfigInterface
       ? $definition->access('update', $account, TRUE)
       : AccessResult::neutral();
+    $surface = $this->usedSurface();
+    if ($surface === NULL) {
+      return $answer;
+    }
+    // The surface's own access class may refuse what the entity allowed;
+    // it never allows on the entity's behalf, because the entity is the
+    // host's gate and the surface only knows its settings.
+    $own = $this->surfaces()->access($surface, $this->surfaceContext($operation), $this->surfaceAccount($account));
+    return $own->isForbidden() ? $answer->andIf($own) : $answer;
   }
 
   /**
@@ -195,15 +220,15 @@ trait DataSurfaceFieldTypeTrait {
   }
 
   /**
-   * Reads the static default field settings from a class's declaration.
+   * Reads the static default field settings from a class's surface.
    *
    * The same static-protocol problem the formatter trait has:
    * defaultFieldSettings() cannot consult an instance. A field type that
-   * declares its surface answers with this, because a declaration is
-   * static; a field type whose surface needs services to describe itself
-   * at all — a country list, a language list, a label helper — has no
-   * declaration to read and keeps whatever static defaults it already
-   * had.
+   * names its surface with #[UsesSurface] answers with that surface's
+   * own shape, and one that declares its surface with its declaration,
+   * both static; a field type that wants its parent's static defaults
+   * (SurfaceAddressItem, whose parent still stores a key the surface
+   * does not describe) keeps them.
    *
    * @param class-string $class
    *   The fully qualified field item class name.

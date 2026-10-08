@@ -209,10 +209,15 @@ prepare and commit is the callers that never render anything.
 
 ### The Tool API A/B
 
-`data_surface_tool` is the recorded experiment.
-`data_surface:field_add` and `data_surface:field_update` mirror Tool
-Belt's `field_add` and `field_update` input for input; the difference is
-the answer to "what may the settings be?".
+`data_surface_tool` is the recorded experiment. Its field tools are
+generated from the field instance surface's situations —
+`data_surface:field.instance:add`, `:reuse` and `:edit` — and
+`data_surface:field.instance:reuse` answers the question Tool Belt's
+`field_add` answers, adding an existing storage's field to a bundle; the
+difference is the answer to "what may the settings be?". (Until step 4
+of the rework they were the hand-written `data_surface:field_add` and
+`data_surface:field_update`, which mirrored Tool Belt's pair input for
+input.)
 
 Tool Belt refines `settings` from the field type's config schema, which
 for the address field type yields three types, a nested `override` key

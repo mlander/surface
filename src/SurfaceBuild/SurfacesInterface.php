@@ -101,6 +101,12 @@ interface SurfacesInterface {
    * context) has no permission to check, so the access class is the
    * whole answer, and a surface with neither answers neutral.
    *
+   * Then its subsurfaces: each child the context resolves — an attached
+   * one, and a slot's variant when its deciding key is known — whose
+   * class names an access class of its own is asked in the context the
+   * parent's hands it, and may refuse. A child never allows on its
+   * parent's behalf.
+   *
    * @param string $surface
    *   The surface class, or its #[Surface] id.
    * @param \Drupal\data_surface\Surface\SurfaceContext $context
@@ -112,6 +118,24 @@ interface SurfacesInterface {
    *   The access answer.
    */
   public function access(string $surface, SurfaceContext $context, ?AccountInterface $account = NULL): AccessResultInterface;
+
+  /**
+   * Reads the defaults a surface's own shape declares, and nothing else.
+   *
+   * For the static half of a plugin host's protocol, a formatter's
+   * defaultSettings() or a field type's defaultFieldSettings(), which is
+   * asked of a class with no instance and no context. Only the owner's
+   * defineInputs() runs: no alter, no context, no refiner, no build
+   * event, so what a contributor mounts is not here, and a subsurface
+   * key holds an empty map.
+   *
+   * @param string $surface
+   *   The surface class, or its #[Surface] id.
+   *
+   * @return array
+   *   The declared defaults, keyed by surface key.
+   */
+  public function defaults(string $surface): array;
 
   /**
    * Gets the pipeline target for a surface's #[Surface(target:)].

@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_address\Target;
 
+use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Field\FieldConfigInterface;
 use Drupal\data_surface\Surface\SurfaceContext;
 use Drupal\data_surface\Surface\SurfaceTargetInterface;
+use Drupal\data_surface\Target\SchemaViolations;
 use Drupal\data_surface_address\AddressSettingsShape;
 
 /**
@@ -26,13 +28,22 @@ use Drupal\data_surface_address\AddressSettingsShape;
 final class AddressFieldSettingsTarget implements SurfaceTargetInterface {
 
   /**
+   * The config schema type the address field's settings are stored as.
+   */
+  protected const SCHEMA = 'field.field_settings.address';
+
+  /**
    * Constructs an AddressFieldSettingsTarget.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
    *   The entity type manager, autowired.
+   * @param \Drupal\Core\Config\TypedConfigManagerInterface $typedConfig
+   *   The typed config manager, autowired, which holds the rehearsed
+   *   settings to the address field type's settings schema.
    */
   public function __construct(
     protected readonly EntityTypeManagerInterface $entityTypeManager,
+    protected readonly TypedConfigManagerInterface $typedConfig,
   ) {}
 
   /**
@@ -45,13 +56,46 @@ final class AddressFieldSettingsTarget implements SurfaceTargetInterface {
 
   /**
    * {@inheritdoc}
+   *
+   * The settings in the shape the field stores them, over what the field
+   * stores today, held to the address field type's settings schema. A
+   * field being added does not exist yet when this runs, so it rehearses
+   * against nothing stored and the field's own defaults fill the rest
+   * when it is committed.
    */
-  public function commit(SurfaceContext $context, array $values): void {
-    $field = $this->field($context) ?? throw new \LogicException(sprintf(
+  public function prepare(SurfaceContext $context, array $values): array {
+    $field = $this->field($context);
+    if ($field === NULL && !$context->creates) {
+      throw $this->noField($context);
+    }
+    $settings = (new AddressSettingsShape())->toStorage($values) + ($field?->getSettings() ?? []);
+    $keys = ['available_countries', 'langcode_override', 'field_overrides'];
+    SchemaViolations::check($this->typedConfig, self::SCHEMA, $settings, array_combine($keys, $keys));
+    return $settings;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function commit(SurfaceContext $context, array $prepared): void {
+    $field = $this->field($context) ?? throw $this->noField($context);
+    $field->setSettings($prepared + $field->getSettings())->save();
+  }
+
+  /**
+   * Says that the settings have no field to belong to.
+   *
+   * @param \Drupal\data_surface\Surface\SurfaceContext $context
+   *   The context, whose identity named none.
+   *
+   * @return \LogicException
+   *   The exception to throw.
+   */
+  protected function noField(SurfaceContext $context): \LogicException {
+    return new \LogicException(sprintf(
       'The address field settings have no field to be written to: the context knows %s.',
       json_encode($context->known),
     ));
-    $field->setSettings((new AddressSettingsShape())->toStorage($values) + $field->getSettings())->save();
   }
 
   /**

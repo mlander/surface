@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
+use Drupal\data_surface_demo_node_type\Target\NodeTypeTarget;
+use Drupal\data_surface_surface_test\Surface\PinnedNoteSurface;
 use Drupal\data_surface_tool\SituationInputs;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
@@ -87,7 +89,6 @@ class SituationToolsTest extends DataSurfaceKernelTestBase {
       'data_surface:field.instance:add',
       'data_surface:field.instance:edit',
       'data_surface:field.instance:reuse',
-      'data_surface:field.storage:add',
       'data_surface:field.storage:edit',
       'data_surface:node.type:add',
       'data_surface:node.type:edit',
@@ -95,6 +96,42 @@ class SituationToolsTest extends DataSurfaceKernelTestBase {
     // The address settings name a target and have no situation of their
     // own: they are only ever a field's.
     $this->assertArrayNotHasKey('data_surface:field.settings.address:add', $this->container->get('plugin.manager.tool')->getDefinitions());
+  }
+
+  /**
+   * Tests the first derivation rule: a permission nothing can name.
+   *
+   * The field storage's add situation needs nothing, and its permission
+   * names %entity_type_id, which no parameter supplies: nothing a caller
+   * sends could name the permission, so it could never be allowed, and
+   * it is no tool. Its edit takes the storage, an entity whose situation
+   * knows the entity type, so it is one.
+   */
+  public function testUnnameablePermissionIsNoTool(): void {
+    $registry = $this->container->get('data_surface.surface_registry');
+    $this->assertSame(['entity_type_id'], $registry->getSituation('field.storage', 'add')->unresolvablePlaceholders());
+    $this->assertSame([], $registry->getSituation('field.storage', 'edit')->unresolvablePlaceholders());
+    $this->assertSame([], $registry->getSituation('field.instance', 'add')->unresolvablePlaceholders());
+    $definitions = $this->container->get('plugin.manager.tool')->getDefinitions();
+    $this->assertArrayNotHasKey('data_surface:field.storage:add', $definitions);
+    $this->assertArrayHasKey('data_surface:field.storage:edit', $definitions);
+  }
+
+  /**
+   * Tests the second derivation rule: a plugin's surface is no tool.
+   *
+   * The pinned note surface names a target and a situation of its own,
+   * and a block names it with #[UsesSurface], so it is that block's
+   * configuration and is configured through the block host. A surface
+   * with a target that no plugin uses, beside it, is a tool.
+   */
+  public function testPluginSurfaceIsNoTool(): void {
+    $this->enableModules(['data_surface_surface_test']);
+    $this->container->get('plugin.manager.tool')->clearCachedDefinitions();
+    $definitions = $this->container->get('plugin.manager.tool')->getDefinitions();
+    $this->assertSame(['block:data_surface_surface_test_pinned_note'], $this->container->get('data_surface.surface_plugins')->usedBy(PinnedNoteSurface::class));
+    $this->assertArrayNotHasKey('data_surface:test.pinned_note:pin', $definitions);
+    $this->assertArrayHasKey('data_surface:surface_test.pantry:add', $definitions);
   }
 
   /**
@@ -212,6 +249,19 @@ class SituationToolsTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($result->isSuccess(), (string) $result->getMessage());
     $this->assertFalse($result->getContextValues()[SituationInputs::COMMITTED]);
     $this->assertNull(NodeType::load('rehearsal'));
+    // What prepare rehearsed is the preview: the node type as config
+    // storage would have been handed it.
+    $prepared = $result->getContextValues()[SituationInputs::PREPARED];
+    $this->assertSame('Rehearsal', $prepared[NodeTypeTarget::NODE_TYPE]['name']);
+    $this->assertSame([], $prepared[NodeTypeTarget::OVERRIDES]);
+
+    // A dry run is refused for what storage would refuse.
+    $tool = $this->tool('data_surface:node.type:add');
+    $tool->setInputValue(SituationInputs::VALUES, ['name' => "Two\nlines", 'type' => 'two_lines']);
+    $tool->setInputValue(SituationInputs::DRY_RUN, TRUE);
+    $tool->execute();
+    $this->assertFalse($tool->getResult()->isSuccess());
+    $this->assertStringContainsString('name: Labels are not allowed to span multiple lines', (string) $tool->getResult()->getMessage());
   }
 
   /**

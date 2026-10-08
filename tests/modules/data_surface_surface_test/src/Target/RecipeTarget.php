@@ -48,8 +48,19 @@ final class RecipeTarget implements SurfaceTargetInterface {
 
   /**
    * {@inheritdoc}
+   *
+   * State has no schema and refuses nothing, so what would be stored is
+   * what was accepted.
    */
-  public function commit(SurfaceContext $context, array $values): void {
+  public function prepare(SurfaceContext $context, array $values): array {
+    return $values;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function commit(SurfaceContext $context, array $prepared): void {
+    $values = $prepared;
     $this->state->set(self::key((string) $values['kitchen'], (string) $values['name']), $values);
   }
 

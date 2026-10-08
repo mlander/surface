@@ -8,6 +8,9 @@ use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\DataSurfaceTargetInterface;
 use Drupal\data_surface\Pipeline\PreparedValues;
+use Drupal\data_surface\Pipeline\SurfaceViolation;
+use Drupal\data_surface\Pipeline\TargetViolationsException;
+use Drupal\data_surface\Pipeline\ViolationSet;
 use Drupal\data_surface\Surface\SurfaceContext;
 use Drupal\data_surface\Surface\SurfaceTargetInterface;
 use Drupal\data_surface\SurfaceEntry;
@@ -15,14 +18,15 @@ use Drupal\data_surface\SurfaceEntry;
 /**
  * A new-spelling target, as the pipeline's target, composed along a tree.
  *
- * The sketch's target has two verbs, load and commit, and is handed the
- * context; the pipeline's has three, load, prepare and commit, and is
- * handed the surface. The context is bound here, once, so the pipeline's
- * submit() path reaches the target unchanged: load narrows what the
- * target returns to the surface's own keys, prepare is the identity —
- * the sketch's target writes canonical values and has no storage shape
- * of its own to translate to — and commit hands the accepted values to
- * the target with the context it loads by.
+ * Both have three verbs, load, prepare and commit; the sketch's target
+ * is handed the context, the pipeline's the surface. The context is
+ * bound here, once, so the pipeline's submit() path reaches the target
+ * unchanged: load narrows what the target returns to the surface's own
+ * keys; prepare hands the target the accepted values, in the shape a
+ * contributor's settings are stored in, and wraps the array it rehearses
+ * in PreparedValues, so a dry run reports it and a refusal from storage
+ * arrives as the pipeline's own violations; commit hands the target that
+ * same array back, with the context it loads by.
  *
  * Targets compose along the subsurface tree. A subsurface whose class
  * names a target of its own is routed to an adapter like this one, for
@@ -105,16 +109,20 @@ final class SurfaceTargetAdapter implements DataSurfaceTargetInterface {
 
   /**
    * {@inheritdoc}
+   *
+   * The target's own prepare(), over this surface's own values in the
+   * shape they are stored in, then each routed child's, in the child's
+   * context plus this level's identity, so a child of something being
+   * created can rehearse against what it will belong to. Everything
+   * storage refuses, at any level, is collected before anything is
+   * thrown, and a child's violations are filed under the key it sits
+   * at, the way the pipeline files a child's own.
    */
   public function prepare(DataSurfaceInterface $surface, array $values): PreparedValues {
-    // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch's target has no prepare step; prepare writes nothing and checks nothing, and its one job is the storage shape a contributor handed the surface for its mounted settings, which the target is then given in stored form.
-    $stored = self::shapeThirdParty($surface, $values, TRUE);
-    if ($this->routes === []) {
-      return new PreparedValues($values, $stored);
-    }
-    $own = $stored;
+    $own = self::shapeThirdParty($surface, $values, TRUE);
+    $known = $this->knownWith($values);
     $children = [];
+    $refused = [];
     foreach ($this->routes as $key => $routes) {
       $entry = $surface->getDefinitions()->entry($key);
       $id = $entry === NULL ? NULL : $this->routeOf($entry, $values);
@@ -123,11 +131,30 @@ final class SurfaceTargetAdapter implements DataSurfaceTargetInterface {
         continue;
       }
       unset($own[$key]);
-      if (is_array($values[$key] ?? NULL)) {
-        $children[$key] = [$id, $routes[$id]->prepare(self::childOf($entry, $id), $values[$key])];
+      if (!is_array($values[$key] ?? NULL)) {
+        continue;
+      }
+      try {
+        $route = $routes[$id]->withParentIdentity($known);
+        $children[$key] = [$id, $route->prepare(self::childOf($entry, $id), $values[$key])];
+      }
+      catch (TargetViolationsException $e) {
+        foreach ($e->getViolations() as $violation) {
+          $refused[] = new SurfaceViolation((string) $key, $violation->fullPath(), $violation->message, $violation->stale);
+        }
       }
     }
-    return new PreparedValues($values, ['own' => $own, 'children' => $children]);
+    try {
+      $artifact = $this->target->prepare($this->context, $own);
+    }
+    catch (TargetViolationsException $e) {
+      $refused = [...iterator_to_array($e->getViolations(), FALSE), ...$refused];
+    }
+    if ($refused !== []) {
+      throw new TargetViolationsException(new ViolationSet($refused));
+    }
+    assert(isset($artifact));
+    return new PreparedValues($values, $this->routes === [] ? $artifact : ['own' => $artifact, 'children' => $children]);
   }
 
   /**
@@ -142,14 +169,16 @@ final class SurfaceTargetAdapter implements DataSurfaceTargetInterface {
       $this->target->commit($this->context, $artifact);
       return;
     }
-    if (!is_array($artifact) || !isset($artifact['own'], $artifact['children'])) {
+    $own = is_array($artifact) ? ($artifact['own'] ?? NULL) : NULL;
+    $children = is_array($artifact) ? ($artifact['children'] ?? NULL) : NULL;
+    if (!is_array($own) || !is_array($children)) {
       throw new \InvalidArgumentException('The prepared values did not come from this target.');
     }
     // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch's child target loads by identity its context knows, but a creating parent's identity is only known once accepted; a routed child is committed in its context plus the parent's accepted identity values it does not already know.
-    $known = array_intersect_key($prepared->values, array_flip($this->identity)) + $this->context->known;
+    // SKETCH GAP: the sketch's child target loads by identity its context knows, but a creating parent's identity is only known once accepted; a routed child is prepared and committed in its context plus the parent's accepted identity values it does not already know.
+    $known = $this->knownWith($prepared->values);
     $before = $after = [];
-    foreach ($artifact['children'] as $key => [$id, $child_prepared]) {
+    foreach ($children as $key => [$id, $child_prepared]) {
       $route = $this->routes[$key][$id] ?? NULL;
       if ($route === NULL || !$child_prepared instanceof PreparedValues) {
         throw new \InvalidArgumentException('The prepared values did not come from this target.');
@@ -166,10 +195,56 @@ final class SurfaceTargetAdapter implements DataSurfaceTargetInterface {
     foreach ($before as [$route, $child_prepared]) {
       $route->withParentIdentity($known)->commit($child_prepared);
     }
-    $this->target->commit($this->context, $artifact['own']);
+    $this->target->commit($this->context, $own);
     foreach ($after as [$route, $child_prepared]) {
       $route->withParentIdentity($known)->commit($child_prepared);
     }
+  }
+
+  /**
+   * Gets what a prepare() rehearsed, as plain arrays, for a dry run.
+   *
+   * The target's own prepared array, as it is, for a surface with no
+   * routed children. Otherwise the parent's under `own` and each routed
+   * child's under `children`, by the key it sits at, recursively: what
+   * each storage would be handed, nothing of how the pipeline carried it.
+   *
+   * @param \Drupal\data_surface\Pipeline\PreparedValues $prepared
+   *   What prepare() returned.
+   *
+   * @return array
+   *   The rehearsed storage shapes.
+   */
+  public function preview(PreparedValues $prepared): array {
+    $artifact = $prepared->artifact;
+    if (!is_array($artifact)) {
+      throw new \InvalidArgumentException('The prepared values did not come from this target.');
+    }
+    if ($this->routes === []) {
+      return $artifact;
+    }
+    $children = [];
+    foreach ($artifact['children'] ?? [] as $key => [$id, $child_prepared]) {
+      $route = $this->routes[$key][$id] ?? NULL;
+      if ($route !== NULL && $child_prepared instanceof PreparedValues) {
+        $children[$key] = $route->preview($child_prepared);
+      }
+    }
+    return ['own' => $artifact['own'] ?? [], 'children' => $children];
+  }
+
+  /**
+   * Gets this context's known identity plus the identity values accepted.
+   *
+   * @param array $values
+   *   The accepted values of this level.
+   *
+   * @return array<string, mixed>
+   *   The identity a routed child is handed; what the context already
+   *   knows wins.
+   */
+  protected function knownWith(array $values): array {
+    return array_intersect_key($values, array_flip($this->identity)) + $this->context->known;
   }
 
   /**
@@ -196,7 +271,7 @@ final class SurfaceTargetAdapter implements DataSurfaceTargetInterface {
     }
     // phpcs:ignore Drupal.Files.LineLength.TooLong
     // SKETCH GAP: the sketch's surface declares outputs but not who produces their values; they are what the target's load() hands back under an output's name, once the values are committed.
-    $known = array_intersect_key($values, array_flip($this->identity)) + $this->context->known;
+    $known = $this->knownWith($values);
     return array_intersect_key($this->target->load($this->context->withKnown($known)->withOperation($this->context->operation, FALSE)), $outputs);
   }
 

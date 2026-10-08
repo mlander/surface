@@ -10,7 +10,9 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\Omitted;
+use Drupal\data_surface\Surface\Attribute\UsesSurface;
 use Drupal\data_surface_demo\Plugin\Field\FieldFormatter\DataSurfaceDemoFormatter;
+use Drupal\data_surface_demo\Surface\DemoFormatterSurface;
 use Drupal\data_surface_test\EventSubscriber\TestSurfaceSubscriber;
 use Drupal\entity_test\Entity\EntityTest;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -396,9 +398,14 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
   /**
    * Tests that the declared outputs are read and sealed.
    *
-   * The declaration is read off the class exactly as the inputs are, so
-   * a formatter says what it emits in the same place, in the same
-   * vocabulary, and without instantiating anything.
+   * The surface class says what the formatter emits in the same place,
+   * in the same vocabulary, as what it is configured with, and the
+   * formatter host reads both without instantiating anything else.
+   *
+   * Outputs are never refined: a refinement narrows what may be sent,
+   * and nobody sends an output. So the class list is advertised open
+   * and stays open whichever variant is chosen; formatValue() is still
+   * held to it by conformOutput().
    */
   public function testOutputsAreDeclaredBesideTheSettings(): void {
     $surface = $this->createFormatter()->getDataSurface();
@@ -408,24 +415,36 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
     $this->assertSame('string', $outputs->get('text')->getDataType());
     $this->assertTrue($outputs->get('text')->isRequired());
     $this->assertFalse($outputs->get('classes')->isRequired());
-    // The edge names an input key: what is emitted depends on what was
-    // configured, never on another output.
-    $this->assertSame(['classes' => ['variant']], $outputs->refinements());
+    $this->assertSame([], $outputs->refinements());
 
-    // As advertised, the class list is open; once a variant is chosen
-    // it is closed to that variant's own class and nothing else.
     $classes = $outputs->get('classes');
     $this->assertInstanceOf(ListDataDefinition::class, $classes);
     $this->assertArrayNotHasKey('Choice', $classes->getItemDefinition()->getConstraints());
     $refined = $surface->refineOutputs(['variant' => 'bold'])
       ->getOutputDefinitions()->get('classes');
     $this->assertInstanceOf(ListDataDefinition::class, $refined);
+    $this->assertArrayNotHasKey('Choice', $refined->getItemDefinition()->getConstraints());
+  }
+
+  /**
+   * Tests that the formatter host reads the surface from the attribute.
+   *
+   * The definition carries the class #[UsesSurface] names, copied in by
+   * the formatter definition alter, and the host builds that surface in
+   * its own `configure` context, under its own host id.
+   */
+  public function testTheHostReadsTheSurfaceFromTheAttribute(): void {
+    $definition = $this->container->get('plugin.manager.field.formatter')->getDefinition('data_surface_demo_string');
+    $this->assertSame(DemoFormatterSurface::class, $definition[UsesSurface::DEFINITION_KEY]);
     $this->assertSame(
-      ['data-surface-variant-bold'],
-      $refined->getItemDefinition()->getConstraints()['Choice']['choices'],
+      ['prefix', 'casing', 'variant', 'third_party_settings'],
+      $this->createFormatter()->getDataSurface()->getDefinitions()->names(),
     );
-    // And the advertisement itself is untouched by having been read.
-    $this->assertArrayNotHasKey('Choice', $classes->getItemDefinition()->getConstraints());
+    // The static defaults are the surface's own shape, alters left out.
+    $this->assertSame(
+      $this->container->get('data_surface.surfaces')->defaults(DemoFormatterSurface::class) + ['third_party_settings' => []],
+      DataSurfaceDemoFormatter::defaultSettings(),
+    );
   }
 
   /**

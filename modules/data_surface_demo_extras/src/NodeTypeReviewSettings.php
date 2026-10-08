@@ -23,6 +23,11 @@ namespace Drupal\data_surface_demo_extras;
 final class NodeTypeReviewSettings {
 
   /**
+   * This module's name: the third party the settings are stored under.
+   */
+  public const MODULE = 'data_surface_demo_extras';
+
+  /**
    * The key holding the review deadline.
    *
    * Stored as a number of seconds, and deliberately not named for its

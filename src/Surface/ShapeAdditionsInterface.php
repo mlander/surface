@@ -16,7 +16,9 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
  * Neither the owner nor an alter may add a key twice: adding is never
  * replacing, so nothing an owner declared can be changed by adding. The
  * one change to an existing key anyone may make is describe(): its label
- * and description, which change nothing about what is accepted.
+ * and description, which change nothing about what is accepted. The one
+ * widening an alter may make is extendChoices(): more values on a list
+ * the owner declared, answered for by the alter.
  */
 interface ShapeAdditionsInterface {
 
@@ -105,5 +107,31 @@ interface ShapeAdditionsInterface {
    *   outputs) not yet built: see the SKETCH GAP notes in the adapters.
    */
   public function attach(string $key, string $child): static;
+
+  /**
+   * Offers more values on a key someone else declared, as an alter.
+   *
+   * The one widening an alter may make, and only of a key whose owner
+   * declared a list of allowed values: the values are added to that list
+   * under the alter's module, which answers for them. A #[RefinesInput]
+   * method of the same alter on the same key narrows only what the alter
+   * added, never the owner's values, and the owner's methods never see
+   * the alter's. What a caller is offered is the union of both.
+   *
+   * @param string $key
+   *   The owner's input key.
+   * @param array $choices
+   *   The values to offer, as a list, or keyed by value with a label each.
+   *
+   * @return $this
+   *
+   * @throws \LogicException
+   *   For the owner's own shape, which lists its values in the key's
+   *   constraint, and for outputs, which nobody sends.
+   * @throws \InvalidArgumentException
+   *   When the key declares no list of allowed values, or already offers
+   *   one of the values.
+   */
+  public function extendChoices(string $key, array $choices): static;
 
 }

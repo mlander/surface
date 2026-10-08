@@ -10,7 +10,6 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Form\DataSurfaceProviderForm;
-use Drupal\data_surface_demo_extras\EventSubscriber\DemoExtrasSurfaceSubscriber;
 use Drupal\data_surface_demo_extras\NodeTypeReviewSettings;
 use Drupal\data_surface_demo_node_type\Surface\NodeTypeSurface;
 use Drupal\data_surface_tool\Plugin\Derivative\SurfaceSituationToolDeriver;
@@ -67,7 +66,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
   /**
    * The extras module, whose third party settings are compared.
    */
-  protected const EXTRAS = DemoExtrasSurfaceSubscriber::PROVIDER;
+  protected const EXTRAS = NodeTypeReviewSettings::MODULE;
 
   /**
    * {@inheritdoc}

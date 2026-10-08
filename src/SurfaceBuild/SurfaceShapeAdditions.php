@@ -64,6 +64,46 @@ final class SurfaceShapeAdditions extends ShapeAdapterBase {
   }
 
   /**
+   * The owner's keys this module offered more values on, in order.
+   *
+   * @var string[]
+   */
+  protected array $extended = [];
+
+  /**
+   * {@inheritdoc}
+   *
+   * Through the engine's own contribution, recorded under this module,
+   * so the values are advertised as this module's and refined apart from
+   * the owner's.
+   */
+  public function extendChoices(string $key, array $choices): static {
+    // phpcs:ignore Drupal.Files.LineLength.TooLong
+    // SKETCH GAP: the sketch has no verb for widening one key on one surface and says a real case goes on ShapeAdditionsInterface; the demo formatter's ribbon is one, so extendChoices() is the engine's contribution, and an alter's #[RefinesInput] method on that key narrows its own values only.
+    if ($this->outputs) {
+      throw new \LogicException(sprintf('The %s alter cannot offer more values on the output "%s": outputs are never sent, so they have nothing to choose from.', $this->provider, $key));
+    }
+    if ($this->builder->getDefinition($key) === NULL) {
+      throw new \LogicException(sprintf('The %s alter offers more values on "%s", which the surface does not declare as an input.', $this->provider, $key));
+    }
+    $this->builder->extendChoices($key, $choices, $this->provider);
+    if (!in_array($key, $this->extended, TRUE)) {
+      $this->extended[] = $key;
+    }
+    return $this;
+  }
+
+  /**
+   * Gets the owner's keys this module offered more values on.
+   *
+   * @return string[]
+   *   The keys, in the order they were extended.
+   */
+  public function extended(): array {
+    return $this->extended;
+  }
+
+  /**
    * {@inheritdoc}
    *
    * This shape's own keys answer by their plain name first: they live in

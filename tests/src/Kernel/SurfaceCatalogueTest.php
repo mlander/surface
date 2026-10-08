@@ -79,6 +79,7 @@ class SurfaceCatalogueTest extends DataSurfaceKernelTestBase {
       'field.instance',
       'field.settings.address',
       'field.storage',
+      'field_formatter.data_surface_demo_string',
       'node.type',
     ], array_keys($catalogue));
 
@@ -97,6 +98,8 @@ class SurfaceCatalogueTest extends DataSurfaceKernelTestBase {
         'parameters' => [],
         'creates' => TRUE,
         'permission' => NodeTypeSurface::PERMISSION,
+        'unresolvable' => [],
+        'standalone' => TRUE,
       ],
       [
         'id' => 'edit',
@@ -106,6 +109,8 @@ class SurfaceCatalogueTest extends DataSurfaceKernelTestBase {
         'parameters' => ['NodeTypeInterface $type'],
         'creates' => NULL,
         'permission' => NodeTypeSurface::PERMISSION,
+        'unresolvable' => [],
+        'standalone' => TRUE,
       ],
     ], $node_type['situations']);
     $this->assertSame([['class' => NodeTypeAlter::class, 'module' => 'data_surface_demo_extras', 'situations' => []]], $node_type['alters']);
@@ -115,6 +120,27 @@ class SurfaceCatalogueTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['FieldStorageConfigInterface $storage', 'string $bundle'], $field['situations'][1]['parameters']);
     $this->assertSame(['settings' => ['address' => AddressFieldSettingsSurface::class]], $field['variants']);
     $this->assertSame(FieldInstanceSurface::class, $field['class']);
+    $this->assertSame([], $field['plugins']);
+  }
+
+  /**
+   * Tests the two rules for what can be asked on its own.
+   *
+   * A situation whose permission names a placeholder no parameter can
+   * supply is never allowed on its own; a surface a plugin uses is that
+   * plugin's configuration. The catalogue says both, and which plugins.
+   */
+  public function testTheCatalogueSaysWhatCanBeAskedOnItsOwn(): void {
+    $catalogue = $this->catalogue();
+    $storage = array_column($catalogue['field.storage']['situations'], NULL, 'id');
+    $this->assertSame(['entity_type_id'], $storage['add']['unresolvable']);
+    $this->assertFalse($storage['add']['standalone']);
+    $this->assertTrue($storage['edit']['standalone']);
+
+    $this->assertSame(['block:data_surface_demo'], $catalogue['block.data_surface_demo']['plugins']);
+    $this->assertSame(['field_formatter:data_surface_demo_string'], $catalogue['field_formatter.data_surface_demo_string']['plugins']);
+    $this->assertSame(['field_type:address'], $catalogue['field.settings.address']['plugins']);
+    $this->assertSame([], $catalogue['block.data_surface_demo.presentation.list']['plugins']);
   }
 
   /**

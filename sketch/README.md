@@ -220,7 +220,9 @@ a surface without running anything.
 These are what the sketch had not covered and `data_surface` does.
 
 - **Targets.** `#[Surface(target:)]` names a `SurfaceTargetInterface`
-  with `load()` and `commit()`. It loads by the identity the context
+  with `load()`, `prepare()` and `commit()`. `prepare()` rehearses the
+  write with every check storage would make and no side effects; a dry
+  run stops there, and a real submit runs it before `commit()`. It loads by the identity the context
   knows, so the context never carries an entity. Targets compose along
   the tree: the storage subsurface has its own, the settings subsurface
   has none and is stored by its parent under its key.

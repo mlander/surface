@@ -270,12 +270,29 @@ refiner that narrows them to the ones the chosen casing offers. It knows
 nothing about any other module.
 
 `data_surface_demo_extras` is a separate module that owns neither the
-formatter nor its form. On the build event it contributes a fifth value:
+formatter nor its form. Its alter of the formatter's surface contributes
+a fifth value, and a refiner of its own for it:
 
 ```php
-$event->builder->extendChoices('variant', ['ribbon' => 'Ribbon'], 'data_surface_demo_extras');
-$event->builder->addRefiner('variant', new DemoExtrasVariantRefiner(), 'data_surface_demo_extras');
+#[AltersSurface(DemoFormatterSurface::class)]
+final class DemoFormatterAlter implements SurfaceAlterInterface {
+
+  public function alterInputs(ShapeAdditionsInterface $inputs): void {
+    $inputs->extendChoices('variant', [self::RIBBON => $this->t('Ribbon')]);
+  }
+
+  #[RefinesInput('variant')]
+  public function ribbonInUpperCase(DataDefinitionInterface $variant, string $casing): DataDefinitionInterface {
+    return $casing === 'uppercase' ? $variant : $variant->addConstraint('LabeledChoice', ['choices' => []]);
+  }
+
+}
 ```
+
+The method refines a key the alter offered more values on, so it is
+bound as that contribution's refiner (the engine's
+`addRefiner('variant', ..., 'data_surface_demo_extras')`), not in the
+owner's chain.
 
 The advertised key now allows five values, and the surface records that
 one of them belongs to the extras module. At refinement time:

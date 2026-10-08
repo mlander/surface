@@ -41,14 +41,6 @@ parameters:
     -
       identifier: new.static
       path: src/Form/DataSurfaceProviderForm.php
-    # Core's ContextDefinition documents $label as string|null|Stringable
-    # and $description as string|null, while storing and rendering both
-    # the same way. Passing a plain string would drop the translation.
-    -
-      message: '#^Parameter \$description of class Drupal\\Core\\Plugin\\Context\\ContextDefinition constructor expects string\|null, Drupal\\Core\\StringTranslation\\TranslatableMarkup given\.$#'
-      paths:
-        - modules/data_surface_tool/src/Plugin/tool/Tool/FieldAdd.php
-        - modules/data_surface_tool/src/Plugin/tool/Tool/FieldUpdate.php
     # An assertion that static analysis can prove today is exactly the
     # assertion that has to fail when the code it guards changes, so
     # these stay in the tests rather than being deleted as redundant.

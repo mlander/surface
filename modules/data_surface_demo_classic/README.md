@@ -44,12 +44,12 @@ prose.
 | | **lines** | **code** | **lines** | **code** |
 | Block plugin and its surfaces | 437 | 264 | 267 | 143 |
 | Field list (constraint, validator, resolver) | — | — | 198 | 103 |
-| Formatter plugin | 285 | 167 | 151 | 101 |
+| Formatter plugin and its surface | 285 | 167 | 168 | 95 |
 | Variant vocabulary | — | — | 116 | 40 |
 | Config schema | 64 | 58 | 81 | 70 |
-| **Total** | **786** | **489** | **813** | **457** |
+| **Total** | **786** | **489** | **830** | **451** |
 
-Four of those rows are worth a sentence.
+Five of those rows are worth a sentence.
 
 - The **variant vocabulary** is `DemoVariant`, an enum the surface
   formatter shares between its declaration and its refiner. It is counted
@@ -58,6 +58,12 @@ Four of those rows are worth a sentence.
   same vocabulary inline in `variants()` and `variantsFor()`, beside a
   `casings()` list the surface side gets from its declaration, and those
   lines are already inside its 285.
+- The **formatter** is two files on the surface side: the plugin,
+  which only shows a value (`formatValue()`), and
+  `DemoFormatterSurface`, which its `#[UsesSurface]` names and which
+  declares its settings and its outputs side by side. Its refiner is one
+  `#[RefinesInput]` method; the output refiner it had in the old
+  spelling is gone, because outputs are never refined.
 - The **config schema** is *longer* on the surface side, not shorter.
   Both versions hand-maintain a schema file; the surface one also
   declares the `third_party_settings` namespace other modules mount into,
@@ -115,8 +121,8 @@ approach changes.
 | Vocabulary lists kept in step | 4 | 1 |
 | Default values written out | 3 | 0 |
 | Settings summary assembled by hand | 1 | 0 |
-| Surface declaration (settings and outputs together) | 0 | 1 |
-| Refiner methods (input and output) | 0 | 2 |
+| Surface class (settings and outputs together) | 0 | 1 |
+| Refiner methods | 0 | 1 |
 | Config schema files | 1 | 1 |
 | **Distinct mechanisms in play** | **8** | **4** |
 

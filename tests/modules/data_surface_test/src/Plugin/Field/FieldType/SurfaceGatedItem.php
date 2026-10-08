@@ -4,18 +4,13 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_test\Plugin\Field\FieldType;
 
-use Drupal\Core\Access\AccessResult;
-use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Field\Attribute\FieldType;
 use Drupal\Core\Field\Plugin\Field\FieldType\StringItem;
-use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\data_surface\DataSurfaceBuilderInterface;
-use Drupal\data_surface\DataSurfaceDeclarationInterface;
-use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Form\DataSurfaceFieldTypeTrait;
 use Drupal\data_surface\Form\FieldSurfaceProviderInterface;
+use Drupal\data_surface\Surface\Attribute\UsesSurface;
+use Drupal\data_surface_test\Surface\GatedFieldSettingsSurface;
 
 /**
  * A field type whose settings surface can refuse an account.
@@ -27,9 +22,15 @@ use Drupal\data_surface\Form\FieldSurfaceProviderInterface;
  * caller refused has seen the surface's answer refuse it and nothing
  * else.
  *
- * The refusal is switched by state rather than by a permission, because
- * a permission is exactly what the host gate already asks and the point
- * of the fixture is an answer the host gate does not have.
+ * In the new spelling: the settings are GatedFieldSettingsSurface, named
+ * with #[UsesSurface], and the refusal is that surface's access class.
+ * The field type host reads both, and so do the derived field tools,
+ * because the same surface fills the field instance surface's settings
+ * slot for this field type. The class writes nothing else but the static
+ * defaults its host protocol asks of it.
+ *
+ * @see \Drupal\data_surface_test\Surface\GatedFieldSettingsSurface
+ * @see \Drupal\data_surface_test\Access\GatedFieldSettingsAccess
  */
 #[FieldType(
   id: 'data_surface_gated',
@@ -39,11 +40,10 @@ use Drupal\data_surface\Form\FieldSurfaceProviderInterface;
   default_widget: 'string_textfield',
   default_formatter: 'string',
 )]
-class SurfaceGatedItem extends StringItem implements FieldSurfaceProviderInterface, DataSurfaceDeclarationInterface {
+#[UsesSurface(GatedFieldSettingsSurface::class)]
+class SurfaceGatedItem extends StringItem implements FieldSurfaceProviderInterface {
 
-  use DataSurfaceFieldTypeTrait {
-    surfaceAccess as protected fieldConfigAccess;
-  }
+  use DataSurfaceFieldTypeTrait;
 
   /**
    * The state key that makes this field type refuse its settings.
@@ -53,46 +53,8 @@ class SurfaceGatedItem extends StringItem implements FieldSurfaceProviderInterfa
   /**
    * {@inheritdoc}
    */
-  public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
-    $builder->setDefinition('note', DataDefinition::create('string')
-      ->setLabel(new TranslatableMarkup('Note'))
-      ->setDescription(new TranslatableMarkup('A note stored with this field instance.')));
-    // NULL is a declared default, and declaring one is not the same as
-    // declaring none: the key starts empty rather than absent.
-    $builder->setDefault('note', NULL);
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public static function defaultFieldSettings(): array {
     return static::surfaceDefaultFieldSettings(static::class) + parent::defaultFieldSettings();
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getFieldSurface(string $operation = FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS, ?string $subject = NULL): DataSurfaceInterface {
-    // The field item is bound to one field config entity, so it is its
-    // own subject and a caller naming another has the wrong item.
-    $this->surfaceSelfSubject($subject);
-    return $this->declaredSurface('field_type:data_surface_gated');
-  }
-
-  /**
-   * {@inheritdoc}
-   *
-   * A refusal of its own on top of the trait's default, which is the
-   * field config entity's own answer. The two are ANDed by being asked
-   * in this order: whatever the entity said, this says no while the flag
-   * is set, and defers to the entity when it is not.
-   */
-  public function surfaceAccess(string $operation = FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS, ?string $subject = NULL, ?AccountInterface $account = NULL): AccessResultInterface {
-    // @phpstan-ignore globalDrupalDependencyInjection.useDependencyInjection
-    if (\Drupal::state()->get(self::REFUSE_STATE_KEY, FALSE)) {
-      return AccessResult::forbidden('The gated test field type does not allow its settings to be configured.');
-    }
-    return $this->fieldConfigAccess($operation, $subject, $account);
   }
 
 }

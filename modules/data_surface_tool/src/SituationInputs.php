@@ -71,6 +71,11 @@ final class SituationInputs {
   public const COMMITTED = 'committed';
 
   /**
+   * The output carrying what a dry run rehearsed.
+   */
+  public const PREPARED = 'prepared';
+
+  /**
    * Builtin parameter types, as the Tool API's data types.
    */
   protected const DATA_TYPES = [
@@ -119,11 +124,12 @@ final class SituationInputs {
    */
   public function inputs(SurfaceDefinition $surface, SituationDefinition $situation): array {
     $inputs = [];
+    $neutral = $situation->parameters === [] ? NULL : $this->surfaces->build($surface->class, new SurfaceContext($situation->id));
     foreach ($situation->parameters as $parameter) {
       if (in_array($parameter->name, [self::VALUES, self::DRY_RUN], TRUE)) {
         throw new \LogicException(sprintf('The "%s" situation of the %s surface takes $%s, which is the name of an input every surface tool has.', $situation->id, $surface->id, $parameter->name));
       }
-      $inputs[$parameter->name] = $this->parameterInput($parameter, $surface, $situation);
+      $inputs[$parameter->name] = $this->parameterInput($parameter, $surface, $situation, $neutral);
     }
     if ($situation->needsNothing()) {
       $context = $this->surfaces->situation($surface->class, $situation->id);
@@ -133,8 +139,7 @@ final class SituationInputs {
       // phpcs:ignore Drupal.Files.LineLength.TooLong
       // SKETCH GAP: the sketch generates a tool's inputs from a situation's parameters plus the surface's open keys, but which identity keys a situation that needs a subject knows is only on the context it returns; the static definition reads it off the signature (a scalar parameter supplies its own name, an entity parameter every identity key no scalar names) and the tool refines it to the real context once the parameters arrive.
       $supplied = $this->suppliedIdentity($surface, $situation);
-      $context = new SurfaceContext($situation->id);
-      $inputs[self::VALUES] = $this->values($surface, $this->surfaces->build($surface->class, $context), $context, $supplied);
+      $inputs[self::VALUES] = $this->values($surface, $neutral ?? $this->surfaces->build($surface->class, new SurfaceContext($situation->id)), new SurfaceContext($situation->id), $supplied);
     }
     $inputs[self::DRY_RUN] = new InputDefinition(
       data_type: 'boolean',
@@ -191,8 +196,8 @@ final class SituationInputs {
    *   The situation.
    *
    * @return array<string, \Drupal\tool\TypedData\OutputDefinitionInterface>
-   *   `values` and `committed`, then the surface's own outputs whose names
-   *   do not collide with those two.
+   *   `values`, `committed` and `prepared`, then the surface's own outputs
+   *   whose names do not collide with those three.
    */
   public function outputs(SurfaceDefinition $surface, SituationDefinition $situation): array {
     $outputs = [
@@ -205,6 +210,12 @@ final class SituationInputs {
         data_type: 'boolean',
         label: $this->t('Written'),
         description: $this->t('Whether the values were written; false for a dry run.'),
+      ),
+      self::PREPARED => new OutputDefinition(
+        data_type: 'map',
+        label: $this->t('Prepared'),
+        description: $this->t('On a dry run only: what would have been stored, in storage\'s own shape, after every check storage makes. A surface with parts stored apart has its own under "own" and each part\'s under "children".'),
+        required: FALSE,
       ),
     ];
     if (!is_subclass_of($surface->class, HasOutputsInterface::class)) {
@@ -247,6 +258,9 @@ final class SituationInputs {
    *   The surface, for messages.
    * @param \Drupal\data_surface\SurfaceBuild\SituationDefinition $situation
    *   The situation, for messages.
+   * @param \Drupal\data_surface\DataSurfaceInterface|null $neutral
+   *   The surface built in a context that knows nothing, whose keys a
+   *   scalar parameter of the same name is.
    *
    * @return \Drupal\tool\TypedData\InputDefinitionInterface
    *   The input.
@@ -254,7 +268,7 @@ final class SituationInputs {
    * @throws \LogicException
    *   When the parameter takes an object no single entity type is.
    */
-  protected function parameterInput(SituationParameter $parameter, SurfaceDefinition $surface, SituationDefinition $situation): InputDefinitionInterface {
+  protected function parameterInput(SituationParameter $parameter, SurfaceDefinition $surface, SituationDefinition $situation, ?DataSurfaceInterface $neutral = NULL): InputDefinitionInterface {
     $label = ucfirst(str_replace('_', ' ', $parameter->name));
     if ($parameter->takesObject()) {
       $entity_type_id = $this->situationArguments->entityTypeOf($parameter);
@@ -267,6 +281,14 @@ final class SituationInputs {
         description: $this->t('The id of the @entity_type the situation is about.', ['@entity_type' => $entity_type_id]),
         required: !$parameter->optional,
       );
+    }
+    // phpcs:ignore Drupal.Files.LineLength.TooLong
+    // SKETCH GAP: the sketch makes a situation's parameters a tool's inputs without saying how they are described; a scalar parameter named for one of the surface's plain keys is that key, so it takes the key's label, meaning and allowed values as the surface declares them.
+    $key = $neutral?->getDefinitions()->entry($parameter->name);
+    if ($key !== NULL && $key->attachment === NULL && $key->slot === NULL) {
+      $input = $this->inputDefinitions->fromDefinition($key->definition);
+      $input->setRequired(!$parameter->optional);
+      return $input;
     }
     return new InputDefinition(
       data_type: self::DATA_TYPES[(string) $parameter->type] ?? 'string',
