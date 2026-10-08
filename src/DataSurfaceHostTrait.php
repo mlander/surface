@@ -314,6 +314,13 @@ trait DataSurfaceHostTrait {
       // value was said on purpose and is judged rather than dropped.
       return array_replace($stored, static::withoutStaleMarkers($this->surfaceSubmittedInput($surface, $form_state), $stored));
     }
+    // A rebuild reads the marker the same way. The discard rule only
+    // looks at refinement targets, so a stale key that is none — a venue
+    // the site took away, posted back on the placeholder while the room
+    // was touched — would otherwise be overlaid as the marker itself, and
+    // its rebuilt element would stash the marker as the value it stands
+    // for.
+    $input = static::withoutStaleMarkers($input, $stored);
     // A programmatic submission is not a rebuild. Its caller said every
     // value on purpose, in one statement, and a value the surface
     // refuses is refused rather than quietly dropped — the payload rule,

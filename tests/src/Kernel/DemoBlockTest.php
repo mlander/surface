@@ -4,13 +4,18 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
+use Drupal\Core\Form\EnforcedResponseException;
 use Drupal\Core\Form\FormState;
+use Drupal\block\Entity\Block;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Target\PluginConfigurationTarget;
 use Drupal\data_surface_demo\Plugin\Block\DataSurfaceDemoBlock;
 use Drupal\node\Entity\NodeType;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Session\Session;
+use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
 
 /**
  * Tests the demo block: one declaration, live options, one pipeline.
@@ -472,6 +477,95 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     }
     $block->validateConfigurationForm($form, $form_state);
     $this->assertArrayHasKey('bundle', $form_state->getErrors());
+  }
+
+  /**
+   * Pins a known limitation: a non-JS save moving type and bundle at once.
+   *
+   * Through core's own block form, posted as a browser without
+   * JavaScript posts it: the entity type moves from user to node and the
+   * bundle to article in the same request. The combination is valid, and
+   * it is refused today — not by the surface, by Form API's own check
+   * that a select's value was among the options it was built with. A
+   * plugin host answers NULL from surfaceSubmissionPath(), because a
+   * subform cannot know where it sits in the input before Form API
+   * assigns its #parents, so the build the submission is processed
+   * against is built from what is stored, and its bundle select offers
+   * user's bundles. With JavaScript the entity type's AJAX rebuild
+   * offers node's bundles first, and none of this arises.
+   *
+   * When a host can supply its subform's parents to
+   * surfaceSubmissionPath(), this test fails: turn it round to assert
+   * the save goes through, and drop the entry.
+   *
+   * @see docs/decisions.md#a-plugin-host-cannot-overlay-a-full-submission
+   */
+  public function testNonJavaScriptSaveMovingTypeAndBundleTogetherIsRefusedToday(): void {
+    // What core's block form needs beside the block: the request path
+    // condition's alias manager, and a theme to place the block in.
+    $this->enableModules(['path_alias']);
+    $this->installConfig(['system']);
+    $this->container->get('theme_installer')->install(['stark']);
+    $this->config('system.theme')->set('default', 'stark')->save();
+    $stored = ['headline' => 'Featured', 'entity_type' => 'user', 'bundle' => 'user', 'limit' => 5];
+    $entity = Block::create([
+      'id' => 'demo',
+      'theme' => 'stark',
+      'region' => 'content',
+      'plugin' => 'data_surface_demo',
+      'settings' => ['label' => 'Demo', 'label_display' => '0'] + $stored,
+    ]);
+    $entity->save();
+
+    $request = Request::create('/admin/structure/block/manage/demo', 'POST');
+    $request->setSession(new Session(new MockArraySessionStorage()));
+    $this->container->get('request_stack')->push($request);
+    $form_object = $this->container->get('entity_type.manager')->getFormObject('block', 'default')->setEntity($entity);
+    $form_state = new FormState();
+    $form_state->setUserInput([
+      'form_id' => $form_object->getFormId(),
+      'settings' => [
+        'label' => 'Demo',
+        'label_display' => '0',
+        'headline' => 'Featured',
+        // Both moved, together, and the pair is valid.
+        'entity_type' => 'node',
+        'bundle' => 'article',
+        'field' => '',
+        'limit' => '5',
+        'presentation' => 'list',
+      ],
+      'id' => 'demo',
+      'region' => 'content',
+      'op' => 'Save block',
+    ]);
+    try {
+      $this->container->get('form_builder')->buildForm($form_object, $form_state);
+    }
+    catch (EnforcedResponseException) {
+      // The redirect a successful save answers with, which is what this
+      // test is waiting for once the limitation is gone.
+    }
+
+    // Refused on the bundle, by Form API's choice check, before the
+    // surface is asked: the select was built offering user's bundles.
+    $errors = array_map('strval', $form_state->getErrors());
+    $this->assertArrayHasKey('settings][bundle', $errors);
+    $this->assertStringContainsString('element is not allowed', $errors['settings][bundle']);
+    $this->assertSame(['user' => 'User'], array_map('strval', array_diff_key(
+      $form_state->getCompleteForm()['settings']['bundle']['#options'],
+      ['' => TRUE, DataSurfacePipelineInterface::KEEP_STALE => TRUE],
+    )));
+    // Nothing was written.
+    $settings = Block::load('demo')->get('settings');
+    $this->assertSame('user', $settings['entity_type']);
+    $this->assertSame('user', $settings['bundle']);
+    // The surface itself accepts the pair: the refusal is the host's.
+    $block = $this->createBlock($stored);
+    $surface = $block->getDataSurface();
+    $current = $block->getConfiguration();
+    $values = $this->pipeline()->accept($surface, ['entity_type' => 'node', 'bundle' => 'article'], $current);
+    $this->assertTrue($this->pipeline()->validate($surface, $values, $current)->isEmpty());
   }
 
 }

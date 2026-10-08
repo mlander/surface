@@ -14,6 +14,7 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Form\DataSurfaceSituationForm;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Pipeline\DataSurfaceResult;
+use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
 use Drupal\data_surface_examples\Surface\RegistrationStep2Surface;
 use Drupal\data_surface_examples\Surface\RegistrationStep3Surface;
 use Drupal\data_surface_tool\SituationInputs;
@@ -179,6 +180,56 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Posts step 2's generic form the way a browser does.
+   *
+   * With the form's id and, for Save, no trigger name; for an AJAX
+   * round trip, the trigger's name instead of the button. The keys the
+   * caller leaves out are sent as stored.
+   *
+   * @param array $surface
+   *   The surface's input, keyed by surface key.
+   * @param array $extra
+   *   The rest of the POST: the button, or the AJAX trigger's name.
+   *
+   * @return \Drupal\Core\Form\FormStateInterface
+   *   The form state after the request.
+   */
+  protected function postStepTwo(array $surface, array $extra = ['op' => 'Save']): FormStateInterface {
+    $route_name = 'data_surface_examples.step2';
+    $route = $this->container->get('router.route_provider')->getRouteByName($route_name);
+    $stack = $this->container->get('request_stack');
+    $request = Request::create($route->getPath(), 'POST');
+    $request->setSession($stack->getSession());
+    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, $route_name);
+    $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
+    $stack->push($request);
+    $form_state = new FormState();
+    $form_state->setUserInput([
+      'form_id' => 'data_surface_situation_form_data_surface_examples_step2',
+      'surface' => $surface + ['title' => 'Spring meetup', 'capacity' => '50', 'open' => '1'],
+    ] + $extra);
+    try {
+      $this->container->get('form_builder')->buildForm(DataSurfaceSituationForm::class, $form_state);
+    }
+    catch (EnforcedResponseException) {
+      // The redirect a browser's successful submission answers with.
+    }
+    return $form_state;
+  }
+
+  /**
+   * Allows the anonymous user to configure the examples.
+   *
+   * A browser-shaped POST carries no form token, which only an
+   * anonymous request is not asked for.
+   */
+  protected function actAsAnonymousAdministrator(): void {
+    $this->installConfig(['user']);
+    Role::load(RoleInterface::ANONYMOUS_ID)?->grantPermission('administer site configuration')->save();
+    $this->container->get('current_user')->setAccount(new AnonymousUserSession());
+  }
+
+  /**
    * Tests the pipeline refuses the room the submitted venue does not offer.
    */
   public function testThePipelineRefusesTheRoomOrphanedByTheSameRun(): void {
@@ -268,37 +319,12 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
    * Posted as a browser posts, with the form's id and no trigger name.
    */
   public function testSaveAfterTheVenueRebuildRefusesTheLeftOverRoom(): void {
-    $this->installConfig(['user']);
-    Role::load(RoleInterface::ANONYMOUS_ID)?->grantPermission('administer site configuration')->save();
-    $this->container->get('current_user')->setAccount(new AnonymousUserSession());
-    $post = function (array $surface): FormStateInterface {
-      $route_name = 'data_surface_examples.step2';
-      $route = $this->container->get('router.route_provider')->getRouteByName($route_name);
-      $stack = $this->container->get('request_stack');
-      $request = Request::create($route->getPath(), 'POST');
-      $request->setSession($stack->getSession());
-      $request->attributes->set(RouteObjectInterface::ROUTE_NAME, $route_name);
-      $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
-      $stack->push($request);
-      $form_state = new FormState();
-      $form_state->setUserInput([
-        'form_id' => 'data_surface_situation_form_data_surface_examples_step2',
-        'surface' => $surface + ['title' => 'Spring meetup', 'capacity' => '50', 'open' => '1'],
-        'op' => 'Save',
-      ]);
-      try {
-        $this->container->get('form_builder')->buildForm(DataSurfaceSituationForm::class, $form_state);
-      }
-      catch (EnforcedResponseException) {
-        // The redirect a browser's successful submission answers with.
-      }
-      return $form_state;
-    };
+    $this->actAsAnonymousAdministrator();
 
     // The browser's version of the valid move first, since Form API
     // remembers for the rest of the request that any form errored: built
     // for the new venue, so its room is offered, and it is saved.
-    $state = $post(['venue' => 'riverside', 'room' => 'riverside_east']);
+    $state = $this->postStepTwo(['venue' => 'riverside', 'room' => 'riverside_east']);
     $this->assertSame([], array_map('strval', $state->getErrors()));
     $this->assertSame('riverside_east', $this->storedStepTwo()['room']);
     $this->assertSame(['The changes have been saved.'], $this->messages('status'));
@@ -308,10 +334,47 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
       $config->set($key, $value);
     }
     $config->save();
-    $state = $post(['venue' => 'riverside', 'room' => DataSurfacePipelineInterface::KEEP_STALE]);
+    $state = $this->postStepTwo(['venue' => 'riverside', 'room' => DataSurfacePipelineInterface::KEEP_STALE]);
     $this->assertArrayHasKey('surface][room', $state->getErrors());
     $this->assertSame(self::STORED, $this->storedStepTwo());
     $this->assertSame([], $this->messages('status'));
+  }
+
+  /**
+   * Tests an AJAX rebuild reads a marker on a non-target key as stored.
+   *
+   * The venue is stale for what the site did — a venue no longer on the
+   * list — so its select comes up on the placeholder and the browser
+   * posts the marker back on every request. The room is touched, which
+   * rebuilds the surface over AJAX. The venue is no refinement target,
+   * so the discard rule never looks at it, and its input is overlaid as
+   * it came: the marker. Built from the marker, the element would stash
+   * the marker as the value it stands for, name it in its option label,
+   * and a Save from the rebuilt form would send the marker in place of
+   * the stored venue. It has to stand for the stored venue, on every
+   * rebuild.
+   */
+  public function testAjaxRebuildReadsTheStaleMarkerAsTheStoredValue(): void {
+    $this->actAsAnonymousAdministrator();
+    $this->config('data_surface_examples.registration_step2')->set('venue', 'demolished')->save();
+
+    $state = $this->postStepTwo(
+      ['venue' => DataSurfacePipelineInterface::KEEP_STALE, 'room' => 'harbour_deck'],
+      ['_triggering_element_name' => 'surface[room]'],
+    );
+
+    $this->assertTrue($state->isRebuilding());
+    $this->assertSame([], array_map('strval', $state->getErrors()));
+    $venue = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY]['venue'];
+    // Still the placeholder, standing for the stored venue and not for
+    // the marker itself.
+    $this->assertSame(DataSurfacePipelineInterface::KEEP_STALE, $venue['#default_value']);
+    $this->assertSame('demolished', $venue[DataSurfaceWidgetBase::STALE_KEY]);
+    $label = (string) $venue['#options'][DataSurfacePipelineInterface::KEEP_STALE];
+    $this->assertStringContainsString('demolished', $label);
+    $this->assertStringNotContainsString(DataSurfacePipelineInterface::KEEP_STALE, $label);
+    // A rebuild writes nothing.
+    $this->assertSame('demolished', $this->storedStepTwo()['venue']);
   }
 
   /**

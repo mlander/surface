@@ -235,11 +235,15 @@ select offers the stored venue's rooms and Form API refuses the new
 venue's room as a choice it was never offered before the surface is
 asked, and a slot flipped in the same request is rendered as the stored
 variant, with no element for the chosen variant's keys to arrive in. A submitted
-stale marker is read as the stored value it stands for.
+stale marker is read as the stored value it stands for, here and on an
+AJAX rebuild alike, so a stale key the discard rule never looks at is
+not rebuilt standing for the marker itself.
 `DataSurfaceSituationForm` answers `surfaceSubmissionPath()`, since its
 container is its own top level key; a plugin host nested inside another
 form cannot know its position before Form API assigns it, answers NULL,
-and is built from what is stored.
+and is built from what is stored — so without JavaScript a plugin host
+refuses a valid save that moves a parent and its dependent together
+([decisions](decisions.md#a-plugin-host-cannot-overlay-a-full-submission)).
 
 ## Current values on extraction
 
@@ -357,7 +361,8 @@ different way of losing the value:
   carries the value it stands for on `#data_surface_stale` — a plain
   value, per [the serialization rule](targets.md#the-serialization-rule).
   Extraction maps the marker back through the stash, so **leaving the
-  select alone keeps the stored value**. Reading it back is
+  select alone sends the stored value back**, and a save keeps it as
+  long as nothing it depends on moved in the same submission. Reading it back is
   `DataSurfaceWidgetBase`'s job rather than the options widget's:
   extraction resolves widgets from the surface as advertised, having no
   values yet to refine with, so a key that is only a choice once a
@@ -369,8 +374,14 @@ different way of losing the value:
   else.
 
 A note is appended to the element's description — "The stored value
-article is no longer available. It is kept until you choose another." —
-and the element gets a `data-surface-stale` class. Both are written when
+article is no longer available. Choose another; saving keeps it only if
+nothing it depends on has changed." — and the element gets a
+`data-surface-stale` class. The note is one wording for both ways the
+placeholder appears, because the element is built from the values as
+they now stand and cannot tell them apart: a value the site took away
+under an unmoved parent is kept by a save, and the same value handed
+over because this edit moved its parent is refused by one (see
+[two ways a value stops being allowed](#two-ways-a-value-stops-being-allowed)). Both are written when
 the element is built, not when it is validated, because a form that
 fails validation is rebuilt from scratch and anything written onto an
 element in a validate handler never reaches the page.

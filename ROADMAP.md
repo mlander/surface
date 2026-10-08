@@ -366,6 +366,10 @@ to.
    refiners wait for the union of what they watch.
 6. **Partial updates of a collection item**: changing one item without
    resending the list, probably a situation on the child.
+7. **Plugin hosts overlay a full submission**: a host supplies its
+   subform's parents to `surfaceSubmissionPath()`, so a save without
+   JavaScript that moves a parent and its dependent together is not
+   refused by Form API (`docs/decisions.md`).
 
 ## Rejected, on the record
 

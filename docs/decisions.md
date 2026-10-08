@@ -355,6 +355,23 @@ which is no declared situation. The pattern says the host "supplies the
 situation" without naming one; a plugin's configuration has no add or
 edit, only the instance the host holds. (`DataSurfaceHostTrait`)
 
+### A plugin host cannot overlay a full submission
+
+*Open.* A plugin host — a block, or any plugin using
+`DataSurfaceHostFormTrait` — answers NULL from `surfaceSubmissionPath()`,
+so the build a full submission is processed against is built from what
+is stored, not from what was submitted. A nested subform cannot know its
+position in the input at build time: Form API assigns its `#parents`
+only later. So a save without JavaScript that moves a parent and its
+dependent together (the demo block's entity type and bundle) is refused
+by Form API's "is not allowed" select check even when the pair is valid,
+because the dependent's select still offers the stored parent's choices.
+With JavaScript the parent's AJAX rebuild offers the new choices first
+and the case does not arise, and an invalid pair is refused either way.
+The fix is a host supplying its subform's parents to
+`surfaceSubmissionPath()`. `DemoBlockTest` pins today's refusal.
+(`DataSurfaceHostTrait::surfaceSubmissionPath()`)
+
 ### Static defaults
 
 A plugin protocol that asks a class for its defaults statically

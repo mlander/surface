@@ -187,9 +187,9 @@ final class RegistrationStep2Surface implements SurfaceInterface {
 
 Change the venue on the form: the room list rebuilds over AJAX, and so
 does the panel beside it, whose room row now lists the new venue's
-rooms, *narrowed* from the six declared. The room saved before stays on
-offer, marked as no longer available, until another is chosen: a stored
-value is never dropped behind your back.
+rooms, *narrowed* from the six declared. The room saved before is shown
+as no longer available rather than dropped behind your back, and Save
+refuses it until a room of the new venue is chosen.
 Choose the garden room and the capacity's row says "from 1 to 30". A
 refiner can only tighten: the framework checks every result is
 narrower than what was declared, so the panel's first answer stays

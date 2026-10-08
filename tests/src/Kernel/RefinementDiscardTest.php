@@ -295,6 +295,11 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
     // is not offered back as one.
     $this->assertArrayNotHasKey('two', $form['tier_two']['#options']);
     $this->assertArrayHasKey('three', $form['tier_two']['#options']);
+    // And the note does not promise that a save keeps it. This edit moved
+    // the parent, so a save sending the placeholder back is refused.
+    $description = (string) $form['tier_two']['#description'];
+    $this->assertStringContainsString('saving keeps it only if nothing it depends on has changed', $description);
+    $this->assertStringNotContainsString('kept until you choose another', $description);
   }
 
   /**
