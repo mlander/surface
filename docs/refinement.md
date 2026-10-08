@@ -306,13 +306,14 @@ contract all see the same five values, narrowed the same way.
   refining the map narrows the property inside what it returns, and
   the check descends into it. Dotted refinement paths (decision D6) are
   where that lands.
-- **An alter cannot watch a mounted key.** An alter's
-  `#[RefinesInput]` method may refine the key it mounted, by that key's
-  own name, watching the owner's keys
-  ([Decisions](decisions.md#an-alter-refines-its-own-mounted-key));
-  the compliance alter of the examples makes its privacy notice required
-  above a hundred people that way. No method can watch a mounted key:
-  its value lives under `third_party_settings.<module>`, and handing it
-  over needs the same dotted paths.
+- **An alter watches only the keys it mounted.** An alter's
+  `#[RefinesInput]` method may refine and watch the keys it mounted, by
+  their own names, beside the owner's
+  ([Decisions](decisions.md#an-alter-watches-its-own-mounted-key));
+  the compliance alter of the examples caps the capacity at a hundred
+  until its own licence is given, and raises its stewards count with the
+  capacity. A watched mounted key is never waited for: it is handed as
+  it stands, NULL while empty. Another module's mounted key, and any
+  key inside a map that is not a mount, still needs the dotted paths.
 - **Storage.** For a config-backed surface, widening is a schema alter
   and the surface follows; storage gates the write either way.

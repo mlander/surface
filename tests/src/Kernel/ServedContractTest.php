@@ -360,6 +360,36 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Tests example 4 on example 3: the capacity depends on the licence.
+   *
+   * The compliance alter's method on the capacity watches the licence the
+   * alter mounted, so the capacity's dependsOn names the licence by its
+   * path in the frame, and a contract refined with a licence lifts the
+   * hundred back to the room's limit.
+   */
+  public function testExampleFourWatchesTheLicence(): void {
+    $this->enableModules(['data_surface_examples_compliance']);
+    $licence = 'third_party_settings.data_surface_examples_compliance.licence';
+    $room = ['venue' => 'riverside', 'room' => 'riverside_main'];
+    $contract = $this->contract('registration.step3', 'configure', [], $room);
+    $capacity = $contract['schema']['properties']['capacity'];
+    $this->assertSame(['room', $licence], $capacity['x-surface']['dependsOn']);
+    $this->assertSame(100, $capacity['maximum']);
+    $this->assertSame('Up to 100 without an event licence.', $capacity['description']);
+    $this->assertSame(['capacity'], $contract['schema']['properties']['third_party_settings']['x-surface']['dependsOn']);
+
+    $licensed = $this->contract('registration.step3', 'configure', [], $room + [
+      'capacity' => 150,
+      'third_party_settings' => ['data_surface_examples_compliance' => ['licence' => 'EV-2048', 'stewards' => 3]],
+    ]);
+    $capacity = $licensed['schema']['properties']['capacity'];
+    $this->assertSame(400, $capacity['maximum']);
+    $this->assertSame('Up to 400 for the Main hall.', $capacity['description']);
+    $this->assertWellFormed($licensed['schema']);
+    $this->assertTrue($this->validates($licensed['schema'], $licensed['values']));
+  }
+
+  /**
    * Tests the content type surface: locked on edit, open on add.
    */
   public function testNodeType(): void {

@@ -48,7 +48,7 @@ the plugin's host. `docs/surfaces.md` says how each part works.
 - Access: the situation's permission alone
 - Used by: `block:data_surface_demo`; configured through the plugin's host, never on its own.
 
-- Altered by `Drupal\data_surface_demo_extras\SurfaceAlter\DemoBlockAlter` (`data_surface_demo_extras`), in every situation.
+- Altered by `Drupal\data_surface_demo_extras\SurfaceAlter\DemoBlockAlter` (`data_surface_demo_extras`), in every situation; it refines `limit` (watching `presentation`).
 
 - Slot `presentation_settings` is filled by: `grid` → `Drupal\data_surface_demo\Surface\GridPresentationSurface`, `list` → `Drupal\data_surface_demo\Surface\ListPresentationSurface`.
 
@@ -119,7 +119,7 @@ the plugin's host. `docs/surfaces.md` says how each part works.
 - Access: the situation's permission alone
 - Used by: `field_formatter:data_surface_demo_string`; configured through the plugin's host, never on its own.
 
-- Altered by `Drupal\data_surface_demo_extras\SurfaceAlter\DemoFormatterAlter` (`data_surface_demo_extras`), in every situation.
+- Altered by `Drupal\data_surface_demo_extras\SurfaceAlter\DemoFormatterAlter` (`data_surface_demo_extras`), in every situation; it refines `variant` (watching `casing`).
 
 ## node.type
 
@@ -180,7 +180,7 @@ the plugin's host. `docs/surfaces.md` says how each part works.
 | --- | --- | --- | --- | --- | --- | --- |
 | `configure` | Configure registration | nothing | no | `administer site configuration` | yes | `RegistrationStep3Surface::configure()` (`data_surface_examples`) |
 
-- Altered by `Drupal\data_surface_examples_compliance\SurfaceAlter\RegistrationComplianceAlter` (`data_surface_examples_compliance`), in every situation.
+- Altered by `Drupal\data_surface_examples_compliance\SurfaceAlter\RegistrationComplianceAlter` (`data_surface_examples_compliance`), in every situation; it refines `capacity` (watching `licence`), `stewards` (watching `capacity`).
 
 - Slot `ticket` is filled by: `free` → `Drupal\data_surface_examples\Surface\FreeTicketSurface`, `paid` → `Drupal\data_surface_examples\Surface\PaidTicketSurface`.
 

@@ -43,7 +43,8 @@ final class SurfaceEntry {
    *   declared default when storage holds nothing.
    * @param string[] $dependencies
    *   The sibling keys this key's refinement reads, in declaration
-   *   order. Empty for a key that never refines.
+   *   order. Empty for a key that never refines. A key an alter mounted
+   *   is named by its dotted path, `third_party_settings.<module>.<key>`.
    * @param array<string, array<\Drupal\data_surface\DataSurfaceRefinerInterface>> $refiners
    *   Refiner chains keyed by contributor, the owner's own under
    *   DataSurfaceInterface::OWNER. Always empty on an output's entry:
@@ -58,6 +59,12 @@ final class SurfaceEntry {
    *   The variant table, when the key is a slot whose shape a sibling
    *   chooses: its definition is then the `any` placeholder until the
    *   sibling holds a value, and that variant's map afterwards.
+   * @param array<string, string[]> $paths
+   *   For a key refined one property at a time — the mount, one property
+   *   per key an alter refines there — what each property refines
+   *   against, keyed by its dotted path below this key. $dependencies is
+   *   their union, which is what gates the key; these are what a form
+   *   rebuilds by.
    */
   public function __construct(
     public readonly string $name,
@@ -69,6 +76,7 @@ final class SurfaceEntry {
     public readonly array $contributions = [],
     public readonly ?SurfaceAttachment $attachment = NULL,
     public readonly ?SurfaceSlot $slot = NULL,
+    public readonly array $paths = [],
   ) {
   }
 
@@ -97,6 +105,7 @@ final class SurfaceEntry {
       $this->contributions,
       $this->attachment,
       $this->slot,
+      $this->paths,
     );
   }
 

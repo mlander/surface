@@ -69,7 +69,7 @@ is an object with `properties` in declaration order, `required`, and
 | --- | --- |
 | `widget` | The Form API-equivalent hint: `select`, `radios`, `checkbox`, `number`, `text`, `textarea`, `email`, `fieldset`, `slot`, `list`; `null` when no widget would claim the key. |
 | `locked` | Identity the situation knows: shown, never changed. |
-| `dependsOn` | The sibling keys this key's refiners watch, in its own frame. A client refines when one of them changes. |
+| `dependsOn` | The sibling keys this key's refiners watch, in its own frame; a key an alter mounted, which only that alter may watch, by its dotted path in that frame (`third_party_settings.<module>.<key>`). A client refines when one of them changes. |
 | `refined` | Whether the key is narrowed right now, compared with what the surface advertises in this situation. |
 | `stale` | The stored value is no longer offered; the key is shown on its empty option, standing for it. |
 | `emptyOption` | On a single select: `{show, label}`, by [the empty option rule](decisions.md#the-empty-option-rule): always for an optional select (`- None -`), for a required one only while no valid choice is selected (`- Select -`). |

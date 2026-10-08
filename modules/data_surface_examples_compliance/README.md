@@ -6,14 +6,17 @@ module has a say in a surface it does not own.
 ## What it shows
 
 One class, `SurfaceAlter\RegistrationComplianceAlter`, naming example 3's
-surface with `#[AltersSurface]`. It adds a privacy notice, which is
-stored under this module's name at
-`third_party_settings.data_surface_examples_compliance.privacy_notice`
-and described by this module's own config schema; it rewords example 3's
-title label with `describe()`; and its `#[RefinesInput('privacy_notice')]`
-method, watching example 3's `capacity`, makes the notice required above a
-hundred people. Example 3 does not change and does not know this module
-exists. There is no form alter and no hook.
+surface with `#[AltersSurface]`. It adds an event licence and a number
+of stewards, which are stored under this module's name at
+`third_party_settings.data_surface_examples_compliance` and described by
+this module's own config schema, and it rewords example 3's title label
+with `describe()`. Its `#[RefinesInput('capacity')]` method watches the
+licence it added itself: without one, example 3's capacity stops at a
+hundred, and with one the room's limit applies again. Its
+`#[RefinesInput('stewards')]` method watches example 3's `capacity`:
+one steward per fifty people, at least one. Example 3 does not change
+and does not know this module exists. There is no form alter and no
+hook.
 
 ## How to try it
 
@@ -21,11 +24,14 @@ exists. There is no form alter and no hook.
 drush pm:install data_surface_examples_compliance
 ```
 
-Then reload `/surface-examples/3`, choose a room that seats more than a
-hundred, and set the capacity to 101.
+Then reload `/surface-examples/3`, choose Riverside Hall's main hall,
+and see the capacity stop at 100. Type `EV-2048` as the licence and it
+goes back to 400; set the capacity to 150 and the stewards field asks
+for 3.
 
 ## What gates it
 
 | Test | Covers |
 | --- | --- |
-| `Kernel\ExamplesComplianceTest` | The key appears under the module's name, the label changes, the notice is required at 101 and not at 100, an empty notice is refused, and a given one is stored in example 3's config. |
+| `Kernel\ExamplesComplianceTest` | The keys appear under the module's name and the label changes; the capacity stops at 100 without a licence and at the room's limit with `EV-2048`; `EV-20` is refused with the alter's message; the stewards' minimum is 3 at 150 and 1 at 20, said under the field; the pipeline refuses 150 without a licence and writes it with one; the licence replaces the capacity, the stewards and the panel, the capacity the stewards and the panel; example 5's calls answer as without the module. |
+| `Functional\ExamplesFullSubmitTest` | On `/surface-examples/3`, a capacity of 150 is refused at the capacity without a licence and written with `EV-2048` and 3 stewards. |

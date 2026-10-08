@@ -79,8 +79,13 @@ final class DataSurfaceCatalogueDocument {
         }
       }
       foreach ($surface['alters'] as $alter) {
+        $refines = array_map(
+          static fn (array $refiner): string => '`' . $refiner['key'] . '`' . ($refiner['watches'] === [] ? '' : ' (watching ' . self::codes($refiner['watches']) . ')'),
+          $alter['refines'],
+        );
         $document .= "\n- Altered by `" . $alter['class'] . '` (`' . $alter['module'] . '`), '
-          . ($alter['situations'] === [] ? 'in every situation' : 'in ' . self::codes($alter['situations'])) . ".\n";
+          . ($alter['situations'] === [] ? 'in every situation' : 'in ' . self::codes($alter['situations']))
+          . ($refines === [] ? '' : '; it refines ' . implode(', ', $refines)) . ".\n";
       }
       foreach ($surface['variants'] as $key => $variants) {
         $document .= "\n- Slot `" . $key . '` is filled by: ';

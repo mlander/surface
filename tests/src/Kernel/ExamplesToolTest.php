@@ -113,7 +113,7 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
     $stored = $config();
     $this->assertSame('Autumn meetup', $stored['title']);
     $this->assertSame('harbour_deck', $stored['room']);
-    $this->assertSame(90, $stored['capacity']);
+    $this->assertSame(50, $stored['capacity']);
     $this->assertEquals(['price' => 12.5, 'currency' => 'EUR'], $stored['ticket']);
 
     // The examples' README quotes the three answers.

@@ -18,7 +18,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * and sends back the room stored under the old one, and has to be
  * refused on the room; the other moves the venue, its room and the
  * ticket's variant at once, all valid, and has to be written. Each says
- * what happened: an error on the element, or the status message.
+ * what happened: an error on the element, or the status message. With
+ * example 4's module on, a large event is refused without its licence
+ * and written with one.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -137,7 +139,8 @@ class ExamplesFullSubmitTest extends BrowserTestBase {
       'surface[pricing]' => 'paid',
       'surface[contact][email]' => 'gala@example.com',
       'surface[contact][phone]' => '',
-      'surface[privacy_notice]' => '',
+      'surface[third_party_settings][data_surface_examples_compliance][licence]' => '',
+      'surface[third_party_settings][data_surface_examples_compliance][stewards]' => '1',
     ];
 
     // The free ticket's key under paid is refused, and nothing written:
@@ -161,6 +164,44 @@ class ExamplesFullSubmitTest extends BrowserTestBase {
     $this->assertSame('riverside_main', $stored['room']);
     $this->assertSame('paid', $stored['pricing']);
     $this->assertEquals(['price' => 25.0, 'currency' => 'USD'], $stored['ticket']);
+  }
+
+  /**
+   * Tests step 3 refuses a large event without a licence, and writes one.
+   *
+   * Example 4's module caps the capacity at a hundred until an event
+   * licence is given, and asks for a steward per fifty people.
+   */
+  public function testStepThreeNeedsLicenceAboveOneHundred(): void {
+    $fields = [
+      'surface[title]' => 'Festival',
+      'surface[capacity]' => '150',
+      'surface[open]' => '1',
+      'surface[venue]' => 'riverside',
+      'surface[room]' => 'riverside_main',
+      'surface[pricing]' => 'free',
+      'surface[ticket][note]' => '',
+      'surface[contact][email]' => 'festival@example.com',
+      'surface[contact][phone]' => '',
+      'surface[third_party_settings][data_surface_examples_compliance][stewards]' => '3',
+    ];
+    $licence = 'surface[third_party_settings][data_surface_examples_compliance][licence]';
+
+    $before = $this->stored('step3');
+    $this->rawPost('surface-examples/3', $fields + [$licence => '']);
+    $assert = $this->assertSession();
+    $assert->statusCodeEquals(200);
+    $assert->elementExists('css', 'input[name="surface[capacity]"][aria-invalid="true"]');
+    $assert->elementNotExists('css', 'input[name="' . $licence . '"][aria-invalid="true"]');
+    $assert->pageTextNotContains('The changes have been saved.');
+    $this->assertSame($before, $this->stored('step3'));
+
+    $this->rawPost('surface-examples/3', $fields + [$licence => 'EV-2048']);
+    $assert->statusCodeEquals(200);
+    $assert->pageTextContains('The changes have been saved.');
+    $stored = $this->stored('step3');
+    $this->assertSame(150, $stored['capacity']);
+    $this->assertSame(['licence' => 'EV-2048', 'stewards' => 3], $stored['third_party_settings']['data_surface_examples_compliance']);
   }
 
 }

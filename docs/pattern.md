@@ -96,8 +96,9 @@ tool; it is a service, so its methods are instance methods.
   a renamed parameter should fail at build rather than silently stop
   watching. Its signature is its dependency declaration, the way a
   situation's is. `DemoBlockSurface::fieldOfBundle()` watches the entity
-  type and the bundle. It runs once every watched sibling has a value,
-  and again when any of them changes. It returns the definition
+  type and the bundle. It runs once every watched sibling has a value
+  (a key its alter mounted is never waited for), and again when any of
+  them changes. It returns the definition
   tightened with plain core API, and the framework checks the result is
   narrower, so a refinement cannot widen, retype, or add or remove a
   map property. It receives only what it named, so it is a pure
@@ -325,7 +326,10 @@ final class DemoBlockAlter implements SurfaceAlterInterface {
 
 - What an alter adds is mounted under its module,
   `third_party_settings.<module>.<key>`, so the owner's storage and
-  schema never have to know it.
+  schema never have to know it. Its `#[RefinesInput]` methods may
+  refine and watch those keys by the names it added them under, and
+  never another module's; a watched one is handed as it stands, NULL
+  while unanswered.
 - `describe()` rewords a key anyone declared: label and description
   only, because that changes nothing about what is accepted.
 - `extendChoices()` offers more values on a key whose owner declared a

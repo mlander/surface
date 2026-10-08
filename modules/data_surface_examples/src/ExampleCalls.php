@@ -10,8 +10,9 @@ namespace Drupal\data_surface_examples;
  * The kernel test makes them, scripts/examples-dry-run.php prints what
  * they answer, and the example 5 page and the README show them as Drush
  * commands. Every call says where the event is, so none depends on what
- * an earlier one wrote, and every capacity is a hundred or fewer, so the
- * compliance module of example 4 does not change the answers.
+ * an earlier one wrote, and every capacity is fifty or fewer, which needs
+ * no event licence and one steward, the default, so the compliance
+ * module of example 4 does not change the answers.
  */
 final class ExampleCalls {
 
@@ -28,7 +29,7 @@ final class ExampleCalls {
       'label' => 'Valid values',
       'values' => [
         'title' => 'Autumn meetup',
-        'capacity' => 90,
+        'capacity' => 50,
         'venue' => 'harbour',
         'room' => 'harbour_deck',
         'pricing' => 'paid',
@@ -51,7 +52,7 @@ final class ExampleCalls {
       'label' => 'A dry run',
       'values' => [
         'title' => 'Winter social',
-        'capacity' => 100,
+        'capacity' => 40,
         'venue' => 'riverside',
         'room' => 'riverside_east',
         'pricing' => 'free',

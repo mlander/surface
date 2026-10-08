@@ -5,7 +5,11 @@ data_surface_examples.registration.third_party.data_surface_examples_compliance:
   type: mapping
   label: 'Compliance settings'
   mapping:
-    privacy_notice:
+    licence:
       type: string
-      label: 'Privacy notice'
+      label: 'Event licence'
+      nullable: true
+    stewards:
+      type: integer
+      label: 'Stewards'
       nullable: true

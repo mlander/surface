@@ -499,11 +499,17 @@ mounted under its own module's name — at
 storage and schema never have to know a contributor's keys. Its
 `#[RefinesInput]` methods tighten the owner's keys, running after the
 owner's own, and may tighten the keys the alter itself added, named as
-the alter named them: `#[RefinesInput('privacy_notice')]` in the
-examples' compliance alter makes its notice required above a hundred
-people. A mounted key can be refined by its alter but watched by no
-one: its value lives under the mount, where no refiner can be handed it
-yet ([Decisions](decisions.md#an-alter-refines-its-own-mounted-key)).
+the alter named them. They may watch the owner's keys and the keys the
+alter itself added, the latter named the same way and handed as they
+stand, NULL while unanswered, so the parameter takes NULL. In the
+examples' compliance alter, `#[RefinesInput('capacity')]` watches the
+alter's own `licence` and caps the owner's capacity at a hundred while
+it is empty, and `#[RefinesInput('stewards')]` raises the alter's own
+stewards count with the owner's `capacity`. A watched mounted key is
+known everywhere else by its path, `third_party_settings.<module>.<key>`:
+the capacity's dependencies, its AJAX trigger and its `dependsOn` name
+the licence that way. Another module's mounted key is watched by no
+alter ([Decisions](decisions.md#an-alter-watches-its-own-mounted-key)).
 
 The one widening an alter may make is `extendChoices()`: more values on
 a key whose owner declared a list of allowed values. The values are the

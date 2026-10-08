@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface\Pipeline;
 
+use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
@@ -543,7 +544,9 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       return FALSE;
     }
     foreach ($dependencies as $dependency) {
-      if (($values[$dependency] ?? NULL) !== ($current[$dependency] ?? NULL)) {
+      // A key an alter mounted is named by its dotted path.
+      $parents = explode('.', $dependency);
+      if (NestedArray::getValue($values, $parents) !== NestedArray::getValue($current, $parents)) {
         return FALSE;
       }
     }

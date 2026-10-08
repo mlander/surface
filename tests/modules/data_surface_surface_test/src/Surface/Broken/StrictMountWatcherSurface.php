@@ -9,12 +9,12 @@ use Drupal\data_surface\Surface\ShapeInterface;
 use Drupal\data_surface\Surface\SurfaceInterface;
 
 /**
- * A surface whose alter watches a key it mounted, which is refused.
+ * A surface whose alter watches its own mounted key without taking NULL.
  *
- * @see \Drupal\data_surface_surface_test\SurfaceAlter\MountWatcherAlter
+ * @see \Drupal\data_surface_surface_test\SurfaceAlter\StrictMountWatcherAlter
  */
-#[Surface('surface_test.broken.mount_watcher')]
-final class MountWatcherSurface implements SurfaceInterface {
+#[Surface('surface_test.broken.strict_mount_watcher')]
+final class StrictMountWatcherSurface implements SurfaceInterface {
 
   /**
    * {@inheritdoc}

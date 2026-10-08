@@ -46,7 +46,7 @@ final class SurfaceCatalogue {
   /**
    * Describes every discovered surface.
    *
-   * @return array<string, array{id: string, class: class-string, module: string, identity: string[], target: class-string|null, access: class-string|null, plugins: list<string>, situations: list<array{id: string, label: string, provider: string, module: string, parameters: string[], creates: bool|null, permission: string|null, unresolvable: string[], standalone: bool}>, alters: list<array{class: class-string, module: string, situations: string[]}>, variants: array<string, array<string, class-string>>, derived: array<string, string>}>
+   * @return array<string, array{id: string, class: class-string, module: string, identity: string[], target: class-string|null, access: class-string|null, plugins: list<string>, situations: list<array{id: string, label: string, provider: string, module: string, parameters: string[], creates: bool|null, permission: string|null, unresolvable: string[], standalone: bool}>, alters: list<array{class: class-string, module: string, situations: string[], refines: list<array{key: string, watches: string[]}>}>, variants: array<string, array<string, class-string>>, derived: array<string, string>}>
    *   The surfaces, keyed and sorted by id. `plugins` lists the plugins
    *   whose configuration the surface is, as `<host type>:<plugin id>`.
    *   A situation's `creates` is NULL when it needs a subject to say;
@@ -56,7 +56,10 @@ final class SurfaceCatalogue {
    *   providers of one id are both listed, as they are both refused when
    *   the surface is built. `variants` are the declared ones, each
    *   value's #[SurfaceVariant] class keyed by slot; `derived` says, per
-   *   slot, where the variants of every other value come from.
+   *   slot, where the variants of every other value come from. An
+   *   alter's `refines` lists its #[RefinesInput] methods by the key each
+   *   refines and the keys it watches, named as the alter names them: a
+   *   key it mounted itself by that key's own name.
    */
   public function describe(): array {
     $catalogue = [];
@@ -85,6 +88,10 @@ final class SurfaceCatalogue {
           'class' => $alter->class,
           'module' => $alter->module,
           'situations' => $alter->situations,
+          'refines' => array_map(static fn (RefinerDefinition $refiner): array => [
+            'key' => $refiner->key,
+            'watches' => $refiner->watched(),
+          ], $alter->refiners),
         ], $definition->alters),
         'variants' => $definition->variants,
         'derived' => $this->derivedVariants->sources($definition->class),

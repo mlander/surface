@@ -46,6 +46,9 @@ use Drupal\data_surface\DataSurfaceRefinerInterface;
  * alter's keys by. Asked to refine the mount, the link refines only its
  * own module's property inside it, each method handed that property's
  * definition, so the method reads exactly as it would on an owner's key.
+ * A method watching a key its alter added is handed that key's value
+ * the same way, read at its dotted path, `third_party_settings.<module>.
+ * <key>`, which is the name the engine knows the dependency by.
  *
  * @internal
  */
@@ -69,12 +72,31 @@ final class RefinesInputRefiner implements DataSurfaceRefinerInterface {
    * @param string|null $module
    *   The alter's module, whose property inside the mount the methods
    *   bound under self::MOUNT refine; NULL for a surface's own link.
+   * @param array<string, string> $paths
+   *   The keys the alter mounted that its methods watch, each mapped to
+   *   the dotted path its value is handed under.
    */
   public function __construct(
     protected object|string $instance,
     protected array $bindings,
     protected ?string $module = NULL,
+    protected array $paths = [],
   ) {
+  }
+
+  /**
+   * Spells the dotted path of a key an alter mounted.
+   *
+   * @param string $module
+   *   The alter's module.
+   * @param string $key
+   *   The key, as the alter added it.
+   *
+   * @return string
+   *   `third_party_settings.<module>.<key>`.
+   */
+  public static function path(string $module, string $key): string {
+    return self::MOUNT . '.' . $module . '.' . $key;
   }
 
   /**
@@ -125,7 +147,8 @@ final class RefinesInputRefiner implements DataSurfaceRefinerInterface {
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition to refine.
    * @param array $values
-   *   Sibling values, keyed by input key; every watched key is present.
+   *   Sibling values, keyed by input key, a mounted one by its dotted
+   *   path; every watched key is present.
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface
    *   What the method returned.
@@ -136,7 +159,7 @@ final class RefinesInputRefiner implements DataSurfaceRefinerInterface {
   public function invoke(RefinerDefinition $refiner, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
     $arguments = [$definition];
     foreach ($refiner->watched() as $key) {
-      $arguments[] = $values[$key] ?? NULL;
+      $arguments[] = $values[$this->paths[$key] ?? $key] ?? NULL;
     }
     $method = new \ReflectionMethod($this->instance, $refiner->method);
     $refined = $method->invokeArgs($method->isStatic() || !is_object($this->instance) ? NULL : $this->instance, $arguments);

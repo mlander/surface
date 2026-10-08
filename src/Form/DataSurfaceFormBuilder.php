@@ -16,6 +16,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Render\ElementInfoManagerInterface;
+use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceInterface;
@@ -222,6 +223,14 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
       NestedArray::unsetValue($input, explode('.', $dotted));
     }
     $values = array_replace($stored, $input);
+    foreach ($discarded as $dotted) {
+      // A mounted key falls back to what is stored, as a whole key does;
+      // a child's key, inside its own frame, to the child's defaults.
+      $parents = explode('.', $dotted);
+      if (count($parents) > 1 && !$surface->getDefinitions()->entry($parents[0])?->isNested()) {
+        static::restore($values, $stored, $parents);
+      }
+    }
     foreach (array_keys($orphaned) as $dotted) {
       NestedArray::setValue($values, explode('.', (string) $dotted), NULL, TRUE);
     }
@@ -229,6 +238,46 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
       $values[self::STANDING_KEY] = $orphaned;
     }
     return $values;
+  }
+
+  /**
+   * Puts what is stored back at one path, or nothing when nothing is.
+   *
+   * @param array $values
+   *   The values being settled.
+   * @param array $stored
+   *   What is stored.
+   * @param string[] $parents
+   *   The path.
+   */
+  protected static function restore(array &$values, array $stored, array $parents): void {
+    $exists = FALSE;
+    $held = NestedArray::getValue($stored, $parents, $exists);
+    if ($exists) {
+      NestedArray::setValue($values, $parents, $held, TRUE);
+      return;
+    }
+    NestedArray::unsetValue($values, $parents);
+  }
+
+  /**
+   * Reads a definition by key, or by dotted path to a mounted key.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The surface.
+   * @param string $path
+   *   A key, or `third_party_settings.<module>.<key>`.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
+   *   The definition, or NULL when nothing is declared there.
+   */
+  protected static function definitionAt(DataSurfaceInterface $surface, string $path): ?DataDefinitionInterface {
+    $parents = explode('.', $path);
+    $definition = $surface->getDefinition((string) array_shift($parents));
+    foreach ($parents as $property) {
+      $definition = $definition instanceof ComplexDataDefinitionInterface ? $definition->getPropertyDefinition($property) : NULL;
+    }
+    return $definition;
   }
 
   /**
@@ -304,14 +353,20 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
    * @return array{0: string[], 1: array<string, mixed>}
    *   The keys whose input is dropped, in the order they were found; and
    *   the keys held unanswered, each mapped to the stored value it
-   *   stands for.
+   *   stands for. A key an alter mounted is named by its dotted path.
    */
   protected function settleFrame(DataSurfaceInterface $surface, array $stored, array $input): array {
-    $refinements = $surface->getDefinitions()->refinements();
+    // One mounted key at a time: a moved capacity drops the stewards
+    // count it narrows, and not the licence beside it.
+    $refinements = $surface->getDefinitions()->refinementPaths();
     if ($refinements === []) {
       return [[], []];
     }
-    $targets = array_intersect_key($refinements, $input);
+    $targets = array_filter(
+      $refinements,
+      static fn (string $name): bool => NestedArray::keyExists($input, explode('.', $name)),
+      ARRAY_FILTER_USE_KEY,
+    );
     // What the person has in front of them right now, before anything is
     // taken away. Every "did this move?" question below is asked against
     // this, so a key is only ever judged against the edit it was made
@@ -325,7 +380,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
       $again = FALSE;
       foreach ($targets as $name => $dependencies) {
         $name = (string) $name;
-        if (isset($discarded[$name]) || $this->stillStands($refined, $name, $dependencies, $input[$name], $overlay, $values)) {
+        if (isset($discarded[$name]) || $this->stillStands($refined, $name, $dependencies, NestedArray::getValue($input, explode('.', $name)), $overlay, $values)) {
           continue;
         }
         $discarded[$name] = $name;
@@ -344,11 +399,11 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
         $name = (string) $name;
         // Only a key standing on what is stored: input that is still
         // there was just judged to stand.
-        if (isset($orphaned[$name]) || (array_key_exists($name, $input) && !isset($discarded[$name]))) {
+        if (isset($orphaned[$name]) || (NestedArray::keyExists($input, explode('.', $name)) && !isset($discarded[$name]))) {
           continue;
         }
         if ($this->isOrphaned($refined, $name, $dependencies, $values, $stored)) {
-          $orphaned[$name] = $values[$name];
+          $orphaned[$name] = NestedArray::getValue($values, explode('.', $name));
           $again = TRUE;
         }
       }
@@ -364,7 +419,8 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
    * @param array $input
    *   The in-progress input for them.
    * @param string[] $discarded
-   *   The keys whose input is dropped so far.
+   *   The keys, or mounted keys' dotted paths, whose input is dropped
+   *   so far.
    * @param array<string, mixed> $orphaned
    *   The keys held unanswered so far.
    *
@@ -373,11 +429,22 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
    *   each orphaned key.
    */
   protected static function frameValues(array $stored, array $input, array $discarded, array $orphaned): array {
-    return array_replace(
-      $stored,
-      array_diff_key($input, array_flip($discarded)),
-      array_fill_keys(array_map('strval', array_keys($orphaned)), NULL),
-    );
+    foreach ($discarded as $dotted) {
+      NestedArray::unsetValue($input, explode('.', $dotted));
+    }
+    $values = array_replace($stored, $input);
+    foreach ($discarded as $dotted) {
+      $parents = explode('.', $dotted);
+      if (count($parents) > 1) {
+        // A mounted key's input dropped: what is stored for it, as for a
+        // whole key.
+        static::restore($values, $stored, $parents);
+      }
+    }
+    foreach (array_keys($orphaned) as $dotted) {
+      NestedArray::setValue($values, explode('.', (string) $dotted), NULL, TRUE);
+    }
+    return $values;
   }
 
   /**
@@ -395,7 +462,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
    * @param \Drupal\data_surface\DataSurfaceInterface $refined
    *   The surface refined against the values as they now stand.
    * @param string $name
-   *   The target key.
+   *   The target key, or a mounted key's dotted path.
    * @param string[] $dependencies
    *   The keys the target refines against.
    * @param array $values
@@ -407,18 +474,19 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
    *   TRUE when the key is to be held unanswered.
    */
   protected function isOrphaned(DataSurfaceInterface $refined, string $name, array $dependencies, array $values, array $stored): bool {
-    $value = $values[$name] ?? NULL;
+    $value = NestedArray::getValue($values, explode('.', $name));
     if ((!is_int($value) && !is_string($value)) || !ValueState::isConfigured($value)) {
       return FALSE;
     }
     $moved = FALSE;
     foreach ($dependencies as $dependency) {
-      $moved = $moved || !static::sameAnswer($values[$dependency] ?? NULL, $stored[$dependency] ?? NULL);
+      $parents = explode('.', $dependency);
+      $moved = $moved || !static::sameAnswer(NestedArray::getValue($values, $parents), NestedArray::getValue($stored, $parents));
     }
     if (!$moved) {
       return FALSE;
     }
-    $definition = $refined->getDefinition($name);
+    $definition = static::definitionAt($refined, $name);
     if ($definition === NULL || $definition instanceof ListDataDefinitionInterface || $refined->getDefinitions()->entry($name)?->slot !== NULL) {
       return FALSE;
     }
@@ -471,7 +539,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
    * @param \Drupal\data_surface\DataSurfaceInterface $refined
    *   The surface refined against the values as they now stand.
    * @param string $name
-   *   The target key.
+   *   The target key, or a mounted key's dotted path.
    * @param string[] $dependencies
    *   The keys the target refines against.
    * @param mixed $value
@@ -487,7 +555,9 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
    */
   protected function stillStands(DataSurfaceInterface $refined, string $name, array $dependencies, mixed $value, array $overlay, array $values): bool {
     foreach ($dependencies as $dependency) {
-      if (($overlay[$dependency] ?? NULL) !== ($values[$dependency] ?? NULL)) {
+      // A key an alter mounted is named by its dotted path.
+      $parents = explode('.', $dependency);
+      if (NestedArray::getValue($overlay, $parents) !== NestedArray::getValue($values, $parents)) {
         return FALSE;
       }
     }
@@ -512,7 +582,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
     // alone. A list is left alone for the same reason the stale rule
     // leaves one alone: some items kept and others dropped is a shape
     // neither the widget nor this rule has.
-    $definition = $refined->getDefinition($name);
+    $definition = static::definitionAt($refined, $name);
     if ($definition === NULL || $definition instanceof ListDataDefinitionInterface || (!is_int($value) && !is_string($value))) {
       return TRUE;
     }
@@ -1035,7 +1105,15 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
    */
   protected function wireRefinement(array $element, DataSurfaceInterface $surface, array $values, array $path, string $wrapper_id): array {
     $definitions = $surface->getDefinitions();
-    $refinements = $definitions->refinements();
+    // One property at a time inside the mount: a key an alter refines
+    // there is a target of its own, and a key it watches there a trigger.
+    $refinements = $definitions->refinementPaths();
+    foreach (array_keys($refinements) as $target) {
+      $parents = explode('.', (string) $target);
+      if (count($parents) > 1 && is_array(NestedArray::getValue($element, $parents))) {
+        NestedArray::setValue($element, [...$parents, self::REFRESH_KEY], implode('.', [...$path, ...$parents]));
+      }
+    }
     foreach ($definitions->entries() as $name => $entry) {
       $name = (string) $name;
       if (!isset($element[$name]) || !is_array($element[$name])) {
@@ -1070,18 +1148,20 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
       }
     }
     foreach ($definitions->refinementDependencies() as $dependency) {
-      if (!isset($element[$dependency]) || !is_array($element[$dependency])) {
+      $parents = explode('.', $dependency);
+      $trigger = NestedArray::getValue($element, $parents);
+      if (!is_array($trigger)) {
         continue;
       }
-      $element[$dependency] = $this->attachRefinementAjax(
-        $element[$dependency],
+      NestedArray::setValue($element, $parents, $this->attachRefinementAjax(
+        $trigger,
         $wrapper_id,
-        [...$path, $dependency],
+        [...$path, ...$parents],
         array_map(
           static fn (string $target): string => implode('.', [...$path, $target]),
           static::dependentsOf($dependency, $refinements),
         ),
-      );
+      ));
     }
     return $element;
   }
@@ -1096,7 +1176,8 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
    * @param string $key
    *   The key that changed.
    * @param array<string, string[]> $refinements
-   *   The frame's refinement map: target => the keys it refines against.
+   *   The frame's refinement map, one mounted key at a time: target =>
+   *   the keys it refines against.
    *
    * @return string[]
    *   The dependents, in declaration order; never the key itself.

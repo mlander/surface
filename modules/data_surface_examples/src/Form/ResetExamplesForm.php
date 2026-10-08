@@ -18,7 +18,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Puts every example's settings back to what the module ships.
  *
  * For a retake: whatever the examples were saved with, and whatever
- * another module mounted on them — the compliance module's notice under
+ * another module mounted on them — the compliance module's licence under
  * example 3's third party settings — each config object is replaced
  * whole by its file in config/install. Read from the files rather than
  * written down here, so a shipped value that changes is reset to the new

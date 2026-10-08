@@ -180,13 +180,39 @@ A `#[RefinesInput]` method on an alter may name a key that alter added,
 by the name it added it under; it is bound to the mount,
 `third_party_settings`, and refines only its own module's property
 inside it, so the method reads as it would on an owner's key and the
-engine's narrowing check, AJAX edges and discard rule apply to the
-mount unchanged. It watches the owner's keys only: watching any mounted
-key is refused, since its value lives under the mount and handing it
-over needs dotted refinement paths, roadmap item 16. *Changed for the
-example 4 of the examples, which needs a notice the alter adds to turn required
-above a hundred people; until then such a method was refused.*
-(`Surfaces::bindRefiners()`, `RefinesInputRefiner::refineMounted()`)
+engine's narrowing check applies to the mount unchanged. Its edge is
+recorded by the key's dotted path, `third_party_settings.<module>.<key>`,
+so the form rebuilds and the discard cascade drops that one key rather
+than the whole mount; the mount itself is gated on the union of what
+its keys watch. *Changed for example 4 of the examples, which needed a
+key the alter adds to tighten with the owner's capacity; until then
+such a method was refused.* (`Surfaces::bindRefiners()`,
+`RefinesInputRefiner::refineMounted()`, `DefinitionMap::refinementPaths()`)
+
+### An alter watches its own mounted key
+
+An alter's method may watch the keys that alter mounted, named as the
+alter added them, whether it refines the owner's key or one of its own.
+The watch is resolved inside the alter's own namespace and recorded by
+the dotted path, so the engine's edge, the form's AJAX trigger, the
+discard cascade and the served contract's `dependsOn` all name
+`third_party_settings.<module>.<key>`, and the method is handed the
+value read at that path. Watching another module's mounted key stays
+refused, as a child's watching its parent does: what another module
+mounted is that module's. A mounted watch never gates: the value is
+handed as it stands, NULL while unanswered, and the parameter receiving
+it has to accept NULL (refused at build otherwise). Gating is per key,
+so an unanswered optional key of the alter's would otherwise suspend
+the owner's own refiners of the same key, and the alter would have
+widened what the owner narrowed: the compliance alter's licence, empty,
+would have lifted the room's limit along with its own hundred. The
+cycle check follows each path's own edges, so a capacity watching the
+licence while the stewards beside it watch the capacity is no cycle.
+*Changed for example 4 of the examples; until then watching any mounted
+key was refused, pending dotted refinement paths, `ROADMAP.md` item 16,
+of which this is the one case the third-party mount needs.*
+(`Surfaces::assertNotWatchingForeignMount()`, `Surfaces::mountedWatches()`,
+`DataSurface::dependencyValues()`, `DataSurfaceBuilder::edgesOf()`)
 
 ### A storage shape for a mount
 

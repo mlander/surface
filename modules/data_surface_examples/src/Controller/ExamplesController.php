@@ -100,7 +100,7 @@ final class ExamplesController extends ControllerBase {
     $enabled = $this->moduleHandler()->moduleExists(self::COMPLIANCE);
     return [
       'what' => [
-        '#markup' => '<p>' . $this->t('Example 4 has no form of its own. Enable @module and reload example 3: the form gains a privacy notice, the title is relabelled, and the notice becomes required when the capacity is above 100. Example 3 is not changed.', ['@module' => self::COMPLIANCE]) . '</p>',
+        '#markup' => '<p>' . $this->t('Example 4 has no form of its own. Enable @module and reload example 3: the form gains an event licence and a stewards count, and the title is relabelled. Without a licence the capacity stops at 100; type EV-2048 and it goes back to what the room seats. Change the capacity and the stewards it needs change under their field. Example 3 is not changed.', ['@module' => self::COMPLIANCE]) . '</p>',
       ],
       'how' => [
         '#theme' => 'item_list',
@@ -189,7 +189,7 @@ final class ExamplesController extends ControllerBase {
       ],
       4 => [
         'title' => $this->t('others get a say'),
-        'sentence' => $this->t('Another module adds a key to example 3, rewords a label, and makes its key required above a hundred people, without touching example 3.'),
+        'sentence' => $this->t('Another module adds two keys to example 3, rewords a label, caps the capacity at a hundred until an event licence is given, and asks for stewards as the capacity grows, without touching example 3.'),
         'items' => [
           $this->route('data_surface_examples.step4'),
           $this->t('The alter: @lines lines of code.', ['@lines' => $this->complianceLines()]),

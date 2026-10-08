@@ -54,8 +54,10 @@ use Drupal\data_surface\SurfaceAttachment;
  *    RefinesInputRefiner link in the owner's chain of that key, the
  *    surface's links before any alter's. The surface's link holds its
  *    class name, its refiners being static; an alter's holds the alter,
- *    an autowired service. A method that watches nothing runs once,
- *    here, and is held to the narrowing check.
+ *    an autowired service. An alter's method may refine and watch the
+ *    keys that alter mounted, each bound by its dotted path inside the
+ *    mount. A method that watches nothing runs once, here, and is held
+ *    to the narrowing check.
  * 6. The children, each through this same build step in its own frame.
  * 7. The seal.
  *
@@ -174,10 +176,18 @@ final class Surfaces implements SurfacesInterface {
     $slots = $this->slotsOf($definition, $inputs, $input_keys);
 
     $this->applyContext($builder, $definition, $context, $input_keys, $subsurfaces);
+    // What each module mounted, so an alter's method may watch its own
+    // module's keys and is told so when it names another's.
+    $mounted_by = [];
+    foreach ($additions as $contributor => $shapes) {
+      foreach (isset($shapes[0]) ? $shapes[0]->keys() : [] as $key) {
+        $mounted_by[$key][] = (string) $contributor;
+      }
+    }
     foreach ($links as [$instance, $refiners, $module]) {
       $extended = $module !== NULL && isset($additions[$module][0]) ? $additions[$module][0]->extended() : [];
       $mounted = $module !== NULL && isset($additions[$module][0]) ? $additions[$module][0]->keys() : [];
-      $this->bindRefiners($builder, $definition, $instance, $refiners, $input_keys, $outputs->keys(), $subsurfaces, $ancestry === [] ? NULL : $ancestry[count($ancestry) - 1], $module, $extended, $mounted);
+      $this->bindRefiners($builder, $definition, $instance, $refiners, $input_keys, $outputs->keys(), $subsurfaces, $ancestry === [] ? NULL : $ancestry[count($ancestry) - 1], $module, $extended, $mounted, $module === NULL ? [] : $mounted_by);
     }
 
     // The children, each through this same build step in its own frame:
@@ -617,35 +627,47 @@ final class Surfaces implements SurfacesInterface {
    *   The owner's keys that alter offered more values on with
    *   extendChoices(): its methods on those keys narrow its own values.
    * @param string[] $mounted
-   *   The keys that alter added, which its methods may refine too.
+   *   The keys that alter added, which its methods may refine and watch
+   *   too.
+   * @param array<string, string[]> $mountedBy
+   *   For an alter, every key any alter of the surface mounted, mapped
+   *   to the modules that mounted it; empty for the surface itself.
    *
    * @throws \LogicException
    *   When a method fails a seal-time check, or one that watches nothing
    *   widens what it was given.
    */
-  protected function bindRefiners(DataSurfaceBuilderInterface $builder, SurfaceDefinition $definition, object|string $instance, array $refiners, array $input_keys, array $output_keys, array $subsurfaces = [], ?array $parent = NULL, ?string $module = NULL, array $extended = [], array $mounted = []): void {
+  protected function bindRefiners(DataSurfaceBuilderInterface $builder, SurfaceDefinition $definition, object|string $instance, array $refiners, array $input_keys, array $output_keys, array $subsurfaces = [], ?array $parent = NULL, ?string $module = NULL, array $extended = [], array $mounted = [], array $mountedBy = []): void {
     if ($refiners === []) {
       return;
     }
     $bindings = [];
     $once = [];
+    $paths = [];
     foreach ($refiners as $refiner) {
       // Decision: see docs/decisions.md#an-alter-refines-its-own-mounted-key.
       $own = $module !== NULL && in_array($refiner->key, $mounted, TRUE) && !in_array($refiner->key, $input_keys, TRUE);
       static::assertStaticOnSurface($definition, $refiner, $module);
       static::assertWalled($definition, $refiner, $input_keys, $subsurfaces, $parent);
-      static::assertNotWatchingMounted($definition, $refiner, $input_keys, $mounted);
-      static::assertRefinable($definition, $refiner, $own ? [...$input_keys, $refiner->key] : $input_keys, $output_keys);
+      static::assertNotWatchingForeignMount($definition, $refiner, $input_keys, $mounted, $mountedBy);
+      $refinable = $own ? [...$input_keys, $refiner->key] : $input_keys;
+      static::assertRefinable($definition, $refiner, $refinable, $output_keys, [...$input_keys, ...$mounted]);
+      // Decision: see docs/decisions.md#an-alter-watches-its-own-mounted-key.
+      $watched = static::mountedWatches($definition, $refiner, $input_keys, $module, $mounted);
+      $paths += $watched;
       $key = $own ? RefinesInputRefiner::MOUNT : $refiner->key;
       if ($refiner->watched() === []) {
         $once[] = [$refiner, $own];
         continue;
       }
       // Decision: see docs/decisions.md#gating-per-key.
-      $builder->addRefinement($key, $refiner->watched());
+      $builder->addRefinement(
+        $own ? RefinesInputRefiner::path((string) $module, $refiner->key) : $refiner->key,
+        array_map(static fn (string $name): string => $watched[$name] ?? $name, $refiner->watched()),
+      );
       $bindings[$key][] = $refiner;
     }
-    $link = new RefinesInputRefiner($instance, $bindings, $module);
+    $link = new RefinesInputRefiner($instance, $bindings, $module, $paths);
     foreach (array_keys($bindings) as $key) {
       // An alter's method on a key it offered more values on is that
       // contribution's refiner: the engine hands it the alter's values
@@ -697,11 +719,11 @@ final class Surfaces implements SurfacesInterface {
   }
 
   /**
-   * Refuses a method that watches a key an alter mounted.
+   * Refuses an alter's method that watches another module's mounted key.
    *
-   * A mounted key's value lives inside `third_party_settings`, not
-   * beside the owner's keys, so nothing could hand it to the method;
-   * watching one needs dotted refinement paths (ROADMAP.md, item 16).
+   * An alter may watch the keys it mounted itself, by the names it added
+   * them under; what another module mounted is that module's, and an
+   * alter does not read it, as a child does not read its parent.
    *
    * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $definition
    *   The surface.
@@ -711,21 +733,71 @@ final class Surfaces implements SurfacesInterface {
    *   The owner's input keys.
    * @param string[] $mounted
    *   The keys the method's alter added.
+   * @param array<string, string[]> $mountedBy
+   *   Every mounted key, mapped to the modules that mounted it; empty
+   *   for the surface's own methods.
    *
    * @throws \LogicException
-   *   Naming the method and the key it watches.
+   *   Naming the method, the key and the module that mounted it.
    */
-  protected static function assertNotWatchingMounted(SurfaceDefinition $definition, RefinerDefinition $refiner, array $input_keys, array $mounted): void {
+  protected static function assertNotWatchingForeignMount(SurfaceDefinition $definition, RefinerDefinition $refiner, array $input_keys, array $mounted, array $mountedBy): void {
     foreach ($refiner->watched() as $watched) {
-      if (in_array($watched, $mounted, TRUE) && !in_array($watched, $input_keys, TRUE)) {
+      if (isset($mountedBy[$watched]) && !in_array($watched, $input_keys, TRUE) && !in_array($watched, $mounted, TRUE)) {
         throw new \LogicException(sprintf(
-          '%s watches "%s", a key its alter mounted on the %s surface. A mounted key may be refined by its own alter, but not watched: its value lives under third_party_settings, where no refiner can be handed it yet.',
+          '%s watches "%s", a key the %s module mounted on the %s surface. An alter may watch the keys it mounted itself and the owner\'s, never another module\'s.',
           $refiner->describe(),
           $watched,
+          implode(', ', $mountedBy[$watched]),
           $definition->id,
         ));
       }
     }
+  }
+
+  /**
+   * Resolves the keys an alter's method watches that the alter mounted.
+   *
+   * Each is named as the alter added it and lives at its dotted path
+   * inside the mount, which is where it is read from. It is handed as it
+   * stands, NULL while unanswered, because it never holds the key it
+   * refines back, so the parameter receiving it has to accept NULL.
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $definition
+   *   The surface.
+   * @param \Drupal\data_surface\SurfaceBuild\RefinerDefinition $refiner
+   *   The method.
+   * @param string[] $input_keys
+   *   The owner's input keys, which win over a mounted key of one name.
+   * @param string|null $module
+   *   The module of an alter, or NULL for the surface itself.
+   * @param string[] $mounted
+   *   The keys that alter added.
+   *
+   * @return array<string, string>
+   *   The watched keys the alter mounted, each mapped to its dotted path.
+   *
+   * @throws \LogicException
+   *   When the parameter receiving one cannot take NULL.
+   */
+  protected static function mountedWatches(SurfaceDefinition $definition, RefinerDefinition $refiner, array $input_keys, ?string $module, array $mounted): array {
+    $paths = [];
+    foreach ($refiner->watched() as $position => $watched) {
+      if ($module === NULL || in_array($watched, $input_keys, TRUE) || !in_array($watched, $mounted, TRUE)) {
+        continue;
+      }
+      $parameter = (new \ReflectionMethod($refiner->class, $refiner->method))->getParameters()[$position + 1] ?? NULL;
+      if ($parameter !== NULL && !$parameter->allowsNull()) {
+        throw new \LogicException(sprintf(
+          '%s watches "%s", a key its alter mounted on the %s surface, which is handed as it stands and is NULL until answered: declare $%s nullable.',
+          $refiner->describe(),
+          $watched,
+          $definition->id,
+          $parameter->getName(),
+        ));
+      }
+      $paths[$watched] = RefinesInputRefiner::path($module, $watched);
+    }
+    return $paths;
   }
 
   /**
@@ -793,11 +865,14 @@ final class Surfaces implements SurfacesInterface {
    *   The owner's input keys.
    * @param string[] $output_keys
    *   The owner's output keys.
+   * @param string[]|null $watchable
+   *   The keys the method may watch, when more than the input keys: an
+   *   alter's adds the keys it mounted.
    *
    * @throws \LogicException
    *   Naming the method and what is wrong with it.
    */
-  protected static function assertRefinable(SurfaceDefinition $definition, RefinerDefinition $refiner, array $input_keys, array $output_keys): void {
+  protected static function assertRefinable(SurfaceDefinition $definition, RefinerDefinition $refiner, array $input_keys, array $output_keys, ?array $watchable = NULL): void {
     if (!$refiner->takesDefinition) {
       throw new \LogicException(sprintf(
         '%s refines "%s" but takes no parameters: its first parameter receives that key\'s definition.',
@@ -829,7 +904,7 @@ final class Surfaces implements SurfacesInterface {
       ));
     }
     foreach ($refiner->watched() as $watched) {
-      if (!in_array($watched, $input_keys, TRUE)) {
+      if (!in_array($watched, $watchable ?? $input_keys, TRUE)) {
         throw new \LogicException(sprintf(
           '%s watches "%s", which the %s surface does not declare as an input.',
           $refiner->describe(),

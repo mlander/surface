@@ -336,7 +336,8 @@ final class ContractEmitter {
    * @param bool $locked
    *   Whether the key is locked.
    * @param string[] $depends
-   *   The sibling keys its refiners watch.
+   *   The sibling keys its refiners watch; a mounted one by its dotted
+   *   path in the frame.
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
    *   Collects what the description depends on.
    * @param string[] $stale
@@ -481,7 +482,8 @@ final class ContractEmitter {
    * @param bool $locked
    *   Whether the key is locked.
    * @param string[] $depends
-   *   The sibling keys its refiners watch.
+   *   The sibling keys its refiners watch; a mounted one by its dotted
+   *   path in the frame.
    * @param bool $refined
    *   Whether it is narrowed right now.
    *

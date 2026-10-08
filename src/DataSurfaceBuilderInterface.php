@@ -310,9 +310,12 @@ interface DataSurfaceBuilderInterface {
    * Declares that a target refines against sibling values.
    *
    * @param string $target
-   *   The surface key whose definition is refined.
+   *   The surface key whose definition is refined, or the dotted path of
+   *   a mounted key, `third_party_settings.<module>.<key>`, refined
+   *   inside the mount.
    * @param array $dependencies
-   *   The sibling keys it is refined against.
+   *   The sibling keys it is refined against; a mounted key by its
+   *   dotted path.
    *
    * @return $this
    *

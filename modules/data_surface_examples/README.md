@@ -21,8 +21,8 @@ never write over each other.
 To take the examples again from the start, follow **Reset to defaults**
 on the landing page (`/surface-examples/reset`). It puts all three
 config objects back to the files the module ships in `config/install`,
-including anything another module stored on them, such as the privacy
-notice example 4's module adds under example 3.
+including anything another module stored on them, such as the event
+licence example 4's module adds under example 3.
 
 ## What a surface is, in one paragraph
 
@@ -366,12 +366,22 @@ drush pm:install data_surface_examples_compliance
 ```
 
 then reload example 3. A second module, which example 3 does not know,
-changes it with one class: it adds a privacy notice (stored under the
-module's own name, at
-`third_party_settings.data_surface_examples_compliance.privacy_notice`,
-so example 3's storage never has to know it), rewords the title's label,
-and makes its notice required once the capacity is above a hundred. No
-form alter, no hook.
+changes it with one class. It adds two keys, an event licence and a
+number of stewards, stored under the module's own name (at
+`third_party_settings.data_surface_examples_compliance.licence` and
+`.stewards`, so example 3's storage never has to know them), and
+rewords the title's label. Its two methods are what you see move:
+
+- **The licence lifts a ceiling on example 3's own key.** The method on
+  `capacity` watches the alter's `licence`. With no licence it caps the
+  capacity at 100 and says so under the field; with one it leaves the
+  capacity alone, so the room's limit, from example 3's own method, is
+  what applies. Both methods narrow the same key, and each only narrows.
+- **The stewards follow the capacity.** The method on the alter's own
+  `stewards` watches example 3's `capacity`: one steward per fifty
+  people, at least one, and the number under the field says how many.
+
+No form alter, no hook.
 
 <!-- code: ../data_surface_examples_compliance/src/SurfaceAlter/RegistrationComplianceAlter.php -->
 
@@ -395,26 +405,46 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
    * {@inheritdoc}
    */
   public function alterInputs(ShapeAdditionsInterface $inputs): void {
-    $inputs->add('privacy_notice', 'string', $this->t('Privacy notice'));
+    $licence = ['pattern' => '/^EV-\d{4}$/', 'message' => 'An event licence is EV- and four digits, such as EV-2048.'];
+    $inputs->add('licence', 'string', $this->t('Event licence'))
+      ->setDescription($this->t('Required to host more than 100 people.'))
+      ->addConstraint('Regex', $licence);
+    $inputs->add('stewards', 'integer', $this->t('Stewards'), default: 1)->setRequired(TRUE);
     $inputs->describe('title', label: $this->t('Public event title'));
   }
 
   /**
-   * Above a hundred people, a privacy notice is required.
+   * Without a licence, no more than a hundred, whatever the room seats.
    */
-  #[RefinesInput('privacy_notice')]
-  public function noticeForLargeEvents(DataDefinition $notice, int $capacity): DataDefinition {
-    return $capacity > 100 ? $notice->setRequired(TRUE) : $notice;
+  #[RefinesInput('capacity')]
+  public function capacityWithoutLicence(DataDefinition $capacity, ?string $licence): DataDefinition {
+    $range = $capacity->getConstraints()['Range'] ?? [];
+    return (string) $licence !== '' ? $capacity : $capacity
+      ->addConstraint('Range', array_replace($range, ['max' => min($range['max'] ?? 100, 100)]))
+      ->setDescription($this->t('Up to 100 without an event licence.'));
+  }
+
+  /**
+   * One steward for every fifty people, at least one.
+   */
+  #[RefinesInput('stewards')]
+  public function stewardsForCapacity(DataDefinition $stewards, int $capacity): DataDefinition {
+    $n = max(1, (int) ceil($capacity / 50));
+    $arguments = ['@n' => $n, '@capacity' => $capacity];
+    return $stewards->addConstraint('Range', ['min' => $n])
+      ->setDescription($this->t('At least @n stewards for @capacity attendees.', $arguments));
   }
 
 }
 ```
 
-Choose a room that seats more than a hundred (Riverside Hall's main
-hall), set the capacity to 101, and the notice turns required, in the
-form and in the panel, whose row for it now depends on `capacity`. An
-alter can add and tighten. It can never take away what the owner
-declared.
+Choose Riverside Hall's main hall, which seats 400. The capacity stops
+at 100, and its help text says why. Type `EV-2048` as the event licence
+and the capacity goes back to 400; type `EV-20` and the licence is
+refused, in the alter's words. Set the capacity to 150 and the stewards
+field asks for at least 3. In the panel, the capacity's row now depends
+on `room` and on the licence's path. An alter can add and tighten. It
+can never take away what the owner declared.
 
 ## Example 5: same contract, no form
 
@@ -435,7 +465,7 @@ ddev exec php web/modules/custom/data_surface/scripts/examples-dry-run.php
 ```
 1. Valid values
 Success: Configure registration: the values were accepted and written.
-  values: {"title":"Autumn meetup","capacity":90,"open":true,"venue":"harbour","room":"harbour_deck","pricing":"paid","ticket":{"price":12.5,"currency":"EUR"},"contact":{"email":"events@example.com","phone":""}}
+  values: {"title":"Autumn meetup","open":true,"venue":"harbour","room":"harbour_deck","capacity":50,"pricing":"paid","ticket":{"price":12.5,"currency":"EUR"},"contact":{"email":"events@example.com","phone":""}}
   committed: true
 
 2. A capacity above the room's
@@ -443,9 +473,9 @@ Failed: The values were refused: capacity: This value should be between 1 and 30
 
 3. A dry run
 Success: Dry run of Configure registration: the values were accepted and prepared, and nothing was written.
-  values: {"title":"Winter social","capacity":100,"open":true,"venue":"riverside","room":"riverside_east","pricing":"free","ticket":{"note":"Donations welcome"},"contact":{"email":"events@example.com","phone":""}}
+  values: {"title":"Winter social","open":true,"venue":"riverside","room":"riverside_east","capacity":40,"pricing":"free","ticket":{"note":"Donations welcome"},"contact":{"email":"events@example.com","phone":""}}
   committed: false
-  prepared: {"title":"Winter social","capacity":100,"open":true,"venue":"riverside","room":"riverside_east","pricing":"free","ticket":{"note":"Donations welcome"},"contact":{"email":"events@example.com","phone":""}}
+  prepared: {"title":"Winter social","open":true,"venue":"riverside","room":"riverside_east","capacity":40,"pricing":"free","ticket":{"note":"Donations welcome"},"contact":{"email":"events@example.com","phone":""}}
 ```
 
 The same tool and the same three calls, from Drush:
@@ -453,11 +483,11 @@ The same tool and the same three calls, from Drush:
 ```bash
 drush tool:info data_surface:registration.step3:configure
 
-drush tool:run data_surface:registration.step3:configure --uid=1 --input='{"values":{"title":"Autumn meetup","capacity":90,"venue":"harbour","room":"harbour_deck","pricing":"paid","ticket":{"price":12.5,"currency":"EUR"}}}'
+drush tool:run data_surface:registration.step3:configure --uid=1 --input='{"values":{"title":"Autumn meetup","capacity":50,"venue":"harbour","room":"harbour_deck","pricing":"paid","ticket":{"price":12.5,"currency":"EUR"}}}'
 
 drush tool:run data_surface:registration.step3:configure --uid=1 --input='{"values":{"title":"Garden party","venue":"library","room":"library_garden","capacity":45,"pricing":"free"}}'
 
-drush tool:run data_surface:registration.step3:configure --uid=1 --input='{"values":{"title":"Winter social","capacity":100,"venue":"riverside","room":"riverside_east","pricing":"free","ticket":{"note":"Donations welcome"}}}' --input=dry_run=true
+drush tool:run data_surface:registration.step3:configure --uid=1 --input='{"values":{"title":"Winter social","capacity":40,"venue":"riverside","room":"riverside_east","pricing":"free","ticket":{"note":"Donations welcome"}}}' --input=dry_run=true
 ```
 
 `--uid=1` because `tool:run` runs as anonymous unless told otherwise,
@@ -473,9 +503,11 @@ run any number of times and is what the test suite verifies; the Drush
 commands run against your site, and the first one writes example 3's
 settings. The calls are written down once, in `ExampleCalls`, and both
 are generated from it. Every call says where the event is, so none
-depends on an earlier one, and every capacity is a hundred or fewer, so
-example 4's module does not change the answers. Enable it and send a
-capacity of 120 without a privacy notice to see it refuse.
+depends on an earlier one, and every capacity is fifty or fewer, which
+needs no licence and one steward, the default, so example 4's module
+does not change the answers. Enable it and send the first call with a
+capacity of 150, which the upper deck seats, and no licence to see it
+refuse.
 
 ## In React
 
@@ -525,7 +557,7 @@ Drush commands are checked against `ExampleCalls`.
 | Test | Covers |
 | --- | --- |
 | `Kernel\ExamplesStepsTest` | Examples 1 to 3: each form builds and saves, example 1 as its classic twin does; the venue narrows the room and the room the capacity; the ticket slot resolves by pricing; the contact validates its email; the panel's rows as the answers move; each example's class stays screen sized. |
-| `Kernel\ExamplesComplianceTest` | Example 4: the alter's key, label and requiredness above a hundred. |
+| `Kernel\ExamplesComplianceTest` | Example 4: the alter's keys and label; the capacity capped at a hundred without a licence and the room's limit with one; the licence's pattern; the stewards' minimum following the capacity; what the licence and the capacity replace on the form; example 5's calls unchanged. |
 | `Kernel\ExamplesToolTest` | Example 5: the three calls and their answers; what the script prints. |
 | `Unit\ExamplesReadmeTest` | This page against the files it quotes, and its Drush commands. |
 | `Functional\ExamplesRoutesTest` | Every route answers an administrator and refuses anonymous; the landing page; a save through example 3. |

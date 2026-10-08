@@ -75,7 +75,8 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
     }
     foreach ($this->entries as $name => $entry) {
       foreach ($entry->dependencies as $dependency) {
-        if (!isset($this->entries[$dependency])) {
+        // A mounted key is named by its path, inside a key declared here.
+        if (!isset($this->entries[explode('.', $dependency)[0]])) {
           throw new \InvalidArgumentException(sprintf('Refinement dependency "%s" of "%s" is not a surface definition.', $dependency, $name));
         }
       }
@@ -95,7 +96,10 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    *   The definitions, keyed by surface key, in declaration order.
    * @param array<string, string[]> $refinements
    *   Refinement dependencies: target key => the sibling keys it
-   *   refines against.
+   *   refines against. A target may be a dotted path to one property
+   *   inside a key, `third_party_settings.<module>.<key>`: the key then
+   *   refines against the union of its properties' dependencies, and
+   *   remembers each property's own.
    * @param string[] $locked
    *   The keys whose value the surface fixes.
    * @param string $contributor
@@ -130,9 +134,17 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
         throw new \InvalidArgumentException(sprintf('"%s" is not a surface definition.', $key));
       }
     }
-    foreach (array_keys($refinements) as $target) {
-      if (!isset($definitions[$target])) {
+    $dependencies = [];
+    $paths = [];
+    foreach ($refinements as $target => $watched) {
+      [$key, $path] = array_pad(explode('.', (string) $target, 2), 2, NULL);
+      if (!isset($definitions[$key])) {
         throw new \InvalidArgumentException(sprintf('Refinement target "%s" is not a surface definition.', $target));
+      }
+      $watched = array_values(array_map('strval', $watched));
+      $dependencies[$key] = array_values(array_unique([...($dependencies[$key] ?? []), ...$watched]));
+      if ($path !== NULL) {
+        $paths[$key][$path] = $watched;
       }
     }
     $entries = [];
@@ -142,11 +154,12 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
         definition: $definition,
         contributor: $contributor,
         locked: in_array($name, $locked, TRUE),
-        dependencies: array_values(array_map('strval', $refinements[$name] ?? [])),
+        dependencies: $dependencies[$name] ?? [],
         refiners: $refiners[$name] ?? [],
         contributions: $contributions[$name] ?? [],
         attachment: $attachments[$name] ?? NULL,
         slot: $slots[$name] ?? NULL,
+        paths: $paths[$name] ?? [],
       );
     }
     return new static($entries);
@@ -255,10 +268,39 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
   }
 
   /**
+   * Gets the refinement map one property path at a time.
+   *
+   * The map refinements() returns, with a key refined one property at a
+   * time — the mount, where an alter refines the keys it added — split
+   * into those properties' dotted paths, each with what it refines
+   * against. What a
+   * form rebuilds is this: a change to the owner's capacity moves the
+   * one mounted key that watches it, not every key the mount holds.
+   *
+   * @return array<string, string[]>
+   *   The map, target key or dotted path => the keys or dotted paths it
+   *   refines against, in declaration order.
+   */
+  public function refinementPaths(): array {
+    $refinements = [];
+    foreach ($this->entries as $name => $entry) {
+      foreach ($entry->paths as $path => $dependencies) {
+        $refinements[$name . '.' . $path] = $dependencies;
+      }
+      if ($entry->paths === [] && $entry->dependencies !== []) {
+        $refinements[$name] = $entry->dependencies;
+      }
+    }
+    return $refinements;
+  }
+
+  /**
    * Gets the deduplicated names other keys refine against.
    *
    * These are the keys a generated form has to rebuild itself on: a
-   * change to any of them may change what its dependents accept.
+   * change to any of them may change what its dependents accept. A key
+   * an alter mounted, which only that alter's refiners may watch, is
+   * named by its dotted path.
    *
    * @return string[]
    *   The dependency names.

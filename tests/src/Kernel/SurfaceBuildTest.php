@@ -30,14 +30,16 @@ use Drupal\data_surface_surface_test\Surface\Broken\ClashingSituationSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\InstanceRefinerSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\RefinesOutputSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\UndeclaredIdentitySurface;
-use Drupal\data_surface_surface_test\Surface\Broken\MountWatcherSurface;
+use Drupal\data_surface_surface_test\Surface\Broken\StrictMountWatcherSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\WatchesMismatchSurface;
-use Drupal\data_surface_surface_test\SurfaceAlter\MountWatcherAlter;
+use Drupal\data_surface_surface_test\SurfaceAlter\StrictMountWatcherAlter;
 use Drupal\data_surface_surface_test\Surface\Broken\WatchesUndeclaredSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\WideningRefinerSurface;
 use Drupal\data_surface_surface_test\Surface\DynamicChildSurface;
+use Drupal\data_surface_surface_test\Surface\MountWatcherSurface;
 use Drupal\data_surface_surface_test\Surface\RecipeSurface;
 use Drupal\data_surface_surface_test\Target\RecipeTarget;
+use Drupal\data_surface_test\SurfaceAlter\ForeignMountWatcherAlter;
 use Drupal\node\Entity\NodeType;
 use Drupal\Tests\data_surface\Kernel\Fixture\CountingSurfaces;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -287,9 +289,9 @@ class SurfaceBuildTest extends DataSurfaceKernelTestBase {
         RefinesOutputSurface::class,
         RefinesOutputSurface::class . '::totalOfCount() refines "total", which is an output of the surface_test.broken.refines_output surface.',
       ],
-      'an alter watches a key it mounted' => [
-        MountWatcherSurface::class,
-        MountWatcherAlter::class . '::detailOfKind() watches "kind", a key its alter mounted on the surface_test.broken.mount_watcher surface.',
+      'an alter watches a key it mounted, not taking NULL' => [
+        StrictMountWatcherSurface::class,
+        StrictMountWatcherAlter::class . '::sizeOfKind() watches "kind", a key its alter mounted on the surface_test.broken.strict_mount_watcher surface, which is handed as it stands and is NULL until answered: declare $kind nullable.',
       ],
       'watches out of step with the parameters' => [
         WatchesMismatchSurface::class,
@@ -328,6 +330,34 @@ class SurfaceBuildTest extends DataSurfaceKernelTestBase {
         'The surface_test.broken.self_attaching surface is attached inside itself, through surface_test.broken.self_attaching.again',
       ],
     ];
+  }
+
+  /**
+   * Tests an alter watches the keys it mounted, and no other module's.
+   *
+   * Its own kind, read at its path inside the mount and handed as it
+   * stands, narrows its own detail and the owner's size; the same kind,
+   * watched by an alter of another module, is refused.
+   */
+  public function testAnAlterWatchesOnlyTheKeysItMounted(): void {
+    $kind = 'third_party_settings.data_surface_surface_test.kind';
+    $surface = $this->surfaces()->build(MountWatcherSurface::class, new SurfaceContext('configure'));
+    $definitions = $surface->getDefinitions();
+    $this->assertSame(['size' => [$kind], 'third_party_settings' => [$kind]], $definitions->refinements());
+    $this->assertSame(['size' => [$kind], 'third_party_settings.data_surface_surface_test.detail' => [$kind]], $definitions->refinementPaths());
+
+    // Unanswered, the kind holds nothing back: it is handed as NULL.
+    $detail = fn (array $values): array => $this->mounted($surface->refine($values)->getDefinition('third_party_settings'))['detail']->getConstraints();
+    $this->assertSame(['max' => 10], $detail([])['Length']);
+    $with = ['third_party_settings' => ['data_surface_surface_test' => ['kind' => 'large']]];
+    $this->assertArrayNotHasKey('Length', $detail($with));
+    $this->assertSame(['max' => 100], $surface->refine($with)->getDefinition('size')->getConstraints()['Range']);
+    $this->assertArrayNotHasKey('Range', $surface->refine([])->getDefinition('size')->getConstraints());
+
+    $this->enableModules(['data_surface_test']);
+    $this->expectException(\LogicException::class);
+    $this->expectExceptionMessage(ForeignMountWatcherAlter::class . '::noteOfKind() watches "kind", a key the data_surface_surface_test module mounted on the surface_test.mount_watcher surface. An alter may watch the keys it mounted itself and the owner\'s, never another module\'s.');
+    $this->container->get('data_surface.surfaces')->build(MountWatcherSurface::class, new SurfaceContext('configure'));
   }
 
   /**

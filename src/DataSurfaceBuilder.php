@@ -662,10 +662,36 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
       ));
     }
     $path[] = $target;
-    foreach ($this->refinements[$target] ?? [] as $dependency) {
+    foreach ($this->edgesOf($target) as $dependency) {
       $this->walkRefinements((string) $dependency, $path, $settled);
     }
     $settled[$target] = TRUE;
+  }
+
+  /**
+   * Gets what one key or dotted path is refined against, for the walk.
+   *
+   * A mounted key is refined on its own, by its dotted path, so the walk
+   * follows each path's own edges: a capacity watching a licence, and a
+   * stewards count beside that licence watching the capacity, is no
+   * cycle. A path also moves with anything refining a key it sits in,
+   * and a key with whatever refines a path inside it.
+   *
+   * @param string $target
+   *   A surface key, or a dotted path into one.
+   *
+   * @return string[]
+   *   The keys and dotted paths it refines against.
+   */
+  protected function edgesOf(string $target): array {
+    $edges = [];
+    foreach ($this->refinements as $refined => $dependencies) {
+      $refined = (string) $refined;
+      if ($refined === $target || str_starts_with($target, $refined . '.') || str_starts_with($refined, $target . '.')) {
+        array_push($edges, ...$dependencies);
+      }
+    }
+    return array_values(array_unique($edges));
   }
 
   /**

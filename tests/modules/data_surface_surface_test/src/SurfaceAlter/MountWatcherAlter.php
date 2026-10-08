@@ -9,14 +9,13 @@ use Drupal\data_surface\Surface\Attribute\AltersSurface;
 use Drupal\data_surface\Surface\Attribute\RefinesInput;
 use Drupal\data_surface\Surface\ShapeAdditionsInterface;
 use Drupal\data_surface\Surface\SurfaceAlterInterface;
-use Drupal\data_surface_surface_test\Surface\Broken\MountWatcherSurface;
+use Drupal\data_surface_surface_test\Surface\MountWatcherSurface;
 
 /**
- * Refines a key it mounted, by watching another key it mounted.
+ * Refines a key it mounted, and the owner's, by watching a key it mounted.
  *
- * Refining its own key is allowed; watching one is not, because a
- * mounted key's value lives under the mount, where nothing can hand it
- * to a refiner.
+ * Both are allowed: the kind is read at its path inside the mount, and
+ * handed as it stands, NULL while it is unanswered.
  */
 #[AltersSurface(MountWatcherSurface::class)]
 final class MountWatcherAlter implements SurfaceAlterInterface {
@@ -30,11 +29,19 @@ final class MountWatcherAlter implements SurfaceAlterInterface {
   }
 
   /**
-   * Watches the alter's own mounted kind.
+   * Without a kind, the detail is short.
    */
   #[RefinesInput('detail')]
-  public function detailOfKind(DataDefinitionInterface $detail, string $kind): DataDefinitionInterface {
-    return $detail;
+  public function detailOfKind(DataDefinitionInterface $detail, ?string $kind): DataDefinitionInterface {
+    return $kind === NULL ? $detail->addConstraint('Length', ['max' => 10]) : $detail;
+  }
+
+  /**
+   * A large kind allows no more than a hundred.
+   */
+  #[RefinesInput('size')]
+  public function sizeOfKind(DataDefinitionInterface $size, ?string $kind): DataDefinitionInterface {
+    return $kind === 'large' ? $size->addConstraint('Range', ['max' => 100]) : $size;
   }
 
 }

@@ -18,7 +18,9 @@ use Psr\Http\Message\ResponseInterface;
  * and the contract answer an administrator and refuse anonymous; refine
  * narrows the room by the venue and shows an orphaned room stale; and
  * validate refuses a room of another venue and a capacity above the
- * room's, accepts a valid payload, and writes nothing either way.
+ * room's, accepts a valid payload, and writes nothing either way. On
+ * example 3, with example 4's module on, refine follows the licence the
+ * module's alter mounted.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -29,6 +31,7 @@ class ServedContractEndpointsTest extends BrowserTestBase {
    */
   protected static $modules = [
     'data_surface_examples',
+    'data_surface_examples_compliance',
     'data_surface_react',
   ];
 
@@ -225,6 +228,28 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $this->assertSame('library_reading', $back['values']['room']);
     $this->assertSame([], $back['stale']);
     $this->assertSame(['library_reading', 'library_garden'], $this->offered($back['schema']['properties']['room']));
+  }
+
+  /**
+   * Tests refine follows the licence example 4's alter mounted on step 3.
+   *
+   * The capacity's dependsOn names the licence by its path, which is
+   * what the app watches; refined without one the capacity stops at a
+   * hundred, and with one it is the room's again.
+   */
+  public function testRefineFollowsTheMountedLicence(): void {
+    $this->drupalLogin($this->drupalCreateUser(['administer site configuration']));
+    $licence = 'third_party_settings.data_surface_examples_compliance.licence';
+    $values = ['venue' => 'riverside', 'room' => 'riverside_main', 'capacity' => 150];
+    $refined = $this->json($this->post('surface-api/registration.step3/configure/refine', ['values' => $values]));
+    $capacity = $refined['schema']['properties']['capacity'];
+    $this->assertSame(['room', $licence], $capacity['x-surface']['dependsOn']);
+    $this->assertSame(100, $capacity['maximum']);
+
+    $values['third_party_settings'] = ['data_surface_examples_compliance' => ['licence' => 'EV-2048', 'stewards' => 3]];
+    $refined = $this->json($this->post('surface-api/registration.step3/configure/refine', ['values' => $values]));
+    $this->assertSame(400, $refined['schema']['properties']['capacity']['maximum']);
+    $this->assertSame('EV-2048', $refined['values']['third_party_settings']['data_surface_examples_compliance']['licence']);
   }
 
   /**

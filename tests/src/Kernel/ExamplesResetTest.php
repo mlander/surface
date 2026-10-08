@@ -14,7 +14,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Tests the examples' reset puts every example back to the shipped files.
  *
  * For a retake: whatever was saved, and whatever another module stored
- * on an example — the compliance module's notice under example 3's third
+ * on an example — the compliance module's licence under example 3's third
  * party settings — goes, and the files in config/install are what is
  * left.
  */
@@ -84,7 +84,7 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
     $this->config($two)->set('venue', 'harbour')->set('room', 'harbour_deck')->set('capacity', 120)->save();
     $this->config($three)
       ->set('title', 'Changed')
-      ->set('third_party_settings', ['data_surface_examples_compliance' => ['privacy_notice' => 'We keep nothing.']])
+      ->set('third_party_settings', ['data_surface_examples_compliance' => ['licence' => 'EV-2048', 'stewards' => 3]])
       ->save();
     $this->assertSame('harbour_deck', $this->stored($two)['room']);
 

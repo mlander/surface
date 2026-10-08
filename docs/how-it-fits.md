@@ -68,7 +68,8 @@ build(FieldInstanceSurface::class, $context):
   5. the refiners (bindRefiners), owner's first, then each alter's:
        each #[RefinesInput] method checked against the shape and the wall,
          and a surface's checked static
-       the keys it watches become refinement edges
+       the keys it watches become refinement edges; a key its alter
+         mounted, refined or watched, by its dotted path in the mount
        its class becomes one RefinesInputRefiner link on each key it refines:
          the surface's link holds its class name and calls static methods,
          an alter's holds the alter service and calls instance methods
@@ -105,7 +106,9 @@ target($surface, $context, $built)              Surfaces::target()
   is stored by the parent under its key
 
 refine($values)                                  DataSurface::refine()
-  for each key whose watched siblings all hold values: its chain of
+  for each key whose watched siblings all hold values (a key an alter
+  mounted, which only that alter watches, is read at its path and not
+  waited for): its chain of
   RefinesInputRefiner links (owner's, then alters'), each handed a deep
   clone and checked narrower; each child refined in its own frame
 ```

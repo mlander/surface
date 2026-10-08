@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface;
 
+use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\TypedData\DataDefinitionInterface;
@@ -308,6 +309,13 @@ final class DataSurface implements DataSurfaceInterface {
    * pipeline's one rule, not a second one here: a checkbox that is off
    * and a list with no items are answers.
    *
+   * A key an alter mounted, which only that alter's refiners watch, is
+   * read at its dotted path and never holds the target back: it is
+   * handed as it stands, NULL when empty. The engine gates per key, so
+   * an unanswered optional key of the alter's would otherwise suspend
+   * the owner's own refiners of the target as well, and the alter would
+   * have widened what the owner narrowed.
+   *
    * @param string[] $dependencies
    *   The keys the target refines against.
    * @param array $values
@@ -320,6 +328,11 @@ final class DataSurface implements DataSurfaceInterface {
   protected function dependencyValues(array $dependencies, array $values): ?array {
     $dependency_values = [];
     foreach ($dependencies as $dependency) {
+      // Decision: see docs/decisions.md#an-alter-watches-its-own-mounted-key.
+      if (str_contains($dependency, '.')) {
+        $dependency_values[$dependency] = NestedArray::getValue($values, explode('.', $dependency));
+        continue;
+      }
       $value = $values[$dependency] ?? NULL;
       if (!ValueState::isConfigured($value)) {
         return NULL;
