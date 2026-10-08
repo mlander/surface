@@ -136,8 +136,7 @@ final class SituationInputs {
       $inputs[self::VALUES] = $this->values($surface, $this->surfaces->build($surface->class, $context), $context);
     }
     else {
-      // phpcs:ignore Drupal.Files.LineLength.TooLong
-      // SKETCH GAP: the sketch generates a tool's inputs from a situation's parameters plus the surface's open keys, but which identity keys a situation that needs a subject knows is only on the context it returns; the static definition reads it off the signature (a scalar parameter supplies its own name, an entity parameter every identity key no scalar names) and the tool refines it to the real context once the parameters arrive.
+      // Decision: see docs/decisions.md#identity-before-the-parameters.
       $supplied = $this->suppliedIdentity($surface, $situation);
       $inputs[self::VALUES] = $this->values($surface, $neutral ?? $this->surfaces->build($surface->class, new SurfaceContext($situation->id)), new SurfaceContext($situation->id), $supplied);
     }
@@ -282,8 +281,6 @@ final class SituationInputs {
         required: !$parameter->optional,
       );
     }
-    // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch makes a situation's parameters a tool's inputs without saying how they are described; a scalar parameter named for one of the surface's plain keys is that key, so it takes the key's label, meaning and allowed values as the surface declares them.
     $key = $neutral?->getDefinitions()->entry($parameter->name);
     if ($key !== NULL && $key->attachment === NULL && $key->slot === NULL) {
       $input = $this->inputDefinitions->fromDefinition($key->definition);

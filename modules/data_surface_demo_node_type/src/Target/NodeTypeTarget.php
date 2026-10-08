@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_demo_node_type\Target;
 
+use Drupal\Core\Config\Entity\ConfigEntityTypeInterface;
 use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -11,6 +12,7 @@ use Drupal\data_surface\Surface\SurfaceContext;
 use Drupal\data_surface\Pipeline\TargetViolationsException;
 use Drupal\data_surface\Pipeline\ViolationSet;
 use Drupal\data_surface\Surface\SurfaceTargetInterface;
+use Drupal\data_surface\Target\BaseFieldOverrideTarget;
 use Drupal\data_surface\Target\SchemaViolations;
 use Drupal\node\Entity\NodeType;
 use Drupal\node\NodePreviewMode;
@@ -35,8 +37,9 @@ use Drupal\node\NodeTypeInterface;
  *   setThirdPartySetting(), where core keeps them.
  * - Base field overrides on the bundle, for the title label and the three
  *   workflow defaults, which are not stored on the node type at all.
- *   Compared before writing, as core's form does, so a value that did not
- *   move writes no override.
+ *   Read, planned and written by the engine's BaseFieldOverrideTarget,
+ *   which compares before writing, as core's form does, so a value that
+ *   did not move writes no override.
  */
 final class NodeTypeTarget implements SurfaceTargetInterface {
 
@@ -51,9 +54,14 @@ final class NodeTypeTarget implements SurfaceTargetInterface {
   protected const THIRD_PARTY = 'third_party_settings';
 
   /**
-   * The base fields whose per bundle default is a surface key.
+   * The surface keys stored as base field overrides, and where.
    */
-  protected const WORKFLOW = ['status', 'promote', 'sticky'];
+  protected const OVERRIDES_MAP = [
+    'title_label' => ['field' => 'title', 'property' => BaseFieldOverrideTarget::LABEL],
+    'status' => ['field' => 'status', 'property' => BaseFieldOverrideTarget::DEFAULT_VALUE],
+    'promote' => ['field' => 'promote', 'property' => BaseFieldOverrideTarget::DEFAULT_VALUE],
+    'sticky' => ['field' => 'sticky', 'property' => BaseFieldOverrideTarget::DEFAULT_VALUE],
+  ];
 
   /**
    * The prepared key holding the node type's exported array.
@@ -62,6 +70,9 @@ final class NodeTypeTarget implements SurfaceTargetInterface {
 
   /**
    * The prepared key holding the moved base field overrides.
+   *
+   * Each override that would be written, as its exported array, keyed by
+   * base field name; NULL for one whose stored override would be removed.
    */
   public const OVERRIDES = 'base_field_overrides';
 
@@ -95,18 +106,15 @@ final class NodeTypeTarget implements SurfaceTargetInterface {
     if ($type === NULL) {
       return [];
     }
-    $fields = $this->entityFieldManager->getFieldDefinitions(self::ENTITY_TYPE_ID, (string) $type->id());
+    $overrides = $this->overrides((string) $type->id())->values();
     $values = [
       'name' => $type->label(),
       'type' => $type->id(),
       'description' => $type->getDescription(),
-      'title_label' => (string) $fields['title']->getLabel(),
+      'title_label' => $overrides['title_label'],
       'preview_mode' => self::previewModeOf($type),
       'help' => $type->getHelp(),
-    ];
-    foreach (self::WORKFLOW as $name) {
-      $values[$name] = (bool) ($fields[$name]->getDefaultValueLiteral()[0]['value'] ?? FALSE);
-    }
+    ] + $overrides;
     $values['new_revision'] = $type->shouldCreateNewRevision();
     $values['display_submitted'] = $type->displaySubmitted();
     foreach ($type->getThirdPartyProviders() as $provider) {
@@ -184,18 +192,26 @@ final class NodeTypeTarget implements SurfaceTargetInterface {
       self::THIRD_PARTY => self::THIRD_PARTY,
     ]);
     $violations = iterator_to_array($found, FALSE);
-    $overrides = [];
-    foreach ($this->movedOverrides((string) $type->id(), $values) as $name => [$key, $override]) {
-      $exported = $override->toArray();
-      $paths = [$key === 'title_label' ? 'label' : 'default_value' => $key];
-      $found = SchemaViolations::collect($this->typedConfig, $override->getConfigDependencyName(), $exported, $paths);
+    $plan = $this->overrides((string) $type->id())->plan(array_intersect_key($values, self::OVERRIDES_MAP));
+    $override_type = $this->entityTypeManager->getDefinition('base_field_override');
+    $prefix = $override_type instanceof ConfigEntityTypeInterface ? $override_type->getConfigPrefix() : 'core.base_field_override';
+    foreach ($plan[BaseFieldOverrideTarget::SAVE] as $name => $exported) {
+      $paths = [];
+      foreach (self::OVERRIDES_MAP as $key => $target) {
+        if ($target['field'] === $name) {
+          $paths[$target['property']] = $key;
+        }
+      }
+      $found = SchemaViolations::collect($this->typedConfig, $prefix . '.' . $exported['id'], $exported, $paths);
       array_push($violations, ...iterator_to_array($found, FALSE));
-      $overrides[$name] = $exported;
     }
     if ($violations !== []) {
       throw new TargetViolationsException(new ViolationSet($violations));
     }
-    return [self::NODE_TYPE => $record, self::OVERRIDES => $overrides];
+    return [
+      self::NODE_TYPE => $record,
+      self::OVERRIDES => $plan[BaseFieldOverrideTarget::SAVE] + array_fill_keys($plan[BaseFieldOverrideTarget::DELETE], NULL),
+    ];
   }
 
   /**
@@ -226,75 +242,26 @@ final class NodeTypeTarget implements SurfaceTargetInterface {
       $type->set((string) $property, $value);
     }
     $type->save();
-    $this->writeOverrides((string) $type->id(), is_array($prepared[self::OVERRIDES] ?? NULL) ? $prepared[self::OVERRIDES] : []);
+    $overrides = is_array($prepared[self::OVERRIDES] ?? NULL) ? $prepared[self::OVERRIDES] : [];
+    if ($overrides !== []) {
+      $this->overrides((string) $type->id())->write([
+        BaseFieldOverrideTarget::SAVE => array_filter($overrides, 'is_array'),
+        BaseFieldOverrideTarget::DELETE => array_keys(array_filter($overrides, 'is_null')),
+      ]);
+    }
   }
 
   /**
-   * Builds the base field overrides a submission would move, unsaved.
-   *
-   * Compared before writing, as core's form does, so a value that did not
-   * move builds no override.
+   * Gets the target for a content type's base field overrides.
    *
    * @param string $bundle
    *   The content type, which need not exist yet.
-   * @param array $values
-   *   The accepted values.
    *
-   * @return array<string, array{0: string, 1: \Drupal\Core\Field\Entity\BaseFieldOverride}>
-   *   The surface key and the unsaved override, keyed by base field name.
+   * @return \Drupal\data_surface\Target\BaseFieldOverrideTarget
+   *   The target, for the title label and the workflow defaults.
    */
-  protected function movedOverrides(string $bundle, array $values): array {
-    // A bundle that does not exist yet reads what the base fields say,
-    // and nothing cached for it is consulted, so this is read without
-    // touching the field manager's cache.
-    $fields = $this->entityFieldManager->getFieldDefinitions(self::ENTITY_TYPE_ID, $bundle);
-    $moved = [];
-    if (array_key_exists('title_label', $values) && (string) $fields['title']->getLabel() !== (string) $values['title_label']) {
-      $override = clone $fields['title']->getConfig($bundle);
-      $override->setLabel((string) $values['title_label']);
-      $moved['title'] = ['title_label', $override];
-    }
-    foreach (self::WORKFLOW as $name) {
-      if (!array_key_exists($name, $values)) {
-        continue;
-      }
-      $value = (bool) $values[$name];
-      if ((bool) ($fields[$name]->getDefaultValueLiteral()[0]['value'] ?? FALSE) !== $value) {
-        $override = clone $fields[$name]->getConfig($bundle);
-        $override->setDefaultValue($value);
-        $moved[$name] = [$name, $override];
-      }
-    }
-    return $moved;
-  }
-
-  /**
-   * Writes the base field overrides prepare() rehearsed.
-   *
-   * @param string $bundle
-   *   The content type, saved.
-   * @param array<string, array> $overrides
-   *   Each moved override's exported array, keyed by base field name.
-   */
-  protected function writeOverrides(string $bundle, array $overrides): void {
-    if ($overrides === []) {
-      return;
-    }
-    // A content type just created has no field definitions cached for it
-    // yet, and one that was cached before it existed is stale.
-    $this->entityFieldManager->clearCachedFieldDefinitions();
-    $fields = $this->entityFieldManager->getFieldDefinitions(self::ENTITY_TYPE_ID, $bundle);
-    foreach ($overrides as $name => $record) {
-      $override = $fields[$name]->getConfig($bundle);
-      if (array_key_exists('label', $record)) {
-        $override->setLabel((string) $record['label']);
-      }
-      if (array_key_exists('default_value', $record)) {
-        $override->set('default_value', $record['default_value']);
-      }
-      $override->save();
-    }
-    $this->entityFieldManager->clearCachedFieldDefinitions();
+  protected function overrides(string $bundle): BaseFieldOverrideTarget {
+    return new BaseFieldOverrideTarget($this->entityFieldManager, self::ENTITY_TYPE_ID, $bundle, self::OVERRIDES_MAP);
   }
 
   /**

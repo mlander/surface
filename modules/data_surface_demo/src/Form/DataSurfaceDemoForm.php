@@ -45,7 +45,7 @@ final class DataSurfaceDemoForm extends FormBase {
   protected const WRAPPER_KEY = 'data-surface-demo-form';
 
   /**
-   * The block plugin manager, which hands over the surface's provider.
+   * The block plugin manager, which hands over the demo block.
    */
   protected BlockManagerInterface $blockManager;
 

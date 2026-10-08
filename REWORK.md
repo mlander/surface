@@ -23,10 +23,12 @@ Rules for the whole rework:
   is flagged in the code at the point of decision, so it can be grepped
   and the sketch amended or the decision confirmed:
 
-      // SKETCH GAP: <what the sketch did not say, and what was decided>
+      // Sketch gap: <what the sketch did not say, and what was decided>
 
   Sparingly, for real gaps only. Each step's report lists the ones it
-  wrote.
+  wrote. (Step 6 settled all of them into `docs/decisions.md` and
+  removed the comments; the marker is spelled here in lower case so a
+  grep for it over the module comes back empty.)
 
 ## Sequence
 
@@ -67,7 +69,7 @@ Rules for the whole rework:
    `#[UsesSurface]` reaches the plugin definition through
    `SurfacePluginHooks` (block only); the demo needed a constraint and
    resolver of its own for a bundle's fields. Every undecided point is a
-   `SKETCH GAP:` comment in the code. The extras module had no demo
+   sketch-gap comment in the code. The extras module had no demo
    block branch to convert, so `DemoBlockAlter` is new.
 2. **Subsurfaces.** `attach()`, `attachBy()`, open slots filled by
    `#[SurfaceVariant]`, narrowing inside maps, targets composing along
@@ -168,7 +170,7 @@ Rules for the whole rework:
    (`DataSurfaceAccess::decisive()`), since the situation owns its
    operation; the catalogue says whether a situation creates only when
    the situation needs nothing. Every undecided point is a
-   `SKETCH GAP:` comment.
+   sketch-gap comment.
 4. **Plugins and remaining hosts.** Every demo plugin, the address field
    type, and the formatter, condition and action hosts move to
    `#[UsesSurface]` with their surface in `src/Surface`.
@@ -232,7 +234,7 @@ Rules for the whole rework:
    add tool did; `FieldInstanceTarget` loads and writes the field's own
    settings, not `getSettings()`, which mixes in the storage's; the
    `PROVIDER` constant moved to `NodeTypeReviewSettings::MODULE`. Every
-   undecided point is a `SKETCH GAP:` comment.
+   undecided point is a sketch-gap comment.
 5. **Delete the old spelling.** `DataSurfaceDeclarationInterface`,
    `DataSurfaceProviderInterface`, the host trait's declaration paths,
    the build event and its subscribers, the attribute directory, and
@@ -289,6 +291,75 @@ Rules for the whole rework:
    so no alter, refiner, target or access class applies to it.
 6. **Docs.** The sketch's README and build walkthrough become the front
    of `docs/`; `sketch/` is deleted once the docs say everything it did.
+
+   **Done.** One code item first: `FieldStorageSurface` gained identity
+   `field_type` and a `settings` slot chosen by it, filled by a
+   `#[SurfaceVariant(of: FieldStorageSurface::class, key: 'settings')]`
+   class or, for every UI field type, by `FieldStorageSettingsSchemaVariants`
+   (the schema deriver, now a class with three constants, pointed at
+   `field.storage_settings.<type>` and `defaultStorageSettings()`).
+   `FieldStorageTarget` loads, prepares and commits the type and the
+   settings, and refuses at prepare a type other than the field's and,
+   once the field has data, a settings change that alters its columns.
+   A string's `max_length` is set through `field.instance:add`
+   (`storage.settings.max_length`, the type named on the storage too:
+   the add situation knows no type, and the wall keeps the field's from
+   the child until commit) and changed through `field.storage:edit`.
+   The docs: `docs/index.md` opens with the pitch and the pattern
+   table; `docs/pattern.md` and `docs/how-it-fits.md` carry the
+   sketch's README and walkthrough in the module's real names;
+   `docs/decisions.md` settles every sketch-gap comment (39, plus two
+   decisions the docs stated without a comment) by topic, and the code
+   keeps eleven one-line pointers to it; every other page was checked
+   against the code. `sketch/` is deleted, with its phpstan exclusion.
+   Dead engine code: `NodeTypeTarget` reimplemented
+   `BaseFieldOverrideTarget`'s translation, so it now delegates through
+   the latter's new `values()`, `plan()` and `write()` (its plan is
+   exported arrays plus the fields whose override goes, so a dry run
+   previews it); `ConfigObjectTarget` had no production caller and is
+   deleted with its six tests (the composite tests now use two state
+   targets). `ConfigEntityTarget` and `CompositeTarget` are also reached
+   only by tests and are left for the owner. `ROADMAP.md` gained "After
+   the rework". `docs/catalogue.md` changed (storage identity and its
+   derived slot); both `COMPARISON.md` files regenerated unchanged, as
+   they compare instance settings only.
+
+## Closing: what the rework changed
+
+| | `main` (b6db309) | after step 6 |
+| --- | --- | --- |
+| `src/` PHP files | 86 (given as 96) | 118 |
+| `src/` lines | 14306 (given as 17463) | 18641 |
+| `DataSurfaceBuilder` public methods | 21 | 18, and `@internal` |
+| Tests (suite run) | 573 (as given) | 650, 4033 assertions |
+| Test methods (static count) / test classes | 422 / 55 | 469 / 64 |
+
+The `main` file and line counts are measured the way step 5 measured
+its own (every `*.php` under `src/` at that commit); the figures this
+step was handed for `main` do not match that measure, and both are
+shown. `src/` grew because the engine stayed and the authoring layer
+(`src/Surface/`, `src/SurfaceBuild/`) was added over it, while the old
+spelling's declaration, provider, event, filter and output-refiner code
+went.
+
+For an author, the rework replaced several ways of saying one thing
+with one. A surface used to be a static `declareDataSurface()` on a
+host or a provider service, its rules a `refineDataDefinition()` with a
+`match` and dependencies declared apart, its add and edit forms a
+provider calling `lock()` per operation, another module's changes a
+build event subscriber holding the whole builder, and its storage and
+access a provider triple. Now it is one `#[Surface]` class in
+`src/Surface/`: a flat `defineInputs()`, one named `#[RefinesInput]`
+method per rule whose signature is its dependency list, `#[Situation]`
+static methods that say how much is known, and a target and an access
+class named on the attribute. Another module writes an
+`#[AltersSurface]` class that can only add, reword and offer more on a
+fixed list. A plugin names its surface with `#[UsesSurface]` and keeps
+only its rendering. Children are `attach()` and always-open
+`attachBy()` slots that variants, declared or derived, fill without the
+parent naming them. And from that one class the form, the route, the
+access check, the catalogue entry and the tool are all derived, so a
+person, a route and an agent get the same answer.
 
 Each step is one unit, run by an agent, with the suite and gates as the
 exit check and a one-line commit by the orchestrator.

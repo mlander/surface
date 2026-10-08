@@ -30,13 +30,13 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
  * each refiner is handed is its own slice of the advertised list, and
  * the refined surface is the union of the slices.
  *
- * A refiner whose answer depends on site state — a list read from
- * entity types, a permission, the current language — says so by also
- * implementing core's CacheableDependencyInterface. Its metadata is
- * merged into the refined surface whenever it runs, which is how a form
- * built from that surface learns it may not be cached forever. There is
- * no second interface for this: cacheability is core's question, asked
- * in core's words.
+ * A link that also implements core's CacheableDependencyInterface has
+ * its metadata merged into the refined surface whenever it runs. The
+ * one implementation, RefinesInputRefiner, does not: a #[RefinesInput]
+ * method calls no service and is a pure function of the siblings it
+ * watches, so the site state a refined key depends on is said by the
+ * shape (ShapeInterface::addCacheableDependency()) and by the options
+ * resolver that fetches the list a constraint points at.
  *
  * @see \Drupal\data_surface\DataSurfaceBuilderInterface::addRefiner()
  * @see \Drupal\data_surface\SurfaceBuild\RefinesInputRefiner

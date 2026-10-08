@@ -18,6 +18,7 @@ use Drupal\data_surface\Surface\SurfaceContext;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\field\FieldConfigInterface;
+use Drupal\field\FieldStorageConfigInterface;
 use Drupal\tool\Tool\ToolManager;
 use Drupal\tool\TypedData\ListInputDefinition;
 use Drupal\tool\TypedData\ListOutputDefinition;
@@ -541,6 +542,139 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
     $this->assertSame(10, $this->reloadField('field_count')->getSettings()['max']);
+  }
+
+  /**
+   * Adds a string field with a short storage, through the add tool.
+   *
+   * @return \Drupal\tool\Tool\ToolInterface
+   *   The executed tool.
+   */
+  protected function addShortStringField() {
+    $tool = $this->createTool(self::ADD);
+    $tool->setInputValue(SituationInputs::VALUES, [
+      'field_type' => 'string',
+      'field_name' => 'field_code',
+      'label' => 'Code',
+      'storage' => [
+        'field_type' => 'string',
+        'settings' => ['max_length' => 64],
+      ],
+    ]);
+    $tool->execute();
+    return $tool;
+  }
+
+  /**
+   * Edits the short string field's storage through its own tool.
+   *
+   * @param array $values
+   *   The storage values to send.
+   *
+   * @return \Drupal\tool\Tool\ToolInterface
+   *   The executed tool.
+   */
+  protected function editCodeStorage(array $values) {
+    $tool = $this->toolManager->createInstance('data_surface:field.storage:edit');
+    $tool->setInputValue('storage', 'entity_test.field_code');
+    $tool->setInputValue(SituationInputs::VALUES, $values);
+    $tool->execute();
+    return $tool;
+  }
+
+  /**
+   * Reloads the short string field's storage.
+   *
+   * @return \Drupal\field\FieldStorageConfigInterface|null
+   *   The storage, or NULL when it was never created.
+   */
+  protected function reloadCodeStorage(): ?FieldStorageConfigInterface {
+    $this->container->get('entity_type.manager')->getStorage('field_storage_config')->resetCache();
+    return FieldStorageConfig::loadByName('entity_test', 'field_code');
+  }
+
+  /**
+   * Tests that a storage setting is set when a field is added.
+   *
+   * The storage's settings are a slot its field type chooses, filled for
+   * `string` from `field.storage_settings.string`. Adding a field leaves
+   * the type open on both levels, so a caller describing the storage's
+   * settings names it on the storage too; a type other than the field's
+   * is refused when the storage is prepared, and nothing is written.
+   */
+  public function testStorageSettingsAreSetWhenTheFieldIsAdded(): void {
+    $values = $this->createTool(self::ADD)->getInputDefinition(SituationInputs::VALUES);
+    $this->assertInstanceOf(MapInputDefinition::class, $values);
+    $storage = $values->getPropertyDefinitions()['storage'];
+    $this->assertInstanceOf(MapInputDefinition::class, $storage);
+    $this->assertSame(['field_type', 'cardinality', 'translatable', 'settings'], array_keys($storage->getPropertyDefinitions()));
+
+    $tool = $this->addShortStringField();
+    $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResultMessage());
+    $this->assertSame(64, $this->reloadCodeStorage()?->getSetting('max_length'));
+
+    $tool = $this->createTool(self::ADD);
+    $tool->setInputValue(SituationInputs::VALUES, [
+      'field_type' => 'string',
+      'field_name' => 'field_mixed',
+      'label' => 'Mixed',
+      'storage' => ['field_type' => 'integer'],
+    ]);
+    $tool->execute();
+    $this->assertFalse($tool->getResult()->isSuccess());
+    $this->assertStringContainsString('field_type', (string) $tool->getResultMessage());
+    $this->assertNull(FieldStorageConfig::loadByName('entity_test', 'field_mixed'));
+  }
+
+  /**
+   * Tests that the storage tool changes a storage setting.
+   *
+   * Editing knows the field type, so it is locked and left out of the
+   * tool's values, and the settings are the string's from the start.
+   */
+  public function testStorageEditChangesOneStorageSetting(): void {
+    $this->addShortStringField();
+
+    $tool = $this->toolManager->createInstance('data_surface:field.storage:edit');
+    $tool->setInputValue('storage', 'entity_test.field_code');
+    $values = $tool->getInputDefinition(SituationInputs::VALUES);
+    $this->assertInstanceOf(MapInputDefinition::class, $values);
+    $this->assertSame(['cardinality', 'translatable', 'settings'], array_keys($values->getPropertyDefinitions()));
+    $settings = $values->getPropertyDefinitions()['settings'];
+    $this->assertInstanceOf(MapInputDefinition::class, $settings);
+    $this->assertContains('max_length', array_keys($settings->getPropertyDefinitions()));
+
+    $tool = $this->editCodeStorage(['settings' => ['max_length' => 32]]);
+    $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResultMessage());
+    $this->assertSame(32, $this->reloadCodeStorage()?->getSetting('max_length'));
+  }
+
+  /**
+   * Tests that a storage with data keeps its cardinality and its columns.
+   *
+   * The edit situation still constrains cardinality not to shrink; a
+   * settings change that would alter the database columns is refused at
+   * prepare, where the SQL storage would otherwise throw on save.
+   */
+  public function testStorageWithDataKeepsItsCardinalityAndColumns(): void {
+    $this->addShortStringField();
+    $this->editCodeStorage(['cardinality' => 2]);
+    $this->container->get('entity_type.manager')->getStorage('entity_test')
+      ->create(['field_code' => ['A1', 'B2']])
+      ->save();
+
+    $tool = $this->editCodeStorage(['cardinality' => 1]);
+    $this->assertFalse($tool->getResult()->isSuccess());
+    $this->assertStringContainsString('cardinality', (string) $tool->getResultMessage());
+
+    $tool = $this->editCodeStorage(['settings' => ['max_length' => 16]]);
+    $this->assertFalse($tool->getResult()->isSuccess());
+    $this->assertStringContainsString('has data', (string) $tool->getResultMessage());
+
+    $storage = $this->reloadCodeStorage();
+    $this->assertNotNull($storage);
+    $this->assertSame(2, $storage->getCardinality());
+    $this->assertSame(64, $storage->getSetting('max_length'));
   }
 
   /**

@@ -83,8 +83,6 @@ final class RefinesInputRefiner implements DataSurfaceRefinerInterface {
    *   When the method returned something other than a definition.
    */
   public function invoke(RefinerDefinition $refiner, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
-    // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch types sibling parameters but forms hand refinement raw input; values are passed through reflection, so PHP's non-strict scalar coercion applies ("1" reaches a bool as TRUE).
     $arguments = [$definition];
     foreach ($refiner->watched() as $key) {
       $arguments[] = $values[$key] ?? NULL;

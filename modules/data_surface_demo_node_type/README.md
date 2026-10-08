@@ -15,7 +15,9 @@ edit are not two shapes, they are how much is known.
 creates or updates by whether it creates. It writes the node type
 config entity, and the base field overrides that hold the title label
 and the three workflow defaults, in the order core's own form writes
-them and only where a value moved. `Access\NodeTypeAccess` is what the
+them and only where a value moved. The overrides are read, planned and
+written by the engine's `BaseFieldOverrideTarget`, through its
+`values()`, `plan()` and `write()`. `Access\NodeTypeAccess` is what the
 situation's permission cannot say: the node type entity's own answer.
 
 There is no form class in this module, and no tool. Both routes name

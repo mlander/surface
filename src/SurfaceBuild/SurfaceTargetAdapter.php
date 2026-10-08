@@ -16,9 +16,9 @@ use Drupal\data_surface\Surface\SurfaceTargetInterface;
 use Drupal\data_surface\SurfaceEntry;
 
 /**
- * A new-spelling target, as the pipeline's target, composed along a tree.
+ * A surface's target, as the pipeline's target, composed along a tree.
  *
- * Both have three verbs, load, prepare and commit; the sketch's target
+ * Both have three verbs, load, prepare and commit; a surface's target
  * is handed the context, the pipeline's the surface. The context is
  * bound here, once, so the pipeline's submit() path reaches the target
  * unchanged: load narrows what the target returns to the surface's own
@@ -174,8 +174,6 @@ final class SurfaceTargetAdapter implements DataSurfaceTargetInterface {
     if (!is_array($own) || !is_array($children)) {
       throw new \InvalidArgumentException('The prepared values did not come from this target.');
     }
-    // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch's child target loads by identity its context knows, but a creating parent's identity is only known once accepted; a routed child is prepared and committed in its context plus the parent's accepted identity values it does not already know.
     $known = $this->knownWith($prepared->values);
     $before = $after = [];
     foreach ($children as $key => [$id, $child_prepared]) {
@@ -183,8 +181,7 @@ final class SurfaceTargetAdapter implements DataSurfaceTargetInterface {
       if ($route === NULL || !$child_prepared instanceof PreparedValues) {
         throw new \InvalidArgumentException('The prepared values did not come from this target.');
       }
-      // phpcs:ignore Drupal.Files.LineLength.TooLong
-      // SKETCH GAP: the sketch does not say in which order a parent and the children stored apart from it are written; an attached child is a part the parent is built on (a field's storage) and is committed before it, a slot's variant lives on what the parent writes (a field's settings) and is committed after it.
+      // Decision: see docs/decisions.md#write-order.
       if ($id === self::ATTACHED) {
         $before[] = [$route, $child_prepared];
       }
@@ -269,8 +266,6 @@ final class SurfaceTargetAdapter implements DataSurfaceTargetInterface {
     if ($outputs === []) {
       return [];
     }
-    // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch's surface declares outputs but not who produces their values; they are what the target's load() hands back under an output's name, once the values are committed.
     $known = $this->knownWith($values);
     return array_intersect_key($this->target->load($this->context->withKnown($known)->withOperation($this->context->operation, FALSE)), $outputs);
   }

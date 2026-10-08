@@ -42,8 +42,6 @@ final class SurfaceShape extends ShapeAdapterBase implements ShapeInterface {
    * {@inheritdoc}
    */
   public function addCacheableDependency(CacheableDependencyInterface $dependency): static {
-    // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch's shape has no cacheability verb; a surface whose shape reads site state needs one, so the owner's shape takes a dependency (not an alter's, which reaches no further than the owner's keys) and the sealed surface carries it.
     $this->builder->addCacheableDependency($dependency);
     return $this;
   }

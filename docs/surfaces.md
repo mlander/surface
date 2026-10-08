@@ -7,6 +7,11 @@ registered by hand. The build step, `data_surface.surfaces`, turns the
 class and a context into a sealed `DataSurfaceInterface`, which the
 pipeline, forms, widgets and targets read.
 
+This page is the reference for each part. [The pattern](pattern.md) is
+the short version with the reasoning, [How it fits](how-it-fits.md)
+walks one build, and [Decisions](decisions.md) records each point the
+pattern left open.
+
 ## Where things live
 
 A module has two predictable directories, scanned in every enabled
@@ -168,7 +173,9 @@ last: `add($entity_type_id, $bundle)`, `reuse($storage, $bundle)` — an
 add for the field and, through `withChild('storage',
 FieldStorageSurface::edit($storage))`, an edit for its storage — and
 `edit($field)`. The storage's edit situation narrows cardinality not to
-shrink once the field has data, with `withConstraint()`.
+shrink once the field has data, with `withConstraint()`, and knows the
+field type, its one identity key, which locks its settings to that
+type's.
 
 ```php
 $surfaces = \Drupal::service('data_surface.surfaces');
@@ -290,7 +297,10 @@ $context, array $prepared)` writes exactly it.
   and `FieldInstanceTarget` build the unsaved storage and field (a field
   being added on a storage being added beside it is checked against an
   unsaved stand-in built from the same identity) and hold them to
-  `field.storage.*` and `field.field.*`. `AddressFieldSettingsTarget`
+  `field.storage.*` and `field.field.*`; the storage target also
+  refuses a field type other than its field's, and, once the field has
+  data, a settings change that would alter its database columns, which
+  the SQL storage would otherwise throw on at save. `AddressFieldSettingsTarget`
   holds the settings, in the shape the field stores, to
   `field.field_settings.address`.
 - What a prepare returns is what is stored: the node type's prepared
@@ -437,7 +447,9 @@ mounted under its own module's name — at
 `third_party_outputs.<module>.<key>` for an output — so the owner's
 storage and schema never have to know a contributor's keys. Its
 `#[RefinesInput]` methods tighten the owner's keys, running after the
-owner's own.
+owner's own. An alter cannot refine its own mounted key: a method names
+an owner's key, and addressing a mounted one needs dotted refinement
+paths ([Decisions](decisions.md#an-alter-cannot-refine-its-own-mounted-key)).
 
 The one widening an alter may make is `extendChoices()`: more values on
 a key whose owner declared a list of allowed values. The values are the
@@ -512,7 +524,8 @@ with its own shape and refiners, and alters can target it alone.
 
 The demo block's presentation is a slot its two presentation surfaces
 fill; the field instance surface attaches its storage, and its settings
-are a slot each field type's module fills:
+are a slot each field type's module fills, as are the storage's own
+settings:
 
 ```php
 // DemoBlockSurface
@@ -535,6 +548,10 @@ $inputs->attach('storage', FieldStorageSurface::class)
   ->setLabel(new TranslatableMarkup('Field storage'));
 $inputs->attachBy('settings', by: 'field_type')
   ->setLabel(new TranslatableMarkup('Field settings'));
+
+// FieldStorageSurface, in data_surface_tool
+$inputs->attachBy('settings', by: 'field_type')
+  ->setLabel(new TranslatableMarkup('Storage settings'));
 
 // AddressFieldSettingsSurface, in data_surface_address
 #[Surface('field.settings.address', target: AddressFieldSettingsTarget::class)]
@@ -623,14 +640,19 @@ class, no alters, no refiners, no target and no access class, so it is
 stored by its parent under the slot's key. A declared variant always
 wins over a derived one for the same value.
 
-`data_surface_tool` ships `FieldSettingsSchemaVariants`, which fills
+`data_surface_tool` ships two. `FieldSettingsSchemaVariants` fills
 `FieldInstanceSurface`'s `settings` slot from
 `field.field_settings.<field type>` for every field type offered in the
-UI. So the field tools offer a plain `string` or `integer` field as
-they offer an address field, with what the schema says and nothing
-more: its keys, their types and labels, and the field type's own
-default settings where their type fits. The catalogue lists the
-declared variants per slot, and says where the derived ones come from.
+UI, and `FieldStorageSettingsSchemaVariants`, the same class pointed at
+another slot, fills `FieldStorageSurface`'s from
+`field.storage_settings.<field type>`. So the field tools offer a plain
+`string` or `integer` field as they offer an address field, with what
+the schema says and nothing more: its keys, their types and labels, and
+the field type's own default settings where their type fits. A string's
+`max_length` is `storage.settings.max_length` when the field is added,
+and `settings.max_length` on `data_surface:field.storage:edit`. The
+catalogue lists the declared variants per slot, and says where the
+derived ones come from.
 
 ### A child that cannot be listed
 
@@ -642,5 +664,8 @@ become anything narrower, and the method is an ordinary refiner.
 
 ## Not built yet
 
-Options lists, and the alters of them, are a separate piece of work;
-until then a live list is a constraint with an options resolver.
+Collections (`attachList()`, `attachListBy()`), input shapes, and
+options sources with their alters are deferred; [the
+pattern](pattern.md#deferred) records the position each is held to.
+Until options sources exist, a live list is a constraint with an
+options resolver.

@@ -15,7 +15,7 @@ use Drupal\Core\TypedData\MapDataDefinition;
  * with it, so the pipeline and the form hand the value at the key to the
  * child and let it answer for itself, and its refiners run in the
  * child's own frame, under the names the child gave its keys, never under
- * a parent path. That is the wall the sketch draws between a parent and
+ * a parent path. That is the wall the pattern draws between a parent and
  * its child, enforced by construction: nothing in the parent can name a
  * key inside the child, and nothing in the child can see the parent.
  *

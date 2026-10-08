@@ -66,8 +66,6 @@ final class SituationArguments {
           }
         }
       }
-      // phpcs:ignore Drupal.Files.LineLength.TooLong
-      // SKETCH GAP: the sketch maps a route's parameters onto a situation's by name but does not say how an id becomes the entity a parameter is typed with; the one entity type whose class satisfies the type loads it, and a type several entity types satisfy is taken only as an object.
       $this->entityTypes[$class] = count($matches) === 1 ? $matches[0] : NULL;
     }
     return $this->entityTypes[$class];

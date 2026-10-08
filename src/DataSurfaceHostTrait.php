@@ -122,8 +122,7 @@ trait DataSurfaceHostTrait {
    *   The context.
    */
   protected function surfaceContext(string $operation): SurfaceContext {
-    // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch says the host "supplies the situation" without naming one; a plugin host supplies a bare context whose operation is the host's own verb (configure), which is no declared situation.
+    // Decision: see docs/decisions.md#a-plugin-hosts-context.
     return new SurfaceContext($operation);
   }
 

@@ -6,10 +6,10 @@ whether a form, a config action, a test or an agent is doing the
 submitting, and what lets one destination serve the surface for adding a
 thing and the surface for editing it.
 
-This page is about the second half: the seven shipped targets, the
-prepare-versus-commit split, dry runs, what may ride on a form, and the
-one small interface a target uses when the input shape and the storage
-shape differ. [The pipeline](pipeline.md) is the other half, and the
+This page is about the second half: the surface's own target and the
+engine's six, the prepare-versus-commit split, dry runs, what may ride
+on a form, and the one small interface a target uses when the input
+shape and the storage shape differ. [The pipeline](pipeline.md) is the other half, and the
 stage names below are its.
 
 ## What a target is
@@ -41,7 +41,18 @@ by the identity the context knows, so the context never carries an
 entity, and creates or updates by whether the context creates.
 `SurfaceTargetAdapter` binds the context and makes it this interface;
 [Surfaces as classes](surfaces.md#prepare) says what each target here
-checks.
+checks. A surface target is where a surface's own storage logic lives:
+`NodeTypeTarget`, `FieldInstanceTarget`, `FieldStorageTarget` and
+`AddressFieldSettingsTarget` each rehearse a config entity in
+`prepare()` and hold it to its config schema with `SchemaViolations`,
+and a surface target may delegate to an engine target below where one
+already says the translation: `NodeTypeTarget` writes a content type's
+title label and workflow defaults through `BaseFieldOverrideTarget`.
+
+A slot variant derived from a config schema has no class and so no
+target: its values are stored by its parent under the slot's key, as
+`FieldStorageTarget` stores a string's derived `max_length` among the
+storage's settings.
 
 ## Getting one
 
@@ -93,8 +104,9 @@ machine name being submitted.
 The answer is that a target reads the identity in `prepare()`, not
 before. `NodeTypeTarget` loads by the machine name the context knows,
 and on add, where it knows none, loads nothing; `prepare()` builds the
-node type and its overrides around the machine name the accepted values
-carry. A target taking the accepted values when it is made would have
+node type around the machine name the accepted values carry, and has
+`BaseFieldOverrideTarget` plan the overrides for that bundle, which
+need not exist yet. A target taking the accepted values when it is made would have
 put a write-path argument on a method a discovery document calls with
 nothing but a context.
 
@@ -109,8 +121,8 @@ happened.
 Two rules follow, and both were bugs before they were rules:
 
 1. **Prepare never touches what the caller handed over.** The config
-   entity target and the config object target both work on a copy, and
-   the copy is the artifact. The object a caller passes in is almost
+   entity target and every surface target that rehearses an entity work
+   on a copy, and the copy is the artifact. The object a caller passes in is almost
    always the one its form, its route and the rest of the request are
    holding; shaping values onto it would make a rehearsal visible to
    everybody, and the next unrelated save of that object would persist a
@@ -137,42 +149,31 @@ settings.
 everything up to and including prepare and hands back the artifact with
 `committed` false.
 
-For the config object target there is a stronger kind of dry run, and it
-is the one place in the config system where redirecting a single write
-costs nothing. A `Config` holds the storage it was constructed with, so:
+Config entities write through the container's config factory, so an
+entity cannot be pointed at another bin for one call. An unsaved clone,
+held to the schema, is as far as a dry run goes; a surface target's
+`prepare()` returns that clone's exported array, which is what a
+derived tool's dry run reports as `prepared`.
 
-```php
-$config = new Config($name, new MemoryStorage(), new EventDispatcher(), $typed_config);
-$config->initWithData($active_storage->read($name));
-$target = new ConfigObjectTarget($config, $map, $typed_config);
-```
+## The six engine targets
 
-commits for real into a bin nobody else reads. The private dispatcher is
-the part that keeps the rehearsal's save event away from the listeners
-the live config factory keeps.
+| Target | Destination | Artifact | Used by |
+| --- | --- | --- | --- |
+| `StateTarget` | One State key. | The accepted values. | the demo form |
+| `ConfigEntityTarget` | One config entity's properties, plus core's third party settings. | An unsaved clone of the entity. | no shipped surface yet |
+| `FieldSettingsTarget` | One field instance's settings. | The settings array. | the field type host |
+| `BaseFieldOverrideTarget` | A bundle's overrides of an entity type's base fields. | The overrides to save, as exported arrays, and the fields whose override goes. | `NodeTypeTarget` |
+| `PluginConfigurationTarget` | A plugin's configuration array. | The complete configuration. | the plugin hosts |
+| `CompositeTarget` | Several of the above, in order. | One prepared set per child. | no shipped surface yet |
 
-Config entities have no equivalent: their storage writes through the
-container's config factory, so an entity cannot be pointed at another
-bin for one call. An unsaved clone is as far as that dry run goes.
-
-## The seven shipped targets
-
-| Target | Destination | Artifact |
-| --- | --- | --- |
-| `StateTarget` | One State key. | The accepted values. |
-| `ConfigObjectTarget` | One simple config object, by dotted path. | A copy of the `Config`. |
-| `ConfigEntityTarget` | One config entity's properties, plus core's third party settings. | An unsaved clone of the entity. |
-| `FieldSettingsTarget` | One field instance's settings. | The settings array. |
-| `BaseFieldOverrideTarget` | A bundle's overrides of an entity type's base fields. | The overrides to save and the overrides to remove. |
-| `PluginConfigurationTarget` | A plugin's configuration array. | The complete configuration. |
-| `CompositeTarget` | Several of the above, in order. | One prepared set per child. |
+A config object target, mirroring core's `ConfigTarget`, was removed
+for having no adopter; a surface whose values are a simple config
+object writes it in a target of its own, held to the schema with
+`SchemaViolations`, until enough of them share the translation to name
+it again.
 
 A few things each of them is opinionated about:
 
-- **`ConfigObjectTarget`** mirrors core's `ConfigTarget`, callables in
-  each direction included, so a form already carrying `#config_target`
-  metadata describes the same thing and the two can be ported into each
-  other.
 - **`ConfigEntityTarget`** maps a surface key to an entity property name,
   or to `['method' => 'setX']` for a property that needs a real setter.
   The method form is a string rather than a callable on purpose: it
@@ -188,7 +189,11 @@ A few things each of them is opinionated about:
   different from not sending the key at all — that says nothing and
   changes nothing. Only base fields have overrides; a map naming a
   configurable field is refused by name rather than quietly rewriting
-  that field instance.
+  that field instance. Besides the pipeline's three verbs it offers
+  their bodies to a surface target that writes a bundle of its own:
+  `values()` reads the mapped keys, `plan()` rehearses, and `write()`
+  writes a plan onto the bundle as it then exists, after the target
+  has saved the bundle.
 - **`CompositeTarget`** requires every surface key to be claimed by
   exactly one child. A key no child claims would be accepted, validated,
   reported committed and never written; a key two children claim would
@@ -203,13 +208,16 @@ A few things each of them is opinionated about:
   order they were listed, which matters when a later write needs an
   earlier one to have happened: base field overrides belong to a bundle,
   so on an add operation the target that creates the bundle must be
-  listed first.
+  listed first. A surface's own children are composed by
+  `SurfaceTargetAdapter` instead, which routes a slot by its sibling's
+  value; a composite hands each child only the keys it claims.
 
 ## Config schema, and whose violation it is
 
-Both config targets hold their artifact to the config schema and report
-what it says in the same `ViolationSet` the surface's own constraints
-answer with, filed under the surface key that owns the path.
+Every target that writes config holds its artifact to the config
+schema, through `SchemaViolations`, and reports what it says in the
+same `ViolationSet` the surface's own constraints answer with, filed
+under the surface key that owns the path.
 
 Only the paths the target writes are reported. A schema validates the
 whole object, so a config object carrying a violation under a key the
@@ -318,8 +326,8 @@ surface declares a secret key and the codec service is available, and
 leaves everything else exactly as it was.
 
 **The other targets do not, and that is the honest state of it.** The
-state target, the two config targets, the base field override target and
-the plugin configuration target write values that never pass through a
+state target, the config entity target, the base field override target
+and the plugin configuration target write values that never pass through a
 `SettingsShapeInterface`, so there is nowhere for the decorator to sit.
 Generalizing it to a target-level decorator is the follow-up, and it is
 not a rename: a config target holds its artifact to the config schema,
@@ -381,8 +389,8 @@ Every target also composes core's `DependencySerializationTrait`, as a
 safety net for adopters who do put one on a form: a target's services
 then store as service ids and come back as the container's own objects
 rather than as dead copies. Two of them cannot be made fully safe that
-way, because what they hold is not a service — a `Config` carries its own
-storage, and `FieldSettingsTarget` carries a config entity. The rule for
+way, because what they hold is not a service — `ConfigEntityTarget` and
+`FieldSettingsTarget` each carry a config entity. The rule for
 those is the one each class documents: hand it an object you own.
 
 ## Writing a target

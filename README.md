@@ -10,8 +10,9 @@ caller agree about what was accepted.
 
 This module is that place. A surface is built once, sealed, and then
 read: a generated form renders it, a pipeline accepts and validates
-values against it, and a target writes the accepted values to config, to
-a config entity, to base field overrides, or to state. The same surface
+values against it, and a target writes the accepted values to a config
+entity, to field settings, to base field overrides, to a plugin's
+configuration, or to state. The same surface
 answers a form submit, a Drush command, an agent call and a test without
 any of them owning a second copy of the rules. When a value depends on
 another — a bundle list that only makes sense once an entity type is
@@ -120,8 +121,8 @@ The module uses these seven words in exactly one sense each.
   the same list, derived rather than repeated.
 - **Target** — the destination accepted values are written to, and the
   place that knows the distance between the shape a surface describes and
-  the shape storage wants. Config objects, config entities, base field
-  overrides, state, and compositions of those.
+  the shape storage wants. Config entities, field settings, base field
+  overrides, plugin configuration, state, and compositions of those.
 - **Host** — the plugin whose configuration a surface is, and whose
   protocol it has to satisfy: a block, a field formatter, an action, a
   condition, a field type, any configurable plugin. It names the
@@ -184,13 +185,17 @@ Full documentation is under [`docs/`](docs/).
 | Page | What it covers |
 | --- | --- |
 | [Home](docs/index.md) | What a surface is, and where each concept lives in the code. |
+| [The pattern](docs/pattern.md) | What an author writes, where it goes, and why it is shaped that way. |
+| [How it fits](docs/how-it-fits.md) | One build followed from the caller to a sealed surface. |
+| [Decisions](docs/decisions.md) | The points the pattern left open, and how the module settled them. |
 | [Installation](docs/installation.md) | Install, integrations, submodules. |
 | [Declaring a surface](docs/declaring-a-surface.md) | The surface class, adopting it on a plugin, defaults, locking, secrets, required. |
 | [Surfaces as classes](docs/surfaces.md) | Situations, alters, subsurfaces and variants, access, targets, tools, the catalogue. |
+| [Surface catalogue](docs/catalogue.md) | Every surface the modules here declare, generated from the static layer. |
 | [The pipeline](docs/pipeline.md) | Access, accept, validate, prepare, commit; dry runs; exceptions. |
 | [Value semantics](docs/semantics.md) | Configured or not, the casting table, shape mismatches. |
 | [Outputs](docs/outputs.md) | Declaring what a host emits, the Omitted sentinel, conformance. |
-| [Targets](docs/targets.md) | The seven shipped targets and the serialization rule. |
+| [Targets](docs/targets.md) | The six engine targets and the serialization rule. |
 | [Generated forms](docs/forms.md) | Host families, the situation form and its cosmetic seam, the merge rule, AJAX, extraction. |
 | [Widgets](docs/widgets.md) | The widget plugin type, and writing one. |
 | [Options and resolvers](docs/options.md) | `LabeledChoice`, the resolver plugin type, the stock resolvers. |
@@ -209,6 +214,7 @@ passing run looks like.
 
 The design history is kept beside this file: [PLAN.md](PLAN.md) for the
 gaps and phases as they were reasoned through, [ADOPTION.md](ADOPTION.md)
-for the full core survey, and [HARDENING.md, and the forward plan in ROADMAP.md](HARDENING.md) for the audit
-findings and the decisions taken on them. The current documentation is
+for the full core survey, and [HARDENING.md](HARDENING.md) for the audit
+findings and the decisions taken on them; [ROADMAP.md](ROADMAP.md) is the
+forward plan. The current documentation is
 `docs/`.

@@ -4,8 +4,10 @@ The recorded comparison between `data_surface:node.type:add`, the tool
 generated from the content type surface's add situation, and the tool an
 agent has for the same job without surfaces.
 
-The tool is derived by `data_surface_tool` for every situation of every
-surface that names a target, so this module holds no code: it depends
+The tool is derived by `data_surface_tool` for every situation that can
+be asked on its own — its surface names a target, no plugin uses it, and
+its permission's placeholders are all parameters — so this module holds
+no code: it depends
 on the two modules the comparison needs, and keeps the comparison and
 its test.
 

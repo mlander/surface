@@ -82,8 +82,6 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
    * {@inheritdoc}
    */
   public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): static {
-    // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch does not say what adding a key twice does; it is refused for owner and alter alike, and a NULL default means "no default" rather than a declared NULL.
     if (in_array($key, $this->declared(), TRUE) || $this->isDeclared($key)) {
       throw new \LogicException(sprintf(
         'The %s "%s" was already added to this shape. Adding is never replacing: what one declaration said, another may not change.',
@@ -198,8 +196,6 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
    */
   protected function reserveSubsurface(string $verb, string $key): MapDataDefinition {
     if ($this->outputs) {
-      // phpcs:ignore Drupal.Files.LineLength.TooLong
-      // SKETCH GAP: the sketch lets an output vary by an input through attachBy() on outputs; the engine's output map has no subsurfaces, so attaching on outputs is refused.
       throw new \LogicException(sprintf('%s() cannot place a subsurface at the output "%s": outputs do not hold subsurfaces yet.', $verb, $key));
     }
     if (in_array($key, $this->declared(), TRUE) || $this->isDeclared($key)) {

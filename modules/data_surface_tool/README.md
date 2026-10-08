@@ -24,7 +24,8 @@ document. What a caller sends moved:
 
 `values` holds what used to be top-level inputs — `label`,
 `description`, `required`, `settings` — beside `storage` (cardinality,
-translatability), and every tool takes `dry_run`, which answers with
+translatability, and the storage settings its field type chooses, such
+as a string's `max_length`), and every tool takes `dry_run`, which answers with
 what would be stored, after storage's own checks, as `prepared`. The
 field type key offers every field type offered in the UI. One whose
 module marks a settings surface with `#[SurfaceVariant]` is described
@@ -32,9 +33,11 @@ by that surface; every other, a plain `string` or `integer` field
 among them, is described by its config schema,
 `field.field_settings.<field type>`, through `FieldSettingsSchemaVariants`
 (below): its keys, their types and labels, and the field type's own
-default settings where their type fits, and nothing more. The tools
-place a new field on the bundle's default form and view displays, as
-the old add tool did.
+default settings where their type fits, and nothing more. The storage
+settings are the same kind of slot on the storage, described by
+`field.storage_settings.<field type>` through
+`FieldStorageSettingsSchemaVariants`. The tools place a new field on the
+bundle's default form and view displays, as the old add tool did.
 
 ## What it shows
 
@@ -58,14 +61,21 @@ Five pieces:
 - `Surface\FieldInstanceSurface` — a field on a bundle, in the new
   spelling, with `add`, `reuse` and `edit` situations, a target and an
   access class. It attaches `Surface\FieldStorageSurface` at `storage`
-  (cardinality and translatability, with a target of its own, committed
-  before the field), and its `settings` are an open slot chosen by
+  (its field type, cardinality, translatability and storage settings,
+  with a target of its own, committed before the field), and its
+  `settings` are an open slot chosen by
   `field_type`, filled by whichever settings surface a field type's
   module marks with `#[SurfaceVariant]` (the address module's, and the
   test module's gated one), and for every other field type by
   `FieldSettingsSchemaVariants`. `reuse($storage, $bundle)` is an add for the
-  field and an edit for its storage; the storage's edit situation
-  refuses shrinking its cardinality once the field has data. Executing
+  field and an edit for its storage; the storage's edit situation knows
+  the field type, which locks its settings to that type's, and refuses
+  shrinking its cardinality once the field has data. Adding a field
+  leaves the type open on the storage as on the field: a caller setting
+  storage settings names it on both, and the storage refuses a type
+  other than the field's. A settings change that would alter the
+  database columns of a field with data is refused when the storage is
+  prepared, where the SQL storage would otherwise throw on save. Executing
   submits the whole field instance surface to its composed target,
   which prepares every part — the storage, the field, the settings —
   against its config schema, then writes the storage if it moved, the
@@ -89,9 +99,12 @@ Five pieces:
   no `#[SurfaceVariant]` fills, reading `field.field_settings.<field
   type>` through typed config: a mapping becomes a map, a sequence a
   list, a primitive its typed data type, and what the schema cannot
-  resolve without a value `any`. A derived variant has no target, so the
-  field stores it. The catalogue says, per slot, where derived variants
-  come from.
+  resolve without a value `any`. `FieldStorageSettingsSchemaVariants`
+  is the same class pointed at the storage surface's `settings` slot,
+  `field.storage_settings.<field type>` and the field type's default
+  storage settings. A derived variant has no target, so the field, or
+  the storage, stores it. The catalogue says, per slot, where derived
+  variants come from.
 - `SurfaceInputDefinitions` — converts core data definitions into the
   Tool API's input definitions: type, label, description, required,
   default value and constraints, with maps and lists becoming the Tool
@@ -130,11 +143,12 @@ once `storage` names an address storage. Compare with
 
 | Test | Covers |
 | --- | --- |
-| `Kernel\FieldToolsTest` | The three field tools end to end: add, reuse, edit, dry run, the schema refusing at prepare, a `string` field added and edited through settings derived from its schema, access. |
+| `Kernel\FieldToolsTest` | The three field tools end to end: add, reuse, edit, dry run, the schema refusing at prepare, a `string` field added and edited through settings derived from its schema, its storage's `max_length` set on add and changed by `data_surface:field.storage:edit`, a storage type other than the field's refused, cardinality and columns kept once the field has data, access. |
 | `Kernel\FieldToolsAccessTest` | The field type's own access class refusing both the tools and its Field UI host. |
 | `Kernel\FieldToolsComparisonTest` | The two JSON Schema documents in `COMPARISON.md`, against what the code emits, and parity with the retired tools. |
-| `Kernel\FieldInstanceSurfaceTest` | The three situations, the storage child and its has-data constraint, the settings slot, starting values. |
-| `Kernel\SituationToolsTest` | The generated tools: which exist, the two derivation rules, what they advertise, refinement to the thing a parameter names, execution, dry run, access. |
+| `Kernel\FieldInstanceSurfaceTest` | The three situations, the storage child (its keys, its locked type) and its has-data constraint, the settings slot, starting values. |
+| `Kernel\SituationToolsTest` | The generated tools: which exist, the two derivation rules, what they advertise, refinement to the thing a parameter names, execution, dry run, access, the storage tool's has-data constraint. |
+| `Kernel\SurfaceCatalogueTest` | The catalogue read from the static layer, and `docs/catalogue.md` against it, where each derived slot is listed. |
 
 ## Who may run them
 

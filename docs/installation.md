@@ -46,10 +46,14 @@ composer require drupal/tool
 drush pm:install data_surface_tool
 ```
 
-Adds two field instance tools to the
-[Tool](https://www.drupal.org/project/tool) API whose `settings` input is
-derived from the field type's surface, so an agent is offered typed,
-labeled, bounded settings instead of a free-form map.
+Derives one [Tool](https://www.drupal.org/project/tool) API tool,
+`data_surface:<surface>:<situation>`, for every situation that can be
+asked on its own. Among them are the field tools,
+`data_surface:field.instance:add`, `:reuse` and `:edit` and
+`data_surface:field.storage:edit`, whose settings are derived from the
+field type's surface, or from its config schema when it has none, so an
+agent is offered typed, labeled, bounded settings instead of a
+free-form map.
 
 ## Experimental submodules
 

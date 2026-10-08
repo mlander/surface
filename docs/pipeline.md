@@ -321,10 +321,9 @@ cacheability is as real as a refusal's.
 Nothing has been written, and the caller has the exact object a commit
 would have stored.
 
-For the config object target there is a stronger kind of dry run: a
-`Config` holds the storage it was constructed with, so one pointed at a
-memory storage with a private event dispatcher commits for real into a
-bin nobody else reads. Config entities have no equivalent. Both are in
+Config entities write through the container's config factory, so an
+entity cannot be pointed at another bin for one call: an unsaved clone,
+held to the schema, is as far as a dry run goes. See
 [Targets](targets.md#dry-runs).
 
 ## Who asks the access question
@@ -376,14 +375,16 @@ exception messages, because PHP has nowhere to put an object in one.
 | --- | --- | --- |
 | `UnknownKeysException` | `accept()` | The input carries a key no definition declares, at any depth. |
 | `ShapeMismatchException` | `accept()` | The input carries a value in a shape its definition cannot hold — a string where a map was advertised. Names the dotted path and what was expected. |
+| `VariantMismatchException` | `accept()` | A slot's value carries keys the chosen variant does not declare and another variant does. Names the slot, the deciding key and the misplaced keys. |
 | `TargetViolationsException` | `prepare()` | The target's storage refuses the values; a config schema, usually. |
 
-All three render their message through `Pipeline\ViolationSummary`, which
-names the first five entries and counts the rest; the full list is still
-on the exception. `DataSurfaceConfigurationTrait::setConfiguration()`
-throws a fourth refusal the same way.
+`UnknownKeysException` and `TargetViolationsException` render their
+message through `Pipeline\ViolationSummary`, which names the first five
+entries and counts the rest; the full list is still on the exception.
+`DataSurfaceConfigurationTrait::setConfiguration()` throws its refusal
+the same way.
 
-`submit()` catches all three and turns them into ordinary violations on
+`submit()` catches all four and turns them into ordinary violations on
 the surface keys that carried them, rather than letting them escape. So a
 caller that sends a misspelled key, the wrong shape, or something the
 config schema refuses gets the same path-aware report as one that sends

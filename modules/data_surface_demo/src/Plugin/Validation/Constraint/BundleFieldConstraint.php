@@ -16,9 +16,9 @@ use Symfony\Component\Validator\Constraint as SymfonyConstraint;
  * does, so the demo block's field list could only be built by a refiner
  * that fetched it. Said as a constraint, the refiner points at the list
  * and hands it the entity type and the bundle, and the options resolver
- * beside it fetches: the rule the sketch states as "a refiner never
+ * beside it fetches: the rule the pattern states as "a refiner never
  * calls a service", with the module's own resolver mechanism standing in
- * for the sketch's options lists until those are built.
+ * for the pattern's options lists until those are built.
  *
  * @see \Drupal\data_surface_demo\Plugin\DataSurfaceOptionsResolver\BundleFieldOptions
  * @see \Drupal\data_surface_demo\Surface\DemoBlockSurface::fieldOfBundle()

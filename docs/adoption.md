@@ -17,10 +17,10 @@ reasoning, is in `ADOPTION.md` at the module root.
 | --- | --- | --- |
 | [A](#group-a-the-plain-plugin-triple) | `ConfigurableInterface` plus the `PluginFormInterface` triple | **Built.** Three families ported. |
 | [B](#group-b-settings-protocols-with-no-hook) | A settings form the host harvests itself, with no validate or submit hook | **Built.** Formatters ported. |
-| [C](#group-c-one-plugin-two-surfaces) | Field types: two surfaces on one plugin | **Half built.** Instance settings ported; storage settings not. |
+| [C](#group-c-one-plugin-two-surfaces) | Field types: two surfaces on one plugin | **Half built.** Instance settings ported; storage settings described and written by the field tools, with no Field UI host. |
 | [D](#group-d-multiple-named-forms) | A form class resolved per operation | **Built.** One generic form class. |
 | [E](#group-e-config-entities) | Config entity forms | **Built for one.** Node types ported. |
-| [F](#group-f-simple-config-forms) | `ConfigFormBase` with `#config_target` | **Target built**, no adopter yet. |
+| [F](#group-f-simple-config-forms) | `ConfigFormBase` with `#config_target` | **Not built.** The engine target was removed for want of an adopter. |
 | [G](#group-g-field-widgets-collecting-content) | A widget as the form bridge for a field item's values | **Designed, not built.** |
 | [H](#group-h-different-shape-later) | Families whose shape does not fit yet | Out of scope. |
 
@@ -128,8 +128,19 @@ covers instance settings, and `data_surface_address` is the worked
 example — the address field type's settings declared as a surface
 class, `AddressFieldSettingsSurface`, which the swapped item class builds
 for Field UI and which fills the field instance surface's settings slot
-for the tool bridge, with the address module unmodified. Storage settings and the `$has_data` lock are
-the untouched half; address has no storage settings.
+for the tool bridge, with the address module unmodified.
+
+Storage settings are described but have no Field UI host.
+`FieldStorageSurface` in `data_surface_tool` fills its `settings` slot by
+field type, from a `#[SurfaceVariant]` or, for every other field type
+the UI offers, from `field.storage_settings.<type>` through
+`FieldStorageSettingsSchemaVariants`, so the field tools set and edit
+them: a string's `max_length` is `storage.settings.max_length` on
+`data_surface:field.instance:add`. `$has_data` is read where it bites:
+the storage's edit situation keeps cardinality from shrinking, and
+`FieldStorageTarget` refuses at prepare a settings change that alters
+the columns of a field with data. What is untouched is the field type's own
+`storageSettingsForm()`; address has no storage settings.
 
 Address was chosen because its settings form has no dependent settings at
 all, so everything a caller can get wrong is meaning and shape — which is
@@ -188,10 +199,13 @@ defaults from config, `toConfig` and `fromConfig` transforms,
 typed-config validation, violations mapped to elements. What it lacks is
 a form that is *generated* and a contract readable outside PHP.
 
-**Target built, no adopter yet.** `ConfigObjectTarget` mirrors
-`ConfigTarget` one for one, callables in each direction included, so a
-form already carrying `#config_target` metadata describes the same thing
-and the two can be ported into each other. Note that
+**Not built.** An engine `ConfigObjectTarget`, mirroring `ConfigTarget`
+one for one, was built and then removed, because nothing used it. A
+surface over a config object today names a target of its own, a
+`Surface\SurfaceTargetInterface` class that loads, prepares and commits
+the object; the engine target can be restored when an adopter appears,
+so that a form already carrying `#config_target` metadata and a surface
+describe the same thing. Note that
 `ConfigFormBase::copyFormValuesToConfig()` is private static, so a
 surface-driven config form cannot extend it; it replaces it.
 
@@ -224,7 +238,7 @@ rules need an entity-level surface, which is a later design.
 | --- | --- |
 | Views plugins | `defineOptions()` is a definition language of its own; state is `$this->options`, forms are by reference. Worth ingesting eventually, but not an adapter job. |
 | Menu link forms | Write to the menu tree table, not config, and have their own `extractFormValues()`. |
-| Image toolkits | Write to a `system.image.<toolkit>` config object with no plugin configuration. `ConfigObjectTarget` fits once Group F exists. |
+| Image toolkits | Write to a `system.image.<toolkit>` config object with no plugin configuration. A config object target fits once Group F exists. |
 | Migrate | No configuration forms at all. |
 | Layout Builder inline blocks | Configuration holds a serialized content entity. |
 

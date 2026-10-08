@@ -228,8 +228,6 @@ final class SurfaceSituationTool extends ToolBase implements InputDefinitionRefi
    *   Allowed or forbidden, never neutral.
    */
   protected function situationAccess(SurfaceDefinition $surface, SurfaceContext $context, AccountInterface $account): AccessResultInterface {
-    // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch's access is the permission then the access class but does not say what no opinion means; a caller addressing a situation reads neutral as a refusal, as a route does, because the situation owns its operation.
     return DataSurfaceAccess::decisive(
       $this->surfaces->access($surface->class, $context, $account),
       'The situation\'s permission and the surface\'s own access both have to allow this.',

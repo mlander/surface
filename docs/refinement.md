@@ -212,7 +212,11 @@ enters it:
 - **Refiners.** A `#[RefinesInput]` method calls no service and is a
   pure function of the siblings it watches, so it adds nothing of its
   own. The site state it points at is fetched by an options resolver,
-  which says how long its answer holds; see the next item.
+  which says how long its answer holds; see the next item. (The
+  engine's internal refiner interface would merge the metadata of a
+  link that is itself a cacheable dependency, but the one link the
+  build step binds, `RefinesInputRefiner`, is not one, for that
+  reason.)
 - **Option resolvers.** Each resolved option list carries its own
   metadata on its `OptionSet`, which the options widget applies to the
   element it builds.
@@ -302,9 +306,12 @@ contract all see the same five values, narrowed the same way.
   refining the map narrows the property inside what it returns, and
   the check descends into it. Dotted refinement paths (decision D6) are
   where that lands.
-- **Contributed keys.** An alter can add a value to an existing key and
-  can mount a key under its own module's name, but it cannot yet
-  refine the key it mounted, because addressing
-  `third_party_settings.<module>.<key>` needs the same dotted paths.
+- **An alter cannot refine its own mounted key.** An alter can add a
+  value to an existing key and can mount a key under its own module's
+  name, but a `#[RefinesInput]` method names one of the owner's keys,
+  and a method naming the key the alter mounted is refused when the
+  surface is built: addressing `third_party_settings.<module>.<key>`
+  needs the same dotted paths
+  ([Decisions](decisions.md#an-alter-cannot-refine-its-own-mounted-key)).
 - **Storage.** For a config-backed surface, widening is a schema alter
   and the surface follows; storage gates the write either way.

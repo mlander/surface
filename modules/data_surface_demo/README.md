@@ -23,8 +23,9 @@ bundle, and this module's `DataSurfaceDemoBundleField`, with its options
 resolver, for the field. Its presentation settings are a slot: a list
 and a grid need different things, so each is a surface of its own,
 `ListPresentationSurface` and `GridPresentationSurface`, each marked
-`#[SurfaceVariant]` for one value of the `presentation` key, which the
-block's surface makes a slot with `attachBy()`; the form swaps them over AJAX and
+`#[SurfaceVariant]` for one value of the `presentation` key, which
+chooses the `presentation_settings` slot the block's surface makes with
+`attachBy()`; the form swaps them over AJAX and
 the config schema picks the mapping with `[%parent.presentation]`. See
 [docs/surfaces.md](../../docs/surfaces.md).
 

@@ -7,7 +7,7 @@ namespace Drupal\data_surface\SurfaceBuild;
 /**
  * Every discovered surface, as a reader of the static layer sees it.
  *
- * The sketch's discovery document, kept small: for each surface its id,
+ * The pattern's discovery document, kept small: for each surface its id,
  * class, identity keys, target and access class, the plugins whose
  * configuration it is, its situations with what each needs, whether it
  * creates, the permission it asks for and whether it can be asked on its
@@ -132,8 +132,6 @@ final class SurfaceCatalogue {
    *   which building the surface reports.
    */
   protected function creates(SurfaceDefinition $surface, SituationDefinition $situation): ?bool {
-    // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch puts creates on the context a situation returns, not on #[Situation], so a catalogue can say it only for a situation that needs nothing; one that needs a subject is listed as not knowing until it has one.
     if (!$situation->needsNothing()) {
       return NULL;
     }

@@ -26,7 +26,7 @@ the plugin's host. `docs/surfaces.md` says how each part works.
 | [`block.data_surface_demo.presentation.list`](#blockdata_surface_demopresentationlist) | `ListPresentationSurface` | none | none |
 | [`field.instance`](#fieldinstance) | `FieldInstanceSurface` | `entity_type_id`, `bundle`, `field_name`, `field_type` | `add`, `reuse`, `edit` |
 | [`field.settings.address`](#fieldsettingsaddress) | `AddressFieldSettingsSurface` | none | none |
-| [`field.storage`](#fieldstorage) | `FieldStorageSurface` | none | `add`, `edit` |
+| [`field.storage`](#fieldstorage) | `FieldStorageSurface` | `field_type` | `add`, `edit` |
 | [`field_formatter.data_surface_demo_string`](#field_formatterdata_surface_demo_string) | `DemoFormatterSurface` | none | none |
 | [`node.type`](#nodetype) | `NodeTypeSurface` | `type` | `add`, `edit` |
 
@@ -90,7 +90,7 @@ the plugin's host. `docs/surfaces.md` says how each part works.
 
 `Drupal\data_surface_tool\Surface\FieldStorageSurface`, in `data_surface_tool`.
 
-- Identity: none
+- Identity: `field_type`
 - Target: `Drupal\data_surface_tool\Target\FieldStorageTarget`
 - Access: the situation's permission alone
 
@@ -98,6 +98,8 @@ the plugin's host. `docs/surfaces.md` says how each part works.
 | --- | --- | --- | --- | --- | --- | --- |
 | `add` | New field storage | nothing | yes | `administer %entity_type_id fields` | no: nothing supplies `%entity_type_id` | `FieldStorageSurface::add()` (`data_surface_tool`) |
 | `edit` | Edit a field storage | `FieldStorageConfigInterface $storage` | once given what it needs | `administer %entity_type_id fields` | yes | `FieldStorageSurface::edit()` (`data_surface_tool`) |
+
+- Slot `settings` is filled, for every other value, by variants derived from the config schema `field.storage_settings.<field type>`, for every field type offered in the UI.
 
 ## field_formatter.data_surface_demo_string
 

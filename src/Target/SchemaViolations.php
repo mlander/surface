@@ -12,12 +12,13 @@ use Drupal\data_surface\Pipeline\ViolationSet;
 /**
  * Validates storage shaped data and reports it back in surface terms.
  *
- * Both config targets face the same small problem twice: the config
- * schema validates a whole data array and names its violations by config
- * property path, while the pipeline files violations under surface keys.
- * The translation lives here once, so the config object target and the
- * config entity target cannot drift apart on how a schema complaint
- * reaches the caller.
+ * Every target that writes config faces the same small problem: the
+ * config schema validates a whole data array and names its violations by
+ * config property path, while the pipeline files violations under
+ * surface keys. The translation lives here once, so the engine's config
+ * entity target and the surface targets that rehearse a config entity in
+ * prepare() (a field, a field storage, a content type) cannot drift apart
+ * on how a schema complaint reaches the caller.
  *
  * Only the paths the surface writes are reported by default, and that is
  * the important rule. A schema validates the whole object, so a config

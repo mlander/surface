@@ -75,7 +75,7 @@ trait DataSurfaceHostFormTrait {
    * submit stage below asks rather than constructing a target of its
    * own: a plugin's values live in its configuration array, so the
    * target is the plugin wrapped in a PluginConfigurationTarget. The
-   * sketch's rule: a plugin's host supplies the target, because only it
+   * pattern's rule: a plugin's host supplies the target, because only it
    * holds the instance.
    *
    * @return \Drupal\data_surface\Pipeline\DataSurfaceTargetInterface

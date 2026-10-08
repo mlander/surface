@@ -1,5 +1,20 @@
 # Data Surface
 
+A surface is a form you can ask questions of before anything is saved:
+what it will accept right now, on this site, for this thing, and the
+same answer for a person, a route, a tool or an agent.
+
+| | Shape | Values |
+| --- | --- | --- |
+| **Owner**, a `#[Surface]` class in `src/Surface/` | `defineInputs($inputs)`, optionally `defineOutputs($outputs)` | `#[RefinesInput('key')]` methods |
+| **Another module**, an `#[AltersSurface]` class in `src/SurfaceAlter/` | `alterInputs($inputs)`, optionally `alterOutputs($outputs)` | `#[RefinesInput('key')]` methods |
+
+[The pattern](pattern.md) is the whole of what an author writes, and
+why; [How it fits](how-it-fits.md) follows one request through the
+build step. The rest of this page is the module around it.
+
+## What a surface is
+
 A *surface* is the description of a group of values a piece of software
 accepts: what each value is called, what it means, what type it is, what
 it may contain, what it defaults to, and which of its values depend on
@@ -10,8 +25,9 @@ every caller agree about what was accepted.
 
 This module is that place. A surface is built once, sealed, and then only
 read. A generated form renders it, a pipeline accepts and validates
-values against it, and a target writes the accepted values to config, to
-a config entity, to base field overrides, or to state. The same surface
+values against it, and a target writes the accepted values where they
+live: a config entity, a field's settings, base field overrides, a
+plugin's configuration, or state. The same surface
 answers a form submit, a Drush command, a config action, an agent call
 and a test, without any of them owning a second copy of the rules.
 
@@ -89,6 +105,9 @@ by hand.
 
 ## Where to start
 
+- **Learning the pattern**: [The pattern](pattern.md), then [How it
+  fits](how-it-fits.md); [Decisions](decisions.md) for the points it
+  left open and how they were settled.
 - **Writing a surface**: [Declaring a surface](declaring-a-surface.md)
   for the class, its keys, defaults, locks and secrets; then [Surfaces
   as classes](surfaces.md) for situations, alters, subsurfaces, access,

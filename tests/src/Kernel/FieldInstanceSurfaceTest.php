@@ -240,7 +240,10 @@ class FieldInstanceSurfaceTest extends DataSurfaceKernelTestBase {
     }
     $storage = $surface->getDefinitions()->entry('storage');
     $this->assertSame(FieldStorageSurface::class, $storage->attachment->source);
-    $this->assertSame(['cardinality', 'translatable'], $storage->attachment->child->getDefinitions()->names());
+    $this->assertSame(['field_type', 'cardinality', 'translatable', 'settings'], $storage->attachment->child->getDefinitions()->names());
+    // The storage's edit knows the type, so its settings are resolved.
+    $this->assertTrue($storage->attachment->child->isLocked('field_type'));
+    $this->assertSame('address', $storage->attachment->child->getDefault('field_type'));
     $this->assertSame(
       [
         'entity_type_id',
@@ -259,7 +262,12 @@ class FieldInstanceSurfaceTest extends DataSurfaceKernelTestBase {
     // One submission: the storage's cardinality, through its own target,
     // and the field, created on it.
     $target = $this->surfaces()->target(FieldInstanceSurface::class, $reuse, $surface);
-    $this->assertSame(['cardinality' => 1, 'translatable' => TRUE], $target->load($surface)['storage']);
+    // The address field type has no storage settings, so its derived
+    // variant is empty.
+    $this->assertSame(
+      ['field_type' => 'address', 'cardinality' => 1, 'translatable' => TRUE, 'settings' => []],
+      $target->load($surface)['storage'],
+    );
     $result = $this->pipeline()->submit($surface, ['label' => 'Address', 'storage' => ['cardinality' => 2]], $target);
     $this->assertTrue($result->committed, implode(', ', $result->violations->keys()));
     $this->assertSame('Address', $this->reloadField()?->getLabel());

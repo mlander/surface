@@ -112,8 +112,6 @@ final class SurfacePluginHooks {
       if (!is_string($class)) {
         continue;
       }
-      // phpcs:ignore Drupal.Files.LineLength.TooLong
-      // SKETCH GAP: the sketch says #[UsesSurface] "is in the plugin definition" but core discovery reads only the type's own attribute; a definition alter per plugin host copies it under UsesSurface::DEFINITION_KEY.
       $surface = self::usedSurfaceOf($class);
       if ($surface !== NULL) {
         $definition[UsesSurface::DEFINITION_KEY] = $surface;
@@ -147,8 +145,6 @@ final class SurfacePluginHooks {
     // A subclass of a surfaced plugin is that plugin, unless it names a
     // surface of its own: the attribute is not inherited by PHP, so the
     // ancestry is walked here.
-    // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch puts #[UsesSurface] on the plugin class without saying whether a subclass inherits it; it does, the nearest class naming one wins, as a subclassed block keeps its parent's form.
     for ($reflection = new \ReflectionClass($class); $reflection !== FALSE; $reflection = $reflection->getParentClass()) {
       foreach ($reflection->getAttributes(UsesSurface::class) as $attribute) {
         return $attribute->newInstance()->surface;

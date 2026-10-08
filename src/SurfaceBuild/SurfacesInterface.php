@@ -13,7 +13,7 @@ use Drupal\data_surface\Surface\SurfaceContext;
 /**
  * The build step: a surface class and a context in, a sealed surface out.
  *
- * What api/HOW-IT-FITS.md in the sketch calls the framework. It runs the
+ * What docs/how-it-fits.md calls the framework. It runs the
  * shape methods over the engine's builder, applies the discovered
  * alters, applies the context, binds the #[RefinesInput] methods as the
  * engine's refiners, builds each subsurface the same way in its own

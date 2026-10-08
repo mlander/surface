@@ -36,8 +36,28 @@ use Drupal\data_surface_tool\Surface\FieldInstanceSurface;
  * it: a mapping becomes a map, a sequence a list, a primitive its typed
  * data type, and anything the schema cannot resolve without a value (a
  * dynamic type such as an entity reference's handler settings) `any`.
+ *
+ * The field's storage has settings of its own, chosen by the same field
+ * type and described the same way: FieldStorageSettingsSchemaVariants
+ * is this class pointed at the storage's slot, its schema and its
+ * defaults.
  */
-final class FieldSettingsSchemaVariants implements DerivedVariantsInterface {
+class FieldSettingsSchemaVariants implements DerivedVariantsInterface {
+
+  /**
+   * The surface whose slot this fills.
+   */
+  protected const SURFACE = FieldInstanceSurface::class;
+
+  /**
+   * The config schema of a field type's settings, less the field type.
+   */
+  protected const SCHEMA = 'field.field_settings.';
+
+  /**
+   * The field item's static method that answers the default settings.
+   */
+  protected const DEFAULTS = 'defaultFieldSettings';
 
   /**
    * Constructs the deriver.
@@ -60,14 +80,14 @@ final class FieldSettingsSchemaVariants implements DerivedVariantsInterface {
    * {@inheritdoc}
    */
   public function slot(): array {
-    return [FieldInstanceSurface::class, 'settings'];
+    return [static::SURFACE, 'settings'];
   }
 
   /**
    * {@inheritdoc}
    */
   public function source(): string {
-    return 'the config schema `field.field_settings.<field type>`, for every field type offered in the UI';
+    return 'the config schema `' . static::SCHEMA . '<field type>`, for every field type offered in the UI';
   }
 
   /**
@@ -80,7 +100,7 @@ final class FieldSettingsSchemaVariants implements DerivedVariantsInterface {
       if (!empty($definition['no_ui']) || in_array($type, $declared, TRUE)) {
         continue;
       }
-      $schema = $this->typedConfig->getDefinition('field.field_settings.' . $type);
+      $schema = $this->typedConfig->getDefinition(static::SCHEMA . $type);
       $defaults = $this->defaults($definition['class'] ?? NULL);
       $keys = [];
       foreach ($schema['mapping'] ?? [] as $key => $property) {
@@ -155,7 +175,7 @@ final class FieldSettingsSchemaVariants implements DerivedVariantsInterface {
   }
 
   /**
-   * Reads a field type's own default field settings.
+   * Reads a field type's own default settings.
    *
    * @param mixed $class
    *   The field item class.
@@ -164,11 +184,12 @@ final class FieldSettingsSchemaVariants implements DerivedVariantsInterface {
    *   The defaults, or none when the class cannot say.
    */
   protected function defaults(mixed $class): array {
-    if (!is_string($class) || !method_exists($class, 'defaultFieldSettings')) {
+    $method = static::DEFAULTS;
+    if (!is_string($class) || !method_exists($class, $method)) {
       return [];
     }
     try {
-      return $class::defaultFieldSettings();
+      return $class::$method();
     }
     catch (\Throwable) {
       return [];

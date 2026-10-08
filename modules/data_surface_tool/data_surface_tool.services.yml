@@ -14,3 +14,10 @@ services:
     arguments: ['@plugin.manager.field.field_type', '@config.typed', '@typed_data_manager']
     tags:
       - { name: data_surface.derived_variants }
+  # The same, for the field storage surface's settings slot, from
+  # field.storage_settings.<type>.
+  data_surface_tool.field_storage_settings_schema_variants:
+    class: Drupal\data_surface_tool\FieldStorageSettingsSchemaVariants
+    arguments: ['@plugin.manager.field.field_type', '@config.typed', '@typed_data_manager']
+    tags:
+      - { name: data_surface.derived_variants }

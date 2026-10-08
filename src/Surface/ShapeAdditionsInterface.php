@@ -113,7 +113,7 @@ interface ShapeAdditionsInterface {
    *
    * @throws \LogicException
    *   When the key is already declared, or (for an alter, or for
-   *   outputs) not yet built: see the SKETCH GAP notes in the adapters.
+   *   outputs) not yet built: see docs/decisions.md.
    */
   public function attach(string $key, string $child): MapDataDefinition;
 

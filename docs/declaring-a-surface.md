@@ -57,8 +57,9 @@ of a surface has one home:
 | What may refuse once the situation's permission allows | `#[Surface(access:)]`, a `SurfaceAccessInterface` |
 | Its parts | `attach()` and `attachBy()` in `defineInputs()`, and `#[SurfaceVariant]` on each variant |
 
-`FieldInstanceSurface` in `data_surface_tool` uses every row; the test
-module's `TestBlockSurface` uses two.
+`FieldInstanceSurface` in `data_surface_tool` uses every row but
+outputs, which `DemoFormatterSurface` declares; the test module's
+`TestBlockSurface` uses two.
 
 - **`defineInputs()` is a flat list.** No `if`, no loop, and it never
   mentions a sibling. A constraint written there is fully known with no

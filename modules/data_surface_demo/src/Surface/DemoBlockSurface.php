@@ -105,8 +105,6 @@ final class DemoBlockSurface implements SurfaceInterface {
    */
   #[RefinesInput('field', watches: ['entity_type', 'bundle'])]
   public function fieldOfBundle(DataDefinitionInterface $field, string $entity_type, string $bundle): DataDefinitionInterface {
-    // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch fetches this list through an OptionsList source, which is out of scope here, and no core constraint names a bundle's fields; the demo module adds DataSurfaceDemoBundleField and its options resolver.
     $field->addConstraint('DataSurfaceDemoBundleField', [
       'entityTypeId' => $entity_type,
       'bundle' => $bundle,

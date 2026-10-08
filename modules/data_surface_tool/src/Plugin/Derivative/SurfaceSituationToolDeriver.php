@@ -18,12 +18,12 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * One tool per situation of every surface that names a target.
  *
- * The sketch's "one tool per situation, its inputs being the parameters
+ * The pattern's "one tool per situation, its inputs being the parameters
  * plus the surface's open keys", made from the static layer alone: the
  * surfaces discovery found, the situations on each, and what each
  * situation's signature says it needs. The derivative id is
  * `<surface id>:<situation id>`, so a plugin id reads
- * `data_surface:node.type:add` — the address the sketch gives a
+ * `data_surface:node.type:add` — the address the pattern gives a
  * situation.
  *
  * Two rules say which situations are not tools, and the catalogue
@@ -87,8 +87,6 @@ final class SurfaceSituationToolDeriver extends DeriverBase implements Container
       // its host; one a plugin names with #[UsesSurface] is configured
       // through that plugin's host, which holds the instance and supplies
       // the target. Neither is a tool of its own.
-      // phpcs:ignore Drupal.Files.LineLength.TooLong
-      // SKETCH GAP: the sketch generates one tool per situation without saying what of a plugin's surface; a surface any plugin names with #[UsesSurface] gets no tool, whatever it declares, because only the plugin's host holds the instance it configures.
       $plugins = $this->plugins->usedBy($surface->class);
       if ($surface->target === NULL || $plugins !== []) {
         continue;
@@ -101,8 +99,6 @@ final class SurfaceSituationToolDeriver extends DeriverBase implements Container
         continue;
       }
       foreach ($situations as $situation) {
-        // phpcs:ignore Drupal.Files.LineLength.TooLong
-        // SKETCH GAP: the sketch generates one tool per situation without saying what of one that is only ever a child's (a field's storage, added by the field); a situation whose permission names a %key placeholder none of its parameters can supply could never be allowed, so it is not a tool.
         if (!SurfaceCatalogue::standalone($surface, $situation, $plugins)) {
           continue;
         }

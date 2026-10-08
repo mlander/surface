@@ -139,8 +139,6 @@ final class Surfaces implements SurfacesInterface {
         $instance->alterOutputs($additions[$alter->module][1] ??= new SurfaceShapeAdditions($builder, $this->typedDataManager, $alter->module, TRUE));
       }
       if ($instance instanceof HasStorageShapeInterface) {
-        // phpcs:ignore Drupal.Files.LineLength.TooLong
-        // SKETCH GAP: the sketch has no storage shape for what an alter mounts; an alter implementing HasStorageShapeInterface hands one for its own module's mount, which the builder refuses for a module that mounts nothing and SurfaceTargetAdapter applies.
         $builder->setThirdPartyShape($alter->module, $instance->storageShape());
       }
       $links[] = [$instance, $alter->refiners, $alter->module];
@@ -190,8 +188,6 @@ final class Surfaces implements SurfacesInterface {
       }
       $deriver = $this->derivedVariants->for($definition->class, $key);
       if ($deriver !== NULL) {
-        // phpcs:ignore Drupal.Files.LineLength.TooLong
-        // SKETCH GAP: the sketch fills an open slot only with #[SurfaceVariant] classes; a value no class fills (a field type with no settings surface) gets a variant derived from a description that already exists (its config schema), sealed here as a shape with no class, so no alter, refiner, target or access class of its own.
         foreach ($deriver->variants(array_keys($variants)) as $value => $definitions) {
           $variants[(string) $value] ??= new SurfaceAttachment((new DataSurfaceBuilder($definitions))->seal());
         }
@@ -250,8 +246,7 @@ final class Surfaces implements SurfacesInterface {
     if ($child !== $context) {
       return $child;
     }
-    // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch says a child "otherwise sees its parent's" context; it sees the operation, creates and known identity, but not the parent's constraints, starting values or child contexts, which all name the parent's keys.
+    // Decision: see docs/decisions.md#child-context.
     return new SurfaceContext($context->operation, $context->creates, $context->known);
   }
 
@@ -284,8 +279,7 @@ final class Surfaces implements SurfacesInterface {
       }
       // Every surface whose #[SurfaceVariant] names this surface and key
       // fills it; the parent names none.
-      // phpcs:ignore Drupal.Files.LineLength.TooLong
-      // SKETCH GAP: the sketch does not say what a slot nothing fills is; it stays a placeholder and its deciding key gains an empty Choice, so nothing can be chosen, rather than refusing the surface on a site with no variant module.
+      // Decision: see docs/decisions.md#a-slot-nothing-fills.
       $slots[$key] = [
         'by' => $by,
         'children' => $this->registry->getVariants($definition->class, $key),
@@ -310,8 +304,6 @@ final class Surfaces implements SurfacesInterface {
         SurfaceContext::class,
       ));
     }
-    // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch says the operation is the situation id but not who enforces it; a situation returning another operation is refused here.
     if ($context->operation !== $found->id) {
       throw new \LogicException(sprintf(
         'The "%s" situation, %s, returned a context for the "%s" operation. A situation\'s context carries its own id as the operation: call withOperation(\'%s\') on a context built from another situation.',
@@ -341,8 +333,7 @@ final class Surfaces implements SurfacesInterface {
     if ($answer->isForbidden() || !$this->childrenMayAnswer($definition)) {
       return $answer;
     }
-    // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch gives a surface an access class but does not say whether a subsurface's counts; a child the context resolves is asked in its own context and may refuse, never allow, so a field type's settings can refuse the field they belong to.
+    // Decision: see docs/decisions.md#children-may-refuse.
     $answers = $this->childAnswers($context, $account, $this->build($definition->class, $context));
     foreach ($answers as $child) {
       if ($child->isForbidden()) {
@@ -372,14 +363,11 @@ final class Surfaces implements SurfacesInterface {
    *   The answer.
    */
   protected function ownAccess(SurfaceDefinition $definition, SurfaceContext $context, AccountInterface $account): AccessResultInterface {
-    // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch does not cover a context whose operation is no declared situation (a plugin host's 'configure'); it has no permission tier, so the access class alone answers, or neutral.
+    // Decision: see docs/decisions.md#no-declared-situation-no-permission-tier.
     $permission = $this->registry->getSituations($definition->class)[$context->operation]->permission ?? NULL;
     $result = AccessResult::neutral();
     if ($permission !== NULL) {
       $resolved = static::resolvePermission($permission, $context);
-      // phpcs:ignore Drupal.Files.LineLength.TooLong
-      // SKETCH GAP: the sketch does not say what a %key placeholder the context does not know means; it is forbidden, since the permission cannot be named.
       if ($resolved === NULL) {
         return AccessResult::forbidden(sprintf(
           'The "%s" situation\'s permission, "%s", names identity its context does not know.',
@@ -465,8 +453,6 @@ final class Surfaces implements SurfacesInterface {
     $builder = new DataSurfaceBuilder();
     $this->instance($definition->class, SurfaceInterface::class)
       ->defineInputs(new SurfaceShape($builder, $this->typedDataManager));
-    // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch has no static defaults; a plugin host whose protocol asks a class for its defaults statically reads the owner's shape alone, sealed on the spot with no alter or context.
     return $builder->seal()->getDefaultValues();
   }
 
@@ -545,8 +531,6 @@ final class Surfaces implements SurfacesInterface {
   protected function applyContext(DataSurfaceBuilderInterface $builder, SurfaceDefinition $definition, SurfaceContext $context, array $input_keys, array $subsurfaces = []): void {
     $assert_input = static function (string $key, string $what) use ($definition, $context, $input_keys, $subsurfaces): void {
       if (in_array($key, $subsurfaces, TRUE)) {
-        // phpcs:ignore Drupal.Files.LineLength.TooLong
-        // SKETCH GAP: the sketch narrows a child through the child's own context; a constraint or starting value the parent's context names for a subsurface key is refused, and pointed at withChild().
         throw new \LogicException(sprintf(
           'The "%s" context gives a %s for "%s", which is a subsurface of the %s surface: a child is narrowed and started by its own context, handed to it with withChild(\'%s\', ...).',
           $context->operation,
@@ -568,8 +552,6 @@ final class Surfaces implements SurfacesInterface {
     };
 
     if ($context->starting !== []) {
-      // phpcs:ignore Drupal.Files.LineLength.TooLong
-      // SKETCH GAP: the sketch applies starting values "if it creates" but not what happens otherwise; a non-creating context with starting values is refused rather than silently ignored.
       if (!$context->creates) {
         throw new \LogicException(sprintf(
           'The "%s" context carries starting values for %s but does not create. Starting values are where a new thing begins; a thing that exists begins from what its target loads.',
@@ -579,8 +561,6 @@ final class Surfaces implements SurfacesInterface {
       }
       // A starting value is the value a caller sees before choosing, and
       // may replace: exactly what a declared default is to the engine.
-      // phpcs:ignore Drupal.Files.LineLength.TooLong
-      // SKETCH GAP: the sketch calls them "initial values" without a mechanism; they become the key's declared default (setDefault), overriding the shape's default for this build only.
       foreach ($context->starting as $key => $value) {
         $assert_input((string) $key, 'starting value');
         $builder->setDefault((string) $key, $value);
@@ -598,8 +578,7 @@ final class Surfaces implements SurfacesInterface {
       Narrowing::assertNarrows((string) $key, sprintf('the "%s" situation', $context->operation), $before, $target);
     }
 
-    // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch does not say what a known key that is not an identity key does; it is not locked, and stays on the context for the target and access class to read.
+    // Decision: see docs/decisions.md#known-keys-that-are-not-identity.
     foreach ($definition->identity as $key) {
       if (array_key_exists($key, $context->known)) {
         $builder->setDefault($key, $context->known[$key]);
@@ -650,15 +629,12 @@ final class Surfaces implements SurfacesInterface {
         $once[] = $refiner;
         continue;
       }
-      // phpcs:ignore Drupal.Files.LineLength.TooLong
-      // SKETCH GAP: the sketch runs each method once its own siblings have values; the engine gates per key, so a key refined by methods watching different siblings waits for the union of them.
+      // Decision: see docs/decisions.md#gating-per-key.
       $builder->addRefinement($refiner->key, $refiner->watched());
       $bindings[$refiner->key][] = $refiner;
     }
     $link = new RefinesInputRefiner($instance, $bindings);
     foreach (array_keys($bindings) as $key) {
-      // phpcs:ignore Drupal.Files.LineLength.TooLong
-      // SKETCH GAP: the sketch lets an alter tighten an owner's key but the engine's contributor chains only see contributed choices; alters' links go in the owner's chain, after the surface's, except on a key the alter offered more values on, where they are its contribution's chain.
       // An alter's method on a key it offered more values on is that
       // contribution's refiner: the engine hands it the alter's values
       // only, and the union of both chains is what is offered.
@@ -666,8 +642,6 @@ final class Surfaces implements SurfacesInterface {
     }
     // A method that watches nothing has nothing to wait for, so its one
     // run is now, and what it returns is what the surface advertises.
-    // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch says a refiner with no siblings "runs once" but not when; it runs at build, after the context, held to the narrowing check, and its result is advertised.
     foreach ($once as $refiner) {
       $advertised = $builder->getDefinition($refiner->key);
       assert($advertised !== NULL);
@@ -681,7 +655,7 @@ final class Surfaces implements SurfacesInterface {
   /**
    * Refuses a #[RefinesInput] method that reaches across a subsurface.
    *
-   * The sketch's wall between a parent and its child, in both
+   * The pattern's wall between a parent and its child, in both
    * directions. A parent's method may neither refine a subsurface key —
    * the child refines its own keys, in its own frame — nor watch one; a
    * child's method may not watch its parent's keys, because a child sees
@@ -703,8 +677,6 @@ final class Surfaces implements SurfacesInterface {
    *   Naming the method and the key it reached for.
    */
   protected static function assertWalled(SurfaceDefinition $definition, RefinerDefinition $refiner, array $input_keys, array $subsurfaces, ?array $parent): void {
-    // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch says a parent cannot refine a child's key and a child cannot read a parent's value; a parent watching a whole subsurface key is not mentioned and is refused too, so the wall holds both ways.
     if (in_array($refiner->key, $subsurfaces, TRUE)) {
       throw new \LogicException(sprintf(
         '%s refines "%s", which is a subsurface of the %s surface. A subsurface is refined by its own #[RefinesInput] methods, in its own frame; a parent cannot refine into it.',

@@ -42,12 +42,12 @@ prose.
 | | Classic | | Surface | |
 | --- | ---: | ---: | ---: | ---: |
 | | **lines** | **code** | **lines** | **code** |
-| Block plugin and its surfaces | 437 | 264 | 267 | 143 |
+| Block plugin and its surfaces | 434 | 264 | 264 | 142 |
 | Field list (constraint, validator, resolver) | — | — | 198 | 103 |
 | Formatter plugin and its surface | 285 | 167 | 168 | 95 |
-| Variant vocabulary | — | — | 116 | 40 |
+| Variant vocabulary | — | — | 120 | 40 |
 | Config schema | 64 | 58 | 81 | 70 |
-| **Total** | **786** | **489** | **830** | **451** |
+| **Total** | **783** | **489** | **831** | **450** |
 
 Five of those rows are worth a sentence.
 

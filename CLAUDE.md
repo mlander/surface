@@ -7,10 +7,12 @@ storage. The rule the whole module turns on is that refinement may only
 *narrow*, so what a surface advertised when sealed stays true afterwards.
 
 Where to look: **`docs/`** is the current documentation, and the only place
-kept true (start at `docs/index.md`). **`ROADMAP.md`** is what is next.
+kept true (start at `docs/index.md`; the pattern is `docs/pattern.md`, the
+build step `docs/how-it-fits.md`, every decision the pattern left open
+`docs/decisions.md`). **`ROADMAP.md`** is what is next.
 **`PLAN.md`**, **`ADOPTION.md`**, **`HARDENING.md`** are design history —
 read them for why, never as a description of today. **`REWORK.md`** is
-the rework in progress on this branch, toward the spelling in `sketch/`.
+the record of the rework that brought the module to the pattern.
 
 ## One spelling
 
@@ -38,8 +40,13 @@ for a field type) and answers static defaults from the surface's own
 shape (`SurfacesInterface::defaults()`). A target has three verbs,
 `load()`, `prepare()` (rehearse the write with storage's own checks, no
 side effects) and `commit()` of what prepare returned; a dry run stops
-after prepare and reports it. A decision the sketch does not cover is
-marked `// SKETCH GAP:` where it is made; grep for it.
+after prepare and reports it.
+
+Decisions live in `docs/decisions.md`: one entry per point the pattern
+did not settle, with its reason. A new undecided point is added there,
+marked open, not left as a code comment; code points at an entry with
+`// Decision: see docs/decisions.md#<anchor>.` only where a reader at
+that spot needs it.
 
 Situations are what routes and tools are generated from. A route names
 `_data_surface_surface` and `_data_surface_situation` and maps its
@@ -60,8 +67,8 @@ fills it, and the parent names none). Both return the map at the key,
 which the owner labels with the core setters; `describe()` is for an
 alter rewording a key it does not own. A service implementing
 `SurfaceBuild\DerivedVariantsInterface` fills a slot for the values no
-variant class fills (`data_surface_tool` derives a field type's settings
-from its config schema). A child whose shape cannot be listed at all is
+variant class fills (`data_surface_tool` derives a field type's settings,
+and its storage settings, from its config schema). A child whose shape cannot be listed at all is
 a `#[RefinesInput]` method on an `any` key returning a map. A child is
 built by the same build step in its own frame and sealed into the parent's entry as a `SurfaceAttachment`,
 or a `SurfaceSlot` of them; the pipeline, refinement, the form and the
@@ -79,7 +86,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
   modules/custom/data_surface'
 ```
 
-The baseline as of this writing: **653 tests, 4018 assertions, 0 errors,
+The baseline as of this writing: **650 tests, 4033 assertions, 0 errors,
 2 failures** — the two below. The test and assertion counts drift upward
 as work lands and are not the thing to check. **No test may error,
 and the only tests that may fail are the ones in

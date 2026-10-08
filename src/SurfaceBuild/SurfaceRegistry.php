@@ -352,8 +352,7 @@ final class SurfaceRegistry {
     if (isset($surfaces[$class])) {
       return FALSE;
     }
-    // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch does not say what an alter, situation or variant naming a surface that is not there means; a class that does not load, or loads and carries #[Surface] (its module is off, though an autoloader that knows every extension still finds it), is skipped; one that loads and is no surface is refused.
+    // Decision: see docs/decisions.md#a-class-that-is-not-there.
     if (class_exists($class) && (new \ReflectionClass($class))->getAttributes(Surface::class) === []) {
       throw new \LogicException(sprintf(
         '%s names %s, which is not a discovered surface: a surface carries #[Surface] and lives in its module\'s src/Surface directory.',

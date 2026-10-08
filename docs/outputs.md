@@ -57,10 +57,11 @@ documented:
 | **Locking** | Fixes the value to what storage holds. | Refused. Locking narrows what a caller may send. |
 | **Refinement** | `#[RefinesInput]` methods narrow it against its siblings. | Refused: a `#[RefinesInput]` naming an output key is refused when the surface is built. A refinement narrows what may be sent, and nobody sends an output. |
 
-An output whose shape depends on an input value is a variant, declared
-with `attachBy()` on that input key, exactly as for an input slot. An
-output cannot attach yet, and is refused by name, so until it can, an
-output that would vary is advertised at its widest: the demo
+An output whose shape depends on an input value would be a variant,
+declared with `attachBy()` on that input key, exactly as for an input
+slot. Outputs hold no subsurface yet: `attach()` and `attachBy()` on an
+output are refused by name, so until they can, an output that would
+vary is advertised at its widest: the demo
 formatter's `classes` is an open list of class names, whatever variant
 is chosen.
 
