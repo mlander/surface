@@ -86,7 +86,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
   modules/custom/data_surface'
 ```
 
-The baseline as of this writing: **650 tests, 4033 assertions, 0 errors,
+The baseline as of this writing: **664 tests, 4251 assertions, 0 errors,
 2 failures** — the two below. The test and assertion counts drift upward
 as work lands and are not the thing to check. **No test may error,
 and the only tests that may fail are the ones in
@@ -200,7 +200,7 @@ src/Form/                Form builder, host traits, the situation form.
 src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constraints.
 src/Options/             Option sets, the resolver plugin base and manager.
 src/Refinement/          Narrowing and choice sets.
-modules/                 Seven experimental submodules; each has its own README.
+modules/                 Nine experimental submodules; each has its own README.
 tests/src/               Unit, Kernel, Functional, FunctionalJavascript.
 docs/ scripts/           Published documentation; check.sh and the generator.
 ```

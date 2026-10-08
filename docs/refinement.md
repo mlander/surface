@@ -306,12 +306,13 @@ contract all see the same five values, narrowed the same way.
   refining the map narrows the property inside what it returns, and
   the check descends into it. Dotted refinement paths (decision D6) are
   where that lands.
-- **An alter cannot refine its own mounted key.** An alter can add a
-  value to an existing key and can mount a key under its own module's
-  name, but a `#[RefinesInput]` method names one of the owner's keys,
-  and a method naming the key the alter mounted is refused when the
-  surface is built: addressing `third_party_settings.<module>.<key>`
-  needs the same dotted paths
-  ([Decisions](decisions.md#an-alter-cannot-refine-its-own-mounted-key)).
+- **An alter cannot watch a mounted key.** An alter's
+  `#[RefinesInput]` method may refine the key it mounted, by that key's
+  own name, watching the owner's keys
+  ([Decisions](decisions.md#an-alter-refines-its-own-mounted-key));
+  the compliance alter of the examples makes its privacy notice required
+  above a hundred people that way. No method can watch a mounted key:
+  its value lives under `third_party_settings.<module>`, and handing it
+  over needs the same dotted paths.
 - **Storage.** For a config-backed surface, widening is a schema alter
   and the surface follows; storage gates the write either way.

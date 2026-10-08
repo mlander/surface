@@ -135,13 +135,19 @@ contributor's keys, which is how core keeps third-party settings.
 its module, and a subsurface inside that mount is not built yet.
 (`SurfaceShapeAdditions::attach()`)
 
-### An alter cannot refine its own mounted key
+### An alter refines its own mounted key
 
-A `#[RefinesInput]` method names an owner's key; the key an alter
-mounted is not one, so a method naming it is refused. Addressing
-`third_party_settings.<module>.<key>` needs dotted refinement paths,
-roadmap item 16. *Not from a code comment; recorded here because the
-docs state it.*
+A `#[RefinesInput]` method on an alter may name a key that alter added,
+by the name it added it under; it is bound to the mount,
+`third_party_settings`, and refines only its own module's property
+inside it, so the method reads as it would on an owner's key and the
+engine's narrowing check, AJAX edges and discard rule apply to the
+mount unchanged. It watches the owner's keys only: watching any mounted
+key is refused, since its value lives under the mount and handing it
+over needs dotted refinement paths, roadmap item 16. *Changed for the
+examples' step 4, which needs a notice the alter adds to turn required
+above a hundred people; until then such a method was refused.*
+(`Surfaces::bindRefiners()`, `RefinesInputRefiner::refineMounted()`)
 
 ### A storage shape for a mount
 
@@ -150,6 +156,18 @@ implements `HasStorageShapeInterface`; its shape applies to its own
 module's mount and nothing else. The alter does not own the target, so
 it hands the translation to the surface, and the composed target
 applies it. (`Surfaces`, `SurfaceTargetAdapter`)
+
+### Required inside a plain map
+
+A required property inside a plain map (a key that is neither a
+subsurface nor a slot, such as the mount alters' keys live in) that
+holds no value is refused with the surface's own "is required"
+message, filed at its path, whether or not the map itself holds
+anything; typed data's NotNull for the same path is dropped so it is
+said once. No child judges a plain map's properties, and NotNull alone
+passes an empty string and never sees a map that is absent, so a
+mounted key an alter made required would otherwise never be refused.
+(`DataSurfacePipeline::missingInMap()`)
 
 ### Adding a key twice
 
@@ -274,6 +292,28 @@ supply is no tool: it could never be allowed. `field.storage`'s `add`
 is only ever a field's child. (`SurfaceSituationToolDeriver`,
 `SurfaceCatalogue::standalone()`)
 
+### A violation summary is plain text
+
+A derived tool's refusal names each violation with its message rendered
+as plain text before the line is handed on as a placeholder value. The
+line is escaped there, so a message's own placeholder markup (Range's
+`<em class="placeholder">`) would otherwise reach the caller, Drush
+included, as literal tags. (`SurfaceResultReportingTrait::violationSummary()`)
+
+## Forms
+
+### A panel inside the situation form
+
+A route may name a read-only panel in `_data_surface_panel`, a service
+id or class implementing `DataSurfaceFormPanelInterface`, the way it
+names a cosmetic layer. The situation form places what it returns
+inside the surface container, because the AJAX rebuild replaces the
+container and a panel describing the surface as it stands has to be
+replaced with it; it is handed the values the elements are built with,
+not a refined surface, so it can tell which variant a slot shows. The
+contract panel lives in `data_surface_tool`, since half of it is the
+derived tool's JSON Schema. (`DataSurfaceSituationForm::surfacePanel()`)
+
 ## Discovery
 
 ### Whether a situation creates
@@ -330,3 +370,27 @@ demo's own, `DataSurfaceDemoBundleField`, and its options resolver.
 The pattern fetches such a list through an options source, which is
 not built yet, and no core constraint names a bundle's fields.
 (`DemoBlockSurface::fieldOfBundle()`)
+
+## Examples
+
+### What the examples' steps are made of
+
+Each step of `data_surface_examples` keeps its settings in a config
+object of its own and names a target subclass of `RegistrationTarget`
+that says which; a step's surface repeats the previous step's keys
+rather than extending its class, so each step reads alone on screen. A
+ticket price is a `float` with a `Range` minimum of 0.01: core's typed
+data has no decimal type and no `Positive` constraint plugin. The event
+title is stored as a `string`, not a translatable `label`, because a
+`label` would make the classic twin's `#config_target` demand a
+language code the surface side never needs. (`RegistrationStep3Surface`,
+`PaidTicketSurface`, `data_surface_examples.schema.yml`)
+
+### The examples' README is held, not generated
+
+The README quotes each step's class from its first attribute down, and
+`ExamplesReadmeTest` fails when a quoted block and its file differ, as
+`ExamplesToolTest` fails when the three tool answers it quotes change.
+Generating it would need a kernel for the answers and a generator for
+prose written for a viewer; a drift test keeps the prose free and the
+code true.

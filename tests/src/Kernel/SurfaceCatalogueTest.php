@@ -47,6 +47,8 @@ class SurfaceCatalogueTest extends DataSurfaceKernelTestBase {
     'data_surface_demo_extras',
     'data_surface_demo_node_type',
     'data_surface_tool',
+    'data_surface_examples',
+    'data_surface_examples_compliance',
   ];
 
   /**
@@ -81,6 +83,12 @@ class SurfaceCatalogueTest extends DataSurfaceKernelTestBase {
       'field.storage',
       'field_formatter.data_surface_demo_string',
       'node.type',
+      'registration.contact',
+      'registration.step1',
+      'registration.step2',
+      'registration.step3',
+      'registration.step3.ticket.free',
+      'registration.step3.ticket.paid',
     ], array_keys($catalogue));
 
     $node_type = $catalogue['node.type'];

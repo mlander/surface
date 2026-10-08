@@ -56,7 +56,10 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
  * submitted for it. A cosmetic layer, named by the optional
  * `_data_surface_cosmetics` default as a service id or a class, is told
  * the situation id as the operation and the raw value of the situation's
- * first route parameter as the subject. The defaults are
+ * first route parameter as the subject. A panel, named the same way by
+ * the optional `_data_surface_panel` default, is placed inside the
+ * surface container and rebuilt with it (DataSurfaceFormPanelInterface).
+ * The defaults are
  * underscore-prefixed because Drupal's routing treats such defaults as
  * its own business: no parameter converter tries to upcast them and no
  * argument resolver tries to hand them to buildForm().
@@ -98,6 +101,19 @@ class DataSurfaceSituationForm extends FormBase {
    * rather than a string written in three methods.
    */
   public const SURFACE_KEY = 'surface';
+
+  /**
+   * The route default naming a panel shown inside the surface, if any.
+   */
+  public const PANEL = '_data_surface_panel';
+
+  /**
+   * The key the panel is placed at inside the surface container.
+   *
+   * Not a surface key: extraction reads the surface's own keys only, so
+   * nothing placed here is ever taken for a value.
+   */
+  public const PANEL_KEY = 'data_surface_panel';
 
   /**
    * Constructs a DataSurfaceSituationForm.
@@ -163,15 +179,22 @@ class DataSurfaceSituationForm extends FormBase {
       throw new AccessDeniedHttpException($reason ?: 'The surface this form configures may not be written by this account.');
     }
     $operation = $served->situation->id;
+    $values = $this->surfaceFormValues($surface, array_replace(
+      $surface->getDefaultValues(),
+      $this->storedSurfaceValues($surface, $target),
+    ), $form_state);
     $form[static::SURFACE_KEY] = $this->surfaceFormBuilder()->buildSurfaceForm(
       $surface,
-      $this->surfaceFormValues($surface, array_replace(
-        $surface->getDefaultValues(),
-        $this->storedSurfaceValues($surface, $target),
-      ), $form_state),
+      $values,
       $form_state,
       $this->surfaceWrapperKey($operation, $served->subject),
     );
+    $panel = $this->surfacePanel();
+    if ($panel !== NULL) {
+      // Inside the container, so the rebuild a refinement triggers
+      // replaces the panel with the elements it describes.
+      $form[static::SURFACE_KEY][static::PANEL_KEY] = $panel->buildPanel($served, $surface, $values);
+    }
     $form['actions'] = [
       '#type' => 'actions',
       '#weight' => 100,
@@ -301,6 +324,31 @@ class DataSurfaceSituationForm extends FormBase {
       ));
     }
     return $cosmetics;
+  }
+
+  /**
+   * Gets the panel the route names, if it names one.
+   *
+   * @return \Drupal\data_surface\Form\DataSurfaceFormPanelInterface|null
+   *   The panel, or NULL when the route names none.
+   *
+   * @throws \LogicException
+   *   When the route names a panel that does not implement the interface.
+   */
+  protected function surfacePanel(): ?DataSurfaceFormPanelInterface {
+    $name = (string) ($this->routeDefault(static::PANEL) ?? '');
+    if ($name === '') {
+      return NULL;
+    }
+    $panel = $this->classResolver->getInstanceFromDefinition($name);
+    if (!$panel instanceof DataSurfaceFormPanelInterface) {
+      throw new \LogicException(sprintf(
+        'The "%s" the %s route names as its panel does not implement DataSurfaceFormPanelInterface.',
+        $name,
+        (string) $this->getRouteMatch()->getRouteName(),
+      ));
+    }
+    return $panel;
   }
 
   /**

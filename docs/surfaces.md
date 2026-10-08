@@ -447,9 +447,12 @@ mounted under its own module's name — at
 `third_party_outputs.<module>.<key>` for an output — so the owner's
 storage and schema never have to know a contributor's keys. Its
 `#[RefinesInput]` methods tighten the owner's keys, running after the
-owner's own. An alter cannot refine its own mounted key: a method names
-an owner's key, and addressing a mounted one needs dotted refinement
-paths ([Decisions](decisions.md#an-alter-cannot-refine-its-own-mounted-key)).
+owner's own, and may tighten the keys the alter itself added, named as
+the alter named them: `#[RefinesInput('privacy_notice')]` in the
+examples' compliance alter makes its notice required above a hundred
+people. A mounted key can be refined by its alter but watched by no
+one: its value lives under the mount, where no refiner can be handed it
+yet ([Decisions](decisions.md#an-alter-refines-its-own-mounted-key)).
 
 The one widening an alter may make is `extendChoices()`: more values on
 a key whose owner declared a list of allowed values. The values are the

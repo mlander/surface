@@ -439,13 +439,14 @@ example.edit:
         type: 'entity:example'
 ```
 
-The three defaults:
+The defaults:
 
 | Default | Holds |
 | --- | --- |
 | `_data_surface_surface` | The surface class, or its `#[Surface]` id. |
 | `_data_surface_situation` | One of its situation ids. |
 | `_data_surface_cosmetics` | Optional. A service id or class implementing `Form\DataSurfaceFormCosmeticsInterface`. |
+| `_data_surface_panel` | Optional. A service id or class implementing `Form\DataSurfaceFormPanelInterface`: something shown inside the surface, rebuilt with it. |
 
 The route's parameters are the situation method's, by name: an upcast
 entity parameter arrives as the entity, a plain one as its value, so
@@ -468,6 +469,24 @@ The content type demo's two routes are the worked example, and
 The surface container is built under the `surface` key, which is
 `DataSurfaceSituationForm::SURFACE_KEY` and is part of the contract with
 anything that reads submitted values by path.
+
+### A panel beside the elements
+
+A route may name a panel in `_data_surface_panel`. The form hands it the
+situation, the surface built in it, and the values the elements are
+built with, and places what it returns inside the surface container,
+under `DataSurfaceSituationForm::PANEL_KEY`. Inside, because the AJAX
+rebuild a refinement triggers replaces the container: a panel that
+describes the surface as the answers stand changes when they do.
+Extraction reads only the surface's own keys, so nothing in a panel is
+ever taken for a value.
+
+`data_surface_tool.contract_panel` (`SurfaceContractPanel`) is the one
+this repository ships: every key with its type, label, requiredness,
+default, what it allows in words, what it depends on and whether it is
+narrowed right now, children and mounted keys included, and, collapsed,
+the JSON Schema the derived tool for the same situation advertises. The
+examples' routes name it.
 
 ### Access, twice
 

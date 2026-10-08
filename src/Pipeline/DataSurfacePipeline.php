@@ -302,6 +302,10 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       $name = (string) $name;
       $definition = $entry->definition;
       $value = $values[$name] ?? NULL;
+      // Decision: see docs/decisions.md#required-inside-a-plain-map.
+      $missing = $entry->attachment === NULL && $entry->slot === NULL
+        ? $this->missingInMap($definition, is_array($value) ? $value : [])
+        : [];
       if (!ValueState::isConfigured($value)) {
         // Not configured: nothing to hold to a constraint, and for a
         // required key the surface's own message rather than whichever
@@ -312,6 +316,9 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
           $errors[] = new SurfaceViolation($name, '', $this->t('@label is required.', [
             '@label' => $definition->getLabel() ?? $name,
           ]));
+        }
+        foreach ($missing as $path => $label) {
+          $errors[] = new SurfaceViolation($name, $path, $this->t('@label is required.', ['@label' => $label]));
         }
         continue;
       }
@@ -335,12 +342,20 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       $typed_data = $this->typedDataManager->create($definition, $value, $name);
       $refusals = [];
       foreach ($typed_data->validate() as $violation) {
+        $path = (string) $violation->getPropertyPath();
+        if (isset($missing[$path])) {
+          // Said below, in the surface's own words.
+          continue;
+        }
         // The message stays the object the constraint built. Flattening
         // it here would render its placeholders once, as plain text, and
         // whatever reads the violation afterwards would escape that text
         // a second time; a form error, a tool result and a log line each
         // render it themselves, at their own boundary.
-        $refusals[] = new SurfaceViolation($name, (string) $violation->getPropertyPath(), $violation->getMessage());
+        $refusals[] = new SurfaceViolation($name, $path, $violation->getMessage());
+      }
+      foreach ($missing as $path => $label) {
+        $refusals[] = new SurfaceViolation($name, $path, $this->t('@label is required.', ['@label' => $label]));
       }
       if ($refusals !== [] && $this->isStale($definition, $value, $name, $current)) {
         // The whole key is reported as stale and not re-judged. What
@@ -354,6 +369,45 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       $errors = array_merge($errors, $refusals);
     }
     return $errors;
+  }
+
+  /**
+   * Finds the required properties of a plain map that hold no value.
+   *
+   * A plain map is not a subsurface, so no child judges its keys; without
+   * this, a required property inside one would be held only to typed
+   * data's NotNull, which an empty string passes and an absent map never
+   * reaches. The surface's rule for a key, applied to the map's own
+   * properties: required and not configured is refused, with the same
+   * message. A mounted key an alter made required is the case it is for.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition.
+   * @param array $value
+   *   The key's value, or an empty array when it holds none.
+   * @param string $prefix
+   *   The property path so far.
+   *
+   * @return array<string, string|\Stringable>
+   *   The labels of the missing properties, keyed by property path.
+   */
+  protected function missingInMap(DataDefinitionInterface $definition, array $value, string $prefix = ''): array {
+    if (!$definition instanceof ComplexDataDefinitionInterface || $definition instanceof ListDataDefinitionInterface) {
+      return [];
+    }
+    $missing = [];
+    foreach ($definition->getPropertyDefinitions() as $property => $property_definition) {
+      $path = $prefix . $property;
+      $held = $value[$property] ?? NULL;
+      if ($property_definition instanceof ComplexDataDefinitionInterface) {
+        $missing += $this->missingInMap($property_definition, is_array($held) ? $held : [], $path . '.');
+        continue;
+      }
+      if ($property_definition->isRequired() && !ValueState::isConfigured($held)) {
+        $missing[$path] = $property_definition->getLabel() ?? $property;
+      }
+    }
+    return $missing;
   }
 
   /**

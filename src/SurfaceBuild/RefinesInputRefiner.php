@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Drupal\data_surface\SurfaceBuild;
 
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
+use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DataSurfaceRefinerInterface;
 
 /**
@@ -36,6 +38,12 @@ use Drupal\data_surface\DataSurfaceRefinerInterface;
  * autowired service — and the dependency serialization trait stores a
  * service by its id, so a serialized surface carries no container.
  *
+ * An alter's method on a key the alter itself added is bound under the
+ * mount, `third_party_settings`, the one key the engine knows the
+ * alter's keys by. Asked to refine the mount, the link refines only its
+ * own module's property inside it, each method handed that property's
+ * definition, so the method reads exactly as it would on an owner's key.
+ *
  * @internal
  */
 final class RefinesInputRefiner implements DataSurfaceRefinerInterface {
@@ -43,16 +51,26 @@ final class RefinesInputRefiner implements DataSurfaceRefinerInterface {
   use DependencySerializationTrait;
 
   /**
+   * The key an alter's own keys are mounted under.
+   */
+  public const MOUNT = 'third_party_settings';
+
+  /**
    * Constructs a RefinesInputRefiner.
    *
    * @param object $instance
    *   The surface or alter instance the methods are called on.
    * @param array<string, \Drupal\data_surface\SurfaceBuild\RefinerDefinition[]> $bindings
-   *   The methods, keyed by the input key they refine.
+   *   The methods, keyed by the input key they refine; an alter's methods
+   *   on its own mounted keys under self::MOUNT.
+   * @param string|null $module
+   *   The alter's module, whose property inside the mount the methods
+   *   bound under self::MOUNT refine; NULL for a surface's own link.
    */
   public function __construct(
     protected object $instance,
     protected array $bindings,
+    protected ?string $module = NULL,
   ) {
   }
 
@@ -60,10 +78,40 @@ final class RefinesInputRefiner implements DataSurfaceRefinerInterface {
    * {@inheritdoc}
    */
   public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
+    if ($name === self::MOUNT && $this->module !== NULL) {
+      return $this->refineMounted($definition, $values);
+    }
     foreach ($this->bindings[$name] ?? [] as $refiner) {
       $definition = $this->invoke($refiner, $definition, $values);
     }
     return $definition;
+  }
+
+  /**
+   * Refines the alter's own keys inside the mount, in place.
+   *
+   * Decision: see docs/decisions.md#an-alter-refines-its-own-mounted-key.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $mount
+   *   The mount's map, a copy the engine handed over.
+   * @param array $values
+   *   Sibling values, keyed by input key.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface
+   *   The mount, with this module's keys refined.
+   */
+  protected function refineMounted(DataDefinitionInterface $mount, array $values): DataDefinitionInterface {
+    $own = $mount instanceof ComplexDataDefinitionInterface ? $mount->getPropertyDefinition((string) $this->module) : NULL;
+    if (!$own instanceof MapDataDefinition) {
+      return $mount;
+    }
+    foreach ($this->bindings[self::MOUNT] ?? [] as $refiner) {
+      $key = $own->getPropertyDefinition($refiner->key);
+      if ($key !== NULL) {
+        $own->setPropertyDefinition($refiner->key, $this->invoke($refiner, $key, $values));
+      }
+    }
+    return $mount;
   }
 
   /**

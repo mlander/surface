@@ -1,0 +1,78 @@
+# One config object per step, so the steps never write over each other.
+# Each says in schema what its surface says in PHP; the targets hold
+# every write to it in prepare(), before anything is saved.
+
+data_surface_examples.registration_step1:
+  type: config_object
+  label: 'Registration settings, step 1'
+  mapping:
+    title:
+      type: string
+      label: 'Event title'
+    capacity:
+      type: integer
+      label: 'Capacity'
+    open:
+      type: boolean
+      label: 'Registration open'
+
+data_surface_examples.registration_step2:
+  type: data_surface_examples.registration_step1
+  label: 'Registration settings, step 2'
+  mapping:
+    venue:
+      type: string
+      label: 'Venue'
+    room:
+      type: string
+      label: 'Room'
+
+data_surface_examples.registration_step3:
+  type: data_surface_examples.registration_step2
+  label: 'Registration settings, step 3'
+  mapping:
+    pricing:
+      type: string
+      label: 'Pricing'
+    # The slot: its shape is the chosen pricing's.
+    ticket:
+      type: data_surface_examples.ticket.[%parent.pricing]
+      label: 'Ticket'
+    contact:
+      type: mapping
+      label: 'Contact'
+      mapping:
+        email:
+          type: email
+          label: 'Email'
+        phone:
+          type: string
+          label: 'Phone'
+    # Where other modules' keys are mounted, each described by the module
+    # that mounts it, under its own name.
+    third_party_settings:
+      type: sequence
+      label: 'Third party settings'
+      requiredKey: false
+      sequence:
+        type: data_surface_examples.registration.third_party.[%key]
+
+data_surface_examples.ticket.free:
+  type: mapping
+  label: 'Free ticket'
+  mapping:
+    note:
+      type: string
+      label: 'Note'
+      nullable: true
+
+data_surface_examples.ticket.paid:
+  type: mapping
+  label: 'Paid ticket'
+  mapping:
+    price:
+      type: float
+      label: 'Price'
+    currency:
+      type: string
+      label: 'Currency'

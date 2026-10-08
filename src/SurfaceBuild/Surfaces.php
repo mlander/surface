@@ -171,7 +171,8 @@ final class Surfaces implements SurfacesInterface {
     $this->applyContext($builder, $definition, $context, $input_keys, $subsurfaces);
     foreach ($links as [$instance, $refiners, $module]) {
       $extended = $module !== NULL && isset($additions[$module][0]) ? $additions[$module][0]->extended() : [];
-      $this->bindRefiners($builder, $definition, $instance, $refiners, $input_keys, $outputs->keys(), $subsurfaces, $ancestry === [] ? NULL : $ancestry[count($ancestry) - 1], $module, $extended);
+      $mounted = $module !== NULL && isset($additions[$module][0]) ? $additions[$module][0]->keys() : [];
+      $this->bindRefiners($builder, $definition, $instance, $refiners, $input_keys, $outputs->keys(), $subsurfaces, $ancestry === [] ? NULL : $ancestry[count($ancestry) - 1], $module, $extended, $mounted);
     }
 
     // The children, each through this same build step in its own frame:
@@ -611,29 +612,35 @@ final class Surfaces implements SurfacesInterface {
    * @param string[] $extended
    *   The owner's keys that alter offered more values on with
    *   extendChoices(): its methods on those keys narrow its own values.
+   * @param string[] $mounted
+   *   The keys that alter added, which its methods may refine too.
    *
    * @throws \LogicException
    *   When a method fails a seal-time check, or one that watches nothing
    *   widens what it was given.
    */
-  protected function bindRefiners(DataSurfaceBuilderInterface $builder, SurfaceDefinition $definition, object $instance, array $refiners, array $input_keys, array $output_keys, array $subsurfaces = [], ?array $parent = NULL, ?string $module = NULL, array $extended = []): void {
+  protected function bindRefiners(DataSurfaceBuilderInterface $builder, SurfaceDefinition $definition, object $instance, array $refiners, array $input_keys, array $output_keys, array $subsurfaces = [], ?array $parent = NULL, ?string $module = NULL, array $extended = [], array $mounted = []): void {
     if ($refiners === []) {
       return;
     }
     $bindings = [];
     $once = [];
     foreach ($refiners as $refiner) {
+      // Decision: see docs/decisions.md#an-alter-refines-its-own-mounted-key.
+      $own = $module !== NULL && in_array($refiner->key, $mounted, TRUE) && !in_array($refiner->key, $input_keys, TRUE);
       static::assertWalled($definition, $refiner, $input_keys, $subsurfaces, $parent);
-      static::assertRefinable($definition, $refiner, $input_keys, $output_keys);
+      static::assertNotWatchingMounted($definition, $refiner, $input_keys, $mounted);
+      static::assertRefinable($definition, $refiner, $own ? [...$input_keys, $refiner->key] : $input_keys, $output_keys);
+      $key = $own ? RefinesInputRefiner::MOUNT : $refiner->key;
       if ($refiner->watched() === []) {
-        $once[] = $refiner;
+        $once[] = [$refiner, $own];
         continue;
       }
       // Decision: see docs/decisions.md#gating-per-key.
-      $builder->addRefinement($refiner->key, $refiner->watched());
-      $bindings[$refiner->key][] = $refiner;
+      $builder->addRefinement($key, $refiner->watched());
+      $bindings[$key][] = $refiner;
     }
-    $link = new RefinesInputRefiner($instance, $bindings);
+    $link = new RefinesInputRefiner($instance, $bindings, $module);
     foreach (array_keys($bindings) as $key) {
       // An alter's method on a key it offered more values on is that
       // contribution's refiner: the engine hands it the alter's values
@@ -642,13 +649,51 @@ final class Surfaces implements SurfacesInterface {
     }
     // A method that watches nothing has nothing to wait for, so its one
     // run is now, and what it returns is what the surface advertises.
-    foreach ($once as $refiner) {
-      $advertised = $builder->getDefinition($refiner->key);
+    foreach ($once as [$refiner, $own]) {
+      $advertised = $own
+        ? $builder->getThirdPartyDefinition((string) $module, $refiner->key)
+        : $builder->getDefinition($refiner->key);
       assert($advertised !== NULL);
       $refined = $link->invoke($refiner, DataSurface::deepClone($advertised), []);
       Narrowing::assertNarrows($refiner->key, $refiner->describe(), $advertised, $refined);
       DataSurface::carryMetadata($advertised, $refined);
+      if ($own) {
+        $builder->setThirdPartyDefinition((string) $module, $refiner->key, $refined);
+        continue;
+      }
       $builder->setDefinition($refiner->key, $refined);
+    }
+  }
+
+  /**
+   * Refuses a method that watches a key an alter mounted.
+   *
+   * A mounted key's value lives inside `third_party_settings`, not
+   * beside the owner's keys, so nothing could hand it to the method;
+   * watching one needs dotted refinement paths (ROADMAP.md, item 16).
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $definition
+   *   The surface.
+   * @param \Drupal\data_surface\SurfaceBuild\RefinerDefinition $refiner
+   *   The method.
+   * @param string[] $input_keys
+   *   The owner's input keys.
+   * @param string[] $mounted
+   *   The keys the method's alter added.
+   *
+   * @throws \LogicException
+   *   Naming the method and the key it watches.
+   */
+  protected static function assertNotWatchingMounted(SurfaceDefinition $definition, RefinerDefinition $refiner, array $input_keys, array $mounted): void {
+    foreach ($refiner->watched() as $watched) {
+      if (in_array($watched, $mounted, TRUE) && !in_array($watched, $input_keys, TRUE)) {
+        throw new \LogicException(sprintf(
+          '%s watches "%s", a key its alter mounted on the %s surface. A mounted key may be refined by its own alter, but not watched: its value lives under third_party_settings, where no refiner can be handed it yet.',
+          $refiner->describe(),
+          $watched,
+          $definition->id,
+        ));
+      }
     }
   }
 

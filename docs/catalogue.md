@@ -29,6 +29,12 @@ the plugin's host. `docs/surfaces.md` says how each part works.
 | [`field.storage`](#fieldstorage) | `FieldStorageSurface` | `field_type` | `add`, `edit` |
 | [`field_formatter.data_surface_demo_string`](#field_formatterdata_surface_demo_string) | `DemoFormatterSurface` | none | none |
 | [`node.type`](#nodetype) | `NodeTypeSurface` | `type` | `add`, `edit` |
+| [`registration.contact`](#registrationcontact) | `ContactSurface` | none | none |
+| [`registration.step1`](#registrationstep1) | `RegistrationStep1Surface` | none | `configure` |
+| [`registration.step2`](#registrationstep2) | `RegistrationStep2Surface` | none | `configure` |
+| [`registration.step3`](#registrationstep3) | `RegistrationStep3Surface` | none | `configure` |
+| [`registration.step3.ticket.free`](#registrationstep3ticketfree) | `FreeTicketSurface` | none | none |
+| [`registration.step3.ticket.paid`](#registrationstep3ticketpaid) | `PaidTicketSurface` | none | none |
 
 ## block.data_surface_demo
 
@@ -126,3 +132,67 @@ the plugin's host. `docs/surfaces.md` says how each part works.
 | `edit` | Edit a content type | `NodeTypeInterface $type` | once given what it needs | `administer data surface node type demo` | yes | `NodeTypeSurface::edit()` (`data_surface_demo_node_type`) |
 
 - Altered by `Drupal\data_surface_demo_extras\SurfaceAlter\NodeTypeAlter` (`data_surface_demo_extras`), in every situation.
+
+## registration.contact
+
+`Drupal\data_surface_examples\Surface\ContactSurface`, in `data_surface_examples`.
+
+- Identity: none
+- Target: none; its host or its parent stores it
+- Access: the situation's permission alone
+
+## registration.step1
+
+`Drupal\data_surface_examples\Surface\RegistrationStep1Surface`, in `data_surface_examples`.
+
+- Identity: none
+- Target: `Drupal\data_surface_examples\Target\RegistrationStep1Target`
+- Access: the situation's permission alone
+
+| Situation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure registration | nothing | no | `administer site configuration` | yes | `RegistrationStep1Surface::configure()` (`data_surface_examples`) |
+
+## registration.step2
+
+`Drupal\data_surface_examples\Surface\RegistrationStep2Surface`, in `data_surface_examples`.
+
+- Identity: none
+- Target: `Drupal\data_surface_examples\Target\RegistrationStep2Target`
+- Access: the situation's permission alone
+
+| Situation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure registration | nothing | no | `administer site configuration` | yes | `RegistrationStep2Surface::configure()` (`data_surface_examples`) |
+
+## registration.step3
+
+`Drupal\data_surface_examples\Surface\RegistrationStep3Surface`, in `data_surface_examples`.
+
+- Identity: none
+- Target: `Drupal\data_surface_examples\Target\RegistrationStep3Target`
+- Access: the situation's permission alone
+
+| Situation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure registration | nothing | no | `administer site configuration` | yes | `RegistrationStep3Surface::configure()` (`data_surface_examples`) |
+
+- Altered by `Drupal\data_surface_examples_compliance\SurfaceAlter\RegistrationComplianceAlter` (`data_surface_examples_compliance`), in every situation.
+
+- Slot `ticket` is filled by: `free` → `Drupal\data_surface_examples\Surface\FreeTicketSurface`, `paid` → `Drupal\data_surface_examples\Surface\PaidTicketSurface`.
+
+## registration.step3.ticket.free
+
+`Drupal\data_surface_examples\Surface\FreeTicketSurface`, in `data_surface_examples`.
+
+- Identity: none
+- Target: none; its host or its parent stores it
+- Access: the situation's permission alone
+
+## registration.step3.ticket.paid
+
+`Drupal\data_surface_examples\Surface\PaidTicketSurface`, in `data_surface_examples`.
+
+- Identity: none
+- Target: none; its host or its parent stores it
+- Access: the situation's permission alone

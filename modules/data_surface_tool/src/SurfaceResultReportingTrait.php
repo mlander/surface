@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_tool;
 
+use Drupal\Component\Render\PlainTextOutput;
 use Drupal\data_surface\Pipeline\ViolationSet;
 
 /**
@@ -27,12 +28,15 @@ trait SurfaceResultReportingTrait {
    *   The violations as one line, each prefixed by its full path. This
    *   is the boundary a message object stops being one: a tool result
    *   carries a single string, so the objects are rendered here and
-   *   nowhere earlier.
+   *   nowhere earlier. Rendered as plain text, because the line is
+   *   handed on as a placeholder value and escaped there: a message's
+   *   own placeholder markup would otherwise reach the caller as
+   *   literal tags.
    */
   protected function violationSummary(ViolationSet $violations): string {
     $lines = [];
     foreach ($violations as $violation) {
-      $lines[] = $violation->fullPath() . ': ' . (string) $violation->message;
+      $lines[] = $violation->fullPath() . ': ' . PlainTextOutput::renderFromHtml((string) $violation->message);
     }
     return implode(' ', $lines);
   }

@@ -1,0 +1,11 @@
+# What this module's alter mounts on step 3's registration settings,
+# described under this module's name, which is where the alter's keys
+# are stored.
+data_surface_examples.registration.third_party.data_surface_examples_compliance:
+  type: mapping
+  label: 'Compliance settings'
+  mapping:
+    privacy_notice:
+      type: string
+      label: 'Privacy notice'
+      nullable: true

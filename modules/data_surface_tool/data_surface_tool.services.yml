@@ -21,3 +21,8 @@ services:
     arguments: ['@plugin.manager.field.field_type', '@config.typed', '@typed_data_manager']
     tags:
       - { name: data_surface.derived_variants }
+  # A read-only panel a situation route can name in _data_surface_panel:
+  # the contract the form's surface emits, rebuilt with the form.
+  data_surface_tool.contract_panel:
+    class: Drupal\data_surface_tool\SurfaceContractPanel
+    arguments: ['@data_surface.surface_registry', '@data_surface.options', '@plugin.manager.tool', '@tool.definition_serializer', '@string_translation']

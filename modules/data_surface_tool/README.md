@@ -139,6 +139,17 @@ once `storage` names an address storage. Compare with
 `drush tool:info tool_belt:field_add` on the same site, or read
 [`COMPARISON.md`](COMPARISON.md), which has both.
 
+## The contract panel
+
+`SurfaceContractPanel`, the service `data_surface_tool.contract_panel`,
+is a read-only panel any situation route can name in
+`_data_surface_panel`. The generic situation form places it inside the
+surface, so it rebuilds with the form: every key with its type, label,
+requiredness, default, what it allows in words, what it depends on, and
+whether it is narrowed right now; and, collapsed, the JSON Schema the
+derived tool for the same situation advertises. The routes of
+`data_surface_examples` name it.
+
 ## What gates it
 
 | Test | Covers |
@@ -149,6 +160,7 @@ once `storage` names an address storage. Compare with
 | `Kernel\FieldInstanceSurfaceTest` | The three situations, the storage child (its keys, its locked type) and its has-data constraint, the settings slot, starting values. |
 | `Kernel\SituationToolsTest` | The generated tools: which exist, the two derivation rules, what they advertise, refinement to the thing a parameter names, execution, dry run, access, the storage tool's has-data constraint. |
 | `Kernel\SurfaceCatalogueTest` | The catalogue read from the static layer, and `docs/catalogue.md` against it, where each derived slot is listed. |
+| `Kernel\ExamplesStepsTest` | The contract panel: its rows as the answers narrow them, and the tool's schema beside them. |
 
 ## Who may run them
 

@@ -130,6 +130,6 @@ by hand.
 
 The module ships no surfaces of its own on a production site. It provides
 the surface model, the pipeline, the two plugin types and the host
-adoption layer; surfaces come from the modules that declare them. Seven
+adoption layer; surfaces come from the modules that declare them. Nine
 experimental submodules demonstrate the model and double as the fixtures
 the tests run against — see [Installation](installation.md).

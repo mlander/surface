@@ -29,7 +29,9 @@ use Drupal\data_surface_surface_test\Surface\Broken\WatchesSubsurfaceSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\ClashingSituationSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\RefinesOutputSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\UndeclaredIdentitySurface;
+use Drupal\data_surface_surface_test\Surface\Broken\MountWatcherSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\WatchesMismatchSurface;
+use Drupal\data_surface_surface_test\SurfaceAlter\MountWatcherAlter;
 use Drupal\data_surface_surface_test\Surface\Broken\WatchesUndeclaredSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\WideningRefinerSurface;
 use Drupal\data_surface_surface_test\Surface\DynamicChildSurface;
@@ -278,6 +280,10 @@ class SurfaceBuildTest extends DataSurfaceKernelTestBase {
       'refines an output' => [
         RefinesOutputSurface::class,
         RefinesOutputSurface::class . '::totalOfCount() refines "total", which is an output of the surface_test.broken.refines_output surface.',
+      ],
+      'an alter watches a key it mounted' => [
+        MountWatcherSurface::class,
+        MountWatcherAlter::class . '::detailOfKind() watches "kind", a key its alter mounted on the surface_test.broken.mount_watcher surface.',
       ],
       'watches out of step with the parameters' => [
         WatchesMismatchSurface::class,
