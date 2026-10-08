@@ -6,6 +6,7 @@ namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Render\Element;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
@@ -186,8 +187,11 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
 
     $rooms = $this->options()->resolve($surface->refine(['venue' => 'harbour'])->getDefinition('room'));
     $this->assertSame(['harbour_auditorium', 'harbour_deck'], array_keys($rooms->options));
+    $this->assertSame(['title', 'open', 'venue', 'room', 'capacity'], $surface->getDefinitions()->names());
+    $this->assertNull($surface->getDefinition('capacity')->getDescription());
     $capacity = $surface->refine(['venue' => 'library', 'room' => 'library_garden'])->getDefinition('capacity');
     $this->assertSame(['min' => 1, 'max' => 30], $capacity->getConstraints()['Range']);
+    $this->assertSame('Up to 30 for the Garden room.', (string) $capacity->getDescription());
 
     $paths = fn (array $values): array => array_map(
       static fn ($violation): string => $violation->fullPath(),
@@ -204,6 +208,11 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     $this->assertArrayHasKey('#ajax', $container['venue']);
     $this->assertArrayHasKey('#ajax', $container['room']);
     $this->assertSame(60, $container['capacity']['#max']);
+    $this->assertSame('Up to 60 for the Reading room.', (string) $container['capacity']['#description']);
+    // Declaration order is form order: the capacity follows the room it
+    // depends on.
+    $keys = ['title', 'open', 'venue', 'room', 'capacity'];
+    $this->assertSame($keys, array_values(array_intersect(Element::children($container), $keys)));
 
     // A submission is held to the room the form was built for: a browser
     // changing the venue rebuilds the form over AJAX first.
@@ -279,10 +288,10 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     $rows = $this->panelRows(RegistrationStep3Surface::class, $stored);
     $this->assertSame([
       'title',
-      'capacity',
       'open',
       'venue',
       'room',
+      'capacity',
       'pricing',
       'ticket',
       'ticket.note',

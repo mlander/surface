@@ -139,7 +139,8 @@ A venue, and a room in it. Which rooms are on offer depends on the
 venue, and how many people fit depends on the room. Each rule is one
 method with `#[RefinesInput]`: it is handed the key's definition, and,
 by parameter name, the value of the key it reads. Its signature is its
-dependency.
+dependency. Declaration order is form order, so the capacity is
+declared after the room it depends on.
 
 <!-- code: src/Surface/RegistrationStep2Surface.php -->
 
@@ -161,8 +162,6 @@ final class RegistrationStep2Surface implements SurfaceInterface {
   public function defineInputs(ShapeInterface $inputs): void {
     $inputs->add('title', 'string', new TranslatableMarkup('Event title'))
       ->setRequired(TRUE);
-    $inputs->add('capacity', 'integer', new TranslatableMarkup('Capacity'), default: 50)
-      ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
     $inputs->add('open', 'boolean', new TranslatableMarkup('Registration open'), default: TRUE);
     $inputs->add('venue', 'string', new TranslatableMarkup('Venue'))
       ->setRequired(TRUE)
@@ -170,6 +169,8 @@ final class RegistrationStep2Surface implements SurfaceInterface {
     $inputs->add('room', 'string', new TranslatableMarkup('Room'))
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', ['choices' => Venues::rooms()]);
+    $inputs->add('capacity', 'integer', new TranslatableMarkup('Capacity'), default: 50)
+      ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
   }
 
   /**
@@ -181,11 +182,19 @@ final class RegistrationStep2Surface implements SurfaceInterface {
   }
 
   /**
-   * No more people than the chosen room seats.
+   * No more people than the chosen room seats, said under the field.
    */
   #[RefinesInput('capacity')]
   public function capacityOfRoom(DataDefinitionInterface $capacity, string $room): DataDefinitionInterface {
-    return $capacity->addConstraint('Range', ['min' => 1, 'max' => Venues::seats($room) ?? 1000]);
+    $seats = Venues::seats($room);
+    $capacity->addConstraint('Range', ['min' => 1, 'max' => $seats ?? 1000]);
+    if ($seats !== NULL && $capacity instanceof DataDefinition) {
+      $capacity->setDescription(new TranslatableMarkup('Up to @seats for the @room.', [
+        '@seats' => $seats,
+        '@room' => Venues::rooms()[$room],
+      ]));
+    }
+    return $capacity;
   }
 
 }
@@ -199,10 +208,11 @@ than on some other room. The saved room has not gone anywhere: Save
 refuses it, since it belongs to the venue you just moved away from,
 until a room of the new venue is chosen, and putting the venue back
 shows it chosen again.
-Choose the garden room and the capacity's row says "from 1 to 30". A
-refiner can only tighten: the framework checks every result is
-narrower than what was declared, so the panel's first answer stays
-true.
+Choose the garden room and the capacity's row says "from 1 to 30", and
+the text under the capacity field, rebuilt with it, says "Up to 30 for
+the Garden room." A refiner can only tighten: the framework checks
+every result is narrower than what was declared, so the panel's first
+answer stays true.
 
 ## Example 3: made of parts
 
@@ -235,8 +245,6 @@ final class RegistrationStep3Surface implements SurfaceInterface {
   public function defineInputs(ShapeInterface $inputs): void {
     $inputs->add('title', 'string', new TranslatableMarkup('Event title'))
       ->setRequired(TRUE);
-    $inputs->add('capacity', 'integer', new TranslatableMarkup('Capacity'), default: 50)
-      ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
     $inputs->add('open', 'boolean', new TranslatableMarkup('Registration open'), default: TRUE);
     $inputs->add('venue', 'string', new TranslatableMarkup('Venue'))
       ->setRequired(TRUE)
@@ -244,6 +252,8 @@ final class RegistrationStep3Surface implements SurfaceInterface {
     $inputs->add('room', 'string', new TranslatableMarkup('Room'))
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', ['choices' => Venues::rooms()]);
+    $inputs->add('capacity', 'integer', new TranslatableMarkup('Capacity'), default: 50)
+      ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
     $inputs->add('pricing', 'string', new TranslatableMarkup('Pricing'), default: 'free')
       ->setRequired(TRUE)
       ->addConstraint('Choice', ['choices' => ['free', 'paid']]);
@@ -262,11 +272,19 @@ final class RegistrationStep3Surface implements SurfaceInterface {
   }
 
   /**
-   * No more people than the chosen room seats.
+   * No more people than the chosen room seats, said under the field.
    */
   #[RefinesInput('capacity')]
   public function capacityOfRoom(DataDefinitionInterface $capacity, string $room): DataDefinitionInterface {
-    return $capacity->addConstraint('Range', ['min' => 1, 'max' => Venues::seats($room) ?? 1000]);
+    $seats = Venues::seats($room);
+    $capacity->addConstraint('Range', ['min' => 1, 'max' => $seats ?? 1000]);
+    if ($seats !== NULL && $capacity instanceof DataDefinition) {
+      $capacity->setDescription(new TranslatableMarkup('Up to @seats for the @room.', [
+        '@seats' => $seats,
+        '@room' => Venues::rooms()[$room],
+      ]));
+    }
+    return $capacity;
   }
 
 }

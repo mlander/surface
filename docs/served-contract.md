@@ -121,20 +121,21 @@ library and its reading room:
     "type": "object",
     "properties": {
       "title": {"title": "Event title", "type": "string", "x-surface": {"widget": "text", ...}},
-      "capacity": {"title": "Capacity", "type": ["integer", "null"], "minimum": 1, "maximum": 60, "default": 50,
-                   "x-surface": {"widget": "number", "dependsOn": ["room"], "refined": true, ...}},
       "open": {"title": "Registration open", "type": ["boolean", "null"], "default": true, ...},
       "venue": {"title": "Venue", "type": "string",
                 "oneOf": [{"const": "riverside", "title": "Riverside Hall"}, {"const": "library", "title": "Old Library"}, {"const": "harbour", "title": "Harbour Centre"}],
                 "x-surface": {"widget": "select", "dependsOn": [], "emptyOption": {"show": false, "label": "- Select -"}, ...}},
       "room": {"title": "Room", "type": "string",
                "oneOf": [{"const": "library_reading", "title": "Reading room"}, {"const": "library_garden", "title": "Garden room"}],
-               "x-surface": {"widget": "select", "dependsOn": ["venue"], "refined": true, "stale": false, ...}}
+               "x-surface": {"widget": "select", "dependsOn": ["venue"], "refined": true, "stale": false, ...}},
+      "capacity": {"title": "Capacity", "description": "Up to 60 for the Reading room.", "type": ["integer", "null"],
+                   "minimum": 1, "maximum": 60, "default": 50,
+                   "x-surface": {"widget": "number", "dependsOn": ["room"], "refined": true, ...}}
     },
     "additionalProperties": false,
     "required": ["title", "venue", "room"]
   },
-  "values": {"title": "Spring meetup", "capacity": 50, "open": true, "venue": "library", "room": "library_reading"},
+  "values": {"title": "Spring meetup", "open": true, "venue": "library", "room": "library_reading", "capacity": 50},
   "stale": []
 }
 ```

@@ -532,7 +532,7 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
    * not the container around everything. The room refines against the
    * venue and the capacity against the room, so both move; the panel
    * describes the surface as the answers stand, so it moves on every
-   * rebuild. In declaration order, which puts the capacity first.
+   * rebuild. In declaration order, which puts the room first.
    */
   public function testChangingTheVenueReplacesItsDependentsAndThePanel(): void {
     $this->actAsAnonymousAdministrator();
@@ -546,8 +546,8 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
     $response = $this->ajaxResponse($state);
 
     $this->assertSame([
-      $this->wrapperSelector($container['capacity']),
       $this->wrapperSelector($container['room']),
+      $this->wrapperSelector($container['capacity']),
       $this->wrapperSelector($container[DataSurfaceSituationForm::PANEL_KEY]),
     ], $this->ajaxSelectors($response, 'replaceWith'));
     // The venue is no target, so it has no wrapper to be replaced by,
@@ -629,8 +629,11 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
     // The room has a wrapper, being a target of the venue, and it is the
     // trigger here, so it is the one wrapper that must not be named.
     $this->assertNotContains($this->wrapperSelector($container['room']), $replaced);
-    // The capacity now allows what the auditorium seats.
-    $this->assertStringContainsString('max="800"', $this->ajaxMarkup($response, $this->wrapperSelector($container['capacity'])));
+    // The capacity now allows what the auditorium seats, and says so
+    // under the field.
+    $capacity = $this->ajaxMarkup($response, $this->wrapperSelector($container['capacity']));
+    $this->assertStringContainsString('max="800"', $capacity);
+    $this->assertStringContainsString('Up to 800 for the Auditorium.', $capacity);
     // Nothing stale, so the marker is taken out and nothing put back.
     $this->assertSame([], $this->ajaxSelectors($response, 'append'));
   }
@@ -681,8 +684,8 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
     ], ['_triggering_element_name' => 'surface[venue]']);
     $container = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY];
     $this->assertSame([
-      $this->wrapperSelector($container['capacity']),
       $this->wrapperSelector($container['room']),
+      $this->wrapperSelector($container['capacity']),
       $this->wrapperSelector($container[DataSurfaceSituationForm::PANEL_KEY]),
     ], $this->ajaxSelectors($this->ajaxResponse($state), 'replaceWith'));
   }
