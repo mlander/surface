@@ -1,24 +1,12 @@
 /**
- * The contract panel beside the form it describes.
+ * The contract panel below the form it describes.
  *
  * The panel sits inside the surface container, so the AJAX rebuild of
- * the container replaces both; on a wide screen the container becomes
- * two columns and the panel takes the second.
+ * the container replaces both. It is collapsed by default and stacks
+ * under the form; nothing here changes the page's columns.
  */
-@media (min-width: 64rem) {
-  [id^="data-surface-"][id$="-wrapper"]:has(> .data-surface-contract-panel) {
-    display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-    column-gap: 2rem;
-    align-items: start;
-  }
-  [id^="data-surface-"][id$="-wrapper"]:has(> .data-surface-contract-panel) > * {
-    grid-column: 1;
-  }
-  [id^="data-surface-"][id$="-wrapper"] > .data-surface-contract-panel {
-    grid-column: 2;
-    grid-row: 1 / span 100;
-  }
+.data-surface-contract-panel {
+  margin-top: 1.5rem;
 }
 .data-surface-contract-panel table {
   font-size: 0.875em;

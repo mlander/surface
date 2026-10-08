@@ -3,7 +3,7 @@
 One surface that grows, one idea per step. The thing being described is
 the settings of an event registration: a title, how many people, where,
 what it costs, who to contact. Each step adds one idea, each step with a
-form is a page of its own, and beside each form is the contract the
+form is a page of its own, and under each form, collapsed, is the contract the
 form was built from: every key, what it allows right now, and the JSON
 Schema a caller with no form is handed.
 
@@ -186,7 +186,7 @@ final class RegistrationStep2Surface implements SurfaceInterface {
 ```
 
 Change the venue on the form: the room list rebuilds over AJAX, and so
-does the panel beside it, whose room row now lists the new venue's
+does the panel under it, whose room row now lists the new venue's
 rooms, *narrowed* from the six declared. The room saved before is shown
 as no longer available rather than dropped behind your back, and Save
 refuses it until a room of the new venue is chosen.

@@ -25,7 +25,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * Tests the examples' steps 1 to 3, and the contract panel beside them.
+ * Tests the examples' steps 1 to 3, and the contract panel under them.
  *
  * Each step's route is served by the generic situation form, so what is
  * asserted is what a person sees: the form builds from the surface, a

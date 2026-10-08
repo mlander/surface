@@ -87,8 +87,8 @@ final class SurfaceContractPanel implements DataSurfaceFormPanelInterface {
     $tool_id = 'data_surface:' . $this->registry->getDefinition($served->surface)->id . ':' . $served->situation->id;
     $panel = [
       '#type' => 'details',
-      '#open' => TRUE,
-      '#title' => $this->t('The contract, as it stands'),
+      '#open' => FALSE,
+      '#title' => $this->t('Behind the scenes: the contract, as it stands'),
       '#attributes' => ['class' => ['data-surface-contract-panel']],
       '#attached' => ['library' => ['data_surface_tool/contract_panel']],
       '#weight' => 1000,
