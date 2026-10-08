@@ -72,19 +72,14 @@ final class DemoBlockSurface implements SurfaceInterface {
       ->addConstraint('Range', ['min' => 1, 'max' => 50]);
 
     // How the items are laid out, and what that layout needs: a slot the
-    // presentation chooses, its two children named here by class.
+    // presentation chooses, filled by every #[SurfaceVariant] for it.
     $inputs->add('presentation', 'string', new TranslatableMarkup('Presentation'), default: 'list')
       ->setDescription(new TranslatableMarkup('How the items are laid out.'))
       ->setRequired(TRUE)
       ->addConstraint('Choice', ['choices' => ['list', 'grid']]);
-    $inputs->attachBy('presentation_settings', by: 'presentation', children: [
-      'list' => ListPresentationSurface::class,
-      'grid' => GridPresentationSurface::class,
-    ]);
-    $inputs->describe('presentation_settings',
-      label: new TranslatableMarkup('Presentation settings'),
-      description: new TranslatableMarkup('What the chosen presentation needs.'),
-    );
+    $inputs->attachBy('presentation_settings', by: 'presentation')
+      ->setLabel(new TranslatableMarkup('Presentation settings'))
+      ->setDescription(new TranslatableMarkup('What the chosen presentation needs.'));
   }
 
   /**

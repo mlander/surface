@@ -29,8 +29,8 @@ block.settings.data_surface_demo:
     presentation_settings:
       type: block.settings.data_surface_demo.presentation.[%parent.presentation]
       label: 'Presentation settings'
-    # Namespace for surface definitions mounted by other modules through
-    # the build event. Each module describes its own mount under its own
+    # Namespace for surface definitions mounted by other modules' surface
+    # alters. Each module describes its own mount under its own
     # name, which is the core convention for a shape only the mounting
     # module knows.
     third_party_settings:
@@ -71,7 +71,7 @@ field.formatter.settings.data_surface_demo_string:
       type: string
       label: 'Variant'
       nullable: true
-    # As above: mounted by the build event, described by the mounting
+    # As above: mounted by a surface alter, described by the mounting
     # module under its own name.
     third_party_settings:
       type: sequence

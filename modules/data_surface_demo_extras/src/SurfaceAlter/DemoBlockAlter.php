@@ -14,7 +14,7 @@ use Drupal\data_surface\Surface\SurfaceAlterInterface;
 use Drupal\data_surface_demo\Surface\DemoBlockSurface;
 
 /**
- * This module's additions to the demo block, in the new spelling.
+ * This module's additions to the demo block.
  *
  * Both of an alter's jobs, side by side with DemoFormatterAlter, which
  * does the same for the demo formatter:

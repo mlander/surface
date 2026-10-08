@@ -29,12 +29,11 @@ use Drupal\field\FieldStorageConfigInterface;
  * @endcode
  *
  * The storage is a fixed child with a target of its own. The settings
- * are an open slot chosen by the field type: the field surface lists no
+ * are a slot chosen by the field type: the field surface names no
  * children, and each field type's module marks its own settings surface
- * with #[SurfaceVariant]. A field type with no settings surface in the
- * new spelling is not among the field types this surface offers,
- * because its slot would have no shape; the field tools fall back to the
- * old spelling for it.
+ * with #[SurfaceVariant]. A field type offered in the UI with no
+ * settings surface still fills the slot, with a variant
+ * FieldSettingsSchemaVariants derives from its config schema.
  *
  * Add, reuse and edit are not shapes. They are how much is already
  * known, so they are the three ways to ask for this surface, below.
@@ -146,16 +145,12 @@ final class FieldInstanceSurface implements SurfaceInterface {
       ->setDescription(new TranslatableMarkup('Whether the field is required.'));
 
     // Its parts.
-    $inputs->attach('storage', FieldStorageSurface::class);
-    $inputs->describe('storage',
-      label: new TranslatableMarkup('Field storage'),
-      description: new TranslatableMarkup('What every bundle using this field shares.'),
-    );
-    $inputs->attachBy('settings', by: 'field_type');
-    $inputs->describe('settings',
-      label: new TranslatableMarkup('Field settings'),
-      description: new TranslatableMarkup('Settings for this field on this bundle, described by the field type itself.'),
-    );
+    $inputs->attach('storage', FieldStorageSurface::class)
+      ->setLabel(new TranslatableMarkup('Field storage'))
+      ->setDescription(new TranslatableMarkup('What every bundle using this field shares.'));
+    $inputs->attachBy('settings', by: 'field_type')
+      ->setLabel(new TranslatableMarkup('Field settings'))
+      ->setDescription(new TranslatableMarkup('Settings for this field on this bundle, described by the field type itself.'));
   }
 
   /**

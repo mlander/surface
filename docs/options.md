@@ -28,7 +28,7 @@ descriptions play no part in validation.
 Nothing in it knows about surfaces, widgets or resolvers. The resolver
 layer reads the constraint; the constraint never reads the resolver.
 
-### Two spellings
+### Two ways to write it
 
 Which one is meant is decided by whether `labels` is present.
 
@@ -106,18 +106,17 @@ enum DemoVariant: string {
 }
 ```
 
-The declaration consumes the projection, and no value is spelled out
+The surface class consumes the projection, and no value is spelled out
 twice anywhere:
 
 ```php
-$builder->setDefinition('variant', DataDefinition::create('string')
-  ->setLabel(new TranslatableMarkup('Variant'))
-  ->addConstraint('LabeledChoice', ['choices' => DemoVariant::choices()]));
+$inputs->add('variant', 'string', new TranslatableMarkup('Variant'))
+  ->addConstraint('LabeledChoice', ['choices' => DemoVariant::choices()]);
 ```
 
 **An enum is not a fence around the key.** What the key allows is the
-constraint, and a contributing module widens it at build time with a
-value of its own: `data_surface_demo_extras` contributes `ribbon`, which
+constraint, and an alter widens it at build time with
+`extendChoices()`: `data_surface_demo_extras` contributes `ribbon`, which
 is deliberately not a case in the demo's enum. A contributor answers for
 its own value, and the owner's enum is not where that value lives — that
 is what a contribution *is*. So code acting on a stored value takes the
@@ -216,12 +215,12 @@ Prefer an existence or validity constraint plus a resolver over a
 The address port is the worked example. Its countries and languages
 started as labeled choices filled from the country repository and the
 language manager, and the cost was not the code: **a definition that
-cannot be written down without services forces the whole surface to be
-built at runtime**, in a service, away from the class it describes. Said
-as the `Country` and `LanguageExists` constraints instead, the
-definitions became literal enough to sit in a static declaration on the
-field item itself, readable without instantiation, and the live lookup
-moved to the one place that already answers for freshness.
+cannot be written down without services cannot sit in a surface
+class**, which holds no service. Said as the `Country` and
+`LanguageExists` constraints instead, the definitions became literal
+enough to sit in `AddressFieldSettingsSurface`, readable without
+instantiating anything, and the live lookup moved to the one place that
+already answers for freshness.
 
 So: when a list is "every one of a kind that this site has", say that and
 write a resolver. Keep `LabeledChoice` for a vocabulary that really is

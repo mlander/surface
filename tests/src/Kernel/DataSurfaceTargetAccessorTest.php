@@ -84,23 +84,7 @@ class DataSurfaceTargetAccessorTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that a plugin, being its own subject, refuses another.
-   *
-   * The same rule the surface accessor follows, asserted on the target
-   * accessor because the two have to agree: a coordinate the surface
-   * refuses must not find a destination waiting for it.
-   */
-  public function testPluginHostRefusesAnyOtherSubject(): void {
-    $block = $this->container->get('plugin.manager.block')
-      ->createInstance('data_surface_test_block');
-
-    $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('is its own subject');
-    $block->getDataSurfaceTarget('configure', 'something');
-  }
-
-  /**
-   * Tests the field item's accessor, and the subject rule on it.
+   * Tests the field item's accessor.
    */
   public function testFieldItemAnswersWithItsFieldSettingsTarget(): void {
     FieldStorageConfig::create([
@@ -129,10 +113,6 @@ class DataSurfaceTargetAccessorTest extends DataSurfaceKernelTestBase {
       'https://example.com/hook',
       FieldConfig::load('entity_test.entity_test.field_secret')->getSettings()['endpoint'],
     );
-
-    $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('is its own subject');
-    $item->getDataSurfaceTarget(FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS, 'field_secret');
   }
 
   /**

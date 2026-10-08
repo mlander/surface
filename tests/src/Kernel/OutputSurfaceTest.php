@@ -12,19 +12,16 @@ use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\Omitted;
 use Drupal\data_surface\Pipeline\ViolationSet;
-use Drupal\data_surface_test\EventSubscriber\TestSurfaceSubscriber;
-use Drupal\data_surface_test\ModeNoteOutputRefiner;
-use Drupal\data_surface_test\RogueOutputRefiner;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * The output half of the contract: declaring it, narrowing it, keeping it.
+ * The output half of the contract: declaring it and keeping it.
  *
  * The input half says what a caller may send; this says what the host
- * emits, in the same vocabulary, on the same collection type, and under
- * the same narrowing rule. What is new is the third state: an output key
+ * emits, in the same vocabulary, on the same collection type, and is never
+ * refined. What is new is the third state: an output key
  * is present with a value, present with NULL — which is a value — or
  * **absent**, which is what a producer says with the Omitted sentinel
  * and what conformance judges against the required flag.
@@ -48,7 +45,7 @@ class OutputSurfaceTest extends DataSurfaceKernelTestBase {
   ];
 
   /**
-   * Builds the fixture: one input, four outputs, one of them refining.
+   * Builds the fixture: one input, four outputs.
    *
    * @return \Drupal\data_surface\DataSurfaceBuilderInterface
    *   The unsealed builder, so a test can add to it before it seals.
@@ -75,28 +72,37 @@ class OutputSurfaceTest extends DataSurfaceKernelTestBase {
         ->addConstraint('Choice', ['choices' => ['short', 'long']]))
       ->setOutputDefinition('meta', $meta)
       ->setOutputDefinition('tags', ListDataDefinition::create('string')
-        ->setLabel('Tags'))
-      ->addOutputRefinement('note', ['mode'])
-      ->addOutputRefiner('note', new ModeNoteOutputRefiner());
+        ->setLabel('Tags'));
     return $builder;
   }
 
   /**
-   * Seals the fixture, through the factory so contributors are heard.
+   * The module the fixture's mounted output is answered for under.
+   */
+  protected const PROVIDER = 'data_surface_test';
+
+  /**
+   * Seals the fixture, optionally with an alter's mounted output.
    *
-   * @param string|null $host_id
-   *   The host id to build under; the one the test module contributes to
-   *   by default.
+   * @param bool $mounted
+   *   TRUE to mount a badge output under this module, as an alter's
+   *   alterOutputs() would.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The surface.
    */
-  protected function outputSurface(?string $host_id = NULL): DataSurfaceInterface {
-    return $this->surfaceFactory()->build(
-      $this->outputBuilder(),
-      static::class,
-      $host_id ?? TestSurfaceSubscriber::OUTPUT_HOST_ID,
-    );
+  protected function outputSurface(bool $mounted = FALSE): DataSurfaceInterface {
+    $builder = $this->outputBuilder();
+    if ($mounted) {
+      $builder->setThirdPartyOutputDefinition(
+        self::PROVIDER,
+        'badge',
+        DataDefinition::create('string')
+          ->setLabel('Badge')
+          ->addConstraint('Choice', ['choices' => ['star', 'flame']]),
+      );
+    }
+    return $builder->seal();
   }
 
   /**
@@ -118,15 +124,14 @@ class OutputSurfaceTest extends DataSurfaceKernelTestBase {
    * Tests that the outputs seal into a map of their own.
    */
   public function testOutputsSealIntoTheirOwnMap(): void {
-    $surface = $this->outputSurface('test:plain_output');
+    $surface = $this->outputSurface();
 
     $outputs = $surface->getOutputDefinitions();
     $this->assertSame(['text', 'note', 'meta', 'tags'], $outputs->names());
     $this->assertTrue($outputs->get('text')->isRequired());
     $this->assertFalse($outputs->get('note')->isRequired());
-    // The edges name input keys, which is what an output refines
-    // against, and they were checked against the input map at seal.
-    $this->assertSame(['note' => ['mode']], $outputs->refinements());
+    // No output refines against anything.
+    $this->assertSame([], $outputs->refinements());
 
     // The two halves do not leak into each other. The inputs know
     // nothing of the outputs, and the declared defaults — which only
@@ -152,7 +157,6 @@ class OutputSurfaceTest extends DataSurfaceKernelTestBase {
 
     $this->assertCount(0, $surface->getOutputDefinitions());
     $this->assertSame([], $surface->getOutputDefinitions()->names());
-    $this->assertSame($surface, $surface->refineOutputs(['casing' => 'uppercase']));
     $this->assertCount(0, $this->pipeline()->conformOutput($surface, []));
   }
 
@@ -236,7 +240,7 @@ class OutputSurfaceTest extends DataSurfaceKernelTestBase {
    * another contributor mounted.
    */
   public function testThirdPartyMountsOutputUnderItsNamespace(): void {
-    $outputs = $this->outputSurface()->getOutputDefinitions();
+    $outputs = $this->outputSurface(TRUE)->getOutputDefinitions();
 
     $this->assertSame(
       ['text', 'note', 'meta', 'tags', DataSurfaceBuilderInterface::THIRD_PARTY_OUTPUTS],
@@ -244,7 +248,7 @@ class OutputSurfaceTest extends DataSurfaceKernelTestBase {
     );
     $mounted = $outputs->get(DataSurfaceBuilderInterface::THIRD_PARTY_OUTPUTS);
     $this->assertInstanceOf(MapDataDefinition::class, $mounted);
-    $provider = $mounted->getPropertyDefinitions()[TestSurfaceSubscriber::PROVIDER] ?? NULL;
+    $provider = $mounted->getPropertyDefinitions()[self::PROVIDER] ?? NULL;
     $this->assertInstanceOf(MapDataDefinition::class, $provider);
     $badge = $provider->getPropertyDefinitions()['badge'] ?? NULL;
     $this->assertNotNull($badge);
@@ -255,12 +259,12 @@ class OutputSurfaceTest extends DataSurfaceKernelTestBase {
     $emitted = [
       'text' => 'hi',
       DataSurfaceBuilderInterface::THIRD_PARTY_OUTPUTS => [
-        TestSurfaceSubscriber::PROVIDER => ['badge' => 'sash'],
+        self::PROVIDER => ['badge' => 'sash'],
       ],
     ];
-    $violations = $this->pipeline()->conformOutput($this->outputSurface(), $emitted);
+    $violations = $this->pipeline()->conformOutput($this->outputSurface(TRUE), $emitted);
     $this->assertSame(
-      [DataSurfaceBuilderInterface::THIRD_PARTY_OUTPUTS . '.' . TestSurfaceSubscriber::PROVIDER . '.badge'],
+      [DataSurfaceBuilderInterface::THIRD_PARTY_OUTPUTS . '.' . self::PROVIDER . '.badge'],
       $this->paths($violations),
     );
   }
@@ -277,47 +281,16 @@ class OutputSurfaceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that outputs narrow against the accepted input values.
-   */
-  public function testOutputsRefineAgainstInputValues(): void {
-    $surface = $this->outputSurface('test:plain_output');
-
-    // As advertised, before anything is known.
-    $this->assertSame(['short', 'long'], $this->choices($surface, 'note'));
-    // An unanswered dependency narrows nothing: the advertisement
-    // stands, exactly as it does on the input side.
-    $this->assertSame($surface, $surface->refineOutputs([]));
-    $this->assertSame(['short', 'long'], $this->choices($surface->refineOutputs(['mode' => NULL]), 'note'));
-
-    // And once the input is known, the output says less.
-    $this->assertSame(['short'], $this->choices($surface->refineOutputs(['mode' => 'plain']), 'note'));
-    $this->assertSame(['short', 'long'], $this->choices($surface->refineOutputs(['mode' => 'rich']), 'note'));
-
-    // The inputs come back untouched: refining the outputs is not a
-    // second refinement of the whole surface.
-    $refined = $surface->refineOutputs(['mode' => 'plain']);
-    $this->assertSame(
-      $surface->getDefinition('mode')->getConstraints(),
-      $refined->getDefinition('mode')->getConstraints(),
-    );
-  }
-
-  /**
-   * Tests that an output refiner handing back more than it got is refused.
+   * Tests that refining the inputs leaves the outputs as advertised.
    *
-   * The claim the whole module rests on, asserted on the output side:
-   * what a surface advertises stays true of everything it emits, so a
-   * consumer that read the advertisement is never handed a value the
-   * advertisement ruled out.
+   * Outputs are never refined: a refinement narrows what may be sent,
+   * and nobody sends an output. An output whose shape depends on an
+   * input value is a variant, declared with attachBy() on that input.
    */
-  public function testWideningOutputRefinerIsRefused(): void {
-    $builder = $this->outputBuilder();
-    $builder->addOutputRefiner('note', new RogueOutputRefiner(), TestSurfaceSubscriber::PROVIDER);
-    $surface = $builder->seal();
-
-    $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('the Choice constraint gained the values epic');
-    $surface->refineOutputs(['mode' => 'plain']);
+  public function testOutputsAreNeverRefined(): void {
+    $surface = $this->outputSurface();
+    $this->assertSame([], $surface->getOutputDefinitions()->refinements());
+    $this->assertSame(['short', 'long'], $this->choices($surface->refine(['mode' => 'plain']), 'note'));
   }
 
   /**
@@ -325,18 +298,12 @@ class OutputSurfaceTest extends DataSurfaceKernelTestBase {
    *
    * @param array $emitted
    *   What the producer emitted, Omitted included.
-   * @param array $input_values
-   *   The input values the outputs are refined against.
    * @param array $expected
    *   The full paths expected to be refused, in order.
    */
   #[DataProvider('conformanceRules')]
-  public function testConformance(array $emitted, array $input_values, array $expected): void {
-    $violations = $this->pipeline()->conformOutput(
-      $this->outputSurface('test:plain_output'),
-      $emitted,
-      $input_values,
-    );
+  public function testConformance(array $emitted, array $expected): void {
+    $violations = $this->pipeline()->conformOutput($this->outputSurface(), $emitted);
 
     $this->assertSame($expected, $this->paths($violations));
   }
@@ -344,53 +311,45 @@ class OutputSurfaceTest extends DataSurfaceKernelTestBase {
   /**
    * The conformance matrix, as rows rather than as prose.
    *
-   * @return array<string, array{0: array, 1: array, 2: array}>
-   *   Emitted values, input values, and the paths expected to refuse.
+   * @return array<string, array{0: array, 1: array}>
+   *   Emitted values and the paths expected to refuse.
    */
   public static function conformanceRules(): array {
     return [
       // Presence: absent, omitted and NULL, against required and not.
-      'a required output that is emitted' => [['text' => 'hi'], [], []],
-      'a required output that is absent' => [[], [], ['text']],
-      'a required output that is omitted' => [['text' => Omitted::value()], [], ['text']],
-      'a required output emitted as NULL' => [['text' => NULL], [], ['text']],
-      'an optional output that is absent' => [['text' => 'hi'], [], []],
-      'an optional output that is omitted' => [['text' => 'hi', 'note' => Omitted::value()], [], []],
-      'an optional output emitted as NULL' => [['text' => 'hi', 'note' => NULL], [], []],
+      'a required output that is emitted' => [['text' => 'hi'], []],
+      'a required output that is absent' => [[], ['text']],
+      'a required output that is omitted' => [['text' => Omitted::value()], ['text']],
+      'a required output emitted as NULL' => [['text' => NULL], ['text']],
+      'an optional output that is absent' => [['text' => 'hi'], []],
+      'an optional output that is omitted' => [['text' => 'hi', 'note' => Omitted::value()], []],
+      'an optional output emitted as NULL' => [['text' => 'hi', 'note' => NULL], []],
       // Keys nobody declared, at the top and inside a map.
-      'an output nobody declared' => [['text' => 'hi', 'extra' => 1], [], ['extra']],
+      'an output nobody declared' => [['text' => 'hi', 'extra' => 1], ['extra']],
       'a property nobody declared' => [
         ['text' => 'hi', 'meta' => ['count' => 1, 'extra' => TRUE]],
-        [],
         ['meta.extra'],
       ],
       // Types, which are never cast: a producer had the declaration in
       // front of it, so the wrong type is a bug and not a notation.
-      'a number where a string was declared' => [['text' => 42], [], ['text']],
+      'a number where a string was declared' => [['text' => 42], ['text']],
       'a numeric string where a number was declared' => [
         ['text' => 'hi', 'meta' => ['count' => '2']],
-        [],
         ['meta.count'],
       ],
-      'a string where a map was declared' => [['text' => 'hi', 'meta' => 'nope'], [], ['meta']],
-      'a string where a list was declared' => [['text' => 'hi', 'tags' => 'nope'], [], ['tags']],
-      'a list of the declared item type' => [['text' => 'hi', 'tags' => ['a', 'b']], [], []],
+      'a string where a map was declared' => [['text' => 'hi', 'meta' => 'nope'], ['meta']],
+      'a string where a list was declared' => [['text' => 'hi', 'tags' => 'nope'], ['tags']],
+      'a list of the declared item type' => [['text' => 'hi', 'tags' => ['a', 'b']], []],
       // Constraints, at the top and at depth.
-      'a value outside the declared choices' => [['text' => 'hi', 'note' => 'epic'], [], ['note']],
+      'a value outside the declared choices' => [['text' => 'hi', 'note' => 'epic'], ['note']],
       'a map with everything it declares' => [
         ['text' => 'hi', 'meta' => ['count' => 2, 'tag' => 'x']],
-        [],
         [],
       ],
       'a map missing a property it declares as required' => [
         ['text' => 'hi', 'meta' => ['tag' => 'x']],
-        [],
         ['meta.count'],
       ],
-      // Refinement: the same emitted value, judged against what the
-      // inputs selected.
-      'a value the chosen input still allows' => [['text' => 'hi', 'note' => 'long'], ['mode' => 'rich'], []],
-      'a value the chosen input rules out' => [['text' => 'hi', 'note' => 'long'], ['mode' => 'plain'], ['note']],
     ];
   }
 

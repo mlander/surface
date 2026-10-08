@@ -6,21 +6,15 @@ namespace Drupal\data_surface\Plugin\Condition;
 
 use Drupal\Core\Condition\ConditionPluginBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceConfigurationTrait;
-use Drupal\data_surface\DataSurfaceBuilderInterface;
-use Drupal\data_surface\DataSurfaceDeclarationInterface;
 use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DataSurfaceProviderInterface;
-use Drupal\data_surface\DataSurfaceRefinerInterface;
 use Drupal\data_surface\Form\DataSurfacePluginFormTrait;
 
 /**
  * Base class for conditions whose settings are described by a surface.
  *
  * A condition extending this contains #[UsesSurface] naming the surface
- * class its configuration is (in the old spelling, its declaration and
- * its refiner if it has one), and its output: evaluate() and summary(). No
+ * class its configuration is, and its output: evaluate() and summary(). No
  * defaultConfiguration, no buildConfigurationForm, no
  * validateConfigurationForm, no submitConfigurationForm.
  *
@@ -50,7 +44,7 @@ use Drupal\data_surface\Form\DataSurfacePluginFormTrait;
  * @see \Drupal\data_surface\Plugin\Block\DataSurfaceBlockBase
  *   The same composition for the host that renames the triple.
  */
-abstract class DataSurfaceConditionBase extends ConditionPluginBase implements DataSurfaceProviderInterface, DataSurfaceRefinerInterface, DataSurfaceDeclarationInterface {
+abstract class DataSurfaceConditionBase extends ConditionPluginBase {
 
   use DataSurfaceConfigurationTrait {
     defaultConfiguration as protected surfaceDefaultConfiguration;
@@ -60,52 +54,17 @@ abstract class DataSurfaceConditionBase extends ConditionPluginBase implements D
   use DataSurfacePluginFormTrait;
 
   /**
-   * {@inheritdoc}
+   * Builds the surface the class's #[UsesSurface] names.
    *
-   * The surface the class's #[UsesSurface] names, when its definition
-   * carries one: built in the host's `configure` context, and stored as
-   * the host always stored it. Otherwise whatever the class declares in
-   * declareDataSurface(), with this plugin as the refiner. A condition
-   * whose surface needs live site state to describe itself overrides
-   * this and builds the surface here instead, which is the one other
-   * legal home for it in the old spelling.
+   * In the condition host's `configure` context, stored as the host always
+   * stored it, through the plugin configuration target this host
+   * supplies.
    *
-   * A condition is its own subject: the plugin instance is the whole of
-   * what this surface describes, so the subject is NULL, and any
-   * other is refused by name rather than quietly ignored.
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The surface, alters applied.
    */
-  public function getDataSurface(string $operation = 'configure', ?string $subject = NULL): DataSurfaceInterface {
-    // The plugin instance is the only thing this surface describes, so
-    // a caller naming a subject has addressed the wrong provider.
-    $this->surfaceSelfSubject($subject);
-    // The host id is namespaced by plugin type, so a subscriber
-    // matching on it cannot pick up a host of another kind that
-    // happens to share a plugin id.
-    return $this->hostedSurface('condition:' . $this->getPluginId(), $operation);
-  }
-
-  /**
-   * {@inheritdoc}
-   *
-   * A condition that names its surface with #[UsesSurface] declares
-   * nothing here, so the base answers for it; a condition in the old
-   * spelling overrides this, as it always had to.
-   */
-  public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
-    throw new \LogicException(sprintf(
-      '%s declares no surface: name one with #[UsesSurface] on the class, or override declareDataSurface().',
-      static::class,
-    ));
-  }
-
-  /**
-   * {@inheritdoc}
-   *
-   * A condition with no dependent settings refines nothing; one with
-   * them overrides this and narrows the named definition.
-   */
-  public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
-    return $definition;
+  public function getDataSurface(): DataSurfaceInterface {
+    return $this->hostedSurface();
   }
 
   /**

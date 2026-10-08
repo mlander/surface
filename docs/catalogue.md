@@ -41,6 +41,8 @@ the plugin's host. `docs/surfaces.md` says how each part works.
 
 - Altered by `Drupal\data_surface_demo_extras\SurfaceAlter\DemoBlockAlter` (`data_surface_demo_extras`), in every situation.
 
+- Slot `presentation_settings` is filled by: `grid` → `Drupal\data_surface_demo\Surface\GridPresentationSurface`, `list` → `Drupal\data_surface_demo\Surface\ListPresentationSurface`.
+
 ## block.data_surface_demo.presentation.grid
 
 `Drupal\data_surface_demo\Surface\GridPresentationSurface`, in `data_surface_demo`.
@@ -72,6 +74,8 @@ the plugin's host. `docs/surfaces.md` says how each part works.
 | `edit` | Edit a field | `FieldConfigInterface $field` | once given what it needs | `administer %entity_type_id fields` | yes | `FieldInstanceSurface::edit()` (`data_surface_tool`) |
 
 - Slot `settings` is filled by: `address` → `Drupal\data_surface_address\Surface\AddressFieldSettingsSurface`.
+
+- Slot `settings` is filled, for every other value, by variants derived from the config schema `field.field_settings.<field type>`, for every field type offered in the UI.
 
 ## field.settings.address
 

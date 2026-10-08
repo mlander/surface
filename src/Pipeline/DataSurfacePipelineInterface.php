@@ -177,16 +177,13 @@ interface DataSurfacePipelineInterface {
    * held to it, by its own tests and by anything generating them.
    *
    * What it does, in order:
-   * 1. Refines the outputs against the input values, so the definitions
-   *    the emitted values are held to are the ones those inputs
-   *    selected — the same move validate() makes on the input side.
-   * 2. Strips every Omitted key, at every depth. A producer says "not
+   * 1. Strips every Omitted key, at every depth. A producer says "not
    *    emitted" with the sentinel, and after this step that is the same
    *    thing as never having sent the key.
-   * 3. Refuses keys no output definition declares, at any depth, in the
+   * 2. Refuses keys no output definition declares, at any depth, in the
    *    same spirit accept() refuses unknown input keys: a key nobody
    *    declared is a promise nobody made.
-   * 4. Checks every key that is present against its definition's type
+   * 3. Checks every key that is present against its definition's type
    *    and constraints, through typed data.
    *
    * What it deliberately does **not** do is cast. Input arrives from
@@ -205,10 +202,6 @@ interface DataSurfacePipelineInterface {
    *   The surface whose outputs the values are held to.
    * @param array $output
    *   The emitted values, keyed by output key, Omitted included.
-   * @param array $input_values
-   *   The accepted input values the host ran with, which the outputs
-   *   are refined against. Empty when the caller has none, in which
-   *   case no output refines and the advertised definitions stand.
    *
    * @return \Drupal\data_surface\Pipeline\ViolationSet
    *   The violations, each carrying its output key, the property path
@@ -218,7 +211,7 @@ interface DataSurfacePipelineInterface {
    * @see \Drupal\data_surface\Pipeline\Omitted
    * @see docs/outputs.md
    */
-  public function conformOutput(DataSurfaceInterface $surface, array $output, array $input_values = []): ViolationSet;
+  public function conformOutput(DataSurfaceInterface $surface, array $output): ViolationSet;
 
   /**
    * Shapes accepted values for a storage target without writing.
@@ -255,14 +248,14 @@ interface DataSurfacePipelineInterface {
    * one result rather than orchestrating five calls.
    *
    * Access comes first and is the caller's own resolved answer rather
-   * than a provider the pipeline would have to hold: a host asks its
-   * provider's surfaceAccess() for the operation it is running and hands
+   * than a service the pipeline would have to hold: a host asks the
+   * build step's access() for the context it is running in and hands
    * the result over, so a form, a tool, a config action and an agent all
    * pass the same answer through the same gate. A forbidden answer
    * refuses before the target is read at all — nothing is loaded,
    * nothing is accepted, nothing is written — and comes back as a
    * violation under ACCESS_VIOLATION_KEY carrying the refusal's reason.
-   * Neutral and allowed both proceed, identically: a provider with no
+   * Neutral and allowed both proceed, identically: a surface with no
    * opinion blocks nothing.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
@@ -274,7 +267,7 @@ interface DataSurfacePipelineInterface {
    * @param bool $dry_run
    *   TRUE to prepare the artifact but skip the write.
    * @param \Drupal\Core\Access\AccessResultInterface|null $access
-   *   The provider's answer for this operation and account, already
+   *   The surface's answer for this context and account, already
    *   resolved by the caller, or NULL when the caller has no access
    *   answer to apply. NULL is not "allowed": it means nothing was
    *   asked, which is what every caller written before this stage

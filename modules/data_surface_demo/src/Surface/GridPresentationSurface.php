@@ -6,6 +6,7 @@ namespace Drupal\data_surface_demo\Surface;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Surface\Attribute\Surface;
+use Drupal\data_surface\Surface\Attribute\SurfaceVariant;
 use Drupal\data_surface\Surface\ShapeInterface;
 use Drupal\data_surface\Surface\SurfaceInterface;
 
@@ -17,6 +18,7 @@ use Drupal\data_surface\Surface\SurfaceInterface;
  * @see \Drupal\data_surface_demo\Surface\DemoBlockSurface
  */
 #[Surface('block.data_surface_demo.presentation.grid')]
+#[SurfaceVariant(of: DemoBlockSurface::class, key: 'presentation_settings', value: 'grid')]
 final class GridPresentationSurface implements SurfaceInterface {
 
   /**

@@ -16,14 +16,11 @@ use Drupal\data_surface\Surface\SurfaceContext;
  * What api/HOW-IT-FITS.md in the sketch calls the framework. It runs the
  * shape methods over the engine's builder, applies the discovered
  * alters, applies the context, binds the #[RefinesInput] methods as the
- * engine's refiners, and seals through the engine's factory — so the
- * build event still fires and a subscriber written in the old spelling
- * extends a surface written in the new one. That is how the two
- * spellings coexist until step 5 of the rework deletes the old.
+ * engine's refiners, builds each subsurface the same way in its own
+ * frame, and seals. It is the only way a surface is built.
  *
- * The answer is the engine's own DataSurfaceInterface, so the pipeline,
- * the generated form, the widgets and the tool bridge read a surface
- * built here exactly as they read any other.
+ * The answer is the engine's DataSurfaceInterface, which the pipeline,
+ * the generated form, the widgets and the tool bridge all read.
  *
  * @see \Drupal\data_surface\SurfaceBuild\Surfaces
  *   For the order of the steps and what each refuses.
@@ -37,13 +34,6 @@ interface SurfacesInterface {
    *   The surface class, or its #[Surface] id.
    * @param \Drupal\data_surface\Surface\SurfaceContext $context
    *   Where it is being asked for. A generic caller passes an empty one.
-   * @param class-string|null $host_class
-   *   The class the build event names as the host, so a subscriber that
-   *   matches a host by class keeps matching it. NULL names the surface
-   *   class.
-   * @param string|null $host_id
-   *   The namespaced host id the build event carries, `<host type>:<id>`.
-   *   NULL means `surface:<surface id>`.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The sealed surface.
@@ -53,7 +43,7 @@ interface SurfacesInterface {
    * @throws \LogicException
    *   When the surface fails a seal-time check, naming the offender.
    */
-  public function build(string $surface, SurfaceContext $context, ?string $host_class = NULL, ?string $host_id = NULL): DataSurfaceInterface;
+  public function build(string $surface, SurfaceContext $context): DataSurfaceInterface;
 
   /**
    * Builds the context one situation describes.
@@ -125,8 +115,8 @@ interface SurfacesInterface {
    * For the static half of a plugin host's protocol, a formatter's
    * defaultSettings() or a field type's defaultFieldSettings(), which is
    * asked of a class with no instance and no context. Only the owner's
-   * defineInputs() runs: no alter, no context, no refiner, no build
-   * event, so what a contributor mounts is not here, and a subsurface
+   * defineInputs() runs: no alter, no context, no refiner, so what an
+   * alter mounts is not here, and a subsurface
    * key holds an empty map.
    *
    * @param string $surface

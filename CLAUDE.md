@@ -12,36 +12,39 @@ kept true (start at `docs/index.md`). **`ROADMAP.md`** is what is next.
 read them for why, never as a description of today. **`REWORK.md`** is
 the rework in progress on this branch, toward the spelling in `sketch/`.
 
-## Two spellings
+## One spelling
 
-Until step 5 of `REWORK.md`, a surface can be written two ways, and both
-seal through the same factory into the same `DataSurfaceInterface`. The
-**new spelling** is a class in a module's `src/Surface/` carrying
-`#[Surface]`, with `defineInputs()` and `#[RefinesInput]` methods, alters
-in `src/SurfaceAlter/` carrying `#[AltersSurface]`, and `#[Situation]`
-static methods; a plugin names its surface with `#[UsesSurface]`. It is
-discovered by `SurfaceBuild\SurfaceCollectorPass` and built by the
-`data_surface.surfaces` service (`docs/surfaces.md`). The **old
-spelling** is `declareDataSurface()`, provider services and build event
-subscribers, and the build event still fires for new-spelling surfaces,
-so an old subscriber extends a new surface. Moved so far: the demo
-block (with its presentation slot) and the demo formatter, the field
-instance surface in `data_surface_tool` (with its storage child and
-add/reuse/edit), the address settings that fill its slot and the
-address field type that names them, the content type surface in
-`data_surface_demo_node_type`, and every extras module extension (three
-alters, no subscriber). Every plugin host reads `#[UsesSurface]` from
-the plugin definition: block, formatter, condition, action, field type,
-and `DataSurfacePluginForm` for any configurable plugin. A target has
-three verbs, `load()`, `prepare()` (rehearse the write with storage's
-own checks, no side effects) and `commit()` of what prepare returned; a
-dry run stops after prepare and reports it. A decision the sketch does
-not cover is marked `// SKETCH GAP:` where it is made; grep for it.
+A surface is a class in a module's `src/Surface/` carrying `#[Surface]`,
+with `defineInputs()` (and, on `HasOutputsInterface`, `defineOutputs()`),
+`#[RefinesInput]` methods and `#[Situation]` static methods. Another
+module changes it with an alter in `src/SurfaceAlter/` carrying
+`#[AltersSurface]`. A plugin names its surface with `#[UsesSurface]`.
+Everything is discovered by `SurfaceBuild\SurfaceCollectorPass` and built
+by the `data_surface.surfaces` service (`SurfacesInterface::build($surface,
+$context)`), which writes the shape, the alters, the context and the
+bound refiners into the engine's `DataSurfaceBuilder` and seals it into a
+`DataSurfaceInterface` (`docs/surfaces.md`). The builder, the definition
+map and `DataSurfaceRefinerInterface` are internal: nothing an author
+writes touches them. There is no build event, no declaration method, no
+provider service, no policy filter and no output refiner; step 5 of
+`REWORK.md` deleted them.
+
+Every plugin host reads `#[UsesSurface]` from the plugin definition:
+block, formatter, condition, action and field type base classes, and
+`DataSurfacePluginForm` for any configurable plugin. A host builds the
+named surface in its own verb's context (`configure`, `field_settings`),
+supplies the target (the plugin's configuration array; the field config
+for a field type) and answers static defaults from the surface's own
+shape (`SurfacesInterface::defaults()`). A target has three verbs,
+`load()`, `prepare()` (rehearse the write with storage's own checks, no
+side effects) and `commit()` of what prepare returned; a dry run stops
+after prepare and reports it. A decision the sketch does not cover is
+marked `// SKETCH GAP:` where it is made; grep for it.
 
 Situations are what routes and tools are generated from. A route names
 `_data_surface_surface` and `_data_surface_situation` and maps its
 parameters onto the situation's by name (`SituationRoute`), gated by
-`_data_surface_situation_access`; `DataSurfaceProviderForm` serves it.
+`_data_surface_situation_access`; `DataSurfaceSituationForm` serves it.
 `data_surface_tool` derives one tool per situation that can be asked
 on its own, `data_surface:<surface>:<situation>`: its surface names a
 target, no plugin uses it, and every `%key` in its permission can be
@@ -49,14 +52,18 @@ supplied by a parameter (`SurfaceCatalogue::standalone()`). The field
 tools are `data_surface:field.instance:add` / `:reuse` / `:edit`; the
 hand-written `field_add` / `field_update` are gone.
 `data_surface.surface_catalogue` lists the static layer; `docs/catalogue.md`
-is generated from it by `scripts/generate-catalogue.php`. The old
-provider spelling of the form stays for `NodeTypeSurfaceProvider`
-(deprecated, unrouted) until step 5.
+is generated from it by `scripts/generate-catalogue.php`.
 
 Subsurfaces are `attach()` (a fixed child, by class) and `attachBy()`
-(a slot a sibling chooses; open when it lists no children, filled by
-`#[SurfaceVariant]`). A child is built by the same build step in its
-own frame and sealed into the parent's entry as a `SurfaceAttachment`,
+(a slot a sibling chooses, always open: every `#[SurfaceVariant]` for it
+fills it, and the parent names none). Both return the map at the key,
+which the owner labels with the core setters; `describe()` is for an
+alter rewording a key it does not own. A service implementing
+`SurfaceBuild\DerivedVariantsInterface` fills a slot for the values no
+variant class fills (`data_surface_tool` derives a field type's settings
+from its config schema). A child whose shape cannot be listed at all is
+a `#[RefinesInput]` method on an `any` key returning a map. A child is
+built by the same build step in its own frame and sealed into the parent's entry as a `SurfaceAttachment`,
 or a `SurfaceSlot` of them; the pipeline, refinement, the form and the
 tool bridge recurse through those entries, and nothing in a parent can
 name a key inside its child. `docs/surfaces.md` has the rules.
@@ -72,7 +79,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
   modules/custom/data_surface'
 ```
 
-The baseline as of this writing: **675 tests, 4344 assertions, 0 errors,
+The baseline as of this writing: **653 tests, 4018 assertions, 0 errors,
 2 failures** — the two below. The test and assertion counts drift upward
 as work lands and are not the thing to check. **No test may error,
 and the only tests that may fail are the ones in
@@ -125,15 +132,16 @@ npx --yes cspell@8 --config /tmp/merged.json --no-progress --no-summary "**"
 
 - Contracts are objects; payloads are arrays. Never pass a definition as an
   array or a value bag as an object.
-- A surface is declared in one place: a `#[Surface]` class, or (old
-  spelling) `declareDataSurface()`, or entirely at runtime in
-  `getDataSurface()`. Never half of each.
+- A surface is declared in one place, its `#[Surface]` class. A plugin
+  only names it with `#[UsesSurface]`; the host builds it.
 - A `#[Surface]` class has no constructor and holds no service; a refiner
   points at a list with a constraint and the options resolver fetches.
   Alters, targets and access classes are autowired services and may hold
   services.
-- Refiners narrow a definition, contributors widen the surface at build
-  time, filters remove keys. Those are three different jobs; do not blur.
+- `#[RefinesInput]` methods narrow a definition; an alter adds keys and,
+  with `extendChoices()`, offers more values on a fixed choice list (the
+  one widening verb). Nothing removes a key or a value: a remove-only
+  policy is a later concept (`ROADMAP.md`).
 - Requiredness appears only when it says something: `setRequired(TRUE)` on
   the keys that must be configured, nothing at all on the rest, because
   core data definitions are optional by default.
@@ -155,34 +163,36 @@ npx --yes cspell@8 --config /tmp/merged.json --no-progress --no-summary "**"
 
 ## Naming
 
-- A standalone provider class ends in `SurfaceProvider`
-  (`NodeTypeSurfaceProvider`). A host that declares its own surface is named
-  for the host instead.
+- A surface class ends in `Surface` and its `#[Surface]` id is dotted
+  (`node.type`, `field.instance`); an alter ends in `Alter`, a target in
+  `Target`, an access class in `Access`.
 - A class-swap adopter prefixes the swapped class with `Surface`
   (`AddressItem` → `SurfaceAddressItem`), and the hook implementation's
   docblock **must name the replacement class**, so grepping the original
   lands on the line that replaces it.
-- Host ids are namespaced `<host type>:<id>` — `block:my_teaser`,
-  `field_type:address`.
-- Operations are closed verbs from the host type's vocabulary (`configure`,
-  `add`, `edit`, `field_settings`) and never carry identity. Identity goes
-  in the opaque subject the provider resolves for itself.
+- The catalogue lists a plugin as `<host type>:<plugin id>` —
+  `block:my_teaser`, `field_type:address`.
+- A context's operation is a situation id (`add`, `edit`, `reuse`) or a
+  host's own verb (`configure`, `field_settings`) and never carries
+  identity. Identity is the `#[Surface(identity:)]` keys the context
+  knows.
 
 See `docs/declaring-a-surface.md` for all four in full.
 
 ## Where things live
 
 ```
-src/                     Surface, builder, factory, definition map, host trait.
-src/Surface/             The new spelling's API and attributes (Attribute/).
-src/SurfaceBuild/        Discovery pass, registry, build step, adapters.
+src/                     Surface, builder (internal), definition map, host trait.
+src/Surface/             The authoring API and attributes (Attribute/).
+src/SurfaceBuild/        Discovery pass, registry, build step, adapters,
+                         derived variants, catalogue.
 src/Hook/                #[UsesSurface] into plugin definitions.
 src/Pipeline/            Access, accept, validate, prepare, commit; results.
 src/Target/              Where accepted values are written; storage shapes.
-src/Form/                Form builder, host traits, the generic provider form.
+src/Form/                Form builder, host traits, the situation form.
 src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constraints.
 src/Options/             Option sets, the resolver plugin base and manager.
-src/Refinement/ Event/   Narrowing and choice sets; the build event.
+src/Refinement/          Narrowing and choice sets.
 modules/                 Seven experimental submodules; each has its own README.
 tests/src/               Unit, Kernel, Functional, FunctionalJavascript.
 docs/ scripts/           Published documentation; check.sh and the generator.

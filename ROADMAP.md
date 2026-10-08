@@ -244,6 +244,12 @@ which serves the real contract.
    field-of-bundle stop costing an imperative refiner per plugin. The
    object refiner remains the checked escape hatch, and the emitter
    reports it as runtime-narrowed.
+   - **Options alters** (later concept, from the sketch): a class in
+     `src/OptionsAlter/` changing one list of allowed values everywhere
+     it is used, not per surface.
+   - **Remove-only policy** (later concept, beside options alters): a
+     site hiding an owner's key, and an options alter removing an entry
+     stored values use; both need the stale rule (item 11).
 9. **A closed vocabulary of dependent effects** (the Laravel negative
    result made policy). Declared edge effects on the refinement map:
    narrow-choices-to, required-when, excluded-when, locked-when, as

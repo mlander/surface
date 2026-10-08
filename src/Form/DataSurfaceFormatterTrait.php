@@ -23,7 +23,7 @@ use Drupal\data_surface\DataSurfaceHostTrait;
  * settingsForm() and settingsSummary() as it always has, and this trait
  * answers from the surface. When the formatter plugin type understands
  * surfaces natively these methods are exactly the code that gets
- * deleted; the surface and the provider interface survive.
+ * deleted; the surface and #[UsesSurface] survive.
  *
  * Four host realities it absorbs:
  * - The $form parameter is not a fragment to merge into. Field UI hands
@@ -40,10 +40,9 @@ use Drupal\data_surface\DataSurfaceHostTrait;
  *   is nothing to flatten on the way: widgets emit definition-shaped
  *   trees, so what extraction returns is already the settings shape.
  * - defaultSettings() is static and cannot consult an instance surface.
- *   surfaceDefaultSettings() answers it from the class's own
- *   declaration, which is a static method for exactly this reason; a
- *   class whose surface is built at runtime overrides defaultSettings()
- *   itself.
+ *   surfaceDefaultSettings() answers it from the shape of the surface
+ *   the class names with #[UsesSurface], which is static for exactly
+ *   this reason.
  * - The host prunes settings against that static array on save:
  *   EntityDisplayBase::setComponent() runs values through the formatter
  *   manager's prepareConfiguration(), which intersects them with
@@ -53,9 +52,9 @@ use Drupal\data_surface\DataSurfaceHostTrait;
  *   why surfaceDefaultSettings() always declares that key.
  *
  * Nothing but identifiers rides on the element. A surface holds its
- * refiners, and for a formatter the refiner is usually the formatter
- * itself, so putting one on a form array handed the form cache a plugin
- * with whatever the plugin holds. What the element carries instead is
+ * refiners, and a refiner holds the surface or alter instance its
+ * methods are called on, so putting one on a form array hands the form
+ * cache whatever those hold. What the element carries instead is
  * the formatter's plugin id and the field's name, and the static
  * callback rebuilds the formatter from them: through the display the
  * host is editing when there is one, which is where the real field
@@ -84,22 +83,15 @@ trait DataSurfaceFormatterTrait {
   /**
    * Builds the surface describing this formatter's settings.
    *
-   * @param string $operation
-   *   The host operation the surface is wanted for.
-   * @param string|null $subject
-   *   The id of the thing the operation is about, or NULL when the
-   *   provider is its own subject.
-   *
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The surface.
    */
-  abstract public function getDataSurface(string $operation = 'configure', ?string $subject = NULL): DataSurfaceInterface;
+  abstract public function getDataSurface(): DataSurfaceInterface;
 
   /**
    * States that a formatter has no target of its own to hand out.
    *
-   * The shipped example of the provider contract's one refusal. A
-   * formatter's settings are not the formatter's to store: they are one
+   * A formatter's settings are not the formatter's to store: they are one
    * component of an entity view display, and Field UI copies whatever
    * the settings element produced onto that display and saves it. So
    * there is no destination this object could name, and the settings
@@ -115,20 +107,13 @@ trait DataSurfaceFormatterTrait {
    * A caller that means to write a formatter's settings writes the
    * display: load the entity view display, set the component, save it.
    *
-   * @param string $operation
-   *   The host operation the target is wanted for.
-   * @param string|null $subject
-   *   The id of the thing the operation is about.
-   *
    * @return never
-   *   Never returns: the provider contract's one refusal.
+   *   Never returns.
    *
    * @throws \LogicException
    *   Always.
-   *
-   * @see \Drupal\data_surface\DataSurfaceProviderInterface::getDataSurfaceTarget()
    */
-  public function getDataSurfaceTarget(string $operation = 'configure', ?string $subject = NULL): never {
+  public function getDataSurfaceTarget(): never {
     throw new \LogicException(sprintf(
       'The settings of the %s formatter are stored by the entity view display that hosts it, not by the formatter, so there is no target to hand out; write the display component instead.',
       static::class,
@@ -136,7 +121,7 @@ trait DataSurfaceFormatterTrait {
   }
 
   /**
-   * Reads the static default settings from a class's declaration.
+   * Reads the static default settings from the surface a class names.
    *
    * @param class-string $class
    *   The fully qualified formatter class name.
@@ -146,8 +131,7 @@ trait DataSurfaceFormatterTrait {
    *   third party namespace the host prunes against.
    *
    * @throws \LogicException
-   *   When the class declares no surface, in which case it has to
-   *   answer defaultSettings() itself.
+   *   When the class names no surface.
    */
   protected static function surfaceDefaultSettings(string $class): array {
     $defaults = static::surfaceDeclaredDefaults($class);
@@ -251,7 +235,7 @@ trait DataSurfaceFormatterTrait {
    *   The form state.
    *
    * @return static
-   *   The formatter, which is also the surface's refiner.
+   *   The formatter.
    *
    * @throws \LogicException
    *   When the element names no formatter this class can rebuild.

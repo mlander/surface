@@ -235,7 +235,7 @@ class PipelineAccessTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($access->isForbidden());
     // Asked for an operation it has never heard of, it still has no
     // opinion rather than an error.
-    $this->assertTrue($block->surfaceAccess('settings_tray')->isNeutral());
+    $this->assertTrue($block->surfaceAccess(operation: 'settings_tray')->isNeutral());
   }
 
 }

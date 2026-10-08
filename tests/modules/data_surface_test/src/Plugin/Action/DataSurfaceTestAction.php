@@ -9,17 +9,15 @@ use Drupal\Core\Action\Attribute\Action;
 use Drupal\Core\Messenger\MessengerTrait;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\data_surface\DataSurfaceBuilderInterface;
-use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\Surface\Attribute\UsesSurface;
+use Drupal\data_surface_test\Surface\TestActionSurface;
 use Drupal\data_surface\Plugin\Action\DataSurfaceActionBase;
 
 /**
  * An action that adopts surfaces and says nothing else about settings.
  *
- * The thinnest adoption in group A: one method declaring what the
+ * The thinnest adoption in group A: #[UsesSurface] naming what the
  * action accepts and the two methods the action host asks for. No
- * refiner, because no setting here depends on another; no
  * defaultConfiguration; and none of the three form methods that every
  * configurable action in core writes out by hand today.
  */
@@ -27,33 +25,10 @@ use Drupal\data_surface\Plugin\Action\DataSurfaceActionBase;
   id: 'data_surface_test_action',
   label: new TranslatableMarkup('Data surface test action'),
 )]
+#[UsesSurface(TestActionSurface::class)]
 final class DataSurfaceTestAction extends DataSurfaceActionBase {
 
   use MessengerTrait;
-
-  /**
-   * {@inheritdoc}
-   */
-  public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
-    $message = DataDefinition::create('string')
-      ->setLabel(new TranslatableMarkup('Message'))
-      ->setDescription(new TranslatableMarkup('Shown to the person the action runs for.'))
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 40]);
-    DefinitionMetadata::setExamples($message, ['The article was published']);
-    $builder->setDefinition('message', $message);
-    $builder->setDefault('message', 'Done');
-
-    $builder->setDefinition('level', DataDefinition::create('string')
-      ->setLabel(new TranslatableMarkup('Level'))
-      ->addConstraint('LabeledChoice', [
-        'choices' => [
-          'status' => new TranslatableMarkup('Status'),
-          'warning' => new TranslatableMarkup('Warning'),
-        ],
-      ]));
-    $builder->setDefault('level', 'status');
-  }
 
   /**
    * {@inheritdoc}

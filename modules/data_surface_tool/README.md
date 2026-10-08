@@ -3,10 +3,10 @@
 Tools generated from surfaces: one per situation of every surface that
 can be asked on its own, `data_surface:<surface>:<situation>`. For a
 field that is `data_surface:field.instance:add`, `:reuse` and `:edit`,
-whose `settings` are the field type's own settings surface, so the A/B
-against the free-form Tool Belt tools is a fair one: the same question,
-"what may the settings be?", answered from a contract instead of a
-config schema.
+whose `settings` are the field type's own settings surface where it has
+one, so the A/B against the free-form Tool Belt tools is a fair one: the
+same question, "what may the settings be?", answered from a contract
+instead of a config schema.
 
 ## The rename
 
@@ -25,12 +25,16 @@ document. What a caller sends moved:
 `values` holds what used to be top-level inputs — `label`,
 `description`, `required`, `settings` — beside `storage` (cardinality,
 translatability), and every tool takes `dry_run`, which answers with
-what would be stored, after storage's own checks, as `prepared`. A
-field type whose settings are no surface is not offered by the field
-type key: the old tools fell back to the field type's config schema,
-which is Tool Belt's job, `tool_belt:field_add`. The tools place a new
-field on the bundle's default form and view displays, as the old add
-tool did.
+what would be stored, after storage's own checks, as `prepared`. The
+field type key offers every field type offered in the UI. One whose
+module marks a settings surface with `#[SurfaceVariant]` is described
+by that surface; every other, a plain `string` or `integer` field
+among them, is described by its config schema,
+`field.field_settings.<field type>`, through `FieldSettingsSchemaVariants`
+(below): its keys, their types and labels, and the field type's own
+default settings where their type fits, and nothing more. The tools
+place a new field on the bundle's default form and view displays, as
+the old add tool did.
 
 ## What it shows
 
@@ -49,7 +53,7 @@ documents side by side, `values.settings` of
 rather than written by hand, and that the derived tools say at least
 what the retired ones did.
 
-Four pieces:
+Five pieces:
 
 - `Surface\FieldInstanceSurface` — a field on a bundle, in the new
   spelling, with `add`, `reuse` and `edit` situations, a target and an
@@ -58,7 +62,8 @@ Four pieces:
   before the field), and its `settings` are an open slot chosen by
   `field_type`, filled by whichever settings surface a field type's
   module marks with `#[SurfaceVariant]` (the address module's, and the
-  test module's gated one). `reuse($storage, $bundle)` is an add for the
+  test module's gated one), and for every other field type by
+  `FieldSettingsSchemaVariants`. `reuse($storage, $bundle)` is an add for the
   field and an edit for its storage; the storage's edit situation
   refuses shrinking its cardinality once the field has data. Executing
   submits the whole field instance surface to its composed target,
@@ -78,6 +83,15 @@ Four pieces:
   and no parameter supplies the entity type, so it could never be
   allowed and is only ever a field's; and a surface a plugin names with
   `#[UsesSurface]` is configured through the plugin's host.
+- `FieldSettingsSchemaVariants` — a service tagged
+  `data_surface.derived_variants` that fills the field instance
+  surface's `settings` slot for every field type offered in the UI that
+  no `#[SurfaceVariant]` fills, reading `field.field_settings.<field
+  type>` through typed config: a mapping becomes a map, a sequence a
+  list, a primitive its typed data type, and what the schema cannot
+  resolve without a value `any`. A derived variant has no target, so the
+  field stores it. The catalogue says, per slot, where derived variants
+  come from.
 - `SurfaceInputDefinitions` — converts core data definitions into the
   Tool API's input definitions: type, label, description, required,
   default value and constraints, with maps and lists becoming the Tool
@@ -116,11 +130,11 @@ once `storage` names an address storage. Compare with
 
 | Test | Covers |
 | --- | --- |
-| `Kernel\FieldToolsTest` | The three field tools end to end: add, reuse, edit, dry run, the schema refusing at prepare, access. |
+| `Kernel\FieldToolsTest` | The three field tools end to end: add, reuse, edit, dry run, the schema refusing at prepare, a `string` field added and edited through settings derived from its schema, access. |
 | `Kernel\FieldToolsAccessTest` | The field type's own access class refusing both the tools and its Field UI host. |
 | `Kernel\FieldToolsComparisonTest` | The two JSON Schema documents in `COMPARISON.md`, against what the code emits, and parity with the retired tools. |
 | `Kernel\FieldInstanceSurfaceTest` | The three situations, the storage child and its has-data constraint, the settings slot, starting values. |
-| `Kernel\SituationToolsTest` | The generated tools: which exist, the two derivation rules, what they advertise, refinement to the subject, execution, dry run, access. |
+| `Kernel\SituationToolsTest` | The generated tools: which exist, the two derivation rules, what they advertise, refinement to the thing a parameter names, execution, dry run, access. |
 
 ## Who may run them
 

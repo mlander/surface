@@ -19,7 +19,7 @@ them and only where a value moved. `Access\NodeTypeAccess` is what the
 situation's permission cannot say: the node type entity's own answer.
 
 There is no form class in this module, and no tool. Both routes name
-`Drupal\data_surface\Form\DataSurfaceProviderForm` with the surface
+`Drupal\data_surface\Form\DataSurfaceSituationForm` with the surface
 class and a situation; the edit route's `{type}` is the edit
 situation's `$type`. What is left of a form here is
 `NodeTypeSurfaceFormCosmetics`: core's vertical tabs, the machine name's
@@ -27,10 +27,6 @@ mirror-while-typing, the message and the redirect, which is the part
 that should stay bespoke. With `data_surface_tool` enabled, both
 situations are tools, `data_surface:node.type:add` and
 `data_surface:node.type:edit`, generated from the surface.
-
-`NodeTypeSurfaceProvider` and `NodeTypeAddTarget` are the old spelling
-of the same thing, kept, unrouted, until the provider contract is
-deleted; the old spelling's documentation still points at them.
 
 ## How to try it
 
@@ -88,11 +84,10 @@ never appears where following it would be refused.
 
 `Kernel\NodeTypeSurfaceTest` covers both situations and their locks,
 the alter from the extras module, the target creating and updating, a
-dry run, access and the operation link. `Kernel\DataSurfaceProviderFormTest`
-drives both routes through the generic form, message and redirect
-included, and `Functional\NodeTypeSurfaceFormTest` does the same in a
-browser, with the routes' 403s. `Kernel\NodeTypeSurfaceProviderTest`
-keeps the deprecated provider honest until it goes.
+dry run, access and the operation link. `Kernel\DataSurfaceSituationFormTest`
+drives the generic situation form, message and redirect included, and
+`Functional\NodeTypeSurfaceFormTest` drives both routes in a browser,
+with the routes' 403s.
 
 ## Why it is a demo and not a replacement
 

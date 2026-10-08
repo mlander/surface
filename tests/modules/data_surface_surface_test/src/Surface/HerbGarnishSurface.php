@@ -10,7 +10,7 @@ use Drupal\data_surface\Surface\ShapeInterface;
 use Drupal\data_surface\Surface\SurfaceInterface;
 
 /**
- * Settings for a herb garnish: a variant, collected for step 2.
+ * Settings for a herb garnish: the variant that fills the recipe's slot.
  */
 #[Surface('surface_test.garnish.herb')]
 #[SurfaceVariant(of: RecipeSurface::class, key: 'garnish_settings', value: 'herb')]

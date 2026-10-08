@@ -83,8 +83,11 @@ final class FieldInstanceSurface implements SurfaceInterface, HasOutputsInterfac
     $inputs->add('required', 'boolean', 'Required field', default: FALSE);
 
     // Its parts.
-    $inputs->attach('storage', FieldStorageSurface::class);
-    $inputs->attachBy('settings', by: 'field_type');
+    $inputs->attach('storage', FieldStorageSurface::class)
+      ->setLabel('Storage');
+    $inputs->attachBy('settings', by: 'field_type')
+      ->setLabel('Field settings')
+      ->setDescription('What this field type needs.');
   }
 
   // How its values tighten each other.

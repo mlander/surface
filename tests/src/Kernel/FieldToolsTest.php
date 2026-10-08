@@ -12,6 +12,9 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface_tool\SituationInputs;
+use Drupal\data_surface_address\Surface\AddressFieldSettingsSurface;
+use Drupal\data_surface_tool\Surface\FieldInstanceSurface;
+use Drupal\data_surface\Surface\SurfaceContext;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\field\FieldConfigInterface;
@@ -464,31 +467,80 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that a field type with no settings surface is not offered.
+   * Tests that a field type with no settings surface is derived from schema.
    *
-   * The field instance surface's settings are a slot its field types'
-   * settings surfaces fill, and a field type that has none is not among
-   * the values its field type key offers, so it is refused by name
-   * rather than added with settings nothing describes. The hand-written
-   * tools fell back to the config schema here; that fallback is the
-   * free-form tool's, tool_belt:field_add.
+   * The field instance surface's settings slot is filled by every field
+   * type's settings surface, and, for every field type offered in the UI
+   * that has none, by a variant derived from its config schema,
+   * `field.field_settings.<field type>`. The declared variant wins where
+   * there is one: the address field type's settings are still its own
+   * surface.
    */
-  public function testFieldTypeWithoutSettingsSurfaceIsNotOffered(): void {
+  public function testFieldTypeWithoutSettingsSurfaceIsDerivedFromSchema(): void {
     $tool = $this->createTool(self::ADD);
     $values = $tool->getInputDefinition(SituationInputs::VALUES);
     $this->assertInstanceOf(MapInputDefinition::class, $values);
-    $field_type = $values->getPropertyDefinitions()['field_type'];
-    $this->assertSame(['address'], $field_type->getConstraint('Choice')['choices']);
+    $choices = $values->getPropertyDefinitions()['field_type']->getConstraint('Choice')['choices'];
+    $this->assertContains('address', $choices);
+    $this->assertContains('string', $choices);
+    $this->assertContains('integer', $choices);
 
+    $surface = $this->container->get('data_surface.surfaces')->build(FieldInstanceSurface::class, new SurfaceContext('configure'));
+    $slot = $surface->getDefinitions()->entry('settings')?->slot;
+    $this->assertNotNull($slot);
+    $this->assertSame(AddressFieldSettingsSurface::class, $slot->variant('address')->source);
+    $this->assertNull($slot->variant('string')->source);
+    $this->assertSame([], $slot->variant('string')->child->getDefinitions()->names());
+    $this->assertSame(['min', 'max', 'prefix', 'suffix'], $slot->variant('integer')->child->getDefinitions()->names());
+  }
+
+  /**
+   * Tests that a plain string field is added and edited by the tools.
+   */
+  public function testStringFieldIsAddedAndEdited(): void {
+    $tool = $this->createTool(self::ADD);
     $tool->setInputValue(SituationInputs::VALUES, [
       'field_type' => 'string',
       'field_name' => 'field_plain',
       'label' => 'Plain',
     ]);
     $tool->execute();
+    $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResultMessage());
+    $this->assertSame('string', FieldStorageConfig::loadByName('entity_test', 'field_plain')?->getType());
+
+    $tool = $this->toolManager->createInstance(self::EDIT);
+    $tool->setInputValue('field', 'entity_test.entity_test.field_plain');
+    $tool->setInputValue(SituationInputs::VALUES, ['label' => 'Plainer', 'required' => TRUE]);
+    $tool->execute();
+    $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResultMessage());
+    $field = $this->reloadField('field_plain');
+    $this->assertSame('Plainer', $field->getLabel());
+    $this->assertTrue($field->isRequired());
+  }
+
+  /**
+   * Tests that derived settings are typed by the schema, and stored.
+   */
+  public function testDerivedSettingsAreTypedAndStored(): void {
+    $tool = $this->createTool(self::ADD);
+    $tool->setInputValue(SituationInputs::VALUES, [
+      'field_type' => 'integer',
+      'field_name' => 'field_count',
+      'label' => 'Count',
+      'settings' => ['max' => 10, 'suffix' => ' items'],
+    ]);
+    $tool->execute();
+    $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResultMessage());
+    $settings = $this->reloadField('field_count')->getSettings();
+    $this->assertSame(10, $settings['max']);
+    $this->assertSame(' items', $settings['suffix']);
+
+    $tool = $this->toolManager->createInstance(self::EDIT);
+    $tool->setInputValue('field', 'entity_test.entity_test.field_count');
+    $tool->setInputValue(SituationInputs::VALUES, ['settings' => ['max' => 'ten']]);
+    $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
-    $this->assertStringContainsString('field_type', (string) $tool->getResultMessage());
-    $this->assertNull(FieldStorageConfig::loadByName('entity_test', 'field_plain'));
+    $this->assertSame(10, $this->reloadField('field_count')->getSettings()['max']);
   }
 
   /**
@@ -562,11 +614,8 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
    *
    * What cannot survive is stated where it is lost, in
    * SurfaceInputDefinitions::outputsFromSurface(): example values and
-   * type settings, which the Tool API has nowhere to put, and the
-   * refinement edges, because the Tool API has an
-   * input_definition_refiners and no output counterpart. A caller that
-   * wants the narrowed answer converts a surface it has already put
-   * through refineOutputs().
+   * type settings, which the Tool API has nowhere to put. Outputs are
+   * never refined, so there are no refinement edges to lose.
    */
   public function testOutputsConvertToOutputDefinitions(): void {
     $meta = MapDataDefinition::create()->setLabel(new TranslatableMarkup('Meta'));

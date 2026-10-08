@@ -83,9 +83,10 @@ alter is a class with the same two jobs and a narrower tool.
 - The shape methods get a shape to fill, and nothing else: no values,
   no context. The owner gets `ShapeInterface`; an alter gets
   `ShapeAdditionsInterface`, which is the same minus `attachBy()`. An
-  alter can add keys, attach a child, and reword a label or description
-  with `describe()`. It cannot remove a key, change its type, or widen
-  it. Inputs and outputs use the same two interfaces.
+  alter can add keys, attach a child, reword a label or description
+  with `describe()`, and offer more values on a fixed choice list with
+  `extendChoices()`. It cannot remove a key or change its type. Inputs
+  and outputs use the same two interfaces.
 - A `#[RefinesInput('bundle')]` method takes the key's definition first,
   then one parameter per sibling it watches, matched by name to that
   sibling's key, or listed on the attribute as `watches:` when you
@@ -125,14 +126,23 @@ A surface attaches other surfaces at a key. Each child is its own class,
 with its own shape and refiners, and alters can target it alone.
 
 - `attach()` is a fixed child. The field attaches its storage.
-- `attachBy()` is a child that a sibling key chooses. The field's
-  `settings` are chosen by `field_type`.
+- `attachBy()` is a slot: a child that a sibling key chooses. The
+  field's `settings` are chosen by `field_type`.
+- `attachList()` and `attachListBy()` are collections: a list whose
+  every item is the child, or chooses its own child. **Deferred** to the
+  next concept; declared so the position is recorded. The contract is
+  an ordered list with delta as position, stable identity is an
+  identity key on the child, and weights are the target's business.
 
-The settings slot is **open**. The field surface lists no children.
-Each field type's module marks its own settings surface with
-`#[SurfaceVariant]`, naming the slot and the value it is for. A new field
-type brings its settings surface with it, and the field module never
-changes.
+A slot is always **open**. The parent never names the children. Each
+child marks itself with `#[SurfaceVariant]`, naming the slot and the
+value it is for, so a new field type brings its settings surface with it
+and the field module never changes. Underneath, a slot is an `any` stub
+that the framework narrows to the chosen child's map once the deciding
+key has a value: an ordinary refinement, not a new mechanism. A child
+that cannot be enumerated statically is the one case for a
+`#[RefinesInput]` method on an `any` key returning the narrower
+definition itself.
 
 ## Situations: add, reuse, edit
 
@@ -199,9 +209,10 @@ A list can be altered in two places:
 | The list everywhere it is used | `src/OptionsAlter/` | `ExtraCountriesOptionsAlter` |
 | One key on one surface, tightening it | `src/SurfaceAlter/` | `AddressCountryPolicyAlter` |
 
-Widening one key on one surface (adding a choice the owner did not list)
-has no verb in the sketch. The known cases are covered by altering the
-list. If a real one turns up, it goes on `ShapeAdditionsInterface`.
+Widening one key on one surface is `extendChoices()`, for fixed choice
+lists only; it is the one widening verb. Removing is deliberately
+absent: a site that must hide an owner's key by policy is a later
+concept, recorded beside options alters.
 
 ## Surface alters
 

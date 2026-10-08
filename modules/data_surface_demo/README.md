@@ -8,7 +8,7 @@ same surface.
 
 ### The block: `data_surface_demo`
 
-The first consumer of the new spelling. The plugin only renders; its
+The plugin only renders; its
 configuration is `Surface\DemoBlockSurface`, which the plugin names with
 `#[UsesSurface]`, and it writes no form code at all — no
 `defaultConfiguration()`,
@@ -22,8 +22,9 @@ constraint rather than fetch one: core's `EntityBundleExists` for the
 bundle, and this module's `DataSurfaceDemoBundleField`, with its options
 resolver, for the field. Its presentation settings are a slot: a list
 and a grid need different things, so each is a surface of its own,
-`ListPresentationSurface` and `GridPresentationSurface`, chosen by the
-`presentation` key with `attachBy()`; the form swaps them over AJAX and
+`ListPresentationSurface` and `GridPresentationSurface`, each marked
+`#[SurfaceVariant]` for one value of the `presentation` key, which the
+block's surface makes a slot with `attachBy()`; the form swaps them over AJAX and
 the config schema picks the mapping with `[%parent.presentation]`. See
 [docs/surfaces.md](../../docs/surfaces.md).
 

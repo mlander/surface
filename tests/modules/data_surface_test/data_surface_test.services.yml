@@ -6,8 +6,3 @@ services:
   data_surface_test.alternate_form:
     class: Drupal\data_surface\Form\DataSurfacePluginForm
     arguments: ['alternate']
-  data_surface_test.surface_subscriber:
-    class: Drupal\data_surface_test\EventSubscriber\TestSurfaceSubscriber
-    arguments: ['@state']
-    tags:
-      - { name: event_subscriber }

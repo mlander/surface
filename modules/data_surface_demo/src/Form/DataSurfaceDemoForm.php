@@ -10,7 +10,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\State\StateInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DataSurfaceHostTrait;
-use Drupal\data_surface\DataSurfaceProviderInterface;
+use Drupal\data_surface\Plugin\Block\DataSurfaceBlockBase;
 use Drupal\data_surface\Target\StateTarget;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -143,15 +143,15 @@ final class DataSurfaceDemoForm extends FormBase {
    * Reads the demo block's surface through the plugin manager.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The block's surface, refiner bound.
+   *   The block's surface, refiners bound.
    *
    * @throws \LogicException
-   *   When the plugin behind the demo ID does not provide a surface.
+   *   When the plugin behind the demo ID is not a surface block.
    */
   protected function demoSurface(): DataSurfaceInterface {
     $block = $this->blockManager->createInstance('data_surface_demo');
-    if (!$block instanceof DataSurfaceProviderInterface) {
-      throw new \LogicException('The data_surface_demo block does not provide a surface.');
+    if (!$block instanceof DataSurfaceBlockBase) {
+      throw new \LogicException('The data_surface_demo block is not a surface block.');
     }
     return $block->getDataSurface();
   }

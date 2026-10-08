@@ -62,8 +62,8 @@ Five of those rows are worth a sentence.
   which only shows a value (`formatValue()`), and
   `DemoFormatterSurface`, which its `#[UsesSurface]` names and which
   declares its settings and its outputs side by side. Its refiner is one
-  `#[RefinesInput]` method; the output refiner it had in the old
-  spelling is gone, because outputs are never refined.
+  `#[RefinesInput]` method, and its outputs have none, because outputs
+  are never refined.
 - The **config schema** is *longer* on the surface side, not shorter.
   Both versions hand-maintain a schema file; the surface one also
   declares the `third_party_settings` namespace other modules mount into,

@@ -56,8 +56,7 @@ class SurfaceAddressItem extends AddressItem implements FieldSurfaceProviderInte
    * describe the input shape while the field goes on storing exactly
    * what it always stored.
    */
-  public function getDataSurfaceTarget(string $operation = FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS, ?string $subject = NULL): DataSurfaceTargetInterface {
-    $this->surfaceSelfSubject($subject);
+  public function getDataSurfaceTarget(): DataSurfaceTargetInterface {
     return new FieldSettingsTarget($this->settingsFieldConfig(), new AddressSettingsShape());
   }
 

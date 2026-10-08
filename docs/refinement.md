@@ -8,7 +8,8 @@ when, by how much, and how long the answer is good for.
 
 It is the contribution-model chapter: read
 [Declaring a surface](declaring-a-surface.md) first for how a surface of
-your own is built, and [Options and resolvers](options.md) for how the
+your own is built, [Surfaces as classes](surfaces.md#surface-alters) for
+what an alter is, and [Options and resolvers](options.md) for how the
 lists of allowed values this page narrows are declared.
 
 One rule governs the whole page:
@@ -20,42 +21,45 @@ That is what makes an advertisement worth reading. A form, a validator,
 a config action, a REST client and an agent all read the same surface,
 and none of them can be surprised later by a value space they never saw.
 
-## The three roles
+## The two roles
 
-Every module touching a surface is in exactly one of three roles, and
-each role has exactly one permission.
+Every module touching a surface is in one of two roles, and each role
+has exactly one permission.
 
 | Role | When | May | May not |
 | --- | --- | --- | --- |
-| **Contributor** | Build time, on the build event | Add definitions under its own namespace, add values to an existing key, register refiners for what it added, declare cacheability | Add bare top-level keys, take anything away, contribute a value somebody already owns |
-| **Contribution refiner** | Refinement, per request | Narrow the values its own contribution added, reading any key's value | Touch a value it did not contribute, hand back a value it was not given |
-| **Policy filter** | Refinement, after the union | Remove values from any key | Add anything back |
+| **Contributor** | Build time: an alter's `alterInputs()` | Add keys, mounted under its own module's name; offer more values on a fixed list with `extendChoices()`; reword a label or description with `describe()` | Add bare top-level keys, take anything away, change a key's type, contribute a value somebody already owns |
+| **Refiner** | Refinement, per request: a `#[RefinesInput]` method | Narrow one key, reading the siblings it watches | Touch a value its class did not contribute, hand back a value it was not given |
 
-The surface's **owner** — the provider whose definitions these are — is
-simply the first contributor. Its own definitions, its refinement map
-and its refiner are contribution number one, and it is held to the same
-rules as everybody who arrives later. It is the only contributor that
-never has to name itself: `addRefiner()` with no contributor means the
-owner.
+The surface's **owner** — the `#[Surface]` class whose shape this is —
+is simply the first contributor. Its keys and its `#[RefinesInput]`
+methods are contribution number one, and they are held to the same rules
+as everybody who arrives later.
+
+Nothing removes. A site that must hide an owner's key or value by
+policy is a later concept, not a role here.
 
 ### Contributing
 
+An alter contributes in `alterInputs()`:
+
 ```php
-public function onSurfaceBuild(DataSurfaceBuildEvent $event): void {
-  if (!$event->appliesTo(DataSurfaceDemoFormatter::class)) {
-    return;
+#[AltersSurface(DemoFormatterSurface::class)]
+final class DemoFormatterAlter implements SurfaceAlterInterface {
+
+  public function alterInputs(ShapeAdditionsInterface $inputs): void {
+    $inputs->add('badge', 'string', $this->t('Badge'), default: 'star');
+    $inputs->extendChoices('variant', [self::RIBBON => $this->t('Ribbon')]);
   }
-  $event->builder->extendChoices('variant', ['ribbon' => 'Ribbon'], 'my_module');
-  $event->builder->addRefiner('variant', new MyVariantRefiner(), 'my_module');
+
 }
 ```
 
-The provider id is load-bearing, and it is the same id in both calls. It
-is what the value is recorded under, what decides which values the
-refiner is handed, and what a refusal names when two modules contribute
-the same value. A subscriber that leaves it out is claiming to be the
-owner, and its refiner is then handed the owner's values instead of its
-own.
+The alter's module is load-bearing, and nothing has to name it: the
+build step records what the alter adds under the module the class
+belongs to. That is what decides which values the alter's own refiners
+are handed, and what a refusal names when two modules contribute the
+same value.
 
 Two refusals fall out of this, both at build time:
 
@@ -68,18 +72,17 @@ Two refusals fall out of this, both at build time:
   contract its owner deliberately left open, which is not a
   contribution.
 
-New keys go under the contributor's own namespace with
-`setThirdPartyDefinition()`, which lands them at
-`third_party_settings.<provider>.<key>` — advertised, validated and
-machine-visible, the way core stores third-party settings. A formatter
-or widget host has one extra rule to know about there: it prunes saved
-settings against its static defaults array, so the mounted key has to
-appear in that array too. See [Generated forms](forms.md).
+A key an alter adds lands at `third_party_settings.<module>.<key>` —
+advertised, validated and machine-visible, the way core stores
+third-party settings. A formatter or widget host has one extra rule to
+know about there: it prunes saved settings against its static defaults
+array, so the mounted key has to appear in that array too. See
+[Generated forms](forms.md).
 
 ### Refining
 
 Refinement runs per request, whenever the values a key depends on are
-known. In five lines:
+known. In four lines:
 
 1. Deep-clone the advertised definition, and divide its list of allowed
    values into the owner's — everything nobody contributed — and one
@@ -88,8 +91,11 @@ known. In five lines:
 3. Run each contributor's refiners over that contributor's slice.
 4. The refined definition is the owner's, with its list of allowed
    values replaced by the **union** of every narrowed slice.
-5. The policy filters then run over every key, each held to remove-only
-   against the union it was handed.
+
+A `#[RefinesInput]` method of an alter on a key the alter offered more
+values on is that contribution's refiner: handed the alter's values
+only. A method of an alter on any other key of the owner's runs in the
+owner's chain, after the owner's own methods.
 
 The union is the whole point. A refiner narrowing "its" option can never
 take a sibling module's option with it, and can never put back an option
@@ -102,33 +108,14 @@ Only the values are merged this way. Everything else about the refined
 definition — its other constraints, its description, its default — is
 the owner's, because the owner is the one who answers for the key.
 
-#### One refiner, several keys
+#### One method, one rule
 
-A refiner method is handed every key it is registered for, so a host that
-refines more than one key writes one method that has to sort them out.
-The house style is a `match` on the name, dispatching to one protected
-method per key:
-
-```php
-public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
-  return match ($name) {
-    'bundle' => $this->refineBundle($definition, $values),
-    'field' => $this->refineField($definition, $values),
-    default => $definition,
-  };
-}
-```
-
-`default => $definition` is the whole of "this refiner has nothing to say
-about that key", and each arm's method reads as the narrowing of one key
-rather than as one branch of a method about several. The demo block is
-the shipped example, and the same shape is used for
-`refineOutputDefinition()`.
-
-A refiner for a **single** key stays a plain guard — `if ($name !==
-'variant') { return $definition; }` — with no dispatch ceremony. That is
-nearly every refiner, the contribution refiners included, because a
-contributor refines the key it contributed to.
+A refiner is a method, so a class that refines several keys has several
+methods, each named for its rule and each attributed with the one key it
+refines: `DemoBlockSurface::bundleOfEntityType()` and
+`::fieldOfBundle()`. Nothing dispatches on a key's name. The method
+takes the key's definition first and one parameter per sibling it
+watches, and runs once every watched sibling has a value.
 
 A refiner is handed a deep clone, so it may mutate what it is given and
 hand it back, or answer with a fresh definition. A fresh definition does
@@ -136,26 +123,13 @@ not have to carry the declared default or the examples forward: those
 are copied across every link, so the rendered form and the accepted
 value cannot disagree about what a key starts from.
 
-### Filtering
-
-```php
-$event->builder->addFilter(new MySitePolicyFilter());
-```
-
-A filter speaks for the site rather than for a contribution — "this
-installation does not allow that option, whoever added it" — so it sees
-every key, including ones that declare no refinement dependencies at
-all, and it may only take away. Use it for policy, never for
-preference: a module that wants an option gone because it would rather
-it were gone is a contributor arriving after the advertisement.
-
 ## The narrowing table
 
-Every refiner link and every filter is checked, against what it was
-handed, before its answer is used. The check is deliberately
-conservative: it is applied to arbitrary constraints written by
-arbitrary modules, and a wrong "this is narrower" is worse than a
-refused refinement.
+Every refiner link, and every constraint a situation adds, is checked
+against what it was handed before its answer is used. The check is
+deliberately conservative: it is applied to arbitrary constraints
+written by arbitrary modules, and a wrong "this is narrower" is worse
+than a refused refinement.
 
 | Change | Verdict |
 | --- | --- |
@@ -164,8 +138,9 @@ refused refinement.
 | Raising a `Length` or `Range` minimum, lowering its maximum | narrower |
 | Adding a `Length` or `Range` bound where there was none | narrower |
 | Sharpening a label, description, default or example | neither, and allowed |
-| Changing the data type | **refused** |
-| Refining `any` to a concrete type | narrower — the one escape hatch |
+| Refining `any` to a concrete type, a map included | narrower — the declared escape hatch |
+| Changing the data type to one of its derivatives (`entity` to `entity:node` to `entity:node:article`) | narrower |
+| Changing the data type any other way | **refused** |
 | Turning off the required flag | **refused** |
 | Removing a constraint | **refused** |
 | Dropping a choice constraint's list of values | **refused** |
@@ -174,7 +149,13 @@ refused refinement.
 | Adding or removing a map property | **refused** |
 | Any of the above, inside a map property or a list item | as above |
 
-The last row is where the conservatism lives: two `Regex` patterns
+A derivative is narrower because every value of `entity:node` is a value
+of `entity`; the derivative's own properties are its type's to compute,
+so only the base's own required flag and constraints are compared, as
+they are from `any`. `string_long` is not a derivative of `string`: the
+test is the base type followed by a colon.
+
+The conservatism lives in the replaced-options row: two `Regex` patterns
 cannot be compared for containment, so replacing one is refused rather
 than guessed at. A refiner that needs a different pattern advertises the
 narrower one in the first place. For `Length` and `Range` only `min` and
@@ -184,7 +165,9 @@ Inside a map the table recurses, which is what holds a subsurface to
 it: the child narrows its own keys, and the map its parent advertises
 narrows with them. Refining `any` to a map is how a slot's placeholder
 resolves to the variant its deciding key chose (see
-[Surfaces as classes](surfaces.md#subsurfaces)).
+[Surfaces as classes](surfaces.md#subsurfaces)), and how a
+`#[RefinesInput]` method on an `any` key describes a child that cannot
+be listed statically.
 
 A refusal is a `\LogicException` naming the key, the contributor and
 what widened:
@@ -194,21 +177,23 @@ what widened:
 > values bold. Refinement may only narrow; widening is a build-time act,
 > and the build is over.
 
-Two more checks belong to the same contract. `seal()` refuses a
-refinement map in which a key refines, directly or indirectly, against
-itself: a cycle is not an infinite loop — each target is walked once —
-which is exactly why it has to be refused, since the answer would
-otherwise depend on the order the keys happened to be read in. And
-nothing may change a builder after `seal()`: every mutator throws.
+Two more checks belong to the same contract. Building refuses a surface
+in which a key refines, directly or indirectly, against itself: a cycle
+is not an infinite loop — each target is walked once — which is exactly
+why it has to be refused, since the answer would otherwise depend on the
+order the keys happened to be read in. And a sealed surface is only
+read: refinement returns a new surface rather than changing the one it
+was asked of.
 
-What `seal()` produces is a `DefinitionMap`: one `SurfaceEntry` per key,
-in declaration order, carrying that key's definition, its contributor,
-its locked state, its refinement edges, the values contributed to it and
-the refiner chains registered against it. The map checks the rest of the
-shape once, as it is built — a key declared twice, or a refinement edge
-naming a key nobody declared, is refused there. Refinement then rebuilds
-the map one entry at a time through `with()`, replacing only the
-definition, so a narrowed surface cannot lose track of who owns what.
+What the build step seals is a `DefinitionMap`: one `SurfaceEntry` per
+key, in declaration order, carrying that key's definition, its
+contributor, its locked state, its refinement edges, the values
+contributed to it and the refiner chains bound to it. The map checks
+the rest of the shape once, as it is built — a key declared twice, or a
+refinement edge naming a key nobody declared, is refused there.
+Refinement then rebuilds the map one entry at a time through `with()`,
+replacing only the definition, so a narrowed surface cannot lose track
+of who owns what.
 
 ## Cacheability
 
@@ -220,15 +205,14 @@ rendering holds. A surface is therefore a
 `CacheableDependencyInterface`, and there are three places metadata
 enters it:
 
-- **The builder.** `addCacheableDependency()` at build time, for
-  anything the definitions themselves were read from. Contributors
-  declare the cacheability of their contribution the same way.
-- **Refiners and filters.** A refiner whose answer depends on site state
-  says so by also implementing core's `CacheableDependencyInterface`.
-  Whatever it declares is merged into the refined surface when it runs
-  — only when it runs, because a refinement that did not happen depends
-  on nothing. There is no second interface for this: cacheability is
-  core's question, asked in core's words.
+- **The shape.** `ShapeInterface::addCacheableDependency()` in
+  `defineInputs()`, for anything the definitions themselves were read
+  from: a key offered only while a module is installed, a label read
+  from configuration.
+- **Refiners.** A `#[RefinesInput]` method calls no service and is a
+  pure function of the siblings it watches, so it adds nothing of its
+  own. The site state it points at is fetched by an options resolver,
+  which says how long its answer holds; see the next item.
 - **Option resolvers.** Each resolved option list carries its own
   metadata on its `OptionSet`, which the options widget applies to the
   element it builds.
@@ -290,9 +274,8 @@ final class DemoFormatterAlter implements SurfaceAlterInterface {
 ```
 
 The method refines a key the alter offered more values on, so it is
-bound as that contribution's refiner (the engine's
-`addRefiner('variant', ..., 'data_surface_demo_extras')`), not in the
-owner's chain.
+bound as the `data_surface_demo_extras` contribution's refiner, not in
+the owner's chain.
 
 The advertised key now allows five values, and the surface records that
 one of them belongs to the extras module. At refinement time:
@@ -311,19 +294,17 @@ decides is whether that value survives. Neither module has to know the
 other exists, and the select, the validator and any machine reading the
 contract all see the same five values, narrowed the same way.
 
-Add a policy filter to the same surface and it runs last, over the
-union, and can take `strong` away — from the advertisement and from
-every narrowing of it — but putting `sash` back throws.
 
 ## Where this does not reach yet
 
-- **Nested keys.** The narrowing check reads a definition's own
-  constraints. A refiner that tightens a property inside a map is
-  cloned safely and its work is kept, but the check does not descend
-  into it. Dotted refinement paths (decision D6) are where that lands.
-- **Contributed keys.** A contributor can add a value to an existing key
-  and can mount a key under its own namespace, but it cannot yet
-  register a refiner for the key it mounted, because addressing
-  `third_party_settings.<provider>.<key>` needs the same dotted paths.
+- **Nested keys.** A refiner refines a whole key. There is no dotted
+  path to refine one property inside a map on its own; the method
+  refining the map narrows the property inside what it returns, and
+  the check descends into it. Dotted refinement paths (decision D6) are
+  where that lands.
+- **Contributed keys.** An alter can add a value to an existing key and
+  can mount a key under its own module's name, but it cannot yet
+  refine the key it mounted, because addressing
+  `third_party_settings.<module>.<key>` needs the same dotted paths.
 - **Storage.** For a config-backed surface, widening is a schema alter
   and the surface follows; storage gates the write either way.

@@ -15,8 +15,7 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
  * accepts and refinement can only make that smaller, so a consumer that
  * read the advertisement is never surprised by a value space it did not
  * see. That claim is worth nothing as a convention: it has to be checked
- * on every link of every chain and on every policy filter, which is what
- * this does.
+ * on every link of every chain, which is what this does.
  *
  * The check is conservative, because it is applied to arbitrary
  * constraints written by arbitrary modules and a wrong "this is
@@ -29,7 +28,8 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
  * | Raising a Length or Range minimum, lowering its maximum | narrower |
  * | Adding a Length or Range bound where there was none | narrower |
  * | Sharpening a label, description, default or example | neither |
- * | Changing the data type (except away from 'any') | refused |
+ * | Changing the data type to one of its derivatives | narrower |
+ * | Changing the data type any other way (except from 'any') | refused |
  * | Turning off the required flag | refused |
  * | Removing a constraint | refused |
  * | Replacing the options of any other constraint | refused |
@@ -41,10 +41,20 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
  * guessed at. A refiner that has to swap such a constraint says so by
  * advertising the narrower one in the first place.
  *
- * 'any' is the one declared escape hatch: it advertises nothing, so
- * every type is narrower than it. That is also the one way a shape may
- * appear during refinement: a slot's placeholder resolving to the map of
- * a variant the surface declared before anything was chosen.
+ * 'any' is the declared escape hatch: it advertises nothing, so every
+ * type is narrower than it. That is also the one way a shape may appear
+ * during refinement: a slot's placeholder resolving to the map of the
+ * variant its deciding key chose, or a refiner on an `any` key returning
+ * a map itself, for a child that cannot be enumerated statically.
+ *
+ * A derivative is the other narrower type: `entity:node` is typed data's
+ * `entity` restricted to nodes, and `entity:node:article` that restricted
+ * to one bundle, so every value of the derivative is a value of its base.
+ * The derivative's own properties are its type's to compute, so only the
+ * base's own flag and constraints are compared, as from `any`. The rule
+ * is the Tool API's (TypedInputsTrait::assertRefinementNarrows()); its
+ * acceptance of a list item turning `any` is not adopted, because that
+ * accepts every value the item refused.
  *
  * Inside a map the rules recurse. A refined map holds exactly the
  * properties it was handed — gaining one would accept a key nobody was
@@ -71,10 +81,10 @@ final class Narrowing {
    *   The surface key being refined, named in the message because a
    *   refiner that breaks the contract has to be findable.
    * @param string $contributor
-   *   Who did it, in words: the surface owner, a named contribution, or
-   *   a policy filter.
+   *   Who did it, in words: the surface owner, a named contribution, a
+   *   situation or a slot.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $before
-   *   The definition handed to the refiner or filter.
+   *   The definition handed to the refiner.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $after
    *   What it gave back.
    *
@@ -105,9 +115,10 @@ final class Narrowing {
    *   What widened, in words, or NULL.
    */
   protected static function widening(DataDefinitionInterface $before, DataDefinitionInterface $after): ?string {
-    if ($before->getDataType() === 'any') {
-      // Advertised as anything, so no shape it becomes is wider; only
-      // its own flag and constraints are left to compare.
+    if ($before->getDataType() === 'any' || self::isDerivative($before->getDataType(), $after->getDataType())) {
+      // Advertised as anything, or as the base of what it became, so the
+      // shape it becomes is no wider; only its own flag and constraints
+      // are left to compare.
       return self::ownWidening($before, $after);
     }
     if ($before->getDataType() !== $after->getDataType()) {
@@ -116,6 +127,25 @@ final class Narrowing {
     return self::ownWidening($before, $after)
       ?? self::propertyWidening($before, $after)
       ?? self::itemWidening($before, $after);
+  }
+
+  /**
+   * Answers whether a data type is a derivative of another.
+   *
+   * Typed data names a derivative `<base>:<derivative>`, and a
+   * derivative of a derivative appends again, so the test is the base
+   * followed by a colon: `string_long` is not a derivative of `string`.
+   *
+   * @param string $base
+   *   The data type handed over.
+   * @param string $type
+   *   The data type that came back.
+   *
+   * @return bool
+   *   TRUE when the second is a derivative of the first.
+   */
+  protected static function isDerivative(string $base, string $type): bool {
+    return str_starts_with($type, $base . ':');
   }
 
   /**

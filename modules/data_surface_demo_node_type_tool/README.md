@@ -4,13 +4,10 @@ The recorded comparison between `data_surface:node.type:add`, the tool
 generated from the content type surface's add situation, and the tool an
 agent has for the same job without surfaces.
 
-The tool was `data_surface:node_type_add`, a class in this module over
-the old provider. It is now derived by `data_surface_tool` for every
-situation of every surface that names a target, so this module holds no
-code: it depends on the two modules the comparison needs, and keeps the
-comparison and its test. The old id is gone, not aliased: nothing
-outside this repository called it, and an alias would be a second,
-hand-written definition of the same contract.
+The tool is derived by `data_surface_tool` for every situation of every
+surface that names a target, so this module holds no code: it depends
+on the two modules the comparison needs, and keeps the comparison and
+its test.
 
 ## What it proves
 
@@ -172,10 +169,9 @@ through a constraint on the amount and unit together, judging business
 days on their converted seconds like any other unit: twenty-two are
 thirty calendar days and accepted, twenty-three are thirty-one and
 refused. The config schema's own Range on the stored seconds is a
-second gate only where something asks it: the new-spelling target has
-no prepare step, so it is not checked before the write, as the old
-provider's composite target did (in a test, the strict schema checker
-still asks it on save).
+second gate: `NodeTypeTarget::prepare()` holds the node type it would
+save, third party settings included, to `node.type.*` before anything
+is written.
 
 ## The one deliberate difference
 
@@ -194,7 +190,7 @@ the same message a tool caller gets.
 | Test | Covers |
 | --- | --- |
 | `Kernel\NodeTypeToolComparisonTest` | The advertised schema, the stored schema, the tool naming no key, storage and read-back through the storage shape, refusals with paths, dry runs, what Tool Belt advertises and stores, the classic form for a person, the surface form with the extension, and `COMPARISON.md`. |
-| `Kernel\DataSurfaceBuilderTest` | A third-party storage shape travels with the surface, through refinement, and is refused for a provider that mounts nothing. |
+| `Kernel\DataSurfaceBuilderTest` | A third-party storage shape travels with the surface, through refinement, and is refused for a module that mounts nothing. |
 
 ## Tool API limitations found
 
@@ -203,7 +199,7 @@ the same message a tool caller gets.
   (`drush tool:info`, the AI connector's function call deriver) read
   the static plugin definition. A derived tool's definition is static
   and exact for a situation that needs nothing, so for this tool they
-  agree. A situation that needs a subject is refined to it through
+  agree. A situation that needs an existing thing is refined to it through
   `input_definition_refiners`, which consumers reading the static
   definition do not see.
 - **The MCP bridge captures each tool's schema at derivative discovery**,

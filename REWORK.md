@@ -238,6 +238,55 @@ Rules for the whole rework:
    the build event and its subscribers, the attribute directory, and
    every builder method nothing reaches. The builder becomes internal.
    Tests written against the old spelling are rewritten here.
+
+   **Done.** One spelling. Deleted from `src/`: the declaration and
+   provider interfaces, the build event, the factory (it only
+   dispatched the event and sealed), policy filters, output refiners
+   and `refineOutputs()`, and the awareness service (superseded by
+   `SurfacePlugins`). `DataSurfaceBuilder` and its interface are
+   `@internal`, constructed only by the build step; they lost
+   `setPropertyDefinitions()`, `setPropertyDefinition()`,
+   `addOutputRefinement()`, `addOutputRefiner()`, `addFilter()`,
+   `isSealed()` and the constructor's host refiner (public methods 24
+   to 18), and `DataSurface` lost its host refiner, filters and output
+   refiner. `Surfaces::build()` takes a surface and a context only and
+   seals directly. The four plugin bases, the host, configuration, form
+   and formatter traits and `DataSurfacePluginForm` host only the surface
+   `#[UsesSurface]` names: `getDataSurface()`, `getDataSurfaceTarget()`
+   and `surfaceAccess(?account, operation)` lost the operation and
+   subject coordinate, and access asks the surface's access class.
+   `FieldSurfaceProviderInterface` stays, trimmed, because Field UI's
+   static validate callback rebuilds the item and needs its surface and
+   its target. `DataSurfaceProviderForm` lost its provider half and is
+   `DataSurfaceSituationForm`; `NodeTypeSurfaceProvider` and
+   `NodeTypeAddTarget` are deleted. `ShapeInterface` gained
+   `addCacheableDependency()`; `attach()` and `attachBy()` return the
+   map at the key for the owner to label, and `attachBy()` lost its
+   children: a slot is always open, and the demo's presentation
+   surfaces carry `#[SurfaceVariant]`. A slot is also filled, for the
+   values no variant class fills, by a `DerivedVariantsInterface`
+   service (`data_surface.derived_variants`); `data_surface_tool`'s
+   `FieldSettingsSchemaVariants` derives a field type's settings from
+   `field.field_settings.<type>`, so the derived field tools offer
+   every UI field type again, and the catalogue says which variants are
+   declared and which derived. `Narrowing` also accepts a data type
+   becoming one of its derivatives (`entity` to `entity:node`), the Tool
+   API's rule; its acceptance of a list item turning `any` is not
+   adopted. Test fixtures migrated to surface classes: the test block,
+   chain block, condition, action, formatter and the secret item's
+   settings (secret key included); the build-event subscriber, the
+   policy filter, both output refiners, the ribbon refiner and the
+   legacy demo declaration are deleted, as are `SurfaceAlterTest` and
+   `NodeTypeSurfaceProviderTest`; `DataSurfaceProviderFormTest` is
+   `DataSurfaceSituationFormTest`. Counts: `src/` 126 files and 20564
+   lines before, 119 and 18826 after; test classes 65 before, 64 after; the suite
+   675 tests and 4344 assertions before, 653 and 4018 after, with only
+   the two webdriver failures. Deviations: the
+   schema fallback covers instance settings only, so a string's
+   `max_length`, a storage setting, is not yet reachable through the
+   derived tools (the storage surface has no settings slot, and
+   `field_type` is not one of its keys); a derived variant has no class,
+   so no alter, refiner, target or access class applies to it.
 6. **Docs.** The sketch's README and build walkthrough become the front
    of `docs/`; `sketch/` is deleted once the docs say everything it did.
 

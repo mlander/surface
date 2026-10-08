@@ -32,51 +32,44 @@ argument of [the pipeline's `accept()`](pipeline.md#accept), so a key
 nobody sent keeps what it holds instead of falling back to its declared
 default.
 
-A surface written in the new spelling names its target with
-`#[Surface(target:)]`, a `Surface\SurfaceTargetInterface` with the same
-three verbs over the context instead of the surface: `load($context)`,
+A surface names its target with `#[Surface(target:)]`, a
+`Surface\SurfaceTargetInterface` with the same three verbs over the
+context instead of the surface: `load($context)`,
 `prepare($context, $values)`, which returns the storage-shaped array
-after storage's own checks, and `commit($context, $prepared)`.
+after storage's own checks, and `commit($context, $prepared)`. It loads
+by the identity the context knows, so the context never carries an
+entity, and creates or updates by whether the context creates.
 `SurfaceTargetAdapter` binds the context and makes it this interface;
 [Surfaces as classes](surfaces.md#prepare) says what each target here
 checks.
 
-## Asking a provider for one
-
-A target is the third answer of the provider contract's triple, beside
-the surface and the access answer, and all three resolve from the same
-coordinate:
+## Getting one
 
 ```php
-$surface = $provider->getDataSurface($operation, $subject);
-$access  = $provider->surfaceAccess($operation, $subject);
-$target  = $provider->getDataSurfaceTarget($operation, $subject);
+$surfaces = \Drupal::service('data_surface.surfaces');
+$context = $surfaces->situation(NodeTypeSurface::class, 'edit', ['type' => 'article']);
+$target = $surfaces->target(NodeTypeSurface::class, $context);
 ```
 
-That is what lets a caller holding nothing but an operation and a
-subject write as well as read — a generated form, a config action, a
-Drush command, the discovery endpoint. Before the accessor existed,
-target acquisition had three spellings: plugin hosts wrapped themselves
-implicitly inside a submit handler, the field contract had an accessor
-of its own name, and a standalone provider invented a method nobody
-else could call.
+`SurfacesInterface::target()` adapts the surface's target to the
+pipeline's interface and composes it along the subsurface tree: a child
+whose class names a target of its own has its values routed there, and
+a child without one is stored by its parent under its key.
 
-The operation and subject mean here exactly what they mean on
-`getDataSurface()`, and a provider refuses the same coordinates in the
-same words: a target answering for a coordinate the surface refuses
-would be a destination for values nobody could describe.
+A surface a plugin uses names no target, because only the plugin's host
+holds the instance its values belong to. The host supplies one:
 
 | Host family | Answers with |
 | --- | --- |
-| Any configurable plugin (block, condition, action) | `PluginConfigurationTarget` over itself, from `DataSurfaceHostFormTrait` — the one construction path for the family, which the form submit now asks for rather than building inline. |
-| Field types | `FieldSettingsTarget` over the field config entity the item is bound to, from `DataSurfaceFieldTypeTrait`. A field type whose storage shape differs overrides it and hands the target a shape. |
+| Any configurable plugin (block, condition, action) | `PluginConfigurationTarget` over itself, from `DataSurfaceHostFormTrait` — the one construction path for the family, which the form submit asks for rather than building inline. |
+| Field types | `FieldSettingsTarget` over the field config entity the item is bound to, from `DataSurfaceFieldTypeTrait`. A field type whose storage shape differs overrides `getDataSurfaceTarget()` and hands the target a shape. |
 | Field formatters | Nothing: they throw. |
-| A standalone provider | Whatever it writes. The node type demo answers with its composite. |
 
 ### The refusal, and why it is a refusal
 
-A provider whose operation has a surface but no target it can name
-throws `\LogicException`. Two kinds of provider legitimately do:
+`SurfacesInterface::target()` throws `\LogicException` for a surface
+that names no target, and a host whose values have no destination of
+its own throws from `getDataSurfaceTarget()`. Two kinds legitimately do:
 
 1. **A host that owns the write.** A field formatter's settings are one
    component of an entity view display, and Field UI copies whatever the
@@ -91,18 +84,19 @@ and nothing would have been stored.
 
 ### When the destination is named by the submission
 
-An add operation has no subject, because the thing it creates does not
-exist to be named — and yet its destination may depend on what is being
-created. The node type demo is the worked example: a content type's base
-field overrides belong to a bundle, and the bundle IS the machine name
-being submitted.
+An add situation knows no identity, because the thing it creates does
+not exist to be named — and yet its destination may depend on what is
+being created. The node type demo is the worked example: a content
+type's base field overrides belong to a bundle, and the bundle IS the
+machine name being submitted.
 
-The answer is a target that waits one stage. `NodeTypeAddTarget` reads
-against the entity type's own base fields, exactly as a brand new bundle
-does, and builds the real composite in `prepare()` around the machine
-name the accepted values carry. The alternative — a target accessor
-taking the accepted values — would have put a write-path argument on a
-method the discovery endpoint calls with nothing but a coordinate.
+The answer is that a target reads the identity in `prepare()`, not
+before. `NodeTypeTarget` loads by the machine name the context knows,
+and on add, where it knows none, loads nothing; `prepare()` builds the
+node type and its overrides around the machine name the accepted values
+carry. A target taking the accepted values when it is made would have
+put a write-path argument on a method a discovery document calls with
+nothing but a context.
 
 ## Prepare and commit are separate, and that is the whole design
 
@@ -256,27 +250,26 @@ cannot the implementation says so in its own documentation.
 
 ### A shape for settings another module mounted
 
-A contributor that mounts settings with `setThirdPartyDefinition()` may
-ask for a value in one shape and store it in another. It does not build
-the owner's target, so it hands the translation to the surface instead:
-
-```php
-$event->builder->setThirdPartyShape('my_module', new MyModuleShape());
-```
+An alter that adds keys may ask for a value in one shape and store it
+in another. It does not own the surface's target, so it hands the
+translation to the surface instead, by implementing
+`HasStorageShapeInterface`, whose `storageShape()` returns a
+`SettingsShapeInterface`.
 
 The sealed surface carries the shape, refinement keeps it, and
-`getThirdPartyShape($provider)` answers it. `ConfigEntityTarget` applies
-it to that provider's namespace and nothing else: `toStorage()` in
-prepare, before the config schema check, so the schema judges what will
-actually be stored; `fromStorage()` on load. The shape sees only the
-provider's own settings, keyed by the keys it mounted. Sealing refuses a
-shape for a provider that mounts nothing.
+`getThirdPartyShape($module)` answers it. It is applied to that
+module's mount, `third_party_settings.<module>`, and nothing else:
+`toStorage()` before the target prepares, so storage's own checks judge
+what will actually be stored; `fromStorage()` after it loads. The shape
+sees only that module's own settings, keyed by the keys it mounted. A
+shape for a module that mounts nothing is refused.
 
-`data_surface_demo_extras` is the worked example: it asks for a content
-type's review deadline as an amount and a unit and stores seconds,
-through the node type demo's composite target, which knows nothing about
-it. Only `ConfigEntityTarget` writes third party settings today, so it
-is the only target that reads the shape.
+`data_surface_demo_extras` is the worked example: `NodeTypeAlter` asks
+for a content type's review deadline as an amount and a unit, and its
+`ReviewDeadlineShape` stores seconds, through `NodeTypeTarget`, which
+knows nothing about it. `SurfaceTargetAdapter` applies the shape for a
+surface's own target; of the engine's targets, only `ConfigEntityTarget`
+writes third party settings, so it is the only one that reads it.
 
 ## Secrets at the codec
 

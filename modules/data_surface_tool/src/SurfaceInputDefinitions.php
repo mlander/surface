@@ -68,8 +68,8 @@ use Drupal\tool\TypedData\OutputDefinitionInterface;
  * fromSlot() says why and what is emitted instead.
  *
  * One Tool API gap is worth naming here rather than in a method
- * docblock, because it is why the two tools in this module still
- * declare their outputs by hand: outputs are declared statically on the
+ * docblock, because it is why a derived tool declares its outputs as
+ * the deriver writes them: outputs are declared statically on the
  * #[Tool] attribute, and there is no output_definition_refiners beside
  * input_definition_refiners, so a tool cannot say "this output is
  * whatever the subject turns out to describe" the way it can for an
@@ -298,13 +298,6 @@ final class SurfaceInputDefinitions {
    *   `required`, which is what `required` converts to, so the
    *   statement survives — but the Omitted sentinel itself does not
    *   travel, because it is a PHP marker and not a value.
-   * - The refinement edges. An output that narrows once an input is
-   *   known is converted as advertised, not as refined: the Tool API
-   *   has input_definition_refiners and no output counterpart, so
-   *   there is nowhere to say "this output narrows when that input is
-   *   sent". Convert a surface that has already been through
-   *   DataSurfaceInterface::refineOutputs() to advertise the narrowed
-   *   answer instead.
    * - Who contributed what. A mounted third-party output arrives as an
    *   ordinary property of the third_party_outputs map.
    *

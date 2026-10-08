@@ -128,8 +128,13 @@ class FieldInstanceSurfaceTest extends DataSurfaceKernelTestBase {
     foreach (['entity_type_id', 'bundle', 'field_name', 'field_type'] as $key) {
       $this->assertTrue($surface->isLocked($key), $key);
     }
-    // The field type offers exactly the types a settings surface fills.
-    $this->assertSame(['address'], $surface->getDefinition('field_type')->getConstraints()['Choice']['choices']);
+    // The field type offers exactly the types the slot's variants fill:
+    // the declared ones first, then every UI field type derived from its
+    // config schema.
+    $choices = $surface->getDefinition('field_type')->getConstraints()['Choice']['choices'];
+    $this->assertSame('address', $choices[0]);
+    $this->assertContains('string', $choices);
+    $this->assertSame($surface->getDefinitions()->entry('settings')?->slot?->variantIds(), $choices);
     $entry = $surface->getDefinitions()->entry('settings');
     $this->assertSame(AddressFieldSettingsSurface::class, $entry->slot->variant('address')->source);
     // Advertised as the address settings, not as a placeholder: the one

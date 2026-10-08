@@ -45,8 +45,8 @@ final class SurfacePlugins {
    *   The surface class.
    *
    * @return list<string>
-   *   Each plugin as `<host type>:<plugin id>`, the host id its build
-   *   event sees, sorted; empty when no plugin names the surface.
+   *   Each plugin as `<host type>:<plugin id>`, sorted; empty when no
+   *   plugin names the surface.
    */
   public function usedBy(string $surface): array {
     return $this->used()[$surface] ?? [];

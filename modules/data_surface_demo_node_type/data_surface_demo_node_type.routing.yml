@@ -19,7 +19,7 @@
 data_surface_demo_node_type.add:
   path: '/admin/structure/types/surface-add'
   defaults:
-    _form: 'Drupal\data_surface\Form\DataSurfaceProviderForm'
+    _form: 'Drupal\data_surface\Form\DataSurfaceSituationForm'
     _title: 'Add content type (surface)'
     _data_surface_surface: 'Drupal\data_surface_demo_node_type\Surface\NodeTypeSurface'
     _data_surface_situation: 'add'
@@ -30,7 +30,7 @@ data_surface_demo_node_type.add:
 data_surface_demo_node_type.edit:
   path: '/admin/structure/types/manage/{type}/surface-edit'
   defaults:
-    _form: 'Drupal\data_surface\Form\DataSurfaceProviderForm'
+    _form: 'Drupal\data_surface\Form\DataSurfaceSituationForm'
     _title: 'Edit content type (surface)'
     _data_surface_surface: 'Drupal\data_surface_demo_node_type\Surface\NodeTypeSurface'
     _data_surface_situation: 'edit'

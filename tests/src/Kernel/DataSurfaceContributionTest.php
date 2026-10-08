@@ -18,7 +18,6 @@ use Drupal\data_surface_test\AnyToIntegerRefiner;
 use Drupal\data_surface_test\CacheableCasingRefiner;
 use Drupal\data_surface_test\ConstraintRewritingRefiner;
 use Drupal\data_surface_test\MapPropertyRefiner;
-use Drupal\data_surface_test\VariantPolicyFilter;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
@@ -53,19 +52,14 @@ class DataSurfaceContributionTest extends DataSurfaceKernelTestBase {
    *
    * @param array $refiners
    *   Refiners to register, as contributor => refiner.
-   * @param \Drupal\data_surface\DataSurfaceFilterInterface[] $filters
-   *   Policy filters to register.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The sealed surface.
    */
-  protected function surface(array $refiners = [], array $filters = []): DataSurfaceInterface {
+  protected function surface(array $refiners = []): DataSurfaceInterface {
     $builder = $this->builder();
     foreach ($refiners as $contributor => $refiner) {
       $builder->addRefiner('variant', $refiner, $contributor === DataSurfaceInterface::OWNER ? NULL : (string) $contributor);
-    }
-    foreach ($filters as $filter) {
-      $builder->addFilter($filter);
     }
     return $builder->seal();
   }
@@ -295,22 +289,6 @@ class DataSurfaceContributionTest extends DataSurfaceKernelTestBase {
         'the data type changed from string to integer',
       ],
     ];
-  }
-
-  /**
-   * Tests that a policy filter removes from the union, and only removes.
-   */
-  public function testPolicyFilters(): void {
-    $surface = $this->surface(filters: [new VariantPolicyFilter('variant', ['strong', 'ribbon'])]);
-
-    // Every key, not only the refinement targets: a policy is not a
-    // dependency of anything, so it does not wait for one.
-    $this->assertSame(['bold', 'quiet', 'muted'], $this->variants($surface->refine([])));
-
-    $surface = $this->surface(filters: [new VariantPolicyFilter('variant', [], ['sash'])]);
-    $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('for the policy filter Drupal\data_surface_test\VariantPolicyFilter widened');
-    $surface->refine([]);
   }
 
   /**

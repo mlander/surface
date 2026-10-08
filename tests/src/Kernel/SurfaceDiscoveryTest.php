@@ -114,7 +114,7 @@ class SurfaceDiscoveryTest extends DataSurfaceKernelTestBase {
     );
     $this->assertSame(['edit'], $this->registry()->getAlters(RecipeSurface::class)[0]->situations);
 
-    // Collected now, used in step 2.
+    // The variant fills the slot it names.
     $this->assertSame(['herb' => HerbGarnishSurface::class], $this->registry()->getVariants(RecipeSurface::class, 'garnish_settings'));
 
     // Targets and access classes are autowired services too.

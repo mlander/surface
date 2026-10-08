@@ -40,7 +40,7 @@ parameters:
     # the rule.
     -
       identifier: new.static
-      path: src/Form/DataSurfaceProviderForm.php
+      path: src/Form/DataSurfaceSituationForm.php
     # An assertion that static analysis can prove today is exactly the
     # assertion that has to fail when the code it guards changes, so
     # these stay in the tests rather than being deleted as redundant.

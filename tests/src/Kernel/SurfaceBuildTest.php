@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
-use Drupal\Core\Form\FormState;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Event\DataSurfaceBuildEvent;
 use Drupal\data_surface\Surface\Attribute\UsesSurface;
 use Drupal\data_surface\Surface\SurfaceContext;
 use Drupal\data_surface\SurfaceBuild\SurfaceShape;
@@ -34,10 +32,11 @@ use Drupal\data_surface_surface_test\Surface\Broken\UndeclaredIdentitySurface;
 use Drupal\data_surface_surface_test\Surface\Broken\WatchesMismatchSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\WatchesUndeclaredSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\WideningRefinerSurface;
+use Drupal\data_surface_surface_test\Surface\DynamicChildSurface;
 use Drupal\data_surface_surface_test\Surface\RecipeSurface;
 use Drupal\data_surface_surface_test\Target\RecipeTarget;
 use Drupal\node\Entity\NodeType;
-use Drupal\Tests\data_surface\Kernel\Fixture\LegacyDemoBlockDeclaration;
+use Drupal\Tests\data_surface\Kernel\Fixture\CountingSurfaces;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -45,8 +44,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 /**
  * Tests the build step: a surface class and a context in, a surface out.
  *
- * The demo block's surface is held to what the old spelling produced for
- * it, key for key and refinement for refinement. The recipe fixture
+ * The demo block's surface is the plugin host case. The recipe fixture
  * covers the rest: identity, situations, constraints and starting values
  * from a context, refiner dispatch, alters, access and the target. The
  * broken fixtures each fail one seal-time check, by name.
@@ -71,23 +69,6 @@ class SurfaceBuildTest extends DataSurfaceKernelTestBase {
   ];
 
   /**
-   * The host class and host id of every build event, in order.
-   *
-   * @var array<int, array{0: string, 1: string}>
-   */
-  protected array $builds = [];
-
-  /**
-   * Records one build event.
-   *
-   * @param \Drupal\data_surface\Event\DataSurfaceBuildEvent $event
-   *   The event.
-   */
-  public function recordBuild(DataSurfaceBuildEvent $event): void {
-    $this->builds[] = [$event->hostClass, $event->hostId];
-  }
-
-  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
@@ -109,22 +90,7 @@ class SurfaceBuildTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Builds the demo block's surface in the old spelling.
-   *
-   * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface the old declaration produced.
-   */
-  protected function legacyDemoSurface(): DataSurfaceInterface {
-    $builder = new DataSurfaceBuilder(refiner: new LegacyDemoBlockDeclaration(
-      $this->container->get('entity_type.bundle.info'),
-      $this->container->get('entity_field.manager'),
-    ));
-    LegacyDemoBlockDeclaration::declareDataSurface($builder);
-    return $this->surfaceFactory()->build($builder, LegacyDemoBlockDeclaration::class, 'test:legacy_demo');
-  }
-
-  /**
-   * Builds the demo block's surface in the new spelling.
+   * Builds the demo block's surface.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The surface DemoBlockSurface produces.
@@ -134,171 +100,58 @@ class SurfaceBuildTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Describes a definition the way two spellings have to agree on it.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
-   *
-   * @return array
-   *   Its type, words, flags, constraints, default and examples.
+   * Tests the demo surface's refinement edges, read off its signatures.
    */
-  protected function describe(DataDefinitionInterface $definition): array {
-    return [
-      'type' => $definition->getDataType(),
-      'label' => (string) $definition->getLabel(),
-      'description' => (string) $definition->getDescription(),
-      'required' => $definition->isRequired(),
-      'constraints' => $definition->getConstraints(),
-      'has_default' => DefinitionMetadata::hasDefaultValue($definition),
-      'default' => DefinitionMetadata::defaultOf($definition),
-      'examples' => DefinitionMetadata::getExamples($definition),
-    ];
-  }
-
-  /**
-   * Gets the values a definition offers, labeled, as strings.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
-   *
-   * @return array<string, string>|null
-   *   The offered labels keyed by value, or NULL when it offers no list.
-   */
-  protected function offered(DataDefinitionInterface $definition): ?array {
-    $set = $this->options()->resolve($definition);
-    return $set === NULL ? NULL : array_map('strval', $set->options);
-  }
-
-  /**
-   * Tests that the new spelling declares what the old one did.
-   */
-  public function testDemoSurfaceMatchesTheOldSpelling(): void {
-    $legacy = $this->legacyDemoSurface();
-    $surface = $this->demoSurface();
-
-    $this->assertSame(
-      array_keys($legacy->getDefinitions()->toArray()),
-      array_keys($surface->getDefinitions()->toArray()),
-      'Same keys, in the same order.',
-    );
-    foreach ($legacy->getDefinitions() as $name => $definition) {
-      $this->assertEquals($this->describe($definition), $this->describe($surface->getDefinition($name)), $name);
-    }
-    $this->assertSame($legacy->getDefaultValues(), $surface->getDefaultValues());
-    $this->assertSame($legacy->getDefinitions()->refinements(), $surface->getDefinitions()->refinements());
+  public function testDemoSurfaceRefinementEdges(): void {
     $this->assertSame([
       'bundle' => ['entity_type'],
       'field' => ['entity_type', 'bundle'],
       'presentation_settings' => ['presentation'],
-    ], $surface->getDefinitions()->refinements());
-    // The slot's variants match too, child by child.
-    foreach (['list', 'grid'] as $variant) {
-      $legacy_child = $legacy->getDefinitions()->entry('presentation_settings')->slot->variant($variant)->child;
-      $child = $surface->getDefinitions()->entry('presentation_settings')->slot->variant($variant)->child;
-      foreach ($legacy_child->getDefinitions() as $name => $definition) {
-        $this->assertEquals($this->describe($definition), $this->describe($child->getDefinition($name)), $variant . '.' . $name);
-      }
-    }
+    ], $this->demoSurface()->getDefinitions()->refinements());
   }
 
   /**
-   * Tests that the two spellings refine to the same offers.
+   * Tests the escape hatch: an `any` key a refiner narrows to a map.
    *
-   * The constraint differs — LabeledChoice computed by a refiner holding
-   * services in the old spelling, a constraint pointing at a list in the
-   * new one — and what a person is offered, what the description says,
-   * and what is accepted do not.
-   *
-   * @param array $values
-   *   The sibling values to refine against.
+   * The dynamic-child case needs no verb: a #[RefinesInput] method on an
+   * `any` key returns the narrower definition itself, held to the same
+   * narrowing rule, and the pipeline judges values against it.
    */
-  #[DataProvider('refinementValues')]
-  public function testDemoRefinementMatchesTheOldSpelling(array $values): void {
-    $legacy = $this->legacyDemoSurface()->refine($values);
-    $surface = $this->demoSurface()->refine($values);
-    foreach (['bundle', 'field'] as $key) {
-      $this->assertSame($this->offered($legacy->getDefinition($key)), $this->offered($surface->getDefinition($key)), $key);
-      $this->assertSame(
-        (string) $legacy->getDefinition($key)->getDescription(),
-        (string) $surface->getDefinition($key)->getDescription(),
-        $key,
-      );
-    }
-    foreach ([$values + ['bundle' => 'page', 'field' => 'title'], $values + ['bundle' => 'nope', 'field' => 'nope']] as $candidate) {
-      $candidate += $this->demoSurface()->getDefaultValues();
-      $this->assertSame(
-        $this->pipeline()->validate($this->legacyDemoSurface(), $candidate)->keys(),
-        $this->pipeline()->validate($this->demoSurface(), $candidate)->keys(),
-      );
-    }
-  }
+  public function testAnyKeyRefinesToMap(): void {
+    $surface = $this->surfaces()->build(DynamicChildSurface::class, new SurfaceContext('configure'));
+    $this->assertSame('any', $surface->getDefinition('detail')->getDataType());
 
-  /**
-   * Supplies sibling values for the refinement parity.
-   *
-   * @return array
-   *   Cases.
-   */
-  public static function refinementValues(): array {
-    return [
-      'nothing chosen' => [[]],
-      'node' => [['entity_type' => 'node']],
-      'user' => [['entity_type' => 'user']],
-      'node article' => [['entity_type' => 'node', 'bundle' => 'article']],
-      'user user' => [['entity_type' => 'user', 'bundle' => 'user']],
-    ];
-  }
+    $refined = $surface->refine(['kind' => 'box'])->getDefinition('detail');
+    $this->assertInstanceOf(MapDataDefinition::class, $refined);
+    $this->assertSame(['width'], array_keys($refined->getPropertyDefinitions()));
 
-  /**
-   * Tests that the generated form rebuilds the same in both spellings.
-   */
-  public function testDemoFormMatchesTheOldSpelling(): void {
-    $values = ['entity_type' => 'node', 'bundle' => 'article'] + $this->demoSurface()->getDefaultValues();
-    $legacy = $this->formBuilder()->buildSurfaceForm($this->legacyDemoSurface(), $values, new FormState());
-    $surface = $this->formBuilder()->buildSurfaceForm($this->demoSurface(), $values, new FormState());
-    $this->assertSame('checkbox', $surface['presentation_settings']['show_summary']['#type']);
-    $this->assertSame($legacy['presentation_settings']['#type'], $surface['presentation_settings']['#type']);
-    foreach (['headline', 'entity_type', 'bundle', 'field', 'limit', 'presentation'] as $key) {
-      $this->assertSame($legacy[$key]['#type'], $surface[$key]['#type'], $key);
-      $this->assertSame(isset($legacy[$key]['#ajax']), isset($surface[$key]['#ajax']), $key);
-      $this->assertSame(
-        array_map('strval', $legacy[$key]['#options'] ?? []),
-        array_map('strval', $surface[$key]['#options'] ?? []),
-        $key,
-      );
-    }
+    $this->assertSame([], $this->pipeline()->validate($surface, ['kind' => 'box', 'detail' => ['width' => 3]])->keys());
+    $this->assertContains('detail', $this->pipeline()->validate($surface, ['kind' => 'box', 'detail' => ['length' => 3]])->keys());
   }
 
   /**
    * Tests that the block host builds the surface #[UsesSurface] names.
    *
-   * Through the factory, naming the block as the host, so a subscriber
-   * written for the block in the old spelling keeps matching it.
+   * Once, through the build step; the presentation slot's children are
+   * built inside that one build, each in its own frame.
    */
   public function testBlockHostBuildsTheUsedSurface(): void {
-    $this->container->get('event_dispatcher')->addListener(DataSurfaceBuildEvent::class, [$this, 'recordBuild']);
+    $counting = new CountingSurfaces($this->surfaces());
+    $this->container->set('data_surface.surfaces', $counting);
     $definition = $this->container->get('plugin.manager.block')->getDefinition('data_surface_demo');
     $this->assertSame(DemoBlockSurface::class, $definition[UsesSurface::DEFINITION_KEY]);
 
     $block = $this->container->get('plugin.manager.block')->createInstance('data_surface_demo');
     $this->assertInstanceOf(DataSurfaceDemoBlock::class, $block);
-    // Each child of the presentation slot through the same build step,
-    // with its own build event, named for itself; then the block.
-    $this->assertSame([
-      [ListPresentationSurface::class, 'surface:block.data_surface_demo.presentation.list'],
-      [GridPresentationSurface::class, 'surface:block.data_surface_demo.presentation.grid'],
-      [DataSurfaceDemoBlock::class, 'block:data_surface_demo'],
-    ], $this->builds);
+    $this->assertSame([DemoBlockSurface::class], $counting->builds);
     $this->assertSame(
       array_keys($this->demoSurface()->getDefinitions()->toArray()),
       array_keys($block->getDataSurface()->getDefinitions()->toArray()),
     );
-
-    // A surface built for no host is named for itself.
-    $this->builds = [];
-    $this->demoSurface();
-    $this->assertContains([DemoBlockSurface::class, 'surface:block.data_surface_demo'], $this->builds);
-    $this->assertNotContains([DataSurfaceDemoBlock::class, 'block:data_surface_demo'], $this->builds);
+    $slot = $block->getDataSurface()->getDefinitions()->entry('presentation_settings')?->slot;
+    $this->assertNotNull($slot);
+    $this->assertSame(ListPresentationSurface::class, $slot->variant('list')->source);
+    $this->assertSame(GridPresentationSurface::class, $slot->variant('grid')->source);
   }
 
   /**

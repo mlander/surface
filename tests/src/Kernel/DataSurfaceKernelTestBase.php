@@ -7,7 +7,6 @@ namespace Drupal\Tests\data_surface\Kernel;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\data_surface\DataSurface;
 use Drupal\data_surface\DefinitionMap;
-use Drupal\data_surface\DataSurfaceFactoryInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
@@ -73,16 +72,6 @@ abstract class DataSurfaceKernelTestBase extends KernelTestBase {
   }
 
   /**
-   * Gets the surface factory, the one alter-aware entry point.
-   *
-   * @return \Drupal\data_surface\DataSurfaceFactoryInterface
-   *   The factory.
-   */
-  protected function surfaceFactory(): DataSurfaceFactoryInterface {
-    return $this->container->get('data_surface.factory');
-  }
-
-  /**
    * Builds the casing and variant definitions the fixtures share.
    *
    * The smallest surface that has something to say: casing is a required
@@ -132,6 +121,12 @@ abstract class DataSurfaceKernelTestBase extends KernelTestBase {
     foreach ($defaults as $name => $value) {
       DefinitionMetadata::setDefaultValue($definitions[$name], $value);
     }
+    // The owner's refiner comes first in the owner's chain for the
+    // variant, and anything a test registers goes after it.
+    $refiners['variant'][DataSurfaceInterface::OWNER] = [
+      new CasingVariantRefiner(),
+      ...($refiners['variant'][DataSurfaceInterface::OWNER] ?? []),
+    ];
     return new DataSurface(
       DefinitionMap::fromArrays(
         definitions: $definitions,
@@ -139,7 +134,6 @@ abstract class DataSurfaceKernelTestBase extends KernelTestBase {
         locked: $locked,
         refiners: $refiners,
       ),
-      refiner: new CasingVariantRefiner(),
     );
   }
 

@@ -8,7 +8,7 @@ use Drupal\Core\Field\Entity\BaseFieldOverride;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Routing\RouteObjectInterface;
-use Drupal\data_surface\Form\DataSurfaceProviderForm;
+use Drupal\data_surface\Form\DataSurfaceSituationForm;
 use Drupal\node\Entity\NodeType;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -16,7 +16,6 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\InputBag;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
-use Symfony\Component\Routing\Route;
 
 /**
  * Tests the generic form against the node type demo's routes.
@@ -26,7 +25,7 @@ use Symfony\Component\Routing\Route;
  * parameter is the edit situation's $type. Everything else — the
  * context, the access answer, the surface, the target, the three
  * pipeline stages, the message and the redirect — is
- * DataSurfaceProviderForm, which knows nothing about content types.
+ * DataSurfaceSituationForm, which knows nothing about content types.
  *
  * So what this has to show is that the generic path does what the
  * bespoke one did: the same values reach the same two destinations, the
@@ -35,14 +34,10 @@ use Symfony\Component\Routing\Route;
  * redirect are still the demo's own. The routes are read from the route
  * provider rather than written out here, so what is asserted is what the
  * module ships.
- *
- * The old provider spelling of the same form is still served, for the
- * deprecated provider, on a route this test builds itself: no module
- * ships one any more.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
-class DataSurfaceProviderFormTest extends DataSurfaceKernelTestBase {
+class DataSurfaceSituationFormTest extends DataSurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -84,11 +79,9 @@ class DataSurfaceProviderFormTest extends DataSurfaceKernelTestBase {
    *   The route to serve.
    * @param string|null $type
    *   The raw value of the edit route's type parameter.
-   * @param \Symfony\Component\Routing\Route|null $route
-   *   A route to serve under that name instead of the one shipped.
    */
-  protected function serveRoute(string $route_name, ?string $type = NULL, ?Route $route = NULL): void {
-    $route ??= $this->container->get('router.route_provider')->getRouteByName($route_name);
+  protected function serveRoute(string $route_name, ?string $type = NULL): void {
+    $route = $this->container->get('router.route_provider')->getRouteByName($route_name);
     $stack = $this->container->get('request_stack');
     $request = Request::create($route->getPath());
     // The kernel's own mock session, carried onto the request this test
@@ -99,9 +92,8 @@ class DataSurfaceProviderFormTest extends DataSurfaceKernelTestBase {
     $request->attributes->set(RouteObjectInterface::ROUTE_NAME, $route_name);
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     if ($type !== NULL) {
-      $parameter = $route->hasDefault(DataSurfaceProviderForm::SUBJECT) ? 'node_type' : 'type';
-      $request->attributes->set($parameter, NodeType::load($type));
-      $request->attributes->set('_raw_variables', new InputBag([$parameter => $type]));
+      $request->attributes->set('type', NodeType::load($type));
+      $request->attributes->set('_raw_variables', new InputBag(['type' => $type]));
     }
     $stack->push($request);
   }
@@ -113,7 +105,7 @@ class DataSurfaceProviderFormTest extends DataSurfaceKernelTestBase {
    *   The built form.
    */
   protected function buildTheForm(): array {
-    return $this->container->get('form_builder')->getForm(DataSurfaceProviderForm::class);
+    return $this->container->get('form_builder')->getForm(DataSurfaceSituationForm::class);
   }
 
   /**
@@ -127,9 +119,9 @@ class DataSurfaceProviderFormTest extends DataSurfaceKernelTestBase {
    */
   protected function submitTheForm(array $values): FormStateInterface {
     $form_state = new FormState();
-    $form_state->setValues([DataSurfaceProviderForm::SURFACE_KEY => $values]);
+    $form_state->setValues([DataSurfaceSituationForm::SURFACE_KEY => $values]);
     $this->container->get('form_builder')
-      ->submitForm(DataSurfaceProviderForm::class, $form_state);
+      ->submitForm(DataSurfaceSituationForm::class, $form_state);
     return $form_state;
   }
 
@@ -159,17 +151,17 @@ class DataSurfaceProviderFormTest extends DataSurfaceKernelTestBase {
     $form = $this->buildTheForm();
     // Every declared key is on the page, at the value path the generic
     // form nests its surface at.
-    $this->assertArrayHasKey('name', $form[DataSurfaceProviderForm::SURFACE_KEY]);
-    $this->assertArrayHasKey('title_label', $form[DataSurfaceProviderForm::SURFACE_KEY]);
+    $this->assertArrayHasKey('name', $form[DataSurfaceSituationForm::SURFACE_KEY]);
+    $this->assertArrayHasKey('title_label', $form[DataSurfaceSituationForm::SURFACE_KEY]);
     // The declaration's defaults are the form's values, which for an add
     // means the values a new content type starts from.
-    $this->assertSame('Title', $form[DataSurfaceProviderForm::SURFACE_KEY]['title_label']['#default_value']);
-    $this->assertTrue($form[DataSurfaceProviderForm::SURFACE_KEY]['status']['#default_value']);
+    $this->assertSame('Title', $form[DataSurfaceSituationForm::SURFACE_KEY]['title_label']['#default_value']);
+    $this->assertTrue($form[DataSurfaceSituationForm::SURFACE_KEY]['status']['#default_value']);
     // The cosmetic layer ran: the tabs exist and the machine name got
     // its mirror, neither of which the generic form knows about.
-    $this->assertSame('vertical_tabs', $form[DataSurfaceProviderForm::SURFACE_KEY]['additional_settings']['#type']);
-    $this->assertSame('machine_name', $form[DataSurfaceProviderForm::SURFACE_KEY]['type']['#type']);
-    $this->assertSame('surface][workflow', $form[DataSurfaceProviderForm::SURFACE_KEY]['promote']['#group']);
+    $this->assertSame('vertical_tabs', $form[DataSurfaceSituationForm::SURFACE_KEY]['additional_settings']['#type']);
+    $this->assertSame('machine_name', $form[DataSurfaceSituationForm::SURFACE_KEY]['type']['#type']);
+    $this->assertSame('surface][workflow', $form[DataSurfaceSituationForm::SURFACE_KEY]['promote']['#group']);
 
     $form_state = $this->submitTheForm([
       'name' => 'Recipe',
@@ -224,10 +216,10 @@ class DataSurfaceProviderFormTest extends DataSurfaceKernelTestBase {
     // The route's type parameter reached the edit situation as the
     // content type, so the machine name is known: still advertised, its
     // value shown, and fixed.
-    $this->assertSame('recipe', $form[DataSurfaceProviderForm::SURFACE_KEY]['type']['#default_value']);
-    $this->assertTrue($form[DataSurfaceProviderForm::SURFACE_KEY]['type']['#disabled']);
+    $this->assertSame('recipe', $form[DataSurfaceSituationForm::SURFACE_KEY]['type']['#default_value']);
+    $this->assertTrue($form[DataSurfaceSituationForm::SURFACE_KEY]['type']['#disabled']);
     // No machine name mirror on edit: there is nothing to mirror.
-    $this->assertNotSame('machine_name', $form[DataSurfaceProviderForm::SURFACE_KEY]['type']['#type'] ?? NULL);
+    $this->assertNotSame('machine_name', $form[DataSurfaceSituationForm::SURFACE_KEY]['type']['#type'] ?? NULL);
 
     $form_state = $this->submitTheForm([
       'name' => 'Renamed',
@@ -290,35 +282,6 @@ class DataSurfaceProviderFormTest extends DataSurfaceKernelTestBase {
 
     $this->expectException(AccessDeniedHttpException::class);
     $this->buildTheForm();
-  }
-
-  /**
-   * Tests the provider spelling, which still serves an old provider.
-   *
-   * No module ships a provider route any more; the deprecated content
-   * type provider is served here on a route this test builds, with the
-   * four defaults the provider spelling reads, until step 5 deletes it.
-   */
-  public function testTheProviderSpellingStillServesTheOldProvider(): void {
-    NodeType::create(['type' => 'recipe', 'name' => 'Recipe'])->save();
-    $route = new Route('/test/node-type/{node_type}/provider-edit', [
-      '_form' => DataSurfaceProviderForm::class,
-      DataSurfaceProviderForm::PROVIDER => 'data_surface_demo_node_type.provider',
-      DataSurfaceProviderForm::OPERATION => 'edit',
-      DataSurfaceProviderForm::SUBJECT => 'node_type',
-      DataSurfaceProviderForm::COSMETICS => 'data_surface_demo_node_type.form_cosmetics',
-    ]);
-    $this->serveRoute('data_surface_test.provider_edit', 'recipe', $route);
-
-    $form = $this->buildTheForm();
-    $this->assertSame('recipe', $form[DataSurfaceProviderForm::SURFACE_KEY]['type']['#default_value']);
-    $this->assertTrue($form[DataSurfaceProviderForm::SURFACE_KEY]['type']['#disabled']);
-
-    $form_state = $this->submitTheForm(['name' => 'Renamed', 'type' => 'tampered', 'title_label' => 'Dish name']);
-    $this->assertSame([], $form_state->getErrors());
-    $this->assertNull(NodeType::load('tampered'));
-    $this->assertSame('Renamed', NodeType::load('recipe')->label());
-    $this->assertContains('The content type Renamed has been updated.', $this->statusMessages());
   }
 
 }

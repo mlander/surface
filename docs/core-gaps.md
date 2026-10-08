@@ -22,11 +22,11 @@ becomes a pass-through and no consumer changes.
 | A definition cannot declare examples | The definition array key `examples`, same pass-through | Issue drafted: example values on data definitions |
 | `Choice` holds bare values, so allowed values cannot carry meaning | `LabeledChoice`, a `Choice` subclass carrying `labels` and `descriptions` | Issue drafted: labels on `Choice` |
 | Core has existence constraints for plugins, bundles, extensions and config, but none for languages | The `LanguageExists` constraint, written in core's own style | Propose beside the ones that exist |
-| Nothing says a value is fixed in this context | Surface-level `lock()` / `isLocked()`, not a definition flag | Possibly nothing needed; revisit |
+| Nothing says a value is fixed in this context | Surface-level locking of the identity keys a context knows (`isLocked()`), not a definition flag | Possibly nothing needed; revisit |
 | No `text` / multiline string type | The definition **setting** `multiline` on a `string`, which the string widget renders as a textarea | Candidate: a `text` primitive, parity with config schema's `type: text` |
 | No `patternProperties` / `additionalProperties` on maps | Not needed by current consumers; maps are closed here | [#3556242] |
 | `required` conflates non-empty, nullable and present | `NULL` and `''` are "not configured"; everything else is a value | The union/nullability architecture discussion |
-| `required` defaults differ between the definition world and the input world | Core's `DataDefinition` is optional by default. Providers here say which they mean rather than relying on it | None; a convention to document |
+| `required` defaults differ between the definition world and the input world | Core's `DataDefinition` is optional by default. Surfaces here say which they mean rather than relying on it | None; a convention to document |
 
 ## Defaults and examples on definitions
 

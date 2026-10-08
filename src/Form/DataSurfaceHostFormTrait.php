@@ -34,8 +34,8 @@ use Drupal\data_surface\Target\PluginConfigurationTarget;
  * plugin configuration target puts the host-owned keys back around them
  * and commits, so the storage rule lives in one place for every caller,
  * form or not. The target itself comes from getDataSurfaceTarget(),
- * which this trait also answers, so the form path and a caller holding
- * only a coordinate reach one construction rather than two.
+ * which this trait also answers, so the form path and any other caller
+ * holding the plugin reach one construction rather than two.
  */
 trait DataSurfaceHostFormTrait {
 
@@ -44,16 +44,10 @@ trait DataSurfaceHostFormTrait {
   /**
    * Builds the surface describing the values the form collects.
    *
-   * @param string $operation
-   *   The host operation the surface is wanted for.
-   * @param string|null $subject
-   *   The id of the thing the operation is about, or NULL when the
-   *   provider is its own subject.
-   *
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The surface.
    */
-  abstract public function getDataSurface(string $operation = 'configure', ?string $subject = NULL): DataSurfaceInterface;
+  abstract public function getDataSurface(): DataSurfaceInterface;
 
   /**
    * Gets the plugin whose configuration array the surface describes.
@@ -78,35 +72,16 @@ trait DataSurfaceHostFormTrait {
    * Gets the target this host's surface values are stored through.
    *
    * The one construction path for the plugin host family, and what the
-   * submit stage below now asks rather than constructing a target of its
+   * submit stage below asks rather than constructing a target of its
    * own: a plugin's values live in its configuration array, so the
-   * target is the plugin wrapped in a PluginConfigurationTarget, and a
-   * form, a config action, a tool and the discovery endpoint all reach
-   * the same object by asking the provider for it.
-   *
-   * A plugin is its own subject, exactly as it is for the surface, so a
-   * caller naming one has addressed the wrong provider and is refused by
-   * name.
-   *
-   * @param string $operation
-   *   The host operation the target is wanted for. Not read: a plugin's
-   *   configuration array is where every one of its operations stores,
-   *   which is the whole reason this host family needs no target code
-   *   per operation.
-   * @param string|null $subject
-   *   The id of the thing the operation is about, which for a plugin may
-   *   only be NULL.
+   * target is the plugin wrapped in a PluginConfigurationTarget. The
+   * sketch's rule: a plugin's host supplies the target, because only it
+   * holds the instance.
    *
    * @return \Drupal\data_surface\Pipeline\DataSurfaceTargetInterface
    *   The target.
-   *
-   * @throws \InvalidArgumentException
-   *   When a subject was named.
-   *
-   * @see \Drupal\data_surface\DataSurfaceProviderInterface::getDataSurfaceTarget()
    */
-  public function getDataSurfaceTarget(string $operation = 'configure', ?string $subject = NULL): DataSurfaceTargetInterface {
-    $this->surfaceSelfSubject($subject);
+  public function getDataSurfaceTarget(): DataSurfaceTargetInterface {
     return new PluginConfigurationTarget($this->surfaceConfigurable());
   }
 

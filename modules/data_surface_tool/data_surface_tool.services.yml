@@ -7,3 +7,10 @@ services:
   data_surface_tool.situation_inputs:
     class: Drupal\data_surface_tool\SituationInputs
     arguments: ['@data_surface.surfaces', '@data_surface.situation_arguments', '@data_surface_tool.input_definitions', '@string_translation']
+  # Fills the field instance surface's settings slot from config schema
+  # for every field type no #[SurfaceVariant] fills.
+  data_surface_tool.field_settings_schema_variants:
+    class: Drupal\data_surface_tool\FieldSettingsSchemaVariants
+    arguments: ['@plugin.manager.field.field_type', '@config.typed', '@typed_data_manager']
+    tags:
+      - { name: data_surface.derived_variants }

@@ -27,7 +27,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests the content type surface, in the new spelling.
+ * Tests the content type surface.
  *
  * NodeTypeSurface with its two situations: add knows nothing, so the
  * machine name is open and must be unique; edit knows the machine name,

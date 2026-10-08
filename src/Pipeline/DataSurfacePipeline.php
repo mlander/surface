@@ -506,8 +506,8 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   /**
    * {@inheritdoc}
    */
-  public function conformOutput(DataSurfaceInterface $surface, array $output, array $input_values = []): ViolationSet {
-    $definitions = $surface->refineOutputs($input_values)->getOutputDefinitions();
+  public function conformOutput(DataSurfaceInterface $surface, array $output): ViolationSet {
+    $definitions = $surface->getOutputDefinitions();
     // Omitted is the producer's way of saying "this key is not emitted"
     // from inside an array literal, so it is resolved into absence
     // before anything else looks at the array.

@@ -21,7 +21,7 @@ use Symfony\Component\Routing\Route;
  * example.edit:
  *   path: '/admin/structure/examples/{example}/surface-edit'
  *   defaults:
- *     _form: 'Drupal\data_surface\Form\DataSurfaceProviderForm'
+ *     _form: 'Drupal\data_surface\Form\DataSurfaceSituationForm'
  *     _data_surface_surface: 'Drupal\example\Surface\ExampleSurface'
  *     _data_surface_situation: 'edit'
  *   requirements:

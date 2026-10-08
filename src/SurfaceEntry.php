@@ -20,8 +20,8 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
  * beside the map because refinement needs all three of them for one key
  * at a time: the advertised definition to clone, the contributions to
  * divide its option space by, and the chains to run over each slice.
- * Policy filters and the surface's own cacheability are not per key and
- * stay on the surface.
+ * The surface's own cacheability is not per key and stays on the
+ * surface.
  *
  * @see \Drupal\data_surface\DefinitionMap
  *   The ordered collection of entries a surface is sealed with.
@@ -36,7 +36,7 @@ final class SurfaceEntry {
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   What the key accepts.
    * @param string $contributor
-   *   Who introduced the key: the owner for everything a provider
+   *   Who introduced the key: the owner for everything the surface
    *   declares itself, and a module name for a mounted key.
    * @param bool $locked
    *   Whether the key's value is fixed to what storage holds, or to the
@@ -44,11 +44,10 @@ final class SurfaceEntry {
    * @param string[] $dependencies
    *   The sibling keys this key's refinement reads, in declaration
    *   order. Empty for a key that never refines.
-   * @param array<string, array<\Drupal\data_surface\DataSurfaceRefinerInterface|\Drupal\data_surface\DataSurfaceOutputRefinerInterface>> $refiners
+   * @param array<string, array<\Drupal\data_surface\DataSurfaceRefinerInterface>> $refiners
    *   Refiner chains keyed by contributor, the owner's own under
-   *   DataSurfaceInterface::OWNER. Input refiners on an entry of a
-   *   surface's definitions, output refiners on an entry of its
-   *   outputs.
+   *   DataSurfaceInterface::OWNER. Always empty on an output's entry:
+   *   outputs are never refined.
    * @param array<string, array> $contributions
    *   The values contributed to this key at build time, keyed by the
    *   provider that added them. What is not here is the owner's.

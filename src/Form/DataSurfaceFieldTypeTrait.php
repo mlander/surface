@@ -29,10 +29,9 @@ use Drupal\data_surface\Target\FieldSettingsTarget;
  * settings mean, what they may be, or what shape they take.
  *
  * A class using this trait declares that it implements
- * FieldSurfaceProviderInterface: both accessors are public, because the
- * settings form is not their only caller. In the new spelling it names
- * its surface with #[UsesSurface] and writes nothing else: the trait
- * builds that surface, answers access through its access class, and
+ * FieldSurfaceProviderInterface, names its surface with #[UsesSurface],
+ * and writes nothing else: the trait builds that surface, answers access
+ * through the field config entity and the surface's access class, and
  * hands the field settings target the host supplies.
  *
  * Two host realities it absorbs, both inherited from group B and one of
@@ -86,34 +85,16 @@ trait DataSurfaceFieldTypeTrait {
   /**
    * Builds the surface describing this field type's instance settings.
    *
-   * Named for the settings it describes rather than
-   * DataSurfaceProviderInterface's getDataSurface(), because a field
-   * type has two surfaces and the provider interface's single method
-   * cannot say which one is meant. It takes the same operation and
-   * subject pair, so both provider kinds are addressed one way.
-   *
-   * The surface the field type's #[UsesSurface] names, read from its
-   * definition, built in the host's context with the operation as its
-   * verb; otherwise the class's own declareDataSurface(). A field item
-   * is its own subject, so any other subject is refused by name.
-   *
-   * @param string $operation
-   *   The operation the surface is wanted for.
-   * @param string|null $subject
-   *   The id of the thing the operation is about, or NULL when the
-   *   field item is its own subject.
+   * Named for the settings it describes, because a field type has two
+   * sets of settings and only the instance half is a surface here. The
+   * surface the field type's #[UsesSurface] names, read from its
+   * definition, built in the host's `field_settings` context.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The surface.
    */
-  public function getFieldSurface(string $operation = FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS, ?string $subject = NULL): DataSurfaceInterface {
-    // The field item is bound to one field config entity, so it is its
-    // own subject and a caller naming another has the wrong item.
-    $this->surfaceSelfSubject($subject);
-    // Namespaced by host type, as every host id is, so a subscriber
-    // matching on it cannot pick up a block or a formatter of the same
-    // name.
-    return $this->hostedSurface('field_type:' . $this->getFieldDefinition()->getType(), $operation);
+  public function getFieldSurface(): DataSurfaceInterface {
+    return $this->hostedSurface(FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS);
   }
 
   /**
@@ -124,28 +105,14 @@ trait DataSurfaceFieldTypeTrait {
    * this and hands the target a SettingsShapeInterface, which is where
    * the transform becomes visible.
    *
-   * A field item is its own subject, as it is for the surface, so the
-   * first line refuses any subject by name.
-   *
-   * @param string $operation
-   *   The operation the target is wanted for. Not read: both of a field
-   *   type's settings sets are stored on the same field config entity,
-   *   and the storage settings half is not in this trait at all.
-   * @param string|null $subject
-   *   The id of the thing the operation is about, which for a field item
-   *   may only be NULL.
-   *
    * @return \Drupal\data_surface\Pipeline\DataSurfaceTargetInterface
    *   The target.
    *
-   * @throws \InvalidArgumentException
-   *   When a subject was named.
    * @throws \LogicException
    *   When the item's field definition is not a field config entity,
    *   which is the only kind of definition whose settings are editable.
    */
-  public function getDataSurfaceTarget(string $operation = FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS, ?string $subject = NULL): DataSurfaceTargetInterface {
-    $this->surfaceSelfSubject($subject);
+  public function getDataSurfaceTarget(): DataSurfaceTargetInterface {
     return new FieldSettingsTarget($this->settingsFieldConfig());
   }
 
@@ -164,26 +131,18 @@ trait DataSurfaceFieldTypeTrait {
    * write and nothing to ask, so it expresses no opinion rather than
    * refusing: the host that reached it has its own gate.
    *
-   * A field type naming its surface with #[UsesSurface] is then asked
-   * through that surface's access class, which may refuse.
+   * The surface the field type names is then asked through its access
+   * class, which may refuse.
    *
-   * The subject is not read, for the reason an access question never
-   * throws over one: the field config entity this item is bound to is
-   * the subject, and it is what answers however the caller spelled the
-   * coordinate.
-   *
-   * @param string $operation
-   *   The operation the answer is wanted for.
-   * @param string|null $subject
-   *   The id of the thing the operation is about, or NULL when the
-   *   field item is its own subject.
    * @param \Drupal\Core\Session\AccountInterface|null $account
    *   The account to answer for, or NULL for the current user.
+   * @param string $operation
+   *   The operation the answer is wanted for.
    *
    * @return \Drupal\Core\Access\AccessResultInterface
    *   The access answer.
    */
-  public function surfaceAccess(string $operation = FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS, ?string $subject = NULL, ?AccountInterface $account = NULL): AccessResultInterface {
+  public function surfaceAccess(?AccountInterface $account = NULL, string $operation = FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS): AccessResultInterface {
     $definition = $this->getFieldDefinition();
     $answer = $definition instanceof FieldConfigInterface
       ? $definition->access('update', $account, TRUE)
@@ -223,10 +182,9 @@ trait DataSurfaceFieldTypeTrait {
    * Reads the static default field settings from a class's surface.
    *
    * The same static-protocol problem the formatter trait has:
-   * defaultFieldSettings() cannot consult an instance. A field type that
-   * names its surface with #[UsesSurface] answers with that surface's
-   * own shape, and one that declares its surface with its declaration,
-   * both static; a field type that wants its parent's static defaults
+   * defaultFieldSettings() cannot consult an instance. A field type
+   * answers with the shape of the surface its #[UsesSurface] names,
+   * which is static; a field type that wants its parent's static defaults
    * (SurfaceAddressItem, whose parent still stores a key the surface
    * does not describe) keeps them.
    *
@@ -237,7 +195,7 @@ trait DataSurfaceFieldTypeTrait {
    *   The declared defaults keyed by setting name.
    *
    * @throws \LogicException
-   *   When the class declares no surface.
+   *   When the class names no surface.
    */
   protected static function surfaceDefaultFieldSettings(string $class): array {
     return static::surfaceDeclaredDefaults($class);

@@ -13,7 +13,6 @@ use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\data_surface\DataSurface;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
-use Drupal\data_surface\DataSurfaceFactoryInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\DataSurfaceTargetInterface;
 use Drupal\data_surface\Refinement\Narrowing;
@@ -52,27 +51,20 @@ use Drupal\data_surface\SurfaceAttachment;
  *    RefinesInputRefiner link in the owner's chain of that key, the
  *    surface's links before any alter's. A method that watches nothing
  *    runs once, here, and is held to the narrowing check.
- * 6. The seal, through the engine's factory, so the build event fires
- *    and subscribers written in the old spelling still contribute.
+ * 6. The children, each through this same build step in its own frame.
+ * 7. The seal.
  *
  * The engine's builder is the whole state of a build. Nothing is cached
- * across builds, because a surface describes live site state, the way
- * every host in the old spelling builds its surface when asked.
+ * across builds, because a surface describes live site state; what that
+ * state is, a shape or an alter says with addCacheableDependency().
  */
 final class Surfaces implements SurfacesInterface {
-
-  /**
-   * The host id prefix for a surface built for no host in particular.
-   */
-  public const HOST_PREFIX = 'surface:';
 
   /**
    * Constructs the build step.
    *
    * @param \Drupal\data_surface\SurfaceBuild\SurfaceRegistry $registry
    *   What discovery found.
-   * @param \Drupal\data_surface\DataSurfaceFactoryInterface $factory
-   *   The engine's factory, which dispatches the build event and seals.
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
    *   The typed data manager, for the definitions add() creates.
    * @param \Drupal\Core\DependencyInjection\ClassResolverInterface $classResolver
@@ -84,22 +76,24 @@ final class Surfaces implements SurfacesInterface {
    * @param \Drupal\data_surface\SurfaceBuild\SituationArguments $situationArguments
    *   What turns a route's or a tool's values into a situation's
    *   arguments, an entity's id into the entity among them.
+   * @param \Drupal\data_surface\SurfaceBuild\DerivedVariants $derivedVariants
+   *   What fills an open slot for the values no declared variant fills.
    */
   public function __construct(
     protected readonly SurfaceRegistry $registry,
-    protected readonly DataSurfaceFactoryInterface $factory,
     protected readonly TypedDataManagerInterface $typedDataManager,
     protected readonly ClassResolverInterface $classResolver,
     protected readonly AccountInterface $currentUser,
     protected readonly SituationArguments $situationArguments,
+    protected readonly DerivedVariants $derivedVariants,
   ) {
   }
 
   /**
    * {@inheritdoc}
    */
-  public function build(string $surface, SurfaceContext $context, ?string $host_class = NULL, ?string $host_id = NULL): DataSurfaceInterface {
-    return $this->buildSurface($surface, $context, $host_class, $host_id, []);
+  public function build(string $surface, SurfaceContext $context): DataSurfaceInterface {
+    return $this->buildSurface($surface, $context, []);
   }
 
   /**
@@ -109,10 +103,6 @@ final class Surfaces implements SurfacesInterface {
    *   The surface class, or its #[Surface] id.
    * @param \Drupal\data_surface\Surface\SurfaceContext $context
    *   Where it is being asked for.
-   * @param class-string|null $host_class
-   *   The class the build event names as the host.
-   * @param string|null $host_id
-   *   The host id the build event carries.
    * @param array<int, array{class: class-string, id: string, key: string, inputs: string[]}> $ancestry
    *   The surfaces this one is being built inside, outermost first, each
    *   with the key it is attached at and its own input keys; empty for
@@ -121,7 +111,7 @@ final class Surfaces implements SurfacesInterface {
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The sealed surface.
    */
-  protected function buildSurface(string $surface, SurfaceContext $context, ?string $host_class, ?string $host_id, array $ancestry): DataSurfaceInterface {
+  protected function buildSurface(string $surface, SurfaceContext $context, array $ancestry): DataSurfaceInterface {
     $definition = $this->registry->getDefinition($surface);
     // Refuses two providers of one situation id, whichever is asked for.
     $this->registry->getSituations($definition->class);
@@ -187,8 +177,8 @@ final class Surfaces implements SurfacesInterface {
     }
 
     // The children, each through this same build step in its own frame:
-    // its own shape, its own alters, its own refiners, its own build
-    // event, and the context the parent's context hands it.
+    // its own shape, its own alters, its own refiners, and the context
+    // the parent's context hands it.
     $frame = ['class' => $definition->class, 'id' => $definition->id, 'key' => '', 'inputs' => $input_keys];
     foreach ($inputs->attachments() as $key => $child) {
       $builder->attach($key, $this->buildChild($child, $context, $key, $frame, $ancestry));
@@ -198,18 +188,18 @@ final class Surfaces implements SurfacesInterface {
       foreach ($children as $value => $child) {
         $variants[(string) $value] = $this->buildChild($child, $context, $key, $frame, $ancestry);
       }
+      $deriver = $this->derivedVariants->for($definition->class, $key);
+      if ($deriver !== NULL) {
+        // phpcs:ignore Drupal.Files.LineLength.TooLong
+        // SKETCH GAP: the sketch fills an open slot only with #[SurfaceVariant] classes; a value no class fills (a field type with no settings surface) gets a variant derived from a description that already exists (its config schema), sealed here as a shape with no class, so no alter, refiner, target or access class of its own.
+        foreach ($deriver->variants(array_keys($variants)) as $value => $definitions) {
+          $variants[(string) $value] ??= new SurfaceAttachment((new DataSurfaceBuilder($definitions))->seal());
+        }
+      }
       $builder->attachBy($key, $by, $variants);
     }
 
-    // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch has no build event; it still fires here, after the context and refiners, so old-spelling subscribers run last and see locks and situation constraints already applied.
-    // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch's build() takes a surface and a context only; an optional host class and host id are added so old-spelling subscribers matching a host (block:<id>, a block class) still match.
-    return $this->factory->build(
-      $builder,
-      $host_class ?? $definition->class,
-      $host_id ?? self::HOST_PREFIX . $definition->id,
-    );
+    return $builder->seal();
   }
 
   /**
@@ -233,7 +223,7 @@ final class Surfaces implements SurfacesInterface {
     $class = $this->registry->getDefinition($child)->class;
     $frame['key'] = $key;
     return new SurfaceAttachment(
-      $this->buildSurface($class, static::childContext($context, $key), NULL, NULL, [...$ancestry, $frame]),
+      $this->buildSurface($class, static::childContext($context, $key), [...$ancestry, $frame]),
       $class,
     );
   }
@@ -276,14 +266,14 @@ final class Surfaces implements SurfacesInterface {
    *   The owner's plain input keys.
    *
    * @return array<string, array{by: string, children: array<string, class-string>}>
-   *   The slots, an open one filled from discovery's variants.
+   *   The slots, each filled from discovery's variants.
    *
    * @throws \LogicException
    *   When a deciding key is not a plain input of the surface.
    */
   protected function slotsOf(SurfaceDefinition $definition, SurfaceShape $inputs, array $input_keys): array {
     $slots = [];
-    foreach ($inputs->slots() as $key => ['by' => $by, 'children' => $children]) {
+    foreach ($inputs->slots() as $key => $by) {
       if (!in_array($by, $input_keys, TRUE)) {
         throw new \LogicException(sprintf(
           'The %s surface\'s "%s" slot is chosen by "%s", which its shape never declares as a plain input: a slot is chosen by a sibling that holds one value.',
@@ -292,13 +282,13 @@ final class Surfaces implements SurfacesInterface {
           $by,
         ));
       }
-      // An open slot lists no children: every surface whose
-      // #[SurfaceVariant] names this surface and key fills it.
+      // Every surface whose #[SurfaceVariant] names this surface and key
+      // fills it; the parent names none.
       // phpcs:ignore Drupal.Files.LineLength.TooLong
-      // SKETCH GAP: the sketch does not say what an open slot nothing fills is; it stays a placeholder and its deciding key gains an empty Choice, so nothing can be chosen, rather than refusing the surface on a site with no variant module.
+      // SKETCH GAP: the sketch does not say what a slot nothing fills is; it stays a placeholder and its deciding key gains an empty Choice, so nothing can be chosen, rather than refusing the surface on a site with no variant module.
       $slots[$key] = [
         'by' => $by,
-        'children' => $children === [] ? $this->registry->getVariants($definition->class, $key) : $children,
+        'children' => $this->registry->getVariants($definition->class, $key),
       ];
     }
     return $slots;
@@ -476,7 +466,7 @@ final class Surfaces implements SurfacesInterface {
     $this->instance($definition->class, SurfaceInterface::class)
       ->defineInputs(new SurfaceShape($builder, $this->typedDataManager));
     // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch has no static defaults; a plugin host whose protocol asks a class for its defaults statically reads the owner's shape alone, sealed on the spot with no alter, context or build event, as the old spelling's declaration did.
+    // SKETCH GAP: the sketch has no static defaults; a plugin host whose protocol asks a class for its defaults statically reads the owner's shape alone, sealed on the spot with no alter or context.
     return $builder->seal()->getDefaultValues();
   }
 

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface\SurfaceBuild;
 
+use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Surface\ShapeInterface;
 
@@ -23,25 +25,35 @@ final class SurfaceShape extends ShapeAdapterBase implements ShapeInterface {
   /**
    * The slots declared through this shape, keyed by key.
    *
-   * @var array<string, array{by: string, children: array<string, class-string>}>
+   * @var array<string, string>
    */
   protected array $slots = [];
 
   /**
    * {@inheritdoc}
    */
-  public function attachBy(string $key, string $by, array $children = []): static {
-    $this->reserveSubsurface('attachBy', $key);
-    $this->slots[$key] = ['by' => $by, 'children' => $children];
+  public function attachBy(string $key, string $by): MapDataDefinition {
+    $shell = $this->reserveSubsurface('attachBy', $key);
+    $this->slots[$key] = $by;
+    return $shell;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function addCacheableDependency(CacheableDependencyInterface $dependency): static {
+    // phpcs:ignore Drupal.Files.LineLength.TooLong
+    // SKETCH GAP: the sketch's shape has no cacheability verb; a surface whose shape reads site state needs one, so the owner's shape takes a dependency (not an alter's, which reaches no further than the owner's keys) and the sealed surface carries it.
+    $this->builder->addCacheableDependency($dependency);
     return $this;
   }
 
   /**
    * Gets the slots declared through this shape.
    *
-   * @return array<string, array{by: string, children: array<string, class-string>}>
-   *   The deciding key and the named children of each slot, keyed by
-   *   key, in declaration order. Empty children mark an open slot.
+   * @return array<string, string>
+   *   The deciding key of each slot, keyed by key, in declaration order.
+   *   Discovery's #[SurfaceVariant] classes fill them.
    */
   public function slots(): array {
     return $this->slots;

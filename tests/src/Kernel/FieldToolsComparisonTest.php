@@ -185,7 +185,10 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
     $this->assertContains('entity_test', $entity_type['enum']);
     $this->assertSame(['entity_type_id', 'bundle', SituationInputs::VALUES], $schema['required']);
     $values = $schema['properties'][SituationInputs::VALUES]['properties'];
-    $this->assertSame(['address'], $values['field_type']['enum']);
+    // Every field type in the UI: address's own settings surface, the
+    // rest derived from config schema.
+    $this->assertSame('address', $values['field_type']['enum'][0]);
+    $this->assertContains('string', $values['field_type']['enum']);
     $this->assertSame('^[_a-z]+[_a-z0-9]*$', $values['field_name']['pattern']);
     $this->assertSame(32, $values['field_name']['maxLength']);
 

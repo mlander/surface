@@ -22,7 +22,7 @@ use Drupal\data_surface_test\Surface\GatedFieldSettingsSurface;
  * caller refused has seen the surface's answer refuse it and nothing
  * else.
  *
- * In the new spelling: the settings are GatedFieldSettingsSurface, named
+ * The settings are GatedFieldSettingsSurface, named
  * with #[UsesSurface], and the refusal is that surface's access class.
  * The field type host reads both, and so do the derived field tools,
  * because the same surface fills the field instance surface's settings

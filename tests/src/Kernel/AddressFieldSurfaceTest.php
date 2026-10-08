@@ -522,7 +522,7 @@ class AddressFieldSurfaceTest extends DataSurfaceKernelTestBase {
   /**
    * Tests that the whole contract is the surface class, built on its own.
    *
-   * The settings are AddressFieldSettingsSurface, in the new spelling: a
+   * The settings are AddressFieldSettingsSurface: a
    * class whose shape needs no field, no item and no service, built by
    * the build step in a bare context. The live lists are named as
    * constraints rather than built into the definitions, which is the

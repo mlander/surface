@@ -14,10 +14,9 @@ use Drupal\data_surface\DataSurfaceRefinerInterface;
  * One of these per class that refines — the surface, then each alter —
  * registered in the owner's chain of every key it refines, in that
  * order. So the engine runs the owner's methods first and the alters'
- * after, hands each link a deep clone, and checks every link narrower,
- * exactly as it does for a refiner written in the old spelling; nothing
- * about refinement, its narrowing check, its cacheability or the form's
- * AJAX and discard machinery knows which spelling it is serving.
+ * after, hands each link a deep clone, and checks every link narrower;
+ * nothing about refinement, its narrowing check, its cacheability or the
+ * form's AJAX and discard machinery knows a method is behind the link.
  *
  * Asked to refine one key, it calls that key's methods on its class in
  * declaration order, each with the definition the one before returned,

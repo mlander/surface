@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface\SurfaceBuild;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DefinitionMetadata;
@@ -51,9 +52,9 @@ final class SurfaceShapeAdditions extends ShapeAdapterBase {
   /**
    * {@inheritdoc}
    */
-  public function attach(string $key, string $child): static {
+  public function attach(string $key, string $child): MapDataDefinition {
     // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch lets an alter attach a child; an alter's keys are mounted at third_party_settings.<module>, and a subsurface inside that mount is not built in step 2, so an alter's attach() is refused.
+    // SKETCH GAP: the sketch lets an alter attach a child; an alter's keys are mounted at third_party_settings.<module>, and a subsurface inside that mount is not built, so an alter's attach() is refused.
     throw new \LogicException(sprintf(
       'The %s alter cannot attach %s at "%s" yet: an alter\'s keys are mounted under third_party_settings.%s, and a subsurface inside that mount is not built.',
       $this->provider,
@@ -78,8 +79,6 @@ final class SurfaceShapeAdditions extends ShapeAdapterBase {
    * the owner's.
    */
   public function extendChoices(string $key, array $choices): static {
-    // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch has no verb for widening one key on one surface and says a real case goes on ShapeAdditionsInterface; the demo formatter's ribbon is one, so extendChoices() is the engine's contribution, and an alter's #[RefinesInput] method on that key narrows its own values only.
     if ($this->outputs) {
       throw new \LogicException(sprintf('The %s alter cannot offer more values on the output "%s": outputs are never sent, so they have nothing to choose from.', $this->provider, $key));
     }

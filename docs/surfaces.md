@@ -1,13 +1,11 @@
 # Surfaces as classes
 
-A surface can be written as a class of its own: one method that declares
-its shape, and one named method per key whose allowed values depend on
-another key. Other modules change it with classes of their own, and
-nothing is registered by hand. This is the spelling the module is moving
-to. The older one — `declareDataSurface()` on a host, a provider
-service, a build event subscriber — still works beside it and is what
-the rest of these pages describe; both build the same sealed surface, so
-the pipeline, forms, widgets and targets read either without knowing.
+A surface is a class of its own: one method that declares its shape,
+and one named method per key whose allowed values depend on another
+key. Other modules change it with classes of their own, and nothing is
+registered by hand. The build step, `data_surface.surfaces`, turns the
+class and a context into a sealed `DataSurfaceInterface`, which the
+pipeline, forms, widgets and targets read.
 
 ## Where things live
 
@@ -97,9 +95,11 @@ final class DemoBlockSurface implements SurfaceInterface {
   an option. The refiner points; the resolver fetches. Core's
   `EntityBundleExists` is one; the demo brings `DataSurfaceDemoBundleField`
   for a bundle's fields.
-- **The framework checks every refinement is narrower**, exactly as it
-  does for the older spelling, so a refiner cannot widen, retype, or
-  turn off required.
+- **The framework checks every refinement is narrower**, so a refiner
+  cannot widen, retype, or turn off required. The two type changes it
+  accepts are away from `any` and to a derivative of the type
+  (`entity` to `entity:node` to `entity:node:article`); see [the
+  narrowing table](refinement.md#the-narrowing-table).
 
 ## Reading a surface
 
@@ -127,8 +127,8 @@ already known, and that is a **context**, a `SurfaceContext`:
   a tool supplies its parameters by name.
 - Another module adds a situation with
   `#[Situation('clone', of: SomeSurface::class)]` on a static method in
-  its `src/SurfaceAlter/`. Two providers of one id are refused, naming
-  both.
+  its `src/SurfaceAlter/`. Two declarations of one id are refused,
+  naming both.
 - A context may also narrow a key (`withConstraint()`, checked narrower)
   and, when it creates, give starting values (`withStarting()`), which
   become the key's defaults: values the caller sees first and may
@@ -187,7 +187,7 @@ open, and it is still the same surface.
 
 A route names a surface class and a situation, and its parameters are
 the situation method's, by name; an upcast entity parameter arrives as
-the entity. `DataSurfaceProviderForm` builds the context with the
+the entity. `DataSurfaceSituationForm` builds the context with the
 situation, renders the surface, loads current values from the composed
 target and submits through the pipeline to it. The route's requirement
 is the situation's access:
@@ -196,7 +196,7 @@ is the situation's access:
 data_surface_demo_node_type.edit:
   path: '/admin/structure/types/manage/{type}/surface-edit'
   defaults:
-    _form: 'Drupal\data_surface\Form\DataSurfaceProviderForm'
+    _form: 'Drupal\data_surface\Form\DataSurfaceSituationForm'
     _data_surface_surface: 'Drupal\data_surface_demo_node_type\Surface\NodeTypeSurface'
     _data_surface_situation: 'edit'
     _data_surface_cosmetics: 'data_surface_demo_node_type.form_cosmetics'
@@ -210,21 +210,22 @@ data_surface_demo_node_type.edit:
 
 A locked identity key renders as a disabled element holding the value
 the situation knows, and extraction keeps that value whatever is
-posted. The cosmetic layer (`DataSurfaceFormCosmeticsInterface`) is told
-the situation id as its operation and the raw value of the situation's
-first route parameter as its subject. `docs/forms.md` has the rest.
+posted. The cosmetic layer (`DataSurfaceFormCosmeticsInterface`), named
+by the route's optional `_data_surface_cosmetics`, is told the situation
+id as its operation and the raw value of the situation's first route
+parameter. [Generated forms](forms.md#the-situation-form) has the rest.
 
 ## Access
 
 Two tiers, and alters never touch either:
 
 - **The situation's permission**, on `#[Situation(permission:)]`: the
-  static part, answerable with no subject. A `%key` in it is filled from
+  static part, answerable with nothing loaded. A `%key` in it is filled from
   the identity the context knows (`administer %entity_type_id fields`);
   a placeholder the context does not know is refused.
 - **The surface's access class**, `#[Surface(access:)]`, a
   `SurfaceAccessInterface` that may hold services, asked only once the
-  permission allows: what depends on the subject. `NodeTypeAccess` asks
+  permission allows: what depends on the thing itself. `NodeTypeAccess` asks
   the node type entity whether one may be created, or this one updated,
   so this module never grants more than core's own form;
   `FieldInstanceAccess` refuses a locked storage.
@@ -318,9 +319,9 @@ own is a tool, `data_surface:<surface id>:<situation id>`, derived by
   `dry_run`. Nothing in `values` is required unless the situation
   creates. The definition is static, which is what situations make
   possible: a situation that needs nothing is the exact contract before
-  anyone calls, and one that needs a subject refines `values` to its
-  real context (a field's settings become its type's) through the Tool
-  API's own input refiners once the subject arrives.
+  anyone calls, and one that needs an existing thing refines `values`
+  to its real context (a field's settings become its type's) through
+  the Tool API's own input refiners once its parameters arrive.
 - **Access** is the situation's, decisively, then each subsurface the
   context resolves may refuse through its own access class.
 - **Execution** is the situation, the build, and one pipeline submit to
@@ -353,7 +354,8 @@ class, the plugins whose configuration it is (`<host type>:<plugin id>`,
 from the plugin definitions, through `data_surface.surface_plugins`),
 situations (id, label, parameters, whether it creates, permission, the
 placeholders nothing supplies, whether it can be asked on its own),
-alters and variants, without building anything. Whether a situation
+alters, declared variants and, per slot, where derived variants come
+from, without building anything. Whether a situation
 creates is on the context it returns, so it is known only for a
 situation that needs nothing. [`catalogue.md`](catalogue.md) is that
 array for this repository's modules, generated by
@@ -380,14 +382,24 @@ final class DataSurfaceDemoBlock extends DataSurfaceBlockBase {
 
 Every host reads it the same way:
 
-| Host | Base or trait | Host id | Target |
+| Host | Base or trait | Context | Target |
 | --- | --- | --- | --- |
-| Block | `DataSurfaceBlockBase` | `block:<id>` | the block's configuration |
-| Formatter | `DataSurfaceFormatterBase` | `field_formatter:<id>` | none: the display stores it |
-| Condition | `DataSurfaceConditionBase` | `condition:<id>` | the condition's configuration |
-| Action | `DataSurfaceActionBase` | `action:<id>` | the action's configuration |
-| Field type | `DataSurfaceFieldTypeTrait` | `field_type:<type>` | the field config's settings |
-| Any configurable plugin | `DataSurfacePluginForm` | `plugin:<id>` | its configuration |
+| Block | `DataSurfaceBlockBase` | `configure` | the block's configuration |
+| Formatter | `DataSurfaceFormatterBase` | `configure` | none: the display stores it |
+| Condition | `DataSurfaceConditionBase` | `configure` | the condition's configuration |
+| Action | `DataSurfaceActionBase` | `configure` | the action's configuration |
+| Field type | `DataSurfaceFieldTypeTrait` | `field_settings` | the field config's settings |
+| Any configurable plugin | `DataSurfacePluginForm` | the form's operation | its configuration |
+
+A host's methods take no arguments that say which surface or which
+thing: `getDataSurface()` builds the surface the plugin names,
+`getDataSurfaceTarget()` is the target in the last column (a formatter
+throws), and `surfaceAccess(?AccountInterface $account, string
+$operation)` asks the surface's access class in the host's context,
+neutral when it names none. A field type's surface is
+`getFieldSurface()`, on `FieldSurfaceProviderInterface`, which Field
+UI's static `#element_validate` callback needs to find the rebuilt item
+by.
 
 - **Into the definition.** `SurfacePluginHooks` copies the attribute
   into each host's plugin definitions, under `UsesSurface::DEFINITION_KEY`,
@@ -397,13 +409,13 @@ Every host reads it the same way:
   derives from the field type's. So the catalogue lists which plugins
   use a surface without instantiating one.
 - **The build.** `DataSurfaceHostTrait::hostedSurface()` builds the
-  surface the definition names, in the host's context, with the host
-  class and host id on the build event; a plugin naming none falls back
-  to its own `declareDataSurface()` until step 5.
+  surface the definition names, in `new SurfaceContext($operation)`: the
+  host's own verb, which is no declared situation, and nothing known. A
+  plugin naming no surface is refused by name.
 - **Static defaults.** A formatter's `defaultSettings()` and a field
   type's `defaultFieldSettings()` are asked of the class, so they read
   the attribute off the class and take `SurfacesInterface::defaults()`:
-  the surface's own shape alone, no alter, context or build event.
+  the surface's own shape alone, no alter, context or refiner.
 - **Access.** A field type's host asks the field config entity, then
   the surface's access class, which may refuse. The gated test field
   type refuses that way, in Field UI and in the derived field tools
@@ -412,9 +424,9 @@ Every host reads it the same way:
   configurable plugin whose definition names a surface: it builds that
   surface in its operation and stores into the configuration array.
 
-Moved: the demo block, the demo formatter, the address field type and
-the gated test field type. A plugin surface is never a tool (see
-Tools).
+The demo block, the demo formatter, the address field type and every
+plugin in the test module are written this way. A plugin surface is
+never a tool (see Tools).
 
 ## Surface alters
 
@@ -461,10 +473,9 @@ final class DemoBlockAlter implements SurfaceAlterInterface {
 its name, and another alter's key by its mounted path,
 `third_party_settings.<module>.<key>`.
 
-A build event subscriber written for the older spelling still runs on a
-surface built this way, after the alters and the context, so the two
-spellings extend each other while consumers move over. None ships in
-the demo modules any more; the test module's still does.
+Nothing an alter does removes: it cannot take a key or a value away
+from the owner. A site policy that hides an owner's key is a later
+concept, not a verb here.
 
 ## What is checked when a surface is built
 
@@ -475,7 +486,7 @@ Each refusal names the class and method at fault:
   output key;
 - a watched sibling that is not a declared input;
 - a `watches:` list that does not match the parameters, in order;
-- two providers of one situation id;
+- two declarations of one situation id;
 - a context constraint, or a refiner that watches nothing, that widens;
 - starting values on a context that does not create;
 - a refiner that refines or watches a subsurface key, or a child's
@@ -491,41 +502,57 @@ A surface attaches other surfaces at a key. Each child is its own class,
 with its own shape and refiners, and alters can target it alone.
 
 - `attach('key', Child::class)` is a fixed child.
-- `attachBy('key', by: 'sibling', children: [...])` is a child the
-  sibling's value chooses: a **slot**. With no children it is an
-  **open** slot, filled by every surface marked
-  `#[SurfaceVariant(of: Parent::class, key: 'key', value: '...')]`, so a
-  new variant brings itself and the parent never changes.
+- `attachBy('key', by: 'sibling')` is a child the sibling's value
+  chooses: a **slot**. A slot is always open. The parent never names
+  its children: every surface marked
+  `#[SurfaceVariant(of: Parent::class, key: 'key', value: '...')]` fills
+  it, and the sibling's allowed values become exactly the values the
+  variants fill. A new variant brings itself and the parent never
+  changes.
 
-The demo block's presentation is a slot with two children named by
-class; the field instance surface attaches its storage and its settings
-are an open slot the address module fills:
+The demo block's presentation is a slot its two presentation surfaces
+fill; the field instance surface attaches its storage, and its settings
+are a slot each field type's module fills:
 
 ```php
 // DemoBlockSurface
 $inputs->add('presentation', 'string', new TranslatableMarkup('Presentation'), default: 'list')
   ->setRequired(TRUE)
   ->addConstraint('Choice', ['choices' => ['list', 'grid']]);
-$inputs->attachBy('presentation_settings', by: 'presentation', children: [
-  'list' => ListPresentationSurface::class,
-  'grid' => GridPresentationSurface::class,
-]);
-$inputs->describe('presentation_settings', label: new TranslatableMarkup('Presentation settings'));
+$inputs->attachBy('presentation_settings', by: 'presentation')
+  ->setLabel(new TranslatableMarkup('Presentation settings'))
+  ->setDescription(new TranslatableMarkup('What the chosen presentation needs.'));
+
+// ListPresentationSurface and GridPresentationSurface, beside it
+#[Surface('block.data_surface_demo.presentation.list')]
+#[SurfaceVariant(of: DemoBlockSurface::class, key: 'presentation_settings', value: 'list')]
+
+#[Surface('block.data_surface_demo.presentation.grid')]
+#[SurfaceVariant(of: DemoBlockSurface::class, key: 'presentation_settings', value: 'grid')]
 
 // FieldInstanceSurface, in data_surface_tool
-$inputs->attach('storage', FieldStorageSurface::class);
-$inputs->attachBy('settings', by: 'field_type');
+$inputs->attach('storage', FieldStorageSurface::class)
+  ->setLabel(new TranslatableMarkup('Field storage'));
+$inputs->attachBy('settings', by: 'field_type')
+  ->setLabel(new TranslatableMarkup('Field settings'));
 
 // AddressFieldSettingsSurface, in data_surface_address
 #[Surface('field.settings.address', target: AddressFieldSettingsTarget::class)]
 #[SurfaceVariant(of: FieldInstanceSurface::class, key: 'settings', value: 'address')]
 ```
 
+`attach()` and `attachBy()` return the map definition at the key, a
+core `MapDataDefinition`, the way `add()` returns its definition, so
+the owner labels and describes its own subsurface key with the core
+setters. `describe()` is for an alter rewording a key it does not own;
+an owner calling it on its own key is saying in two statements what
+one says.
+
 What that means, end to end:
 
 - **A child is built by the same build step**, after its parent's
-  context is applied: its own shape, its own alters, its own refiners,
-  its own build event (named `surface:<child id>`). It sees the context
+  context is applied: its own shape, its own alters, its own refiners.
+  It sees the context
   the parent's context hands it with `withChild()`, and otherwise the
   parent's operation, `creates` and known identity — never the parent's
   constraints or starting values, which name the parent's keys.
@@ -542,7 +569,9 @@ What that means, end to end:
 - **A slot** is advertised as an `any` placeholder marked as a slot
   (`DefinitionMetadata::slotOf()`) while its deciding key holds
   nothing, and as exactly the chosen variant's map once it does — or
-  from the start, when the context locks the deciding key. The deciding
+  from the start, when the context locks the deciding key. That is an
+  ordinary refinement under the rule that `any` may become anything
+  narrower, not a mechanism of its own. The deciding
   key gains a Choice over the variants' values, checked narrower than
   any list it already had, and becomes a refinement dependency of the
   slot, so the form rebuilds on it over AJAX and the discard cascade
@@ -570,6 +599,46 @@ What that means, end to end:
 
 An alter cannot attach yet (its keys are mounted under its module), and
 neither can an output; both are refused by name.
+
+### Derived variants
+
+A slot's deciding values may come from somewhere no surface class
+answers for. Most field types declare no settings surface, and yet each
+one's settings are described already, by its config schema. A service
+tagged `data_surface.derived_variants` implementing
+`SurfaceBuild\DerivedVariantsInterface` fills one open slot for the
+values no `#[SurfaceVariant]` fills:
+
+- `slot()` names the surface class and the slot's key;
+- `source()` says, in one phrase, where the variants come from, for the
+  catalogue;
+- `variants(array $declared)` returns fresh core definitions keyed by
+  key, keyed by deciding value, leaving out the values a declared
+  variant already fills.
+
+The build step seals each value's definitions into a child beside the
+declared ones, and from there it is advertised, refined, accepted and
+emitted the same way. A derived variant is a shape and nothing else: no
+class, no alters, no refiners, no target and no access class, so it is
+stored by its parent under the slot's key. A declared variant always
+wins over a derived one for the same value.
+
+`data_surface_tool` ships `FieldSettingsSchemaVariants`, which fills
+`FieldInstanceSurface`'s `settings` slot from
+`field.field_settings.<field type>` for every field type offered in the
+UI. So the field tools offer a plain `string` or `integer` field as
+they offer an address field, with what the schema says and nothing
+more: its keys, their types and labels, and the field type's own
+default settings where their type fits. The catalogue lists the
+declared variants per slot, and says where the derived ones come from.
+
+### A child that cannot be listed
+
+A slot covers a child chosen from a set of values someone can name. A
+child whose shape cannot be enumerated at all is the one case for a
+`#[RefinesInput]` method on an `any` key that returns the narrower
+definition itself, a map included. No verb is needed for it: `any` may
+become anything narrower, and the method is an ordinary refiner.
 
 ## Not built yet
 

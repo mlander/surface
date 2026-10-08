@@ -10,7 +10,7 @@ use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\Url;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Form\DataSurfaceFormCosmeticsInterface;
-use Drupal\data_surface\Form\DataSurfaceProviderForm;
+use Drupal\data_surface\Form\DataSurfaceSituationForm;
 use Drupal\data_surface\Pipeline\DataSurfaceResult;
 
 /**
@@ -51,7 +51,7 @@ final class NodeTypeSurfaceFormCosmetics implements DataSurfaceFormCosmeticsInte
    * pushed after them at weight 20.
    */
   public function alterSurfaceForm(array $form, DataSurfaceInterface $surface, FormStateInterface $form_state, string $operation, ?string $subject): array {
-    $key = DataSurfaceProviderForm::SURFACE_KEY;
+    $key = DataSurfaceSituationForm::SURFACE_KEY;
     $form[$key]['additional_settings'] = [
       '#type' => 'vertical_tabs',
       '#weight' => 10,

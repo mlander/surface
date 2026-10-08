@@ -6,6 +6,7 @@ namespace Drupal\data_surface\Surface;
 
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\Core\TypedData\MapDataDefinition;
 
 /**
  * What anyone may do to a shape: add to it.
@@ -63,6 +64,9 @@ interface ShapeAdditionsInterface {
   /**
    * Rewords a key anyone declared.
    *
+   * For an alter rewording a key it does not own. An owner words its own
+   * keys with the core setters on what add() and attach() return.
+   *
    * Label and description only: the one change to an existing key an
    * alter may make, because it changes nothing about what is accepted.
    * Type, presence and width stay the owner's; tightening is a
@@ -95,24 +99,30 @@ interface ShapeAdditionsInterface {
    * and validated by the child in its own frame; a parent cannot refine
    * into it and it cannot watch a parent key.
    *
+   * Returns the map definition at the key, as add() returns its
+   * definition, so the owner labels and describes it with the core
+   * setters. The child fills its properties when it is built.
+   *
    * @param string $key
    *   The key the subsurface sits at.
    * @param class-string<\Drupal\data_surface\Surface\SurfaceInterface> $child
    *   The subsurface.
    *
-   * @return $this
+   * @return \Drupal\Core\TypedData\MapDataDefinition
+   *   The map at the key, already part of the shape.
    *
    * @throws \LogicException
    *   When the key is already declared, or (for an alter, or for
    *   outputs) not yet built: see the SKETCH GAP notes in the adapters.
    */
-  public function attach(string $key, string $child): static;
+  public function attach(string $key, string $child): MapDataDefinition;
 
   /**
    * Offers more values on a key someone else declared, as an alter.
    *
-   * The one widening an alter may make, and only of a key whose owner
-   * declared a list of allowed values: the values are added to that list
+   * The one widening verb, and only of a key whose owner declared a fixed
+   * list of allowed values. Nothing removes: an alter cannot take a key
+   * or a value away from its owner. The values are added to that list
    * under the alter's module, which answers for them. A #[RefinesInput]
    * method of the same alter on the same key narrows only what the alter
    * added, never the owner's values, and the owner's methods never see

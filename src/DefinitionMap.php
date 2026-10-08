@@ -61,30 +61,21 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    *
    * @param \Drupal\data_surface\SurfaceEntry[] $entries
    *   The entries, in the order the surface declares them.
-   * @param string[]|null $dependency_names
-   *   The names a refinement edge may point at, for a map whose edges
-   *   leave it. NULL, the ordinary case, means an edge names a sibling
-   *   in this same map. An output map passes the input map's names,
-   *   because an output refines against the values the surface
-   *   accepted and never against another output.
    *
    * @throws \InvalidArgumentException
    *   When two entries share a name, or a refinement edge names a key
    *   nothing declares.
    */
-  public function __construct(array $entries, ?array $dependency_names = NULL) {
+  public function __construct(array $entries) {
     foreach ($entries as $entry) {
       if (isset($this->entries[$entry->name])) {
         throw new \InvalidArgumentException(sprintf('The surface key "%s" is declared twice.', $entry->name));
       }
       $this->entries[$entry->name] = $entry;
     }
-    $declared = $dependency_names === NULL
-      ? $this->entries
-      : array_fill_keys($dependency_names, TRUE);
     foreach ($this->entries as $name => $entry) {
       foreach ($entry->dependencies as $dependency) {
-        if (!isset($declared[$dependency])) {
+        if (!isset($this->entries[$dependency])) {
           throw new \InvalidArgumentException(sprintf('Refinement dependency "%s" of "%s" is not a surface definition.', $dependency, $name));
         }
       }
@@ -109,16 +100,10 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    *   The keys whose value the surface fixes.
    * @param string $contributor
    *   Who introduced these keys.
-   * @param array<string, array<string, array<\Drupal\data_surface\DataSurfaceRefinerInterface|\Drupal\data_surface\DataSurfaceOutputRefinerInterface>>> $refiners
-   *   Refiner chains keyed by target key, then by contributor. Input
-   *   refiners for a surface's definitions, output refiners for its
-   *   outputs; one map type serves both, and each half only ever holds
-   *   the kind its own builder put there.
+   * @param array<string, array<string, array<\Drupal\data_surface\DataSurfaceRefinerInterface>>> $refiners
+   *   Refiner chains keyed by target key, then by contributor.
    * @param array<string, array<string, array>> $contributions
    *   Contributed values keyed by surface key, then by provider.
-   * @param string[]|null $dependency_names
-   *   The names a refinement edge may point at, or NULL when an edge
-   *   names a sibling of this same map.
    * @param array<string, \Drupal\data_surface\SurfaceAttachment> $attachments
    *   The child surfaces fixed at keys, keyed by surface key.
    * @param array<string, \Drupal\data_surface\SurfaceSlot> $slots
@@ -137,7 +122,6 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
     string $contributor = DataSurfaceInterface::OWNER,
     array $refiners = [],
     array $contributions = [],
-    ?array $dependency_names = NULL,
     array $attachments = [],
     array $slots = [],
   ): static {
@@ -165,7 +149,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
         slot: $slots[$name] ?? NULL,
       );
     }
-    return new static($entries, $dependency_names);
+    return new static($entries);
   }
 
   /**

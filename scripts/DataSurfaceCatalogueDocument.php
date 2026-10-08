@@ -90,6 +90,9 @@ final class DataSurfaceCatalogueDocument {
         }
         $document .= implode(', ', $filled) . ".\n";
       }
+      foreach ($surface['derived'] as $key => $source) {
+        $document .= "\n- Slot `" . $key . '` is filled, for every other value, by variants derived from ' . $source . ".\n";
+      }
     }
     return $document;
   }

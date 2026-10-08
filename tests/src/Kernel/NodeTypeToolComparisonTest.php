@@ -9,7 +9,7 @@ use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\data_surface\Form\DataSurfaceProviderForm;
+use Drupal\data_surface\Form\DataSurfaceSituationForm;
 use Drupal\data_surface_demo_extras\NodeTypeReviewSettings;
 use Drupal\data_surface_demo_node_type\Surface\NodeTypeSurface;
 use Drupal\data_surface_tool\Plugin\Derivative\SurfaceSituationToolDeriver;
@@ -522,8 +522,8 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
    */
   public function testSurfaceFormRendersTheExtension(): void {
     $this->serveSurfaceAddRoute();
-    $form = $this->container->get('form_builder')->getForm(DataSurfaceProviderForm::class);
-    $extras = $form[DataSurfaceProviderForm::SURFACE_KEY]['third_party_settings'][self::EXTRAS];
+    $form = $this->container->get('form_builder')->getForm(DataSurfaceSituationForm::class);
+    $extras = $form[DataSurfaceSituationForm::SURFACE_KEY]['third_party_settings'][self::EXTRAS];
     $deadline = $extras[NodeTypeReviewSettings::DEADLINE];
     $this->assertSame('number', $deadline[NodeTypeReviewSettings::AMOUNT]['#type']);
     $this->assertSame('select', $deadline[NodeTypeReviewSettings::UNIT]['#type']);
@@ -821,7 +821,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
   protected function submitSurfaceForm(string $type, string $amount, string $unit, string $tags): FormStateInterface {
     $form_state = new FormState();
     $form_state->setValues([
-      DataSurfaceProviderForm::SURFACE_KEY => [
+      DataSurfaceSituationForm::SURFACE_KEY => [
         'name' => ucfirst($type),
         'type' => $type,
         'title_label' => 'Title',
@@ -837,7 +837,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
         ],
       ],
     ]);
-    $this->container->get('form_builder')->submitForm(DataSurfaceProviderForm::class, $form_state);
+    $this->container->get('form_builder')->submitForm(DataSurfaceSituationForm::class, $form_state);
     return $form_state;
   }
 

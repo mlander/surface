@@ -9,32 +9,27 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Target\SettingsShapeInterface;
 
 /**
- * The mutable stage a surface passes through before it is advertised.
+ * The mutable stage a surface passes through before it is sealed.
  *
- * Build time is when widening is legal: other modules may add
- * definitions, extend choices, mount namespaced third-party settings,
- * and register refiners — nothing has been advertised yet, so every
- * consumer sees the identical post-alter surface. seal() produces the
- * immutable surface; from that point on only narrowing refinement may
- * act, and every mutator on this interface throws.
+ * The engine under the build step. Surfaces writes an owner's shape, its
+ * alters' additions, the context and the bound #[RefinesInput] methods
+ * into one of these, then seals it; nothing an author writes holds one.
+ * ShapeInterface and ShapeAdditionsInterface are the author's view of
+ * it, and each of their verbs lands on a method here.
  *
- * Every addition made here is a contribution, and it is recorded under
- * the name of whoever made it. That is what lets refinement be shared:
- * a contributor's refiners narrow the values that contributor added and
- * nothing else, and the refined surface is the union of what each
- * contribution narrowed to. The owner is simply the first contributor —
- * its own definitions, refinement map and refiner are contribution
- * number one — which is why nothing on this interface asks it to name
- * itself.
+ * Every addition is a contribution recorded under the name of whoever
+ * made it, which is what lets refinement be shared: a contributor's
+ * refiners narrow the values that contributor added and nothing else,
+ * and the refined surface is the union of what each contribution
+ * narrowed to. The owner is the first contributor.
  *
- * A builder is single use. seal() is idempotent — it answers with the
- * same surface however often it is called — and the factory refuses a
- * builder that has already been sealed, so one builder can never
- * advertise two different surfaces or dispatch the build event twice.
+ * A builder is single use. seal() is idempotent, and every mutator
+ * throws once it has run.
  *
- * @see \Drupal\data_surface\DataSurfaceFactoryInterface
- * @see \Drupal\data_surface\Event\DataSurfaceBuildEvent
+ * @see \Drupal\data_surface\SurfaceBuild\Surfaces
  * @see docs/refinement.md
+ *
+ * @internal
  */
 interface DataSurfaceBuilderInterface {
 
@@ -63,8 +58,8 @@ interface DataSurfaceBuilderInterface {
   /**
    * Adds or replaces a definition.
    *
-   * Provider/host territory: third parties adding new keys should mount
-   * them under their namespace with setThirdPartyDefinition() instead.
+   * The owner's verb: an alter adding keys mounts them under its
+   * module with setThirdPartyDefinition() instead.
    *
    * @param string $name
    *   The surface key.
@@ -77,52 +72,6 @@ interface DataSurfaceBuilderInterface {
    *   When the builder is already sealed.
    */
   public function setDefinition(string $name, DataDefinitionInterface $definition): static;
-
-  /**
-   * Adds or replaces the property definitions of a complex definition.
-   *
-   * The companion to setDefinition() for maps. Core's MapDataDefinition
-   * takes only its own definition array in its constructor and gains its
-   * properties through a setter, so a map arrives from its constructor
-   * with no properties at all. This is where they are supplied — before
-   * seal, so subscribers and every later consumer see the complete map
-   * rather than one the host filled in afterwards.
-   *
-   * Existing properties of the same name are replaced; properties the
-   * definition already carries under other names are kept.
-   *
-   * @param string $key
-   *   The surface key naming the map definition.
-   * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $property_definitions
-   *   The property definitions, keyed by property name.
-   *
-   * @return $this
-   *
-   * @throws \InvalidArgumentException
-   *   When the key is unknown or its definition takes no properties.
-   * @throws \LogicException
-   *   When the builder is already sealed.
-   */
-  public function setPropertyDefinitions(string $key, array $property_definitions): static;
-
-  /**
-   * Adds or replaces one property of a complex definition.
-   *
-   * @param string $key
-   *   The surface key naming the map definition.
-   * @param string $property
-   *   The property name within it.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition describing that property.
-   *
-   * @return $this
-   *
-   * @throws \InvalidArgumentException
-   *   When the key is unknown or its definition takes no properties.
-   * @throws \LogicException
-   *   When the builder is already sealed.
-   */
-  public function setPropertyDefinition(string $key, string $property, DataDefinitionInterface $definition): static;
 
   /**
    * Sets the default value for a key.
@@ -285,8 +234,8 @@ interface DataSurfaceBuilderInterface {
    * Adds or replaces an output definition.
    *
    * What the host's execution emits, declared in the same vocabulary as
-   * what it accepts. Provider/host territory, exactly as setDefinition()
-   * is: a third party adding an output of its own mounts it under its
+   * what it accepts. The owner's verb, exactly as setDefinition() is: an
+   * alter adding an output of its own mounts it under its
    * namespace with setThirdPartyOutputDefinition() instead, and never
    * replaces one the owner declared — a consumer reading the owner's
    * output schema has to keep reading true.
@@ -373,53 +322,6 @@ interface DataSurfaceBuilderInterface {
   public function addRefinement(string $target, array $dependencies): static;
 
   /**
-   * Declares that an output refines against input values.
-   *
-   * The dependencies are *input* keys: what a host emits is decided by
-   * what it was given, and an output never refines against another
-   * output, because outputs are produced in one act by code that
-   * already knows all of them.
-   *
-   * @param string $output
-   *   The output key whose definition is refined.
-   * @param array $dependencies
-   *   The input keys it is refined against.
-   *
-   * @return $this
-   *
-   * @throws \LogicException
-   *   When the builder is already sealed.
-   */
-  public function addOutputRefinement(string $output, array $dependencies): static;
-
-  /**
-   * Appends a refiner to an output's chain.
-   *
-   * Links run in registration order, the owner's first, each receiving
-   * the previous link's output, and every link is held to the narrowing
-   * contract against what it was handed.
-   *
-   * There is no option-space division here, unlike the input side: an
-   * output's value space has exactly one owner, because a contributor
-   * cannot extend an output's choices — it mounts an output of its own
-   * instead. So there is nothing to divide and nothing to take a union
-   * of, and a chain is a chain.
-   *
-   * @param string $output
-   *   The output key whose definition is refined.
-   * @param \Drupal\data_surface\DataSurfaceOutputRefinerInterface $refiner
-   *   The refiner to append.
-   * @param string|null $contributor
-   *   The provider this refiner speaks for, or NULL for the owner.
-   *
-   * @return $this
-   *
-   * @throws \LogicException
-   *   When the builder is already sealed.
-   */
-  public function addOutputRefiner(string $output, DataSurfaceOutputRefinerInterface $refiner, ?string $contributor = NULL): static;
-
-  /**
    * Appends a refiner to one contribution's chain for a target.
    *
    * A chain narrows one contribution's own slice of the target: the
@@ -450,25 +352,6 @@ interface DataSurfaceBuilderInterface {
   public function addRefiner(string $target, DataSurfaceRefinerInterface $refiner, ?string $contributor = NULL): static;
 
   /**
-   * Registers a policy filter, which runs last and may only remove.
-   *
-   * The third role: a filter speaks for the site rather than for a
-   * contribution, so it sees every key after every contribution has been
-   * merged in, and is held to remove-only against what it was handed. Use
-   * it for "this installation does not allow that", never for "my module
-   * prefers".
-   *
-   * @param \Drupal\data_surface\DataSurfaceFilterInterface $filter
-   *   The filter to register.
-   *
-   * @return $this
-   *
-   * @throws \LogicException
-   *   When the builder is already sealed.
-   */
-  public function addFilter(DataSurfaceFilterInterface $filter): static;
-
-  /**
    * Declares what the surface being built depends on.
    *
    * A surface is computed from live site state, so it can only be reused
@@ -488,14 +371,6 @@ interface DataSurfaceBuilderInterface {
    *   When the builder is already sealed.
    */
   public function addCacheableDependency(CacheableDependencyInterface $dependency): static;
-
-  /**
-   * Returns whether the builder has been sealed.
-   *
-   * @return bool
-   *   TRUE once seal() has run, after which every mutator throws.
-   */
-  public function isSealed(): bool;
 
   /**
    * Fixes a child surface at a key: a subsurface.
@@ -572,20 +447,15 @@ interface DataSurfaceBuilderInterface {
    * order, and checked once for the rest of its shape.
    *
    * The outputs become a second map of the same type, holding whatever
-   * the host declared it emits. Its entries carry no locked flag and no
-   * contributed values, and their dependency edges name *input* keys,
-   * which is checked here against the input map: an output refining
-   * against something the surface never accepts could not be refined at
-   * all.
+   * the owner and its alters declared it emits. Its entries carry no
+   * locked flag, no contributed values and no refiners: outputs are
+   * never refined.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The advertised surface.
    *
    * @throws \LogicException
    *   When a key refines, directly or indirectly, against itself.
-   * @throws \InvalidArgumentException
-   *   When an output refinement names an output, or an input key the
-   *   surface does not declare.
    */
   public function seal(): DataSurfaceInterface;
 

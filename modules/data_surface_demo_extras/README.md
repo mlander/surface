@@ -20,8 +20,7 @@ carrying `#[AltersSurface(DemoFormatterSurface::class)]`. Nothing
 registers it; discovery finds it and builds it as an autowired service.
 Nothing here alters a form, and every consumer of the surface — form,
 validation, defaults, and any machine-readable contract — sees the same
-extended surface. (Until step 4 of the rework this was a build event
-subscriber in the old spelling; the module has none left.)
+extended surface.
 
 The contribution is the part worth reading twice. The value is added at
 build time, so it is part of what the surface advertises rather than
@@ -38,10 +37,10 @@ narrowed to:
 | `uppercase` | bold, strong | ribbon | bold, strong, ribbon |
 | `lowercase` | quiet, muted | none | quiet, muted |
 
-## The demo block, in the new spelling
+## The demo block
 
 The demo block's configuration is a surface class,
-`DemoBlockSurface`, and this module alters it the new way: one class in
+`DemoBlockSurface`, and this module alters it the same way: one class in
 `src/SurfaceAlter`, `DemoBlockAlter`, carrying
 `#[AltersSurface(DemoBlockSurface::class)]`. Nothing registers it;
 discovery finds it and builds it as an autowired service.

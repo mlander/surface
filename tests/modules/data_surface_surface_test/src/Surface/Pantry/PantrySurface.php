@@ -49,8 +49,9 @@ final class PantrySurface implements SurfaceInterface {
       ->addConstraint('Choice', ['choices' => ['jar', 'tin', 'sack']]);
     $inputs->attach('shelf', ShelfSurface::class);
     $inputs->attach('label', LabelSurface::class);
-    $inputs->attachBy('kind_settings', by: 'kind');
-    $inputs->describe('kind_settings', label: 'Kind settings', description: 'What the kind of container needs.');
+    $inputs->attachBy('kind_settings', by: 'kind')
+      ->setLabel('Kind settings')
+      ->setDescription('What the kind of container needs.');
   }
 
 }

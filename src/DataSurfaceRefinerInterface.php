@@ -9,13 +9,18 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 /**
  * Narrows data definitions against known sibling values.
  *
+ * The engine's link in a refiner chain. Nothing an author writes
+ * implements it: the build step binds each class's #[RefinesInput]
+ * methods as one RefinesInputRefiner, which is the implementation.
+ *
  * The narrowing contract: a refiner may tighten constraints, supply a
  * concrete option list, or sharpen a description — but the refined
  * definition must accept only values the one it was handed already
  * accepted. Changing the data type is refused (except from 'any', the
  * declared escape hatch for definitions whose type itself depends on
- * sibling values), as is turning required off, removing a constraint, or
- * replacing one whose options cannot be compared. The contract is
+ * sibling values, and to a derivative of the type), as is turning
+ * required off, removing a constraint, or replacing one whose options
+ * cannot be compared. The contract is
  * enforced by DataSurface::refine() on every link, not trusted.
  *
  * A refiner narrows one contribution. The surface's owner gets the
@@ -34,8 +39,10 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
  * in core's words.
  *
  * @see \Drupal\data_surface\DataSurfaceBuilderInterface::addRefiner()
- * @see \Drupal\data_surface\DataSurfaceFilterInterface
+ * @see \Drupal\data_surface\SurfaceBuild\RefinesInputRefiner
  * @see docs/refinement.md
+ *
+ * @internal
  */
 interface DataSurfaceRefinerInterface {
 

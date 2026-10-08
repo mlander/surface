@@ -7,13 +7,10 @@ namespace Drupal\data_surface_test\Plugin\Field\FieldType;
 use Drupal\Core\Field\Attribute\FieldType;
 use Drupal\Core\Field\Plugin\Field\FieldType\StringItem;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\data_surface\DataSurfaceBuilderInterface;
-use Drupal\data_surface\DataSurfaceDeclarationInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Form\DataSurfaceFieldTypeTrait;
 use Drupal\data_surface\Form\FieldSurfaceProviderInterface;
+use Drupal\data_surface\Surface\Attribute\UsesSurface;
+use Drupal\data_surface_test\Surface\SecretFieldSettingsSurface;
 
 /**
  * A field type with one secret instance setting and one ordinary one.
@@ -30,12 +27,10 @@ use Drupal\data_surface\Form\FieldSurfaceProviderInterface;
  * generic wiring in FieldSettingsTarget and not something this fixture
  * arranged.
  *
- * The flag is written onto the definition with
- * DefinitionMetadata::setSecret(), beside the defaults the builder
- * writes, because both are metadata core's definitions have no methods
- * for yet.
+ * The settings are SecretFieldSettingsSurface, named with
+ * #[UsesSurface], whose token carries the secret flag.
  *
- * @see \Drupal\data_surface\DefinitionMetadata::setSecret()
+ * @see \Drupal\data_surface_test\Surface\SecretFieldSettingsSurface
  */
 #[FieldType(
   id: 'data_surface_secret',
@@ -45,42 +40,16 @@ use Drupal\data_surface\Form\FieldSurfaceProviderInterface;
   default_widget: 'string_textfield',
   default_formatter: 'string',
 )]
-class SurfaceSecretItem extends StringItem implements FieldSurfaceProviderInterface, DataSurfaceDeclarationInterface {
+#[UsesSurface(SecretFieldSettingsSurface::class)]
+class SurfaceSecretItem extends StringItem implements FieldSurfaceProviderInterface {
 
   use DataSurfaceFieldTypeTrait;
 
   /**
    * {@inheritdoc}
    */
-  public static function declareDataSurface(DataSurfaceBuilderInterface $builder): void {
-    $builder->setDefinition('endpoint', DataDefinition::create('string')
-      ->setLabel(new TranslatableMarkup('Endpoint'))
-      ->setDescription(new TranslatableMarkup('Where this field sends its values.')));
-    $builder->setDefault('endpoint', '');
-
-    $token = DataDefinition::create('string')
-      ->setLabel(new TranslatableMarkup('API key'))
-      ->setDescription(new TranslatableMarkup('The key this field authenticates with.'));
-    DefinitionMetadata::setSecret($token);
-    $builder->setDefinition('token', $token);
-    $builder->setDefault('token', '');
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public static function defaultFieldSettings(): array {
     return static::surfaceDefaultFieldSettings(static::class) + parent::defaultFieldSettings();
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getFieldSurface(string $operation = FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS, ?string $subject = NULL): DataSurfaceInterface {
-    // The field item is bound to one field config entity, so it is its
-    // own subject and a caller naming another has the wrong item.
-    $this->surfaceSelfSubject($subject);
-    return $this->declaredSurface('field_type:data_surface_secret');
   }
 
 }

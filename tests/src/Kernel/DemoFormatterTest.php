@@ -13,7 +13,6 @@ use Drupal\data_surface\Pipeline\Omitted;
 use Drupal\data_surface\Surface\Attribute\UsesSurface;
 use Drupal\data_surface_demo\Plugin\Field\FieldFormatter\DataSurfaceDemoFormatter;
 use Drupal\data_surface_demo\Surface\DemoFormatterSurface;
-use Drupal\data_surface_test\EventSubscriber\TestSurfaceSubscriber;
 use Drupal\entity_test\Entity\EntityTest;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
@@ -303,44 +302,6 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that a policy filter may take an option out of the union.
-   */
-  public function testPolicyFilterRemovesFromTheUnion(): void {
-    $this->container->get('state')->set(TestSurfaceSubscriber::FILTER_STATE, [
-      'key' => 'variant',
-      'remove' => ['strong'],
-    ]);
-
-    $surface = $this->createFormatter()->getDataSurface();
-
-    // The filter sees every key, so it applies to the advertisement as
-    // well as to anything refinement narrowed it to.
-    $this->assertSame(['bold', 'quiet', 'muted', 'ribbon'], $this->variants($surface->refine([])));
-    $this->assertSame(['bold', 'ribbon'], $this->variants($surface->refine(['casing' => 'uppercase'])));
-    $this->assertContains(
-      'variant',
-      $this->pipeline()->validate($surface, ['casing' => 'uppercase', 'variant' => 'strong'])->keys(),
-    );
-  }
-
-  /**
-   * Tests that a policy filter putting a value back is refused.
-   */
-  public function testPolicyFilterMayNotWiden(): void {
-    $this->container->get('state')->set(TestSurfaceSubscriber::FILTER_STATE, [
-      'key' => 'variant',
-      'remove' => [],
-      'add' => ['sash'],
-    ]);
-
-    $surface = $this->createFormatter()->getDataSurface();
-
-    $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('the LabeledChoice constraint gained the values sash');
-    $surface->refine(['casing' => 'uppercase']);
-  }
-
-  /**
    * Reads the values a refined surface offers for the variant key.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
@@ -420,7 +381,7 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
     $classes = $outputs->get('classes');
     $this->assertInstanceOf(ListDataDefinition::class, $classes);
     $this->assertArrayNotHasKey('Choice', $classes->getItemDefinition()->getConstraints());
-    $refined = $surface->refineOutputs(['variant' => 'bold'])
+    $refined = $surface->refine(['casing' => 'uppercase', 'variant' => 'bold'])
       ->getOutputDefinitions()->get('classes');
     $this->assertInstanceOf(ListDataDefinition::class, $refined);
     $this->assertArrayNotHasKey('Choice', $refined->getItemDefinition()->getConstraints());
@@ -471,7 +432,7 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
       $emitted[$delta] = $formatter->formatValue($item, $settings);
       $this->assertCount(
         0,
-        $this->pipeline()->conformOutput($surface, $emitted[$delta], $settings),
+        $this->pipeline()->conformOutput($surface, $emitted[$delta]),
         'Delta ' . $delta . ' conforms.',
       );
     }
@@ -498,11 +459,7 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
 
     $this->assertTrue(Omitted::is($data['classes']));
     $this->assertSame(['text' => 'plain'], Omitted::strip($data));
-    $this->assertCount(0, $this->pipeline()->conformOutput(
-      $formatter->getDataSurface(),
-      $data,
-      $formatter->getSettings(),
-    ));
+    $this->assertCount(0, $this->pipeline()->conformOutput($formatter->getDataSurface(), $data));
   }
 
   /**

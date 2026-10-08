@@ -23,10 +23,9 @@ use Drupal\data_surface\Pipeline\ViolationSummary;
  * top, which is why adopters set the configuration property from the
  * accepted values instead of calling a host's own deep or shallow merge.
  *
- * The surface is built once per instance and coordinate. The host calls
- * these three methods freely and each of them needs the surface, so
- * building on every call meant dispatching the build event several times
- * for one submit; memoizedDataSurface() says why nothing invalidates it.
+ * The surface is built once per instance. The host calls these three
+ * methods freely and each of them needs the surface;
+ * memoizedDataSurface() says why nothing invalidates it.
  *
  * The configuration property is declared here without a type or an
  * initial value on purpose: core's PluginBase already declares it
@@ -49,60 +48,39 @@ trait DataSurfaceConfigurationTrait {
   protected $configuration;
 
   /**
-   * The surfaces this instance has already built, keyed by coordinate.
-   *
-   * Keyed by operation and then by subject, which is the pair a surface
-   * is asked for: two coordinates are two surfaces even when one object
-   * answers for both. The empty string stands for the NULL subject,
-   * because an array key cannot be NULL.
-   *
-   * @var array<string, array<string, \Drupal\data_surface\DataSurfaceInterface>>
+   * The surface this instance has already built, once it has.
    */
-  protected array $memoizedDataSurfaces = [];
+  protected ?DataSurfaceInterface $memoizedDataSurface = NULL;
 
   /**
    * Builds the surface describing this object's values.
    *
-   * @param string $operation
-   *   The host operation the surface is wanted for.
-   * @param string|null $subject
-   *   The id of the thing the operation is about, or NULL when the
-   *   provider is its own subject.
-   *
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The surface.
    */
-  abstract public function getDataSurface(string $operation = 'configure', ?string $subject = NULL): DataSurfaceInterface;
+  abstract public function getDataSurface(): DataSurfaceInterface;
 
   /**
-   * Gets this instance's surface, built at most once per coordinate.
+   * Gets this instance's surface, built at most once.
    *
    * Every method in this trait needs the surface, and the host calls
-   * them freely: one block submit asked for the configuration three
-   * times and dispatched the build event three times with it, so three
-   * sets of subscribers ran and any of them could have disagreed with
-   * the others. Building once per instance and coordinate makes the
-   * advertisement stable for the life of the object, which is what
-   * "the surface is the single authority" has to mean in practice.
+   * them freely: one block submit asks for the configuration three
+   * times. Building once per instance makes the advertisement stable for
+   * the life of the object, which is what "the surface is the single
+   * authority" has to mean in practice.
    *
    * Nothing invalidates this. A surface is a per-request description: it
    * is built from live site state at the moment it is asked for, and the
    * request that would need a different one is the next request, with a
    * new instance. A host whose state changes underneath it mid-request —
-   * a test installing a module between two calls, say — asks the factory
-   * itself rather than going through this trait.
-   *
-   * @param string $operation
-   *   The host operation the surface is wanted for.
-   * @param string|null $subject
-   *   The id of the thing the operation is about, or NULL when the
-   *   provider is its own subject.
+   * a test installing a module between two calls, say — asks the build
+   * step itself rather than going through this trait.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The surface.
    */
-  protected function memoizedDataSurface(string $operation = 'configure', ?string $subject = NULL): DataSurfaceInterface {
-    return $this->memoizedDataSurfaces[$operation][(string) $subject] ??= $this->getDataSurface($operation, $subject);
+  protected function memoizedDataSurface(): DataSurfaceInterface {
+    return $this->memoizedDataSurface ??= $this->getDataSurface();
   }
 
   /**

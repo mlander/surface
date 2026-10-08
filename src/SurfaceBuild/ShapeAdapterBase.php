@@ -21,9 +21,9 @@ use Drupal\data_surface\Surface\ShapeAdditionsInterface;
  * once.
  *
  * Adding is never replacing. The builder's own setters replace silently,
- * because the old spelling's owner and subscribers legitimately rewrite a
- * definition; in the new spelling nothing may change what was declared,
- * so a second add of one key is refused naming it.
+ * because the build step itself rewrites a definition (a context's lock,
+ * a build-time refiner's result); nothing an author writes may change
+ * what was declared, so a second add of one key is refused naming it.
  *
  * @internal
  */
@@ -99,10 +99,10 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
   /**
    * {@inheritdoc}
    */
-  public function attach(string $key, string $child): static {
-    $this->reserveSubsurface('attach', $key);
+  public function attach(string $key, string $child): MapDataDefinition {
+    $shell = $this->reserveSubsurface('attach', $key);
     $this->attachments[$key] = $child;
-    return $this;
+    return $shell;
   }
 
   /**
@@ -181,20 +181,25 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
    *
    * The child is built after the context is applied, so the key is
    * declared now as an empty map: that keeps it where defineInputs()
-   * put it, and gives describe() a definition to word.
+   * put it, and is what attach() and attachBy() hand back for the owner
+   * to label and describe with the core setters. The engine keeps that
+   * same map as the shell the child is advertised in.
    *
    * @param string $verb
    *   attach or attachBy, for the message.
    * @param string $key
    *   The key.
    *
+   * @return \Drupal\Core\TypedData\MapDataDefinition
+   *   The map at the key.
+   *
    * @throws \LogicException
    *   When the key is taken, or this shape cannot hold a subsurface.
    */
-  protected function reserveSubsurface(string $verb, string $key): void {
+  protected function reserveSubsurface(string $verb, string $key): MapDataDefinition {
     if ($this->outputs) {
       // phpcs:ignore Drupal.Files.LineLength.TooLong
-      // SKETCH GAP: the sketch lets an output vary by an input through attachBy() on outputs; the engine's output map has no subsurfaces yet, so attaching on outputs is refused in step 2.
+      // SKETCH GAP: the sketch lets an output vary by an input through attachBy() on outputs; the engine's output map has no subsurfaces, so attaching on outputs is refused.
       throw new \LogicException(sprintf('%s() cannot place a subsurface at the output "%s": outputs do not hold subsurfaces yet.', $verb, $key));
     }
     if (in_array($key, $this->declared(), TRUE) || $this->isDeclared($key)) {
@@ -203,9 +208,9 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
         $key,
       ));
     }
-    // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch's attach() and attachBy() take a key and classes, with no label; the key is an unlabeled map until the owner words it with describe(), and a surface class carries no label of its own to borrow.
-    $this->declare($key, MapDataDefinition::create(), NULL);
+    $shell = MapDataDefinition::create();
+    $this->declare($key, $shell, NULL);
+    return $shell;
   }
 
   /**

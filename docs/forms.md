@@ -13,15 +13,19 @@ satisfy one host family's protocol using it.
 
 ## Pick your host family
 
+Every plugin family names its surface class the same way, with
+`#[UsesSurface]` on the plugin; the surface class itself is in
+[Declaring a surface](declaring-a-surface.md).
+
 | Family | Use | What you write |
 | --- | --- | --- |
-| Blocks | `Plugin\Block\DataSurfaceBlockBase` | The declaration, the refiner if you have one, `build()`. |
-| Conditions | `Plugin\Condition\DataSurfaceConditionBase` | The declaration, the refiner, `evaluate()` and `summary()`. |
-| Actions | `Plugin\Action\DataSurfaceActionBase` | The declaration, the refiner, `execute()` and `access()`. |
-| Field formatters | `Plugin\Field\FieldFormatter\DataSurfaceFormatterBase` | The declaration, the refiner, `viewElements()`. |
-| Field types | `Form\DataSurfaceFieldTypeTrait` on the item class | The declaration and `getFieldSurface()`, which takes the same operation and subject pair with `field_settings` as its verb; `getDataSurfaceTarget()` only when the storage shape differs from the input shape. |
-| Any plugin resolving a form class per operation | `Form\DataSurfacePluginForm` | Nothing at all: list the class under a `forms` key. It is named per operation, so it settles the verb at construction and hands the subject to the plugin unread. |
-| A standalone provider served at a route | `Form\DataSurfaceProviderForm` | Nothing but routing, and a cosmetic layer if the page needs one. |
+| Blocks | `Plugin\Block\DataSurfaceBlockBase` | `#[UsesSurface]`, `build()`. |
+| Conditions | `Plugin\Condition\DataSurfaceConditionBase` | `#[UsesSurface]`, `evaluate()` and `summary()`. |
+| Actions | `Plugin\Action\DataSurfaceActionBase` | `#[UsesSurface]`, `execute()` and `access()`. |
+| Field formatters | `Plugin\Field\FieldFormatter\DataSurfaceFormatterBase` | `#[UsesSurface]`, `formatValue()` or `viewElements()`. |
+| Field types | `Form\DataSurfaceFieldTypeTrait` on the item class, implementing `Form\FieldSurfaceProviderInterface` | `#[UsesSurface]` and a one-line `defaultFieldSettings()`; `getDataSurfaceTarget()` only when the storage shape differs from the input shape. The surface is built in the `field_settings` context. |
+| Any plugin resolving a form class per operation | `Form\DataSurfacePluginForm` | Nothing but `#[UsesSurface]`: list the class under a `forms` key. It is named per operation, so it settles the context's operation at construction. |
+| A surface situation served at a route | `Form\DataSurfaceSituationForm` | Nothing but routing, and a cosmetic layer if the page needs one. |
 | A standalone form of your own | Nothing | Build the container, call `submit()`. |
 
 Under those sit three traits, and it is worth knowing which is which when
@@ -87,21 +91,18 @@ spellings of one intention — a route requirement is checked when the page
 is built and the submit arrives later, so a permission revoked in between
 is caught only by the half that writes.
 
-The rule: **the provider answers, and every gate reads that answer.**
-`submitDataSurfaceForm()` passes `$this->surfaceAccess()` into
-`submit()`, so a host that has adopted the method gates its own form
-without writing a line of access code, and a host that has not (neutral,
-the default) behaves exactly as before. `data_surface_demo_node_type` is
-the worked example: `NodeTypeSurfaceProvider::surfaceAccess()` states
-what its two routes state in YAML, the operation link in the content type
-listing asks it before offering itself, and the form hands it to the
-pipeline when it writes. All three ask with the same coordinate — the
-operation `add` with no subject, or `edit` with the content type's
-machine name as its subject — which is the pair described in
-[Declaring a surface](declaring-a-surface.md#the-operation-and-subject-pair).
-Nothing in that module spells the permission twice, which is the property
-the test asserts by comparing the provider's answer to the route's for
-the same four accounts.
+The rule: **the surface answers, and every gate reads that answer.**
+`SurfacesInterface::access()` is the situation's permission and then
+the surface's access class. A plugin host's `surfaceAccess()` asks it in
+the host's context, and `submitDataSurfaceForm()` passes that into
+`submit()`, so a host gates its own form without writing a line of
+access code; a surface with no access class answers neutral, and the
+host's own gates stand exactly as they stood. `data_surface_demo_node_type`
+is the worked example: its routes' `_data_surface_situation_access`
+requirement, the operation link in the content type listing, the
+situation form on its way in and out, and the generated tool all ask
+`NodeTypeSurface`'s access in the same situation, so nothing in that
+module spells the permission twice.
 
 An access refusal has no element to be flagged on — it belongs to the run
 rather than to a value — so `flagSurfaceErrors()` reports it as a
@@ -403,93 +404,84 @@ Two more things these hosts force:
 
 - **Static defaults.** `defaultSettings()` is static and cannot consult
   an instance surface. `DataSurfaceHostTrait::surfaceDeclaredDefaults()`
-  answers it from the class's `declareDataSurface()`, which is a static
-  method for exactly this reason: it fills a builder, seals it on the
-  spot with no factory and no build event, and reads the defaults off
-  it. A class whose surface is built at runtime overrides
-  `defaultSettings()` itself, and the helper throws a clear message
-  rather than returning a quietly empty array.
+  answers it from the class's `#[UsesSurface]`, which is readable with
+  no instance: `SurfacesInterface::defaults()` runs the surface's own
+  `defineInputs()` alone, with no alter, context or refiner, and reads
+  the defaults off it. A class that names no surface is refused with a
+  clear message rather than answered with a quietly empty array.
 - **Pruning.** `EntityDisplayBase::setComponent()` runs values through
   the formatter manager's `prepareConfiguration()`, which intersects them
   with `defaultSettings()`. Keys mounted onto the surface at build time
   must therefore appear in that static array too, which is why
   `surfaceDefaultSettings()` always declares `third_party_settings`.
 
-## The generic provider form
+## The situation form
 
-`Form\DataSurfaceProviderForm` serves a surface from the route alone, in
-two spellings.
-
-**A surface and a situation** (the new spelling). The route names the
-surface class in `_data_surface_surface` and one of its situations in
-`_data_surface_situation`; its parameters are the situation method's,
-by name, and its requirement is `_data_surface_situation_access:
-'TRUE'`, the situation's permission and then the surface's access
-class. The content type demo's two routes are this spelling, and
-[Surfaces as classes](surfaces.md#routes-from-situations) has the
-example. Everything below about cosmetics, the `surface` key and access
-twice applies to it unchanged; the cosmetic layer is told the
-situation id as its operation and the raw value of the situation's
-first route parameter as its subject.
-
-**A provider** (the old spelling, until step 5 of the rework deletes
-it). A provider answers three questions about one coordinate — surface,
-access, target — which is everything a form needs. So a standalone
-provider does not write a form class: a route names it, and the form
-does the rest. No module here ships such a route any more; the
-deprecated `NodeTypeSurfaceProvider` is still served by one in
-`DataSurfaceProviderFormTest`.
+`Form\DataSurfaceSituationForm` serves a surface in one of its
+situations from the route alone. A situation says what is known, the
+surface names its target and its access class, and that is everything a
+form needs, so a surface served at a route does not write a form class:
 
 ```yaml
 example.edit:
   path: '/admin/structure/examples/{example}/surface-edit'
   defaults:
-    _form: 'Drupal\data_surface\Form\DataSurfaceProviderForm'
+    _form: 'Drupal\data_surface\Form\DataSurfaceSituationForm'
     _title: 'Edit example'
-    _data_surface_provider: 'example.surface_provider'
-    _data_surface_operation: 'edit'
-    _data_surface_subject: 'example'
+    _data_surface_surface: 'Drupal\example\Surface\ExampleSurface'
+    _data_surface_situation: 'edit'
     _data_surface_cosmetics: 'example.surface_form_cosmetics'
   requirements:
-    _entity_access: 'example.update'
+    _data_surface_situation_access: 'TRUE'
+  options:
+    parameters:
+      example:
+        type: 'entity:example'
 ```
 
-The four defaults:
+The three defaults:
 
 | Default | Holds |
 | --- | --- |
-| `_data_surface_provider` | A service id, or a class the class resolver can instantiate. |
-| `_data_surface_operation` | The verb, from the provider's own vocabulary. Defaults to `configure`. |
-| `_data_surface_subject` | **The name of a route parameter**, not the subject. Its raw value — the string in the path, before upcasting — is the subject. Absent means the provider is its own subject. |
+| `_data_surface_surface` | The surface class, or its `#[Surface]` id. |
+| `_data_surface_situation` | One of its situation ids. |
 | `_data_surface_cosmetics` | Optional. A service id or class implementing `Form\DataSurfaceFormCosmeticsInterface`. |
 
-They are underscore-prefixed because Drupal's routing treats such
-defaults as its own: no parameter converter tries to upcast them and no
-argument resolver tries to hand them to `buildForm()`.
+The route's parameters are the situation method's, by name: an upcast
+entity parameter arrives as the entity, a plain one as its value, so
+`edit(NodeTypeInterface $type)` is served by a route with a `{type}`
+parameter upcast to a node type. The defaults are underscore-prefixed
+because Drupal's routing treats such defaults as its own: no parameter
+converter tries to upcast them and no argument resolver tries to hand
+them to `buildForm()`.
 
-The subject rule is the one worth reading twice. A route that has to
-upcast `{example}` to an entity for its own `_entity_access` requirement
-still hands the provider the plain id its contract is written in, so the
-route's access layer and the provider's vocabulary do not have to agree
-about types.
+The form builds the context with the situation, builds the surface in
+it, loads current values from the surface's composed target, and
+submits through the pipeline to that target. A locked identity key
+renders as a disabled element holding the value the situation knows,
+and extraction keeps that value whatever is posted. The form id is
+`data_surface_situation_form_<route name>`, so an alter hook can name
+one route's form and two of them on one page cannot share a form state.
+The content type demo's two routes are the worked example, and
+[Surfaces as classes](surfaces.md#routes-from-situations) shows one.
 
 The surface container is built under the `surface` key, which is
-`DataSurfaceProviderForm::SURFACE_KEY` and is part of the contract with
+`DataSurfaceSituationForm::SURFACE_KEY` and is part of the contract with
 anything that reads submitted values by path.
 
 ### Access, twice
 
-The build refuses a **forbidden** provider answer with a 403, and the
-submit hands the same answer to the pipeline. The second is the one that
-matters, for the reason in [the non-drift rule](#hosts-and-the-non-drift-rule)
-above: a route requirement is checked when the page is built and the
-submit arrives later. A route that states its gate in YAML as well —
-which `data_surface_demo_node_type` does — gets core's own access layer
-first, and the form's check is the floor under it. Neutral blocks
-nothing for a provider. For a situation it is a refusal on both halves:
-the situation owns its operation, so the form refuses anything but
-allowed on the way in and hands the pipeline a decisive answer on the
-way out, the same answer the route's own requirement gives.
+The route's requirement, `_data_surface_situation_access`, is the
+situation's permission and then the surface's access class. The form
+asks the same answer again on its way in, as the floor under the route
+for a caller that reached the form another way, and hands it to the
+pipeline on its way out. The second is the one that matters, for the
+reason in [the non-drift rule](#hosts-and-the-non-drift-rule) above: a
+route requirement is checked when the page is built and the submit
+arrives later. The situation owns its operation, so an answer with no
+opinion is a refusal on both halves, as it is on the route: the form
+refuses anything but allowed on the way in and hands the pipeline a
+decisive answer on the way out.
 
 ### The cosmetic seam
 
@@ -502,14 +494,18 @@ the whole of what a form class is still for:
 | `surfaceFormMessage()` | What the person is told. NULL for the generic sentence. |
 | `surfaceFormRedirect()` | Where they are sent. NULL to stay on the form. |
 
-A route names one, or the provider implements the interface itself when
-its presentation is the same wherever it is served from.
+A route names one, in `_data_surface_cosmetics`. Each method is told the
+situation id as the operation and the raw value of the situation's
+first route parameter — the string in the path, before upcasting — or
+`NULL` when the situation takes none.
 
 Nothing in a cosmetic layer can change what a value means. Every element
 keeps its name and its `#parents`; `#group` only relocates an element at
 render time. If you find yourself wanting to change allowed values, a
 default, or whether a key is required, that belongs on the surface —
-through [the build event](declaring-a-surface.md), not here.
+in [its class](declaring-a-surface.md), or in an
+[alter](surfaces.md#surface-alters) when it is somebody else's — not
+here.
 
 Swapping an element's `#type` for a better-looking one borrows what it
 checks along with what it draws, so clear its `#element_validate` when
@@ -519,35 +515,36 @@ with the element answers first and the surface's own violation — the one
 that names the value that was refused — is dropped in silence. The demo
 does exactly this where it borrows core's machine name element.
 
-`data_surface_demo_node_type` is the worked example: two routes, a
-provider service, a cosmetics service holding core's vertical tabs, the
-machine name's mirror-while-typing, the message and the redirect. There
-is no form class in the module at all.
+`data_surface_demo_node_type` is the worked example: two routes and a
+cosmetics service holding core's vertical tabs, the machine name's
+mirror-while-typing, the message and the redirect. There is no form
+class in the module at all.
 
 ### When a hand-written form is still right
 
 Three cases, and the demo module is the second one:
 
-1. **The page is not one provider's page.** A form collecting a surface
+1. **The page is not one situation's page.** A form collecting a surface
    beside several unrelated things — a confirmation step, a batch, an
    entity form the surface rides inside — is a form, and it composes the
-   surface builder itself.
+   surface container itself.
 2. **The surface and the destination belong to different owners.**
    `data_surface_demo` renders the demo block's surface into a
    `StateTarget`, which is exactly the claim it exists to make: a surface
-   is independent of where its values are stored. Converting it would
-   mean inventing a provider adapter that answers `getDataSurface()` for
-   a surface it does not own, which is more indirection than the three
-   delegations it would delete.
+   is independent of where its values are stored. A situation route
+   writes to the surface's own target, and the demo block's surface
+   names none, because its host stores it; serving it at a route would
+   mean giving it a destination that is not its own.
 3. **The host protocol is not a route.** Field UI, the block layout
    form, the manage display form: those are the host trait families
    above, not this.
 
 ## A standalone form
 
-A form that is not a plugin needs none of the above. Ask the provider for
-its surface, build the container, and hand the submitted values to the
-pipeline with a target:
+A form that is not a plugin needs none of the above. Get the surface —
+from a plugin's `getDataSurface()`, or from
+`SurfacesInterface::build()` with a context — build the container, and
+hand the submitted values to the pipeline with a target:
 
 Compose `DataSurfaceHostTrait` for the three collaborators — the
 pipeline, the form builder, and the in-progress AJAX input — and the
@@ -585,4 +582,4 @@ public function submitForm(array &$form, FormStateInterface $form_state): void {
 A surface plus a target is a complete configurable thing.
 `data_surface_demo` ships exactly this against a `StateTarget`, asking
 the block manager for the demo block and reading its surface rather than
-repeating the declaration — which is what any other consumer would do.
+repeating its keys — which is what any other consumer would do.

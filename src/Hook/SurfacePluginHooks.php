@@ -28,8 +28,8 @@ final class SurfacePluginHooks {
   /**
    * The plugin hosts that read #[UsesSurface], and their managers.
    *
-   * Keyed by host type, the prefix of the host ids the build event sees
-   * (`block:<plugin id>`), so the catalogue and a host agree on a name.
+   * Keyed by host type, the prefix the catalogue lists a plugin under
+   * (`block:<plugin id>`).
    */
   public const HOSTS = [
     'block' => 'plugin.manager.block',

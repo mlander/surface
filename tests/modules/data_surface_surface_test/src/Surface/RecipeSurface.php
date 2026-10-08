@@ -16,7 +16,7 @@ use Drupal\data_surface_surface_test\Access\RecipeAccess;
 use Drupal\data_surface_surface_test\Target\RecipeTarget;
 
 /**
- * A recipe in a kitchen: every part of the new spelling, in one surface.
+ * A recipe in a kitchen: every part of a surface, in one.
  *
  * Two identity keys, two situations, a target, an access class, outputs,
  * and three refiners: one watching a sibling by name, one watching two
