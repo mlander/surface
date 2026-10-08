@@ -497,8 +497,9 @@ final class SurfaceInputDefinitions {
   /**
    * Copies a definition's constraints, teaching the enum one to travel.
    *
-   * The constraints are carried across untouched, so a Drupal constraint
-   * plugin goes on validating exactly as it did on the surface. The one
+   * The constraints are carried across by name, with the same options, so
+   * a Drupal constraint plugin goes on validating exactly as it did on
+   * the surface. The one
    * addition is the enum: the Tool API's schema normalizer reads Choice
    * and AllowedValues and nothing else, so a value list declared as
    * anything else — the labeled choice constraint, an existence
@@ -520,23 +521,82 @@ final class SurfaceInputDefinitions {
    * A definition that already carries a Choice keeps it: it is its own
    * enum, and the options service would only hand back what it says.
    *
+   * Every option value is then made a scalar (scalarOptions() says how
+   * and why), so a LabeledChoice's labels travel as the strings they
+   * read as rather than as TranslatableMarkup.
+   *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition to read.
    *
    * @return array<string, mixed>
    *   The constraints, keyed by constraint name.
+   *
+   * @throws \LogicException
+   *   When an option holds an object that has no scalar spelling.
    */
   protected function constraints(DataDefinitionInterface $definition): array {
     $constraints = $definition->getConstraints();
-    if (isset($constraints[self::CHOICE])) {
-      return $constraints;
+    if (!isset($constraints[self::CHOICE])) {
+      $set = $this->options->resolve($definition);
+      if ($set !== NULL && $set->options !== []) {
+        $constraints[self::CHOICE] = ['choices' => array_keys($set->options)];
+      }
     }
-    $set = $this->options->resolve($definition);
-    if ($set === NULL || $set->options === []) {
-      return $constraints;
+    foreach ($constraints as $name => $options) {
+      $constraints[$name] = $this->scalarOptions($options, (string) $name);
     }
-    $constraints[self::CHOICE] = ['choices' => array_keys($set->options)];
     return $constraints;
+  }
+
+  /**
+   * Spells a constraint's options with scalars and arrays alone.
+   *
+   * A tool definition's constraint options are config-schema shaped:
+   * the Tool API copies them into the config schema it suggests for a
+   * tool, and Tool Explorer prints that schema with Yaml::encode(), which
+   * refuses an object. A surface's own constraints may hold objects — a
+   * LabeledChoice's labels and descriptions are TranslatableMarkup —
+   * because the surface is the PHP side and they validate the same
+   * either way. So a stringable object converts to the string it reads
+   * as, a backed enum to its value, and anything else is refused here,
+   * by name, rather than as an encoding error on a page that has nothing
+   * to do with it.
+   *
+   * What the string costs: a tool definition is cached once for every
+   * language, so a label is in the language discovery ran in. It costs
+   * nothing an invoker reads today, because the Tool API's normalizer
+   * advertises a value list from Choice alone and never these labels;
+   * the tool's own label and description stay TranslatableMarkup, which
+   * the Tool API takes as such.
+   *
+   * @param mixed $options
+   *   A constraint's options, or one value inside them.
+   * @param string $path
+   *   Where the value is, for the message.
+   *
+   * @return mixed
+   *   The same options, with no object anywhere in them.
+   *
+   * @throws \LogicException
+   *   When an object is neither stringable nor a backed enum.
+   */
+  protected function scalarOptions(mixed $options, string $path): mixed {
+    if (is_array($options)) {
+      foreach ($options as $key => $value) {
+        $options[$key] = $this->scalarOptions($value, $path . '.' . $key);
+      }
+      return $options;
+    }
+    if (!is_object($options)) {
+      return $options;
+    }
+    if ($options instanceof \BackedEnum) {
+      return $options->value;
+    }
+    if ($options instanceof \Stringable) {
+      return (string) $options;
+    }
+    throw new \LogicException(sprintf('The constraint option %s holds a %s, which a tool definition cannot carry: its constraint options are config schema, scalars and arrays only.', $path, get_class($options)));
   }
 
   /**

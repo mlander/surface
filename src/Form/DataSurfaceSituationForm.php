@@ -299,6 +299,30 @@ class DataSurfaceSituationForm extends FormBase {
   }
 
   /**
+   * {@inheritdoc}
+   *
+   * The container is this form's own top level key, so its place in the
+   * input is known before anything is processed. A browser's submission
+   * names this form's id; a programmatic one is this form by definition.
+   *
+   * An AJAX request is not a submission and is left built from what is
+   * stored, as it always was. It names its trigger in the input, and it
+   * carries a dependent the new choice has just orphaned: built against
+   * that choice, the orphan would be a choice it was never offered,
+   * which Form API reports whatever the trigger's validation limit
+   * says, and the rebuild that discards it would never run.
+   */
+  protected function surfaceSubmissionPath(FormStateInterface $state): ?array {
+    $input = $state->getUserInput();
+    if (isset($input['_triggering_element_name'])) {
+      return NULL;
+    }
+    return $state->isProgrammed() || ($input['form_id'] ?? NULL) === $this->getFormId()
+      ? [static::SURFACE_KEY]
+      : NULL;
+  }
+
+  /**
    * Gets the cosmetic layer, if this form has one.
    *
    * Named by the route alone.

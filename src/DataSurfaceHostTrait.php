@@ -274,6 +274,9 @@ trait DataSurfaceHostTrait {
   /**
    * Merges stored values with the input an AJAX rebuild is refining on.
    *
+   * Or, on the build a full submission is processed against, with what
+   * that submission sent: see surfaceSubmittedInput().
+   *
    * The one overlay every host builds its surface form from, so that the
    * order — stored underneath, in-progress edit on top — and the rule
    * for what the edit invalidates are said once rather than per host.
@@ -298,13 +301,26 @@ trait DataSurfaceHostTrait {
    */
   protected function surfaceFormValues(DataSurfaceInterface $surface, array $stored, FormStateInterface $form_state): array {
     $input = $this->surfaceRefinementInput($surface, $form_state);
+    if ($input === []) {
+      // Not a rebuild, so either nothing was submitted or this is the
+      // build a submission is about to be processed against. In the
+      // second case the elements have to be the ones the submitted
+      // answers ask for: a select offering the stored venue's rooms
+      // refuses the new venue's room as a choice it was never offered,
+      // before the surface is ever asked, and a slot rendered as the
+      // stored variant has no element for the chosen variant's keys to
+      // arrive in.
+      // Nothing is discarded: the person pressed the button, so every
+      // value was said on purpose and is judged rather than dropped.
+      return array_replace($stored, static::withoutStaleMarkers($this->surfaceSubmittedInput($surface, $form_state), $stored));
+    }
     // A programmatic submission is not a rebuild. Its caller said every
     // value on purpose, in one statement, and a value the surface
     // refuses is refused rather than quietly dropped — the payload rule,
     // and the same line the stale model draws: chosen, therefore judged.
     // Discarding is for the half-finished edit a browser is still in the
     // middle of.
-    if ($input !== [] && !static::surfaceCompleteFormState($form_state)->isProgrammed()) {
+    if (!static::surfaceCompleteFormState($form_state)->isProgrammed()) {
       $discarded = $this->surfaceFormBuilder()->discardedRefinementInput($surface, $stored, $input);
       if ($discarded !== []) {
         $this->forgetSurfaceInput($discarded, $form_state);
@@ -312,6 +328,86 @@ trait DataSurfaceHostTrait {
       }
     }
     return $input === [] ? $stored : array_replace($stored, $input);
+  }
+
+  /**
+   * Reads what a submission sent for the surface, before it is processed.
+   *
+   * The build a submission is processed against runs before Form API has
+   * found the triggering element, so the container cannot be located the
+   * way a rebuild locates it. Only a host that knows where its container
+   * sits in the input can answer, through surfaceSubmissionPath(); every
+   * other host answers nothing, and its elements are built from what is
+   * stored as before.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The surface being built.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state of the containing form.
+   *
+   * @return array
+   *   Submitted input keyed by surface key; empty when nothing of this
+   *   form was submitted.
+   */
+  protected function surfaceSubmittedInput(DataSurfaceInterface $surface, FormStateInterface $form_state): array {
+    $state = static::surfaceCompleteFormState($form_state);
+    $path = $this->surfaceSubmissionPath($state);
+    if ($path === NULL) {
+      return [];
+    }
+    $tree = NestedArray::getValue($state->getUserInput(), $path);
+    return is_array($tree) ? array_intersect_key($tree, $surface->getDefinitions()->toArray()) : [];
+  }
+
+  /**
+   * Gets where this form's surface sits in a submission's input.
+   *
+   * @param \Drupal\Core\Form\FormStateInterface $state
+   *   The complete form state.
+   *
+   * @return string[]|null
+   *   The input path of the surface container when the form state holds
+   *   a submission of this form, NULL otherwise. NULL here: a host
+   *   nested inside another form cannot know its position before Form
+   *   API assigns it.
+   */
+  protected function surfaceSubmissionPath(FormStateInterface $state): ?array {
+    return NULL;
+  }
+
+  /**
+   * Puts the stored value back wherever the stale marker was submitted.
+   *
+   * The marker is a placeholder, not a value: a select that came up on
+   * it and was left alone submits it back, and it means "what is
+   * stored". Building an element from the marker itself would stash the
+   * marker as the value it stands for, and the stored value would be
+   * lost on the way back out.
+   *
+   * @param array $input
+   *   Submitted input for one level.
+   * @param array $stored
+   *   What that level holds.
+   *
+   * @return array
+   *   The input, each marker replaced by the stored value at its place,
+   *   or dropped where nothing is stored.
+   */
+  protected static function withoutStaleMarkers(array $input, array $stored): array {
+    foreach ($input as $key => $value) {
+      if ($value === DataSurfacePipelineInterface::KEEP_STALE) {
+        if (array_key_exists($key, $stored)) {
+          $input[$key] = $stored[$key];
+        }
+        else {
+          unset($input[$key]);
+        }
+      }
+      elseif (is_array($value)) {
+        $input[$key] = static::withoutStaleMarkers($value, is_array($stored[$key] ?? NULL) ? $stored[$key] : []);
+      }
+    }
+    return $input;
   }
 
   /**

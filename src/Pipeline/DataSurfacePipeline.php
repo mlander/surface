@@ -357,7 +357,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       foreach ($missing as $path => $label) {
         $refusals[] = new SurfaceViolation($name, $path, $this->t('@label is required.', ['@label' => $label]));
       }
-      if ($refusals !== [] && $this->isStale($definition, $value, $name, $current)) {
+      if ($refusals !== [] && $this->isStale($definition, $value, $name, $current, $refined->getDefinitions()->dependencies($name), $values)) {
         // The whole key is reported as stale and not re-judged. What
         // else its constraints would say is about a value this run is
         // not changing and could not have chosen — it is what storage
@@ -492,13 +492,19 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   /**
    * Answers whether a refused value is a stale reference.
    *
-   * Three things have to be true at once, and each of them rules out a
+   * Four things have to be true at once, and each of them rules out a
    * case that is not stale:
    *
    * - The value is exactly what storage holds for that key. A value that
    *   differs was chosen by whoever sent it, so it is refused however
    *   far outside the list it falls. This is the whole line between
    *   "re-choose this" and "that is not a valid answer".
+   * - Every key it refines against also holds exactly what storage
+   *   holds. A run that moves a dependency is what narrowed the list
+   *   away from the stored value — a venue changed, and the room stored
+   *   under the old one is not among the new one's — so the refusal is
+   *   about this run's own answers, not about the site, and it blocks.
+   *   Stale is for what the site did; this is what the caller did.
    * - The key offers a list of values at all, read from the options
    *   service, which is the same list a generated select renders. A key
    *   with no list has no membership to fall outside of; whatever its
@@ -521,16 +527,25 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *   The surface key.
    * @param array $current
    *   The stored values, in surface shape.
+   * @param string[] $dependencies
+   *   The keys the key refines against.
+   * @param array $values
+   *   The values of this run, at the key's own level.
    *
    * @return bool
    *   TRUE when the refusal is a stale reference.
    */
-  protected function isStale(DataDefinitionInterface $definition, mixed $value, string $name, array $current): bool {
+  protected function isStale(DataDefinitionInterface $definition, mixed $value, string $name, array $current, array $dependencies, array $values): bool {
     if ($definition instanceof ListDataDefinitionInterface) {
       return FALSE;
     }
     if (!array_key_exists($name, $current) || $current[$name] !== $value) {
       return FALSE;
+    }
+    foreach ($dependencies as $dependency) {
+      if (($values[$dependency] ?? NULL) !== ($current[$dependency] ?? NULL)) {
+        return FALSE;
+      }
     }
     $set = $this->options->resolve($definition);
     return $set !== NULL && !$set->allows($value);

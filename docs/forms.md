@@ -223,6 +223,24 @@ $form_state)` is the one overlay every host builds from: stored
 underneath, in-progress edit on top, and the discard rule below applied
 between them.
 
+A full submit — the Save button, with or without JavaScript, or a
+programmatic `submitForm()` — is the other case the overlay covers. The
+build it is processed against runs before Form API knows the triggering
+element, so no rebuild input is found; instead the host's
+`surfaceSubmissionPath()` names where its container sits in the input,
+and the submitted answers are overlaid on the stored values, **with
+nothing discarded**: every value was sent on purpose and is judged. That
+is what makes the elements the ones the answers ask for. Without it a
+select offers the stored venue's rooms and Form API refuses the new
+venue's room as a choice it was never offered before the surface is
+asked, and a slot flipped in the same request is rendered as the stored
+variant, with no element for the chosen variant's keys to arrive in. A submitted
+stale marker is read as the stored value it stands for.
+`DataSurfaceSituationForm` answers `surfaceSubmissionPath()`, since its
+container is its own top level key; a plugin host nested inside another
+form cannot know its position before Form API assigns it, answers NULL,
+and is built from what is stored.
+
 ## Current values on extraction
 
 `extractSurfaceValues()` takes a `$current` argument: what the surface's
@@ -260,6 +278,12 @@ from**, not what the value is.
 | Treatment | Kept, placeholder, warning on save | **Discarded**, silently |
 | Cleared when | A real submit, and at no other time | Never — nothing was stored to clear |
 | Said out loud | A messenger warning, on every save | Nothing at all |
+
+The two halves meet at the Save button. A stored value the rebuild
+handed over to the stale placeholder because its dependency moved is
+not stale on save: the same submission moves the dependency, so the
+pipeline refuses it on its element and the person chooses again
+([value semantics](semantics.md#stale-values-the-third-state)).
 
 The two meet without conflicting. If a parent changes while a child was
 already showing the stale placeholder, the sentinel the browser posted

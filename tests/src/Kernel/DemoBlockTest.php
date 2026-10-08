@@ -436,4 +436,42 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     $this->assertCount(1, $violations->stale());
   }
 
+  /**
+   * Tests a stored bundle is refused once the same save moves the type.
+   *
+   * The bundle-shaped dependency: the article bundle is stored under
+   * node, and a save that moves the entity type to user while sending
+   * article back has orphaned it itself. Stale is for what the site
+   * did; this is what the caller did, so it blocks, through the block's
+   * own form validation as through the pipeline.
+   */
+  public function testTheBundleOrphanedByTheSameSaveIsRefused(): void {
+    $stored = ['headline' => 'Featured', 'entity_type' => 'node', 'bundle' => 'article', 'limit' => 5];
+    $block = $this->createBlock($stored);
+
+    $result = $this->pipeline()->submit($block->getDataSurface(), ['entity_type' => 'user', 'bundle' => 'article'], new PluginConfigurationTarget($block));
+    $this->assertFalse($result->committed);
+    $this->assertSame(['bundle'], $result->violations->keys());
+    $this->assertFalse($result->violations->hasStale());
+    $this->assertSame('node', $block->getConfiguration()['entity_type']);
+
+    // The block form, submitted in one statement: the bundle element is
+    // flagged rather than the save going through with a warning.
+    $form_state = new FormState();
+    $form = $block->buildConfigurationForm([], $form_state);
+    $form_state->setValues([
+      'entity_type' => 'user',
+      'bundle' => 'article',
+      'field' => '',
+      'limit' => '5',
+      'headline' => 'Featured',
+      'presentation' => 'list',
+    ]);
+    foreach (['entity_type', 'bundle', 'field', 'limit', 'headline', 'presentation'] as $key) {
+      $form[$key]['#parents'] = [$key];
+    }
+    $block->validateConfigurationForm($form, $form_state);
+    $this->assertArrayHasKey('bundle', $form_state->getErrors());
+  }
+
 }

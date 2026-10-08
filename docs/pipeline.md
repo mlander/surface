@@ -169,10 +169,13 @@ config schema reported them interleaved.
 
 `$current` is what storage holds, and it is what makes one refusal not a
 refusal. A value that the refined surface will not take, which is
-*exactly what is stored* for that key, and which is no longer among the
-values the key offers, is **stale**: nothing about this run tried to
-change it, so refusing it would punish a caller for something the site
-did. The full rule and its two deliberate boundaries are in
+*exactly what is stored* for that key, whose dependencies this run left
+as they are stored, and which is no longer among the values the key
+offers, is **stale**: nothing about this run tried to change it, so
+refusing it would punish a caller for something the site did. A run that
+moves a dependency — the venue — and sends back the dependent stored
+under the old one — the room — has narrowed the list itself, and is
+refused. The full rule and its two deliberate boundaries are in
 [value semantics](semantics.md#stale-values-the-third-state).
 
 A stale entry is a `SurfaceViolation` with its `stale` flag set, and the
