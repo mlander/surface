@@ -9,22 +9,65 @@ use Drupal\Core\Access\AccessResultReasonInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\data_surface\DataSurfaceAccess;
 use Drupal\data_surface\DataSurfaceHostTrait;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DataSurfaceProviderInterface;
 use Drupal\data_surface\Pipeline\DataSurfaceTargetInterface;
+use Drupal\data_surface\SurfaceBuild\SituationArguments;
+use Drupal\data_surface\SurfaceBuild\SituationRoute;
+use Drupal\data_surface\SurfaceBuild\SurfaceRegistry;
+use Drupal\data_surface\SurfaceBuild\SurfacesInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 /**
- * Serves any provider's surface as a page, from the route alone.
+ * Serves a surface as a page, from the route alone.
  *
- * The form class a standalone provider does not have to write. A route
- * names the provider, the operation, and where the subject comes from;
- * this class resolves the triple the provider contract guarantees —
- * surface, access, target — and the three form stages are the same
+ * The form class a surface does not have to write, in two spellings.
+ *
+ * ## A surface and a situation
+ *
+ * The route names a surface class and one of its situations, and its
+ * parameters are mapped onto the situation method's parameters by name:
+ * an upcast entity parameter arrives as the entity, a plain one as its
+ * value, so `edit(NodeTypeInterface $type)` is served by a route with a
+ * `{type}` parameter upcast to a node type. The situation builds the
+ * context; the surface is built in it, current values are loaded from
+ * its composed target, and the submission goes through the pipeline to
+ * that target, gated by the situation's permission and the surface's
+ * access class — the same answer the route's own requirement gives.
+ *
+ * @code
+ * example.edit:
+ *   path: '/admin/structure/examples/{example}/surface-edit'
+ *   defaults:
+ *     _form: 'Drupal\data_surface\Form\DataSurfaceProviderForm'
+ *     _title: 'Edit example'
+ *     _data_surface_surface: 'Drupal\example\Surface\ExampleSurface'
+ *     _data_surface_situation: 'edit'
+ *     _data_surface_cosmetics: 'example.surface_form_cosmetics'
+ *   requirements:
+ *     _data_surface_situation_access: 'TRUE'
+ *   options:
+ *     parameters:
+ *       example:
+ *         type: 'entity:example'
+ * @endcode
+ *
+ * A locked identity key renders as a disabled element holding the value
+ * the situation knows, and extraction keeps that value whatever is
+ * submitted for it. A cosmetic layer is told the situation id as the
+ * operation and the raw value of the situation's first route parameter
+ * as the subject.
+ *
+ * ## A provider (the old spelling)
+ *
+ * A route names the provider, the operation, and where the subject comes
+ * from; this class resolves the triple the provider contract guarantees
+ * — surface, access, target — and the three form stages are the same
  * pipeline every other host runs. Nothing here knows what is being
- * configured.
+ * configured. Kept until the provider contract is deleted.
  *
  * @code
  * example.edit:
@@ -120,9 +163,18 @@ class DataSurfaceProviderForm extends FormBase {
    * @param \Drupal\Core\DependencyInjection\ClassResolverInterface $classResolver
    *   The class resolver, which turns a service id or a class name from
    *   the route into the provider and the cosmetic layer.
+   * @param \Drupal\data_surface\SurfaceBuild\SurfacesInterface $surfaces
+   *   The build step, for a route served by a situation.
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceRegistry $surfaceRegistry
+   *   What discovery found.
+   * @param \Drupal\data_surface\SurfaceBuild\SituationArguments $situationArguments
+   *   What maps the route's parameters onto the situation's.
    */
   public function __construct(
     protected readonly ClassResolverInterface $classResolver,
+    protected readonly SurfacesInterface $surfaces,
+    protected readonly SurfaceRegistry $surfaceRegistry,
+    protected readonly SituationArguments $situationArguments,
   ) {
   }
 
@@ -134,7 +186,12 @@ class DataSurfaceProviderForm extends FormBase {
    * here would collide with the one it declares.
    */
   public static function create(ContainerInterface $container): static {
-    return new static($container->get('class_resolver'));
+    return new static(
+      $container->get('class_resolver'),
+      $container->get('data_surface.surfaces'),
+      $container->get('data_surface.surface_registry'),
+      $container->get('data_surface.situation_arguments'),
+    );
   }
 
   /**
@@ -155,6 +212,9 @@ class DataSurfaceProviderForm extends FormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state): array {
+    if (SituationRoute::serves($this->getRouteMatch()->getRouteObject())) {
+      return $this->buildSituationForm($form, $form_state);
+    }
     $provider = $this->surfaceProvider();
     $operation = $this->surfaceOperation();
     $subject = $this->surfaceSubject();
@@ -199,6 +259,14 @@ class DataSurfaceProviderForm extends FormBase {
    * {@inheritdoc}
    */
   public function validateForm(array &$form, FormStateInterface $form_state): void {
+    if (SituationRoute::serves($this->getRouteMatch()->getRouteObject())) {
+      [, $surface, $target] = $this->situationServed();
+      $current = $this->storedSurfaceValues($surface, $target);
+      $builder = $this->surfaceFormBuilder();
+      $values = $builder->extractSurfaceValues($surface, $form[static::SURFACE_KEY], $form_state, $current);
+      $builder->validateSurfaceForm($surface, $values, $form[static::SURFACE_KEY], $form_state, $current);
+      return;
+    }
     $provider = $this->surfaceProvider();
     $operation = $this->surfaceOperation();
     $subject = $this->surfaceSubject();
@@ -218,6 +286,10 @@ class DataSurfaceProviderForm extends FormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state): void {
+    if (SituationRoute::serves($this->getRouteMatch()->getRouteObject())) {
+      $this->submitSituationForm($form, $form_state);
+      return;
+    }
     $provider = $this->surfaceProvider();
     $operation = $this->surfaceOperation();
     $subject = $this->surfaceSubject();
@@ -255,6 +327,116 @@ class DataSurfaceProviderForm extends FormBase {
     if ($redirect !== NULL) {
       $form_state->setRedirectUrl($redirect);
     }
+  }
+
+  /**
+   * Builds the form for a route served by a situation.
+   *
+   * @param array $form
+   *   The form.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   *
+   * @return array
+   *   The built form.
+   */
+  protected function buildSituationForm(array $form, FormStateInterface $form_state): array {
+    [$served, $surface, $target, $access] = $this->situationServed();
+    if (!$access->isAllowed()) {
+      // The floor under the route's own requirement, as for a provider:
+      // the same answer, for the caller that reached the form another
+      // way. The situation owns its operation, so no opinion is a no, as
+      // it is on the route.
+      $reason = $access instanceof AccessResultReasonInterface ? $access->getReason() : NULL;
+      throw new AccessDeniedHttpException($reason ?: 'The surface this form configures may not be written by this account.');
+    }
+    $operation = $served->situation->id;
+    $form[static::SURFACE_KEY] = $this->surfaceFormBuilder()->buildSurfaceForm(
+      $surface,
+      $this->surfaceFormValues($surface, array_replace(
+        $surface->getDefaultValues(),
+        $this->storedSurfaceValues($surface, $target),
+      ), $form_state),
+      $form_state,
+      $this->surfaceWrapperKey($operation, $served->subject),
+    );
+    $form['actions'] = [
+      '#type' => 'actions',
+      '#weight' => 100,
+      'submit' => [
+        '#type' => 'submit',
+        '#value' => $this->t('Save'),
+      ],
+    ];
+    $cosmetics = $this->surfaceCosmetics(NULL);
+    return $cosmetics === NULL
+      ? $form
+      : $cosmetics->alterSurfaceForm($form, $surface, $form_state, $operation, $served->subject);
+  }
+
+  /**
+   * Submits the form for a route served by a situation.
+   *
+   * @param array $form
+   *   The form.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   */
+  protected function submitSituationForm(array &$form, FormStateInterface $form_state): void {
+    [$served, $surface, $target, $access] = $this->situationServed();
+    $builder = $this->surfaceFormBuilder();
+    $values = $builder->extractSurfaceValues(
+      $surface,
+      $form[static::SURFACE_KEY],
+      $form_state,
+      $this->storedSurfaceValues($surface, $target),
+    );
+    // The situation owns this operation, so an answer with no opinion is
+    // a refusal here as it is on the route: the pipeline would read a
+    // neutral answer as nothing to say.
+    $result = $this->surfacePipeline()->submit(
+      $surface,
+      $values,
+      $target,
+      access: DataSurfaceAccess::decisive($access, 'The surface this form configures may not be written by this account.'),
+    );
+    if (!$result->isValid()) {
+      $builder->flagSurfaceErrors($result->violations, $form[static::SURFACE_KEY], $form_state);
+      return;
+    }
+    $operation = $served->situation->id;
+    $cosmetics = $this->surfaceCosmetics(NULL);
+    $message = $cosmetics?->surfaceFormMessage($result, $operation, $served->subject)
+      ?? $this->t('The changes have been saved.');
+    if ((string) $message !== '') {
+      $this->messenger()->addStatus($message);
+    }
+    $redirect = $cosmetics?->surfaceFormRedirect($result, $operation, $served->subject);
+    if ($redirect !== NULL) {
+      $form_state->setRedirectUrl($redirect);
+    }
+  }
+
+  /**
+   * Builds what a route served by a situation serves.
+   *
+   * Asked afresh at every stage, the way the provider spelling asks its
+   * provider: the surface describes live site state, and nothing built
+   * from it rides along on a cached form.
+   *
+   * @return array{0: \Drupal\data_surface\SurfaceBuild\SituationRoute, 1: \Drupal\data_surface\DataSurfaceInterface, 2: \Drupal\data_surface\Pipeline\DataSurfaceTargetInterface, 3: \Drupal\Core\Access\AccessResultInterface}
+   *   The situation and its context, the surface built in it, the target
+   *   composed for it, and the access answer for the current user.
+   */
+  protected function situationServed(): array {
+    $served = SituationRoute::fromRouteMatch($this->getRouteMatch(), $this->surfaceRegistry, $this->situationArguments, $this->surfaces);
+    $surface = $this->surfaces->build($served->surface, $served->context);
+    return [
+      $served,
+      $surface,
+      $this->surfaces->target($served->surface, $served->context, $surface),
+      $this->surfaces->access($served->surface, $served->context),
+    ];
   }
 
   /**
@@ -314,8 +496,9 @@ class DataSurfaceProviderForm extends FormBase {
    * wherever it is served from says so once, on the class, rather than
    * on every route that serves it.
    *
-   * @param \Drupal\data_surface\DataSurfaceProviderInterface $provider
-   *   The provider this route serves.
+   * @param \Drupal\data_surface\DataSurfaceProviderInterface|null $provider
+   *   The provider this route serves, or NULL for a route served by a
+   *   situation, whose cosmetic layer is the route's alone.
    *
    * @return \Drupal\data_surface\Form\DataSurfaceFormCosmeticsInterface|null
    *   The cosmetic layer, or NULL when there is none.
@@ -324,7 +507,7 @@ class DataSurfaceProviderForm extends FormBase {
    *   When the route names a cosmetic layer that does not implement the
    *   interface, which would otherwise be silently ignored.
    */
-  protected function surfaceCosmetics(DataSurfaceProviderInterface $provider): ?DataSurfaceFormCosmeticsInterface {
+  protected function surfaceCosmetics(?DataSurfaceProviderInterface $provider): ?DataSurfaceFormCosmeticsInterface {
     $name = (string) ($this->routeDefault(static::COSMETICS) ?? '');
     if ($name === '') {
       return $provider instanceof DataSurfaceFormCosmeticsInterface ? $provider : NULL;

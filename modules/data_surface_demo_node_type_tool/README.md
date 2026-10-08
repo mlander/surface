@@ -1,8 +1,16 @@
 # Data Surface Demo - Node type tool
 
-One tool, `data_surface:node_type_add`, that creates a content type
-through the content type surface — and the recorded comparison with the
-tool an agent has for the same job without surfaces.
+The recorded comparison between `data_surface:node.type:add`, the tool
+generated from the content type surface's add situation, and the tool an
+agent has for the same job without surfaces.
+
+The tool was `data_surface:node_type_add`, a class in this module over
+the old provider. It is now derived by `data_surface_tool` for every
+situation of every surface that names a target, so this module holds no
+code: it depends on the two modules the comparison needs, and keeps the
+comparison and its test. The old id is gone, not aliased: nothing
+outside this repository called it, and an alias would be a second,
+hand-written definition of the same contract.
 
 ## What it proves
 
@@ -34,34 +42,35 @@ the test asserts on every run that it has not drifted.
 
 ## How the tool is built
 
-`NodeTypeAdd` names a provider service and an operation, and that is
-all. `Drupal\data_surface_tool\SurfaceProviderToolBase` does the rest,
-for any provider and any subject-less operation:
+It is not written. `SurfaceSituationToolDeriver` in `data_surface_tool`
+reads the content type surface's `add` situation and derives
+`data_surface:node.type:add`; `SurfaceSituationTool` runs it:
 
-- **Inputs.** One `values` map, whose definition each instance replaces
-  with the provider's surface converted by `SurfaceInputDefinitions`,
-  and an optional `dry_run` boolean that stops the pipeline after
-  prepare.
-- **Access.** The provider's `surfaceAccess()` for the coordinate, asked
-  in `checkAccess()` and again in `doExecute()`, and handed to the
-  pipeline.
-- **Execution.** One `DataSurfacePipeline::submit()` with the provider's
-  surface and target. Nothing is written by the tool itself.
+- **Inputs.** The situation's parameters — `add()` has none — then one
+  `values` map, the surface built in the add situation, converted by
+  `SurfaceInputDefinitions`, and an optional `dry_run` boolean that
+  stops the pipeline after prepare. Because the add situation needs
+  nothing, that map is the exact contract in the static plugin
+  definition: every consumer, `drush tool:info` and the AI connector's
+  deriver included, sees the extras module's settings.
+- **Access.** The situation's permission, then the surface's access
+  class, asked in `checkAccess()` and again in `doExecute()`, and handed
+  to the pipeline, decisively.
+- **Execution.** The situation builds the context, the surface is built
+  in it, and one `DataSurfacePipeline::submit()` goes to its composed
+  target. Nothing is written by the tool itself.
 
 One map rather than one input per surface key, because the Tool API
 treats top level input names as fixed by the plugin definition: the
-serializer closes the root schema on that assumption, refiners may
-replace a named input but never add one, and some consumers read the
-static plugin definition rather than an instance. With one map those
-consumers still advertise something true. The base class's docblock has
-the detail, and the limitations are listed below.
+serializer closes the root schema on that assumption, and refiners may
+replace a named input but never add one.
 
 ## How to try it
 
 ```bash
 composer require drupal/tool
 drush pm:install data_surface_demo_node_type_tool data_surface_demo_extras
-drush tool:info data_surface:node_type_add --format=json
+drush tool:info data_surface:node.type:add --format=json
 ```
 
 The `values` input in the JSON schema carries
@@ -137,33 +146,33 @@ thing, so it was written to be:
 
 The surface asks for the deadline the way a person says it, an amount
 and a unit, and stores the seconds core's form stores. The conversion is
-`ReviewDeadlineShape`, a `SettingsShapeInterface` the extras module hands
-the surface at build time with
-`DataSurfaceBuilderInterface::setThirdPartyShape()`. The sealed surface
-carries it, and `ConfigEntityTarget` — the target that writes third
-party settings — applies it to that provider's namespace only:
-`toStorage()` in prepare, before its config schema check, and
-`fromStorage()` on load, so an edit reads 604800 back as one week.
-Business days convert by the same `NodeTypeReviewSettings::seconds()`
-the form uses, and do not round-trip to their own unit: stored seconds
-carry no unit, so `fromStorage()` reads them back in the largest of
-hours, days or weeks that divides them exactly. Under the business day
-rule that is always days, since a count of business days never ends on
-a weekend: ten business days read back as twelve days. The duration is
-kept; the way it was said is not.
-Neither the node type provider nor its composite target knows the extras
-module exists; the translation travels with the contribution, the same
-way `FieldSettingsTarget` finds a surface's secret keys on the surface it
-is handed.
+`ReviewDeadlineShape`, a `SettingsShapeInterface` the extras module's
+alter, `NodeTypeAlter`, hands the surface by implementing
+`HasStorageShapeInterface`. The sealed surface carries it, and the
+target adapter applies it to that module's settings and nothing else:
+`toStorage()` before `NodeTypeTarget` writes them, `fromStorage()` after
+it reads them, so an edit reads 604800 back as one week. Business days
+convert by the same `NodeTypeReviewSettings::seconds()` the form uses,
+and do not round-trip to their own unit: stored seconds carry no unit,
+so `fromStorage()` reads them back in the largest of hours, days or
+weeks that divides them exactly. Under the business day rule that is
+always days, since a count of business days never ends on a weekend:
+ten business days read back as twelve days. The duration is kept; the
+way it was said is not. Neither the content type surface nor its target
+knows the extras module exists; the translation travels with the
+contribution.
 
-Both gates hold. The pipeline refuses forty-five days on the amount the
-caller sent, in the caller's units
+The pipeline refuses forty-five days on the amount the caller sent, in
+the caller's units
 (`third_party_settings.data_surface_demo_extras.review_deadline.amount`),
-through a constraint on the amount and unit together; and the target's
-config schema check, run on the seconds about to be stored, enforces the
-schema's own Range as a second gate. Both judge business days on their
-converted seconds, like any other unit: twenty-two are thirty calendar
-days and accepted, twenty-three are thirty-one and refused.
+through a constraint on the amount and unit together, judging business
+days on their converted seconds like any other unit: twenty-two are
+thirty calendar days and accepted, twenty-three are thirty-one and
+refused. The config schema's own Range on the stored seconds is a
+second gate only where something asks it: the new-spelling target has
+no prepare step, so it is not checked before the write, as the old
+provider's composite target did (in a test, the strict schema checker
+still asks it on save).
 
 ## The one deliberate difference
 
@@ -186,21 +195,19 @@ the same message a tool caller gets.
 
 ## Tool API limitations found
 
-- **No way to declare an input computed per instance without a
-  dependency.** `input_definition_refiners` run only when a declared
-  dependency input is set, and a subject-less coordinate has none, so
-  the base class overrides `getInputDefinitions()` on the instance.
-- **The static and the instance definitions disagree, and consumers
-  pick different ones.** The definition serializer, the MCP bridge and
-  the AI connector's runtime schema read the instance; `drush tool:info`'s
-  input rows and JSON inputs, and the AI connector's function call
-  deriver, read the static plugin definition and see a plain map.
-- **`ToolBase::__construct()` is final and asks for the input
-  definitions before `create()` can inject services**, so an instance
-  override has to tolerate being asked before it can answer.
+- **The static and the instance definitions used to disagree**, because
+  the old tool replaced its values map per instance and some consumers
+  (`drush tool:info`, the AI connector's function call deriver) read
+  the static plugin definition. A derived tool's definition is static
+  and exact for a situation that needs nothing, so for this tool they
+  agree. A situation that needs a subject is refined to it through
+  `input_definition_refiners`, which consumers reading the static
+  definition do not see.
 - **The MCP bridge captures each tool's schema at derivative discovery**,
   cached with the plugin definitions, so a surface change reaches MCP
   clients on the next plugin cache clear. Installing a module clears it.
+  The same is now true of the static definition itself: it is built
+  when the tool plugins are discovered.
 - **Map validation treats "required" as "present in the payload".**
   A surface's required key with a configured default is satisfied by
   saying nothing, so `SurfaceInputDefinitions` converts it as not

@@ -27,6 +27,7 @@ nav:
   - Home: index.md
   - Installation: installation.md
   - Surfaces as classes: surfaces.md
+  - Surface catalogue: catalogue.md
   - Declaring a surface: declaring-a-surface.md
   - Values:
       - The pipeline: pipeline.md

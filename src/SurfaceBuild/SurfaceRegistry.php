@@ -289,6 +289,7 @@ final class SurfaceRegistry {
             method: $method->getName(),
             permission: $situation->permission,
             module: $module,
+            parameters: array_map(SituationParameter::fromReflection(...), $method->getParameters()),
           );
         }
       }

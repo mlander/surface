@@ -6,27 +6,34 @@ namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Form\FormState;
-use Drupal\data_surface\Pipeline\PreparedValues;
+use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
+use Drupal\data_surface\DataSurfaceInterface;
+use Drupal\data_surface\Pipeline\DataSurfaceTargetInterface;
 use Drupal\data_surface\Pipeline\ViolationSummary;
-use Drupal\data_surface\Target\BaseFieldOverrideTarget;
+use Drupal\data_surface\Surface\SurfaceContext;
+use Drupal\data_surface\SurfaceBuild\SurfacesInterface;
+use Drupal\data_surface_demo_extras\NodeTypeReviewSettings;
+use Drupal\data_surface_demo_extras\SurfaceAlter\NodeTypeAlter;
+use Drupal\data_surface_demo_node_type\Access\NodeTypeAccess;
 use Drupal\data_surface_demo_node_type\Hook\NodeTypeSurfaceHooks;
-use Drupal\data_surface_demo_node_type\NodeTypeSurfaceProvider;
+use Drupal\data_surface_demo_node_type\Surface\NodeTypeSurface;
+use Drupal\data_surface_demo_node_type\Target\NodeTypeTarget;
 use Drupal\node\Entity\NodeType;
 use Drupal\node\NodeTypeInterface;
 use Drupal\Tests\user\Traits\UserCreationTrait;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests the shared add and edit content type surface.
+ * Tests the content type surface, in the new spelling.
  *
- * One surface declaration serves both operations. Add carries a service
- * backed uniqueness constraint on the machine name, edit locks the
- * machine name, and the storage translation the demo used to do by hand
- * is a composite target: the node type config entity, then the base
- * field overrides holding the title label and the workflow defaults.
- * Nothing in the demo writes anything itself, so the same values reach
- * the same three destinations whether a form or a payload sent them.
+ * NodeTypeSurface with its two situations: add knows nothing, so the
+ * machine name is open and must be unique; edit knows the machine name,
+ * so it is locked. NodeTypeTarget writes the node type entity and the
+ * base field overrides behind it, loading by the identity the context
+ * knows; NodeTypeAccess answers what the situation's permission cannot.
+ * The extras module's review settings arrive through NodeTypeAlter, and
+ * are stored as seconds through the storage shape it hands the surface.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -44,16 +51,12 @@ class NodeTypeSurfaceTest extends DataSurfaceKernelTestBase {
     'filter',
     'text',
     'node',
+    'block',
     'data_surface',
+    'data_surface_demo',
+    'data_surface_demo_extras',
     'data_surface_demo_node_type',
   ];
-
-  /**
-   * The surface provider under test.
-   *
-   * @var \Drupal\data_surface_demo_node_type\NodeTypeSurfaceProvider
-   */
-  protected $provider;
 
   /**
    * {@inheritdoc}
@@ -63,7 +66,49 @@ class NodeTypeSurfaceTest extends DataSurfaceKernelTestBase {
     $this->installEntitySchema('user');
     $this->installEntitySchema('node');
     $this->installConfig(['field', 'node']);
-    $this->provider = $this->container->get('data_surface_demo_node_type.provider');
+  }
+
+  /**
+   * Gets the build step.
+   *
+   * @return \Drupal\data_surface\SurfaceBuild\SurfacesInterface
+   *   The service.
+   */
+  protected function surfaces(): SurfacesInterface {
+    return $this->container->get('data_surface.surfaces');
+  }
+
+  /**
+   * Builds the surface in a context, and its target.
+   *
+   * @param \Drupal\data_surface\Surface\SurfaceContext $context
+   *   The context.
+   *
+   * @return array{0: \Drupal\data_surface\DataSurfaceInterface, 1: \Drupal\data_surface\Pipeline\DataSurfaceTargetInterface}
+   *   The surface and its composed target.
+   */
+  protected function served(SurfaceContext $context): array {
+    $surface = $this->surfaces()->build(NodeTypeSurface::class, $context);
+    return [$surface, $this->surfaces()->target(NodeTypeSurface::class, $context, $surface)];
+  }
+
+  /**
+   * Submits values to a surface and its target.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The surface.
+   * @param \Drupal\data_surface\Pipeline\DataSurfaceTargetInterface $target
+   *   The target.
+   * @param array $values
+   *   The values.
+   * @param bool $dry_run
+   *   Whether to stop after prepare.
+   *
+   * @return \Drupal\data_surface\Pipeline\DataSurfaceResult
+   *   The result.
+   */
+  protected function submit(DataSurfaceInterface $surface, DataSurfaceTargetInterface $target, array $values, bool $dry_run = FALSE) {
+    return $this->pipeline()->submit($surface, $values, $target, $dry_run);
   }
 
   /**
@@ -76,549 +121,9 @@ class NodeTypeSurfaceTest extends DataSurfaceKernelTestBase {
    *   The field definitions, keyed by field name.
    */
   protected function nodeFields(string $bundle): array {
-    return $this->container->get('entity_field.manager')->getFieldDefinitions('node', $bundle);
-  }
-
-  /**
-   * Tests the add surface: open machine name, unique on this site.
-   */
-  public function testAddSurface(): void {
-    $surface = $this->provider->surfaceFor();
-
-    $type = $surface->getDefinition('type');
-    $this->assertFalse($surface->isLocked('type'));
-    $this->assertArrayHasKey('DataSurfaceUniqueNodeType', $type->getConstraints());
-
-    // Base field workflow defaults surface as the declared defaults.
-    $defaults = $surface->getDefaultValues();
-    $this->assertTrue($defaults['status']);
-    $this->assertFalse($defaults['promote']);
-    $this->assertFalse($defaults['sticky']);
-    $this->assertSame('Title', $defaults['title_label']);
-    $this->assertSame(1, $defaults['preview_mode']);
-
-    // The three preview modes carry their meaning on the constraint, so
-    // the option list a form renders and the list that validates are one
-    // declaration.
-    $constraint = $surface->getDefinition('preview_mode')->getConstraints()['LabeledChoice'];
-    $this->assertSame([0, 1, 2], $constraint['choices']);
-    $this->assertSame('Optional', (string) $constraint['labels'][1]);
-    $options = $this->container->get('data_surface.options')
-      ->resolve($surface->getDefinition('preview_mode'));
-    $this->assertSame([0, 1, 2], array_keys($options->options));
-
-    // A taken machine name is a violation, and a free one is not: the
-    // same check a form, a recipe, or an agent would hit, with no form
-    // involved.
-    NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
-    $values = ['name' => 'Article again', 'type' => 'article'] + $defaults;
-    $errors = $this->pipeline()->validate($surface, $values);
-    $this->assertContains('type', $errors->keys());
-    $this->assertStringContainsString('already exists', (string) $errors->byKey('type')[0]->message);
-    $this->assertCount(0, $this->pipeline()->validate($surface, ['type' => 'fresh_type'] + $values));
-  }
-
-  /**
-   * Tests that the operation and subject pair names the two surfaces.
-   *
-   * The verb says what is being done and the subject says what it is
-   * being done to, so nothing has to be parsed out of the operation to
-   * find the content type it is about.
-   */
-  public function testProviderInterfaceMapsTheOperation(): void {
-    NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
-
-    // 'add' is the surface for a content type that does not exist yet,
-    // and it is the one operation here with no subject.
-    $this->assertFalse($this->provider->getDataSurface('add')->isLocked('type'));
-    // 'edit' with the machine name as its subject is the surface for one
-    // that does, so the identifier is context rather than an editable
-    // value.
-    $edit = $this->provider->getDataSurface('edit', 'article');
-    $this->assertTrue($edit->isLocked('type'));
-    $this->assertSame('Article', $edit->getDefault('name'));
-
-    // A content type that is not there is a refusal, not an add form.
-    $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('no "ghost" content type');
-    $this->provider->getDataSurface('edit', 'ghost');
-  }
-
-  /**
-   * Tests that the pair and the typed entry point are one answer.
-   *
-   * The typed entry point surfaceFor() stays as the in-process
-   * convenience for a caller that already holds the entity, so what it
-   * hands back and what the wire coordinate hands back have to be the
-   * same surface described the same way — otherwise the endpoint and
-   * the form would be describing two different things by one name.
-   */
-  public function testTheTypedEntryPointAndThePairAgree(): void {
-    NodeType::create([
-      'type' => 'article',
-      'name' => 'Article',
-      'help' => 'Some help.',
-    ])->save();
-    $article = NodeType::load('article');
-
-    $typed = $this->provider->surfaceFor($article);
-    $addressed = $this->provider->getDataSurface(
-      NodeTypeSurfaceProvider::OPERATION_EDIT,
-      (string) $article->id(),
-    );
-
-    $this->assertSame($typed->getDefaultValues(), $addressed->getDefaultValues());
-    $this->assertSame(
-      array_keys($typed->getDefinitions()->toArray()),
-      array_keys($addressed->getDefinitions()->toArray()),
-    );
-    $this->assertTrue($addressed->isLocked('type'));
-    $this->assertSame($typed->isLocked('type'), $addressed->isLocked('type'));
-    $this->assertSame(
-      $typed->getDefinition('type')->getConstraints(),
-      $addressed->getDefinition('type')->getConstraints(),
-    );
-  }
-
-  /**
-   * Tests that an operation this provider does not have is refused.
-   */
-  public function testProviderInterfaceRefusesAnUnknownOperation(): void {
-    $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('not for "configure"');
-    $this->provider->getDataSurface('configure');
-  }
-
-  /**
-   * Tests that a subject this provider cannot resolve is refused.
-   *
-   * Both halves of the rule: an operation with nothing to name takes no
-   * subject, and one that is about a particular content type cannot do
-   * without it. Either way the refusal says what it was given rather
-   * than falling back to the surface that was not asked for.
-   */
-  public function testProviderInterfaceRefusesAnUnresolvableSubject(): void {
-    try {
-      $this->provider->getDataSurface(NodeTypeSurfaceProvider::OPERATION_ADD, 'article');
-      $this->fail('Adding a content type takes no subject.');
-    }
-    catch (\InvalidArgumentException $e) {
-      $this->assertStringContainsString('"article" was named', $e->getMessage());
-    }
-
-    $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('given one as its subject');
-    $this->provider->getDataSurface(NodeTypeSurfaceProvider::OPERATION_EDIT);
-  }
-
-  /**
-   * Tests the edit surface: locked machine name, defaults from the entity.
-   */
-  public function testEditSurfaceLocksMachineName(): void {
-    NodeType::create([
-      'type' => 'article',
-      'name' => 'Article',
-      'help' => 'Some help.',
-      'description' => 'Articles.',
-    ])->save();
-    $type = NodeType::load('article');
-    $surface = $this->provider->surfaceFor($type);
-
-    $this->assertTrue($surface->isLocked('type'));
-    $this->assertSame('article', $surface->getDefault('type'));
-    // No uniqueness check against yourself on edit.
-    $this->assertArrayNotHasKey('DataSurfaceUniqueNodeType', $surface->getDefinition('type')->getConstraints());
-
-    // Entity values are the surface defaults.
-    $defaults = $surface->getDefaultValues();
-    $this->assertSame('Article', $defaults['name']);
-    $this->assertSame('Some help.', $defaults['help']);
-    $this->assertSame('Articles.', $defaults['description']);
-
-    // The generated form renders the locked value, disabled.
-    $form = $this->container->get('data_surface.form_builder')
-      ->buildSurfaceForm($surface, $defaults, new FormState());
-    $this->assertTrue($form['type']['#disabled']);
-    $this->assertSame('article', $form['type']['#default_value']);
-    // The labels ride the constraint, so the select needs nothing
-    // cosmetic to say what 0, 1 and 2 mean.
-    $this->assertSame('select', $form['preview_mode']['#type']);
-    $this->assertSame(
-      ['Disabled', 'Optional', 'Required'],
-      array_map('strval', array_values($form['preview_mode']['#options'])),
-    );
-    // The multiline setting is what makes these two textareas.
-    $this->assertSame('textarea', $form['description']['#type']);
-    $this->assertSame('textarea', $form['help']['#type']);
-
-    // Extraction is authoritative from the surface: a tampered submit
-    // cannot move a locked value.
-    $form_state = new FormState();
-    $form_state->setValues(['name' => 'Renamed', 'type' => 'evil_rename']);
-    $values = $this->container->get('data_surface.form_builder')
-      ->extractSurfaceValues($surface, $form, $form_state);
-    $this->assertSame('article', $values['type']);
-    $this->assertSame('Renamed', $values['name']);
-  }
-
-  /**
-   * Tests submitting an add, then an edit, through the composite target.
-   */
-  public function testSubmitReachesEveryDestination(): void {
-    $surface = $this->provider->surfaceFor();
-    $input = [
-      'name' => 'Recipe',
-      'type' => 'recipe',
-      'title_label' => 'Recipe name',
-      'description' => 'Cooking instructions.',
-      'help' => '',
-      'preview_mode' => '2',
-      'display_submitted' => 0,
-      'new_revision' => 1,
-      'status' => 1,
-      'promote' => 0,
-      'sticky' => 1,
-    ];
-    $result = $this->pipeline()->submit($surface, $input, $this->provider->targetFor(NULL, 'recipe'));
-
-    $this->assertCount(0, $result->violations);
-    $this->assertTrue($result->committed);
-
-    $type = NodeType::load('recipe');
-    $this->assertInstanceOf(NodeTypeInterface::class, $type);
-    $this->assertSame('Recipe', $type->label());
-    $this->assertSame('Cooking instructions.', $type->getDescription());
-    $this->assertSame(2, $type->getPreviewMode(FALSE)->value);
-    $this->assertFalse($type->displaySubmitted());
-    $this->assertTrue($type->shouldCreateNewRevision());
-
-    // The title label and the workflow defaults landed as base field
-    // overrides, not on the node type entity: the second destination
-    // behind the one surface.
-    $fields = $this->nodeFields('recipe');
-    $this->assertSame('Recipe name', (string) $fields['title']->getLabel());
-    $this->assertFalse((bool) $fields['promote']->getDefaultValueLiteral()[0]['value']);
-    $this->assertTrue((bool) $fields['sticky']->getDefaultValueLiteral()[0]['value']);
-    // Comparing before writing means the values that did not move wrote
-    // no override at all.
-    $this->assertNull($this->baseFieldOverride('promote'));
-    $this->assertNotNull($this->baseFieldOverride('sticky'));
-
-    // Edit through the same surface and the same pipeline: the changed
-    // values round-trip to both destinations, and the machine name
-    // cannot move.
-    $edit_surface = $this->provider->surfaceFor($type);
-    $edit_target = $this->provider->targetFor($type);
-    $this->assertSame('Recipe name', $edit_target->load($edit_surface)['title_label']);
-    $edit = $this->pipeline()->submit($edit_surface, [
-      'name' => 'Recipes',
-      'type' => 'tampered',
-      'promote' => 1,
-      'title_label' => 'Dish name',
-    ], $edit_target);
-
-    $this->assertCount(0, $edit->violations);
-    $this->assertTrue($edit->committed);
-    $this->assertSame('recipe', $edit->values['type']);
-
-    $reloaded = NodeType::load('recipe');
-    $this->assertSame('Recipes', $reloaded->label());
-    // Everything the edit did not mention kept its stored value.
-    $this->assertSame(2, $reloaded->getPreviewMode(FALSE)->value);
-    $fields = $this->nodeFields('recipe');
-    $this->assertSame('Dish name', (string) $fields['title']->getLabel());
-    $this->assertTrue((bool) $fields['promote']->getDefaultValueLiteral()[0]['value']);
-    $this->assertTrue((bool) $fields['sticky']->getDefaultValueLiteral()[0]['value']);
-  }
-
-  /**
-   * Tests the config schema refusing what the surface let through.
-   *
-   * The node type schema is fully validatable, and the entity target is
-   * left to hold the built entity to it. A label the surface only
-   * limited in length is a label the schema also forbids line breaks in,
-   * so the storage's second opinion arrives in the same violation shape
-   * the surface's own constraints use, filed under the surface key.
-   */
-  public function testSchemaRefusesValuesTheSurfaceAllowed(): void {
-    $surface = $this->provider->surfaceFor();
-    $result = $this->pipeline()->submit($surface, [
-      'name' => "Two\nlines",
-      'type' => 'two_lines',
-      'title_label' => 'Title',
-    ], $this->provider->targetFor(NULL, 'two_lines'));
-
-    $this->assertContains('name', $result->violations->keys());
-    $this->assertFalse($result->committed);
-    $this->assertNull(NodeType::load('two_lines'));
-  }
-
-  /**
-   * Tests a dry run shaping every destination and writing none of them.
-   */
-  public function testDryRunWritesNothing(): void {
-    $surface = $this->provider->surfaceFor();
-    $result = $this->pipeline()->submit($surface, [
-      'name' => 'Dry run',
-      'type' => 'dry_run',
-      'title_label' => 'Dry run title',
-      'promote' => 1,
-    ], $this->provider->targetFor(NULL, 'dry_run'), TRUE);
-
-    $this->assertCount(0, $result->violations);
-    $this->assertFalse($result->committed);
-
-    // One prepared set per child, and inside the second one an unsaved
-    // override per base field that would have to move: the node type
-    // plus two overrides, all of it ready to show, none of it stored.
-    $children = $result->prepared->artifact;
-    $this->assertCount(2, $children);
-    $this->assertInstanceOf(PreparedValues::class, $children[0]);
-    $this->assertInstanceOf(NodeTypeInterface::class, $children[0]->artifact);
-    $this->assertTrue($children[0]->artifact->isNew());
-    $overrides = $children[1]->artifact[BaseFieldOverrideTarget::SAVE];
-    $this->assertCount(2, $overrides);
-    $this->assertSame([], $children[1]->artifact[BaseFieldOverrideTarget::DELETE]);
-    foreach ($overrides as $override) {
-      $this->assertTrue($override->isNew());
-    }
-    $this->assertSame(
-      ['node.dry_run.title', 'node.dry_run.promote'],
-      array_map(static fn ($override) => $override->id(), $overrides),
-    );
-
-    $this->assertNull(NodeType::load('dry_run'));
-    $this->assertNull($this->baseFieldOverride('title', 'dry_run'));
-    $this->assertNull($this->baseFieldOverride('promote', 'dry_run'));
-  }
-
-  /**
-   * Tests the operation link, which is a hook class rather than a file.
-   *
-   * The demo's one procedural hook became a #[Hook] method, so this
-   * asserts that core discovers it, that it holds the entity's own
-   * access answer rather than a permission repeated in the module, and
-   * that the answer's cacheability reaches the listing that renders it.
-   */
-  public function testOperationLinkComesFromTheHookClass(): void {
-    NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
-    $node_type = NodeType::load('article');
-    $module_handler = $this->container->get('module_handler');
-
-    // Nobody in particular may edit a content type, and the link is the
-    // entity's answer rather than a permission repeated in the module.
-    $anonymous = new CacheableMetadata();
-    $this->assertSame(
-      [],
-      $module_handler->invoke('data_surface_demo_node_type', 'entity_operation', [$node_type, $anonymous]),
-    );
-
-    // Holding the content type permission alone is not enough. This
-    // module is a second way into writing content types and has its own
-    // permission for that, and the link asks both questions the route it
-    // points at asks, so it is never offered where it would be refused.
-    $this->setUpCurrentUser([], ['administer content types']);
-    $this->assertSame(
-      [],
-      $module_handler->invoke('data_surface_demo_node_type', 'entity_operation', [$node_type, new CacheableMetadata()]),
-    );
-
-    $this->setUpCurrentUser([], ['administer content types', NodeTypeSurfaceHooks::PERMISSION]);
-    $cacheability = new CacheableMetadata();
-    $operations = $module_handler
-      ->invoke('data_surface_demo_node_type', 'entity_operation', [$node_type, $cacheability]);
-
-    $this->assertArrayHasKey('surface_edit', $operations);
-    $this->assertSame('Edit (surface)', (string) $operations['surface_edit']['title']);
-    $this->assertSame(
-      '/admin/structure/types/manage/article/surface-edit',
-      $operations['surface_edit']['url']->toString(),
-    );
-    $this->assertContains('user.permissions', $cacheability->getCacheContexts());
-
-    // Nothing is offered for an entity of another type.
-    $account = $this->container->get('entity_type.manager')
-      ->getStorage('user')
-      ->create(['name' => 'somebody']);
-    $this->assertSame(
-      [],
-      $module_handler->invoke(
-        'data_surface_demo_node_type',
-        'entity_operation',
-        [$account, new CacheableMetadata()],
-      ),
-    );
-  }
-
-  /**
-   * Tests that both routes are gated by entity access and by permission.
-   *
-   * Both requirements have to allow, and neither alone opens anything:
-   * entity access is what keeps this module from granting more than
-   * core's own content type form grants, and the module's permission is
-   * what decides whether this second way in exists on the site at all.
-   */
-  public function testRouteAccessIsGatedTwice(): void {
-    NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
-    $access_manager = $this->container->get('access_manager');
-    // User 1 bypasses every access check and a kernel test has none
-    // until one is asked for, so it is created and set aside before any
-    // account below is made.
-    $this->setUpCurrentUser();
-
-    $matrix = [
-      'nobody' => [[], FALSE],
-      'content types only' => [['administer content types'], FALSE],
-      'demo permission only' => [[NodeTypeSurfaceHooks::PERMISSION], FALSE],
-      'both' => [['administer content types', NodeTypeSurfaceHooks::PERMISSION], TRUE],
-    ];
-    foreach ($matrix as $who => [$permissions, $allowed]) {
-      $account = $this->createUser($permissions);
-      $this->assertSame(
-        $allowed,
-        $access_manager->checkNamedRoute('data_surface_demo_node_type.add', [], $account),
-        $who . ' on the add route.',
-      );
-      $this->assertSame(
-        $allowed,
-        $access_manager->checkNamedRoute('data_surface_demo_node_type.edit', ['node_type' => 'article'], $account),
-        $who . ' on the edit route.',
-      );
-    }
-  }
-
-  /**
-   * Tests that the provider's answer is the answer the routes give.
-   *
-   * The non-drift claim, asserted rather than asserted about: for every
-   * account in the same four-way matrix the routes are held to, the
-   * provider's answer for the matching operation and the route's answer
-   * are the same answer. A permission added to one and not the other, or
-   * an entity check quietly dropped from one side, fails here.
-   */
-  public function testProviderAccessMatchesTheRoutes(): void {
-    NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
-    $article = NodeType::load('article');
-    $access_manager = $this->container->get('access_manager');
-    // User 1 bypasses every access check and a kernel test has none
-    // until one is asked for, so it is created and set aside first.
-    $this->setUpCurrentUser();
-
-    $matrix = [
-      'nobody' => [[], FALSE],
-      'entity access only' => [['administer content types'], FALSE],
-      'demo permission only' => [[NodeTypeSurfaceHooks::PERMISSION], FALSE],
-      'both' => [['administer content types', NodeTypeSurfaceHooks::PERMISSION], TRUE],
-    ];
-    foreach ($matrix as $who => [$permissions, $allowed]) {
-      $account = $this->createUser($permissions);
-
-      $add = $this->provider->surfaceAccess(
-        NodeTypeSurfaceProvider::OPERATION_ADD,
-        account: $account,
-      );
-      $edit = $this->provider->surfaceAccess(
-        NodeTypeSurfaceProvider::OPERATION_EDIT,
-        (string) $article->id(),
-        $account,
-      );
-
-      $this->assertSame($allowed, $add->isAllowed(), $who . ' on the add surface.');
-      $this->assertSame($allowed, $edit->isAllowed(), $who . ' on the edit surface.');
-      // The same answer the route gives, which is the whole point of
-      // having the provider answer at all.
-      $this->assertSame(
-        $access_manager->checkNamedRoute('data_surface_demo_node_type.add', [], $account),
-        $add->isAllowed(),
-        $who . ' on the add route and the add surface.',
-      );
-      $this->assertSame(
-        $access_manager->checkNamedRoute('data_surface_demo_node_type.edit', ['node_type' => 'article'], $account),
-        $edit->isAllowed(),
-        $who . ' on the edit route and the edit surface.',
-      );
-      // Permissions decide it, so the answer may only be reused for an
-      // account holding the same ones.
-      $this->assertContains(
-        'user.permissions',
-        CacheableMetadata::createFromObject($edit)->getCacheContexts(),
-      );
-    }
-  }
-
-  /**
-   * Tests that an operation this provider has no surface for is refused.
-   *
-   * Asking for a surface that does not exist throws, and an access
-   * question is the one question that must never be answered with an
-   * exception: something has to be told no.
-   */
-  public function testAccessRefusesAnUnknownOperation(): void {
-    $account = $this->createUser(['administer content types', NodeTypeSurfaceHooks::PERMISSION]);
-
-    $this->assertTrue($this->provider->surfaceAccess('delete', account: $account)->isForbidden());
-    // Including an edit operation naming a content type that is not
-    // there, which is refused until it is created rather than forever.
-    $missing = $this->provider->surfaceAccess(
-      NodeTypeSurfaceProvider::OPERATION_EDIT,
-      'ghost',
-      $account,
-    );
-    $this->assertTrue($missing->isForbidden());
-    $this->assertContains(
-      'config:node_type_list',
-      CacheableMetadata::createFromObject($missing)->getCacheTags(),
-    );
-  }
-
-  /**
-   * Tests that the form's write is gated by the provider's answer.
-   *
-   * The form is the caller that matters most, because a route requirement
-   * is checked once, when the page is built, and a submit arrives later:
-   * a permission revoked in between has to be caught by the half that
-   * writes. So the pipeline refuses the same values it accepted for an
-   * allowed account, and refuses them before the target is read.
-   */
-  public function testSubmitIsRefusedForAnAccountWithoutAccess(): void {
-    $this->setUpCurrentUser();
-    $stranger = $this->createUser();
-    $surface = $this->provider->surfaceFor();
-    $values = $surface->getDefaultValues();
-    $values['name'] = 'Refused';
-    $values['type'] = 'refused';
-    $values['title_label'] = 'Title';
-
-    $result = $this->pipeline()->submit(
-      $surface,
-      $values,
-      $this->provider->targetFor(NULL, 'refused'),
-      access: $this->provider->surfaceAccess(
-        NodeTypeSurfaceProvider::OPERATION_ADD,
-        account: $stranger,
-      ),
-    );
-
-    $this->assertFalse($result->isValid());
-    $this->assertTrue($result->isAccessRefused());
-    $this->assertNull(NodeType::load('refused'));
-    // The same values, for an account that may, are stored.
-    $allowed = $this->createUser(['administer content types', NodeTypeSurfaceHooks::PERMISSION]);
-    $result = $this->pipeline()->submit(
-      $surface,
-      $values,
-      $this->provider->targetFor(NULL, 'refused'),
-      access: $this->provider->surfaceAccess(
-        NodeTypeSurfaceProvider::OPERATION_ADD,
-        account: $allowed,
-      ),
-    );
-
-    $this->assertTrue($result->isValid(), ViolationSummary::fromViolations($result->violations));
-    $stored = $this->container->get('entity_type.manager')
-      ->getStorage('node_type')
-      ->load('refused');
-    $this->assertInstanceOf(NodeTypeInterface::class, $stored);
+    $manager = $this->container->get('entity_field.manager');
+    $manager->clearCachedFieldDefinitions();
+    return $manager->getFieldDefinitions('node', $bundle);
   }
 
   /**
@@ -632,10 +137,287 @@ class NodeTypeSurfaceTest extends DataSurfaceKernelTestBase {
    * @return \Drupal\Core\Field\FieldConfigInterface|null
    *   The override, or NULL when none is stored.
    */
-  protected function baseFieldOverride(string $field_name, string $bundle = 'recipe') {
+  protected function baseFieldOverride(string $field_name, string $bundle) {
     return $this->container->get('entity_type.manager')
       ->getStorage('base_field_override')
       ->load('node.' . $bundle . '.' . $field_name);
+  }
+
+  /**
+   * Tests what discovery reads off the surface: identity, target, access.
+   */
+  public function testTheSurfaceIsDiscovered(): void {
+    $definition = $this->container->get('data_surface.surface_registry')->getDefinition('node.type');
+    $this->assertSame(NodeTypeSurface::class, $definition->class);
+    $this->assertSame(['type'], $definition->identity);
+    $this->assertSame(NodeTypeTarget::class, $definition->target);
+    $this->assertSame(NodeTypeAccess::class, $definition->access);
+    $situations = $this->container->get('data_surface.surface_registry')->getSituations(NodeTypeSurface::class);
+    $this->assertSame(['add', 'edit'], array_keys($situations));
+    $this->assertSame(NodeTypeSurface::PERMISSION, $situations['edit']->permission);
+    $this->assertSame([NodeTypeAlter::class], array_map(static fn ($alter): string => $alter->class, $definition->alters));
+  }
+
+  /**
+   * Tests the add situation: an open machine name, unique on the site.
+   */
+  public function testAddLeavesTheMachineNameOpenAndUnique(): void {
+    $surface = $this->surfaces()->buildSituation(NodeTypeSurface::class, 'add');
+    $this->assertFalse($surface->isLocked('type'));
+    $this->assertArrayHasKey('DataSurfaceUniqueNodeType', $surface->getDefinition('type')->getConstraints());
+
+    // The defaults a new content type starts from, as declared.
+    $defaults = $surface->getDefaultValues();
+    $this->assertTrue($defaults['status']);
+    $this->assertFalse($defaults['promote']);
+    $this->assertFalse($defaults['sticky']);
+    $this->assertSame('Title', $defaults['title_label']);
+    $this->assertSame(1, $defaults['preview_mode']);
+    $this->assertTrue($defaults['new_revision']);
+    $this->assertTrue($defaults['display_submitted']);
+
+    // Declared in core's order, then the alter's mount.
+    $this->assertSame(
+      [
+        'name',
+        'type',
+        'description',
+        'title_label',
+        'preview_mode',
+        'help',
+        'status',
+        'promote',
+        'sticky',
+        'new_revision',
+        'display_submitted',
+        'third_party_settings',
+      ],
+      $surface->getDefinitions()->names(),
+    );
+
+    // A taken machine name is a violation, and a free one is not.
+    NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
+    $values = ['name' => 'Article again', 'type' => 'article'] + $defaults;
+    $errors = $this->pipeline()->validate($surface, $values);
+    $this->assertContains('type', $errors->keys());
+    $this->assertStringContainsString('already exists', (string) $errors->byKey('type')[0]->message);
+    $this->assertCount(0, $this->pipeline()->validate($surface, ['type' => 'fresh_type'] + $values));
+  }
+
+  /**
+   * Tests the edit situation: the machine name is locked to the type.
+   */
+  public function testEditLocksTheMachineName(): void {
+    NodeType::create(['type' => 'article', 'name' => 'Article', 'help' => 'Some help.'])->save();
+    $context = $this->surfaces()->situation(NodeTypeSurface::class, 'edit', ['type' => 'article']);
+    $this->assertSame(['type' => 'article'], $context->known);
+    $this->assertFalse($context->creates);
+    [$surface, $target] = $this->served($context);
+
+    $this->assertTrue($surface->isLocked('type'));
+    $this->assertSame('article', $surface->getDefault('type'));
+    // No uniqueness check against yourself on edit.
+    $this->assertArrayNotHasKey('DataSurfaceUniqueNodeType', $surface->getDefinition('type')->getConstraints());
+
+    // Current values come from the target, not from the surface.
+    $stored = $target->load($surface);
+    $this->assertSame('Article', $stored['name']);
+    $this->assertSame('Some help.', $stored['help']);
+    $this->assertSame('Title', $stored['title_label']);
+
+    // The generated form renders the locked value, disabled, and a
+    // tampered submit cannot move it.
+    $form_builder = $this->container->get('data_surface.form_builder');
+    $form = $form_builder->buildSurfaceForm($surface, array_replace($surface->getDefaultValues(), $stored), new FormState());
+    $this->assertTrue($form['type']['#disabled']);
+    $this->assertSame('article', $form['type']['#default_value']);
+    $this->assertSame('select', $form['preview_mode']['#type']);
+    $this->assertSame('textarea', $form['help']['#type']);
+    $form_state = new FormState();
+    $form_state->setValues(['name' => 'Renamed', 'type' => 'evil_rename']);
+    $values = $form_builder->extractSurfaceValues($surface, $form, $form_state, $stored);
+    $this->assertSame('article', $values['type']);
+    $this->assertSame('Renamed', $values['name']);
+
+    // An id that names nothing is refused by the situation, by name.
+    $this->expectException(\InvalidArgumentException::class);
+    $this->expectExceptionMessage('there is none with the id "ghost"');
+    $this->surfaces()->situation(NodeTypeSurface::class, 'edit', ['type' => 'ghost']);
+  }
+
+  /**
+   * Tests the target creating a content type, then updating it.
+   */
+  public function testTargetCreatesThenUpdates(): void {
+    [$surface, $target] = $this->served(NodeTypeSurface::add());
+    $this->assertSame([], $target->load($surface));
+    $result = $this->submit($surface, $target, [
+      'name' => 'Recipe',
+      'type' => 'recipe',
+      'title_label' => 'Recipe name',
+      'description' => 'Cooking instructions.',
+      'preview_mode' => '2',
+      'display_submitted' => 0,
+      'sticky' => 1,
+    ]);
+    $this->assertTrue($result->committed, ViolationSummary::fromViolations($result->violations));
+
+    $type = NodeType::load('recipe');
+    $this->assertInstanceOf(NodeTypeInterface::class, $type);
+    $this->assertSame('Recipe', $type->label());
+    $this->assertSame('Cooking instructions.', $type->getDescription());
+    $this->assertSame(2, $type->getPreviewMode(FALSE)->value);
+    $this->assertFalse($type->displaySubmitted());
+    $this->assertTrue($type->shouldCreateNewRevision());
+    $fields = $this->nodeFields('recipe');
+    $this->assertSame('Recipe name', (string) $fields['title']->getLabel());
+    $this->assertTrue((bool) $fields['sticky']->getDefaultValueLiteral()[0]['value']);
+    // Compared before writing: what did not move wrote no override.
+    $this->assertNull($this->baseFieldOverride('promote', 'recipe'));
+    $this->assertNotNull($this->baseFieldOverride('sticky', 'recipe'));
+
+    // Edited through the edit situation: a partial payload changes what
+    // it names, the rest is loaded, and the machine name cannot move.
+    [$surface, $target] = $this->served(NodeTypeSurface::edit($type));
+    $this->assertSame('Recipe name', $target->load($surface)['title_label']);
+    $edit = $this->submit($surface, $target, [
+      'name' => 'Recipes',
+      'type' => 'tampered',
+      'promote' => 1,
+      'title_label' => 'Dish name',
+    ]);
+    $this->assertTrue($edit->committed, ViolationSummary::fromViolations($edit->violations));
+    $this->assertSame('recipe', $edit->values['type']);
+    $this->assertNull(NodeType::load('tampered'));
+    $reloaded = NodeType::load('recipe');
+    $this->assertSame('Recipes', $reloaded->label());
+    $this->assertSame(2, $reloaded->getPreviewMode(FALSE)->value);
+    $this->assertSame('Cooking instructions.', $reloaded->getDescription());
+    $fields = $this->nodeFields('recipe');
+    $this->assertSame('Dish name', (string) $fields['title']->getLabel());
+    $this->assertTrue((bool) $fields['promote']->getDefaultValueLiteral()[0]['value']);
+    $this->assertTrue((bool) $fields['sticky']->getDefaultValueLiteral()[0]['value']);
+  }
+
+  /**
+   * Tests a dry run, which writes nothing.
+   */
+  public function testDryRunWritesNothing(): void {
+    [$surface, $target] = $this->served(NodeTypeSurface::add());
+    $result = $this->submit($surface, $target, ['name' => 'Dry run', 'type' => 'dry_run', 'promote' => 1], TRUE);
+    $this->assertTrue($result->isValid(), ViolationSummary::fromViolations($result->violations));
+    $this->assertFalse($result->committed);
+    $this->assertNull(NodeType::load('dry_run'));
+    $this->assertNull($this->baseFieldOverride('promote', 'dry_run'));
+  }
+
+  /**
+   * Tests the alter: the review settings, stored as seconds.
+   *
+   * Mounted under the extras module's name, asked for as an amount and a
+   * unit, and stored as the seconds the extras module's schema says,
+   * through the storage shape the alter hands the surface; read back,
+   * one week is one week again. The target writes and reads the seconds
+   * without knowing the extras module exists.
+   */
+  public function testAlterStoresTheReviewSettingsInTheirOwnShape(): void {
+    $extras = 'data_surface_demo_extras';
+    [$surface, $target] = $this->served(NodeTypeSurface::add());
+    $mount = $surface->getDefinition('third_party_settings');
+    $this->assertInstanceOf(ComplexDataDefinitionInterface::class, $mount);
+    $module = $mount->getPropertyDefinition($extras);
+    $this->assertInstanceOf(ComplexDataDefinitionInterface::class, $module);
+    $this->assertSame('Review deadline', (string) $module->getPropertyDefinition(NodeTypeReviewSettings::DEADLINE)?->getLabel());
+    $this->assertNotNull($surface->getThirdPartyShape($extras));
+
+    $week = [NodeTypeReviewSettings::AMOUNT => 1, NodeTypeReviewSettings::UNIT => 'weeks'];
+    $result = $this->submit($surface, $target, [
+      'name' => 'Reviewed',
+      'type' => 'reviewed',
+      'third_party_settings' => [
+        $extras => [
+          NodeTypeReviewSettings::DEADLINE => $week,
+          NodeTypeReviewSettings::TAGS => ['news'],
+        ],
+      ],
+    ]);
+    $this->assertTrue($result->committed, ViolationSummary::fromViolations($result->violations));
+    $type = NodeType::load('reviewed');
+    $this->assertSame(604800, $type->getThirdPartySetting($extras, NodeTypeReviewSettings::DEADLINE));
+    $this->assertSame(['news'], $type->getThirdPartySetting($extras, NodeTypeReviewSettings::TAGS));
+    $this->assertContains($extras, $type->getDependencies()['module'] ?? []);
+
+    [$surface, $target] = $this->served(NodeTypeSurface::edit($type));
+    $this->assertSame($week, $target->load($surface)['third_party_settings'][$extras][NodeTypeReviewSettings::DEADLINE]);
+
+    // Past thirty days is refused on the amount, in the caller's units.
+    $late_deadline = [NodeTypeReviewSettings::AMOUNT => 45, NodeTypeReviewSettings::UNIT => 'days'];
+    $late = $this->submit($surface, $target, [
+      'third_party_settings' => [$extras => [NodeTypeReviewSettings::DEADLINE => $late_deadline]],
+    ]);
+    $this->assertSame(
+      ['third_party_settings.' . $extras . '.' . NodeTypeReviewSettings::DEADLINE . '.' . NodeTypeReviewSettings::AMOUNT],
+      array_map(static fn ($violation): string => $violation->fullPath(), iterator_to_array($late->violations, FALSE)),
+    );
+  }
+
+  /**
+   * Tests access: the situation's permission, then the entity's answer.
+   *
+   * Both have to allow, and neither alone opens anything; the routes the
+   * module ships give the same answer, because they ask the same thing.
+   */
+  public function testAccessIsThePermissionThenTheEntity(): void {
+    NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
+    $access_manager = $this->container->get('access_manager');
+    // User 1 bypasses every access check, so it is created and set aside
+    // before any account below is made.
+    $this->setUpCurrentUser();
+    $matrix = [
+      'nobody' => [[], FALSE],
+      'content types only' => [['administer content types'], FALSE],
+      'demo permission only' => [[NodeTypeSurfaceHooks::PERMISSION], FALSE],
+      'both' => [['administer content types', NodeTypeSurfaceHooks::PERMISSION], TRUE],
+    ];
+    $add = NodeTypeSurface::add();
+    $edit = NodeTypeSurface::edit(NodeType::load('article'));
+    foreach ($matrix as $who => [$permissions, $allowed]) {
+      $account = $this->createUser($permissions);
+      $add_access = $this->surfaces()->access(NodeTypeSurface::class, $add, $account);
+      $edit_access = $this->surfaces()->access(NodeTypeSurface::class, $edit, $account);
+      $this->assertSame($allowed, $add_access->isAllowed(), $who . ' on add.');
+      $this->assertSame($allowed, $edit_access->isAllowed(), $who . ' on edit.');
+      $this->assertSame($allowed, $access_manager->checkNamedRoute('data_surface_demo_node_type.add', [], $account), $who . ' on the add route.');
+      $this->assertSame($allowed, $access_manager->checkNamedRoute('data_surface_demo_node_type.edit', ['type' => 'article'], $account), $who . ' on the edit route.');
+      $this->assertContains('user.permissions', CacheableMetadata::createFromObject($edit_access)->getCacheContexts());
+    }
+
+    // An edit context naming a content type that is not there is refused
+    // by the access class, until it is created.
+    $account = $this->createUser(['administer content types', NodeTypeSurfaceHooks::PERMISSION]);
+    $missing = $this->surfaces()->access(NodeTypeSurface::class, new SurfaceContext('edit', known: ['type' => 'ghost']), $account);
+    $this->assertTrue($missing->isForbidden());
+    $this->assertContains('config:node_type_list', CacheableMetadata::createFromObject($missing)->getCacheTags());
+  }
+
+  /**
+   * Tests the operation link, which asks the edit situation's access.
+   */
+  public function testOperationLinkAsksTheEditSituation(): void {
+    NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
+    $node_type = NodeType::load('article');
+    $module_handler = $this->container->get('module_handler');
+
+    $this->setUpCurrentUser([], ['administer content types']);
+    $arguments = [$node_type, new CacheableMetadata()];
+    $this->assertSame([], $module_handler->invoke('data_surface_demo_node_type', 'entity_operation', $arguments));
+
+    $this->setUpCurrentUser([], ['administer content types', NodeTypeSurfaceHooks::PERMISSION]);
+    $cacheability = new CacheableMetadata();
+    $operations = $module_handler->invoke('data_surface_demo_node_type', 'entity_operation', [$node_type, $cacheability]);
+    $this->assertSame('Edit (surface)', (string) $operations['surface_edit']['title']);
+    $this->assertSame('/admin/structure/types/manage/article/surface-edit', $operations['surface_edit']['url']->toString());
+    $this->assertContains('user.permissions', $cacheability->getCacheContexts());
   }
 
 }

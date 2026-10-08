@@ -18,6 +18,7 @@ use Drupal\data_surface\Pipeline\DataSurfaceTargetInterface;
 use Drupal\data_surface\Refinement\Narrowing;
 use Drupal\data_surface\Surface\AltersOutputsInterface;
 use Drupal\data_surface\Surface\HasOutputsInterface;
+use Drupal\data_surface\Surface\HasStorageShapeInterface;
 use Drupal\data_surface\Surface\SurfaceAccessInterface;
 use Drupal\data_surface\Surface\SurfaceAlterInterface;
 use Drupal\data_surface\Surface\SurfaceContext;
@@ -79,6 +80,9 @@ final class Surfaces implements SurfacesInterface {
    *   surface with no constructor.
    * @param \Drupal\Core\Session\AccountInterface $currentUser
    *   The account an access question is about when none is named.
+   * @param \Drupal\data_surface\SurfaceBuild\SituationArguments $situationArguments
+   *   What turns a route's or a tool's values into a situation's
+   *   arguments, an entity's id into the entity among them.
    */
   public function __construct(
     protected readonly SurfaceRegistry $registry,
@@ -86,6 +90,7 @@ final class Surfaces implements SurfacesInterface {
     protected readonly TypedDataManagerInterface $typedDataManager,
     protected readonly ClassResolverInterface $classResolver,
     protected readonly AccountInterface $currentUser,
+    protected readonly SituationArguments $situationArguments,
   ) {
   }
 
@@ -141,6 +146,11 @@ final class Surfaces implements SurfacesInterface {
       }
       if ($instance instanceof AltersOutputsInterface) {
         $instance->alterOutputs($additions[$alter->module][1] ??= new SurfaceShapeAdditions($builder, $this->typedDataManager, $alter->module, TRUE));
+      }
+      if ($instance instanceof HasStorageShapeInterface) {
+        // phpcs:ignore Drupal.Files.LineLength.TooLong
+        // SKETCH GAP: the sketch has no storage shape for what an alter mounts; an alter implementing HasStorageShapeInterface hands one for its own module's mount, which the builder refuses for a module that mounts nothing and SurfaceTargetAdapter applies.
+        $builder->setThirdPartyShape($alter->module, $instance->storageShape());
       }
       $links[] = [$instance, $alter->refiners];
     }
@@ -297,7 +307,8 @@ final class Surfaces implements SurfacesInterface {
    */
   public function situation(string $surface, string $situation, array $arguments = []): SurfaceContext {
     $found = $this->registry->getSituation($surface, $situation);
-    $context = (new \ReflectionMethod($found->class, $found->method))->invokeArgs(NULL, $arguments);
+    $context = (new \ReflectionMethod($found->class, $found->method))
+      ->invokeArgs(NULL, $this->situationArguments->resolve($found, $arguments));
     if (!$context instanceof SurfaceContext) {
       throw new \LogicException(sprintf(
         'The "%s" situation, %s, returned %s; a situation returns a %s.',

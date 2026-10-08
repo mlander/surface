@@ -13,11 +13,13 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 /**
  * Tests the surface-driven content type add and edit forms in a browser.
  *
- * The demo's largest claim is that one declaration serves two operations
- * and that the operation is build-time context: uniqueness is added on
- * add, the machine name is locked on edit, and a composite target writes
- * a config entity and a set of base field overrides in one commit. All
- * of that had been exercised by calling the provider and the pipeline.
+ * The demo's largest claim is that one surface serves two situations
+ * and that the situation is build-time context: uniqueness is added on
+ * add, the machine name is locked on edit, and one target writes a
+ * config entity and a set of base field overrides in one commit. Each
+ * route names the surface and a situation, and the edit route's {type}
+ * is the edit situation's parameter. All of that is exercised in kernel
+ * tests by calling the surface, its target and the pipeline.
  * What only a browser shows is that the form really redirects and says
  * so, that a locked key is not merely marked disabled but is refused
  * when a client sends it anyway, and that the uniqueness constraint —
@@ -193,6 +195,31 @@ class NodeTypeSurfaceFormTest extends BrowserTestBase {
     $renamed = NodeType::load('recipe');
     $this->assertInstanceOf(NodeType::class, $renamed);
     $this->assertSame('Renamed', $renamed->label());
+  }
+
+  /**
+   * Tests that each route is gated by its situation's two answers.
+   *
+   * The situation's permission and the entity's own answer: holding
+   * either alone is a 403 on both routes.
+   */
+  public function testRoutesAreGatedByTheSituation(): void {
+    NodeType::create(['type' => 'recipe', 'name' => 'Recipe'])->save();
+    $this->drupalLogin($this->drupalCreateUser(['administer content types']));
+    $this->drupalGet(self::ADD_ROUTE);
+    $this->assertSession()->statusCodeEquals(403);
+    $this->drupalGet('admin/structure/types/manage/recipe/surface-edit');
+    $this->assertSession()->statusCodeEquals(403);
+
+    $this->drupalLogin($this->drupalCreateUser(['administer data surface node type demo']));
+    $this->drupalGet(self::ADD_ROUTE);
+    $this->assertSession()->statusCodeEquals(403);
+    $this->drupalGet('admin/structure/types/manage/recipe/surface-edit');
+    $this->assertSession()->statusCodeEquals(403);
+
+    // A content type that is not there is not found, before access.
+    $this->drupalGet('admin/structure/types/manage/ghost/surface-edit');
+    $this->assertSession()->statusCodeEquals(404);
   }
 
 }

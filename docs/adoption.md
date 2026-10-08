@@ -235,10 +235,11 @@ in that submodule's README and summarized in [Core gaps](core-gaps.md).
 The field tools compare two descriptions of settings the tool's author
 knew about. `data_surface_demo_node_type_tool` compares what happens to
 settings nobody told the tool about. `data_surface_demo_extras` adds two
-review settings to every content type, once through the content type
-surface's build event and once through an ordinary form alter on core's
-content type form. `data_surface:node_type_add`, which names no key of a
-content type at all, advertises both — the deadline as the amount and
+review settings to every content type, once through an alter of the
+content type surface and once through an ordinary form alter on core's
+content type form. `data_surface:node.type:add`, a tool generated from
+the content type surface's add situation that names no key of a content
+type at all, advertises both — the deadline as the amount and
 unit a person says, the tags with their pattern — and holds every caller
 to them. The classic side is given the most a schema can say: the
 deadline's config schema is an integer with its full Range, 3600 to

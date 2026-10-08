@@ -16,32 +16,34 @@ use Drupal\data_surface\Surface\SurfaceInterface;
 use Drupal\data_surface_tool\Access\FieldInstanceAccess;
 use Drupal\data_surface_tool\Target\FieldInstanceTarget;
 use Drupal\field\FieldConfigInterface;
+use Drupal\field\FieldStorageConfigInterface;
 
 /**
  * A field on a bundle. Generic: knows nothing of any field type.
  *
  * @code
  *   FieldInstanceSurface
+ *   -> storage    FieldStorageSurface
  *   -> settings   whichever surface is marked as the variant for the field type
  * @endcode
  *
- * The settings are an open slot chosen by the field type: the field
- * surface lists no children, and each field type's module marks its own
- * settings surface with #[SurfaceVariant]. A field type with no settings
- * surface in the new spelling is not among the field types this surface
- * offers, because its slot would have no shape; the field tools fall
- * back to the old spelling for it.
+ * The storage is a fixed child with a target of its own. The settings
+ * are an open slot chosen by the field type: the field surface lists no
+ * children, and each field type's module marks its own settings surface
+ * with #[SurfaceVariant]. A field type with no settings surface in the
+ * new spelling is not among the field types this surface offers,
+ * because its slot would have no shape; the field tools fall back to the
+ * old spelling for it.
  *
- * Add and edit are not shapes. They are how much is already known, so
- * they are the two ways to ask for this surface, below. The sketch's
- * storage subsurface and reuse situation are not built: the field
- * storage is assumed to exist, as the field tools assume it.
+ * Add, reuse and edit are not shapes. They are how much is already
+ * known, so they are the three ways to ask for this surface, below.
  *
  * @code
- *                              add      edit
- *   entity_type_id, bundle     locked   locked
- *   field_type, field_name     open     locked
- *   label, description, ...    open     open, current values loaded
+ *                              add      reuse    edit
+ *   entity_type_id, bundle     locked   locked   locked
+ *   field_type, field_name     open     locked   locked
+ *   label, description, ...    open     open     open, current values loaded
+ *   storage                    its add  its edit its edit
  *   settings                   by type  fixed by the known type
  * @endcode
  */
@@ -53,7 +55,7 @@ use Drupal\field\FieldConfigInterface;
 final class FieldInstanceSurface implements SurfaceInterface {
 
   /**
-   * Adds a field to a bundle.
+   * Adds a field to a bundle, with a storage of its own.
    */
   #[Situation('add', label: 'Add a field to a bundle', permission: 'administer %entity_type_id fields')]
   public static function add(string $entity_type_id, string $bundle): SurfaceContext {
@@ -64,16 +66,28 @@ final class FieldInstanceSurface implements SurfaceInterface {
   }
 
   /**
+   * Adds an existing storage's field to another bundle.
+   *
+   * An add for the field, an edit for its storage: parent and child see
+   * different operations.
+   */
+  #[Situation('reuse', label: 'Add an existing field to another bundle', permission: 'administer %entity_type_id fields')]
+  public static function reuse(FieldStorageConfigInterface $storage, string $bundle): SurfaceContext {
+    return self::handSettingsTheField(self::add($storage->getTargetEntityTypeId(), $bundle)
+      ->withOperation('reuse')
+      ->withKnown(['field_type' => $storage->getType(), 'field_name' => $storage->getName()]))
+      ->withChild('storage', FieldStorageSurface::edit($storage));
+  }
+
+  /**
    * Edits a field. Everything that says which field it is, is known.
    */
   #[Situation('edit', label: 'Edit a field', permission: 'administer %entity_type_id fields')]
   public static function edit(FieldConfigInterface $field): SurfaceContext {
-    return self::handSettingsTheField(new SurfaceContext('edit', known: [
-      'entity_type_id' => $field->getTargetEntityTypeId(),
-      'bundle' => $field->getTargetBundle(),
-      'field_name' => $field->getName(),
-      'field_type' => $field->getType(),
-    ]));
+    $storage = $field->getFieldStorageDefinition();
+    assert($storage instanceof FieldStorageConfigInterface);
+    return self::handSettingsTheField(self::reuse($storage, $field->getTargetBundle())
+      ->withOperation('edit', creates: FALSE));
   }
 
   /**
@@ -117,6 +131,11 @@ final class FieldInstanceSurface implements SurfaceInterface {
     $inputs->add('required', 'boolean', new TranslatableMarkup('Required field'), default: FALSE);
 
     // Its parts.
+    $inputs->attach('storage', FieldStorageSurface::class);
+    $inputs->describe('storage',
+      label: new TranslatableMarkup('Field storage'),
+      description: new TranslatableMarkup('What every bundle using this field shares.'),
+    );
     $inputs->attachBy('settings', by: 'field_type');
     $inputs->describe('settings',
       label: new TranslatableMarkup('Field settings'),

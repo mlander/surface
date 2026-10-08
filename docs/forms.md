@@ -417,10 +417,28 @@ Two more things these hosts force:
 
 ## The generic provider form
 
-A provider answers three questions about one coordinate — surface,
+`Form\DataSurfaceProviderForm` serves a surface from the route alone, in
+two spellings.
+
+**A surface and a situation** (the new spelling). The route names the
+surface class in `_data_surface_surface` and one of its situations in
+`_data_surface_situation`; its parameters are the situation method's,
+by name, and its requirement is `_data_surface_situation_access:
+'TRUE'`, the situation's permission and then the surface's access
+class. The content type demo's two routes are this spelling, and
+[Surfaces as classes](surfaces.md#routes-from-situations) has the
+example. Everything below about cosmetics, the `surface` key and access
+twice applies to it unchanged; the cosmetic layer is told the
+situation id as its operation and the raw value of the situation's
+first route parameter as its subject.
+
+**A provider** (the old spelling, until step 5 of the rework deletes
+it). A provider answers three questions about one coordinate — surface,
 access, target — which is everything a form needs. So a standalone
-provider does not write a form class: a route names it, and
-`Form\DataSurfaceProviderForm` does the rest.
+provider does not write a form class: a route names it, and the form
+does the rest. No module here ships such a route any more; the
+deprecated `NodeTypeSurfaceProvider` is still served by one in
+`DataSurfaceProviderFormTest`.
 
 ```yaml
 example.edit:
@@ -468,7 +486,10 @@ above: a route requirement is checked when the page is built and the
 submit arrives later. A route that states its gate in YAML as well —
 which `data_surface_demo_node_type` does — gets core's own access layer
 first, and the form's check is the floor under it. Neutral blocks
-nothing.
+nothing for a provider. For a situation it is a refusal on both halves:
+the situation owns its operation, so the form refuses anything but
+allowed on the way in and hands the pipeline a decisive answer on the
+way out, the same answer the route's own requirement gives.
 
 ### The cosmetic seam
 

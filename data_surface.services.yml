@@ -36,5 +36,22 @@ services:
     arguments: ['%data_surface.surface_classes%', '@cache.discovery']
   data_surface.surfaces:
     class: Drupal\data_surface\SurfaceBuild\Surfaces
-    arguments: ['@data_surface.surface_registry', '@data_surface.factory', '@typed_data_manager', '@class_resolver', '@current_user']
+    arguments: ['@data_surface.surface_registry', '@data_surface.factory', '@typed_data_manager', '@class_resolver', '@current_user', '@data_surface.situation_arguments']
   Drupal\data_surface\SurfaceBuild\SurfacesInterface: '@data_surface.surfaces'
+  # A situation's arguments from a route's parameters or a tool's inputs,
+  # by name; an entity's id becomes the entity a parameter is typed with.
+  data_surface.situation_arguments:
+    class: Drupal\data_surface\SurfaceBuild\SituationArguments
+    arguments: ['@entity_type.manager']
+  # The route access check for a route served by a situation: the
+  # situation's permission, then the surface's access class.
+  data_surface.situation_access:
+    class: Drupal\data_surface\Access\SituationAccessCheck
+    arguments: ['@data_surface.surfaces', '@data_surface.surface_registry', '@data_surface.situation_arguments']
+    tags:
+      - { name: access_check, applies_to: _data_surface_situation_access }
+  # Every discovered surface, its situations, alters and variants, as one
+  # array: what docs/catalogue.md is generated from.
+  data_surface.surface_catalogue:
+    class: Drupal\data_surface\SurfaceBuild\SurfaceCatalogue
+    arguments: ['@data_surface.surface_registry', '@data_surface.surfaces']

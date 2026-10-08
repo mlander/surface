@@ -15,7 +15,8 @@ both ways, so the two can be compared.
   value is offered — here, only in upper case.
 
 Both live in one event subscriber on `DataSurfaceBuildEvent`, which fires
-while the surface is still mutable. Nothing here alters a form, and every
+while the surface is still mutable — the old spelling, which the
+formatter still uses. Nothing here alters a form, and every
 consumer of the surface — form, validation, defaults, and any
 machine-readable contract — sees the same extended surface.
 
@@ -62,17 +63,19 @@ deadline of one hour to thirty days, stored as one integer of seconds
 under a key, `review_deadline`, that does not name its unit; and a list
 of audience tags.
 
-- **As contract**, in the same subscriber: mounted on the content type
-  surface (host id `entity_type:node_type`, so nothing here depends on
-  the module providing it). The deadline is asked for as an amount and a
+- **As contract**, in `SurfaceAlter\NodeTypeAlter`, carrying
+  `#[AltersSurface(NodeTypeSurface::class)]`: discovery finds it, and
+  skips it on a site without the node type demo, so nothing here
+  depends on that module. The deadline is asked for as an amount and a
   unit — hours, days, weeks or business days — with a constraint on the
   pair that refuses anything past thirty days on the amount, and
-  `ReviewDeadlineShape` turns the pair into seconds and back; it is
-  handed to the surface with `setThirdPartyShape()`, and the target that
-  writes third party settings applies it in prepare. The tags are a
-  list, with a pattern for each tag and a uniqueness constraint. It
-  brings a comma-separated widget for the list, because the stock
-  widgets draw a list only as a multiple select.
+  `ReviewDeadlineShape` turns the pair into seconds and back; the alter
+  hands it to the surface by implementing `HasStorageShapeInterface`,
+  and the target adapter applies it to this module's settings before
+  the content type's target writes them and after it reads them. The
+  tags are a list, with a pattern for each tag and a uniqueness
+  constraint. It brings a comma-separated widget for the list, because
+  the stock widgets draw a list only as a multiple select.
 - **The classic way**, in `Hook\NodeTypeFormHooks`: a
   `hook_form_node_type_form_alter` on core's own content type form, with
   an amount and a unit select whose `#element_validate` turns them into

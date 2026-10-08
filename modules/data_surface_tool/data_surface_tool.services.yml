@@ -5,3 +5,8 @@ services:
   data_surface_tool.input_definitions:
     class: Drupal\data_surface_tool\SurfaceInputDefinitions
     arguments: ['@data_surface.options', '@string_translation']
+  # What a tool generated for one situation of one surface takes and
+  # answers with; the deriver writes it statically, the tool refines it.
+  data_surface_tool.situation_inputs:
+    class: Drupal\data_surface_tool\SituationInputs
+    arguments: ['@data_surface.surfaces', '@data_surface.situation_arguments', '@data_surface_tool.input_definitions', '@string_translation']

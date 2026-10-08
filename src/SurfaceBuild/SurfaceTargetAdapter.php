@@ -34,9 +34,13 @@ use Drupal\data_surface\SurfaceEntry;
  * CompositeTarget: a composite hands each child only the keys it claims,
  * and a slot's child needs its sibling to know which variant it is.
  *
- * A storage shape for third-party settings, which the engine's own
- * targets apply in prepare, is not applied here: no surface in the new
- * spelling has a target yet that stores them.
+ * A storage shape an alter hands the surface for the keys it mounts
+ * (HasStorageShapeInterface) is applied here, to that module's namespace
+ * under `third_party_settings` and nothing else: fromStorage() on what
+ * the target loads, toStorage() in prepare. So the target reads and
+ * writes a contributor's settings in the shape they are stored in, and
+ * never has to know the contributor exists, the way the engine's own
+ * ConfigEntityTarget applies the same shape.
  *
  * @internal
  */
@@ -48,6 +52,11 @@ final class SurfaceTargetAdapter implements DataSurfaceTargetInterface {
    * The route id of an attached child, which has one route only.
    */
   public const ATTACHED = '';
+
+  /**
+   * The surface key a module's mounted settings live under.
+   */
+  public const THIRD_PARTY = 'third_party_settings';
 
   /**
    * Constructs a SurfaceTargetAdapter.
@@ -75,7 +84,7 @@ final class SurfaceTargetAdapter implements DataSurfaceTargetInterface {
    * {@inheritdoc}
    */
   public function load(DataSurfaceInterface $surface): array {
-    $values = array_intersect_key($this->target->load($this->context), $surface->getDefinitions()->toArray());
+    $values = self::shapeThirdParty($surface, array_intersect_key($this->target->load($this->context), $surface->getDefinitions()->toArray()), FALSE);
     foreach ($this->routes as $key => $routes) {
       $entry = $surface->getDefinitions()->entry($key);
       $id = $entry === NULL ? NULL : $this->routeOf($entry, $values + $surface->getDefaultValues());
@@ -98,12 +107,13 @@ final class SurfaceTargetAdapter implements DataSurfaceTargetInterface {
    * {@inheritdoc}
    */
   public function prepare(DataSurfaceInterface $surface, array $values): PreparedValues {
+    // phpcs:ignore Drupal.Files.LineLength.TooLong
+    // SKETCH GAP: the sketch's target has no prepare step; prepare writes nothing and checks nothing, and its one job is the storage shape a contributor handed the surface for its mounted settings, which the target is then given in stored form.
+    $stored = self::shapeThirdParty($surface, $values, TRUE);
     if ($this->routes === []) {
-      // phpcs:ignore Drupal.Files.LineLength.TooLong
-      // SKETCH GAP: the sketch's target has no prepare step and no third-party storage shape; prepare is the identity and mounted settings shapes are not applied.
-      return new PreparedValues($values, $values);
+      return new PreparedValues($values, $stored);
     }
-    $own = $values;
+    $own = $stored;
     $children = [];
     foreach ($this->routes as $key => $routes) {
       $entry = $surface->getDefinitions()->entry($key);
@@ -124,27 +134,70 @@ final class SurfaceTargetAdapter implements DataSurfaceTargetInterface {
    * {@inheritdoc}
    */
   public function commit(PreparedValues $prepared): void {
+    $artifact = $prepared->artifact;
     if ($this->routes === []) {
-      $this->target->commit($this->context, $prepared->values);
+      if (!is_array($artifact)) {
+        throw new \InvalidArgumentException('The prepared values did not come from this target.');
+      }
+      $this->target->commit($this->context, $artifact);
       return;
     }
-    $artifact = $prepared->artifact;
     if (!is_array($artifact) || !isset($artifact['own'], $artifact['children'])) {
       throw new \InvalidArgumentException('The prepared values did not come from this target.');
     }
-    // The parent first: a child stored apart from it is usually stored on
-    // the thing the parent creates.
-    $this->target->commit($this->context, $artifact['own']);
     // phpcs:ignore Drupal.Files.LineLength.TooLong
     // SKETCH GAP: the sketch's child target loads by identity its context knows, but a creating parent's identity is only known once accepted; a routed child is committed in its context plus the parent's accepted identity values it does not already know.
     $known = array_intersect_key($prepared->values, array_flip($this->identity)) + $this->context->known;
+    $before = $after = [];
     foreach ($artifact['children'] as $key => [$id, $child_prepared]) {
       $route = $this->routes[$key][$id] ?? NULL;
       if ($route === NULL || !$child_prepared instanceof PreparedValues) {
         throw new \InvalidArgumentException('The prepared values did not come from this target.');
       }
+      // phpcs:ignore Drupal.Files.LineLength.TooLong
+      // SKETCH GAP: the sketch does not say in which order a parent and the children stored apart from it are written; an attached child is a part the parent is built on (a field's storage) and is committed before it, a slot's variant lives on what the parent writes (a field's settings) and is committed after it.
+      if ($id === self::ATTACHED) {
+        $before[] = [$route, $child_prepared];
+      }
+      else {
+        $after[] = [$route, $child_prepared];
+      }
+    }
+    foreach ($before as [$route, $child_prepared]) {
       $route->withParentIdentity($known)->commit($child_prepared);
     }
+    $this->target->commit($this->context, $artifact['own']);
+    foreach ($after as [$route, $child_prepared]) {
+      $route->withParentIdentity($known)->commit($child_prepared);
+    }
+  }
+
+  /**
+   * Reads what a committed surface answers with, from its target.
+   *
+   * The values of the surface's declared outputs that its target's load()
+   * hands back, in the context the values were committed in: this
+   * context plus the identity the values accepted, so a thing just
+   * created is found by the identity it was given.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The surface, whose output definitions say which keys are outputs.
+   * @param array $values
+   *   The accepted values.
+   *
+   * @return array
+   *   The outputs the target could say, keyed by output name; empty for a
+   *   surface that declares none.
+   */
+  public function outputs(DataSurfaceInterface $surface, array $values): array {
+    $outputs = $surface->getOutputDefinitions()->toArray();
+    if ($outputs === []) {
+      return [];
+    }
+    // phpcs:ignore Drupal.Files.LineLength.TooLong
+    // SKETCH GAP: the sketch's surface declares outputs but not who produces their values; they are what the target's load() hands back under an output's name, once the values are committed.
+    $known = array_intersect_key($values, array_flip($this->identity)) + $this->context->known;
+    return array_intersect_key($this->target->load($this->context->withKnown($known)->withOperation($this->context->operation, FALSE)), $outputs);
   }
 
   /**
@@ -205,6 +258,33 @@ final class SurfaceTargetAdapter implements DataSurfaceTargetInterface {
    */
   protected static function childOf(SurfaceEntry $entry, string $id): DataSurfaceInterface {
     return $entry->attachment !== NULL ? $entry->attachment->child : $entry->slot->variant($id)->child;
+  }
+
+  /**
+   * Applies the storage shapes the surface carries to mounted settings.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The surface, which carries each contributor's storage shape.
+   * @param array $values
+   *   Values of this surface's level.
+   * @param bool $to_storage
+   *   TRUE to turn them into the stored shape, FALSE to read them back.
+   *
+   * @return array
+   *   The values, each shaped module's settings translated and nothing
+   *   else touched.
+   */
+  protected static function shapeThirdParty(DataSurfaceInterface $surface, array $values, bool $to_storage): array {
+    if (!is_array($values[self::THIRD_PARTY] ?? NULL)) {
+      return $values;
+    }
+    foreach ($values[self::THIRD_PARTY] as $module => $settings) {
+      $shape = $surface->getThirdPartyShape((string) $module);
+      if ($shape !== NULL && is_array($settings)) {
+        $values[self::THIRD_PARTY][$module] = $to_storage ? $shape->toStorage($settings) : $shape->fromStorage($settings);
+      }
+    }
+    return $values;
   }
 
 }

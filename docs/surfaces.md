@@ -123,8 +123,8 @@ already known, and that is a **context**, a `SurfaceContext`:
   open. That is the whole difference between add and edit.
 - The ways a surface is asked for are static methods carrying
   `#[Situation]`, each returning a context whose operation is the
-  situation id. The permission on the attribute is the static part of
-  access; `%key` in it is filled from the identity the context knows.
+  situation id. What a situation needs is its own signature: a route or
+  a tool supplies its parameters by name.
 - Another module adds a situation with
   `#[Situation('clone', of: SomeSurface::class)]` on a static method in
   its `src/SurfaceAlter/`. Two providers of one id are refused, naming
@@ -132,19 +132,179 @@ already known, and that is a **context**, a `SurfaceContext`:
 - A context may also narrow a key (`withConstraint()`, checked narrower)
   and, when it creates, give starting values (`withStarting()`), which
   become the key's defaults: values the caller sees first and may
-  change.
+  change. It may hand a subsurface a context of its own
+  (`withChild()`). What depends on where you are is the situation's;
+  what depends on what was entered is a refiner's.
+
+The content type surface is the worked example:
+
+```php
+#[Surface('node.type',
+  identity: ['type'],
+  target: NodeTypeTarget::class,
+  access: NodeTypeAccess::class,
+)]
+final class NodeTypeSurface implements SurfaceInterface {
+
+  #[Situation('add', label: 'Add a content type', permission: self::PERMISSION)]
+  public static function add(): SurfaceContext {
+    // Unique on add only: that is where you are, not what was entered.
+    return (new SurfaceContext('add', creates: TRUE))
+      ->withConstraint('type', 'DataSurfaceUniqueNodeType');
+  }
+
+  #[Situation('edit', label: 'Edit a content type', permission: self::PERMISSION)]
+  public static function edit(NodeTypeInterface $type): SurfaceContext {
+    return new SurfaceContext('edit', known: ['type' => $type->id()]);
+  }
+
+  // defineInputs(): name, type, description, title_label, ...
+
+}
+```
+
+and the field instance surface has three, each knowing more than the
+last: `add($entity_type_id, $bundle)`, `reuse($storage, $bundle)` — an
+add for the field and, through `withChild('storage',
+FieldStorageSurface::edit($storage))`, an edit for its storage — and
+`edit($field)`. The storage's edit situation narrows cardinality not to
+shrink once the field has data, with `withConstraint()`.
 
 ```php
 $surfaces = \Drupal::service('data_surface.surfaces');
-$surface = $surfaces->buildSituation(RecipeSurface::class, 'edit', ['main', 'stew']);
-$access = $surfaces->access(RecipeSurface::class, RecipeSurface::edit('main', 'stew'));
-$target = $surfaces->target(RecipeSurface::class, RecipeSurface::edit('main', 'stew'));
+// By parameter name or position; an entity parameter takes the entity
+// or its id, loaded by the entity type whose class satisfies the type.
+$context = $surfaces->situation(NodeTypeSurface::class, 'edit', ['type' => 'article']);
+$surface = $surfaces->build(NodeTypeSurface::class, $context);
+$access = $surfaces->access(NodeTypeSurface::class, $context);
+$target = $surfaces->target(NodeTypeSurface::class, $context, $surface);
 ```
 
-The target is a `SurfaceTargetInterface` with `load()` and `commit()`,
-reached by the pipeline's `submit()` like any other target. A generic
-caller passes an empty context: every identity key stays open, and it
-is still the same surface.
+A generic caller passes an empty context: every identity key stays
+open, and it is still the same surface.
+
+### Routes from situations
+
+A route names a surface class and a situation, and its parameters are
+the situation method's, by name; an upcast entity parameter arrives as
+the entity. `DataSurfaceProviderForm` builds the context with the
+situation, renders the surface, loads current values from the composed
+target and submits through the pipeline to it. The route's requirement
+is the situation's access:
+
+```yaml
+data_surface_demo_node_type.edit:
+  path: '/admin/structure/types/manage/{type}/surface-edit'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceProviderForm'
+    _data_surface_surface: 'Drupal\data_surface_demo_node_type\Surface\NodeTypeSurface'
+    _data_surface_situation: 'edit'
+    _data_surface_cosmetics: 'data_surface_demo_node_type.form_cosmetics'
+  requirements:
+    _data_surface_situation_access: 'TRUE'
+  options:
+    parameters:
+      type:
+        type: 'entity:node_type'
+```
+
+A locked identity key renders as a disabled element holding the value
+the situation knows, and extraction keeps that value whatever is
+posted. The cosmetic layer (`DataSurfaceFormCosmeticsInterface`) is told
+the situation id as its operation and the raw value of the situation's
+first route parameter as its subject. `docs/forms.md` has the rest.
+
+## Access
+
+Two tiers, and alters never touch either:
+
+- **The situation's permission**, on `#[Situation(permission:)]`: the
+  static part, answerable with no subject. A `%key` in it is filled from
+  the identity the context knows (`administer %entity_type_id fields`);
+  a placeholder the context does not know is refused.
+- **The surface's access class**, `#[Surface(access:)]`, a
+  `SurfaceAccessInterface` that may hold services, asked only once the
+  permission allows: what depends on the subject. `NodeTypeAccess` asks
+  the node type entity whether one may be created, or this one updated,
+  so this module never grants more than core's own form;
+  `FieldInstanceAccess` refuses a locked storage.
+
+`SurfacesInterface::access()` is that answer, and every caller reads it:
+the route requirement `_data_surface_situation_access`, the form's
+floor, the content type listing's operation link, and the generated
+tool. A situation owns its operation, so a caller that hands the answer
+to the pipeline makes it decisive (`DataSurfaceAccess::decisive()`): no
+opinion is a refusal, as it is on a route.
+
+## Targets
+
+`#[Surface(target:)]` names a `SurfaceTargetInterface` with `load()` and
+`commit()`. It loads by the identity the context knows, so the context
+never carries an entity, and creates or updates by the context's
+`creates`. `SurfacesInterface::target()` adapts it to the pipeline's
+target and composes it along the tree:
+
+- A subsurface whose class names a target is loaded from and committed
+  to it, in the context its parent's hands it, plus the identity the
+  parent accepted that it did not already know. An attached child (a
+  field's storage) is committed **before** its parent, which is built on
+  it; a slot's variant (a field's settings) **after**, since it lives on
+  what the parent writes.
+- A subsurface without one is stored by its parent under its key.
+- An alter whose keys are asked for in one shape and stored in another
+  implements `HasStorageShapeInterface`. Its shape is applied to that
+  module's mount, `third_party_settings.<module>`, and nothing else:
+  `toStorage()` before the target writes, `fromStorage()` after it
+  reads. `NodeTypeAlter` in the extras module asks for a review
+  deadline as an amount and a unit; `NodeTypeTarget` writes the seconds
+  core's form writes, and never knows the extras module exists.
+- A target has no prepare step: a dry run accepts and validates, and
+  writes nothing, but a target's own storage checks (a config schema)
+  run only on commit.
+
+## Tools
+
+With `data_surface_tool` enabled, every situation of every surface that
+names a target is a tool, `data_surface:<surface id>:<situation id>`,
+derived by `SurfaceSituationToolDeriver` from the static layer alone:
+
+| Tool | Inputs |
+| --- | --- |
+| `data_surface:node.type:add` | `values` (every key, `type` unique), `dry_run` |
+| `data_surface:node.type:edit` | `type` (the content type's id), `values` (every key but `type`), `dry_run` |
+| `data_surface:field.instance:add` | `entity_type_id`, `bundle`, `values`, `dry_run` |
+| `data_surface:field.instance:reuse` | `storage` (its id), `bundle`, `values`, `dry_run` |
+| `data_surface:field.instance:edit` | `field` (its id), `values`, `dry_run` |
+
+- **Inputs** are the situation's parameters, by name — an entity
+  parameter as the entity's id, resolved when the tool runs — then
+  `values`, the surface's keys less the identity keys the situation
+  knows, then `dry_run`. Nothing in `values` is required unless the
+  situation creates. The definition is static, which is what situations
+  make possible: a situation that needs nothing is the exact contract
+  before anyone calls, and one that needs a subject refines `values`
+  to its real context (a field's settings become its type's) through
+  the Tool API's own input refiners once the subject arrives.
+- **Access** is the situation's, decisively.
+- **Execution** is the situation, the build, and one pipeline submit to
+  the composed target.
+- **Outputs** are the accepted `values`, `committed`, and the surface's
+  own outputs, as its target reads them back after the write.
+
+A surface without a target has no tool: its host supplies the target.
+A surface or situation that cannot be described is left out and logged.
+
+## Catalogue
+
+`data_surface.surface_catalogue` (`SurfaceCatalogue::describe()`) lists
+every discovered surface with its id, class, identity, target, access
+class, situations (id, label, parameters, whether it creates,
+permission), alters and variants, without building anything. Whether a
+situation creates is on the context it returns, so it is known only for
+a situation that needs nothing. [`catalogue.md`](catalogue.md) is that
+array for this repository's modules, generated by
+`scripts/generate-catalogue.php` and held to it by
+`SurfaceCatalogueTest`.
 
 ## Plugins
 
@@ -239,8 +399,8 @@ with its own shape and refiners, and alters can target it alone.
   new variant brings itself and the parent never changes.
 
 The demo block's presentation is a slot with two children named by
-class; the field instance surface's settings are an open slot the
-address module fills:
+class; the field instance surface attaches its storage and its settings
+are an open slot the address module fills:
 
 ```php
 // DemoBlockSurface
@@ -254,6 +414,7 @@ $inputs->attachBy('presentation_settings', by: 'presentation', children: [
 $inputs->describe('presentation_settings', label: new TranslatableMarkup('Presentation settings'));
 
 // FieldInstanceSurface, in data_surface_tool
+$inputs->attach('storage', FieldStorageSurface::class);
 $inputs->attachBy('settings', by: 'field_type');
 
 // AddressFieldSettingsSurface, in data_surface_address
@@ -296,11 +457,12 @@ What that means, end to end:
   too; the one shape refinement may introduce is a slot's placeholder
   resolving to its variant.
 - **Targets compose along the tree.** A child whose `#[Surface(target:)]`
-  names a target is loaded from and committed to it, after its parent,
-  in its own context plus whatever identity the parent accepted that it
-  did not already know; a child without one is stored by its parent
-  under its key. `SurfacesInterface::target()` builds the composed
-  target.
+  names a target is loaded from and committed to it — an attached child
+  before its parent, a slot's variant after — in its own context plus
+  whatever identity the parent accepted that it did not already know; a
+  child without one is stored by its parent under its key.
+  `SurfacesInterface::target()` builds the composed target (see
+  Targets, above).
 - **Emission.** The tool bridge converts an attached child to a nested
   map input, and an unresolved slot to the widest honest map: every
   variant's keys, none required and none with a default, each

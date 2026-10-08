@@ -124,6 +124,51 @@ Rules for the whole rework:
    form and the tool bridge are driven by situations: one route per
    situation, one tool per situation, inputs being the situation's
    parameters plus the surface's open keys.
+
+   **Done.** `NodeTypeSurface` (`node.type`, identity `type`) in
+   `data_surface_demo_node_type` with `add()` (creates; adds the
+   uniqueness constraint with `withConstraint()`) and
+   `edit(NodeTypeInterface $type)`, `NodeTypeTarget` (the node type
+   entity, then base field overrides that moved) and `NodeTypeAccess`
+   (the entity's create or update answer, after the situation's
+   permission). The extras module's node type branch is
+   `NodeTypeAlter`. Seams: discovery reads each situation's parameters
+   (`SituationParameter`); `SituationArguments` maps a route's
+   parameters or a tool's inputs onto them by name and loads an entity
+   parameter given as an id, and `Surfaces::situation()` goes through
+   it; `SituationRoute` reads `_data_surface_surface` /
+   `_data_surface_situation` off a route for both
+   `DataSurfaceProviderForm` (a second spelling beside the provider
+   one) and the `_data_surface_situation_access` access check; an alter
+   implementing `HasStorageShapeInterface` hands a storage shape for its
+   own mount, which `SurfaceTargetAdapter` applies in load and prepare;
+   the adapter commits an attached child before its parent and a slot
+   variant after; `SurfaceTargetAdapter::outputs()` reads a surface's
+   outputs back from its target. `data_surface_tool` derives
+   `data_surface:<surface>:<situation>` for every situation of every
+   surface with a target (`SurfaceSituationToolDeriver`,
+   `SurfaceSituationTool`, `SituationInputs`): parameters as inputs, an
+   entity one by id; `values` less the known identity keys, exact for a
+   situation that needs nothing and refined to the real context through
+   `input_definition_refiners` otherwise; `dry_run`. `FieldStorageSurface`
+   with `FieldStorageTarget` is attached at `storage`; `reuse()` hands it
+   `FieldStorageSurface::edit()`, which adds the has-data constraint; the
+   field tools' add path uses `reuse`. `SurfaceCatalogue`
+   (`data_surface.surface_catalogue`) and `docs/catalogue.md` via
+   `scripts/generate-catalogue.php`. Deviations: `data_surface:node_type_add`
+   is renamed, not aliased, and `NodeTypeAdd` and
+   `SurfaceProviderToolBase` are deleted; `NodeTypeSurfaceProvider` and
+   `NodeTypeAddTarget` stay, deprecated and unrouted, because the old
+   spelling's docs and the form's provider spelling still use them; the
+   edit route's parameter is `{type}` (was `{node_type}`), to match the
+   situation's `$type`; a new-spelling target has no prepare step, so
+   the node type config schema is no longer checked before a write (a
+   dry run no longer previews the entity); a situation's form and tool
+   read a neutral access answer as a refusal
+   (`DataSurfaceAccess::decisive()`), since the situation owns its
+   operation; the catalogue says whether a situation creates only when
+   the situation needs nothing. Every undecided point is a
+   `SKETCH GAP:` comment.
 4. **Plugins and remaining hosts.** Every demo plugin, the address field
    type, and the formatter, condition and action hosts move to
    `#[UsesSurface]` with their surface in `src/Surface`.

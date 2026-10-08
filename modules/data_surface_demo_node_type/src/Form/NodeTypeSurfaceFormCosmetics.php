@@ -12,7 +12,6 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Form\DataSurfaceFormCosmeticsInterface;
 use Drupal\data_surface\Form\DataSurfaceProviderForm;
 use Drupal\data_surface\Pipeline\DataSurfaceResult;
-use Drupal\data_surface_demo_node_type\NodeTypeSurfaceProvider;
 
 /**
  * Everything the content type form still has an opinion about.
@@ -99,7 +98,7 @@ final class NodeTypeSurfaceFormCosmetics implements DataSurfaceFormCosmeticsInte
     // #element_validate is what keeps this layer cosmetic. Only an add
     // has anything to mirror; on edit the key is locked and the
     // generated element is already disabled.
-    if ($operation === NodeTypeSurfaceProvider::OPERATION_ADD) {
+    if ($operation === 'add') {
       $form[$key]['type']['#type'] = 'machine_name';
       $form[$key]['type']['#machine_name'] = [
         'source' => [$key, 'name'],
@@ -118,7 +117,7 @@ final class NodeTypeSurfaceFormCosmetics implements DataSurfaceFormCosmeticsInte
    * this layer always has something to say.
    */
   public function surfaceFormMessage(DataSurfaceResult $result, string $operation, ?string $subject): \Stringable {
-    return $operation === NodeTypeSurfaceProvider::OPERATION_ADD
+    return $operation === 'add'
       ? $this->t('The content type %name has been added.', ['%name' => $result->values['name']])
       : $this->t('The content type %name has been updated.', ['%name' => $result->values['name']]);
   }

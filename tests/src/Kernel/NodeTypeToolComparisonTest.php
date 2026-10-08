@@ -12,8 +12,10 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Form\DataSurfaceProviderForm;
 use Drupal\data_surface_demo_extras\EventSubscriber\DemoExtrasSurfaceSubscriber;
 use Drupal\data_surface_demo_extras\NodeTypeReviewSettings;
-use Drupal\data_surface_demo_node_type_tool\Plugin\tool\Tool\NodeTypeAdd;
-use Drupal\data_surface_tool\SurfaceProviderToolBase;
+use Drupal\data_surface_demo_node_type\Surface\NodeTypeSurface;
+use Drupal\data_surface_tool\Plugin\Derivative\SurfaceSituationToolDeriver;
+use Drupal\data_surface_tool\Plugin\tool\Tool\SurfaceSituationTool;
+use Drupal\data_surface_tool\SituationInputs;
 use Drupal\node\Entity\NodeType;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\ToolResultInterface;
@@ -28,7 +30,7 @@ use Symfony\Component\HttpFoundation\Request;
  * Compares two content type tools once another module has extended it.
  *
  * The data_surface_demo_extras module adds two review settings to every
- * content type, twice: to the content type surface through the build event, and
+ * content type, twice: to the content type surface through an alter, and
  * to core's own content type form through a form alter. Neither tool
  * compared here was written with those settings in mind. The surface
  * driven tool picks them up because its input is the surface; the
@@ -55,7 +57,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
   /**
    * The surface driven tool.
    */
-  protected const SURFACE_TOOL = 'data_surface:node_type_add';
+  protected const SURFACE_TOOL = 'data_surface:node.type:add';
 
   /**
    * The tool an agent has for creating a content type without surfaces.
@@ -128,7 +130,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
    */
   public function testSurfaceToolAdvertisesTheExtension(): void {
     $schema = $this->surfaceSchema();
-    $values = $schema['properties'][SurfaceProviderToolBase::VALUES];
+    $values = $schema['properties'][SituationInputs::VALUES];
     $extras = $values['properties']['third_party_settings']['properties'][self::EXTRAS]['properties'];
 
     $deadline = $extras[NodeTypeReviewSettings::DEADLINE];
@@ -176,16 +178,18 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
   /**
    * Tests that the tool's own code names nothing it advertises.
    *
-   * The claim this whole comparison rests on, made checkable: the tool
-   * and the base it extends do not spell a single key of a content type,
-   * nor anything the extras module adds, nor the mount it adds it under.
+   * The claim this whole comparison rests on, made checkable: the tool,
+   * its deriver and what describes its inputs do not spell a single key
+   * of a content type, nor anything the extras module adds, nor the
+   * mount it adds it under. Nor the surface: the tool is generated.
    */
   public function testSurfaceToolNamesNoKey(): void {
     $sources = [
-      (new \ReflectionClass(NodeTypeAdd::class))->getFileName(),
-      (new \ReflectionClass(SurfaceProviderToolBase::class))->getFileName(),
+      (new \ReflectionClass(SurfaceSituationTool::class))->getFileName(),
+      (new \ReflectionClass(SurfaceSituationToolDeriver::class))->getFileName(),
+      (new \ReflectionClass(SituationInputs::class))->getFileName(),
     ];
-    $surface = $this->container->get('data_surface_demo_node_type.provider')->getDataSurface('add');
+    $surface = $this->container->get('data_surface.surfaces')->buildSituation(NodeTypeSurface::class, 'add');
     $keys = array_merge(
       $surface->getDefinitions()->names(),
       [self::EXTRAS, NodeTypeReviewSettings::DEADLINE, NodeTypeReviewSettings::TAGS],
@@ -217,7 +221,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
       [NodeTypeReviewSettings::DEADLINE => 604800, NodeTypeReviewSettings::TAGS => ['news', 'sports']],
       $this->stored('deadline'),
     );
-    $this->assertTrue($result->getContextValues()[SurfaceProviderToolBase::COMMITTED]);
+    $this->assertTrue($result->getContextValues()[SituationInputs::COMMITTED]);
     // Stored as the schema the extras module declares says, range
     // included, and the content type now depends on the module whose
     // settings it carries.
@@ -225,8 +229,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
     $this->assertContains(self::EXTRAS, NodeType::load('deadline')?->getDependencies()['module'] ?? []);
 
     // Read back through the same target, the seconds are a week again.
-    $provider = $this->container->get('data_surface_demo_node_type.provider');
-    $loaded = $provider->getDataSurfaceTarget('edit', 'deadline')->load($provider->getDataSurface('edit', 'deadline'));
+    $loaded = $this->loadThroughTheSurface('deadline');
     $this->assertSame(
       $this->deadline(1, 'weeks'),
       $loaded['third_party_settings'][self::EXTRAS][NodeTypeReviewSettings::DEADLINE],
@@ -255,11 +258,13 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
     $this->assertNull(NodeType::load('late'));
 
     // The same through the pipeline alone, and in weeks.
-    $provider = $this->container->get('data_surface_demo_node_type.provider');
+    $surfaces = $this->container->get('data_surface.surfaces');
+    $add = NodeTypeSurface::add();
+    $surface = $surfaces->build(NodeTypeSurface::class, $add);
     $pipeline_result = $this->pipeline()->submit(
-      $provider->getDataSurface('add'),
+      $surface,
       $this->contentType('late') + $this->extras($this->deadline(5, 'weeks'), []),
-      $provider->getDataSurfaceTarget('add'),
+      $surfaces->target(NodeTypeSurface::class, $add, $surface),
     );
     $this->assertSame(
       [$path],
@@ -341,8 +346,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($result->isSuccess(), (string) $result->getMessage());
     $this->assertSame($rule, $this->stored('business')[NodeTypeReviewSettings::DEADLINE] ?? NULL);
     $this->assertSchemaHolds('business');
-    $provider = $this->container->get('data_surface_demo_node_type.provider');
-    $loaded = $provider->getDataSurfaceTarget('edit', 'business')->load($provider->getDataSurface('edit', 'business'));
+    $loaded = $this->loadThroughTheSurface('business');
     $this->assertSame(
       $this->deadline(12, 'days'),
       $loaded['third_party_settings'][self::EXTRAS][NodeTypeReviewSettings::DEADLINE],
@@ -400,10 +404,10 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
     $result = $this->runSurfaceTool($this->contentType('rehearsal') + $this->extras($this->deadline(1, 'weeks'), ['news']), TRUE);
     $this->assertTrue($result->isSuccess(), (string) $result->getMessage());
     $context = $result->getContextValues();
-    $this->assertFalse($context[SurfaceProviderToolBase::COMMITTED]);
+    $this->assertFalse($context[SituationInputs::COMMITTED]);
     $this->assertSame(
       $this->deadline(1, 'weeks'),
-      $context[SurfaceProviderToolBase::VALUES]['third_party_settings'][self::EXTRAS][NodeTypeReviewSettings::DEADLINE],
+      $context[SituationInputs::VALUES]['third_party_settings'][self::EXTRAS][NodeTypeReviewSettings::DEADLINE],
     );
     $this->assertNull(NodeType::load('rehearsal'));
     // And a dry run is still judged: an out-of-range value is refused.
@@ -510,7 +514,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
   /**
    * Tests the surface driven form, which the extension also reaches.
    *
-   * The generic provider form renders the deadline as an amount and a
+   * The generic form renders the deadline as an amount and a
    * unit select, and the tags as one comma-separated field, because the
    * extras module brings the widget for the list it mounts; without it,
    * building the form would be refused. Reading the field back only
@@ -631,7 +635,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
     $dry_run = $this->runSurfaceTool($this->contentType($surface) + $this->extras($this->deadline(1, 'weeks'), NULL), TRUE);
     $classic = $this->toolManager->createInstance(self::CLASSIC_TOOL);
     try {
-      $classic->setInputValue(SurfaceProviderToolBase::DRY_RUN, TRUE);
+      $classic->setInputValue(SituationInputs::DRY_RUN, TRUE);
       $classic_dry_run = 'Accepted.';
     }
     catch (InputException $e) {
@@ -644,6 +648,22 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
       'No equivalent.',
     ];
     return $rows;
+  }
+
+  /**
+   * Reads a content type back through the surface's edit situation.
+   *
+   * @param string $type
+   *   The machine name.
+   *
+   * @return array
+   *   What the composed target loads, in surface shape.
+   */
+  protected function loadThroughTheSurface(string $type): array {
+    $surfaces = $this->container->get('data_surface.surfaces');
+    $context = $surfaces->situation(NodeTypeSurface::class, 'edit', ['type' => $type]);
+    $surface = $surfaces->build(NodeTypeSurface::class, $context);
+    return $surfaces->target(NodeTypeSurface::class, $context, $surface)->load($surface);
   }
 
   /**
@@ -683,9 +703,9 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
   protected function runSurfaceTool(array $values, bool $dry_run = FALSE): ToolResultInterface {
     $tool = $this->toolManager->createInstance(self::SURFACE_TOOL);
     try {
-      $tool->setInputValue(SurfaceProviderToolBase::VALUES, $values);
+      $tool->setInputValue(SituationInputs::VALUES, $values);
       if ($dry_run) {
-        $tool->setInputValue(SurfaceProviderToolBase::DRY_RUN, TRUE);
+        $tool->setInputValue(SituationInputs::DRY_RUN, TRUE);
       }
     }
     catch (InputException $e) {
@@ -1015,7 +1035,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
    */
   protected static function toolApiPath(string $key, ?string $leaf = NULL): string {
     $segments = ['third_party_settings', self::EXTRAS, $key];
-    return SurfaceProviderToolBase::VALUES . ($leaf === NULL ? '' : '.' . $leaf) . ': '
+    return SituationInputs::VALUES . ($leaf === NULL ? '' : '.' . $leaf) . ': '
       . implode(' ', array_map(static fn (string $segment): string => '(property ' . $segment . ')', $segments)) . ' ';
   }
 

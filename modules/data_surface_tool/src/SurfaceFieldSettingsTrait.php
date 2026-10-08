@@ -145,9 +145,11 @@ trait SurfaceFieldSettingsTrait {
   /**
    * Gets the context a field about to be added is described in.
    *
-   * The add situation, knowing besides the entity type and bundle what
-   * the existing storage says: the field's name and type. The type is
-   * identity, so it is locked, and the settings slot resolves by it.
+   * The storage exists, so this is the reuse situation: an add for the
+   * field, knowing besides the entity type and bundle what the storage
+   * says — the field's name and type — and an edit for the storage. The
+   * type is identity, so it is locked, and the settings slot resolves by
+   * it.
    *
    * @param string $entity_type_id
    *   The entity type.
@@ -160,8 +162,8 @@ trait SurfaceFieldSettingsTrait {
    *   The context.
    */
   protected function addContext(string $entity_type_id, string $bundle, FieldStorageConfigInterface $storage): SurfaceContext {
-    return $this->surfaces->situation(FieldInstanceSurface::class, 'add', [$entity_type_id, $bundle])
-      ->withKnown(['field_name' => $storage->getName(), 'field_type' => $storage->getType()]);
+    assert($storage->getTargetEntityTypeId() === $entity_type_id);
+    return $this->surfaces->situation(FieldInstanceSurface::class, 'reuse', [$storage, $bundle]);
   }
 
   /**

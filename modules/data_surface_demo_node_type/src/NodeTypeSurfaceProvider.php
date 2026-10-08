@@ -47,7 +47,19 @@ use Drupal\node\NodeTypeInterface;
  * provider form with this service, an operation, and the route
  * parameter the subject is read from.
  *
+ * Deprecated, and kept only until step 5 of REWORK.md deletes the
+ * provider contract: the content type surface is
+ * \Drupal\data_surface_demo_node_type\Surface\NodeTypeSurface, with
+ * its add and edit situations, NodeTypeTarget and NodeTypeAccess, and
+ * this module's routes, operation link and tool are served by it. This
+ * class stays as the worked example the old spelling's documentation
+ * points at, and as the one old-spelling provider the generic form's
+ * provider spelling is still tested against. Nothing extends it any
+ * more: the extras module's review settings moved to an alter of the
+ * new surface.
+ *
  * @see docs/forms.md
+ * @see \Drupal\data_surface_demo_node_type\Surface\NodeTypeSurface
  */
 final class NodeTypeSurfaceProvider implements DataSurfaceProviderInterface {
 

@@ -10,6 +10,7 @@ use Drupal\data_surface\Surface\SurfaceContext;
 use Drupal\data_surface\SurfaceBuild\SurfacesInterface;
 use Drupal\data_surface_address\Surface\AddressFieldSettingsSurface;
 use Drupal\data_surface_tool\Surface\FieldInstanceSurface;
+use Drupal\data_surface_tool\Surface\FieldStorageSurface;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\field\FieldConfigInterface;
@@ -18,7 +19,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests the field instance surface, whose settings are an open slot.
+ * Tests the field instance surface, its storage child and settings slot.
  *
  * The field surface lists no children: the address module's settings
  * surface fills the slot for the address field type, by
@@ -79,11 +80,14 @@ class FieldInstanceSurfaceTest extends DataSurfaceKernelTestBase {
    * Gets the context a new address field on the test bundle is added in.
    *
    * @return \Drupal\data_surface\Surface\SurfaceContext
-   *   The add situation, knowing the storage's name and type.
+   *   The reuse situation: the storage exists, so it knows the field's
+   *   name and type, and edits the storage.
    */
   protected function addContext(): SurfaceContext {
-    return $this->surfaces()->situation(FieldInstanceSurface::class, 'add', ['entity_test', 'entity_test'])
-      ->withKnown(['field_name' => 'field_address', 'field_type' => 'address']);
+    return $this->surfaces()->situation(FieldInstanceSurface::class, 'reuse', [
+      'storage' => 'entity_test.field_address',
+      'bundle' => 'entity_test',
+    ]);
   }
 
   /**
@@ -208,6 +212,123 @@ class FieldInstanceSurfaceTest extends DataSurfaceKernelTestBase {
 
     FieldStorageConfig::loadByName('entity_test', 'field_address')->setLocked(TRUE)->save();
     $this->assertTrue($this->surfaces()->access(FieldInstanceSurface::class, $context, $account)->isForbidden());
+  }
+
+  /**
+   * Tests the three situations and what each hands the storage child.
+   *
+   * Reuse is an add for the field and an edit for its storage; edit is
+   * an edit for both. The storage child is a fixed subsurface with a
+   * target of its own, committed before the field.
+   */
+  public function testSituationsHandTheStorageItsOwnContext(): void {
+    $reuse = $this->addContext();
+    $this->assertSame('reuse', $reuse->operation);
+    $this->assertTrue($reuse->creates);
+    $this->assertSame('edit', $reuse->forChild('storage')->operation);
+    $this->assertFalse($reuse->forChild('storage')->creates);
+    $this->assertSame('reuse', $reuse->forChild('settings')->operation);
+
+    $surface = $this->surfaces()->build(FieldInstanceSurface::class, $reuse);
+    foreach (['entity_type_id', 'bundle', 'field_name', 'field_type'] as $key) {
+      $this->assertTrue($surface->isLocked($key), $key);
+    }
+    $storage = $surface->getDefinitions()->entry('storage');
+    $this->assertSame(FieldStorageSurface::class, $storage->attachment->source);
+    $this->assertSame(['cardinality', 'translatable'], $storage->attachment->child->getDefinitions()->names());
+    $this->assertSame(
+      [
+        'entity_type_id',
+        'bundle',
+        'field_type',
+        'field_name',
+        'label',
+        'description',
+        'required',
+        'storage',
+        'settings',
+      ],
+      $surface->getDefinitions()->names(),
+    );
+
+    // One submission: the storage's cardinality, through its own target,
+    // and the field, created on it.
+    $target = $this->surfaces()->target(FieldInstanceSurface::class, $reuse, $surface);
+    $this->assertSame(['cardinality' => 1, 'translatable' => TRUE], $target->load($surface)['storage']);
+    $result = $this->pipeline()->submit($surface, ['label' => 'Address', 'storage' => ['cardinality' => 2]], $target);
+    $this->assertTrue($result->committed, implode(', ', $result->violations->keys()));
+    $this->assertSame('Address', $this->reloadField()?->getLabel());
+    $this->assertSame(2, FieldStorageConfig::loadByName('entity_test', 'field_address')->getCardinality());
+
+    // Add, with no storage yet: the storage is created first, then the
+    // field on it, both from one payload.
+    $add = FieldInstanceSurface::add('entity_test', 'entity_test');
+    $this->assertSame('add', $add->forChild('storage')->operation);
+    $surface = $this->surfaces()->build(FieldInstanceSurface::class, $add);
+    $result = $this->pipeline()->submit($surface, [
+      'field_name' => 'field_postal',
+      'field_type' => 'address',
+      'label' => 'Postal',
+      'storage' => ['cardinality' => -1],
+    ], $this->surfaces()->target(FieldInstanceSurface::class, $add, $surface));
+    $this->assertTrue($result->committed, implode(', ', $result->violations->keys()));
+    $this->assertSame(-1, FieldStorageConfig::loadByName('entity_test', 'field_postal')?->getCardinality());
+    $this->assertSame('Postal', FieldConfig::loadByName('entity_test', 'entity_test', 'field_postal')?->getLabel());
+  }
+
+  /**
+   * Tests the has-data constraint the storage's edit situation adds.
+   *
+   * Where you are, not what was entered: once the field holds data the
+   * storage's cardinality may not shrink, which the situation says with
+   * a constraint, so a form, a payload and a tool all meet it.
+   */
+  public function testStorageWithDataMayNotShrink(): void {
+    $field = $this->createField();
+    FieldStorageConfig::loadByName('entity_test', 'field_address')->setCardinality(3)->save();
+    $context = FieldInstanceSurface::edit($field);
+    $this->assertSame([], $context->forChild('storage')->constraints);
+
+    $this->container->get('entity_type.manager')->getStorage('entity_test')->create([
+      'field_address' => [['country_code' => 'US', 'locality' => 'Boston']],
+    ])->save();
+    $field = $this->reloadField();
+    $context = FieldInstanceSurface::edit($field);
+    $this->assertSame(['cardinality' => ['Range' => ['min' => 3]]], $context->forChild('storage')->constraints);
+    $surface = $this->surfaces()->build(FieldInstanceSurface::class, $context);
+    $cardinality = $surface->getDefinitions()->entry('storage')->attachment->child->getDefinition('cardinality');
+    $this->assertSame(['min' => 3], $cardinality->getConstraints()['Range']);
+
+    $target = $this->surfaces()->target(FieldInstanceSurface::class, $context, $surface);
+    $result = $this->pipeline()->submit($surface, ['storage' => ['cardinality' => 2]], $target);
+    $this->assertSame(['storage.cardinality'], array_map(static fn ($violation): string => $violation->fullPath(), iterator_to_array($result->violations, FALSE)));
+    $result = $this->pipeline()->submit($surface, ['storage' => ['cardinality' => 5]], $target);
+    $this->assertTrue($result->committed, implode(', ', $result->violations->keys()));
+    $this->assertSame(5, FieldStorageConfig::loadByName('entity_test', 'field_address')->getCardinality());
+  }
+
+  /**
+   * Tests starting values on a creating situation.
+   *
+   * What a clone does: the context a situation returns starts the new
+   * thing from given values, which become the defaults a caller sees and
+   * may change, and only where the context creates.
+   */
+  public function testStartingValuesAreTheNewFieldsDefaults(): void {
+    $context = $this->addContext()->withStarting(['label' => 'Postal address', 'required' => TRUE]);
+    $surface = $this->surfaces()->build(FieldInstanceSurface::class, $context);
+    $this->assertSame('Postal address', $surface->getDefault('label'));
+    $this->assertTrue($surface->getDefault('required'));
+    $result = $this->pipeline()->submit($surface, [], $this->surfaces()->target(FieldInstanceSurface::class, $context, $surface));
+    $this->assertTrue($result->committed, implode(', ', $result->violations->keys()));
+    $field = $this->reloadField();
+    $this->assertNotNull($field);
+    $this->assertSame('Postal address', $field->getLabel());
+    $this->assertTrue($field->isRequired());
+
+    $this->expectException(\LogicException::class);
+    $this->expectExceptionMessage('does not create');
+    $this->surfaces()->build(FieldInstanceSurface::class, FieldInstanceSurface::edit($field)->withStarting(['label' => 'Nope']));
   }
 
 }

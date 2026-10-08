@@ -28,6 +28,9 @@ final class SituationDefinition {
    *   The static part of access, `%key` placeholders unresolved.
    * @param string $module
    *   The module that provides it.
+   * @param \Drupal\data_surface\SurfaceBuild\SituationParameter[] $parameters
+   *   The method's parameters, in order: what a route or a tool has to
+   *   supply, by name.
    */
   public function __construct(
     public readonly string $id,
@@ -37,7 +40,25 @@ final class SituationDefinition {
     public readonly string $method,
     public readonly ?string $permission,
     public readonly string $module,
+    public readonly array $parameters = [],
   ) {}
+
+  /**
+   * Answers whether the situation can be asked for with no subject.
+   *
+   * @return bool
+   *   TRUE when every parameter is optional, so the context can be built
+   *   before anything is known: what a generated tool or a catalogue can
+   *   do without a caller.
+   */
+  public function needsNothing(): bool {
+    foreach ($this->parameters as $parameter) {
+      if (!$parameter->optional) {
+        return FALSE;
+      }
+    }
+    return TRUE;
+  }
 
   /**
    * Names the provider the way a message about it should.

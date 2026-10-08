@@ -26,9 +26,22 @@ spelling** is `declareDataSurface()`, provider services and build event
 subscribers, and the build event still fires for new-spelling surfaces,
 so an old subscriber extends a new surface. Moved so far: the demo
 block (with its presentation slot), the field instance surface in
-`data_surface_tool`, and the address settings that fill its slot. A
+`data_surface_tool` (with its storage child and add/reuse/edit), the
+address settings that fill its slot, and the content type surface in
+`data_surface_demo_node_type` (with the extras module's alter). A
 decision the sketch does not cover is marked `// SKETCH GAP:` where it
 is made; grep for it.
+
+Situations are what routes and tools are generated from. A route names
+`_data_surface_surface` and `_data_surface_situation` and maps its
+parameters onto the situation's by name (`SituationRoute`), gated by
+`_data_surface_situation_access`; `DataSurfaceProviderForm` serves it.
+`data_surface_tool` derives one tool per situation of every surface
+with a target, `data_surface:<surface>:<situation>`.
+`data_surface.surface_catalogue` lists the static layer; `docs/catalogue.md`
+is generated from it by `scripts/generate-catalogue.php`. The old
+provider spelling of the form stays for `NodeTypeSurfaceProvider`
+(deprecated, unrouted) until step 5.
 
 Subsurfaces are `attach()` (a fixed child, by class) and `attachBy()`
 (a slot a sibling chooses; open when it lists no children, filled by
@@ -49,7 +62,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
   modules/custom/data_surface'
 ```
 
-The baseline as of this writing: **638 tests, 3787 assertions, 0 errors,
+The baseline as of this writing: **657 tests, 4104 assertions, 0 errors,
 2 failures** — the two below. The test and assertion counts drift upward
 as work lands and are not the thing to check. **No test may error,
 and the only tests that may fail are the ones in
@@ -126,7 +139,8 @@ npx --yes cspell@8 --config /tmp/merged.json --no-progress --no-summary "**"
   order, and `FieldToolsComparisonTest`'s drift assertion is the tripwire.
 - `modules/data_surface_tool/COMPARISON.md` and
   `modules/data_surface_demo_node_type_tool/COMPARISON.md` are generated
-  by `scripts/generate-comparison.php`. Never edit either by hand.
+  by `scripts/generate-comparison.php`, and `docs/catalogue.md` by
+  `scripts/generate-catalogue.php`. Never edit any of them by hand.
 - Commit messages are one line.
 
 ## Naming

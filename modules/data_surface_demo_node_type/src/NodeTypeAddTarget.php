@@ -31,6 +31,11 @@ use Drupal\data_surface\Target\CompositeTarget;
  * have put a write-path argument on a method the discovery endpoint
  * calls with nothing but a coordinate.
  *
+ * Deprecated with the provider it belongs to. A new-spelling target
+ * needs none of this patience: it reads the context, which knows whether
+ * it creates, and is handed the accepted values, machine name included,
+ * when it commits (Target\NodeTypeTarget).
+ *
  * @see \Drupal\data_surface_demo_node_type\NodeTypeSurfaceProvider::getDataSurfaceTarget()
  * @see \Drupal\data_surface\Target\BaseFieldOverrideTarget
  */

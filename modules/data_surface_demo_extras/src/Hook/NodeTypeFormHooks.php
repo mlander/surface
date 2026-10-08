@@ -37,7 +37,7 @@ use Drupal\node\NodeTypeInterface;
  * tells it whether it was right until after the value is stored. No
  * reading of the integer says what ten business days become.
  *
- * @see \Drupal\data_surface_demo_extras\EventSubscriber\DemoExtrasSurfaceSubscriber::extendNodeType()
+ * @see \Drupal\data_surface_demo_extras\SurfaceAlter\NodeTypeAlter
  *   The same two settings, said as contract.
  */
 final class NodeTypeFormHooks {
