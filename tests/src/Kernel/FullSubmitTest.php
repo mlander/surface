@@ -11,8 +11,8 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\data_surface\DataSurfaceInterface;
+use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Form\DataSurfaceSituationForm;
-use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Pipeline\DataSurfaceResult;
 use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
 use Drupal\data_surface_examples\Surface\RegistrationStep2Surface;
@@ -310,13 +310,14 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests Save after an AJAX venue change, room left on the placeholder.
+   * Tests Save after an AJAX venue change, room left on the empty option.
    *
-   * What a browser with JavaScript does: the venue's rebuild handed the
-   * stored room over to the stale placeholder, and Save posts the marker
-   * back with the new venue. The marker means the stored room, and the
-   * stored room is this submission's problem, since it moved the venue.
-   * Posted as a browser posts, with the form's id and no trigger name.
+   * What a browser with JavaScript does: the venue's rebuild left the
+   * stored room standing behind the empty option, and Save posts the
+   * empty room back with the new venue and the marker naming it. Empty
+   * there means the stored room, and the stored room is this
+   * submission's problem, since it moved the venue. Posted as a browser
+   * posts, with the form's id and no trigger name.
    */
   public function testSaveAfterTheVenueRebuildRefusesTheLeftOverRoom(): void {
     $this->actAsAnonymousAdministrator();
@@ -334,45 +335,107 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
       $config->set($key, $value);
     }
     $config->save();
-    $state = $this->postStepTwo(['venue' => 'riverside', 'room' => DataSurfacePipelineInterface::KEEP_STALE]);
-    $this->assertArrayHasKey('surface][room', $state->getErrors());
+    $state = $this->postStepTwo([
+      'venue' => 'riverside',
+      'room' => '',
+      DataSurfaceFormBuilderInterface::STALE_MARKER_KEY => 'room',
+    ]);
+    $errors = array_map('strval', $state->getErrors());
+    $this->assertArrayHasKey('surface][room', $errors);
+    // Refused as the stored room, not as an unanswered one: the empty
+    // select stood for it.
+    $this->assertStringNotContainsString('is required', $errors['surface][room']);
     $this->assertSame(self::STORED, $this->storedStepTwo());
     $this->assertSame([], $this->messages('status'));
   }
 
   /**
-   * Tests an AJAX rebuild reads a marker on a non-target key as stored.
+   * Tests an untouched save keeps a room the site narrowed away.
+   *
+   * The venue did not move, so the room left on the empty option is the
+   * stored room, kept, with the warning that it is no longer available.
+   */
+  public function testAnUntouchedSaveKeepsTheStaleRoom(): void {
+    $this->actAsAnonymousAdministrator();
+    $this->config('data_surface_examples.registration_step2')->set('room', 'harbour_gone')->save();
+
+    $state = $this->postStepTwo([
+      'title' => 'Renamed',
+      'venue' => 'harbour',
+      'room' => '',
+      DataSurfaceFormBuilderInterface::STALE_MARKER_KEY => 'room',
+    ]);
+
+    $this->assertSame([], array_map('strval', $state->getErrors()));
+    $this->assertSame(['The changes have been saved.'], $this->messages('status'));
+    $this->assertCount(1, $this->messages('warning'));
+    $this->assertSame('harbour_gone', $this->storedStepTwo()['room']);
+    $this->assertSame('Renamed', $this->storedStepTwo()['title']);
+  }
+
+  /**
+   * Tests a required select on first entry, refused until chosen.
+   *
+   * Nothing stored and no declared default: the venue and the room come
+   * up on the empty option, selected, and a save leaving them there is
+   * refused in the surface's own words, with nothing to keep.
+   */
+  public function testRequiredSelectOnFirstEntryIsRefusedUntilChosen(): void {
+    $this->config('data_surface_examples.registration_step2')->clear('venue')->clear('room')->save();
+    $this->actAsAnonymousAdministrator();
+
+    $state = $this->postStepTwo(['venue' => '', 'room' => '']);
+    $venue = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY]['venue'];
+    $this->assertSame('', $venue['#value']);
+    $this->assertSame('- Select -', (string) $venue['#options']['']);
+    $this->assertArrayNotHasKey(DataSurfaceFormBuilderInterface::STALE_MARKER_KEY, $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY]);
+    $errors = array_map('strval', $state->getErrors());
+    $this->assertSame('Venue is required.', $errors['surface][venue']);
+    $this->assertSame([], $this->messages('status'));
+    $this->assertSame('Room is required.', $errors['surface][room']);
+    $this->assertArrayNotHasKey('venue', $this->storedStepTwo());
+    // Form API remembers for the rest of the request that a form errored,
+    // so the chosen half is asked of the pipeline: an explicit choice is
+    // all it takes.
+    $result = $this->submit(RegistrationStep2Surface::class, ['venue' => 'harbour', 'room' => 'harbour_deck']);
+    $this->assertTrue($result->committed);
+    $this->assertSame('harbour_deck', $this->storedStepTwo()['room']);
+  }
+
+  /**
+   * Tests an AJAX rebuild reads a stale select left empty as stored.
    *
    * The venue is stale for what the site did — a venue no longer on the
-   * list — so its select comes up on the placeholder and the browser
-   * posts the marker back on every request. The room is touched, which
-   * rebuilds the surface over AJAX. The venue is no refinement target,
-   * so the discard rule never looks at it, and its input is overlaid as
-   * it came: the marker. Built from the marker, the element would stash
-   * the marker as the value it stands for, name it in its option label,
-   * and a Save from the rebuilt form would send the marker in place of
-   * the stored venue. It has to stand for the stored venue, on every
-   * rebuild.
+   * list — so its select comes up on the empty option, and the browser
+   * posts it back empty, with the marker, on every request. The room is
+   * touched, which rebuilds the surface over AJAX. The venue is no
+   * refinement target, so the discard rule never looks at it, and read
+   * as it came it would be rebuilt as a key holding nothing: the stash
+   * gone, and a Save from the rebuilt form clearing the stored venue.
+   * It has to stand for the stored venue, on every rebuild.
    */
-  public function testAjaxRebuildReadsTheStaleMarkerAsTheStoredValue(): void {
+  public function testAjaxRebuildReadsStaleSelectLeftEmptyAsTheStoredValue(): void {
     $this->actAsAnonymousAdministrator();
     $this->config('data_surface_examples.registration_step2')->set('venue', 'demolished')->save();
 
     $state = $this->postStepTwo(
-      ['venue' => DataSurfacePipelineInterface::KEEP_STALE, 'room' => 'harbour_deck'],
+      [
+        'venue' => '',
+        'room' => 'harbour_deck',
+        DataSurfaceFormBuilderInterface::STALE_MARKER_KEY => 'venue',
+      ],
       ['_triggering_element_name' => 'surface[room]'],
     );
 
     $this->assertTrue($state->isRebuilding());
     $this->assertSame([], array_map('strval', $state->getErrors()));
-    $venue = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY]['venue'];
-    // Still the placeholder, standing for the stored venue and not for
-    // the marker itself.
-    $this->assertSame(DataSurfacePipelineInterface::KEEP_STALE, $venue['#default_value']);
+    $container = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY];
+    $venue = $container['venue'];
+    // Still the empty option, standing for the stored venue.
+    $this->assertSame('', $venue['#value']);
     $this->assertSame('demolished', $venue[DataSurfaceWidgetBase::STALE_KEY]);
-    $label = (string) $venue['#options'][DataSurfacePipelineInterface::KEEP_STALE];
-    $this->assertStringContainsString('demolished', $label);
-    $this->assertStringNotContainsString(DataSurfacePipelineInterface::KEEP_STALE, $label);
+    $this->assertArrayNotHasKey('demolished', $venue['#options']);
+    $this->assertSame('venue', $container[DataSurfaceFormBuilderInterface::STALE_MARKER_KEY]['#value']);
     // A rebuild writes nothing.
     $this->assertSame('demolished', $this->storedStepTwo()['venue']);
   }

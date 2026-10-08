@@ -14,6 +14,7 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Hook\SurfacePluginHooks;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
+use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\data_surface\Surface\Attribute\UsesSurface;
 use Drupal\data_surface\Surface\SurfaceContext;
 use Drupal\data_surface\SurfaceBuild\SurfacesInterface;
@@ -300,6 +301,7 @@ trait DataSurfaceHostTrait {
    *   The values to build the surface form from.
    */
   protected function surfaceFormValues(DataSurfaceInterface $surface, array $stored, FormStateInterface $form_state): array {
+    $state = static::surfaceCompleteFormState($form_state);
     $input = $this->surfaceRefinementInput($surface, $form_state);
     if ($input === []) {
       // Not a rebuild, so either nothing was submitted or this is the
@@ -312,22 +314,36 @@ trait DataSurfaceHostTrait {
       // arrive in.
       // Nothing is discarded: the person pressed the button, so every
       // value was said on purpose and is judged rather than dropped.
-      return array_replace($stored, static::withoutStaleMarkers($this->surfaceSubmittedInput($surface, $form_state), $stored));
+      $path = $this->surfaceSubmissionPath($state);
+      $submitted = $this->surfaceSubmittedInput($surface, $form_state);
+      if ($path !== NULL) {
+        // A select left on the empty option it was given in place of a
+        // stored value is built standing for that value again, so its
+        // element carries the stash extraction reads it back through.
+        $submitted = static::withStaleKept($submitted, $stored, static::staleKeptPaths($state, $path, $submitted, $stored));
+      }
+      return array_replace($stored, $submitted);
     }
-    // A rebuild reads the marker the same way. The discard rule only
-    // looks at refinement targets, so a stale key that is none — a venue
-    // the site took away, posted back on the placeholder while the room
-    // was touched — would otherwise be overlaid as the marker itself, and
-    // its rebuilt element would stash the marker as the value it stands
-    // for.
-    $input = static::withoutStaleMarkers($input, $stored);
+    // A rebuild reads them the same way. The discard rule only looks at
+    // refinement targets, so a stale key that is none — a venue the site
+    // took away, left empty while the room was touched — would otherwise
+    // be overlaid as empty, and rebuilt as a key that holds nothing.
+    $path = static::surfaceInputPath($state) ?? [];
+    $kept = static::staleKeptPaths($state, $path, $input, $stored);
+    if ($kept !== []) {
+      // Out of the raw input as well, so that the rebuilt element takes
+      // its #default_value: the stored value, if the list offers it
+      // again, and the empty option standing for it if not.
+      $this->forgetSurfaceInput($kept, $form_state);
+      $input = static::withStaleKept($input, $stored, $kept);
+    }
     // A programmatic submission is not a rebuild. Its caller said every
     // value on purpose, in one statement, and a value the surface
     // refuses is refused rather than quietly dropped — the payload rule,
     // and the same line the stale model draws: chosen, therefore judged.
     // Discarding is for the half-finished edit a browser is still in the
     // middle of.
-    if (!static::surfaceCompleteFormState($form_state)->isProgrammed()) {
+    if (!$state->isProgrammed()) {
       $discarded = $this->surfaceFormBuilder()->discardedRefinementInput($surface, $stored, $input);
       if ($discarded !== []) {
         $this->forgetSurfaceInput($discarded, $form_state);
@@ -335,6 +351,68 @@ trait DataSurfaceHostTrait {
       }
     }
     return $input === [] ? $stored : array_replace($stored, $input);
+  }
+
+  /**
+   * Names the stale selects a submission left on their empty option.
+   *
+   * Read from the marker the container posted beside them, and held to
+   * what is true now: the input at the path is still empty, and
+   * something is stored there to stand for.
+   *
+   * @param \Drupal\Core\Form\FormStateInterface $state
+   *   The complete form state.
+   * @param string[] $path
+   *   The input path of the surface container.
+   * @param array $input
+   *   The submitted input, keyed by surface key.
+   * @param array $stored
+   *   What the host holds for the surface's keys.
+   *
+   * @return string[]
+   *   Dotted paths, relative to the container.
+   *
+   * @see \Drupal\data_surface\Form\DataSurfaceFormBuilderInterface::STALE_MARKER_KEY
+   */
+  protected static function staleKeptPaths(FormStateInterface $state, array $path, array $input, array $stored): array {
+    $marker = NestedArray::getValue($state->getUserInput(), [
+      ...$path,
+      DataSurfaceFormBuilderInterface::STALE_MARKER_KEY,
+    ]);
+    if (!is_string($marker) || $marker === '') {
+      return [];
+    }
+    $kept = [];
+    foreach (explode(' ', $marker) as $dotted) {
+      $segments = explode('.', $dotted);
+      $exists = FALSE;
+      $value = NestedArray::getValue($input, $segments, $exists);
+      if ($exists && !ValueState::isConfigured($value) && NestedArray::keyExists($stored, $segments)) {
+        $kept[] = $dotted;
+      }
+    }
+    return $kept;
+  }
+
+  /**
+   * Puts the stored value back at each path left on a stale select.
+   *
+   * @param array $input
+   *   The submitted input, keyed by surface key.
+   * @param array $stored
+   *   What the host holds for the surface's keys.
+   * @param string[] $paths
+   *   The dotted paths to put the stored value back at.
+   *
+   * @return array
+   *   The input, standing for the stored values at those paths.
+   */
+  protected static function withStaleKept(array $input, array $stored, array $paths): array {
+    foreach ($paths as $dotted) {
+      $segments = explode('.', $dotted);
+      NestedArray::setValue($input, $segments, NestedArray::getValue($stored, $segments), TRUE);
+    }
+    return $input;
   }
 
   /**
@@ -383,45 +461,11 @@ trait DataSurfaceHostTrait {
   }
 
   /**
-   * Puts the stored value back wherever the stale marker was submitted.
-   *
-   * The marker is a placeholder, not a value: a select that came up on
-   * it and was left alone submits it back, and it means "what is
-   * stored". Building an element from the marker itself would stash the
-   * marker as the value it stands for, and the stored value would be
-   * lost on the way back out.
-   *
-   * @param array $input
-   *   Submitted input for one level.
-   * @param array $stored
-   *   What that level holds.
-   *
-   * @return array
-   *   The input, each marker replaced by the stored value at its place,
-   *   or dropped where nothing is stored.
-   */
-  protected static function withoutStaleMarkers(array $input, array $stored): array {
-    foreach ($input as $key => $value) {
-      if ($value === DataSurfacePipelineInterface::KEEP_STALE) {
-        if (array_key_exists($key, $stored)) {
-          $input[$key] = $stored[$key];
-        }
-        else {
-          unset($input[$key]);
-        }
-      }
-      elseif (is_array($value)) {
-        $input[$key] = static::withoutStaleMarkers($value, is_array($stored[$key] ?? NULL) ? $stored[$key] : []);
-      }
-    }
-    return $input;
-  }
-
-  /**
    * Takes discarded keys out of the raw input the rebuild will read.
    *
    * @param string[] $keys
-   *   The surface keys whose input is discarded.
+   *   The surface keys whose input is discarded, or dotted paths below
+   *   them.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state of the containing form.
    */
@@ -433,7 +477,7 @@ trait DataSurfaceHostTrait {
     }
     $input = $state->getUserInput();
     foreach ($keys as $key) {
-      NestedArray::unsetValue($input, [...$path, $key]);
+      NestedArray::unsetValue($input, [...$path, ...explode('.', $key)]);
     }
     $state->setUserInput($input);
   }

@@ -11,9 +11,9 @@ use Drupal\data_surface\Surface\SurfaceTargetInterface;
 use Drupal\data_surface\Target\SchemaViolations;
 
 /**
- * Keeps one step's registration settings in its own config object.
+ * Keeps one example's registration settings in its own config object.
  *
- * Each step names a subclass that says which object, so the steps never
+ * Each example names a subclass that says which object, so the examples never
  * write over each other. The values are stored as the surface accepted
  * them, key for key: a part with no target of its own (the ticket, the
  * contact) is the map at its key, and another module's keys arrive
@@ -25,7 +25,7 @@ use Drupal\data_surface\Target\SchemaViolations;
 abstract class RegistrationTarget implements SurfaceTargetInterface {
 
   /**
-   * The config object this step's values live in.
+   * The config object this example's values live in.
    */
   protected const CONFIG = '';
 

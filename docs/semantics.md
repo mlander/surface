@@ -184,32 +184,41 @@ Then:
 | --- | --- | --- | --- |
 | **optional** | valid, `NULL` | held to its constraints | kept, reported stale, saved |
 | **required** | violation: "@label is required." | held to its constraints | kept, reported stale, saved |
-| **the form shows** | the ordinary empty select | the chosen option | a placeholder naming the missing value, no real option chosen |
-| **untouched save** | stays unanswered | stays as it is | **stays as it is** |
+| **the form shows** | the empty option, selected | the chosen option; a required select shows no empty option | the empty option, selected; the stored value is not an option |
+| **untouched save** | stays unanswered (required: refused) | stays as it is | **stays as it is** |
 
 Four consequences worth stating:
 
-- **Display never errors.** The select renders with the placeholder
-  selected and the stale value is never injected back into the list as
-  something that can be chosen. Nothing is auto-selected in its place either: a
-  browser handed a select whose value is missing picks the first option,
-  and that is how an unrelated save used to silently rewrite the value.
-- **Untouched means keep.** The placeholder maps back to the stored
-  value on extraction, so an unrelated save cannot clear it. This is the
-  trap, and it is the same one secrets have: an empty select otherwise
-  means clear.
+- **Display never errors.** The select renders with its empty option
+  selected, and the stale value is never injected back into the list as
+  something that can be chosen, nor named by an option of its own.
+  Nothing real is auto-selected in its place either: a browser handed a
+  select whose value is missing picks the first option, and that is how
+  an unrelated save used to silently rewrite the value.
+- **Untouched means keep.** The element carries the stored value
+  (`#data_surface_stale`), and an empty submission from an element that
+  carries one is read as that value on extraction, so an unrelated save
+  cannot clear it. This is the trap, and it is the same one secrets
+  have: an empty select otherwise means clear. A build made from the
+  submission itself learns which selects stood for a stored value from
+  a hidden input the container posts beside them
+  (`DataSurfaceFormBuilderInterface::STALE_MARKER_KEY`).
 - **Stale never blocks.** A run that found only stale entries is valid,
   commits, and carries the stale references on its result — see
   [the pipeline](pipeline.md#stale-never-blocks). A new value outside
   the list is still a hard violation.
 - **Required splits.** Never set plus required is the ordinary required
-  violation. Stale plus required stashes and nags like any other stale,
-  because there is a value there and losing it helps nobody.
+  violation, and on a form a required select left on its empty option
+  is refused with that message. Stale plus required stashes and nags
+  like any other stale, because there is a value there and losing it
+  helps nobody.
 
-Clearing stays expressible and stays distinct from keeping: an optional
-select keeps its ordinary `- None -` beside the placeholder, and
-choosing it empties the key. A required select gets the placeholder and
-the real options and nothing else.
+Only an explicit new choice replaces a stale value on a form. Choosing
+the empty option of an optional select clears the key when the select
+could show what it holds; on a stale select the empty option is what
+was selected already, so it keeps. A caller with no form clears a stale
+key by sending it empty. The presentation is [the empty option
+rule](decisions.md#the-empty-option-rule).
 
 Two boundaries, both deliberate:
 

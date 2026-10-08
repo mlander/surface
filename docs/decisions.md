@@ -145,7 +145,7 @@ engine's narrowing check, AJAX edges and discard rule apply to the
 mount unchanged. It watches the owner's keys only: watching any mounted
 key is refused, since its value lives under the mount and handing it
 over needs dotted refinement paths, roadmap item 16. *Changed for the
-examples' step 4, which needs a notice the alter adds to turn required
+example 4 of the examples, which needs a notice the alter adds to turn required
 above a hundred people; until then such a method was refused.*
 (`Surfaces::bindRefiners()`, `RefinesInputRefiner::refineMounted()`)
 
@@ -314,6 +314,45 @@ not a refined surface, so it can tell which variant a slot shows. The
 contract panel lives in `data_surface_tool`, since half of it is the
 derived tool's JSON Schema. (`DataSurfaceSituationForm::surfacePanel()`)
 
+### The empty option rule
+
+A single select shows its empty option according to four points, and
+the stash model under them is unchanged:
+
+1. A stored value no longer among the options is shown as the empty
+   option, selected. It is not put back into the list and no option
+   names it; the stored value travels on the element
+   (`#data_surface_stale`), and the container posts the paths of such
+   selects in a hidden input (`DataSurfaceFormBuilderInterface::STALE_MARKER_KEY`).
+   A save that leaves the select empty keeps the stored value, and its
+   dependents, with the non-blocking stale warning; only an explicit
+   new choice replaces it. The same after an AJAX change of a parent
+   orphans a stored dependent: empty, standing for the stored value,
+   which a Save then refuses because the parent moved in the same edit.
+2. A required select shows the empty option only when no valid choice
+   is selected: nothing stored and no declared default, or a stored
+   value no longer offered. A stored value still offered, or a declared
+   default the list offers, is a valid choice, and no empty option is
+   shown — the surface author chose the default.
+3. On first entry a required select comes up on the empty option, and
+   a save leaving it there is refused with the key's own required
+   message ("@label is required."), set as the element's
+   `#required_error` so core's check, which answers first, says it in
+   the surface's words. A required select standing for a stale value is
+   not `#required` to core, since empty there means keep; its label
+   keeps the marker.
+4. An optional select keeps its empty option always. Choosing it on a
+   select with nothing stale behind it clears the key; on a stale one it
+   is what was already selected, so it keeps.
+
+The placeholder option this replaced ("Previous value X is no longer
+available", posting a sentinel from the select) told the person what
+was missing, but put an option in the list that was no value of the
+key. Pipeline callers are unaffected: a payload that leaves a key out
+keeps it, one that sends the stored stale value back keeps it with a
+stale entry, as before. (`OptionsWidget::singleSelect()`,
+`DataSurfaceWidgetBase::unstash()`, `DataSurfaceHostTrait::surfaceFormValues()`)
+
 ## Discovery
 
 ### Whether a situation creates
@@ -390,12 +429,16 @@ not built yet, and no core constraint names a bundle's fields.
 
 ## Examples
 
-### What the examples' steps are made of
+### What the examples are made of
 
-Each step of `data_surface_examples` keeps its settings in a config
+Each example of `data_surface_examples` keeps its settings in a config
 object of its own and names a target subclass of `RegistrationTarget`
-that says which; a step's surface repeats the previous step's keys
-rather than extending its class, so each step reads alone on screen. A
+that says which; an example's surface repeats the previous example's
+keys rather than extending its class, so each example reads alone on
+screen. The machine names keep the word step (`registration_step2`,
+`RegistrationStep2Surface`, the `data_surface_examples.step2` route):
+they were never shown to anybody, and renaming them would churn the
+catalogue and every test for no reader's benefit. A
 ticket price is a `float` with a `Range` minimum of 0.01: core's typed
 data has no decimal type and no `Positive` constraint plugin. The event
 title is stored as a `string`, not a translatable `label`, because a
@@ -405,7 +448,7 @@ language code the surface side never needs. (`RegistrationStep3Surface`,
 
 ### The examples' README is held, not generated
 
-The README quotes each step's class from its first attribute down, and
+The README quotes each example's class from its first attribute down, and
 `ExamplesReadmeTest` fails when a quoted block and its file differ, as
 `ExamplesToolTest` fails when the three tool answers it quotes change.
 Generating it would need a kernel for the answers and a generator for

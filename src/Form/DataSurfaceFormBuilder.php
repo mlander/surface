@@ -16,7 +16,9 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
+use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\data_surface\Pipeline\ViolationSet;
+use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
 use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
 
 /**
@@ -151,6 +153,15 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
       }
       $container[$name] = $element;
     }
+    $stale = static::stalePaths($container);
+    if ($stale !== []) {
+      // Fixed to this build: what the person is looking at now, not what
+      // the previous build posted.
+      $container[self::STALE_MARKER_KEY] = [
+        '#type' => 'hidden',
+        '#value' => implode(' ', $stale),
+      ];
+    }
     // What the refined surface depends on is what this container
     // depends on: the option lists inside it were read from live site
     // state, and the refiners that produced them said so. The widget
@@ -239,6 +250,13 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
       // starts from the chosen variant's own values.
       $chosen = $slot->chosen($values[$slot->by] ?? NULL);
       return $chosen === NULL || $slot->fits($chosen, $value);
+    }
+    // An empty answer has nothing to fall out of: it is the person
+    // having said "nothing" under a parent that has not moved, and a
+    // stale select left empty never reaches here as empty, because the
+    // marker it posted has already put the stored value back.
+    if (!ValueState::isConfigured($value)) {
+      return TRUE;
     }
     // Only a value a select could have offered can be tested for
     // membership at all; anything else is not a choice and is left
@@ -569,6 +587,30 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
       }
     }
     return $container;
+  }
+
+  /**
+   * Lists the dotted paths of the elements standing for a stale value.
+   *
+   * @param array $element
+   *   The container, or an element inside it.
+   * @param string $prefix
+   *   The path so far.
+   *
+   * @return string[]
+   *   The paths, relative to the container.
+   */
+  protected static function stalePaths(array $element, string $prefix = ''): array {
+    $paths = [];
+    foreach (static::elementChildren($element) as $key) {
+      $path = $prefix . $key;
+      if (array_key_exists(DataSurfaceWidgetBase::STALE_KEY, $element[$key])) {
+        $paths[] = $path;
+        continue;
+      }
+      $paths = array_merge($paths, static::stalePaths($element[$key], $path . '.'));
+    }
+    return $paths;
   }
 
   /**

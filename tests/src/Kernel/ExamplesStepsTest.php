@@ -10,8 +10,10 @@ use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceInterface;
+use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Form\DataSurfaceSituationForm;
 use Drupal\data_surface\SurfaceBuild\SituationRoute;
+use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
 use Drupal\data_surface_examples\CodeLines;
 use Drupal\data_surface_examples\Form\RegistrationStep1ClassicForm;
 use Drupal\data_surface_examples\Surface\RegistrationStep1Surface;
@@ -343,10 +345,14 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($form_state->isRebuilding());
     $this->assertSame([], $form_state->getErrors());
     $container = $form[DataSurfaceSituationForm::SURFACE_KEY];
-    // The harbour's rooms, beside the stored room kept as no longer
-    // available: the stale rule, since that room is what is saved.
-    $offered = array_keys(array_diff_key($container['room']['#options'], ['' => TRUE]));
-    $this->assertSame(['harbour_auditorium', 'harbour_deck'], array_values(array_filter($offered, static fn (string $room): bool => !str_starts_with($room, '@'))));
+    // The harbour's rooms and nothing else. The stored room is not among
+    // them, so the select comes up on its empty option with the stored
+    // room stashed behind it: a Save from here keeps it only if the venue
+    // is put back, and refuses it otherwise.
+    $this->assertSame(['', 'harbour_auditorium', 'harbour_deck'], array_keys($container['room']['#options']));
+    $this->assertSame('', $container['room']['#value']);
+    $this->assertSame('library_reading', $container['room'][DataSurfaceWidgetBase::STALE_KEY]);
+    $this->assertSame('room', $container[DataSurfaceFormBuilderInterface::STALE_MARKER_KEY]['#value']);
 
     $rows = [];
     foreach ($container[DataSurfaceSituationForm::PANEL_KEY]['keys']['#rows'] as $row) {

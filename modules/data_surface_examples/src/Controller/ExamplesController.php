@@ -18,21 +18,21 @@ use Drupal\data_surface_examples\Surface\RegistrationStep3Surface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * The examples' landing page, and the pages of the two steps with no form.
+ * The examples' landing page, and the pages of the two examples with no form.
  *
- * Plain on purpose: one sentence per step, where it is, and how many
+ * Plain on purpose: one sentence per example, where it is, and how many
  * lines of code it took, counted from the files by CodeLines rather than
- * written down, so a step that grows says so here.
+ * written down, so an example that grows says so here.
  */
 final class ExamplesController extends ControllerBase {
 
   /**
-   * The module the compliance alter of step 4 lives in.
+   * The module the compliance alter of example 4 lives in.
    */
   public const COMPLIANCE = 'data_surface_examples_compliance';
 
   /**
-   * The alter of step 4, relative to its module.
+   * The alter of example 4, relative to its module.
    */
   public const COMPLIANCE_ALTER = 'src/SurfaceAlter/RegistrationComplianceAlter.php';
 
@@ -53,7 +53,7 @@ final class ExamplesController extends ControllerBase {
   }
 
   /**
-   * Lists the steps.
+   * Lists the examples.
    *
    * @return array
    *   A render array.
@@ -64,7 +64,7 @@ final class ExamplesController extends ControllerBase {
       $steps[$number] = [
         '#type' => 'container',
         'title' => [
-          '#markup' => '<h2>' . $this->t('Step @number: @title', ['@number' => $number, '@title' => $step['title']]) . '</h2>',
+          '#markup' => '<h2>' . $this->t('Example @number: @title', ['@number' => $number, '@title' => $step['title']]) . '</h2>',
         ],
         'sentence' => ['#markup' => '<p>' . $step['sentence'] . '</p>'],
         'where' => [
@@ -75,13 +75,18 @@ final class ExamplesController extends ControllerBase {
     }
     return [
       'intro' => [
-        '#markup' => '<p>' . $this->t('One surface that grows, one idea per step: the settings of an event registration. Each step with a form shows, beside it, the contract the form is built from.') . '</p>',
+        '#markup' => '<p>' . $this->t('One surface that grows, one idea per example: the settings of an event registration. Each example with a form shows, beside it, the contract the form is built from.') . '</p>',
+      ],
+      'reset' => [
+        '#type' => 'container',
+        'link' => Link::fromTextAndUrl($this->t('Reset to defaults'), Url::fromRoute('data_surface_examples.reset'))->toRenderable(),
+        'why' => ['#markup' => ' ' . $this->t('puts every example back to the settings the module ships with, for a retake.')],
       ],
     ] + $steps;
   }
 
   /**
-   * Says how to see step 4, which changes step 3 rather than adding a form.
+   * Says how to see example 4, which changes example 3 instead of a form.
    *
    * @return array
    *   A render array.
@@ -90,7 +95,7 @@ final class ExamplesController extends ControllerBase {
     $enabled = $this->moduleHandler()->moduleExists(self::COMPLIANCE);
     return [
       'what' => [
-        '#markup' => '<p>' . $this->t('Step 4 has no form of its own. Enable @module and reload step 3: the form gains a privacy notice, the title is relabelled, and the notice becomes required when the capacity is above 100. Step 3 is not changed.', ['@module' => self::COMPLIANCE]) . '</p>',
+        '#markup' => '<p>' . $this->t('Example 4 has no form of its own. Enable @module and reload example 3: the form gains a privacy notice, the title is relabelled, and the notice becomes required when the capacity is above 100. Example 3 is not changed.', ['@module' => self::COMPLIANCE]) . '</p>',
       ],
       'how' => [
         '#theme' => 'item_list',
@@ -99,7 +104,7 @@ final class ExamplesController extends ControllerBase {
           $enabled
             ? $this->t('It is enabled on this site now.')
             : $this->t('It is not enabled on this site yet.'),
-          Link::fromTextAndUrl($this->t('Step 3, /surface-examples/3'), Url::fromRoute('data_surface_examples.step3'))->toRenderable(),
+          Link::fromTextAndUrl($this->t('Example 3, /surface-examples/3'), Url::fromRoute('data_surface_examples.step3'))->toRenderable(),
           $this->t('The alter: @lines lines of code.', ['@lines' => $this->complianceLines()]),
         ],
       ],
@@ -107,7 +112,7 @@ final class ExamplesController extends ControllerBase {
   }
 
   /**
-   * Shows the tool step 3 already is, and how to call it.
+   * Shows the tool example 3 already is, and how to call it.
    *
    * @return array
    *   A render array.
@@ -119,7 +124,7 @@ final class ExamplesController extends ControllerBase {
     }
     return [
       'what' => [
-        '#markup' => '<p>' . $this->t('Step 5 has nothing to write. Step 3 names a target and has a situation that needs nothing, so the Tool API bridge derives a tool from it: <code>@tool</code>. It takes what the form of step 3 takes, refuses what it refuses, and can rehearse a write without making it.', ['@tool' => ExampleCalls::TOOL]) . '</p>',
+        '#markup' => '<p>' . $this->t('Example 5 has nothing to write. Example 3 names a target and has a situation that needs nothing, so the Tool API bridge derives a tool from it: <code>@tool</code>. It takes what the form of example 3 takes, refuses what it refuses, and can rehearse a write without making it.', ['@tool' => ExampleCalls::TOOL]) . '</p>',
       ],
       'script' => [
         '#markup' => '<p>' . $this->t('The three calls, made by a kernel test and printed, from the site root:') . '</p>',
@@ -141,10 +146,10 @@ final class ExamplesController extends ControllerBase {
   }
 
   /**
-   * Describes the steps, with where each is and what it cost.
+   * Describes the examples, with where each is and what it cost.
    *
    * @return array<int, array{title: \Drupal\Core\StringTranslation\TranslatableMarkup, sentence: \Drupal\Core\StringTranslation\TranslatableMarkup, items: array}>
-   *   The steps, keyed by number.
+   *   The examples, keyed by number.
    */
   protected function steps(): array {
     return [
@@ -170,7 +175,7 @@ final class ExamplesController extends ControllerBase {
       ],
       4 => [
         'title' => $this->t('others get a say'),
-        'sentence' => $this->t('Another module adds a key to step 3, rewords a label, and makes its key required above a hundred people, without touching step 3.'),
+        'sentence' => $this->t('Another module adds a key to example 3, rewords a label, and makes its key required above a hundred people, without touching example 3.'),
         'items' => [
           $this->route('data_surface_examples.step4'),
           $this->t('The alter: @lines lines of code.', ['@lines' => $this->complianceLines()]),
@@ -178,7 +183,7 @@ final class ExamplesController extends ControllerBase {
       ],
       5 => [
         'title' => $this->t('same contract, no form'),
-        'sentence' => $this->t('Step 3 is already a tool, @tool, which takes what the form takes and refuses what it refuses.', ['@tool' => ExampleCalls::TOOL]),
+        'sentence' => $this->t('Example 3 is already a tool, @tool, which takes what the form takes and refuses what it refuses.', ['@tool' => ExampleCalls::TOOL]),
         'items' => [$this->route('data_surface_examples.step5'), $this->t('Nothing to write: 0 lines of code.')],
       ],
       6 => [
@@ -204,7 +209,7 @@ final class ExamplesController extends ControllerBase {
   }
 
   /**
-   * Says how many lines of code a step's surface class is.
+   * Says how many lines of code an example's surface class is.
    *
    * @param class-string $class
    *   The class.
@@ -217,7 +222,7 @@ final class ExamplesController extends ControllerBase {
   }
 
   /**
-   * Counts the lines of step 4's alter, enabled or not.
+   * Counts the lines of example 4's alter, enabled or not.
    *
    * @return int
    *   The lines of code.

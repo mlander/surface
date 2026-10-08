@@ -8,7 +8,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Plugin\PluginBase;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
+use Drupal\data_surface\Pipeline\ValueState;
 
 /**
  * Common ground for data surface widgets.
@@ -23,13 +23,13 @@ use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 abstract class DataSurfaceWidgetBase extends PluginBase implements DataSurfaceWidgetInterface {
 
   /**
-   * Render key carrying the stale value an element stands in for.
+   * Render key carrying the stored value a select could not show.
    *
-   * Written by the widget that renders a placeholder instead of a value
-   * it cannot show — the options widget's sentinel option is the only
-   * one today — and read back here, by every widget, because which
-   * widget reads an element back is not the same question as which
-   * widget built it. Extraction resolves widgets from the surface as
+   * Written by the options widget when a stored value is no longer among
+   * the options: the select comes up on its empty option, and the value
+   * travels here. Read back here, by every widget, because which widget
+   * reads an element back is not the same question as which widget
+   * built it. Extraction resolves widgets from the surface as
    * advertised, since it has no values yet to refine with, while the
    * form was built from the surface refined against what was stored: a
    * key that is a plain string until a refiner narrows it into a choice
@@ -69,19 +69,18 @@ abstract class DataSurfaceWidgetBase extends PluginBase implements DataSurfaceWi
   }
 
   /**
-   * Maps a keep-stale submission back to the value it stands for.
+   * Maps an untouched stale select back to the value it stands for.
    *
-   * An element that could not render its stored value rendered a marker
-   * in its place, and a control left alone submits what it was rendered
-   * with — so the marker coming back means "keep", which is what leaving
-   * a control alone has always meant. It is mapped back here rather than
-   * left for the pipeline because the marker is a rendering device: no
-   * value the pipeline handles is ever that string, and a payload that
-   * sends it is sending a value its key does not have.
+   * An element that could not show its stored value came up empty and
+   * carries the value in its stash, so empty coming back from it means
+   * "left alone", and leaving a control alone means keep: only an
+   * explicit new choice replaces a stored value. There is no way to tell
+   * "left alone" from "chose the empty option" on such a select, since
+   * the empty option is what was selected, and that is the point — it
+   * never offered emptiness as a separate answer.
    *
-   * The stash is the authority, not the marker. An element carrying no
-   * stash never had a stale value, so the marker submitted into it is an
-   * ordinary string and is passed along to be refused as one.
+   * The stash is the authority. An element carrying none had nothing
+   * stale behind it, so empty from it is an ordinary empty answer.
    *
    * @param array $element
    *   The element the value was submitted for.
@@ -89,11 +88,11 @@ abstract class DataSurfaceWidgetBase extends PluginBase implements DataSurfaceWi
    *   The raw submitted value.
    *
    * @return mixed
-   *   The stashed value when the marker came back, the raw value
+   *   The stashed value when the element came back empty, the raw value
    *   otherwise.
    */
   protected static function unstash(array $element, mixed $value): mixed {
-    return $value === DataSurfacePipelineInterface::KEEP_STALE && array_key_exists(self::STALE_KEY, $element)
+    return !ValueState::isConfigured($value) && array_key_exists(self::STALE_KEY, $element)
       ? $element[self::STALE_KEY]
       : $value;
   }

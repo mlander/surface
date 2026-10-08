@@ -196,6 +196,57 @@ class DataSurfaceRefinementTest extends WebDriverTestBase {
     // Nor about the host form around it, which is still unanswered and
     // still not being asked.
     $assert_session->pageTextNotContains('Region field is required.');
+    // And no marker: the empty select stands for nothing stored.
+    $assert_session->hiddenFieldNotExists('settings[@stale]');
+  }
+
+  /**
+   * Tests a stored dependent orphaned by a parent change, then saved.
+   *
+   * The empty option rule over AJAX: the stored bundle is not among the
+   * new entity type's bundles, so the select comes up on its empty
+   * option with the stored bundle standing behind it. Saving refuses it,
+   * because this edit moved the entity type it belongs to; moving the
+   * entity type back shows it chosen again.
+   */
+  public function testStoredDependentOrphanedByTheParentIsRefusedOnSave(): void {
+    $assert_session = $this->assertSession();
+    $block = Block::create([
+      'id' => 'orphaned',
+      'theme' => $this->defaultTheme,
+      'region' => 'content',
+      'plugin' => 'data_surface_demo',
+      'settings' => [
+        'id' => 'data_surface_demo',
+        'label' => 'Featured',
+        'provider' => 'data_surface_demo',
+        'headline' => 'Featured',
+        'entity_type' => 'node',
+        'bundle' => 'article',
+        'limit' => 5,
+      ],
+    ]);
+    $block->save();
+    $this->drupalGet($block->toUrl('edit-form'));
+    $assert_session->fieldValueEquals('settings[bundle]', 'article');
+
+    $assert_session->selectExists('settings[entity_type]')->selectOption('user');
+    $assert_session->assertWaitOnAjaxRequest();
+    $this->assertSame('', $assert_session->selectExists('settings[bundle]')->getValue());
+    $assert_session->optionNotExists('settings[bundle]', 'article');
+    $assert_session->pageTextNotContains('no longer available');
+    $assert_session->hiddenFieldValueEquals('settings[@stale]', 'bundle');
+
+    $assert_session->selectExists('settings[entity_type]')->selectOption('node');
+    $assert_session->assertWaitOnAjaxRequest();
+    $this->assertSame('article', $assert_session->selectExists('settings[bundle]')->getValue());
+
+    $assert_session->selectExists('settings[entity_type]')->selectOption('user');
+    $assert_session->assertWaitOnAjaxRequest();
+    $this->getSession()->getPage()->pressButton('Save block');
+    $assert_session->pageTextNotContains('The block configuration has been saved.');
+    $assert_session->elementExists('css', 'select[name="settings[bundle]"].error');
+    $this->assertSame('article', Block::load('orphaned')->get('settings')['bundle']);
   }
 
 }

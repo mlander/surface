@@ -1,12 +1,12 @@
-# The examples: one surface that grows, one idea per step.
+# The examples: one surface that grows, one idea per example.
 #
-# Steps 1 to 3 are each one situation of that step's surface, served by
+# Examples 1 to 3 are each one situation of that example's surface, served by
 # the generic situation form: none of them names a form class of this
 # module. The panel beside each form is the contract the surface emits,
 # rebuilt with the form whenever an answer narrows another key.
 #
-# Step 1 also has a classic twin, the same three settings written as a
-# ConfigFormBase by hand, writing the same config object. Steps 4 and 5
+# Example 1 also has a classic twin, the same three settings written as a
+# ConfigFormBase by hand, writing the same config object. Examples 4 and 5
 # change no surface, so their pages say what to do and where to look.
 
 data_surface_examples.index:
@@ -17,11 +17,19 @@ data_surface_examples.index:
   requirements:
     _permission: 'administer site configuration'
 
+data_surface_examples.reset:
+  path: '/surface-examples/reset'
+  defaults:
+    _form: 'Drupal\data_surface_examples\Form\ResetExamplesForm'
+    _title: 'Reset the examples'
+  requirements:
+    _permission: 'administer site configuration'
+
 data_surface_examples.step1:
   path: '/surface-examples/1'
   defaults:
     _form: 'Drupal\data_surface\Form\DataSurfaceSituationForm'
-    _title: 'Step 1: declare what you accept'
+    _title: 'Example 1: declare what you accept'
     _data_surface_surface: 'Drupal\data_surface_examples\Surface\RegistrationStep1Surface'
     _data_surface_situation: 'configure'
     _data_surface_panel: 'data_surface_tool.contract_panel'
@@ -32,7 +40,7 @@ data_surface_examples.step1_classic:
   path: '/surface-examples/1/classic'
   defaults:
     _form: 'Drupal\data_surface_examples\Form\RegistrationStep1ClassicForm'
-    _title: 'Step 1, the classic way'
+    _title: 'Example 1, the classic way'
   requirements:
     _permission: 'administer site configuration'
 
@@ -40,7 +48,7 @@ data_surface_examples.step2:
   path: '/surface-examples/2'
   defaults:
     _form: 'Drupal\data_surface\Form\DataSurfaceSituationForm'
-    _title: 'Step 2: answers depend on answers'
+    _title: 'Example 2: answers depend on answers'
     _data_surface_surface: 'Drupal\data_surface_examples\Surface\RegistrationStep2Surface'
     _data_surface_situation: 'configure'
     _data_surface_panel: 'data_surface_tool.contract_panel'
@@ -51,7 +59,7 @@ data_surface_examples.step3:
   path: '/surface-examples/3'
   defaults:
     _form: 'Drupal\data_surface\Form\DataSurfaceSituationForm'
-    _title: 'Step 3: made of parts'
+    _title: 'Example 3: made of parts'
     _data_surface_surface: 'Drupal\data_surface_examples\Surface\RegistrationStep3Surface'
     _data_surface_situation: 'configure'
     _data_surface_panel: 'data_surface_tool.contract_panel'
@@ -62,7 +70,7 @@ data_surface_examples.step4:
   path: '/surface-examples/4'
   defaults:
     _controller: '\Drupal\data_surface_examples\Controller\ExamplesController::step4'
-    _title: 'Step 4: others get a say'
+    _title: 'Example 4: others get a say'
   requirements:
     _permission: 'administer site configuration'
 
@@ -70,6 +78,6 @@ data_surface_examples.step5:
   path: '/surface-examples/5'
   defaults:
     _controller: '\Drupal\data_surface_examples\Controller\ExamplesController::step5'
-    _title: 'Step 5: same contract, no form'
+    _title: 'Example 5: same contract, no form'
   requirements:
     _permission: 'administer site configuration'

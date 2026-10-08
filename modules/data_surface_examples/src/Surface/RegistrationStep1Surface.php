@@ -13,7 +13,7 @@ use Drupal\data_surface\Surface\SurfaceInterface;
 use Drupal\data_surface_examples\Target\RegistrationStep1Target;
 
 /**
- * Step 1: declare what you accept.
+ * Example 1: declare what you accept.
  *
  * Three keys, each with its type, its label and what it allows. The form
  * at /surface-examples/1, its validation, and the tool

@@ -16,9 +16,9 @@ use Drupal\data_surface_examples\Target\RegistrationStep3Target;
 use Drupal\data_surface_examples\Venues;
 
 /**
- * Step 3: made of parts.
+ * Example 3: made of parts.
  *
- * Step 2, plus two parts that are surfaces of their own. The ticket is a
+ * Example 2, plus two parts that are surfaces of their own. The ticket is a
  * slot the pricing chooses: FreeTicketSurface or PaidTicketSurface fills
  * it, each naming this class with #[SurfaceVariant], and this class names
  * neither. The contact is a fixed part, ContactSurface, always there.

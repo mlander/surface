@@ -10,11 +10,11 @@ use Drupal\data_surface\Surface\ShapeInterface;
 use Drupal\data_surface\Surface\SurfaceInterface;
 
 /**
- * Who to contact about the event: a part step 3 always has.
+ * Who to contact about the event: a part example 3 always has.
  *
- * Attached by step 3 with attach(). It is its own surface, so it is
+ * Attached by example 3 with attach(). It is its own surface, so it is
  * validated in its own frame, and an alter could name it alone. No
- * target: step 3 stores it under its contact key.
+ * target: example 3 stores it under its contact key.
  */
 #[Surface('registration.contact')]
 final class ContactSurface implements SurfaceInterface {

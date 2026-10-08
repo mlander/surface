@@ -234,10 +234,11 @@ is what makes the elements the ones the answers ask for. Without it a
 select offers the stored venue's rooms and Form API refuses the new
 venue's room as a choice it was never offered before the surface is
 asked, and a slot flipped in the same request is rendered as the stored
-variant, with no element for the chosen variant's keys to arrive in. A submitted
-stale marker is read as the stored value it stands for, here and on an
-AJAX rebuild alike, so a stale key the discard rule never looks at is
-not rebuilt standing for the marker itself.
+variant, with no element for the chosen variant's keys to arrive in. A
+select left on the empty option it was given in place of a stored value
+— named in the hidden input the container posts — is read as that
+stored value, here and on an AJAX rebuild alike, so it is rebuilt
+standing for it rather than as a key that holds nothing.
 `DataSurfaceSituationForm` answers `surfaceSubmissionPath()`, since its
 container is its own top level key; a plugin host nested inside another
 form cannot know its position before Form API assigns it, answers NULL,
@@ -279,21 +280,21 @@ from**, not what the value is.
 |---|---|---|
 | What happened | A bundle was deleted, a module uninstalled, a refiner narrowed under a saved value | The person changed a dependency, orphaning what a dependent was holding |
 | What it is | A **stored** value that no longer validates | Input nobody submitted: an answer to a question no longer on the screen |
-| Treatment | Kept, placeholder, warning on save | **Discarded**, silently |
+| Treatment | Kept behind the empty option, warning on save | **Discarded**, silently |
 | Cleared when | A real submit, and at no other time | Never — nothing was stored to clear |
 | Said out loud | A messenger warning, on every save | Nothing at all |
 
 The two halves meet at the Save button. A stored value the rebuild
-handed over to the stale placeholder because its dependency moved is
-not stale on save: the same submission moves the dependency, so the
-pipeline refuses it on its element and the person chooses again
-([value semantics](semantics.md#stale-values-the-third-state)).
+left behind the empty option because its dependency moved is not stale
+on save: the same submission moves the dependency, so the pipeline
+refuses it on its element and the person chooses again
+([value semantics](semantics.md#stale-values-the-third-state)). Moving
+the parent back shows it chosen again.
 
 The two meet without conflicting. If a parent changes while a child was
-already showing the stale placeholder, the sentinel the browser posted
-back is transient input like any other and is withdrawn — and the stored
-value it stands for is still stored, because a stored value clears on a
-submit and at no other time.
+already standing for a stale stored value, the child still stands for
+it under the new parent's list — and the value is still stored, because
+a stored value changes on a submit and at no other time.
 
 ### The in-form half: discarding orphaned input
 
@@ -304,9 +305,13 @@ is tested against its newly narrowed definition with
 is **dropped from the input**, and the key falls back, in this order:
 
 1. its **stored** value, when the narrowed definition still offers that;
-2. the **stale placeholder**, when something is stored and is no longer
-   offered — the other half of the table, reached from here;
-3. **nothing chosen**: the `- None -` option on an optional select.
+2. the **empty option standing for it**, when something is stored and
+   is no longer offered — the other half of the table, reached from
+   here;
+3. **nothing chosen**: the empty option, with nothing behind it.
+
+An empty input is never discarded: it is the person having said
+"nothing" under a parent that has not moved.
 
 No error and no warning, ever. Nothing was submitted, so there is nothing
 to judge and nothing to report.
@@ -335,56 +340,65 @@ straight back into the rebuilt select.
 
 A select whose stored value is no longer among the options it offers —
 a deleted bundle, an uninstalled plugin, a refinement that narrowed —
-renders on a **placeholder**, never on a real option:
+comes up on its **empty option**, selected, and the stored value is not
+an option:
 
 ```html
 <select name="settings[bundle]">
-  <option value="">- None -</option>
-  <option value="@data_surface:keep-stale" selected>Previous value article is no longer available</option>
+  <option value="" selected>- None -</option>
   <option value="page">Page</option>
 </select>
+<input type="hidden" name="settings[@stale]" value="bundle">
 ```
 
-Four things are true of that element, and each of them closes a
-different way of losing the value:
+The whole of the rule for when a single select shows its empty option
+is [a decision](decisions.md#the-empty-option-rule): whenever no valid
+choice is selected, and always on an optional select. A required select
+with a stored value it still offers, or a declared default it offers,
+has no empty option at all; on first entry it comes up on `- Select -`,
+and a save leaving it there is refused with "@label is required.", set
+as the element's `#required_error` so core's own check, which answers
+first, uses the surface's words.
+
+Four things are true of a stale select, and each closes a different way
+of losing the value:
 
 - **The stale value is not in the list.** Offering it back would let
   somebody re-save a reference to something that does not exist, and
   would make the list that is offered wider than the list that
   validates.
-- **Nothing else is selected.** A browser handed a select whose value is
+- **Nothing real is selected.** A browser handed a select whose value is
   missing from its options picks the first one, so the next unrelated
   save used to write that first option over the stored value without
   anybody choosing anything.
-- **The placeholder is `DataSurfacePipelineInterface::KEEP_STALE`**, in
-  the same reserved `@` namespace as `CLEAR_SECRET`, and the element
-  carries the value it stands for on `#data_surface_stale` — a plain
-  value, per [the serialization rule](targets.md#the-serialization-rule).
-  Extraction maps the marker back through the stash, so **leaving the
+- **The element carries the value it stands for** on
+  `#data_surface_stale` — a plain value, per [the serialization
+  rule](targets.md#the-serialization-rule) — and extraction reads an
+  empty submission from such an element as that value, so **leaving the
   select alone sends the stored value back**, and a save keeps it as
-  long as nothing it depends on moved in the same submission. Reading it back is
-  `DataSurfaceWidgetBase`'s job rather than the options widget's:
-  extraction resolves widgets from the surface as advertised, having no
-  values yet to refine with, so a key that is only a choice once a
-  refiner has narrowed it is built by the options widget and read back
-  by another.
-- **Clearing is still expressible and still distinct.** An optional
-  select keeps its ordinary `- None -` beside the placeholder; a
-  required one gets the placeholder and the real options and nothing
-  else.
+  long as nothing it depends on moved in the same submission. Reading it
+  back is `DataSurfaceWidgetBase`'s job rather than the options
+  widget's: extraction resolves widgets from the surface as advertised,
+  having no values yet to refine with, so a key that is only a choice
+  once a refiner has narrowed it is built by the options widget and read
+  back by another.
+- **The container says which selects those are**, in a hidden input,
+  `DataSurfaceFormBuilderInterface::STALE_MARKER_KEY`, holding their
+  dotted paths. The build a submission or a rebuild is processed against
+  is made from the submitted input before any element exists, and an
+  empty string there is the same whether it means "keep" or "nothing";
+  the marker is what lets the overlay put the stored value back at those
+  paths, so the rebuilt element stands for it again. It can only ever
+  name a value that is already stored.
 
-A note is appended to the element's description — "The stored value
-article is no longer available. Choose another; saving keeps it only if
-nothing it depends on has changed." — and the element gets a
-`data-surface-stale` class. The note is one wording for both ways the
-placeholder appears, because the element is built from the values as
-they now stand and cannot tell them apart: a value the site took away
-under an unmoved parent is kept by a save, and the same value handed
-over because this edit moved its parent is refused by one (see
-[two ways a value stops being allowed](#two-ways-a-value-stops-being-allowed)). Both are written when
-the element is built, not when it is validated, because a form that
-fails validation is rebuilt from scratch and anything written onto an
-element in a validate handler never reaches the page.
+A required stale select is not `#required` to core, because empty there
+means keep and core's check would refuse it before the surface is asked;
+its label keeps the required marker.
+
+Only an explicit new choice replaces the value. Choosing the empty
+option of an optional select clears the key when the select could show
+what it holds; on a stale select the empty option is what was selected
+already, so it keeps.
 
 On submit, `flagSurfaceErrors()` turns each stale reference into a
 messenger **warning** and never a form error: nothing is wrong with the

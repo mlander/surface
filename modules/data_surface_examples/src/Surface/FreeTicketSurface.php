@@ -13,7 +13,7 @@ use Drupal\data_surface\Surface\SurfaceInterface;
 /**
  * The ticket, when registration is free: a note, and nothing to pay.
  *
- * Fills step 3's ticket slot for `free`. No target: step 3 stores it
+ * Fills example 3's ticket slot for `free`. No target: example 3 stores it
  * under its ticket key.
  */
 #[Surface('registration.step3.ticket.free')]

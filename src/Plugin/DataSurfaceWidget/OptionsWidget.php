@@ -12,7 +12,6 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\data_surface\Attribute\DataSurfaceWidget;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Options\OptionSet;
-use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -39,11 +38,6 @@ final class OptionsWidget extends DataSurfaceWidgetBase implements ContainerFact
    * How many rows a multiple select shows at most.
    */
   protected const MAXIMUM_SIZE = 8;
-
-  /**
-   * Class marking the select whose stored value is no longer offered.
-   */
-  protected const STALE_CLASS = 'data-surface-stale';
 
   /**
    * Constructs an OptionsWidget.
@@ -91,57 +85,33 @@ final class OptionsWidget extends DataSurfaceWidgetBase implements ContainerFact
 
   /**
    * {@inheritdoc}
+   *
+   * One rule decides whether a single select shows its empty option: the
+   * empty option is there whenever no valid choice is selected, and an
+   * optional select keeps it besides, because choosing nothing is one of
+   * its answers. A valid choice is a value the list offers — what is
+   * stored, or failing that the declared default, since the form builder
+   * hands over whichever applies and the surface author chose the
+   * default. Anything else comes up on the empty option, selected: a key
+   * never answered, and a stored value the list no longer offers.
    */
   public function buildElement(DataDefinitionInterface $definition, mixed $value): array {
     $set = $this->optionSet($definition);
     $options = $set === NULL ? [] : $set->options;
     $multiple = $definition instanceof ListDataDefinitionInterface;
-    $stale = !$multiple && $set !== NULL && ValueState::isConfigured($value) && !$set->allows($value);
-    if ($stale) {
-      // Never offered as a choice: the value is gone, and offering it
-      // back would let somebody re-save a reference to something that
-      // does not exist, and would make the list that is offered wider
-      // than the list that validates. The sentinel stands in its place,
-      // says what the value was, and carries it back through extraction.
-      $options = self::staleOption($value) + $options;
-    }
     $element = $this->baseElement($definition) + [
       '#type' => 'select',
       '#options' => $options,
-      // No forced default, ever. A stale select comes up on the
-      // sentinel, which is not a value; what it is not is pre-set to the
-      // first real option, which is what a browser does with a select
-      // whose stored value is missing from its list, and which quietly
-      // rewrote the stored value on the next unrelated save.
-      '#default_value' => match (TRUE) {
-        $multiple => is_array($value) ? $value : [],
-        $stale => DataSurfacePipelineInterface::KEEP_STALE,
-        default => $value,
-      },
     ];
-    if ($stale) {
-      // The value travels on the element so that extraction can map the
-      // sentinel back to it. Reading it back is the base class's job and
-      // not this widget's, because the widget that reads an element back
-      // is not always the one that built it: extraction resolves widgets
-      // from the surface as advertised, and a key that is only a choice
-      // once a refiner has narrowed it is a plain string there.
-      $element[self::STALE_KEY] = $value;
-      $element['#attributes']['class'][] = self::STALE_CLASS;
-      $element = self::describeStale($element, $value);
-    }
     if ($multiple) {
       // A list offers every value at once and needs no empty choice:
       // choosing nothing is the empty list.
+      $element['#default_value'] = is_array($value) ? $value : [];
       $element['#multiple'] = TRUE;
       $element['#size'] = min(max(count($options), 2), self::MAXIMUM_SIZE);
     }
-    elseif (!$definition->isRequired()) {
-      // An optional select offers an empty choice — core only auto-adds
-      // one to required selects, which would force a value the
-      // definition never demanded.
-      $element['#empty_option'] = $this->t('- None -');
-      $element['#empty_value'] = '';
+    else {
+      $element = $this->singleSelect($element, $definition, $set, $value);
     }
     if ($set !== NULL) {
       // The resolver said how long its answer may be reused, and this is
@@ -155,58 +125,67 @@ final class OptionsWidget extends DataSurfaceWidgetBase implements ContainerFact
   }
 
   /**
-   * Builds the one-entry option list standing in for a stale value.
+   * Applies the empty option rule to a single select.
    *
-   * @param mixed $value
-   *   The stored value that is no longer offered.
-   *
-   * @return array
-   *   The sentinel keyed by its marker, ready to be prepended.
-   */
-  protected static function staleOption(mixed $value): array {
-    return [
-      DataSurfacePipelineInterface::KEEP_STALE => new TranslatableMarkup('Previous value @value is no longer available', [
-        '@value' => (string) $value,
-      ]),
-    ];
-  }
-
-  /**
-   * Appends the note explaining what leaving the select alone will do.
-   *
-   * The select says what the value was; the description says what
-   * happens next, because a person who reads only the option list has
-   * been told that something is missing and not what saving will do.
-   * The same reasoning as the locked note: the reason goes where every
-   * user reaches it rather than in a visual cue.
-   *
-   * One wording for both ways a value comes to be shown here, because
-   * the element cannot tell them apart: it is built from the values as
-   * they now stand and never sees what is stored. A value the site took
-   * away under an unmoved parent is kept by a save; the same value shown
-   * because this edit moved its parent is refused by a save, since the
-   * stale rule never excuses a value whose dependency the run moved
-   * (DataSurfacePipeline::isStale()). So the note promises only what is
-   * true of both.
+   * A stored value the list does not offer is never put back into it:
+   * offering it would let somebody re-save a reference to something that
+   * does not exist, and would make the list that is offered wider than
+   * the list that validates. Nor is the select left without a selection,
+   * which a browser answers by picking the first real option and which
+   * quietly rewrote the stored value on the next unrelated save. The
+   * empty option is selected instead, and the stored value travels on the
+   * element's stash, so a save that leaves the select alone keeps it:
+   * only an explicit new choice replaces a stored value.
    *
    * @param array $element
-   *   The stale element.
+   *   The select element so far.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition it renders.
+   * @param \Drupal\data_surface\Options\OptionSet|null $set
+   *   The values it offers.
    * @param mixed $value
-   *   The stored value that is no longer offered.
+   *   The stored value, or the declared default when nothing is stored.
    *
    * @return array
-   *   The element, with the note appended to its description.
+   *   The element, with its default value and, when the rule calls for
+   *   one, its empty option.
    */
-  protected static function describeStale(array $element, mixed $value): array {
-    $note = new TranslatableMarkup('The stored value @value is no longer available. Choose another; saving keeps it only if nothing it depends on has changed.', [
-      '@value' => (string) $value,
-    ]);
-    $element['#description'] = isset($element['#description'])
-      ? new TranslatableMarkup('@description @note', [
-        '@description' => $element['#description'],
-        '@note' => $note,
-      ])
-      : $note;
+  protected function singleSelect(array $element, DataDefinitionInterface $definition, ?OptionSet $set, mixed $value): array {
+    // Decision: see docs/decisions.md#the-empty-option-rule.
+    $configured = ValueState::isConfigured($value);
+    $chosen = $configured && $set !== NULL && $set->allows($value);
+    $required = $definition->isRequired();
+    if ($chosen && $required) {
+      // A valid choice is selected and emptiness is not an answer: no
+      // empty option. Core adds none either, since a default is set.
+      $element['#default_value'] = $value;
+      return $element;
+    }
+    $element['#default_value'] = $chosen ? $value : '';
+    $element['#empty_value'] = '';
+    $element['#empty_option'] = $required ? $this->t('- Select -') : $this->t('- None -');
+    if ($configured && !$chosen) {
+      // Stale: the value travels on the element, so extraction can read
+      // an untouched select as the stored value it could not show.
+      $element[self::STALE_KEY] = $value;
+      if ($required) {
+        // Empty is not a refusal here, it is "keep": so not core's
+        // required check, which would refuse it before the surface is
+        // asked. The marker stays on the label, where it is drawn.
+        $element['#required'] = FALSE;
+        $element['#label_attributes']['class'] = ['js-form-required', 'form-required'];
+      }
+    }
+    elseif ($required) {
+      // First entry: nothing stored, so nothing to keep, and saving with
+      // the empty option still selected is refused in the surface's own
+      // words. Core's required check runs first and a form state keeps
+      // only the first error on an element, so its generic "field is
+      // required" would otherwise be the one shown.
+      $element['#required_error'] = $this->t('@label is required.', [
+        '@label' => $definition->getLabel() ?? '',
+      ]);
+    }
     return $element;
   }
 

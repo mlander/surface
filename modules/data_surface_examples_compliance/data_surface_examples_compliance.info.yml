@@ -1,6 +1,6 @@
 name: Data Surface Examples - Compliance
 type: module
-description: 'Step 4 of the examples: another module has a say in step 3''s surface, with one alter class and no form alter.'
+description: 'Example 4 of the examples: another module has a say in example 3''s surface, with one alter class and no form alter.'
 package: Data Surface
 lifecycle: experimental
 lifecycle_link: 'https://git.drupalcode.org/project/data_surface/-/blob/1.0.x/README.md#experimental-submodules'

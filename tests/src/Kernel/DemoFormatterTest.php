@@ -232,7 +232,8 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
       $surface->getDefaultValues()['third_party_settings']['data_surface_demo_extras']['badge'],
     );
     $fresh = $this->createFormatter()->settingsForm([], new FormState());
-    $this->assertNull($fresh['third_party_settings']['data_surface_demo_extras']['badge']['#default_value']);
+    // So the select comes up on its empty option.
+    $this->assertSame('', $fresh['third_party_settings']['data_surface_demo_extras']['badge']['#default_value']);
 
     // The mounted value is validated by the surface like any other.
     $this->assertContains(

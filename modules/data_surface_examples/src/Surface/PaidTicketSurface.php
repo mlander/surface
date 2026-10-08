@@ -13,7 +13,7 @@ use Drupal\data_surface\Surface\SurfaceInterface;
 /**
  * The ticket, when registration is paid: a price, and its currency.
  *
- * Fills step 3's ticket slot for `paid`. No target: step 3 stores it
+ * Fills example 3's ticket slot for `paid`. No target: example 3 stores it
  * under its ticket key.
  */
 #[Surface('registration.step3.ticket.paid')]

@@ -6,7 +6,6 @@ namespace Drupal\Tests\data_surface\Functional;
 
 use Drupal\Tests\BrowserTestBase;
 use Drupal\block\Entity\Block;
-use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\node\Entity\NodeType;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -117,23 +116,22 @@ class StaleValueBlockFormTest extends BrowserTestBase {
     $assert_session->statusCodeEquals(200);
     $assert_session->pageTextNotContains('Invalid configuration');
 
-    // The select comes up on a placeholder that names what is gone, and
-    // it is a placeholder rather than an option: the deleted bundle is
-    // not offered back, and no other bundle has been quietly chosen.
-    $assert_session->fieldValueEquals('settings[bundle]', DataSurfacePipelineInterface::KEEP_STALE);
+    // The select comes up on its empty option: the deleted bundle is
+    // not offered back, nothing names it, and no other bundle has been
+    // quietly chosen. The container posts the select's path beside it,
+    // which is how the submission knows the empty select stands for the
+    // stored bundle.
+    $assert_session->fieldValueEquals('settings[bundle]', '');
     $assert_session->optionNotExists('settings[bundle]', 'article');
     $assert_session->optionExists('settings[bundle]', 'page');
-    $this->assertStringContainsString(
-      'article',
-      $assert_session->optionExists('settings[bundle]', DataSurfacePipelineInterface::KEEP_STALE)->getText(),
-    );
+    $assert_session->pageTextNotContains('no longer available');
+    $assert_session->hiddenFieldValueEquals('settings[@stale]', 'bundle');
     // Nothing is flagged as an error, because nothing is wrong.
     $assert_session->elementNotExists('css', 'select[name="settings[bundle]"].error');
 
     // Somebody edits the headline and never touches the bundle. The
-    // browser submits the select it was handed, which is the placeholder
-    // — the trap, since an unrecognized or empty select otherwise means
-    // "clear this".
+    // browser submits the select it was handed, which is empty — the
+    // trap, since an empty select otherwise means "clear this".
     $this->submitForm(['settings[headline]' => 'Changed'], 'Save block');
     $assert_session->pageTextContains('The block configuration has been saved.');
     // Said out loud, so the value does not stay broken silently.

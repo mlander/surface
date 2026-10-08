@@ -1,10 +1,10 @@
-# One config object per step, so the steps never write over each other.
+# One config object per example, so the examples never write over each other.
 # Each says in schema what its surface says in PHP; the targets hold
 # every write to it in prepare(), before anything is saved.
 
 data_surface_examples.registration_step1:
   type: config_object
-  label: 'Registration settings, step 1'
+  label: 'Registration settings, example 1'
   mapping:
     title:
       type: string
@@ -18,7 +18,7 @@ data_surface_examples.registration_step1:
 
 data_surface_examples.registration_step2:
   type: data_surface_examples.registration_step1
-  label: 'Registration settings, step 2'
+  label: 'Registration settings, example 2'
   mapping:
     venue:
       type: string
@@ -29,7 +29,7 @@ data_surface_examples.registration_step2:
 
 data_surface_examples.registration_step3:
   type: data_surface_examples.registration_step2
-  label: 'Registration settings, step 3'
+  label: 'Registration settings, example 3'
   mapping:
     pricing:
       type: string

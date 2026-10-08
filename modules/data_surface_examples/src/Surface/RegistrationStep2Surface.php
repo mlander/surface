@@ -16,9 +16,9 @@ use Drupal\data_surface_examples\Target\RegistrationStep2Target;
 use Drupal\data_surface_examples\Venues;
 
 /**
- * Step 2: answers depend on answers.
+ * Example 2: answers depend on answers.
  *
- * Step 1's keys, plus a venue and a room. Which rooms are offered
+ * Example 1's keys, plus a venue and a room. Which rooms are offered
  * depends on the venue, and how many people fit depends on the room:
  * one #[RefinesInput] method each, whose signature names what it reads.
  */

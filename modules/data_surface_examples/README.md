@@ -1,8 +1,8 @@
 # Data Surface Examples
 
-One surface that grows, one idea per step. The thing being described is
+One surface that grows, one idea per example. The thing being described is
 the settings of an event registration: a title, how many people, where,
-what it costs, who to contact. Each step adds one idea, each step with a
+what it costs, who to contact. Each example adds one idea, each example with a
 form is a page of its own, and under each form, collapsed, is the contract the
 form was built from: every key, what it allows right now, and the JSON
 Schema a caller with no form is handed.
@@ -13,10 +13,16 @@ drush pm:install data_surface_examples
 
 Then visit `/surface-examples` as an administrator. Every page asks for
 "administer site configuration". Nothing else is needed: the venues and
-rooms are fixed lists inside the module, and each step keeps its
+rooms are fixed lists inside the module, and each example keeps its
 settings in a config object of its own
-(`data_surface_examples.registration_step1` to `_step3`), so the steps
+(`data_surface_examples.registration_step1` to `_step3`), so the examples
 never write over each other.
+
+To take the examples again from the start, follow **Reset to defaults**
+on the landing page (`/surface-examples/reset`). It puts all three
+config objects back to the files the module ships in `config/install`,
+including anything another module stored on them, such as the privacy
+notice example 4's module adds under example 3.
 
 ## What a surface is, in one paragraph
 
@@ -27,7 +33,7 @@ same class is a tool an agent can call. The rule that makes this work is
 that a surface may only ever *narrow* what it said: once a caller has
 read it, nothing it accepts later contradicts what it advertised.
 
-## Step 1: declare what you accept
+## Example 1: declare what you accept
 
 `/surface-examples/1`
 
@@ -125,7 +131,7 @@ final class RegistrationStep1ClassicForm extends ConfigFormBase {
 }
 ```
 
-## Step 2: answers depend on answers
+## Example 2: answers depend on answers
 
 `/surface-examples/2`
 
@@ -187,22 +193,25 @@ final class RegistrationStep2Surface implements SurfaceInterface {
 
 Change the venue on the form: the room list rebuilds over AJAX, and so
 does the panel under it, whose room row now lists the new venue's
-rooms, *narrowed* from the six declared. The room saved before is shown
-as no longer available rather than dropped behind your back, and Save
-refuses it until a room of the new venue is chosen.
+rooms, *narrowed* from the six declared. The room saved before is not
+one of them, so the room select comes up on its empty option rather
+than on some other room. The saved room has not gone anywhere: Save
+refuses it, since it belongs to the venue you just moved away from,
+until a room of the new venue is chosen, and putting the venue back
+shows it chosen again.
 Choose the garden room and the capacity's row says "from 1 to 30". A
 refiner can only tighten: the framework checks every result is
 narrower than what was declared, so the panel's first answer stays
 true.
 
-## Step 3: made of parts
+## Example 3: made of parts
 
 `/surface-examples/3`
 
 Two parts, each a surface of its own. The **ticket** is a *slot*: the
-pricing chooses which surface fills it. Step 3 names neither ticket;
-each ticket names step 3, with `#[SurfaceVariant]`, so a third kind of
-ticket is a new class and step 3 never changes. The **contact** is a
+pricing chooses which surface fills it. Example 3 names neither ticket;
+each ticket names example 3, with `#[SurfaceVariant]`, so a third kind of
+ticket is a new class and example 3 never changes. The **contact** is a
 fixed part, attached with `attach()`: always there, and validated in
 its own frame, so its email is checked by its own rules.
 
@@ -330,7 +339,7 @@ currency, and the panel shows the paid variant's keys. A paid ticket
 with no price is refused as `ticket.price`, an email that is no email as
 `contact.email`.
 
-## Step 4: others get a say
+## Example 4: others get a say
 
 `/surface-examples/4`, which says what to do:
 
@@ -338,11 +347,11 @@ with no price is refused as `ticket.price`, an email that is no email as
 drush pm:install data_surface_examples_compliance
 ```
 
-then reload step 3. A second module, which step 3 does not know,
+then reload example 3. A second module, which example 3 does not know,
 changes it with one class: it adds a privacy notice (stored under the
 module's own name, at
 `third_party_settings.data_surface_examples_compliance.privacy_notice`,
-so step 3's storage never has to know it), rewords the title's label,
+so example 3's storage never has to know it), rewords the title's label,
 and makes its notice required once the capacity is above a hundred. No
 form alter, no hook.
 
@@ -389,14 +398,14 @@ form and in the panel, whose row for it now depends on `capacity`. An
 alter can add and tighten. It can never take away what the owner
 declared.
 
-## Step 5: same contract, no form
+## Example 5: same contract, no form
 
 `/surface-examples/5`
 
-Nothing to write. Step 3 names a target and has a situation that needs
+Nothing to write. Example 3 names a target and has a situation that needs
 nothing, so the Tool API bridge (`data_surface_tool`) derives a tool
 from it, `data_surface:registration.step3:configure`. It takes what
-step 3's form takes, refuses what it refuses, with the same messages,
+example 3's form takes, refuses what it refuses, with the same messages,
 and can rehearse a write without making it.
 
 The script makes three calls to the tool and prints what each answered:
@@ -443,14 +452,14 @@ same pipeline, against the same surface. The difference is where they
 run: the script runs the calls inside a kernel test,
 `ExamplesToolTest`, on a fresh database it throws away, so it can be
 run any number of times and is what the test suite verifies; the Drush
-commands run against your site, and the first one writes step 3's
+commands run against your site, and the first one writes example 3's
 settings. The calls are written down once, in `ExampleCalls`, and both
 are generated from it. Every call says where the event is, so none
 depends on an earlier one, and every capacity is a hundred or fewer, so
-step 4's module does not change the answers. Enable it and send a
+example 4's module does not change the answers. Enable it and send a
 capacity of 120 without a privacy notice to see it refuse.
 
-## Step 6: every door
+## Example 6: every door
 
 To be written: the same contract through ECA, a decoupled page, and an
 AI agent.
@@ -465,8 +474,9 @@ Drush commands are checked against `ExampleCalls`.
 
 | Test | Covers |
 | --- | --- |
-| `Kernel\ExamplesStepsTest` | Steps 1 to 3: each form builds and saves, step 1 as its classic twin does; the venue narrows the room and the room the capacity; the ticket slot resolves by pricing; the contact validates its email; the panel's rows as the answers move; each step's class stays screen sized. |
-| `Kernel\ExamplesComplianceTest` | Step 4: the alter's key, label and requiredness above a hundred. |
-| `Kernel\ExamplesToolTest` | Step 5: the three calls and their answers; what the script prints. |
+| `Kernel\ExamplesStepsTest` | Examples 1 to 3: each form builds and saves, example 1 as its classic twin does; the venue narrows the room and the room the capacity; the ticket slot resolves by pricing; the contact validates its email; the panel's rows as the answers move; each example's class stays screen sized. |
+| `Kernel\ExamplesComplianceTest` | Example 4: the alter's key, label and requiredness above a hundred. |
+| `Kernel\ExamplesToolTest` | Example 5: the three calls and their answers; what the script prints. |
 | `Unit\ExamplesReadmeTest` | This page against the files it quotes, and its Drush commands. |
-| `Functional\ExamplesRoutesTest` | Every route answers an administrator and refuses anonymous; the landing page; a save through step 3. |
+| `Functional\ExamplesRoutesTest` | Every route answers an administrator and refuses anonymous; the landing page; a save through example 3. |
+| `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files. |

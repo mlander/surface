@@ -1,6 +1,6 @@
 name: Data Surface Examples
 type: module
-description: 'One surface that grows, one idea per step: event registration settings at /surface-examples, each step a form beside the contract it emits.'
+description: 'One surface that grows, one idea per example: event registration settings at /surface-examples, each example a form beside the contract it emits.'
 package: Data Surface
 lifecycle: experimental
 lifecycle_link: 'https://git.drupalcode.org/project/data_surface/-/blob/1.0.x/README.md#experimental-submodules'

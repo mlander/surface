@@ -62,33 +62,6 @@ interface DataSurfacePipelineInterface {
   public const CLEAR_SECRET = '@data_surface:clear-secret';
 
   /**
-   * The option a generated select offers in place of a stale value.
-   *
-   * A stored value that has fallen outside the list its key now offers
-   * cannot be rendered as a chosen option, and must not be injected into
-   * the list as though it could still be chosen. So the select renders
-   * with this marker selected instead, labeled with the value that is no
-   * longer available, and extraction maps it back to the stored value
-   * through the marker the element carries. Leaving the select alone
-   * therefore means "keep what is stored", which is what leaving a
-   * control alone has always meant everywhere else.
-   *
-   * Spelled in the same reserved "@" namespace as ACCESS_VIOLATION_KEY
-   * and CLEAR_SECRET, for the same reason: no definition is named with a
-   * leading "@", so the namespace cannot collide with a real value.
-   *
-   * Unlike CLEAR_SECRET this is the form path's own marker and not a
-   * word a payload says: a caller with no form in front of it keeps a
-   * stale value by sending it, or not sending the key at all. Sent as a
-   * value by a payload it is an ordinary string, refused by the choice
-   * constraint like any other value the key does not offer.
-   *
-   * @see \Drupal\data_surface\Plugin\DataSurfaceWidget\OptionsWidget
-   * @see docs/forms.md
-   */
-  public const KEEP_STALE = '@data_surface:keep-stale';
-
-  /**
    * Produces a complete, typed value set from partial, untyped input.
    *
    * Values merge in one order at every level: the surface's declared

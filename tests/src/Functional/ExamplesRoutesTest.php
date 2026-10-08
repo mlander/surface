@@ -42,6 +42,7 @@ class ExamplesRoutesTest extends BrowserTestBase {
     'surface-examples/3',
     'surface-examples/4',
     'surface-examples/5',
+    'surface-examples/reset',
   ];
 
   /**
@@ -66,10 +67,11 @@ class ExamplesRoutesTest extends BrowserTestBase {
     $this->drupalLogin($this->drupalCreateUser(['administer site configuration']));
     $this->drupalGet('surface-examples');
     $assert = $this->assertSession();
-    $assert->pageTextContains('Step 1: declare what you accept');
-    $assert->pageTextContains('Step 6: every door');
+    $assert->pageTextContains('Example 1: declare what you accept');
+    $assert->pageTextContains('Example 6: every door');
     $assert->pageTextMatches('/The surface: \d+ lines of code\./');
     $assert->pageTextMatches('/The classic twin, a config form: \d+ lines of code\./');
+    $assert->linkByHrefExists('/surface-examples/reset');
 
     $this->drupalGet('surface-examples/3');
     $assert->pageTextContains('The contract, as it stands');
@@ -77,6 +79,15 @@ class ExamplesRoutesTest extends BrowserTestBase {
     $this->submitForm(['surface[title]' => 'Harvest fair'], 'Save');
     $assert->pageTextContains('The changes have been saved.');
     $this->assertSame('Harvest fair', $this->config('data_surface_examples.registration_step3')->get('title'));
+
+    // And back, for a retake: the landing page's reset, confirmed.
+    $this->drupalGet('surface-examples');
+    $this->clickLink('Reset to defaults');
+    $this->submitForm([], 'Reset to defaults');
+    $assert->addressEquals('surface-examples');
+    $assert->pageTextContains('The examples are back to the settings the module ships with.');
+    $this->container->get('config.factory')->reset();
+    $this->assertSame('Spring meetup', $this->config('data_surface_examples.registration_step3')->get('title'));
 
     $this->drupalGet('surface-examples/5');
     $assert->pageTextContains('drush tool:info data_surface:registration.step3:configure');

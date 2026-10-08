@@ -7,8 +7,8 @@ namespace Drupal\Tests\data_surface\Kernel;
 use Drupal\Core\Form\EnforcedResponseException;
 use Drupal\Core\Form\FormState;
 use Drupal\block\Entity\Block;
-use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Target\PluginConfigurationTarget;
+use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
 use Drupal\data_surface_demo\Plugin\Block\DataSurfaceDemoBlock;
 use Drupal\node\Entity\NodeType;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -406,8 +406,9 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
    * died: the one page that could have fixed the value was the one page
    * that could not be opened.
    *
-   * Now the value is kept, the select comes up on a placeholder naming
-   * it, and nothing errors until somebody chooses again.
+   * Now the value is kept, the select comes up on its empty option with
+   * the value stashed behind it, and nothing errors until somebody
+   * chooses again.
    */
   public function testDeletedBundleIsKeptRatherThanFatal(): void {
     $stored = [
@@ -425,15 +426,16 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     $block = $this->createBlock($stored);
     $this->assertSame('article', $block->getConfiguration()['bundle']);
 
-    // The form opens, and the bundle select says what is missing rather
-    // than quietly coming up on some other bundle.
+    // The form opens, and the bundle select comes up on its empty option
+    // rather than quietly on some other bundle, with the stored bundle
+    // stashed for an untouched save to keep.
     $surface = $block->getDataSurface();
     $element = $this->formBuilder()
       ->buildSurfaceForm($surface, $block->getConfiguration(), new FormState())['bundle'];
-    $this->assertSame(DataSurfacePipelineInterface::KEEP_STALE, $element['#default_value']);
+    $this->assertSame('', $element['#default_value']);
     $this->assertArrayNotHasKey('article', $element['#options']);
     $this->assertArrayHasKey('page', $element['#options']);
-    $this->assertStringContainsString('article', (string) $element['#options'][DataSurfacePipelineInterface::KEEP_STALE]);
+    $this->assertSame('article', $element[DataSurfaceWidgetBase::STALE_KEY]);
 
     // And the values validate, so an unrelated save goes through.
     $violations = $this->pipeline()->validate($surface, $block->getConfiguration(), $block->getConfiguration());
@@ -554,7 +556,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     $this->assertStringContainsString('element is not allowed', $errors['settings][bundle']);
     $this->assertSame(['user' => 'User'], array_map('strval', array_diff_key(
       $form_state->getCompleteForm()['settings']['bundle']['#options'],
-      ['' => TRUE, DataSurfacePipelineInterface::KEEP_STALE => TRUE],
+      ['' => TRUE],
     )));
     // Nothing was written.
     $settings = Block::load('demo')->get('settings');

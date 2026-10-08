@@ -72,8 +72,8 @@ of them is meant to replace core's own forms on a production site.
 | `data_surface_address` | A contributed field type adopting a surface without being forked. Needs Address. |
 | `data_surface_tool` | The same surface serving a non-form caller. Needs Tool. |
 | `data_surface_demo_node_type_tool` | A content type add tool whose input is the content type surface, compared with Tool Belt's bundle tool once another module has extended content types. Needs Tool. |
-| `data_surface_examples` | One surface that grows, one idea per step, each step a form beside the contract it emits, at `/surface-examples`: declaring, refining, parts, and the same contract as a tool. Needs Tool. |
-| `data_surface_examples_compliance` | Step 4 of the examples: one alter class that changes step 3's surface, and nothing else. |
+| `data_surface_examples` | One surface that grows, one idea per example, each example a form beside the contract it emits, at `/surface-examples`: declaring, refining, parts, and the same contract as a tool. Needs Tool. |
+| `data_surface_examples_compliance` | Example 4: one alter class that changes example 3's surface, and nothing else. |
 
 Each submodule's own README says what it shows, how to try it, and which
 tests gate it.
@@ -84,7 +84,7 @@ drush pm:install data_surface_demo data_surface_demo_extras data_surface_demo_cl
 
 The examples run on a fresh site with nothing else, and are written to
 be shown: start at `/surface-examples`, and enable the compliance module
-when you reach step 4.
+when you reach example 4.
 
 ```bash
 drush pm:install data_surface_examples

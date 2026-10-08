@@ -202,13 +202,14 @@ their configuration may change without a deprecation path.
   derived from the content type surface, and Tool Belt's bundle tool and
   core's form, once another module has extended content types.
 - **Data Surface Examples** (`data_surface_examples`) — one surface
-  that grows, one idea per step, at `/surface-examples`: each step a
-  form beside the contract it emits, a classic twin for step 1, and
-  step 3 called as a tool with no form. Needs
+  that grows, one idea per example, at `/surface-examples`: each
+  example a form beside the contract it emits, a classic twin for
+  example 1, and example 3 called as a tool with no form, with a reset
+  to the shipped settings for a retake. Needs
   [Tool](https://www.drupal.org/project/tool).
 - **Data Surface Examples - Compliance**
-  (`data_surface_examples_compliance`) — step 4 of the examples: one
-  alter class changing step 3's surface, which does not know it.
+  (`data_surface_examples_compliance`) — example 4: one alter class
+  changing example 3's surface, which does not know it.
 
 Each submodule's README says what it shows, how to try it, and what gates
 it.

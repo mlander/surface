@@ -6,7 +6,8 @@ namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
+use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
+use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
 use Drupal\data_surface_test\Plugin\Block\DataSurfaceChainTestBlock;
 use Drupal\node\Entity\NodeType;
 use PHPUnit\Framework\Attributes\Group;
@@ -23,8 +24,9 @@ use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
  *
  * Out of the form, in storage: a bundle was deleted, a module was
  * uninstalled. Nobody did it here and nobody can be told they did it
- * wrong, so the value is kept, the select says what is missing, and the
- * stored value only ever clears on a real submit. That is the stale
+ * wrong, so the value is kept: the select comes up on its empty option
+ * with the stored value stashed behind it, and the stored value only
+ * ever changes on a real submit that chooses something else. That is the stale
  * model and StaleValueTest owns it.
  *
  * Inside the form, in the person's own half-finished edit: they chose a
@@ -33,8 +35,8 @@ use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
  * orphaned input is not an answer to be judged, it is an answer to a
  * question that is no longer on the screen. It is discarded, silently,
  * and the key falls back: to what is stored if that is still offered, to
- * the stale placeholder if something is stored and is not, and otherwise
- * to nothing chosen at all.
+ * the empty option standing for it if something is stored and is not,
+ * and otherwise to nothing chosen at all.
  *
  * The bug this closes was the opposite of every line of that. The
  * refinement AJAX limited validation to the whole surface container, so
@@ -204,13 +206,14 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
     );
     // And nothing is chosen in it: the input was withdrawn, and there is
     // no stored value underneath it.
-    $this->assertNull($form['tier_two']['#default_value']);
+    $this->assertSame('', $form['tier_two']['#default_value']);
     // Optional and unchosen, so the empty choice is what it comes up on.
     // It is still a render key here rather than an option: Form API
     // folds it into the list while processing, which a container read
     // straight off the builder has not been through.
     $this->assertSame('', $form['tier_two']['#empty_value']);
-    $this->assertArrayNotHasKey(DataSurfacePipelineInterface::KEEP_STALE, $form['tier_two']['#options']);
+    $this->assertArrayNotHasKey(DataSurfaceWidgetBase::STALE_KEY, $form['tier_two']);
+    $this->assertArrayNotHasKey(DataSurfaceFormBuilderInterface::STALE_MARKER_KEY, $form);
     $this->assertSame([], $form_state->getErrors());
     $this->assertSame([], $this->container->get('messenger')->all());
     // The withdrawal reaches the raw input too, because Form API
@@ -273,10 +276,10 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
    * Both halves of the rule at once. The in-progress input is withdrawn
    * because the form itself invalidated it; the stored value underneath
    * it is orphaned by the same change and is kept rather than cleared,
-   * so the fall-back lands on the stale placeholder the existing model
-   * already builds.
+   * so the fall-back lands on the empty option with the stored value
+   * stashed behind it, which is what a stale stored value always gets.
    */
-  public function testAnOrphanedStoredValueHandsOverToTheStalePlaceholder(): void {
+  public function testAnOrphanedStoredValueHandsOverToTheEmptyOption(): void {
     $form = $this->rebuild(
       // Saved: "one", which "c" does not offer either.
       ['tier_one' => 'a', 'tier_two' => 'one'],
@@ -284,53 +287,88 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
       ['tier_one' => 'c', 'tier_two' => 'two'],
     );
 
-    $this->assertSame(DataSurfacePipelineInterface::KEEP_STALE, $form['tier_two']['#default_value']);
-    // The placeholder names the stored value, so the person is told what
-    // is about to be kept rather than only that something is missing.
-    $this->assertStringContainsString(
-      'one',
-      (string) $form['tier_two']['#options'][DataSurfacePipelineInterface::KEEP_STALE],
-    );
-    // The withdrawn input is nowhere: it was never a stored value and it
-    // is not offered back as one.
-    $this->assertArrayNotHasKey('two', $form['tier_two']['#options']);
-    $this->assertArrayHasKey('three', $form['tier_two']['#options']);
-    // And the note does not promise that a save keeps it. This edit moved
-    // the parent, so a save sending the placeholder back is refused.
-    $description = (string) $form['tier_two']['#description'];
-    $this->assertStringContainsString('saving keeps it only if nothing it depends on has changed', $description);
-    $this->assertStringNotContainsString('kept until you choose another', $description);
+    $this->assertSame('', $form['tier_two']['#default_value']);
+    $this->assertSame('one', $form['tier_two'][DataSurfaceWidgetBase::STALE_KEY]);
+    // Neither the stored value nor the withdrawn input is offered, and
+    // nothing names either of them: the new parent's list and the empty
+    // option are all there is.
+    $this->assertSame(['three', 'four'], array_keys($form['tier_two']['#options']));
+    $this->assertSame('', $form['tier_two']['#empty_value']);
+    // The container posts the path, so the Save that follows can read
+    // the empty select as the stored value it stands for.
+    $this->assertSame('tier_two', $form[DataSurfaceFormBuilderInterface::STALE_MARKER_KEY]['#value']);
   }
 
   /**
-   * Tests that a stale sentinel is withdrawn like any other input.
+   * Tests a stale select left empty is withdrawn like any other input.
    *
    * The two cases meeting. A stored value had already gone stale out of
-   * the form, so the select came up on the sentinel and the browser
-   * posts the sentinel back. Changing a parent withdraws that sentinel
-   * exactly as it withdraws a real choice — and the stored value it
-   * stands for is still stored, because a stored value clears on a
-   * submit and at no other time.
+   * the form, so the select came up on its empty option and the browser
+   * posts that back, with the marker naming it. Changing a parent leaves
+   * it standing for the same stored value, under the new parent's list —
+   * and the stored value is still stored, because a rebuild is not a
+   * submit.
    */
-  public function testTheStaleSentinelIsWithdrawnAndTheStoredValueStays(): void {
+  public function testStaleSelectLeftEmptyKeepsStandingForTheStoredValue(): void {
     $stored = ['tier_one' => 'a', 'tier_two' => 'gone'];
     $form = $this->rebuild($stored, 'tier_one', [
       'tier_one' => 'b',
-      'tier_two' => DataSurfacePipelineInterface::KEEP_STALE,
+      'tier_two' => '',
+      DataSurfaceFormBuilderInterface::STALE_MARKER_KEY => 'tier_two',
     ]);
 
-    // Still the placeholder, standing for the same stored value, under
-    // the new parent's list.
-    $this->assertSame(DataSurfacePipelineInterface::KEEP_STALE, $form['tier_two']['#default_value']);
-    $this->assertStringContainsString(
-      'gone',
-      (string) $form['tier_two']['#options'][DataSurfacePipelineInterface::KEEP_STALE],
-    );
-    $this->assertArrayHasKey('three', $form['tier_two']['#options']);
+    $this->assertSame('', $form['tier_two']['#default_value']);
+    $this->assertSame('gone', $form['tier_two'][DataSurfaceWidgetBase::STALE_KEY]);
+    $this->assertSame(['two', 'three'], array_keys($form['tier_two']['#options']));
     // Nothing was written: a rebuild is not a submit.
     $this->assertSame('gone', $this->container->get('plugin.manager.block')
       ->createInstance('data_surface_chain_test_block', $stored)
       ->getConfiguration()['tier_two']);
+  }
+
+  /**
+   * Tests a parent moved back brings the stored dependent back with it.
+   *
+   * The dependent was shown empty because the parent had moved away from
+   * the one its stored value belongs to; the marker says the empty select
+   * stands for that value, so moving the parent back shows it chosen
+   * again rather than leaving the person to re-choose what is saved.
+   */
+  public function testMovingTheParentBackShowsTheStoredDependentAgain(): void {
+    $form_state = new FormState();
+    $form = $this->rebuild(
+      ['tier_one' => 'a', 'tier_two' => 'one'],
+      'tier_one',
+      [
+        'tier_one' => 'a',
+        'tier_two' => '',
+        DataSurfaceFormBuilderInterface::STALE_MARKER_KEY => 'tier_two',
+      ],
+      $form_state,
+    );
+
+    $this->assertSame('one', $form['tier_two']['#default_value']);
+    $this->assertArrayNotHasKey(DataSurfaceWidgetBase::STALE_KEY, $form['tier_two']);
+    // Out of the raw input, so the rebuilt select takes its default.
+    $this->assertArrayNotHasKey('tier_two', $form_state->getUserInput()['settings']);
+  }
+
+  /**
+   * Tests empty on a select with no marker behind it is an answer.
+   *
+   * The marker is the only thing that turns an empty select into "keep":
+   * a select whose stored value was still offered, emptied by the person,
+   * is an empty answer and stays one across a rebuild.
+   */
+  public function testAnEmptySelectWithNoMarkerStaysEmpty(): void {
+    $form = $this->rebuild(
+      ['tier_one' => 'a', 'tier_two' => 'one', 'note' => 'n'],
+      'note',
+      ['tier_one' => 'a', 'tier_two' => '', 'note' => 'n'],
+    );
+
+    $this->assertSame('', $form['tier_two']['#default_value']);
+    $this->assertArrayNotHasKey(DataSurfaceWidgetBase::STALE_KEY, $form['tier_two']);
   }
 
   /**
@@ -356,7 +394,7 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
       ['three' => 'three', 'four' => 'four'],
       $this->offered($form['tier_two']),
     );
-    $this->assertNull($form['tier_two']['#default_value']);
+    $this->assertSame('', $form['tier_two']['#default_value']);
 
     // Third tier: its own dependency has just moved under it, so its
     // input goes the same way. With nothing left to narrow against it is

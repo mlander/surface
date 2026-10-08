@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface_examples\Target;
 
 /**
- * Step 3's registration settings, in their own config object.
+ * Example 3's registration settings, in their own config object.
  */
 final class RegistrationStep3Target extends RegistrationTarget {
 

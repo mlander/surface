@@ -8,12 +8,12 @@ use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 
 /**
- * Step 1, the classic way: the same three settings as a config form.
+ * Example 1, the classic way: the same three settings as a config form.
  *
  * Written as well as core allows today, not to lose: #config_target
  * reads and writes each setting with no submit handler, and the
  * elements' own #required, #min and #max are its validation. It writes
- * the same config object step 1's surface does, so the two forms edit
+ * the same config object example 1's surface does, so the two forms edit
  * one thing. What it cannot do is be asked: nothing but this form knows
  * what the three settings accept.
  */

@@ -79,7 +79,9 @@ What the stock widgets do beyond the obvious: defaults populate at every
 depth, and constraint options reach the element, so the browser enforces
 what the definition declares. `Length`'s `max` becomes `#maxlength` on
 the string widget and `Range`'s `min` and `max` become `#min` and `#max`
-on the number widget. Optional selects offer an empty choice. The string
+on the number widget. A select offers an empty option by [the empty
+option rule](decisions.md#the-empty-option-rule): always when optional,
+and when required only while no valid choice is selected. The string
 widget picks its element type from the definition — `textarea` when the
 definition carries the `multiline` type setting, otherwise `email`,
 `url` or `textfield` from the data type — and both the string and number

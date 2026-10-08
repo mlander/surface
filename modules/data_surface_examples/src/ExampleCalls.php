@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Drupal\data_surface_examples;
 
 /**
- * Step 5's three calls to the step 3 tool, written down once.
+ * Example 5's three calls to the example 3 tool, written down once.
  *
  * The kernel test makes them, scripts/examples-dry-run.php prints what
- * they answer, and the step 5 page and the README show them as Drush
+ * they answer, and the example 5 page and the README show them as Drush
  * commands. Every call says where the event is, so none depends on what
  * an earlier one wrote, and every capacity is a hundred or fewer, so the
- * compliance module of step 4 does not change the answers.
+ * compliance module of example 4 does not change the answers.
  */
 final class ExampleCalls {
 

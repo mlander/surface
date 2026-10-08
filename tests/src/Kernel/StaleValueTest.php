@@ -5,14 +5,17 @@ declare(strict_types=1);
 namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Core\Form\FormState;
+use Drupal\Core\Render\Element\Select;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\data_surface\DataSurface;
 use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
+use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Target\StateTarget;
+use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -26,12 +29,13 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * refinement narrowed. Nothing the caller did caused it and nothing the
  * caller sends can be blamed for it, so the rules are their own:
  *
- * - Display never errors. The select renders with no real option chosen
- *   and a sentinel naming what is missing, never with the stale value
- *   injected back into the list and never pre-set to some other option.
- * - Untouched means keep. The sentinel maps back to the stored value on
- *   extraction, so an unrelated save cannot clear it — which is the trap,
- *   because an empty select otherwise means clear.
+ * - Display never errors. The select comes up on its empty option,
+ *   selected, never with the stale value injected back into the list and
+ *   never pre-set to some other option.
+ * - Untouched means keep. The element stashes the stored value, and an
+ *   empty select carrying a stash maps back to it on extraction, so an
+ *   unrelated save cannot clear it — which is the trap, because an empty
+ *   select otherwise means clear.
  * - Stale never blocks. A value identical to what is stored and outside
  *   the list warns and saves; a value that differs is refused however far
  *   outside it falls, because that one was chosen.
@@ -75,11 +79,13 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
    *   Whether the select is required.
    * @param array $choices
    *   What the select offers now.
+   * @param string|null $default
+   *   The value the select declares as its default, if any.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The surface.
    */
-  protected function surface(bool $required, array $choices = ['keep', 'other']): DataSurfaceInterface {
+  protected function surface(bool $required, array $choices = ['keep', 'other'], ?string $default = NULL): DataSurfaceInterface {
     $pick = DataDefinition::create('string')
       ->setLabel('Pick')
       ->setDescription('What to feature.')
@@ -88,6 +94,9 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
         'choices' => $choices,
         'labels' => array_combine($choices, array_map('ucfirst', $choices)),
       ]);
+    if ($default !== NULL) {
+      DefinitionMetadata::setDefaultValue($pick, $default);
+    }
     return new DataSurface(DefinitionMap::fromArrays(definitions: [
       'pick' => $pick,
       'note' => DataDefinition::create('string')->setLabel('Note'),
@@ -146,6 +155,26 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Runs Form API's own select processing over a built element.
+   *
+   * Core folds #empty_option into #options while processing, and adds
+   * one of its own to a required select with no default; the rule is
+   * about the options a person is shown, so it is asserted on these.
+   *
+   * @param array $element
+   *   The select element as the widget built it.
+   *
+   * @return array
+   *   The options the select renders, as plain strings.
+   */
+  protected function shown(array $element): array {
+    $element += $this->container->get('element_info')->getInfo('select');
+    $complete = [];
+    $processed = Select::processSelect($element, new FormState(), $complete);
+    return array_map('strval', $processed['#options']);
+  }
+
+  /**
    * The target the payload path writes through.
    *
    * @return \Drupal\data_surface\Target\StateTarget
@@ -166,71 +195,134 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that a stale value renders with no real option selected.
+   * Tests that a stale value renders as the empty option, selected.
+   *
+   * Rule 1 of the empty option rule.
    */
   #[DataProvider('requiredCases')]
-  public function testStaleSelectComesUpOnTheSentinel(bool $required): void {
+  public function testStaleSelectComesUpOnTheEmptyOption(bool $required): void {
     $element = $this->element($required, self::GONE);
 
-    // Nothing real is selected, and nothing was guessed at: the element
-    // comes up on the sentinel, which is not a value the key can hold.
-    $this->assertSame(DataSurfacePipelineInterface::KEEP_STALE, $element['#default_value']);
-    $this->assertArrayHasKey(DataSurfacePipelineInterface::KEEP_STALE, $element['#options']);
-    // The sentinel says which value is missing, so the person is not
-    // told only that something is wrong.
-    $this->assertStringContainsString(self::GONE, (string) $element['#options'][DataSurfacePipelineInterface::KEEP_STALE]);
-    // And the stale value is never offered as a choice: putting it back
-    // would let somebody re-save a reference to something gone, and
-    // would make the list that is offered wider than the one that
-    // validates.
-    $this->assertArrayNotHasKey(self::GONE, $element['#options']);
-    // The real options are all still there.
-    $this->assertArrayHasKey('keep', $element['#options']);
-    $this->assertArrayHasKey('other', $element['#options']);
-    // The description says what leaving it alone will do, where a screen
-    // reader reaches it rather than only in the option label — and only
-    // what is true whether or not this edit moved what the key depends
-    // on, because a save keeps the value only when it did not.
-    $this->assertStringContainsString(
-      'Choose another; saving keeps it only if nothing it depends on has changed.',
-      (string) $element['#description'],
-    );
-    $this->assertStringNotContainsString('kept until you choose another', (string) $element['#description']);
-    $this->assertContains('data-surface-stale', $element['#attributes']['class']);
-  }
-
-  /**
-   * Tests that only an optional stale select can still be cleared.
-   */
-  public function testTheEmptyChoiceSurvivesBesideTheSentinel(): void {
-    // Optional: keep and clear are different answers and both have to be
-    // expressible, so the empty choice stays beside the sentinel.
-    $optional = $this->element(FALSE, self::GONE);
-    $this->assertSame('', $optional['#empty_value']);
-    $this->assertNotEmpty($optional['#empty_option']);
-
-    // Required: the sentinel and the real options, and nothing else. An
-    // empty choice here would offer a way to empty a key the definition
-    // says must be answered.
-    $required = $this->element(TRUE, self::GONE);
-    $this->assertArrayNotHasKey('#empty_value', $required);
+    // The empty option, selected: nothing real is chosen and nothing was
+    // guessed at.
+    $this->assertSame('', $element['#default_value']);
     $this->assertSame(
-      [DataSurfacePipelineInterface::KEEP_STALE, 'keep', 'other'],
-      array_keys($required['#options']),
+      ['' => $required ? '- Select -' : '- None -', 'keep' => 'Keep', 'other' => 'Other'],
+      $this->shown($element),
     );
-  }
-
-  /**
-   * Tests that a key that was never set renders as it always did.
-   */
-  #[DataProvider('requiredCases')]
-  public function testNeverSetSelectIsUntouchedByTheStaleRules(bool $required): void {
-    $element = $this->element($required, NULL);
-
-    $this->assertNull($element['#default_value']);
-    $this->assertArrayNotHasKey(DataSurfacePipelineInterface::KEEP_STALE, $element['#options']);
+    // The stale value is never offered as a choice, nor named by an
+    // option of its own: putting it back would let somebody re-save a
+    // reference to something gone, and would make the list that is
+    // offered wider than the one that validates.
+    $this->assertArrayNotHasKey(self::GONE, $element['#options']);
+    // It travels on the element instead, which is how an untouched
+    // select keeps it.
+    $this->assertSame(self::GONE, $element[DataSurfaceWidgetBase::STALE_KEY]);
+    // No note and no class: the stored value no longer being an option
+    // is the whole of the presentational change.
     $this->assertSame('What to feature.', (string) $element['#description']);
     $this->assertArrayNotHasKey('#attributes', $element);
+  }
+
+  /**
+   * Tests a required stale select is not refused by core before the surface.
+   *
+   * Empty on a stale select means keep, so core's required check, which
+   * runs before the surface is asked, must not see it as unanswered; the
+   * required marker stays on the label.
+   */
+  public function testRequiredStaleSelectKeepsItsMarkerButNotCoresCheck(): void {
+    $element = $this->element(TRUE, self::GONE);
+
+    $this->assertFalse($element['#required']);
+    $this->assertContains('form-required', $element['#label_attributes']['class']);
+    $this->assertArrayNotHasKey('#required_error', $element);
+  }
+
+  /**
+   * Tests that a key that was never set renders on the empty option.
+   *
+   * Rule 3: a required select on first entry shows its empty option,
+   * selected, and core's required check refuses it in the surface's own
+   * words until something is chosen.
+   */
+  #[DataProvider('requiredCases')]
+  public function testNeverSetSelectComesUpOnTheEmptyOption(bool $required): void {
+    $element = $this->element($required, NULL);
+
+    $this->assertSame('', $element['#default_value']);
+    $this->assertSame(
+      ['' => $required ? '- Select -' : '- None -', 'keep' => 'Keep', 'other' => 'Other'],
+      $this->shown($element),
+    );
+    $this->assertArrayNotHasKey(DataSurfaceWidgetBase::STALE_KEY, $element);
+    $this->assertSame('What to feature.', (string) $element['#description']);
+    $this->assertArrayNotHasKey('#attributes', $element);
+    $this->assertSame($required, $element['#required']);
+    if ($required) {
+      $this->assertSame('Pick is required.', (string) $element['#required_error']);
+    }
+  }
+
+  /**
+   * Tests rule 2: a required select with a valid stored value.
+   *
+   * A valid choice is selected, so there is no empty option at all: the
+   * only things offered are the values the key may hold.
+   */
+  public function testRequiredSelectWithStoredValidValueShowsNoEmptyOption(): void {
+    $element = $this->element(TRUE, 'keep');
+
+    $this->assertSame('keep', $element['#default_value']);
+    $this->assertArrayNotHasKey('#empty_option', $element);
+    $this->assertArrayNotHasKey('#empty_value', $element);
+    $this->assertSame(['keep' => 'Keep', 'other' => 'Other'], $this->shown($element));
+    $this->assertArrayNotHasKey(DataSurfaceWidgetBase::STALE_KEY, $element);
+  }
+
+  /**
+   * Tests rule 2 for a declared default the list offers.
+   *
+   * The surface author chose it, so it counts as a valid choice selected
+   * and no empty option appears; a declared default the list does not
+   * offer is no choice at all, and the empty option is back.
+   */
+  public function testRequiredSelectWithAnOfferedDefaultShowsNoEmptyOption(): void {
+    $surface = $this->surface(TRUE, default: 'other');
+    $element = $this->formBuilder()->buildSurfaceForm($surface, [], new FormState())['pick'];
+    $this->assertSame('other', $element['#default_value']);
+    $this->assertSame(['keep' => 'Keep', 'other' => 'Other'], $this->shown($element));
+
+    $surface = $this->surface(TRUE, ['keep'], default: 'other');
+    $element = $this->formBuilder()->buildSurfaceForm($surface, [], new FormState())['pick'];
+    $this->assertSame('', $element['#default_value']);
+    $this->assertSame(['' => '- Select -', 'keep' => 'Keep'], $this->shown($element));
+  }
+
+  /**
+   * Tests rule 4: an optional select keeps its empty option always.
+   */
+  public function testOptionalSelectKeepsItsEmptyOptionWithValidValue(): void {
+    $element = $this->element(FALSE, 'keep');
+
+    $this->assertSame('keep', $element['#default_value']);
+    $this->assertSame(['' => '- None -', 'keep' => 'Keep', 'other' => 'Other'], $this->shown($element));
+  }
+
+  /**
+   * Tests the container names the stale selects in its hidden marker.
+   *
+   * What lets a build made from a submission, before any element exists,
+   * tell an untouched stale select from an empty answer.
+   */
+  public function testTheContainerPostsTheStalePaths(): void {
+    $container = $this->formBuilder()->buildSurfaceForm($this->surface(TRUE), ['pick' => self::GONE], new FormState());
+    $this->assertSame('hidden', $container[DataSurfaceFormBuilderInterface::STALE_MARKER_KEY]['#type']);
+    $this->assertSame('pick', $container[DataSurfaceFormBuilderInterface::STALE_MARKER_KEY]['#value']);
+
+    // Nothing stale, no marker.
+    $container = $this->formBuilder()->buildSurfaceForm($this->surface(TRUE), ['pick' => 'keep'], new FormState());
+    $this->assertArrayNotHasKey(DataSurfaceFormBuilderInterface::STALE_MARKER_KEY, $container);
   }
 
   /**
@@ -241,7 +333,7 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
     $element = $this->element($required, 'keep');
 
     $this->assertSame('keep', $element['#default_value']);
-    $this->assertArrayNotHasKey(DataSurfacePipelineInterface::KEEP_STALE, $element['#options']);
+    $this->assertArrayNotHasKey(DataSurfaceWidgetBase::STALE_KEY, $element);
   }
 
   /**
@@ -290,19 +382,35 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that an optional stale select can still be emptied.
+   * Tests that empty on a select with nothing stale behind it clears.
+   *
+   * The other half of "untouched means keep": a select that could show
+   * its stored value carries no stash, so its empty option is an answer,
+   * and for an optional key that answer is "nothing".
    */
-  public function testClearingAnOptionalStaleSelectClearsIt(): void {
+  public function testChoosingEmptyOnLiveOptionalSelectClearsIt(): void {
     $surface = $this->surface(FALSE);
-    $current = ['pick' => self::GONE, 'note' => 'before'];
+    $current = ['pick' => 'keep', 'note' => 'before'];
 
-    // The empty choice, which is what the browser submits for "- None -".
     $values = $this->extract($surface, $current, ['pick' => '']);
     $this->assertNull($values['pick']);
 
     $violations = $this->pipeline()->validate($surface, $values, $current);
     $this->assertTrue($violations->isEmpty());
     $this->assertFalse($violations->hasStale());
+  }
+
+  /**
+   * Tests that empty on a required live select is refused as required.
+   */
+  public function testChoosingEmptyOnLiveRequiredSelectIsRefused(): void {
+    $surface = $this->surface(TRUE);
+    $current = ['pick' => 'keep', 'note' => 'before'];
+
+    $values = $this->extract($surface, $current, ['pick' => '']);
+    $violations = $this->pipeline()->validate($surface, $values, $current);
+    $this->assertSame(['pick'], $violations->keys());
+    $this->assertSame('Pick is required.', (string) $violations->byKey('pick')[0]->message);
   }
 
   /**
@@ -429,21 +537,6 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the sentinel is only ever honoured where it was rendered.
-   */
-  public function testTheMarkerIsAnOrdinaryStringOnAnyOtherKey(): void {
-    $surface = $this->surface(FALSE);
-    $current = ['pick' => 'keep', 'note' => NULL];
-
-    // The select came up on a real option, so it carries no stash, and
-    // the marker spelled into it by hand is just a value the key does
-    // not offer.
-    $values = $this->extract($surface, $current, ['pick' => DataSurfacePipelineInterface::KEEP_STALE]);
-    $this->assertSame(DataSurfacePipelineInterface::KEEP_STALE, $values['pick']);
-    $this->assertFalse($this->pipeline()->validate($surface, $values, $current)->isEmpty());
-  }
-
-  /**
    * Tests that what the element stashes is a value and nothing else.
    */
   public function testTheStashIsSerializable(): void {
@@ -451,7 +544,7 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
 
     // The form cache rule, asserted rather than trusted: what a built
     // element carries is ids and values, never anything with behavior.
-    $this->assertSame(self::GONE, $element['#data_surface_stale']);
+    $this->assertSame(self::GONE, $element[DataSurfaceWidgetBase::STALE_KEY]);
     // Equal, not identical: the messages are objects and come back as
     // new ones, which is the whole point of round-tripping them.
     $this->assertEquals($element, unserialize(serialize($element), [

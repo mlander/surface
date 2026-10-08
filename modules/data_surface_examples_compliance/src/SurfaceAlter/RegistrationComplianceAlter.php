@@ -14,11 +14,11 @@ use Drupal\data_surface\Surface\SurfaceAlterInterface;
 use Drupal\data_surface_examples\Surface\RegistrationStep3Surface;
 
 /**
- * Step 4: others get a say.
+ * Example 4: others get a say.
  *
- * Another module's class, naming step 3's surface. It adds a key, which
+ * Another module's class, naming example 3's surface. It adds a key, which
  * is stored under this module's name; it rewords one of the owner's
- * labels; and it makes its own key required for a large event. Step 3
+ * labels; and it makes its own key required for a large event. Example 3
  * is not changed and does not know this module exists.
  */
 #[AltersSurface(RegistrationStep3Surface::class)]

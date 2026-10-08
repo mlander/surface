@@ -25,6 +25,24 @@ use Drupal\data_surface\Pipeline\ViolationSet;
 interface DataSurfaceFormBuilderInterface {
 
   /**
+   * Key of the hidden input naming the selects that stand for a stale value.
+   *
+   * A select whose stored value is no longer offered comes up on its
+   * empty option, which submits the same empty string as an empty
+   * answer. Its element knows the difference, through its stash, but
+   * the build a submission is processed against is made from what was
+   * submitted, before any element exists. So the container posts, beside
+   * the selects, the dotted paths of the ones standing for a stored
+   * value, and a host's overlay reads an empty answer at one of those
+   * paths as "keep what is stored" rather than as "clear it". It can
+   * only ever name a value that is already stored, so a forged path
+   * keeps a value the caller could have sent anyway.
+   *
+   * In the reserved "@" namespace, which no definition is named in.
+   */
+  public const STALE_MARKER_KEY = '@stale';
+
+  /**
    * Builds a container of form elements for a surface.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
@@ -51,13 +69,13 @@ interface DataSurfaceFormBuilderInterface {
    * input is transient — nobody submitted it, and it is no longer an
    * answer to the question now being asked — so it is discarded and the
    * key falls back: to its stored value when the narrowed definition
-   * still offers that, to the stale placeholder when a stored value
-   * exists and is no longer offered, and otherwise to nothing chosen at
-   * all. Nothing is flagged and nothing is warned about, because nothing
-   * was submitted.
+   * still offers that, to the empty option standing for the stored
+   * value when one exists and is no longer offered, and otherwise to
+   * nothing chosen at all. Nothing is flagged and nothing is warned
+   * about, because nothing was submitted.
    *
    * The out-of-form half is the stale model and is untouched here: only
-   * input is ever named, never a stored value, which clears on a real
+   * input is ever named, never a stored value, which changes on a real
    * submit and at no other time.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
