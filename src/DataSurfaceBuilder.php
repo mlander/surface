@@ -6,7 +6,6 @@ namespace Drupal\data_surface;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Cache\CacheableMetadata;
-use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
@@ -23,12 +22,11 @@ use Drupal\data_surface\Target\SettingsShapeInterface;
  * alterInputs() are handed, and seals it. Nothing else constructs one
  * outside the engine's own tests.
  *
- * The one place in this module where a human-facing string is still
- * built as `new TranslatableMarkup` from inside an instance method. The
- * builder is a value object made with `new DataSurfaceBuilder()`, so
- * there is no constructor to inject the translation service through. So
- * the titles of the third-party containers below are constructed raw,
- * and translate at render time exactly as an injected `$this->t()` would.
+ * The builder is a value object made with `new DataSurfaceBuilder()`, so
+ * there is no constructor to inject the translation service through. The
+ * titles of the third-party containers below are built by a static
+ * method with the global t(), and translate at render time exactly as an
+ * injected `$this->t()` would.
  *
  * @see \Drupal\data_surface\DataSurfaceBuilderInterface
  *   For the documentation of every method.
@@ -388,7 +386,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
       $definitions[$key] = $chosen === NULL ? $slot->placeholder() : $slot->definitionFor($chosen);
     }
     if ($this->thirdParty !== []) {
-      $definitions['third_party_settings'] = $this->mountedMap($this->thirdParty, FALSE);
+      $definitions['third_party_settings'] = static::mountedMap($this->thirdParty, FALSE);
     }
     $outputs = $this->outputs;
     // Asked again over everything, because outputs also arrive whole
@@ -398,7 +396,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
       static::assertOutputDeclarable((string) $name, $definition);
     }
     if ($this->thirdPartyOutputs !== []) {
-      $outputs[self::THIRD_PARTY_OUTPUTS] = $this->mountedMap($this->thirdPartyOutputs, TRUE);
+      $outputs[self::THIRD_PARTY_OUTPUTS] = static::mountedMap($this->thirdPartyOutputs, TRUE);
     }
     return $this->sealed = new DataSurface(
       DefinitionMap::fromArrays(
@@ -434,20 +432,20 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The assembled map.
    */
-  protected function mountedMap(array $mounted, bool $emitted): MapDataDefinition {
+  protected static function mountedMap(array $mounted, bool $emitted): MapDataDefinition {
     $providers = MapDataDefinition::create()
       ->setLabel($emitted
-        ? new TranslatableMarkup('Third party outputs')
-        : new TranslatableMarkup('Third party settings'))
+        ? t('Third party outputs')
+        : t('Third party settings'))
       ->setDescription($emitted
-        ? new TranslatableMarkup('Values emitted by other modules.')
-        : new TranslatableMarkup('Settings added by other modules.'));
+        ? t('Values emitted by other modules.')
+        : t('Settings added by other modules.'));
     foreach ($mounted as $provider => $keys) {
       $name = static::providerLabel((string) $provider);
       $provider_map = MapDataDefinition::create()
         ->setLabel($emitted
-          ? new TranslatableMarkup('@provider outputs', ['@provider' => $name])
-          : new TranslatableMarkup('@provider settings', ['@provider' => $name]));
+          ? t('@provider outputs', ['@provider' => $name])
+          : t('@provider settings', ['@provider' => $name]));
       foreach ($keys as $key => $definition) {
         $provider_map->setPropertyDefinition((string) $key, $definition);
       }

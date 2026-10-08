@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_tool\Surface;
 
-use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Surface\Attribute\Situation;
 use Drupal\data_surface\Surface\Attribute\Surface;
 use Drupal\data_surface\Surface\ShapeInterface;
@@ -90,21 +89,21 @@ final class FieldStorageSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(ShapeInterface $inputs): void {
     // Which storage this is, beyond what the field hands it.
-    $inputs->add('field_type', 'string', new TranslatableMarkup('Field type'))
-      ->setDescription(new TranslatableMarkup("The field type, which decides what the storage settings are. The same as the field's."));
+    $inputs->add('field_type', 'string', t('Field type'))
+      ->setDescription(t("The field type, which decides what the storage settings are. The same as the field's."));
 
     // The storage itself.
-    $inputs->add('cardinality', 'integer', new TranslatableMarkup('Allowed number of values'), default: 1)
-      ->setDescription(new TranslatableMarkup('How many values the field holds: a number of one or more, or -1 for unlimited.'))
+    $inputs->add('cardinality', 'integer', t('Allowed number of values'), default: 1)
+      ->setDescription(t('How many values the field holds: a number of one or more, or -1 for unlimited.'))
       ->addConstraint('Range', ['min' => FieldStorageConfigInterface::CARDINALITY_UNLIMITED]);
-    $inputs->add('translatable', 'boolean', new TranslatableMarkup('Translatable'), default: TRUE);
+    $inputs->add('translatable', 'boolean', t('Translatable'), default: TRUE);
 
     // Its part.
     $inputs->attachBy('settings', by: 'field_type')
-      ->setLabel(new TranslatableMarkup('Storage settings'))
-      ->setDescription(new TranslatableMarkup('Settings every bundle using this field shares, described by the field type itself.'));
+      ->setLabel(t('Storage settings'))
+      ->setDescription(t('Settings every bundle using this field shares, described by the field type itself.'));
   }
 
 }

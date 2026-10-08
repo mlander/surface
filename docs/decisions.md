@@ -10,6 +10,45 @@ code change at the place its entry names.
 A point that comes up undecided while working on the module is added
 here, as an entry marked *open*, rather than as a comment in the code.
 
+## Authoring
+
+### A surface is static
+
+`SurfaceInterface::defineInputs()` and `HasOutputsInterface::defineOutputs()`
+are `public static`, and the build step calls them on the class, never
+on an instance; a surface's `#[RefinesInput]` methods are static too,
+and one that is not is refused when the surface is built. Shape is a
+property of the class: it takes no values, no context and no services,
+and static enforces that by the language rather than by a docblock. It
+also lets a plugin class be its own surface without anything
+constructing the plugin to ask (see [A plugin that is its own
+surface](#a-plugin-that-is-its-own-surface)), and it keeps an object
+out of every cached form: the surface's link in the refiner chain holds
+the class name, where an instance carrying `StringTranslationTrait` was
+measured at about 721 bytes more per cached form. `RefinesInputRefiner`
+dispatches a static and an instance method alike, so **a surface's
+refiner is static; an alter's is an instance method**: an alter is an
+autowired service and may hold configuration its refiner reads, a
+site's shipping zones, say. PHP itself refuses a class that implements
+the interface with an instance `defineInputs()`, so discovery names the
+one that dropped the interface to get one past the compiler.
+(`Surfaces::buildSurface()`, `Surfaces::assertStaticOnSurface()`,
+`SurfaceRegistry::assertSurfaceClass()`)
+
+Translatable strings in static context use the global `t()`: a
+surface's shape, refiners and situations, a plugin's static protocol
+methods, an enum's labels, a value object's static helper.
+`t('Label')` returns the same lazy `TranslatableMarkup` that
+`new TranslatableMarkup('Label')` does, and string extraction finds
+it; the coding standards' reason to prefer `$this->t()` is injection,
+which does not apply where nothing can be injected, and
+`DrupalPractice` does not flag `t()` in a static method.
+`Drupal.Semantics.FunctionT` holds it to literal strings, so a value is
+always a placeholder. `new TranslatableMarkup` stays only inside
+attribute arguments (`#[Situation(label:)]`, plugin attributes), where
+a function call is not allowed; a class the container builds keeps
+injecting `string_translation` and calling `$this->t()`.
+
 ## Context
 
 ### A build is not cached
@@ -382,9 +421,10 @@ catalogue builds nothing. (`SurfaceCatalogue::creates()`)
 ### A class that is not there
 
 An alter, situation or variant naming a surface class that does not
-load, or that loads and carries `#[Surface]` but was not discovered (its
-module is off), is skipped; one naming a class that loads and is no
-surface is refused. A disabled module must not break the site, and a
+load, or that loads and is a surface but was not discovered (its module
+is off) — it carries `#[Surface]`, or it is a plugin that is its own
+surface — is skipped; one naming a class that loads and is no surface
+is refused. A disabled module must not break the site, and a
 typo must not pass silently. (`SurfaceRegistry`)
 
 ### `#[UsesSurface]` into the plugin definition
@@ -399,7 +439,34 @@ plugins without instantiating any. (`SurfacePluginHooks`)
 
 A subclass inherits its parent's `#[UsesSurface]`; the nearest class
 naming one wins. A subclassed block keeps its parent's form, as it
-would with `blockForm()`. (`SurfacePluginHooks::usedSurfaceOf()`)
+would with `blockForm()`. A subclass of a plugin that is its own
+surface is its own surface in turn, inheriting the static shape, so an
+alter of the parent's class does not reach it.
+(`SurfacePluginHooks::usedSurfaceOf()`)
+
+### A plugin that is its own surface
+
+`#[UsesSurface]` with no argument means the plugin class is its own
+surface: it implements `SurfaceInterface`, with a static
+`defineInputs()` and static `#[RefinesInput]` methods, and its
+definition records its own class under `UsesSurface::DEFINITION_KEY`,
+so every host builds it exactly as it builds a named surface. Such a
+surface is found through the plugin definitions
+(`SurfacePlugins::ownSurfaces()`), not a directory: a plugin lives
+where its plugin type says. Its id is `<host type>:<plugin id>`, the
+catalogue's name for the plugin, unless the class also carries
+`#[Surface]`, whose id, identity, target and access then apply; a class
+several plugins share (a deriver's derivatives) is one surface, named
+after the first of them in sorted order. The catalogue lists it as used
+by that same plugin, and an alter targets it by the plugin class. The
+registry's cache id hashes the plugin-own list beside the compiler
+pass's, so a plugin more or less is a different entry. The compiler
+pass never sees such a class, so a target or access class it names is
+not registered as an autowired service; the class resolver builds it,
+which means no constructor arguments or `ContainerInjectionInterface`.
+The demo formatter is written this way and the demo block is not, so
+the two spellings sit side by side.
+(`SurfaceRegistry::discover()`, `SurfacePluginHooks::usedSurfaceOf()`)
 
 ## Plugins
 

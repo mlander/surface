@@ -18,7 +18,7 @@ final class LabelSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(ShapeInterface $inputs): void {
     $inputs->add('text', 'string', 'Text', default: 'Pantry');
   }
 

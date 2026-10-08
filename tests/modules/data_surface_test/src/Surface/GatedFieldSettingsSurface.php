@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_test\Surface;
 
-use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Surface\Attribute\Surface;
 use Drupal\data_surface\Surface\Attribute\SurfaceVariant;
 use Drupal\data_surface\Surface\ShapeInterface;
@@ -37,9 +36,9 @@ final class GatedFieldSettingsSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
-    $inputs->add('note', 'string', new TranslatableMarkup('Note'))
-      ->setDescription(new TranslatableMarkup('A note stored with this field instance.'));
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('note', 'string', t('Note'))
+      ->setDescription(t('A note stored with this field instance.'));
   }
 
 }

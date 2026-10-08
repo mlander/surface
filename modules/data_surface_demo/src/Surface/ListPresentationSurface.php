@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_demo\Surface;
 
-use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Surface\Attribute\Surface;
 use Drupal\data_surface\Surface\Attribute\SurfaceVariant;
 use Drupal\data_surface\Surface\ShapeInterface;
@@ -26,9 +25,9 @@ final class ListPresentationSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
-    $inputs->add('show_summary', 'boolean', new TranslatableMarkup('Show summaries'), default: TRUE)
-      ->setDescription(new TranslatableMarkup('Whether item summaries render.'));
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('show_summary', 'boolean', t('Show summaries'), default: TRUE)
+      ->setDescription(t('Whether item summaries render.'));
   }
 
 }

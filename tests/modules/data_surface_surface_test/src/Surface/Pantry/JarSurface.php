@@ -19,7 +19,7 @@ final class JarSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(ShapeInterface $inputs): void {
     $inputs->add('lid', 'string', 'Lid', default: 'screw')
       ->setDescription('How the jar closes.')
       ->addConstraint('Choice', ['choices' => ['screw', 'clip']]);

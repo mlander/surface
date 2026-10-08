@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_examples\Surface;
 
-use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Surface\Attribute\Surface;
 use Drupal\data_surface\Surface\Attribute\SurfaceVariant;
 use Drupal\data_surface\Surface\ShapeInterface;
@@ -23,11 +22,11 @@ final class PaidTicketSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
-    $inputs->add('price', 'float', new TranslatableMarkup('Price'))
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('price', 'float', t('Price'))
       ->setRequired(TRUE)
       ->addConstraint('Range', ['min' => 0.01]);
-    $inputs->add('currency', 'string', new TranslatableMarkup('Currency'), default: 'EUR')
+    $inputs->add('currency', 'string', t('Currency'), default: 'EUR')
       ->setRequired(TRUE)
       ->addConstraint('Choice', ['choices' => ['EUR', 'GBP', 'USD']]);
   }

@@ -8,16 +8,20 @@ use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Form\DataSurfacePluginForm;
+use Drupal\data_surface\Refinement\ChoiceSet;
 use Drupal\data_surface\Surface\Attribute\UsesSurface;
 use Drupal\data_surface\Target\PluginConfigurationTarget;
 use Drupal\data_surface_address\Surface\AddressFieldSettingsSurface;
+use Drupal\data_surface\Surface\SurfaceContext;
+use Drupal\data_surface_demo\Plugin\Field\FieldFormatter\DataSurfaceDemoFormatter;
 use Drupal\data_surface_demo\Surface\DemoBlockSurface;
-use Drupal\data_surface_demo\Surface\DemoFormatterSurface;
 use Drupal\data_surface_surface_test\PlainThresholdPlugin;
 use Drupal\data_surface_surface_test\Plugin\Action\ThresholdAction;
+use Drupal\data_surface_surface_test\Plugin\Block\StickyNoteBlock;
 use Drupal\data_surface_surface_test\Plugin\Condition\ThresholdCondition;
 use Drupal\data_surface_surface_test\Surface\PinnedNoteSurface;
 use Drupal\data_surface_surface_test\Surface\ThresholdSurface;
+use Drupal\data_surface_surface_test\SurfaceAlter\StickyNoteAlter;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use PHPUnit\Framework\Attributes\Group;
@@ -31,7 +35,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * that only names a surface. Each host reads the surface class from the
  * plugin definition, where its definition alter copied the attribute,
  * builds it in its own `configure` context and supplies the target; the
- * plugin writes nothing about its settings.
+ * plugin writes nothing about its settings. A plugin may also be its own
+ * surface, #[UsesSurface] with no argument: the formatter and a block
+ * here, found through their definitions and built from their classes.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -73,7 +79,9 @@ class UsesSurfaceHostsTest extends DataSurfaceKernelTestBase {
     $named = [
       ['plugin.manager.block', 'data_surface_demo', DemoBlockSurface::class],
       ['plugin.manager.block', 'data_surface_surface_test_pinned_note', PinnedNoteSurface::class],
-      ['plugin.manager.field.formatter', 'data_surface_demo_string', DemoFormatterSurface::class],
+      // A plugin that is its own surface records its own class.
+      ['plugin.manager.field.formatter', 'data_surface_demo_string', DataSurfaceDemoFormatter::class],
+      ['plugin.manager.block', 'data_surface_surface_test_sticky_note', StickyNoteBlock::class],
       ['plugin.manager.condition', 'data_surface_surface_test_threshold', ThresholdSurface::class],
       ['plugin.manager.action', 'data_surface_surface_test_threshold', ThresholdSurface::class],
       // Read off the class another module's alter swapped in.
@@ -87,6 +95,90 @@ class UsesSurfaceHostsTest extends DataSurfaceKernelTestBase {
       ['action:data_surface_surface_test_threshold', 'condition:data_surface_surface_test_threshold'],
       $this->container->get('data_surface.surface_plugins')->usedBy(ThresholdSurface::class),
     );
+  }
+
+  /**
+   * Tests that a plugin that is its own surface is discovered as one.
+   *
+   * Found through the plugin definitions, not a directory; its id comes
+   * from the plugin unless the class carries #[Surface]; the plugin it is
+   * used by is itself; and an alter names it by the plugin class.
+   */
+  public function testPluginsThatAreTheirOwnSurface(): void {
+    $registry = $this->container->get('data_surface.surface_registry');
+    $plugins = $this->container->get('data_surface.surface_plugins');
+
+    $formatter = $registry->getDefinition(DataSurfaceDemoFormatter::class);
+    $this->assertSame('field_formatter:data_surface_demo_string', $formatter->id);
+    $this->assertSame('data_surface_demo', $formatter->module);
+    $this->assertSame($formatter, $registry->getDefinition('field_formatter:data_surface_demo_string'));
+    $this->assertNull($formatter->target);
+    $this->assertSame(['variant'], array_map(static fn ($refiner) => $refiner->key, $formatter->refiners));
+    $this->assertTrue($formatter->refiners[0]->isStatic);
+    $this->assertSame(['field_formatter:data_surface_demo_string'], $plugins->usedBy(DataSurfaceDemoFormatter::class));
+
+    $sticky = $registry->getDefinition(StickyNoteBlock::class);
+    $this->assertSame('surface_test.sticky_note', $sticky->id);
+    $this->assertSame('data_surface_surface_test', $sticky->module);
+    $this->assertSame(['block:data_surface_surface_test_sticky_note'], $plugins->usedBy(StickyNoteBlock::class));
+    $this->assertSame([StickyNoteAlter::class], array_map(static fn ($alter) => $alter->class, $sticky->alters));
+
+    // Neither is in the list the compiler pass made: both came from the
+    // plugin definitions.
+    $this->assertSame([DataSurfaceDemoFormatter::class, StickyNoteBlock::class], array_keys($plugins->ownSurfaces()));
+
+    // Built by id as well as by class, on the class, with no instance.
+    $built = $this->container->get('data_surface.surfaces')->build('field_formatter:data_surface_demo_string', new SurfaceContext('configure'));
+    $this->assertSame(['prefix', 'casing', 'variant'], $built->getDefinitions()->names());
+    $this->assertSame(['text', 'classes'], $built->getOutputDefinitions()->names());
+    // The refiner rides along as the class name, so a cached form holds
+    // no formatter.
+    $serialized = serialize($built);
+    $this->assertStringNotContainsString('O:' . strlen(DataSurfaceDemoFormatter::class) . ':"' . DataSurfaceDemoFormatter::class . '"', $serialized);
+    // phpcs:ignore DrupalPractice.FunctionCalls.InsecureUnserialize.InsecureUnserialize
+    $restored = unserialize($serialized);
+    $this->assertSame(['muted', 'quiet'], $this->variants($restored->refine(['casing' => 'lowercase'])->getDefinition('variant')));
+  }
+
+  /**
+   * Reads the values a variant definition offers, sorted.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $variant
+   *   The variant definition.
+   *
+   * @return string[]
+   *   The offered values.
+   */
+  protected function variants(?DataDefinitionInterface $variant): array {
+    $this->assertNotNull($variant);
+    $values = ChoiceSet::of($variant)->values ?? [];
+    sort($values);
+    return $values;
+  }
+
+  /**
+   * Tests the block host on a block that is its own surface.
+   */
+  public function testTheBlockHostWhenTheBlockIsItsOwnSurface(): void {
+    $block = $this->container->get('plugin.manager.block')->createInstance('data_surface_surface_test_sticky_note');
+    $this->assertInstanceOf(StickyNoteBlock::class, $block);
+    $surface = $block->getDataSurface();
+    $this->assertSame(['color', 'note'], $surface->getDefinitions()->names());
+    // Defaults read off the block's own static shape.
+    $this->assertSame('yellow', $block->getConfiguration()['color']);
+    $this->assertSame('Sticky', $block->getConfiguration()['note']);
+    // The alter that names the block class applies.
+    $this->assertSame('Written on the note.', (string) $surface->getDefinition('note')->getDescription());
+    // The static refiner runs.
+    $this->assertSame(['max' => 10], $surface->refine(['color' => 'pink'])->getDefinition('note')->getConstraints()['Length']);
+    $this->assertSame(['max' => 40], $surface->refine(['color' => 'yellow'])->getDefinition('note')->getConstraints()['Length']);
+
+    $result = $this->pipeline()->submit($surface, ['color' => 'pink', 'note' => 'Far too long a note'], $block->getDataSurfaceTarget());
+    $this->assertFalse($result->committed);
+    $this->assertSame(['note'], $result->violations->keys());
+    $result = $this->pipeline()->submit($surface, ['color' => 'pink', 'note' => 'Short'], $block->getDataSurfaceTarget());
+    $this->assertTrue($result->committed);
+    $this->assertSame('Short', $block->getConfiguration()['note']);
   }
 
   /**

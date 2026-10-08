@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace Drupal\data_surface\SurfaceBuild;
 
 /**
- * One #[Surface] class and everything discovery attached to it.
+ * One surface class and everything discovery attached to it.
+ *
+ * The class carries #[Surface] in a module's src/Surface, or is a plugin
+ * that is its own surface, whose id its plugin definition gives unless it
+ * carries #[Surface] as well.
  *
  * Situations are kept as a list rather than by id, so that two
  * providers of one id survive discovery and are refused, naming both,
@@ -22,7 +26,8 @@ final class SurfaceDefinition {
    * @param class-string $class
    *   The surface class.
    * @param string $id
-   *   The machine name from #[Surface].
+   *   The machine name from #[Surface], or `<host type>:<plugin id>` for
+   *   a plugin that is its own surface and carries none.
    * @param string $module
    *   The module it is in.
    * @param string[] $identity

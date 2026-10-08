@@ -59,12 +59,12 @@ final class RegistrationStep1Surface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
-    $inputs->add('title', 'string', new TranslatableMarkup('Event title'))
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('title', 'string', t('Event title'))
       ->setRequired(TRUE);
-    $inputs->add('capacity', 'integer', new TranslatableMarkup('Capacity'), default: 50)
+    $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
       ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
-    $inputs->add('open', 'boolean', new TranslatableMarkup('Registration open'), default: TRUE);
+    $inputs->add('open', 'boolean', t('Registration open'), default: TRUE);
   }
 
 }
@@ -159,17 +159,17 @@ final class RegistrationStep2Surface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
-    $inputs->add('title', 'string', new TranslatableMarkup('Event title'))
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('title', 'string', t('Event title'))
       ->setRequired(TRUE);
-    $inputs->add('open', 'boolean', new TranslatableMarkup('Registration open'), default: TRUE);
-    $inputs->add('venue', 'string', new TranslatableMarkup('Venue'))
+    $inputs->add('open', 'boolean', t('Registration open'), default: TRUE);
+    $inputs->add('venue', 'string', t('Venue'))
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', ['choices' => Venues::VENUES]);
-    $inputs->add('room', 'string', new TranslatableMarkup('Room'))
+    $inputs->add('room', 'string', t('Room'))
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', ['choices' => Venues::rooms()]);
-    $inputs->add('capacity', 'integer', new TranslatableMarkup('Capacity'), default: 50)
+    $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
       ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
   }
 
@@ -177,7 +177,7 @@ final class RegistrationStep2Surface implements SurfaceInterface {
    * The room must be one of the chosen venue's rooms.
    */
   #[RefinesInput('room')]
-  public function roomInVenue(DataDefinitionInterface $room, string $venue): DataDefinitionInterface {
+  public static function roomInVenue(DataDefinitionInterface $room, string $venue): DataDefinitionInterface {
     return $room->addConstraint('LabeledChoice', ['choices' => Venues::rooms($venue)]);
   }
 
@@ -185,11 +185,11 @@ final class RegistrationStep2Surface implements SurfaceInterface {
    * No more people than the chosen room seats, said under the field.
    */
   #[RefinesInput('capacity')]
-  public function capacityOfRoom(DataDefinitionInterface $capacity, string $room): DataDefinitionInterface {
+  public static function capacityOfRoom(DataDefinitionInterface $capacity, string $room): DataDefinitionInterface {
     $seats = Venues::seats($room);
     $capacity->addConstraint('Range', ['min' => 1, 'max' => $seats ?? 1000]);
     if ($seats !== NULL && $capacity instanceof DataDefinition) {
-      $capacity->setDescription(new TranslatableMarkup('Up to @seats for the @room.', [
+      $capacity->setDescription(t('Up to @seats for the @room.', [
         '@seats' => $seats,
         '@room' => Venues::rooms()[$room],
       ]));
@@ -242,32 +242,32 @@ final class RegistrationStep3Surface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
-    $inputs->add('title', 'string', new TranslatableMarkup('Event title'))
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('title', 'string', t('Event title'))
       ->setRequired(TRUE);
-    $inputs->add('open', 'boolean', new TranslatableMarkup('Registration open'), default: TRUE);
-    $inputs->add('venue', 'string', new TranslatableMarkup('Venue'))
+    $inputs->add('open', 'boolean', t('Registration open'), default: TRUE);
+    $inputs->add('venue', 'string', t('Venue'))
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', ['choices' => Venues::VENUES]);
-    $inputs->add('room', 'string', new TranslatableMarkup('Room'))
+    $inputs->add('room', 'string', t('Room'))
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', ['choices' => Venues::rooms()]);
-    $inputs->add('capacity', 'integer', new TranslatableMarkup('Capacity'), default: 50)
+    $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
       ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
-    $inputs->add('pricing', 'string', new TranslatableMarkup('Pricing'), default: 'free')
+    $inputs->add('pricing', 'string', t('Pricing'), default: 'free')
       ->setRequired(TRUE)
       ->addConstraint('Choice', ['choices' => ['free', 'paid']]);
     $inputs->attachBy('ticket', by: 'pricing')
-      ->setLabel(new TranslatableMarkup('Ticket'));
+      ->setLabel(t('Ticket'));
     $inputs->attach('contact', ContactSurface::class)
-      ->setLabel(new TranslatableMarkup('Contact'));
+      ->setLabel(t('Contact'));
   }
 
   /**
    * The room must be one of the chosen venue's rooms.
    */
   #[RefinesInput('room')]
-  public function roomInVenue(DataDefinitionInterface $room, string $venue): DataDefinitionInterface {
+  public static function roomInVenue(DataDefinitionInterface $room, string $venue): DataDefinitionInterface {
     return $room->addConstraint('LabeledChoice', ['choices' => Venues::rooms($venue)]);
   }
 
@@ -275,11 +275,11 @@ final class RegistrationStep3Surface implements SurfaceInterface {
    * No more people than the chosen room seats, said under the field.
    */
   #[RefinesInput('capacity')]
-  public function capacityOfRoom(DataDefinitionInterface $capacity, string $room): DataDefinitionInterface {
+  public static function capacityOfRoom(DataDefinitionInterface $capacity, string $room): DataDefinitionInterface {
     $seats = Venues::seats($room);
     $capacity->addConstraint('Range', ['min' => 1, 'max' => $seats ?? 1000]);
     if ($seats !== NULL && $capacity instanceof DataDefinition) {
-      $capacity->setDescription(new TranslatableMarkup('Up to @seats for the @room.', [
+      $capacity->setDescription(t('Up to @seats for the @room.', [
         '@seats' => $seats,
         '@room' => Venues::rooms()[$room],
       ]));
@@ -302,9 +302,9 @@ final class FreeTicketSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
-    $inputs->add('note', 'string', new TranslatableMarkup('Note'))
-      ->setDescription(new TranslatableMarkup('Shown beside the register button, for example "Donations welcome".'));
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('note', 'string', t('Note'))
+      ->setDescription(t('Shown beside the register button, for example "Donations welcome".'));
   }
 
 }
@@ -320,11 +320,11 @@ final class PaidTicketSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
-    $inputs->add('price', 'float', new TranslatableMarkup('Price'))
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('price', 'float', t('Price'))
       ->setRequired(TRUE)
       ->addConstraint('Range', ['min' => 0.01]);
-    $inputs->add('currency', 'string', new TranslatableMarkup('Currency'), default: 'EUR')
+    $inputs->add('currency', 'string', t('Currency'), default: 'EUR')
       ->setRequired(TRUE)
       ->addConstraint('Choice', ['choices' => ['EUR', 'GBP', 'USD']]);
   }
@@ -343,10 +343,10 @@ final class ContactSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
-    $inputs->add('email', 'email', new TranslatableMarkup('Email'))
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('email', 'email', t('Email'))
       ->setRequired(TRUE);
-    $inputs->add('phone', 'string', new TranslatableMarkup('Phone'));
+    $inputs->add('phone', 'string', t('Phone'));
   }
 
 }

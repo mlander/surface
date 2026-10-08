@@ -17,11 +17,16 @@ the record of the rework that brought the module to the pattern.
 ## One spelling
 
 A surface is a class in a module's `src/Surface/` carrying `#[Surface]`,
-with `defineInputs()` (and, on `HasOutputsInterface`, `defineOutputs()`),
-`#[RefinesInput]` methods and `#[Situation]` static methods. Another
-module changes it with an alter in `src/SurfaceAlter/` carrying
-`#[AltersSurface]`. A plugin names its surface with `#[UsesSurface]`.
-Everything is discovered by `SurfaceBuild\SurfaceCollectorPass` and built
+with a static `defineInputs()` (and, on `HasOutputsInterface`, a static
+`defineOutputs()`), static `#[RefinesInput]` methods and `#[Situation]`
+static methods; it is never instantiated. Another module changes it
+with an alter in `src/SurfaceAlter/` carrying `#[AltersSurface]`. A
+plugin names its surface with `#[UsesSurface]`, or, with no argument,
+is its own surface: the plugin class implements `SurfaceInterface`, is
+found through its plugin definition (`SurfacePlugins::ownSurfaces()`),
+gets the id `<host type>:<plugin id>` unless it carries `#[Surface]`,
+and alters name it by the plugin class (the demo formatter).
+Everything else is discovered by `SurfaceBuild\SurfaceCollectorPass` and built
 by the `data_surface.surfaces` service (`SurfacesInterface::build($surface,
 $context)`), which writes the shape, the alters, the context and the
 bound refiners into the engine's `DataSurfaceBuilder` and seals it into a
@@ -86,7 +91,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
   modules/custom/data_surface'
 ```
 
-The baseline as of this writing: **706 tests, 6757 assertions, 0 errors,
+The baseline as of this writing: **710 tests, 6808 assertions, 0 errors,
 3 failures** — the three tests of the one class below. The test and
 assertion counts drift upward as work lands and are not the thing to
 check. **No test may error,
@@ -170,12 +175,16 @@ so the rule is this sentence. `npm test` is not part of
 
 - Contracts are objects; payloads are arrays. Never pass a definition as an
   array or a value bag as an object.
-- A surface is declared in one place, its `#[Surface]` class. A plugin
-  only names it with `#[UsesSurface]`; the host builds it.
-- A `#[Surface]` class has no constructor and holds no service; a refiner
-  points at a list with a constraint and the options resolver fetches.
-  Alters, targets and access classes are autowired services and may hold
-  services.
+- A surface is declared in one place, its `#[Surface]` class, or the
+  plugin class that is its own surface. A plugin names it with
+  `#[UsesSurface]`; the host builds it.
+- A surface is static: `defineInputs()`, `defineOutputs()` and its
+  `#[RefinesInput]` methods are `public static`, called on the class, so
+  it has no constructor, holds no service and is never instantiated; a
+  refiner points at a list with a constraint and the options resolver
+  fetches. A surface's refiner is static; an alter's is an instance
+  method. Alters, targets and access classes are autowired services and
+  may hold services (`docs/decisions.md#a-surface-is-static`).
 - `#[RefinesInput]` methods narrow a definition; an alter adds keys and,
   with `extendChoices()`, offers more values on a fixed choice list (the
   one widening verb). Nothing removes a key or a value: a remove-only
@@ -185,10 +194,12 @@ so the rule is this sentence. `npm test` is not part of
   core data definitions are optional by default.
 - Violations are message objects end to end, from the pipeline to the form,
   never pre-rendered strings.
-- Translatable strings: static context constructs `new TranslatableMarkup`
-  because it must, instance context calls `$this->t()` — a container-built
-  class of ours injects `string_translation` for it — and object-oriented
-  code never calls the global `t()`.
+- Translatable strings: static context (a surface, a static protocol
+  method, an enum, a value object's static helper) calls the global
+  `t()` with a literal string — the same lazy `TranslatableMarkup`, and
+  extractable; a container-built class of ours injects
+  `string_translation` and calls `$this->t()`; `new TranslatableMarkup`
+  appears only inside attribute arguments, where a call is not allowed.
 - No closures anywhere a form array or a surface carries — both are
   serialized. Use a service, a callable string, or a class.
 - Iteration order is load-bearing: the definition map is in declaration

@@ -16,7 +16,9 @@ use Drupal\data_surface\Surface\Attribute\UsesSurface;
  * invisible to anything that reads definitions. Copying it in here puts
  * the surface class in the cached definition, under
  * UsesSurface::DEFINITION_KEY, where a host reads it and a tool or the
- * catalogue can list the surfaced plugins without instantiating one.
+ * catalogue can list the surfaced plugins without instantiating one. A
+ * plugin that is its own surface records its own class there, which is
+ * how discovery finds that surface.
  *
  * One alter per plugin host this module serves: blocks, formatters,
  * conditions, actions and field types. Each runs last, so a class
@@ -136,7 +138,8 @@ final class SurfacePluginHooks {
    *
    * @return class-string|null
    *   The surface class, or NULL when the class names none, inherited
-   *   from a parent class or not.
+   *   from a parent class or not. A #[UsesSurface] with no argument
+   *   answers the class asked about: that plugin is its own surface.
    */
   public static function usedSurfaceOf(string $class): ?string {
     if (!class_exists($class)) {
@@ -144,13 +147,29 @@ final class SurfacePluginHooks {
     }
     // A subclass of a surfaced plugin is that plugin, unless it names a
     // surface of its own: the attribute is not inherited by PHP, so the
-    // ancestry is walked here.
+    // ancestry is walked here. A subclass of a plugin that is its own
+    // surface is its own surface in turn, inheriting the static shape.
+    // Decision: see docs/decisions.md#a-plugin-that-is-its-own-surface.
     for ($reflection = new \ReflectionClass($class); $reflection !== FALSE; $reflection = $reflection->getParentClass()) {
       foreach ($reflection->getAttributes(UsesSurface::class) as $attribute) {
-        return $attribute->newInstance()->surface;
+        return $attribute->newInstance()->surface ?? $class;
       }
     }
     return NULL;
+  }
+
+  /**
+   * Answers whether a plugin class is its own surface.
+   *
+   * @param string $class
+   *   The plugin class.
+   *
+   * @return bool
+   *   TRUE when its #[UsesSurface], its own or inherited, names no other
+   *   class.
+   */
+  public static function isOwnSurface(string $class): bool {
+    return self::usedSurfaceOf($class) === $class;
   }
 
 }

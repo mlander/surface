@@ -19,7 +19,7 @@ final class HerbGarnishSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(ShapeInterface $inputs): void {
     $inputs->add('chopped', 'boolean', 'Chopped', default: TRUE);
   }
 

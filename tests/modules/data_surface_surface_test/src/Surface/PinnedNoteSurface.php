@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_surface_test\Surface;
 
-use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Surface\Attribute\Situation;
 use Drupal\data_surface\Surface\Attribute\Surface;
 use Drupal\data_surface\Surface\ShapeInterface;
@@ -33,8 +32,8 @@ final class PinnedNoteSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
-    $inputs->add('note', 'string', new TranslatableMarkup('Note'), default: 'Pinned')->setRequired(TRUE);
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('note', 'string', t('Note'), default: 'Pinned')->setRequired(TRUE);
   }
 
 }

@@ -122,8 +122,8 @@ final class DataSurfaceAccess {
   public static function message(AccessResultInterface $access): TranslatableMarkup {
     $reason = $access instanceof AccessResultReasonInterface ? $access->getReason() : NULL;
     return $reason === NULL || (string) $reason === ''
-      ? new TranslatableMarkup('Access refused.')
-      : new TranslatableMarkup('Access refused: @reason', ['@reason' => $reason]);
+      ? t('Access refused.')
+      : t('Access refused: @reason', ['@reason' => $reason]);
   }
 
 }

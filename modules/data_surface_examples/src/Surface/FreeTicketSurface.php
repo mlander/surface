@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_examples\Surface;
 
-use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Surface\Attribute\Surface;
 use Drupal\data_surface\Surface\Attribute\SurfaceVariant;
 use Drupal\data_surface\Surface\ShapeInterface;
@@ -23,9 +22,9 @@ final class FreeTicketSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
-    $inputs->add('note', 'string', new TranslatableMarkup('Note'))
-      ->setDescription(new TranslatableMarkup('Shown beside the register button, for example "Donations welcome".'));
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('note', 'string', t('Note'))
+      ->setDescription(t('Shown beside the register button, for example "Donations welcome".'));
   }
 
 }

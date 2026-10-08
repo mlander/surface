@@ -114,7 +114,10 @@ matches what that script produces.
 Every surface the modules in this repository declare, read from the
 static layer alone: the `#[Surface]` attribute, the `#[Situation]`
 methods and what each needs, the `#[AltersSurface]` classes and the
-`#[SurfaceVariant]` ones. Nothing here builds a surface. A situation's
+`#[SurfaceVariant]` ones. A plugin that is its own surface,
+`#[UsesSurface]` with no argument, is listed by its plugin class, under
+an id from its plugin unless it carries `#[Surface]`, and is used by
+itself. Nothing here builds a surface. A situation's
 "Creates" is the one fact that is not static — it is on the context
 the situation returns — so it is known only for a situation that needs
 nothing to start from.

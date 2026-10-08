@@ -25,9 +25,12 @@ interface HasOutputsInterface {
   /**
    * Shape of what the surface answers with.
    *
+   * Static, like SurfaceInterface::defineInputs(), and for the same
+   * reason: a shape takes nothing but the shape to fill.
+   *
    * @param \Drupal\data_surface\Surface\ShapeInterface $outputs
    *   The output shape to fill.
    */
-  public function defineOutputs(ShapeInterface $outputs): void;
+  public static function defineOutputs(ShapeInterface $outputs): void;
 
 }

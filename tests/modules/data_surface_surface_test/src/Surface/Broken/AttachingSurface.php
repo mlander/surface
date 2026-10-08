@@ -17,7 +17,7 @@ final class AttachingSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(ShapeInterface $inputs): void {
     $inputs->add('type', 'string', 'Type');
     $inputs->attachBy('settings', by: 'type');
   }

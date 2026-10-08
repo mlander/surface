@@ -17,7 +17,7 @@ final class UndeclaredIdentitySurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(ShapeInterface $inputs): void {
     $inputs->add('name', 'string', 'Name');
   }
 

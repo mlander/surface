@@ -25,7 +25,13 @@ attributes into the discovery cache: each surface's id, identity,
 target, access class and `#[RefinesInput]` methods; each situation with
 its parameters; each alter with the situations it applies in; each
 variant with the slot and value it fills. Plugin definitions get
-`#[UsesSurface]` copied in by `SurfacePluginHooks`.
+`#[UsesSurface]` copied in by `SurfacePluginHooks`, and that is where
+the registry finds the other kind of surface: a plugin that is its own
+surface, `#[UsesSurface]` with no argument, whose definition records
+its own class (`SurfacePlugins::ownSurfaces()`). It is read the same
+way, under the id `<host type>:<plugin id>` unless it carries
+`#[Surface]`, and the cache id hashes both lists. Discovery refuses a
+surface whose `defineInputs()` or `defineOutputs()` is not static.
 
 ## The build step
 
@@ -35,11 +41,12 @@ DataSurfaceInterface`, in `Surfaces::buildSurface()`:
 ```
 build(FieldInstanceSurface::class, $context):
 
-  1. the owner's shape
-       $surface->defineInputs(new SurfaceShape($builder))        <- no context: the
-       $surface->defineOutputs(new SurfaceShape($builder, TRUE))    same everywhere
+  1. the owner's shape, asked of the class: no instance is ever made
+       $class::defineInputs(new SurfaceShape($builder))          <- no context: the
+       $class::defineOutputs(new SurfaceShape($builder, TRUE))      same everywhere
      SurfaceShape writes straight into a fresh DataSurfaceBuilder,
-     the engine's internal builder
+     the engine's internal builder. $class is the #[Surface] class,
+     or the plugin class of a plugin that is its own surface
 
   2. the alters #[AltersSurface] names for this surface, skipping one
      whose situations leave this context's operation out:
@@ -59,9 +66,12 @@ build(FieldInstanceSurface::class, $context):
        each identity key it knows becomes that key's default, locked
 
   5. the refiners (bindRefiners), owner's first, then each alter's:
-       each #[RefinesInput] method checked against the shape and the wall
+       each #[RefinesInput] method checked against the shape and the wall,
+         and a surface's checked static
        the keys it watches become refinement edges
-       its class becomes one RefinesInputRefiner link on each key it refines
+       its class becomes one RefinesInputRefiner link on each key it refines:
+         the surface's link holds its class name and calls static methods,
+         an alter's holds the alter service and calls instance methods
        a method watching nothing runs now, checked narrower
 
   6. the children, each through this same build step in its own frame:
@@ -130,7 +140,7 @@ SurfaceSituationTool
 
   $surface = $surfaces->build(FieldInstanceSurface::class, $context);
 
-Step 1   FieldInstanceSurface::defineInputs()
+Step 1   FieldInstanceSurface::defineInputs(), static
            entity_type_id, bundle, field_type, field_name, label, ...
            attach storage; attachBy settings on field_type
 Step 2   no alter in this repository names the field surface

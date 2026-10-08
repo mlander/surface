@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_test\Surface;
 
-use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Surface\Attribute\RefinesInput;
 use Drupal\data_surface\Surface\Attribute\Surface;
@@ -23,27 +22,27 @@ final class TestFormatterSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
-    $inputs->add('prefix', 'string', new TranslatableMarkup('Prefix'))
-      ->setDescription(new TranslatableMarkup('Text placed before each value.'))
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('prefix', 'string', t('Prefix'))
+      ->setDescription(t('Text placed before each value.'))
       ->addConstraint('Length', ['max' => 10]);
-    $inputs->add('casing', 'string', new TranslatableMarkup('Casing'), default: 'none')
+    $inputs->add('casing', 'string', t('Casing'), default: 'none')
       ->addConstraint('LabeledChoice', [
         'choices' => [
-          'none' => new TranslatableMarkup('As written'),
-          'uppercase' => new TranslatableMarkup('Upper case'),
-          'lowercase' => new TranslatableMarkup('Lower case'),
+          'none' => t('As written'),
+          'uppercase' => t('Upper case'),
+          'lowercase' => t('Lower case'),
         ],
       ]);
-    $inputs->add('variant', 'string', new TranslatableMarkup('Variant'))
-      ->setDescription(new TranslatableMarkup('Pick a casing other than none to see its variants.'));
+    $inputs->add('variant', 'string', t('Variant'))
+      ->setDescription(t('Pick a casing other than none to see its variants.'));
   }
 
   /**
    * A casing other than none offers its own variants, and no others.
    */
   #[RefinesInput('variant')]
-  public function variantOfCasing(DataDefinitionInterface $variant, string $casing): DataDefinitionInterface {
+  public static function variantOfCasing(DataDefinitionInterface $variant, string $casing): DataDefinitionInterface {
     $offered = TestBlockSurface::variants()[$casing] ?? NULL;
     return $offered === NULL
       ? $variant

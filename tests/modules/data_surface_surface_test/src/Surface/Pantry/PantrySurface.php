@@ -43,7 +43,7 @@ final class PantrySurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(ShapeInterface $inputs): void {
     $inputs->add('pantry', 'string', 'Pantry')->setRequired(TRUE);
     $inputs->add('kind', 'string', 'Kind', default: 'jar')
       ->addConstraint('Choice', ['choices' => ['jar', 'tin', 'sack']]);

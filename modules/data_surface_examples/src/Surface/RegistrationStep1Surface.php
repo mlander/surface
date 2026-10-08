@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_examples\Surface;
 
-use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Surface\Attribute\Situation;
 use Drupal\data_surface\Surface\Attribute\Surface;
 use Drupal\data_surface\Surface\ShapeInterface;
@@ -33,12 +32,12 @@ final class RegistrationStep1Surface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
-    $inputs->add('title', 'string', new TranslatableMarkup('Event title'))
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('title', 'string', t('Event title'))
       ->setRequired(TRUE);
-    $inputs->add('capacity', 'integer', new TranslatableMarkup('Capacity'), default: 50)
+    $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
       ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
-    $inputs->add('open', 'boolean', new TranslatableMarkup('Registration open'), default: TRUE);
+    $inputs->add('open', 'boolean', t('Registration open'), default: TRUE);
   }
 
 }

@@ -16,8 +16,9 @@ both ways, so the two can be compared.
   upper case.
 
 Both live in one surface alter, `SurfaceAlter\DemoFormatterAlter`,
-carrying `#[AltersSurface(DemoFormatterSurface::class)]`. Nothing
-registers it; discovery finds it and builds it as an autowired service.
+carrying `#[AltersSurface(DataSurfaceDemoFormatter::class)]`: the
+formatter is its own surface, so the alter names the formatter's class.
+Nothing registers it; discovery finds it and builds it as an autowired service.
 Nothing here alters a form, and every consumer of the surface — form,
 validation, defaults, and any machine-readable contract — sees the same
 extended surface.

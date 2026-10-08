@@ -52,9 +52,9 @@ use Drupal\data_surface\DataSurfaceHostTrait;
  *   why surfaceDefaultSettings() always declares that key.
  *
  * Nothing but identifiers rides on the element. A surface holds its
- * refiners, and a refiner holds the surface or alter instance its
+ * refiners, and a refiner holds the surface's class or the alter its
  * methods are called on, so putting one on a form array hands the form
- * cache whatever those hold. What the element carries instead is
+ * cache whatever an alter holds. What the element carries instead is
  * the formatter's plugin id and the field's name, and the static
  * callback rebuilds the formatter from them: through the display the
  * host is editing when there is one, which is where the real field

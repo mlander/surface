@@ -93,7 +93,8 @@ trait DataSurfaceHostTrait {
    *
    * Read from the plugin definition, where the plugin type's definition
    * alter copied it, so a plugin constructed with a hand-made definition
-   * that carries no such key is taken at its definition's word.
+   * that carries no such key is taken at its definition's word. For a
+   * plugin that is its own surface it is the plugin's class.
    *
    * @return class-string|null
    *   The surface class, or NULL when the definition names none.
@@ -141,7 +142,7 @@ trait DataSurfaceHostTrait {
    */
   protected function hostedSurface(string $operation = 'configure'): DataSurfaceInterface {
     $surface = $this->usedSurface() ?? throw new \LogicException(sprintf(
-      '%s names no surface: put #[UsesSurface] on the class, naming a #[Surface] class in a module\'s src/Surface.',
+      '%s names no surface: put #[UsesSurface] on the class, naming a #[Surface] class in a module\'s src/Surface, or with no argument on a plugin class that implements SurfaceInterface itself.',
       static::class,
     ));
     return $this->surfaces()->build($surface, $this->surfaceContext($operation));

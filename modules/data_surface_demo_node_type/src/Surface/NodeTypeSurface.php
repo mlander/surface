@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\data_surface_demo_node_type\Surface;
 
 use Drupal\Core\Entity\EntityTypeInterface;
-use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Surface\Attribute\Situation;
 use Drupal\data_surface\Surface\Attribute\Surface;
 use Drupal\data_surface\Surface\ShapeInterface;
@@ -81,14 +80,14 @@ final class NodeTypeSurface implements SurfaceInterface {
    * Ordered as core's NodeTypeForm presents them; the form's cosmetic
    * grouping relies on this order within each group.
    */
-  public function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(ShapeInterface $inputs): void {
     // Which content type this is.
-    $inputs->add('name', 'string', new TranslatableMarkup('Name'))
-      ->setDescription(new TranslatableMarkup('The human readable name for this content type.'))
+    $inputs->add('name', 'string', t('Name'))
+      ->setDescription(t('The human readable name for this content type.'))
       ->setRequired(TRUE)
       ->addConstraint('Length', ['max' => 255]);
-    $inputs->add('type', 'string', new TranslatableMarkup('Machine name'))
-      ->setDescription(new TranslatableMarkup('Unique machine readable name: lowercase letters, numbers, and underscores only.'))
+    $inputs->add('type', 'string', t('Machine name'))
+      ->setDescription(t('Unique machine readable name: lowercase letters, numbers, and underscores only.'))
       ->setRequired(TRUE)
       ->addConstraint('Length', ['max' => EntityTypeInterface::BUNDLE_MAX_LENGTH])
       ->addConstraint('Regex', [
@@ -99,39 +98,39 @@ final class NodeTypeSurface implements SurfaceInterface {
     // The content type itself. Core has no multiline string type, so the
     // definition says so with a setting and the string widget renders a
     // textarea.
-    $inputs->add('description', 'string', new TranslatableMarkup('Description'))
-      ->setDescription(new TranslatableMarkup('Displays on the Content types page.'))
+    $inputs->add('description', 'string', t('Description'))
+      ->setDescription(t('Displays on the Content types page.'))
       ->setSetting('multiline', TRUE);
     // Not stored on the node type: the title base field's per bundle
     // label.
-    $inputs->add('title_label', 'string', new TranslatableMarkup('Title field label'), default: 'Title')
-      ->setDescription(new TranslatableMarkup('The label shown for the title field on the content form.'))
+    $inputs->add('title_label', 'string', t('Title field label'), default: 'Title')
+      ->setDescription(t('The label shown for the title field on the content form.'))
       ->setRequired(TRUE)
       ->addConstraint('Length', ['max' => 255]);
     // Spelled canonically — values as a list, labels beside them —
     // because the values are integers, and an integer-keyed map of labels
     // cannot be told from a list of values.
-    $inputs->add('preview_mode', 'integer', new TranslatableMarkup('Preview before submitting'), default: NodePreviewMode::Optional->value)
+    $inputs->add('preview_mode', 'integer', t('Preview before submitting'), default: NodePreviewMode::Optional->value)
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', [
         'choices' => array_column(NodePreviewMode::cases(), 'value'),
         'labels' => NodePreviewMode::asOptions(),
       ]);
-    $inputs->add('help', 'string', new TranslatableMarkup('Explanation or submission guidelines'))
-      ->setDescription(new TranslatableMarkup('Displayed at the top of the page when creating or editing content of this type.'))
+    $inputs->add('help', 'string', t('Explanation or submission guidelines'))
+      ->setDescription(t('Displayed at the top of the page when creating or editing content of this type.'))
       ->setSetting('multiline', TRUE);
 
     // The defaults of new content, kept on the node base fields.
-    $inputs->add('status', 'boolean', new TranslatableMarkup('Published'), default: TRUE)
-      ->setDescription(new TranslatableMarkup('Whether new content of this type is published by default.'));
-    $inputs->add('promote', 'boolean', new TranslatableMarkup('Promoted to front page'), default: FALSE)
-      ->setDescription(new TranslatableMarkup('Whether new content of this type is promoted by default.'));
-    $inputs->add('sticky', 'boolean', new TranslatableMarkup('Sticky at top of lists'), default: FALSE)
-      ->setDescription(new TranslatableMarkup('Whether new content of this type is sticky by default.'));
-    $inputs->add('new_revision', 'boolean', new TranslatableMarkup('Create new revision'), default: TRUE)
-      ->setDescription(new TranslatableMarkup('Whether edits create a new revision by default.'));
-    $inputs->add('display_submitted', 'boolean', new TranslatableMarkup('Display author and date information'), default: TRUE)
-      ->setDescription(new TranslatableMarkup('Author username and publish date will be displayed.'));
+    $inputs->add('status', 'boolean', t('Published'), default: TRUE)
+      ->setDescription(t('Whether new content of this type is published by default.'));
+    $inputs->add('promote', 'boolean', t('Promoted to front page'), default: FALSE)
+      ->setDescription(t('Whether new content of this type is promoted by default.'));
+    $inputs->add('sticky', 'boolean', t('Sticky at top of lists'), default: FALSE)
+      ->setDescription(t('Whether new content of this type is sticky by default.'));
+    $inputs->add('new_revision', 'boolean', t('Create new revision'), default: TRUE)
+      ->setDescription(t('Whether edits create a new revision by default.'));
+    $inputs->add('display_submitted', 'boolean', t('Display author and date information'), default: TRUE)
+      ->setDescription(t('Author username and publish date will be displayed.'));
   }
 
 }

@@ -33,10 +33,13 @@ use Drupal\data_surface\DataSurfaceRefinerInterface;
  * a number as "5"; a refiner declaring bool and int parameters receives
  * TRUE and 5, rather than a TypeError from this file's strict types.
  *
- * It rides inside the sealed surface, so inside cached forms. The class
- * instance is the one property that may be a service — an alter is an
- * autowired service — and the dependency serialization trait stores a
- * service by its id, so a serialized surface carries no container.
+ * It rides inside the sealed surface, so inside cached forms. A surface's
+ * link holds the surface's class name, because a surface's refiners are
+ * static and a surface is never instantiated; an alter's link holds the
+ * alter, an autowired service whose refiners may be instance methods,
+ * and the dependency serialization trait stores a service by its id, so
+ * a serialized surface carries no container either way. A static method
+ * and an instance method are dispatched alike.
  *
  * An alter's method on a key the alter itself added is bound under the
  * mount, `third_party_settings`, the one key the engine knows the
@@ -58,8 +61,8 @@ final class RefinesInputRefiner implements DataSurfaceRefinerInterface {
   /**
    * Constructs a RefinesInputRefiner.
    *
-   * @param object $instance
-   *   The surface or alter instance the methods are called on.
+   * @param object|class-string $instance
+   *   The surface class, or the alter instance, the methods are on.
    * @param array<string, \Drupal\data_surface\SurfaceBuild\RefinerDefinition[]> $bindings
    *   The methods, keyed by the input key they refine; an alter's methods
    *   on its own mounted keys under self::MOUNT.
@@ -68,7 +71,7 @@ final class RefinesInputRefiner implements DataSurfaceRefinerInterface {
    *   bound under self::MOUNT refine; NULL for a surface's own link.
    */
   public function __construct(
-    protected object $instance,
+    protected object|string $instance,
     protected array $bindings,
     protected ?string $module = NULL,
   ) {
@@ -135,7 +138,8 @@ final class RefinesInputRefiner implements DataSurfaceRefinerInterface {
     foreach ($refiner->watched() as $key) {
       $arguments[] = $values[$key] ?? NULL;
     }
-    $refined = (new \ReflectionMethod($this->instance, $refiner->method))->invokeArgs($this->instance, $arguments);
+    $method = new \ReflectionMethod($this->instance, $refiner->method);
+    $refined = $method->invokeArgs($method->isStatic() || !is_object($this->instance) ? NULL : $this->instance, $arguments);
     if (!$refined instanceof DataDefinitionInterface) {
       throw new \LogicException(sprintf(
         '%s returned %s; a #[RefinesInput] method returns the definition it was handed, tightened.',

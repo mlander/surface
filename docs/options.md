@@ -41,11 +41,11 @@ values:
 $definition->addConstraint('LabeledChoice', [
   'choices' => [0, 1, 2],
   'labels' => [
-    0 => new TranslatableMarkup('Disabled'),
-    1 => new TranslatableMarkup('Optional'),
-    2 => new TranslatableMarkup('Required'),
+    0 => t('Disabled'),
+    1 => t('Optional'),
+    2 => t('Required'),
   ],
-  'descriptions' => [2 => new TranslatableMarkup('Every request has to carry one.')],
+  'descriptions' => [2 => t('Every request has to carry one.')],
 ]);
 ```
 
@@ -54,7 +54,7 @@ by hand: `choices` on its own is read as `value => label`.
 
 ```php
 $definition->addConstraint('LabeledChoice', [
-  'choices' => ['star' => new TranslatableMarkup('Star'), 'flame' => new TranslatableMarkup('Flame')],
+  'choices' => ['star' => t('Star'), 'flame' => t('Flame')],
 ]);
 ```
 
@@ -87,7 +87,7 @@ enum DemoVariant: string {
 
   public function label(): TranslatableMarkup {
     return match ($this) {
-      self::Bold => new TranslatableMarkup('Bold'),
+      self::Bold => t('Bold'),
       // ...
     };
   }
@@ -106,11 +106,11 @@ enum DemoVariant: string {
 }
 ```
 
-The surface class consumes the projection, and no value is spelled out
+The surface consumes the projection, and no value is spelled out
 twice anywhere:
 
 ```php
-$inputs->add('variant', 'string', new TranslatableMarkup('Variant'))
+$inputs->add('variant', 'string', t('Variant'))
   ->addConstraint('LabeledChoice', ['choices' => DemoVariant::choices()]);
 ```
 

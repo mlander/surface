@@ -16,7 +16,6 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Render\ElementInfoManagerInterface;
-use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceInterface;
@@ -973,9 +972,9 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
    *   The element, with the reason appended to its description.
    */
   protected static function describeLocked(array $element): array {
-    $note = new TranslatableMarkup('Fixed for this operation.');
+    $note = t('Fixed for this operation.');
     $element['#description'] = isset($element['#description'])
-      ? new TranslatableMarkup('@description @note', [
+      ? t('@description @note', [
         '@description' => $element['#description'],
         '@note' => $note,
       ])

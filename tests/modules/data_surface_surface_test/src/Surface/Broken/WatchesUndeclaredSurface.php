@@ -19,7 +19,7 @@ final class WatchesUndeclaredSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(ShapeInterface $inputs): void {
     $inputs->add('name', 'string', 'Name');
   }
 
@@ -27,7 +27,7 @@ final class WatchesUndeclaredSurface implements SurfaceInterface {
    * Watches a sibling that is not there.
    */
   #[RefinesInput('name')]
-  public function nameOfGhost(DataDefinitionInterface $name, string $ghost): DataDefinitionInterface {
+  public static function nameOfGhost(DataDefinitionInterface $name, string $ghost): DataDefinitionInterface {
     return $name;
   }
 

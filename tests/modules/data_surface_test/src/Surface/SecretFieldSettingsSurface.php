@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_test\Surface;
 
-use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Surface\Attribute\Surface;
 use Drupal\data_surface\Surface\ShapeInterface;
@@ -27,11 +26,11 @@ final class SecretFieldSettingsSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
-    $inputs->add('endpoint', 'string', new TranslatableMarkup('Endpoint'), default: '')
-      ->setDescription(new TranslatableMarkup('Where this field sends its values.'));
-    $token = $inputs->add('token', 'string', new TranslatableMarkup('API key'), default: '')
-      ->setDescription(new TranslatableMarkup('The key this field authenticates with.'));
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('endpoint', 'string', t('Endpoint'), default: '')
+      ->setDescription(t('Where this field sends its values.'));
+    $token = $inputs->add('token', 'string', t('API key'), default: '')
+      ->setDescription(t('The key this field authenticates with.'));
     DefinitionMetadata::setSecret($token);
   }
 

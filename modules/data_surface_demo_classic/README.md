@@ -12,7 +12,7 @@ each plugin, behaving the same way, written two ways.
 | The classic way | The surface way |
 | --- | --- |
 | [`ClassicDemoBlock`](src/Plugin/Block/ClassicDemoBlock.php) | [`DataSurfaceDemoBlock`](../data_surface_demo/src/Plugin/Block/DataSurfaceDemoBlock.php) and its [`DemoBlockSurface`](../data_surface_demo/src/Surface/DemoBlockSurface.php) |
-| [`ClassicDemoFormatter`](src/Plugin/Field/FieldFormatter/ClassicDemoFormatter.php) | [`DataSurfaceDemoFormatter`](../data_surface_demo/src/Plugin/Field/FieldFormatter/DataSurfaceDemoFormatter.php) |
+| [`ClassicDemoFormatter`](src/Plugin/Field/FieldFormatter/ClassicDemoFormatter.php) | [`DataSurfaceDemoFormatter`](../data_surface_demo/src/Plugin/Field/FieldFormatter/DataSurfaceDemoFormatter.php), which is its own surface |
 
 The classic side is written to be good code, not to lose. It uses the
 element-level validation core already provides (`#required`, `#min` and
@@ -42,12 +42,12 @@ prose.
 | | Classic | | Surface | |
 | --- | ---: | ---: | ---: | ---: |
 | | **lines** | **code** | **lines** | **code** |
-| Block plugin and its surfaces | 434 | 264 | 264 | 142 |
+| Block plugin and its surfaces | 434 | 264 | 262 | 139 |
 | Field list (constraint, validator, resolver) | — | — | 198 | 103 |
-| Formatter plugin and its surface | 285 | 167 | 168 | 95 |
+| Formatter plugin, which is its own surface | 285 | 167 | 147 | 86 |
 | Variant vocabulary | — | — | 120 | 40 |
 | Config schema | 64 | 58 | 81 | 70 |
-| **Total** | **783** | **489** | **831** | **450** |
+| **Total** | **783** | **489** | **808** | **438** |
 
 Five of those rows are worth a sentence.
 
@@ -58,12 +58,15 @@ Five of those rows are worth a sentence.
   same vocabulary inline in `variants()` and `variantsFor()`, beside a
   `casings()` list the surface side gets from its declaration, and those
   lines are already inside its 285.
-- The **formatter** is two files on the surface side: the plugin,
-  which only shows a value (`formatValue()`), and
-  `DemoFormatterSurface`, which its `#[UsesSurface]` names and which
-  declares its settings and its outputs side by side. Its refiner is one
-  `#[RefinesInput]` method, and its outputs have none, because outputs
-  are never refined.
+- The **formatter** is one file on the surface side: the plugin is its
+  own surface (`#[UsesSurface]` with no argument), so its static
+  `defineInputs()` and `defineOutputs()` declare its settings and its
+  outputs beside `formatValue()`, the one thing it does. Its refiner is
+  one static `#[RefinesInput]` method, and its outputs have none,
+  because outputs are never refined. It was two files, the plugin and a
+  surface class it named, until a plugin could be its own surface. The
+  merge saved 21 lines, 9 of them code, all of it the second file's own
+  scaffolding; what the shape says did not change.
 - The **config schema** is *longer* on the surface side, not shorter.
   Both versions hand-maintain a schema file; the surface one also
   declares the `third_party_settings` namespace other modules mount into,
@@ -121,7 +124,7 @@ approach changes.
 | Vocabulary lists kept in step | 4 | 1 |
 | Default values written out | 3 | 0 |
 | Settings summary assembled by hand | 1 | 0 |
-| Surface class (settings and outputs together) | 0 | 1 |
+| Surface shape, on the plugin itself (settings and outputs together) | 0 | 1 |
 | Refiner methods | 0 | 1 |
 | Config schema files | 1 | 1 |
 | **Distinct mechanisms in play** | **8** | **4** |

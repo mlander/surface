@@ -36,7 +36,7 @@ final class ThresholdCondition extends DataSurfaceConditionBase {
    * {@inheritdoc}
    */
   public function summary(): TranslatableMarkup {
-    return new TranslatableMarkup('Reading @mode @threshold', [
+    return $this->t('Reading @mode @threshold', [
       '@mode' => $this->configuration['mode'],
       '@threshold' => $this->configuration['threshold'],
     ]);

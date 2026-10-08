@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\data_surface_tool\Surface;
 
 use Drupal\Core\Entity\FieldableEntityInterface;
-use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Surface\Attribute\RefinesInput;
 use Drupal\data_surface\Surface\Attribute\Situation;
@@ -114,22 +113,22 @@ final class FieldInstanceSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(ShapeInterface $inputs): void {
     // Which field this is.
-    $inputs->add('entity_type_id', 'string', new TranslatableMarkup('Entity type'))->setRequired(TRUE)
-      ->setDescription(new TranslatableMarkup('The machine name of the entity type the field is on.'))
+    $inputs->add('entity_type_id', 'string', t('Entity type'))->setRequired(TRUE)
+      ->setDescription(t('The machine name of the entity type the field is on.'))
       ->addConstraint('PluginExists', [
         'manager' => 'entity_type.manager',
         'interface' => FieldableEntityInterface::class,
       ]);
-    $inputs->add('bundle', 'string', new TranslatableMarkup('Bundle'))->setRequired(TRUE)
-      ->setDescription(new TranslatableMarkup('The bundle the field is on, for example article or page.'));
-    $inputs->add('field_type', 'string', new TranslatableMarkup('Field type'))->setRequired(TRUE)
-      ->setDescription(new TranslatableMarkup('The field type, which decides what the settings are.'));
+    $inputs->add('bundle', 'string', t('Bundle'))->setRequired(TRUE)
+      ->setDescription(t('The bundle the field is on, for example article or page.'));
+    $inputs->add('field_type', 'string', t('Field type'))->setRequired(TRUE)
+      ->setDescription(t('The field type, which decides what the settings are.'));
     // What a field storage's name may be, which its constructor refuses
     // otherwise with an exception rather than a violation.
-    $inputs->add('field_name', 'string', new TranslatableMarkup('Machine name'))->setRequired(TRUE)
-      ->setDescription(new TranslatableMarkup('The machine name of the field storage, for example field_tags.'))
+    $inputs->add('field_name', 'string', t('Machine name'))->setRequired(TRUE)
+      ->setDescription(t('The machine name of the field storage, for example field_tags.'))
       ->addConstraint('Length', ['max' => FieldStorageConfig::NAME_MAX_LENGTH])
       ->addConstraint('Regex', [
         'pattern' => '/^[_a-z]+[_a-z0-9]*$/',
@@ -137,27 +136,27 @@ final class FieldInstanceSurface implements SurfaceInterface {
       ]);
 
     // The field itself.
-    $inputs->add('label', 'string', new TranslatableMarkup('Label'))->setRequired(TRUE)
-      ->setDescription(new TranslatableMarkup('The human readable label for the field on this bundle.'));
-    $inputs->add('description', 'string', new TranslatableMarkup('Help text'))
-      ->setDescription(new TranslatableMarkup('Help text to display for the field.'));
-    $inputs->add('required', 'boolean', new TranslatableMarkup('Required field'), default: FALSE)
-      ->setDescription(new TranslatableMarkup('Whether the field is required.'));
+    $inputs->add('label', 'string', t('Label'))->setRequired(TRUE)
+      ->setDescription(t('The human readable label for the field on this bundle.'));
+    $inputs->add('description', 'string', t('Help text'))
+      ->setDescription(t('Help text to display for the field.'));
+    $inputs->add('required', 'boolean', t('Required field'), default: FALSE)
+      ->setDescription(t('Whether the field is required.'));
 
     // Its parts.
     $inputs->attach('storage', FieldStorageSurface::class)
-      ->setLabel(new TranslatableMarkup('Field storage'))
-      ->setDescription(new TranslatableMarkup('What every bundle using this field shares.'));
+      ->setLabel(t('Field storage'))
+      ->setDescription(t('What every bundle using this field shares.'));
     $inputs->attachBy('settings', by: 'field_type')
-      ->setLabel(new TranslatableMarkup('Field settings'))
-      ->setDescription(new TranslatableMarkup('Settings for this field on this bundle, described by the field type itself.'));
+      ->setLabel(t('Field settings'))
+      ->setDescription(t('Settings for this field on this bundle, described by the field type itself.'));
   }
 
   /**
    * The bundle must belong to the chosen entity type.
    */
   #[RefinesInput('bundle')]
-  public function bundleOfEntityType(DataDefinitionInterface $bundle, string $entity_type_id): DataDefinitionInterface {
+  public static function bundleOfEntityType(DataDefinitionInterface $bundle, string $entity_type_id): DataDefinitionInterface {
     return $bundle->addConstraint('EntityBundleExists', ['entityTypeId' => $entity_type_id]);
   }
 

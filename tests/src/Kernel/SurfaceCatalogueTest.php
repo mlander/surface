@@ -9,6 +9,7 @@ use Drupal\data_surface_demo_node_type\Access\NodeTypeAccess;
 use Drupal\data_surface_demo_node_type\Surface\NodeTypeSurface;
 use Drupal\data_surface_demo_node_type\Target\NodeTypeTarget;
 use Drupal\data_surface_address\Surface\AddressFieldSettingsSurface;
+use Drupal\data_surface_demo\Plugin\Field\FieldFormatter\DataSurfaceDemoFormatter;
 use Drupal\data_surface_tool\Surface\FieldInstanceSurface;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -81,7 +82,7 @@ class SurfaceCatalogueTest extends DataSurfaceKernelTestBase {
       'field.instance',
       'field.settings.address',
       'field.storage',
-      'field_formatter.data_surface_demo_string',
+      'field_formatter:data_surface_demo_string',
       'node.type',
       'registration.contact',
       'registration.step1',
@@ -146,7 +147,9 @@ class SurfaceCatalogueTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($storage['edit']['standalone']);
 
     $this->assertSame(['block:data_surface_demo'], $catalogue['block.data_surface_demo']['plugins']);
-    $this->assertSame(['field_formatter:data_surface_demo_string'], $catalogue['field_formatter.data_surface_demo_string']['plugins']);
+    // A plugin that is its own surface is used by itself.
+    $this->assertSame(['field_formatter:data_surface_demo_string'], $catalogue['field_formatter:data_surface_demo_string']['plugins']);
+    $this->assertSame(DataSurfaceDemoFormatter::class, $catalogue['field_formatter:data_surface_demo_string']['class']);
     $this->assertSame(['field_type:address'], $catalogue['field.settings.address']['plugins']);
     $this->assertSame([], $catalogue['block.data_surface_demo.presentation.list']['plugins']);
   }

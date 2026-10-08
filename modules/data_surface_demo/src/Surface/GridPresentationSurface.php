@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_demo\Surface;
 
-use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Surface\Attribute\Surface;
 use Drupal\data_surface\Surface\Attribute\SurfaceVariant;
 use Drupal\data_surface\Surface\ShapeInterface;
@@ -24,9 +23,9 @@ final class GridPresentationSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
-    $inputs->add('columns', 'integer', new TranslatableMarkup('Columns'), default: 3)
-      ->setDescription(new TranslatableMarkup('How many items sit side by side.'))
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('columns', 'integer', t('Columns'), default: 3)
+      ->setDescription(t('How many items sit side by side.'))
       ->setRequired(TRUE)
       ->addConstraint('Range', ['min' => 1, 'max' => 6]);
   }

@@ -43,19 +43,19 @@ enum DemoVariant: string {
   /**
    * Gets what this variant is called.
    *
-   * Raw construction with an instance in hand, which is the exception
-   * the convention allows: an enum case has no properties, so it cannot
-   * carry `StringTranslationTrait` and there is no `$this->t()` to call.
+   * The global t(), with an instance in hand: an enum case has no
+   * properties, so it cannot carry `StringTranslationTrait` and there is
+   * no `$this->t()` to call or service to inject.
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup
    *   The label.
    */
   public function label(): TranslatableMarkup {
     return match ($this) {
-      self::Bold => new TranslatableMarkup('Bold'),
-      self::Strong => new TranslatableMarkup('Strong'),
-      self::Quiet => new TranslatableMarkup('Quiet'),
-      self::Muted => new TranslatableMarkup('Muted'),
+      self::Bold => t('Bold'),
+      self::Strong => t('Strong'),
+      self::Quiet => t('Quiet'),
+      self::Muted => t('Muted'),
     };
   }
 

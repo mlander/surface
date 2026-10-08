@@ -19,7 +19,7 @@ final class WatchesMismatchSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(ShapeInterface $inputs): void {
     $inputs->add('first', 'string', 'First');
     $inputs->add('second', 'string', 'Second');
     $inputs->add('third', 'string', 'Third');
@@ -29,7 +29,7 @@ final class WatchesMismatchSurface implements SurfaceInterface {
    * Lists watches its parameters no longer match.
    */
   #[RefinesInput('third', watches: ['first', 'second'])]
-  public function thirdOf(DataDefinitionInterface $third, string $first, string $renamed): DataDefinitionInterface {
+  public static function thirdOf(DataDefinitionInterface $third, string $first, string $renamed): DataDefinitionInterface {
     return $third;
   }
 

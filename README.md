@@ -53,11 +53,11 @@ describes, and delete the form code:
 #[Surface('block.my_teaser')]
 final class TeaserBlockSurface implements SurfaceInterface {
 
-  public function defineInputs(ShapeInterface $inputs): void {
-    $inputs->add('headline', 'string', new TranslatableMarkup('Headline'), default: 'Featured content')
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('headline', 'string', t('Headline'), default: 'Featured content')
       ->setRequired(TRUE)
       ->addConstraint('Length', ['max' => 50]);
-    $inputs->add('limit', 'integer', new TranslatableMarkup('Number of items'), default: 10)
+    $inputs->add('limit', 'integer', t('Number of items'), default: 10)
       ->setRequired(TRUE)
       ->addConstraint('Range', ['min' => 1, 'max' => 50]);
   }
@@ -78,7 +78,11 @@ final class TeaserBlock extends DataSurfaceBlockBase {
 ```
 
 The surface class goes in the module's `src/Surface/`, where it is
-discovered; nothing is registered by hand. The block has no
+discovered; nothing is registered by hand. Its shape is static, asked
+of the class, so it is never constructed, and its labels are `t()`.
+A small plugin can also be its own surface: `#[UsesSurface]` with no
+argument, and the same static `defineInputs()` on the block class
+itself. The block has no
 `defaultConfiguration()`, no `blockForm()`, no `blockValidate()` and no
 `blockSubmit()`. The block configuration form is generated from the
 definitions, with a maxlength on the headline and a number spinner
@@ -130,7 +134,8 @@ The module uses these ten words in exactly one sense each.
 - **Host** — the plugin whose configuration a surface is, and whose
   protocol it has to satisfy: a block, a field formatter, an action, a
   condition, a field type, any configurable plugin. It names the
-  surface with `#[UsesSurface]` and supplies the context and the target,
+  surface with `#[UsesSurface]`, or is the surface itself when the
+  attribute names none, and supplies the context and the target,
   because only it holds the instance.
 - **Situation** — one way a surface is asked for: add, edit, reuse. A
   static method on the surface class carrying `#[Situation]`, returning
@@ -172,8 +177,9 @@ fixtures the tests run against, so they are supported but their APIs and
 their configuration may change without a deprecation path.
 
 - **Data Surface Demo** (`data_surface_demo`) — two surfaces and three
-  hosts: `DemoBlockSurface` drives a block and a standalone form,
-  `DemoFormatterSurface` a field formatter.
+  hosts, in the two spellings: `DemoBlockSurface`, a class of its own,
+  drives a block and a standalone form, and the field formatter is its
+  own surface.
 - **Data Surface Demo - Classic** (`data_surface_demo_classic`) — the
   same block and the same formatter written the pre-surface way, by
   hand, with a parity test holding the two to the same behavior and a

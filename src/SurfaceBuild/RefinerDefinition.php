@@ -31,6 +31,9 @@ final class RefinerDefinition {
    *   The names of the parameters after the first, in order.
    * @param bool $takesDefinition
    *   Whether the method has a first parameter to receive the definition.
+   * @param bool $isStatic
+   *   Whether the method is static, as a surface's must be; an alter's
+   *   may be either.
    */
   public function __construct(
     public readonly string $class,
@@ -39,6 +42,7 @@ final class RefinerDefinition {
     public readonly ?array $watches,
     public readonly array $parameters,
     public readonly bool $takesDefinition,
+    public readonly bool $isStatic = FALSE,
   ) {}
 
   /**

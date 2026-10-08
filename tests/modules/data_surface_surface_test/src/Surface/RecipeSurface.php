@@ -59,7 +59,7 @@ final class RecipeSurface implements SurfaceInterface, HasOutputsInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(ShapeInterface $inputs): void {
     $inputs->add('kitchen', 'string', 'Kitchen')->setRequired(TRUE);
     $inputs->add('name', 'string', 'Name')->setRequired(TRUE);
     $inputs->add('course', 'string', 'Course', default: 'main')
@@ -74,7 +74,7 @@ final class RecipeSurface implements SurfaceInterface, HasOutputsInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineOutputs(ShapeInterface $outputs): void {
+  public static function defineOutputs(ShapeInterface $outputs): void {
     $outputs->add('id', 'string', 'Recipe id');
   }
 
@@ -82,7 +82,7 @@ final class RecipeSurface implements SurfaceInterface, HasOutputsInterface {
    * The dish is one the course offers. Watches the course by name.
    */
   #[RefinesInput('dish')]
-  public function dishOfCourse(DataDefinitionInterface $dish, string $course): DataDefinitionInterface {
+  public static function dishOfCourse(DataDefinitionInterface $dish, string $course): DataDefinitionInterface {
     return $dish->addConstraint('Choice', ['choices' => self::DISHES[$course] ?? []]);
   }
 
@@ -92,7 +92,7 @@ final class RecipeSurface implements SurfaceInterface, HasOutputsInterface {
    * Watches two siblings, listed so a renamed parameter is caught.
    */
   #[RefinesInput('servings', watches: ['course', 'vegetarian'])]
-  public function servingsFor(DataDefinitionInterface $servings, string $course, bool $vegetarian): DataDefinitionInterface {
+  public static function servingsFor(DataDefinitionInterface $servings, string $course, bool $vegetarian): DataDefinitionInterface {
     $max = ($course === 'dessert' ? 8 : 12) - ($vegetarian ? 2 : 0);
     // Only the maximum moves: a situation may have raised the minimum,
     // and replacing the whole constraint would lower it back.
@@ -105,7 +105,7 @@ final class RecipeSurface implements SurfaceInterface, HasOutputsInterface {
    * A name fits on a card. Watches nothing, so it runs once, at build.
    */
   #[RefinesInput('name')]
-  public function nameFitsOnCard(DataDefinitionInterface $name): DataDefinitionInterface {
+  public static function nameFitsOnCard(DataDefinitionInterface $name): DataDefinitionInterface {
     return $name->addConstraint('Length', ['max' => 40]);
   }
 

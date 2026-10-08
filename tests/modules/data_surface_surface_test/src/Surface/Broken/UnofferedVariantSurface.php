@@ -19,7 +19,7 @@ final class UnofferedVariantSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(ShapeInterface $inputs): void {
     $inputs->add('kind', 'string', 'Kind')->addConstraint('Choice', ['choices' => ['jar']]);
     $inputs->attachBy('settings', by: 'kind');
   }

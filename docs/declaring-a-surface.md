@@ -3,8 +3,10 @@
 A surface is declared in one place: a class in a module's
 `src/Surface/` carrying `#[Surface]`. Discovery finds it the way core
 finds a class in `src/Hook`, the build step (`data_surface.surfaces`)
-builds it in a context and seals it, and nothing else constructs one. A
-plugin whose configuration it is only names it, with `#[UsesSurface]`.
+builds it in a context and seals it, and nothing ever constructs one:
+its shape and its refiners are static, asked of the class. A plugin
+whose configuration it is only names it, with `#[UsesSurface]` — or is
+it, with `#[UsesSurface]` and no argument ([On a plugin](#on-a-plugin)).
 
 This page is the class and what it says. [Surfaces as
 classes](surfaces.md) has situations, alters, subsurfaces, access,
@@ -16,19 +18,19 @@ targets and the tools generated from them.
 #[Surface('block.data_surface_demo')]
 final class DemoBlockSurface implements SurfaceInterface {
 
-  public function defineInputs(ShapeInterface $inputs): void {
-    $headline = $inputs->add('headline', 'string', new TranslatableMarkup('Headline'), default: 'Featured content')
-      ->setDescription(new TranslatableMarkup('Shown above the featured content.'))
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $headline = $inputs->add('headline', 'string', t('Headline'), default: 'Featured content')
+      ->setDescription(t('Shown above the featured content.'))
       ->setRequired(TRUE)
       ->addConstraint('Length', ['max' => 50]);
     DefinitionMetadata::setExamples($headline, ['Quarterly report']);
-    $inputs->add('entity_type', 'string', new TranslatableMarkup('Entity type'), default: 'user')
+    $inputs->add('entity_type', 'string', t('Entity type'), default: 'user')
       ->setRequired(TRUE)
       ->addConstraint('PluginExists', [
         'manager' => 'entity_type.manager',
         'interface' => ContentEntityInterface::class,
       ]);
-    $inputs->add('bundle', 'string', new TranslatableMarkup('Bundle'));
+    $inputs->add('bundle', 'string', t('Bundle'));
     // ...
   }
 
@@ -36,7 +38,7 @@ final class DemoBlockSurface implements SurfaceInterface {
    * The bundle must be one of the chosen entity type's bundles.
    */
   #[RefinesInput('bundle')]
-  public function bundleOfEntityType(DataDefinitionInterface $bundle, string $entity_type): DataDefinitionInterface {
+  public static function bundleOfEntityType(DataDefinitionInterface $bundle, string $entity_type): DataDefinitionInterface {
     return $bundle->addConstraint('EntityBundleExists', ['entityTypeId' => $entity_type]);
   }
 
@@ -49,18 +51,23 @@ of a surface has one home:
 | What | Where |
 | --- | --- |
 | Its id, and which keys say which thing it is | `#[Surface('id', identity: [...])]` |
-| Its keys: type, label, default, constraints | `defineInputs(ShapeInterface $inputs)` |
-| What it emits | `defineOutputs()`, on `HasOutputsInterface`; see [Outputs](outputs.md) |
-| A key whose allowed values depend on another key's value | a `#[RefinesInput('key')]` method |
+| Its keys: type, label, default, constraints | `static defineInputs(ShapeInterface $inputs)` |
+| What it emits | `static defineOutputs()`, on `HasOutputsInterface`; see [Outputs](outputs.md) |
+| A key whose allowed values depend on another key's value | a static `#[RefinesInput('key')]` method |
 | How much is already known: add, edit, reuse | `#[Situation]` static methods returning a `SurfaceContext` |
 | Where its values are stored | `#[Surface(target:)]`, a `SurfaceTargetInterface` |
 | What may refuse once the situation's permission allows | `#[Surface(access:)]`, a `SurfaceAccessInterface` |
 | Its parts | `attach()` and `attachBy()` in `defineInputs()`, and `#[SurfaceVariant]` on each variant |
 
 `FieldInstanceSurface` in `data_surface_tool` uses every row but
-outputs, which `DemoFormatterSurface` declares; the test module's
+outputs, which the demo formatter declares; the test module's
 `TestBlockSurface` uses two.
 
+- **Everything on the class is static.** `defineInputs()` and
+  `defineOutputs()` are static on the interface, and a `#[RefinesInput]`
+  method on a surface is refused unless it is static. Shape is a
+  property of the class: it takes no values, context or services, and
+  static holds it to that by the language.
 - **`defineInputs()` is a flat list.** No `if`, no loop, and it never
   mentions a sibling. A constraint written there is fully known with no
   values. Anything that reads another key's value is a `#[RefinesInput]`
@@ -68,16 +75,19 @@ outputs, which `DemoFormatterSurface` declares; the test module's
 - **`add()` takes name, type and label** and returns the core
   definition, so the rest is plain core API: `setRequired()`,
   `setDescription()`, `addConstraint()`, `setSetting()`.
-  `addDefinition()` is the long form, for a map or a list.
+  `addDefinition()` is the long form, for a map or a list. The label is
+  `t('...')` with a literal string; see [Translatable
+  strings](#translatable-strings).
 - **A `#[RefinesInput]` method takes the key's definition first, then one
   parameter per sibling it watches**, matched by name, or listed as
   `watches:` when a renamed parameter should be refused rather than
   silently stop watching. Its signature is its dependency declaration.
   One rule per method, its docblock stating the rule.
-- **The class has no constructor and holds no service.** That is what
-  lets the build step make it with `new`, and what keeps a surface pure
-  data. Targets, access classes and alters are autowired services and
-  may hold services.
+- **The class has no constructor and holds no service**, and is never
+  instantiated: the build step calls its static methods on the class,
+  and what rides along in a cached form is the class name. Targets,
+  access classes and alters are autowired services and may hold
+  services; an alter's refiners are instance methods.
 
 ### Nothing live in the shape
 
@@ -98,7 +108,7 @@ is cached no longer than its shape holds.
 
 ## On a plugin
 
-A plugin keeps rendering and names its surface:
+A plugin keeps rendering and names its surface, a class of its own:
 
 ```php
 #[Block(
@@ -126,6 +136,46 @@ writing `execute()` and `access()`) and a formatter
 (`DataSurfaceFormatterBase`, writing `formatValue()`). Any configurable
 plugin with no base class of this module's lists `DataSurfacePluginForm`
 under its `forms` key. [Generated forms](forms.md) has the table.
+
+Or the plugin is its own surface: `#[UsesSurface]` with no argument,
+and the plugin class implements `SurfaceInterface` with the static
+methods a surface class has, beside the plugin's own code:
+
+```php
+#[FieldFormatter(
+  id: 'data_surface_demo_string',
+  label: new TranslatableMarkup('Data surface demo formatter'),
+  field_types: ['string'],
+)]
+#[UsesSurface]
+final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements SurfaceInterface, HasOutputsInterface {
+
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('prefix', 'string', t('Prefix'))
+      ->setDescription(t('Text placed before each value.'))
+      ->addConstraint('Length', ['max' => 10]);
+    // casing, variant
+  }
+
+  // defineOutputs(), variantsOfCasing(): static as well.
+
+  public function formatValue(FieldItemInterface $item, array $settings): array {
+    // ...
+  }
+
+}
+```
+
+Discovery finds it through the plugin definition, not a directory. Its
+id is `<host type>:<plugin id>`, `field_formatter:data_surface_demo_string`,
+unless the class also carries `#[Surface]`; the catalogue lists it as
+used by that same plugin; an alter names it by the plugin class. The
+demo module keeps both spellings side by side: its block names
+`DemoBlockSurface`, its formatter is its own. A separate class reads
+better for a large surface, one with subsurfaces or situations, or one
+more than one plugin shares; the plugin's own reads better for a small
+plugin whose settings are only ever its own, because the settings sit
+beside the code that reads them.
 
 A field type implements `FieldSurfaceProviderInterface` and uses
 `DataSurfaceFieldTypeTrait`. Its static defaults are one line, because
@@ -191,9 +241,11 @@ of the story.
 
 **A surface class ends in `Surface`, and its id is dotted.**
 `NodeTypeSurface` is `node.type`, `FieldInstanceSurface` is
-`field.instance`, `DemoBlockSurface` is `block.data_surface_demo`. An
-alter ends in `Alter`, a target in `Target`, an access class in
-`Access`.
+`field.instance`, `DemoBlockSurface` is `block.data_surface_demo`. A
+plugin that is its own surface keeps its plugin's class name, and its
+id is its plugin's, `<host type>:<plugin id>`, unless it carries
+`#[Surface]`. An alter ends in `Alter`, a target in `Target`, an access
+class in `Access`.
 
 **A class-swap adopter prefixes the swapped class with `Surface`, and
 says so in the hook.** Adopting a plugin class you do not own means
@@ -217,36 +269,38 @@ kinds that share an id apart.
 ## Translatable strings
 
 Every human-facing string a surface carries is a translatable object,
-never a concatenation of translated fragments. Which of the two forms
-to use is decided by one question: is there an instance with a
-container behind it?
+never a concatenation of translated fragments. Which spelling to use is
+decided by one question: is there an instance a translation service
+could have been injected into?
 
-**A surface class constructs it raw.** It has no constructor, so
-nothing can inject the translation service, and `#[Situation]` methods
-and attribute arguments are static. `new TranslatableMarkup('Headline')`
-is the only spelling available. It resolves the translation service at
-render time, which is correct here and costs nothing.
+**Static context calls the global `t()`.** A surface's shape, its
+refiners and its situations are static, and so are a plugin's static
+protocol methods; an enum has no properties. Nothing can be injected
+there, so `t('Headline')` is the spelling. It returns the same lazy
+`TranslatableMarkup` that `new TranslatableMarkup('Headline')` would,
+resolves the translation service at render time exactly as late, and is
+what string extraction looks for. The string is a literal, which
+`Drupal.Semantics.FunctionT` holds it to; values go in placeholders.
+
+**Attribute arguments construct `new TranslatableMarkup`.** A function
+call is not allowed in an attribute argument, so `#[Situation(label:)]`
+and a plugin attribute's label are the one place the constructor
+stays.
 
 **Everything the container builds calls `$this->t()`.** An alter, a
-target, an access class, a widget, a cosmetic layer: the trait is
-available or can be, the spelling is shorter, and the sniffs read it. A
-class we author that is built by the container and writes human-facing
+target, an access class, a widget, a cosmetic layer, a deriver: a class
+we author that is built by the container and writes human-facing
 strings injects `string_translation`, uses `StringTranslationTrait` and
 calls `$this->t()`, so that translation never resolves through the
-global container at render time from our own code. The two forms
-render identically; what differs is where the service comes from.
+global container from our own code. A plugin whose base class already
+carries the trait, a condition's `summary()`, calls `$this->t()` too.
 
-The global `t()` function appears nowhere in object-oriented code.
-
-So the split is between files, not inside one: `DemoFormatterSurface`
-constructs raw markup, and `DemoFormatterAlter`, an alter of it, calls
-`$this->t()`.
-
-Two places keep raw construction with an instance in hand, and both say
-why in a docblock: `DataSurfaceBuilder`, the engine under the build
-step, is a value object made with `new`, so there is no constructor to
-inject through, and `DemoVariant` is an enum, which cannot carry the
-trait's property.
+So the split is by context, and can fall inside one file: the demo
+formatter's static `defineInputs()` calls `t()`, its plugin attribute
+constructs `new TranslatableMarkup`, and `DemoFormatterAlter`, an alter
+of it, calls `$this->t()`. `DataSurfaceBuilder`, the engine under the
+build step, is a value object made with `new`, so its one labeling
+method is static and calls `t()`.
 
 ## Maps and lists
 
@@ -257,7 +311,7 @@ setter:
 
 ```php
 $overrides = MapDataDefinition::create()
-  ->setLabel(new TranslatableMarkup('Field overrides'));
+  ->setLabel(t('Field overrides'));
 foreach (self::fieldOverrideDefinitions() as $field_name => $definition) {
   $overrides->setPropertyDefinition($field_name, $definition);
 }
@@ -329,8 +383,8 @@ A key whose stored value must never be read back to whoever writes it —
 an API token, a password, a signing key — is declared secret:
 
 ```php
-$token = $inputs->add('token', 'string', new TranslatableMarkup('API key'), default: '')
-  ->setDescription(new TranslatableMarkup('The key this field authenticates with.'));
+$token = $inputs->add('token', 'string', t('API key'), default: '')
+  ->setDescription(t('The key this field authenticates with.'));
 DefinitionMetadata::setSecret($token);
 ```
 

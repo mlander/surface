@@ -20,7 +20,7 @@ final class TinSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(ShapeInterface $inputs): void {
     $inputs->add('opener', 'boolean', 'Needs an opener', default: FALSE);
     $inputs->add('volume', 'integer', 'Volume', default: 400)->setRequired(TRUE);
   }

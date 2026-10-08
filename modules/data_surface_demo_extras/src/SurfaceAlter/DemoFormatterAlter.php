@@ -11,10 +11,13 @@ use Drupal\data_surface\Surface\Attribute\AltersSurface;
 use Drupal\data_surface\Surface\Attribute\RefinesInput;
 use Drupal\data_surface\Surface\ShapeAdditionsInterface;
 use Drupal\data_surface\Surface\SurfaceAlterInterface;
-use Drupal\data_surface_demo\Surface\DemoFormatterSurface;
+use Drupal\data_surface_demo\Plugin\Field\FieldFormatter\DataSurfaceDemoFormatter;
 
 /**
  * This module's additions to the demo formatter.
+ *
+ * The formatter is its own surface, so this alter names the formatter's
+ * class, the way an alter of a surface in src/Surface names that class.
  *
  * Both of the ways an alter extends another module's surface, neither
  * touching a form:
@@ -37,7 +40,7 @@ use Drupal\data_surface_demo\Surface\DemoFormatterSurface;
  * @see docs/refinement.md
  *   Where this module is the worked example.
  */
-#[AltersSurface(DemoFormatterSurface::class)]
+#[AltersSurface(DataSurfaceDemoFormatter::class)]
 final class DemoFormatterAlter implements SurfaceAlterInterface {
 
   use StringTranslationTrait;

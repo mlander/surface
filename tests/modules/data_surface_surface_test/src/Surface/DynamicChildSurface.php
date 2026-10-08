@@ -25,7 +25,7 @@ final class DynamicChildSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(ShapeInterface $inputs): void {
     $inputs->add('kind', 'string', 'Kind')->addConstraint('Choice', ['choices' => ['box', 'tube']]);
     $inputs->add('detail', 'any', 'Detail');
   }
@@ -34,7 +34,7 @@ final class DynamicChildSurface implements SurfaceInterface {
    * A box has a width; a tube has a length.
    */
   #[RefinesInput('detail')]
-  public function detailOfKind(DataDefinitionInterface $detail, string $kind): DataDefinitionInterface {
+  public static function detailOfKind(DataDefinitionInterface $detail, string $kind): DataDefinitionInterface {
     $map = MapDataDefinition::create()->setLabel('Detail');
     return $map->setPropertyDefinition(
       $kind === 'box' ? 'width' : 'length',

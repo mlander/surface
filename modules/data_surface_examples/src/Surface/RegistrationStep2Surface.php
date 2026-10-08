@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_examples\Surface;
 
-use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Surface\Attribute\RefinesInput;
@@ -39,17 +38,17 @@ final class RegistrationStep2Surface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
-    $inputs->add('title', 'string', new TranslatableMarkup('Event title'))
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('title', 'string', t('Event title'))
       ->setRequired(TRUE);
-    $inputs->add('open', 'boolean', new TranslatableMarkup('Registration open'), default: TRUE);
-    $inputs->add('venue', 'string', new TranslatableMarkup('Venue'))
+    $inputs->add('open', 'boolean', t('Registration open'), default: TRUE);
+    $inputs->add('venue', 'string', t('Venue'))
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', ['choices' => Venues::VENUES]);
-    $inputs->add('room', 'string', new TranslatableMarkup('Room'))
+    $inputs->add('room', 'string', t('Room'))
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', ['choices' => Venues::rooms()]);
-    $inputs->add('capacity', 'integer', new TranslatableMarkup('Capacity'), default: 50)
+    $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
       ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
   }
 
@@ -57,7 +56,7 @@ final class RegistrationStep2Surface implements SurfaceInterface {
    * The room must be one of the chosen venue's rooms.
    */
   #[RefinesInput('room')]
-  public function roomInVenue(DataDefinitionInterface $room, string $venue): DataDefinitionInterface {
+  public static function roomInVenue(DataDefinitionInterface $room, string $venue): DataDefinitionInterface {
     return $room->addConstraint('LabeledChoice', ['choices' => Venues::rooms($venue)]);
   }
 
@@ -65,11 +64,11 @@ final class RegistrationStep2Surface implements SurfaceInterface {
    * No more people than the chosen room seats, said under the field.
    */
   #[RefinesInput('capacity')]
-  public function capacityOfRoom(DataDefinitionInterface $capacity, string $room): DataDefinitionInterface {
+  public static function capacityOfRoom(DataDefinitionInterface $capacity, string $room): DataDefinitionInterface {
     $seats = Venues::seats($room);
     $capacity->addConstraint('Range', ['min' => 1, 'max' => $seats ?? 1000]);
     if ($seats !== NULL && $capacity instanceof DataDefinition) {
-      $capacity->setDescription(new TranslatableMarkup('Up to @seats for the @room.', [
+      $capacity->setDescription(t('Up to @seats for the @room.', [
         '@seats' => $seats,
         '@room' => Venues::rooms()[$room],
       ]));

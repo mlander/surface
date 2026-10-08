@@ -27,6 +27,7 @@ use Drupal\data_surface_surface_test\Surface\Broken\SelfAttachingSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\UnofferedVariantSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\WatchesSubsurfaceSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\ClashingSituationSurface;
+use Drupal\data_surface_surface_test\Surface\Broken\InstanceRefinerSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\RefinesOutputSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\UndeclaredIdentitySurface;
 use Drupal\data_surface_surface_test\Surface\Broken\MountWatcherSurface;
@@ -238,11 +239,16 @@ class SurfaceBuildTest extends DataSurfaceKernelTestBase {
     // A refiner that watches nothing ran once, at build.
     $this->assertSame(['max' => 40], $surface->getDefinition('name')->getConstraints()['Length']);
 
-    // The refiners ride inside the surface, alter service and all.
+    // The refiners ride inside the surface, alter service and all. The
+    // surface's own ride as its class name: its refiners are static, and
+    // nothing ever instantiated the surface to carry.
+    $serialized = serialize($surface);
+    $this->assertStringNotContainsString('O:' . strlen(RecipeSurface::class) . ':"' . RecipeSurface::class . '"', $serialized);
+    $this->assertStringContainsString('"' . RecipeSurface::class . '"', $serialized);
     // A cached form restores the surface whole, so this allows every
     // class the way core's own form cache does.
     // phpcs:ignore DrupalPractice.FunctionCalls.InsecureUnserialize.InsecureUnserialize
-    $restored = unserialize(serialize($surface));
+    $restored = unserialize($serialized);
     $this->assertSame(['risotto'], $choices($restored->refine(['course' => 'main', 'vegetarian' => TRUE])));
   }
 
@@ -312,6 +318,10 @@ class SurfaceBuildTest extends DataSurfaceKernelTestBase {
       'a variant its deciding key cannot choose' => [
         UnofferedVariantSurface::class,
         'The "settings" slot has the tin variant, which "kind" does not allow',
+      ],
+      'a surface refiner that is an instance method' => [
+        InstanceRefinerSurface::class,
+        InstanceRefinerSurface::class . '::nameOfKind() is a #[RefinesInput] method of the surface_test.broken.instance_refiner surface and is not static.',
       ],
       'a surface inside itself' => [
         SelfAttachingSurface::class,

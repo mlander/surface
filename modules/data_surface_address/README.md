@@ -13,7 +13,7 @@ generated form; the address module is not modified.
 Four pieces:
 
 - `Surface\AddressFieldSettingsSurface` — the definitions, in the new
-  spelling: a class with `defineInputs()` and no services. The country
+  spelling: a class with a static `defineInputs()` and no services. The country
   list and the language list are not in it: the items carry the address
   module's `Country` constraint and the `LanguageExists` constraint, and
   `CountryOptions` and `LanguageExistsOptions` resolve them live. It is

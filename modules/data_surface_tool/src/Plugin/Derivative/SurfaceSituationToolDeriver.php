@@ -6,7 +6,8 @@ namespace Drupal\data_surface_tool\Plugin\Derivative;
 
 use Drupal\Component\Plugin\Derivative\DeriverBase;
 use Drupal\Core\Plugin\Discovery\ContainerDeriverInterface;
-use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\data_surface\SurfaceBuild\SurfaceCatalogue;
 use Drupal\data_surface\SurfaceBuild\SurfacePlugins;
 use Drupal\data_surface\SurfaceBuild\SurfaceRegistry;
@@ -50,6 +51,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 final class SurfaceSituationToolDeriver extends DeriverBase implements ContainerDeriverInterface {
 
+  use StringTranslationTrait;
+
   /**
    * Constructs a SurfaceSituationToolDeriver.
    *
@@ -61,13 +64,18 @@ final class SurfaceSituationToolDeriver extends DeriverBase implements Container
    *   Where a surface left out is reported.
    * @param \Drupal\data_surface\SurfaceBuild\SurfacePlugins $plugins
    *   Which plugins name which surface with #[UsesSurface].
+   * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
+   *   The string translation service.
    */
   public function __construct(
     protected readonly SurfaceRegistry $registry,
     protected readonly SituationInputs $situationInputs,
     protected readonly LoggerInterface $logger,
     protected readonly SurfacePlugins $plugins,
-  ) {}
+    TranslationInterface $string_translation,
+  ) {
+    $this->stringTranslation = $string_translation;
+  }
 
   /**
    * {@inheritdoc}
@@ -78,6 +86,7 @@ final class SurfaceSituationToolDeriver extends DeriverBase implements Container
       $container->get('data_surface_tool.situation_inputs'),
       $container->get('logger.channel.data_surface'),
       $container->get('data_surface.surface_plugins'),
+      $container->get('string_translation'),
     );
   }
 
@@ -110,7 +119,7 @@ final class SurfaceSituationToolDeriver extends DeriverBase implements Container
         $id = $surface->id . ':' . $situation->id;
         try {
           $definition = (clone $base_plugin_definition)
-            ->setLabel(new TranslatableMarkup('@label', ['@label' => (string) $situation->label]))
+            ->setLabel($this->t('@label', ['@label' => (string) $situation->label]))
             ->setDescription($this->situationInputs->description($surface, $situation));
           foreach (array_keys($definition->getInputDefinitions(TRUE)) as $name) {
             $definition->removeInputDefinition($name);

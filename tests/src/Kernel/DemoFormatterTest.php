@@ -12,7 +12,6 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\Omitted;
 use Drupal\data_surface\Surface\Attribute\UsesSurface;
 use Drupal\data_surface_demo\Plugin\Field\FieldFormatter\DataSurfaceDemoFormatter;
-use Drupal\data_surface_demo\Surface\DemoFormatterSurface;
 use Drupal\entity_test\Entity\EntityTest;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
@@ -391,20 +390,21 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
   /**
    * Tests that the formatter host reads the surface from the attribute.
    *
-   * The definition carries the class #[UsesSurface] names, copied in by
-   * the formatter definition alter, and the host builds that surface in
-   * its own `configure` context, under its own host id.
+   * The formatter is its own surface, #[UsesSurface] with no argument, so
+   * the definition carries the formatter's own class, copied in by the
+   * formatter definition alter, and the host builds the surface from that
+   * class in its own `configure` context, under its own host id.
    */
   public function testTheHostReadsTheSurfaceFromTheAttribute(): void {
     $definition = $this->container->get('plugin.manager.field.formatter')->getDefinition('data_surface_demo_string');
-    $this->assertSame(DemoFormatterSurface::class, $definition[UsesSurface::DEFINITION_KEY]);
+    $this->assertSame(DataSurfaceDemoFormatter::class, $definition[UsesSurface::DEFINITION_KEY]);
     $this->assertSame(
       ['prefix', 'casing', 'variant', 'third_party_settings'],
       $this->createFormatter()->getDataSurface()->getDefinitions()->names(),
     );
     // The static defaults are the surface's own shape, alters left out.
     $this->assertSame(
-      $this->container->get('data_surface.surfaces')->defaults(DemoFormatterSurface::class) + ['third_party_settings' => []],
+      $this->container->get('data_surface.surfaces')->defaults(DataSurfaceDemoFormatter::class) + ['third_party_settings' => []],
       DataSurfaceDemoFormatter::defaultSettings(),
     );
   }

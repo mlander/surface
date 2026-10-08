@@ -63,18 +63,22 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  * \Drupal\data_surface\Surface\Attribute\Surface is a surface. It is found
  * the way core finds a class in src/Hook, so nothing registers it, and the
  * build step, \Drupal\data_surface\SurfaceBuild\SurfacesInterface (service
- * data_surface.surfaces), is the only thing that builds it. The class has no
- * constructor and holds no service: a list that depends on the site is a
- * constraint whose options resolver fetches it.
+ * data_surface.surfaces), is the only thing that builds it. The class is
+ * never instantiated: its shape and its refiners are static, called on the
+ * class, so it has no constructor and holds no service, and a list that
+ * depends on the site is a constraint whose options resolver fetches it.
+ * Labels are built with the global t(), since a static method has nothing
+ * a translation service could be injected into.
  *
  * Each part of a surface has one home:
- * - Its keys, in defineInputs(): a flat list, no conditionals, never naming
- *   a sibling. add() takes a name, a type and a label and returns the core
- *   definition, so the rest is core API.
- * - A key whose allowed values depend on another key's value, in a method
- *   carrying \Drupal\data_surface\Surface\Attribute\RefinesInput. It takes
- *   the key's definition first and one parameter per sibling it watches,
- *   and returns the definition narrowed. The framework checks it narrowed.
+ * - Its keys, in static defineInputs(): a flat list, no conditionals,
+ *   never naming a sibling. add() takes a name, a type and a label and
+ *   returns the core definition, so the rest is core API.
+ * - A key whose allowed values depend on another key's value, in a static
+ *   method carrying \Drupal\data_surface\Surface\Attribute\RefinesInput.
+ *   It takes the key's definition first and one parameter per sibling it
+ *   watches, and returns the definition narrowed. The framework checks it
+ *   narrowed.
  * - How much is already known, in static methods carrying
  *   \Drupal\data_surface\Surface\Attribute\Situation, each returning a
  *   \Drupal\data_surface\Surface\SurfaceContext. An identity key the
@@ -83,7 +87,7 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  *   target names a \Drupal\data_surface\Surface\SurfaceTargetInterface and
  *   access a \Drupal\data_surface\Surface\SurfaceAccessInterface, both
  *   autowired services.
- * - What it emits, in defineOutputs(), on
+ * - What it emits, in static defineOutputs(), on
  *   \Drupal\data_surface\Surface\HasOutputsInterface. Never refined.
  *
  * @code
@@ -106,21 +110,20 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  *     return new SurfaceContext('edit', known: ['id' => $thing->id()]);
  *   }
  *
- *   public function defineInputs(ShapeInterface $inputs): void {
- *     $inputs->add('id', 'string', new TranslatableMarkup('Machine name'))
+ *   public static function defineInputs(ShapeInterface $inputs): void {
+ *     $inputs->add('id', 'string', t('Machine name'))
  *       ->setRequired(TRUE);
- *     $inputs->add('entity_type', 'string',
- *       new TranslatableMarkup('Entity type'), default: 'user')
+ *     $inputs->add('entity_type', 'string', t('Entity type'), default: 'user')
  *       ->setRequired(TRUE)
  *       ->addConstraint('PluginExists', [
  *         'manager' => 'entity_type.manager',
  *         'interface' => ContentEntityInterface::class,
  *       ]);
- *     $inputs->add('bundle', 'string', new TranslatableMarkup('Bundle'));
+ *     $inputs->add('bundle', 'string', t('Bundle'));
  *   }
  *
  *   #[RefinesInput('bundle')]
- *   public function bundleOfEntityType(
+ *   public static function bundleOfEntityType(
  *     DataDefinitionInterface $bundle,
  *     string $entity_type,
  *   ): DataDefinitionInterface {
@@ -149,6 +152,27 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  * #[Block(id: 'example', admin_label: new TranslatableMarkup('Example'))]
  * #[UsesSurface(ExampleBlockSurface::class)]
  * final class ExampleBlock extends DataSurfaceBlockBase {
+ *
+ *   public function build(): array {
+ *     return ['#markup' => $this->getConfiguration()['headline']];
+ *   }
+ *
+ * }
+ * @endcode
+ *
+ * Or the plugin is its own surface: the attribute with no argument, and
+ * the plugin class implements SurfaceInterface with the same static
+ * methods. It is found through its plugin definition rather than a
+ * directory, its id is `<host type>:<plugin id>` unless the class carries
+ * #[Surface] as well, and an alter names it by the plugin class:
+ * @code
+ * #[Block(id: 'example', admin_label: new TranslatableMarkup('Example'))]
+ * #[UsesSurface]
+ * final class ExampleBlock extends DataSurfaceBlockBase implements SurfaceInterface {
+ *
+ *   public static function defineInputs(ShapeInterface $inputs): void {
+ *     $inputs->add('headline', 'string', t('Headline'), default: 'News');
+ *   }
  *
  *   public function build(): array {
  *     return ['#markup' => $this->getConfiguration()['headline']];
@@ -194,14 +218,15 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  * - offer more values on a key whose owner declared a fixed list, with
  *   extendChoices(), the one widening verb; a value already offered by
  *   anyone is refused;
- * - narrow any key with #[RefinesInput] methods of its own. On a key it
+ * - narrow any key with #[RefinesInput] methods of its own, instance
+ *   methods, since an alter is a service. On a key it
  *   offered more values on, a method is handed this module's values alone,
  *   so it can neither narrow away a value the owner offers nor hand back
  *   one it was not given; what is offered is the union.
  * Nothing an alter does removes a key or a value.
  *
  * @code
- * #[AltersSurface(DemoFormatterSurface::class)]
+ * #[AltersSurface(DataSurfaceDemoFormatter::class)]
  * final class MyModuleFormatterAlter implements SurfaceAlterInterface {
  *
  *   use StringTranslationTrait;

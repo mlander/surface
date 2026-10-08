@@ -20,7 +20,7 @@ final class RefinesSubsurfaceSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(ShapeInterface $inputs): void {
     $inputs->attach('shelf', ShelfSurface::class);
   }
 
@@ -28,7 +28,7 @@ final class RefinesSubsurfaceSurface implements SurfaceInterface {
    * Reaches into the child.
    */
   #[RefinesInput('shelf')]
-  public function intoTheShelf(DataDefinitionInterface $shelf): DataDefinitionInterface {
+  public static function intoTheShelf(DataDefinitionInterface $shelf): DataDefinitionInterface {
     return $shelf;
   }
 

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_examples\Surface;
 
-use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Surface\Attribute\Surface;
 use Drupal\data_surface\Surface\ShapeInterface;
 use Drupal\data_surface\Surface\SurfaceInterface;
@@ -22,10 +21,10 @@ final class ContactSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
-    $inputs->add('email', 'email', new TranslatableMarkup('Email'))
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('email', 'email', t('Email'))
       ->setRequired(TRUE);
-    $inputs->add('phone', 'string', new TranslatableMarkup('Phone'));
+    $inputs->add('phone', 'string', t('Phone'));
   }
 
 }

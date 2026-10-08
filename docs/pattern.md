@@ -24,9 +24,12 @@ where it reaches into something it does not own.
 | **Surfaces** | `src/Surface/` | `src/SurfaceAlter/` |
 
 Both are scanned in every enabled module, the way core scans
-`src/Hook`, so nothing is registered by hand. A surface has no
-constructor and holds no service; an alter is registered as an
-autowired service and may hold services.
+`src/Hook`, so nothing is registered by hand. A surface is never
+instantiated: its shape and its refiners are static methods, asked of
+the class. An alter is registered as an autowired service and may hold
+services. A plugin may also be its own surface, with the same static
+methods on the plugin class; it is found through its plugin definition
+rather than a directory ([Plugins](#plugins)).
 
 Two more kinds of class are named by a surface rather than discovered,
 so their directory is a suggestion, not a rule: targets (`src/Target/`)
@@ -51,6 +54,8 @@ modules/data_surface_demo/src/
   Surface/DemoBlockSurface.php            its configuration, as a surface
   Surface/ListPresentationSurface.php     fill the block's presentation slot
   Surface/GridPresentationSurface.php
+  Plugin/Field/FieldFormatter/DataSurfaceDemoFormatter.php
+                                          a plugin that is its own surface
 
 modules/data_surface_address/src/
   Surface/AddressFieldSettingsSurface.php fills the field's settings slot
@@ -66,17 +71,20 @@ modules/data_surface_demo_extras/src/
 
 ## The pattern
 
-A surface is a class with one method that declares its shape, and one
-named method per key whose allowed values depend on another key. An
-alter is a class with the same two jobs and a narrower tool.
+A surface is a class with one static method that declares its shape,
+and one named static method per key whose allowed values depend on
+another key. An alter is a class with the same two jobs and a narrower
+tool; it is a service, so its methods are instance methods.
 
 | | Shape | Values |
 | --- | --- | --- |
-| **Owner** | `defineInputs($inputs)`, optionally `defineOutputs($outputs)` | `#[RefinesInput('key')]` methods |
+| **Owner** | `static defineInputs($inputs)`, optionally `static defineOutputs($outputs)` | static `#[RefinesInput('key')]` methods |
 | **Another module** | `alterInputs($inputs)`, optionally `alterOutputs($outputs)` | `#[RefinesInput('key')]` methods |
 
 - **The shape methods get a shape to fill, and nothing else**: no
-  values, no context. The owner gets `ShapeInterface`; an alter gets
+  values, no context, no services. On a surface they are static, so the
+  language holds them to that: the build step calls them on the class
+  and never makes an instance. The owner gets `ShapeInterface`; an alter gets
   `ShapeAdditionsInterface`, which is the same minus `attachBy()`. An
   alter can add keys, reword a label or description with `describe()`,
   and offer more values on a fixed choice list with `extendChoices()`.
@@ -93,7 +101,14 @@ alter is a class with the same two jobs and a narrower tool.
   tightened with plain core API, and the framework checks the result is
   narrower, so a refinement cannot widen, retype, or add or remove a
   map property. It receives only what it named, so it is a pure
-  function of its arguments.
+  function of its arguments. **A surface's refiner is static; an
+  alter's is an instance method**, because an alter is a service that
+  may hold configuration.
+- **Labels are `t('...')`.** A static method has no instance for the
+  translation service to be injected into, and the global `t()` returns
+  the same lazy `TranslatableMarkup`, which string extraction finds.
+  `new TranslatableMarkup` is kept for attribute arguments, where a
+  function call is not allowed; an alter, a service, calls `$this->t()`.
 
 ```php
 #[Surface('field.instance',
@@ -103,28 +118,28 @@ alter is a class with the same two jobs and a narrower tool.
 )]
 final class FieldInstanceSurface implements SurfaceInterface {
 
-  public function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(ShapeInterface $inputs): void {
     // Which field this is.
-    $inputs->add('entity_type_id', 'string', new TranslatableMarkup('Entity type'))->setRequired(TRUE);
-    $inputs->add('bundle', 'string', new TranslatableMarkup('Bundle'))->setRequired(TRUE);
-    $inputs->add('field_type', 'string', new TranslatableMarkup('Field type'))->setRequired(TRUE);
-    $inputs->add('field_name', 'string', new TranslatableMarkup('Machine name'))->setRequired(TRUE);
+    $inputs->add('entity_type_id', 'string', t('Entity type'))->setRequired(TRUE);
+    $inputs->add('bundle', 'string', t('Bundle'))->setRequired(TRUE);
+    $inputs->add('field_type', 'string', t('Field type'))->setRequired(TRUE);
+    $inputs->add('field_name', 'string', t('Machine name'))->setRequired(TRUE);
     // The field itself.
-    $inputs->add('label', 'string', new TranslatableMarkup('Label'))->setRequired(TRUE);
-    $inputs->add('description', 'string', new TranslatableMarkup('Help text'));
-    $inputs->add('required', 'boolean', new TranslatableMarkup('Required field'), default: FALSE);
+    $inputs->add('label', 'string', t('Label'))->setRequired(TRUE);
+    $inputs->add('description', 'string', t('Help text'));
+    $inputs->add('required', 'boolean', t('Required field'), default: FALSE);
     // Its parts.
     $inputs->attach('storage', FieldStorageSurface::class)
-      ->setLabel(new TranslatableMarkup('Field storage'));
+      ->setLabel(t('Field storage'));
     $inputs->attachBy('settings', by: 'field_type')
-      ->setLabel(new TranslatableMarkup('Field settings'));
+      ->setLabel(t('Field settings'));
   }
 
   /**
    * The bundle must belong to the chosen entity type.
    */
   #[RefinesInput('bundle')]
-  public function bundleOfEntityType(DataDefinitionInterface $bundle, string $entity_type_id): DataDefinitionInterface {
+  public static function bundleOfEntityType(DataDefinitionInterface $bundle, string $entity_type_id): DataDefinitionInterface {
     return $bundle->addConstraint('EntityBundleExists', ['entityTypeId' => $entity_type_id]);
   }
 
@@ -136,11 +151,17 @@ and `Length`, and three situations, below.)
 
 ## Reading a surface
 
+- **Everything on it is static.** `defineInputs()`, `defineOutputs()`,
+  every `#[RefinesInput]` method and every `#[Situation]`. Shape is a
+  property of the class: nothing it says takes a value, a context or a
+  service, and a static method cannot reach for one. No constructor, no
+  properties, no `$this`.
 - **`defineInputs()` is a flat list.** No `if`, no loop. Wanting one
   means a second surface, a subsurface, or a situation.
 - **Name, type and label sit on one line.** `add()` takes those three
   and returns the core definition, so the rest is plain core API.
-  `addDefinition()` is the long form, for a list or a map.
+  `addDefinition()` is the long form, for a list or a map. The label is
+  `t('...')`, a literal string.
 - **It is ordered like the thing it describes.** Identity first, the
   thing's own keys next, its parts last.
 - **`defineInputs()` never mentions a sibling.** A constraint written
@@ -266,7 +287,7 @@ surface has no verb for options.
 **A refiner never calls a service.** A list that depends on a value is
 a constraint with the value as an option. The refiner points; the
 options resolver fetches ([Options and resolvers](options.md)). That is
-what lets a surface stay a plain object with no constructor.
+what lets a surface stay a class of static methods.
 
 A list can be changed in two places. Tightening one key on one surface
 is an alter's `#[RefinesInput]` method. Widening one key on one surface
@@ -362,8 +383,11 @@ rendered `text` and `classes`. [Outputs](outputs.md) has the rest.
 
 ## Plugins
 
-A plugin keeps rendering; its configuration moves to a surface in
-`src/Surface/`, named by `#[UsesSurface]` on the plugin:
+A plugin keeps rendering, and names its configuration's surface with
+`#[UsesSurface]`. Two spellings, side by side in the demo module.
+
+**Naming a surface class.** The configuration moves to a surface in
+`src/Surface/`, and the plugin names it:
 
 ```php
 #[Block(id: 'data_surface_demo', admin_label: new TranslatableMarkup('Data surface demo'))]
@@ -375,13 +399,44 @@ final class DataSurfaceDemoBlock extends DataSurfaceBlockBase {
 }
 ```
 
-No `blockForm()`, `blockValidate()` or `blockSubmit()`. The host
-supplies the context and the target, since only it holds the instance.
-The attribute is copied into the plugin definition, so tools and the
-catalogue can list surfaced plugins without instantiating any. One more
-file per plugin, in return for the same reading everywhere. Block,
-formatter, condition, action and field type hosts all read it, and
-`DataSurfacePluginForm` serves any other configurable plugin.
+**The plugin is its own surface.** `#[UsesSurface]` with no argument,
+and the plugin implements `SurfaceInterface`: its static shape and
+refiners sit beside the code that uses the values, and the host builds
+the surface from the plugin class without constructing it.
+
+```php
+#[FieldFormatter(id: 'data_surface_demo_string', label: new TranslatableMarkup('Data surface demo formatter'), field_types: ['string'])]
+#[UsesSurface]
+final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements SurfaceInterface, HasOutputsInterface {
+
+  public static function defineInputs(ShapeInterface $inputs): void { /* prefix, casing, variant */ }
+
+  public static function defineOutputs(ShapeInterface $outputs): void { /* text, classes */ }
+
+  #[RefinesInput('variant')]
+  public static function variantsOfCasing(DataDefinitionInterface $variant, string $casing): DataDefinitionInterface { /* ... */ }
+
+  public function formatValue(FieldItemInterface $item, array $settings): array { /* ... */ }
+
+}
+```
+
+Such a surface is found through the plugin definitions, not a
+directory. Its id is `<host type>:<plugin id>`
+(`field_formatter:data_surface_demo_string`) unless the class also
+carries `#[Surface]`; the catalogue lists it as used by that same
+plugin; an alter names it by the plugin class,
+`#[AltersSurface(DataSurfaceDemoFormatter::class)]`. The separate class
+reads better when the surface is large, has subsurfaces or situations,
+or is shared; the plugin's own reads better when the plugin is small
+and its settings are only ever its own.
+
+Either way: no `blockForm()`, `blockValidate()` or `blockSubmit()`. The
+host supplies the context and the target, since only it holds the
+instance. The attribute is copied into the plugin definition, so tools
+and the catalogue can list surfaced plugins without instantiating any.
+Block, formatter, condition, action and field type hosts all read it,
+and `DataSurfacePluginForm` serves any other configurable plugin.
 
 ## Deferred
 
@@ -464,4 +519,4 @@ concept. The naming of sources and resolvers is undecided.
 | A class in `src/SurfaceAlter/` with `#[AltersSurface]` | a build event subscriber holding the full builder |
 | `#[Surface(target:, access:)]` | the provider triple: `getDataSurface()`, `surfaceAccess()`, `getDataSurfaceTarget()` |
 | `defineOutputs()`, never refined | `setOutputDefinition()` plus output refiners |
-| `#[UsesSurface]` on the plugin | `declareDataSurface()` on the plugin class itself |
+| `#[UsesSurface]` on the plugin, naming a surface or being one | `declareDataSurface()` on the plugin class itself |

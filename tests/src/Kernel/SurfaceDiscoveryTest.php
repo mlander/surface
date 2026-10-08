@@ -12,6 +12,8 @@ use Drupal\data_surface_demo\Plugin\Block\DataSurfaceDemoBlock;
 use Drupal\data_surface_demo\Surface\DemoBlockSurface;
 use Drupal\data_surface_demo_extras\SurfaceAlter\DemoBlockAlter;
 use Drupal\data_surface_surface_test\Access\RecipeAccess;
+use Drupal\data_surface_surface_test\OutsideDiscovery\InstanceShapeSurface;
+use Drupal\data_surface_surface_test\Plugin\Block\StickyNoteBlock;
 use Drupal\data_surface_surface_test\Surface\HerbGarnishSurface;
 use Drupal\data_surface_surface_test\Surface\RecipeSurface;
 use Drupal\data_surface_surface_test\SurfaceAlter\EditOnlyRecipeAlter;
@@ -128,13 +130,36 @@ class SurfaceDiscoveryTest extends DataSurfaceKernelTestBase {
   public function testDefinitionsAreCached(): void {
     $this->registry()->getDefinitions();
     $classes = $this->container->getParameter(SurfaceCollectorPass::PARAMETER);
-    $cached = $this->container->get('cache.discovery')->get('data_surface:surfaces:' . hash('xxh3', serialize($classes)));
+    $plugins = $this->container->get('data_surface.surface_plugins');
+    // The id carries both lists: the classes the compiler pass found and
+    // the plugins that are their own surface.
+    $cid = 'data_surface:surfaces:' . hash('xxh3', serialize([$classes, $plugins->ownSurfaces()]));
+    $cached = $this->container->get('cache.discovery')->get($cid);
     $this->assertNotFalse($cached);
     $this->assertArrayHasKey(DemoBlockSurface::class, $cached->data);
+    $this->assertArrayHasKey(StickyNoteBlock::class, $cached->data);
 
     // A second registry reads the cache rather than the classes.
-    $fresh = new SurfaceRegistry($classes, $this->container->get('cache.discovery'));
+    $fresh = new SurfaceRegistry($classes, $this->container->get('cache.discovery'), $plugins);
     $this->assertEquals($this->registry()->getDefinitions(), $fresh->getDefinitions());
+  }
+
+  /**
+   * Tests that a surface whose shape method is not static is refused.
+   *
+   * PHP refuses a class implementing SurfaceInterface with an instance
+   * defineInputs() before discovery could, so the class that reaches
+   * discovery with one has left the interface off; it is named for what
+   * it is rather than only for the missing interface.
+   */
+  public function testAnInstanceShapeIsRefused(): void {
+    $registry = new SurfaceRegistry(
+      ['surfaces' => [InstanceShapeSurface::class => 'data_surface_surface_test']],
+      $this->container->get('cache.discovery'),
+    );
+    $this->expectException(\LogicException::class);
+    $this->expectExceptionMessage(InstanceShapeSurface::class . ' carries #[Surface] and declares defineInputs() as an instance method. A surface\'s shape is a property of its class and takes nothing but the shape to fill: declare it `public static function defineInputs(ShapeInterface $inputs): void`, and implement Drupal\data_surface\Surface\SurfaceInterface.');
+    $registry->getDefinitions();
   }
 
   /**

@@ -6,7 +6,7 @@ same answer for a person, a route, a tool or an agent.
 
 | | Shape | Values |
 | --- | --- | --- |
-| **Owner**, a `#[Surface]` class in `src/Surface/` | `defineInputs($inputs)`, optionally `defineOutputs($outputs)` | `#[RefinesInput('key')]` methods |
+| **Owner**, a `#[Surface]` class in `src/Surface/`, or a plugin that is its own surface | `static defineInputs($inputs)`, optionally `static defineOutputs($outputs)` | static `#[RefinesInput('key')]` methods |
 | **Another module**, an `#[AltersSurface]` class in `src/SurfaceAlter/` | `alterInputs($inputs)`, optionally `alterOutputs($outputs)` | `#[RefinesInput('key')]` methods |
 
 [The pattern](pattern.md) is the whole of what an author writes, and
@@ -49,7 +49,7 @@ it](https://www.drupal.org/project/drupal/issues/3622144).
 
 | Concept | What it is | In the code |
 | --- | --- | --- |
-| **Surface class** | The one home for what a surface holds: its shape in `defineInputs()` (and `defineOutputs()`), and one `#[RefinesInput]` method per rule that reads another key. No constructor, no service. | `#[Surface]` on a class in `src/Surface/`, implementing `Surface\SurfaceInterface` |
+| **Surface class** | The one home for what a surface holds: its shape in static `defineInputs()` (and `defineOutputs()`), and one static `#[RefinesInput]` method per rule that reads another key. Never instantiated: no constructor, no service. | `#[Surface]` on a class in `src/Surface/`, implementing `Surface\SurfaceInterface`; or a plugin that is its own surface, `#[UsesSurface]` with no argument |
 | **Surface** | What the build step seals from a surface class and a context: an immutable group of data definitions, the map of which key depends on which, and the refiners that narrow them. | `DataSurfaceInterface`, built by `SurfaceBuild\SurfacesInterface` (`data_surface.surfaces`) |
 | **Definition map** | Everything a surface advertises, as one ordered, validated collection: one entry per key, in declaration order. | `DefinitionMap` of `SurfaceEntry` |
 | **Definition** | One core `DataDefinitionInterface`: type, label, description, constraints, required, plus the interim default and example metadata. | core, plus `DefinitionMetadata` |
@@ -63,7 +63,7 @@ it](https://www.drupal.org/project/drupal/issues/3622144).
 | **Pipeline** | Access, accept, validate, prepare, commit — the one road from raw input to storage. | `Pipeline\DataSurfacePipelineInterface` |
 | **Target** | Where accepted values are written, and the translation between surface shape and storage shape. | `#[Surface(target:)]` naming a `Surface\SurfaceTargetInterface`; `Pipeline\DataSurfaceTargetInterface`, `Target\*` |
 | **Access class** | What may refuse once the situation's permission allows: the part of access that depends on the thing itself. | `#[Surface(access:)]` naming a `Surface\SurfaceAccessInterface` |
-| **Host** | The plugin whose configuration a surface is: a block, a formatter, a condition, an action, a field type, any configurable plugin. It supplies the context and the target, because only it holds the instance. | `#[UsesSurface]` on the plugin, the `Plugin/*Base` classes, `Form\*` traits |
+| **Host** | The plugin whose configuration a surface is: a block, a formatter, a condition, an action, a field type, any configurable plugin. It supplies the context and the target, because only it holds the instance. | `#[UsesSurface]` on the plugin, naming a surface or, with no argument, being one; the `Plugin/*Base` classes, `Form\*` traits |
 | **Situation form** | The generic form that serves a surface in one of its situations from a route, with no form class of its own. | `Form\DataSurfaceSituationForm`, `Form\DataSurfaceFormCosmeticsInterface` |
 | **Widget** | Maps one definition to a form element and back. A plugin type. | `Widget\DataSurfaceWidgetInterface`, `Plugin/DataSurfaceWidget/*` |
 | **Options resolver** | Reads one validation constraint as the list of values it allows, with labels and cacheability. A plugin type. | `Options\DataSurfaceOptionsResolverInterface`, `Plugin/DataSurfaceOptionsResolver/*` |

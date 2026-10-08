@@ -26,17 +26,17 @@ way.
 Beside the inputs, in the same class, on `HasOutputsInterface`:
 
 ```php
-#[Surface('field_formatter.data_surface_demo_string')]
-final class DemoFormatterSurface implements SurfaceInterface, HasOutputsInterface {
+#[UsesSurface]
+final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements SurfaceInterface, HasOutputsInterface {
 
-  public function defineOutputs(ShapeInterface $outputs): void {
-    $outputs->add('text', 'string', new TranslatableMarkup('Text'))
-      ->setDescription(new TranslatableMarkup('The field value, prefixed and cased as the settings ask.'))
+  public static function defineOutputs(ShapeInterface $outputs): void {
+    $outputs->add('text', 'string', t('Text'))
+      ->setDescription(t('The field value, prefixed and cased as the settings ask.'))
       ->setRequired(TRUE);
     $outputs->addDefinition('classes', (new ListDataDefinition(['type' => 'list'], DataDefinition::create('string')
-      ->setLabel(new TranslatableMarkup('Class'))))
-      ->setLabel(new TranslatableMarkup('Classes'))
-      ->setDescription(new TranslatableMarkup('The classes the chosen variant puts on the wrapper. Absent when no variant is chosen.')));
+      ->setLabel(t('Class'))))
+      ->setLabel(t('Classes'))
+      ->setDescription(t('The classes the chosen variant puts on the wrapper. Absent when no variant is chosen.')));
   }
 
 }
@@ -160,9 +160,9 @@ because the data step stays separately callable — by a test, by a JSON
 representation, by an agent asking what this formatter would show — and
 separately checkable against the contract.
 
-The demo formatter is the worked example: its surface,
-`DemoFormatterSurface`, declares two outputs in `defineOutputs()`; the
-formatter implements `formatValue()`, writes no render array, and emits
+The demo formatter is the worked example: it is its own surface, and
+declares two outputs in its static `defineOutputs()`; it implements
+`formatValue()`, writes no render array, and emits
 `Omitted::value()` for its classes when no variant is chosen. Its
 `classes` output is advertised open whatever variant is chosen, because
 outputs are never refined.

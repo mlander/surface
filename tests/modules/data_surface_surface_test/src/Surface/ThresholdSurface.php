@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_surface_test\Surface;
 
-use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Surface\Attribute\RefinesInput;
@@ -25,19 +24,19 @@ final class ThresholdSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
-    $inputs->add('mode', 'string', new TranslatableMarkup('Comparison'), default: 'at_least')
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('mode', 'string', t('Comparison'), default: 'at_least')
       ->addConstraint('LabeledChoice', [
         'choices' => [
-          'at_least' => new TranslatableMarkup('At least'),
-          'at_most' => new TranslatableMarkup('At most'),
+          'at_least' => t('At least'),
+          'at_most' => t('At most'),
         ],
       ]);
-    $inputs->add('threshold', 'integer', new TranslatableMarkup('Threshold'), default: 10)
-      ->setDescription(new TranslatableMarkup('The number the reading is compared against.'))
+    $inputs->add('threshold', 'integer', t('Threshold'), default: 10)
+      ->setDescription(t('The number the reading is compared against.'))
       ->addConstraint('Range', ['min' => 0, 'max' => 100]);
-    $inputs->add('reading', 'integer', new TranslatableMarkup('Reading'), default: 0)
-      ->setDescription(new TranslatableMarkup('The number the plugin tests.'))
+    $inputs->add('reading', 'integer', t('Reading'), default: 0)
+      ->setDescription(t('The number the plugin tests.'))
       ->addConstraint('Range', ['min' => 0, 'max' => 100]);
   }
 
@@ -45,13 +44,13 @@ final class ThresholdSurface implements SurfaceInterface {
    * In the at most mode, a threshold of zero would refuse every reading.
    */
   #[RefinesInput('threshold')]
-  public function atLeastOneAtMost(DataDefinitionInterface $threshold, string $mode): DataDefinitionInterface {
+  public static function atLeastOneAtMost(DataDefinitionInterface $threshold, string $mode): DataDefinitionInterface {
     if ($mode !== 'at_most') {
       return $threshold;
     }
     $threshold->addConstraint('Range', ['min' => 1] + ($threshold->getConstraints()['Range'] ?? []));
     if ($threshold instanceof DataDefinition) {
-      $threshold->setDescription(new TranslatableMarkup('The number no reading may pass.'));
+      $threshold->setDescription(t('The number no reading may pass.'));
     }
     return $threshold;
   }

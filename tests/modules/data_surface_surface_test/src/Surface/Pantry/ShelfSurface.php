@@ -24,7 +24,7 @@ final class ShelfSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(ShapeInterface $inputs): void {
     $inputs->add('unit', 'string', 'Unit', default: 'cm')
       ->addConstraint('Choice', ['choices' => array_keys(self::MAX)]);
     $inputs->add('height', 'integer', 'Height', default: 30)
@@ -35,7 +35,7 @@ final class ShelfSurface implements SurfaceInterface {
    * A shelf is no taller than the unit allows. Watches its own sibling.
    */
   #[RefinesInput('height')]
-  public function heightInUnit(DataDefinitionInterface $height, string $unit): DataDefinitionInterface {
+  public static function heightInUnit(DataDefinitionInterface $height, string $unit): DataDefinitionInterface {
     $range = $height->getConstraints()['Range'] ?? [];
     $range['max'] = self::MAX[$unit] ?? 1;
     return $height->addConstraint('Range', $range);

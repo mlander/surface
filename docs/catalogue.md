@@ -7,7 +7,10 @@ matches what that script produces.
 Every surface the modules in this repository declare, read from the
 static layer alone: the `#[Surface]` attribute, the `#[Situation]`
 methods and what each needs, the `#[AltersSurface]` classes and the
-`#[SurfaceVariant]` ones. Nothing here builds a surface. A situation's
+`#[SurfaceVariant]` ones. A plugin that is its own surface,
+`#[UsesSurface]` with no argument, is listed by its plugin class, under
+an id from its plugin unless it carries `#[Surface]`, and is used by
+itself. Nothing here builds a surface. A situation's
 "Creates" is the one fact that is not static — it is on the context
 the situation returns — so it is known only for a situation that needs
 nothing to start from.
@@ -27,7 +30,7 @@ the plugin's host. `docs/surfaces.md` says how each part works.
 | [`field.instance`](#fieldinstance) | `FieldInstanceSurface` | `entity_type_id`, `bundle`, `field_name`, `field_type` | `add`, `reuse`, `edit` |
 | [`field.settings.address`](#fieldsettingsaddress) | `AddressFieldSettingsSurface` | none | none |
 | [`field.storage`](#fieldstorage) | `FieldStorageSurface` | `field_type` | `add`, `edit` |
-| [`field_formatter.data_surface_demo_string`](#field_formatterdata_surface_demo_string) | `DemoFormatterSurface` | none | none |
+| [`field_formatter:data_surface_demo_string`](#field_formatterdata_surface_demo_string) | `DataSurfaceDemoFormatter` | none | none |
 | [`node.type`](#nodetype) | `NodeTypeSurface` | `type` | `add`, `edit` |
 | [`registration.contact`](#registrationcontact) | `ContactSurface` | none | none |
 | [`registration.step1`](#registrationstep1) | `RegistrationStep1Surface` | none | `configure` |
@@ -107,9 +110,9 @@ the plugin's host. `docs/surfaces.md` says how each part works.
 
 - Slot `settings` is filled, for every other value, by variants derived from the config schema `field.storage_settings.<field type>`, for every field type offered in the UI.
 
-## field_formatter.data_surface_demo_string
+## field_formatter:data_surface_demo_string
 
-`Drupal\data_surface_demo\Surface\DemoFormatterSurface`, in `data_surface_demo`.
+`Drupal\data_surface_demo\Plugin\Field\FieldFormatter\DataSurfaceDemoFormatter`, in `data_surface_demo`.
 
 - Identity: none
 - Target: none; its host or its parent stores it

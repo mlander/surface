@@ -1,8 +1,8 @@
 # Surfaces as classes
 
-A surface is a class of its own: one method that declares its shape,
-and one named method per key whose allowed values depend on another
-key. Other modules change it with classes of their own, and nothing is
+A surface is a class of its own: one static method that declares its
+shape, and one named static method per key whose allowed values depend
+on another key. Other modules change it with classes of their own, and nothing is
 registered by hand. The build step, `data_surface.surfaces`, turns the
 class and a context into a sealed `DataSurfaceInterface`, which the
 pipeline, forms, widgets and targets read.
@@ -21,8 +21,12 @@ module the way core scans `src/Hook`:
 | --- | --- | --- |
 | **Surfaces** | `src/Surface/` | `src/SurfaceAlter/` |
 
-- A class in `src/Surface/` carrying `#[Surface]` is a surface. It has
-  no constructor and holds no service.
+- A class in `src/Surface/` carrying `#[Surface]` is a surface. It is
+  never instantiated: its shape and refiners are static, called on the
+  class, so it has no constructor and holds no service.
+- A plugin carrying `#[UsesSurface]` with no argument is its own
+  surface, found through its plugin definition rather than a directory
+  ([Plugins](#plugins)).
 - A class in `src/SurfaceAlter/` carrying `#[AltersSurface]` is an
   alter. It is registered as an autowired service, so it may hold
   services.
@@ -42,7 +46,7 @@ The API is in `Drupal\data_surface\Surface`; the attributes in
 
 | | Shape | Values |
 | --- | --- | --- |
-| **Owner** | `defineInputs($inputs)`, optionally `defineOutputs($outputs)` | `#[RefinesInput('key')]` methods |
+| **Owner** | `static defineInputs($inputs)`, optionally `static defineOutputs($outputs)` | static `#[RefinesInput('key')]` methods |
 | **Another module** | `alterInputs($inputs)`, optionally `alterOutputs($outputs)` | `#[RefinesInput('key')]` methods |
 
 The demo block's configuration, `DemoBlockSurface` in the demo module,
@@ -52,25 +56,25 @@ is the first one written this way:
 #[Surface('block.data_surface_demo')]
 final class DemoBlockSurface implements SurfaceInterface {
 
-  public function defineInputs(ShapeInterface $inputs): void {
-    $inputs->add('entity_type', 'string', new TranslatableMarkup('Entity type'), default: 'user')
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('entity_type', 'string', t('Entity type'), default: 'user')
       ->setRequired(TRUE)
       ->addConstraint('PluginExists', [
         'manager' => 'entity_type.manager',
         'interface' => ContentEntityInterface::class,
       ]);
-    $inputs->add('bundle', 'string', new TranslatableMarkup('Bundle'));
-    $inputs->add('field', 'string', new TranslatableMarkup('Highlight field'));
+    $inputs->add('bundle', 'string', t('Bundle'));
+    $inputs->add('field', 'string', t('Highlight field'));
     // ...
   }
 
   #[RefinesInput('bundle')]
-  public function bundleOfEntityType(DataDefinitionInterface $bundle, string $entity_type): DataDefinitionInterface {
+  public static function bundleOfEntityType(DataDefinitionInterface $bundle, string $entity_type): DataDefinitionInterface {
     return $bundle->addConstraint('EntityBundleExists', ['entityTypeId' => $entity_type]);
   }
 
   #[RefinesInput('field', watches: ['entity_type', 'bundle'])]
-  public function fieldOfBundle(DataDefinitionInterface $field, string $entity_type, string $bundle): DataDefinitionInterface {
+  public static function fieldOfBundle(DataDefinitionInterface $field, string $entity_type, string $bundle): DataDefinitionInterface {
     return $field->addConstraint('DataSurfaceDemoBundleField', [
       'entityTypeId' => $entity_type,
       'bundle' => $bundle,
@@ -81,20 +85,28 @@ final class DemoBlockSurface implements SurfaceInterface {
 ```
 
 - **The shape methods get a shape to fill, and nothing else**: no
-  values, no context. The owner gets `ShapeInterface`; an alter gets
+  values, no context, no services. A surface's are static, so the
+  language holds them to that; the build step calls them on the class
+  and never makes an instance. The owner gets `ShapeInterface`; an alter gets
   `ShapeAdditionsInterface`, which can add but not change or remove
   what the owner declared. Adding a key twice is refused. The one change
   anyone may make to a key already declared is `describe()`: its label
   and description, which change nothing about what is accepted.
 - **`add()` takes name, type and label** and returns the core
   definition, so the rest is plain core API. `addDefinition()` is the
-  long form, for a map or a list.
+  long form, for a map or a list. A label is `t('...')`, with a literal
+  string: a static method has no instance for the translation service
+  to be injected into, and `t()` returns the same lazy
+  `TranslatableMarkup`.
 - **A `#[RefinesInput('key')]` method takes the key's definition first,
   then one parameter per sibling it watches**, matched by name, or
   listed as `watches:` so that a renamed parameter is refused when the
   surface is built rather than silently never watched. It runs once
   every watched sibling has a value, and again when one changes. A
-  method that watches nothing runs once, when the surface is built.
+  method that watches nothing runs once, when the surface is built. A
+  surface's refiner is static, and one that is not is refused when the
+  surface is built; an alter's is an instance method, because an alter
+  is a service and may hold configuration.
 - **A refiner never calls a service.** A list that depends on a value
   is a constraint whose options resolver fetches it, handed the value as
   an option. The refiner points; the resolver fetches. Core's
@@ -108,6 +120,8 @@ final class DemoBlockSurface implements SurfaceInterface {
 
 ## Reading a surface
 
+- Everything on it is static: shape, refiners, situations. No
+  constructor, no properties, no `$this`.
 - `defineInputs()` is a flat list. No `if`, no loop.
 - Name, type and label sit on one line.
 - It is ordered like the thing it describes: identity first, the
@@ -375,11 +389,12 @@ array for this repository's modules, generated by
 
 ## Plugins
 
-A plugin keeps rendering; its configuration is a surface in
-`src/Surface/`, named by `#[UsesSurface]` on the plugin class. The host
-supplies the context (`configure`, knowing nothing) and the target (the
-plugin's own configuration, or for a field type the field config Field
-UI is editing), because only it holds the instance:
+A plugin keeps rendering; its configuration is a surface, named by
+`#[UsesSurface]` on the plugin class. The host supplies the context
+(`configure`, knowing nothing) and the target (the plugin's own
+configuration, or for a field type the field config Field UI is
+editing), because only it holds the instance. The surface is a class in
+`src/Surface/` the attribute names:
 
 ```php
 #[Block(id: 'data_surface_demo', admin_label: new TranslatableMarkup('Data surface demo'))]
@@ -390,6 +405,38 @@ final class DataSurfaceDemoBlock extends DataSurfaceBlockBase {
 
 }
 ```
+
+or, with no argument, the plugin class itself, which implements
+`SurfaceInterface` with the same static methods a surface class has:
+
+```php
+#[FieldFormatter(id: 'data_surface_demo_string', label: new TranslatableMarkup('Data surface demo formatter'), field_types: ['string'])]
+#[UsesSurface]
+final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements SurfaceInterface, HasOutputsInterface {
+
+  public static function defineInputs(ShapeInterface $inputs): void { /* ... */ }
+
+  public static function defineOutputs(ShapeInterface $outputs): void { /* ... */ }
+
+  #[RefinesInput('variant')]
+  public static function variantsOfCasing(DataDefinitionInterface $variant, string $casing): DataDefinitionInterface { /* ... */ }
+
+  public function formatValue(FieldItemInterface $item, array $settings): array { /* ... */ }
+
+}
+```
+
+A plugin that is its own surface is found through the plugin
+definitions (`SurfacePlugins::ownSurfaces()`), not a directory, and
+discovery holds it to the same rules: it implements `SurfaceInterface`,
+its shape and refiners are static. Its id is `<host type>:<plugin id>`,
+`field_formatter:data_surface_demo_string`, unless the class also
+carries `#[Surface]`, whose id, identity and access then apply. The
+catalogue lists it as used by that same plugin, and an alter names it
+by the plugin class. A target or access class it names is not
+registered by the compiler pass, which never sees it; the class
+resolver builds one, so it is constructor-free or implements
+`ContainerInjectionInterface`.
 
 Every host reads it the same way:
 
@@ -413,7 +460,9 @@ UI's static `#element_validate` callback needs to find the rebuilt item
 by.
 
 - **Into the definition.** `SurfacePluginHooks` copies the attribute
-  into each host's plugin definitions, under `UsesSurface::DEFINITION_KEY`,
+  into each host's plugin definitions, under `UsesSurface::DEFINITION_KEY`:
+  the surface class it names, or the plugin's own class when it names
+  none,
   with one definition alter per host, run last so a class another
   module swapped in (`SurfaceAddressItem` for `AddressItem`) is the one
   read. A field item reaches it as its typed data definition, which core
@@ -436,7 +485,8 @@ by.
   surface in its operation and stores into the configuration array.
 
 The demo block, the demo formatter, the address field type and every
-plugin in the test module are written this way. A plugin surface is
+plugin in the test module are written this way; the demo formatter and
+the test module's sticky note block are their own surface. A plugin surface is
 never a tool (see Tools).
 
 ## Surface alters
@@ -533,12 +583,12 @@ settings:
 
 ```php
 // DemoBlockSurface
-$inputs->add('presentation', 'string', new TranslatableMarkup('Presentation'), default: 'list')
+$inputs->add('presentation', 'string', t('Presentation'), default: 'list')
   ->setRequired(TRUE)
   ->addConstraint('Choice', ['choices' => ['list', 'grid']]);
 $inputs->attachBy('presentation_settings', by: 'presentation')
-  ->setLabel(new TranslatableMarkup('Presentation settings'))
-  ->setDescription(new TranslatableMarkup('What the chosen presentation needs.'));
+  ->setLabel(t('Presentation settings'))
+  ->setDescription(t('What the chosen presentation needs.'));
 
 // ListPresentationSurface and GridPresentationSurface, beside it
 #[Surface('block.data_surface_demo.presentation.list')]
@@ -549,13 +599,13 @@ $inputs->attachBy('presentation_settings', by: 'presentation')
 
 // FieldInstanceSurface, in data_surface_tool
 $inputs->attach('storage', FieldStorageSurface::class)
-  ->setLabel(new TranslatableMarkup('Field storage'));
+  ->setLabel(t('Field storage'));
 $inputs->attachBy('settings', by: 'field_type')
-  ->setLabel(new TranslatableMarkup('Field settings'));
+  ->setLabel(t('Field settings'));
 
 // FieldStorageSurface, in data_surface_tool
 $inputs->attachBy('settings', by: 'field_type')
-  ->setLabel(new TranslatableMarkup('Storage settings'));
+  ->setLabel(t('Storage settings'));
 
 // AddressFieldSettingsSurface, in data_surface_address
 #[Surface('field.settings.address', target: AddressFieldSettingsTarget::class)]

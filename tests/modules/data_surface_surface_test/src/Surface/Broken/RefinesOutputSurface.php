@@ -20,14 +20,14 @@ final class RefinesOutputSurface implements SurfaceInterface, HasOutputsInterfac
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(ShapeInterface $inputs): void {
     $inputs->add('count', 'integer', 'Count');
   }
 
   /**
    * {@inheritdoc}
    */
-  public function defineOutputs(ShapeInterface $outputs): void {
+  public static function defineOutputs(ShapeInterface $outputs): void {
     $outputs->add('total', 'integer', 'Total');
   }
 
@@ -35,7 +35,7 @@ final class RefinesOutputSurface implements SurfaceInterface, HasOutputsInterfac
    * Tries to refine an output.
    */
   #[RefinesInput('total')]
-  public function totalOfCount(DataDefinitionInterface $total, int $count): DataDefinitionInterface {
+  public static function totalOfCount(DataDefinitionInterface $total, int $count): DataDefinitionInterface {
     return $total;
   }
 

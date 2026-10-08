@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\data_surface_demo\Surface;
 
 use Drupal\Core\Entity\ContentEntityInterface;
-use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\DefinitionMetadata;
@@ -28,9 +27,10 @@ use Drupal\data_surface\Surface\SurfaceInterface;
  * hands it those values, and the options resolver for that constraint
  * fetches.
  *
- * Strings are built as TranslatableMarkup rather than through $this->t():
- * a surface has no constructor, so nothing could inject the translation
- * service, and markup translates at render time just the same.
+ * Strings are built with the global t() rather than $this->t(): the
+ * shape and the refiners are static, so there is no instance for the
+ * translation service to be injected into, and the markup t() returns
+ * translates at render time just the same.
  *
  * @see \Drupal\data_surface_demo\Plugin\Block\DataSurfaceDemoBlock
  */
@@ -40,9 +40,9 @@ final class DemoBlockSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
-    $headline = $inputs->add('headline', 'string', new TranslatableMarkup('Headline'), default: 'Featured content')
-      ->setDescription(new TranslatableMarkup('Shown above the featured content.'))
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $headline = $inputs->add('headline', 'string', t('Headline'), default: 'Featured content')
+      ->setDescription(t('Shown above the featured content.'))
       ->setRequired(TRUE)
       ->addConstraint('Length', ['max' => 50]);
     DefinitionMetadata::setExamples($headline, ['Quarterly report']);
@@ -52,34 +52,34 @@ final class DemoBlockSurface implements SurfaceInterface {
     // default its own constraint refuses makes the block impossible to
     // construct — and 'node' is refused on a site without the node
     // module.
-    $inputs->add('entity_type', 'string', new TranslatableMarkup('Entity type'), default: 'user')
-      ->setDescription(new TranslatableMarkup('The type of content to feature.'))
+    $inputs->add('entity_type', 'string', t('Entity type'), default: 'user')
+      ->setDescription(t('The type of content to feature.'))
       ->setRequired(TRUE)
       ->addConstraint('PluginExists', [
         'manager' => 'entity_type.manager',
         'interface' => ContentEntityInterface::class,
       ]);
 
-    $inputs->add('bundle', 'string', new TranslatableMarkup('Bundle'))
-      ->setDescription(new TranslatableMarkup('Choose an entity type to see its bundles.'));
+    $inputs->add('bundle', 'string', t('Bundle'))
+      ->setDescription(t('Choose an entity type to see its bundles.'));
 
-    $inputs->add('field', 'string', new TranslatableMarkup('Highlight field'))
-      ->setDescription(new TranslatableMarkup('Choose a bundle to pick from its fields.'));
+    $inputs->add('field', 'string', t('Highlight field'))
+      ->setDescription(t('Choose a bundle to pick from its fields.'));
 
-    $inputs->add('limit', 'integer', new TranslatableMarkup('Number of items'), default: 10)
-      ->setDescription(new TranslatableMarkup('How many items to feature.'))
+    $inputs->add('limit', 'integer', t('Number of items'), default: 10)
+      ->setDescription(t('How many items to feature.'))
       ->setRequired(TRUE)
       ->addConstraint('Range', ['min' => 1, 'max' => 50]);
 
     // How the items are laid out, and what that layout needs: a slot the
     // presentation chooses, filled by every #[SurfaceVariant] for it.
-    $inputs->add('presentation', 'string', new TranslatableMarkup('Presentation'), default: 'list')
-      ->setDescription(new TranslatableMarkup('How the items are laid out.'))
+    $inputs->add('presentation', 'string', t('Presentation'), default: 'list')
+      ->setDescription(t('How the items are laid out.'))
       ->setRequired(TRUE)
       ->addConstraint('Choice', ['choices' => ['list', 'grid']]);
     $inputs->attachBy('presentation_settings', by: 'presentation')
-      ->setLabel(new TranslatableMarkup('Presentation settings'))
-      ->setDescription(new TranslatableMarkup('What the chosen presentation needs.'));
+      ->setLabel(t('Presentation settings'))
+      ->setDescription(t('What the chosen presentation needs.'));
   }
 
   /**
@@ -88,10 +88,10 @@ final class DemoBlockSurface implements SurfaceInterface {
    * Watches the entity type by parameter name.
    */
   #[RefinesInput('bundle')]
-  public function bundleOfEntityType(DataDefinitionInterface $bundle, string $entity_type): DataDefinitionInterface {
+  public static function bundleOfEntityType(DataDefinitionInterface $bundle, string $entity_type): DataDefinitionInterface {
     $bundle->addConstraint('EntityBundleExists', ['entityTypeId' => $entity_type]);
     if ($bundle instanceof DataDefinition) {
-      $bundle->setDescription(new TranslatableMarkup('A @entity_type bundle.', ['@entity_type' => $entity_type]));
+      $bundle->setDescription(t('A @entity_type bundle.', ['@entity_type' => $entity_type]));
     }
     return $bundle;
   }
@@ -104,13 +104,13 @@ final class DemoBlockSurface implements SurfaceInterface {
    * and again when either changes.
    */
   #[RefinesInput('field', watches: ['entity_type', 'bundle'])]
-  public function fieldOfBundle(DataDefinitionInterface $field, string $entity_type, string $bundle): DataDefinitionInterface {
+  public static function fieldOfBundle(DataDefinitionInterface $field, string $entity_type, string $bundle): DataDefinitionInterface {
     $field->addConstraint('DataSurfaceDemoBundleField', [
       'entityTypeId' => $entity_type,
       'bundle' => $bundle,
     ]);
     if ($field instanceof DataDefinition) {
-      $field->setDescription(new TranslatableMarkup('A field on @entity_type @bundle.', [
+      $field->setDescription(t('A field on @entity_type @bundle.', [
         '@entity_type' => $entity_type,
         '@bundle' => $bundle,
       ]));

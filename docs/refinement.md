@@ -44,7 +44,7 @@ policy is a later concept, not a role here.
 An alter contributes in `alterInputs()`:
 
 ```php
-#[AltersSurface(DemoFormatterSurface::class)]
+#[AltersSurface(DataSurfaceDemoFormatter::class)]
 final class DemoFormatterAlter implements SurfaceAlterInterface {
 
   public function alterInputs(ShapeAdditionsInterface $inputs): void {
@@ -262,7 +262,7 @@ formatter nor its form. Its alter of the formatter's surface contributes
 a fifth value, and a refiner of its own for it:
 
 ```php
-#[AltersSurface(DemoFormatterSurface::class)]
+#[AltersSurface(DataSurfaceDemoFormatter::class)]
 final class DemoFormatterAlter implements SurfaceAlterInterface {
 
   public function alterInputs(ShapeAdditionsInterface $inputs): void {

@@ -6,7 +6,6 @@ namespace Drupal\data_surface_address\Surface;
 
 use CommerceGuys\Addressing\AddressFormat\AddressField;
 use CommerceGuys\Addressing\AddressFormat\FieldOverride;
-use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
@@ -51,27 +50,27 @@ final class AddressFieldSettingsSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(ShapeInterface $inputs): void {
     // The item says what one country code is, and the Country constraint
     // is the whole of that. Core takes a list's item definition in the
     // constructor rather than through a setter, so the list is built
     // around its item and described fluently after.
     $inputs->addDefinition('available_countries', (new ListDataDefinition(['type' => 'list'], DataDefinition::create('string')
-      ->setLabel(new TranslatableMarkup('Country'))
+      ->setLabel(t('Country'))
       ->addConstraint('Country', [])))
-      ->setLabel(new TranslatableMarkup('Available countries'))
-      ->setDescription(new TranslatableMarkup('Leave empty for all countries.')), default: []);
+      ->setLabel(t('Available countries'))
+      ->setDescription(t('Leave empty for all countries.')), default: []);
 
     // Locked languages are excluded by default, which is what the address
     // module's own settings form does by hand: "not specified" and "not
     // applicable" are not languages an address is formatted in.
-    $inputs->add('langcode_override', 'string', new TranslatableMarkup('Language override'))
-      ->setDescription(new TranslatableMarkup('Ensures entered addresses are always formatted in the same language.'))
+    $inputs->add('langcode_override', 'string', t('Language override'))
+      ->setDescription(t('Ensures entered addresses are always formatted in the same language.'))
       ->addConstraint('LanguageExists', []);
 
     $overrides = MapDataDefinition::create()
-      ->setLabel(new TranslatableMarkup('Field overrides'))
-      ->setDescription(new TranslatableMarkup('Override the country-specific address format, forcing properties to always be hidden, optional, or required.'));
+      ->setLabel(t('Field overrides'))
+      ->setDescription(t('Override the country-specific address format, forcing properties to always be hidden, optional, or required.'));
     foreach (self::fieldOverrideDefinitions() as $field_name => $definition) {
       $overrides->setPropertyDefinition($field_name, $definition);
     }
@@ -94,18 +93,18 @@ final class AddressFieldSettingsSurface implements SurfaceInterface {
    */
   protected static function fieldOverrideDefinitions(): array {
     $labels = [
-      AddressField::GIVEN_NAME => new TranslatableMarkup('First name', [], ['context' => 'Address label']),
-      AddressField::ADDITIONAL_NAME => new TranslatableMarkup('Middle name', [], ['context' => 'Address label']),
-      AddressField::FAMILY_NAME => new TranslatableMarkup('Last name', [], ['context' => 'Address label']),
-      AddressField::ORGANIZATION => new TranslatableMarkup('Organization', [], ['context' => 'Address label']),
-      AddressField::ADDRESS_LINE1 => new TranslatableMarkup('Address line 1', [], ['context' => 'Address label']),
-      AddressField::ADDRESS_LINE2 => new TranslatableMarkup('Address line 2', [], ['context' => 'Address label']),
-      AddressField::ADDRESS_LINE3 => new TranslatableMarkup('Address line 3', [], ['context' => 'Address label']),
-      AddressField::POSTAL_CODE => new TranslatableMarkup('Postal code', [], ['context' => 'Address label']),
-      AddressField::SORTING_CODE => new TranslatableMarkup('Sorting code', [], ['context' => 'Address label']),
-      AddressField::DEPENDENT_LOCALITY => new TranslatableMarkup('Dependent locality (e.g. Neighbourhood)', [], ['context' => 'Address label']),
-      AddressField::LOCALITY => new TranslatableMarkup('Locality (e.g. City)', [], ['context' => 'Address label']),
-      AddressField::ADMINISTRATIVE_AREA => new TranslatableMarkup('Administrative area (e.g. State or Province)', [], ['context' => 'Address label']),
+      AddressField::GIVEN_NAME => t('First name', [], ['context' => 'Address label']),
+      AddressField::ADDITIONAL_NAME => t('Middle name', [], ['context' => 'Address label']),
+      AddressField::FAMILY_NAME => t('Last name', [], ['context' => 'Address label']),
+      AddressField::ORGANIZATION => t('Organization', [], ['context' => 'Address label']),
+      AddressField::ADDRESS_LINE1 => t('Address line 1', [], ['context' => 'Address label']),
+      AddressField::ADDRESS_LINE2 => t('Address line 2', [], ['context' => 'Address label']),
+      AddressField::ADDRESS_LINE3 => t('Address line 3', [], ['context' => 'Address label']),
+      AddressField::POSTAL_CODE => t('Postal code', [], ['context' => 'Address label']),
+      AddressField::SORTING_CODE => t('Sorting code', [], ['context' => 'Address label']),
+      AddressField::DEPENDENT_LOCALITY => t('Dependent locality (e.g. Neighbourhood)', [], ['context' => 'Address label']),
+      AddressField::LOCALITY => t('Locality (e.g. City)', [], ['context' => 'Address label']),
+      AddressField::ADMINISTRATIVE_AREA => t('Administrative area (e.g. State or Province)', [], ['context' => 'Address label']),
     ];
     $definitions = [];
     foreach ($labels as $field_name => $label) {
@@ -115,9 +114,9 @@ final class AddressFieldSettingsSurface implements SurfaceInterface {
         'constraints' => [
           'LabeledChoice' => [
             'choices' => [
-              FieldOverride::HIDDEN => new TranslatableMarkup('Hidden'),
-              FieldOverride::OPTIONAL => new TranslatableMarkup('Optional'),
-              FieldOverride::REQUIRED => new TranslatableMarkup('Required'),
+              FieldOverride::HIDDEN => t('Hidden'),
+              FieldOverride::OPTIONAL => t('Optional'),
+              FieldOverride::REQUIRED => t('Required'),
             ],
           ],
         ],

@@ -5,29 +5,34 @@ declare(strict_types=1);
 namespace Drupal\data_surface\SurfaceBuild;
 
 use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\data_surface\Hook\SurfacePluginHooks;
 use Drupal\data_surface\Surface\Attribute\AltersSurface;
 use Drupal\data_surface\Surface\Attribute\RefinesInput;
 use Drupal\data_surface\Surface\Attribute\Situation;
 use Drupal\data_surface\Surface\Attribute\Surface;
 use Drupal\data_surface\Surface\Attribute\SurfaceVariant;
+use Drupal\data_surface\Surface\HasOutputsInterface;
 use Drupal\data_surface\Surface\SurfaceInterface;
 
 /**
  * Every discovered surface, with its situations, alters and variants.
  *
- * The compiler pass lists the classes; this reads their attributes, once,
+ * The compiler pass lists the classes in src/Surface and src/SurfaceAlter;
+ * the plugin definitions list the plugins that are their own surface
+ * (#[UsesSurface] with no argument). This reads their attributes, once,
  * and caches what it read in the discovery bin the way a plugin manager
- * caches its definitions. The cache id carries a hash of the class lists,
- * so a container rebuilt with a module more or less is a different entry
- * and needs no clearing; an attribute edited in place needs a cache
- * rebuild, exactly as a plugin attribute does.
+ * caches its definitions. The cache id carries a hash of both lists, so
+ * a container rebuilt with a module more or less, or a plugin more or
+ * less, is a different entry and needs no clearing; an attribute edited
+ * in place needs a cache rebuild, exactly as a plugin attribute does.
  *
  * Two kinds of refusal, kept apart on purpose:
  * - What is wrong with the attributes themselves — a situation with no
- *   surface to belong to, a situation method that is not static, two
- *   surfaces claiming one id, a reference to a class that exists and is
- *   not a surface — is refused here, when discovery is read, because it
- *   cannot be pinned on one surface's build.
+ *   surface to belong to, a situation method that is not static, a
+ *   surface whose shape method is not static, two surfaces claiming one
+ *   id, a reference to a class that exists and is not a surface — is
+ *   refused here, when discovery is read, because it cannot be pinned on
+ *   one surface's build.
  * - What is wrong with one surface — two situations with one id, a
  *   refiner watching a key the shape never declares — is refused when
  *   that surface is asked for, naming the offender, so one module's
@@ -55,10 +60,14 @@ final class SurfaceRegistry {
    *   module each class is in.
    * @param \Drupal\Core\Cache\CacheBackendInterface $cache
    *   The discovery cache bin.
+   * @param \Drupal\data_surface\SurfaceBuild\SurfacePlugins|null $plugins
+   *   The plugin definitions, for the plugins that are their own surface;
+   *   NULL reads none.
    */
   public function __construct(
     protected readonly array $classes,
     protected readonly CacheBackendInterface $cache,
+    protected readonly ?SurfacePlugins $plugins = NULL,
   ) {
   }
 
@@ -75,12 +84,13 @@ final class SurfaceRegistry {
     if ($this->definitions !== NULL) {
       return $this->definitions;
     }
-    $cid = self::CACHE_PREFIX . hash('xxh3', serialize($this->classes));
+    $own = $this->plugins?->ownSurfaces() ?? [];
+    $cid = self::CACHE_PREFIX . hash('xxh3', serialize($own === [] ? $this->classes : [$this->classes, $own]));
     $cached = $this->cache->get($cid);
     if ($cached !== FALSE && is_array($cached->data)) {
       return $this->definitions = $cached->data;
     }
-    $this->definitions = $this->discover();
+    $this->definitions = $this->discover($own);
     $this->cache->set($cid, $this->definitions);
     return $this->definitions;
   }
@@ -112,7 +122,7 @@ final class SurfaceRegistry {
    */
   public function getDefinition(string $surface): SurfaceDefinition {
     return $this->find($surface) ?? throw new \InvalidArgumentException(sprintf(
-      'No surface "%s" was discovered: a surface is a class carrying #[Surface] in an enabled module\'s src/Surface directory.',
+      'No surface "%s" was discovered: a surface is a class carrying #[Surface] in an enabled module\'s src/Surface directory, or a plugin carrying #[UsesSurface] with no argument.',
       $surface,
     ));
   }
@@ -227,40 +237,56 @@ final class SurfaceRegistry {
   /**
    * Reads every attribute on every discovered class.
    *
+   * @param array<class-string, array{module: string, id: string}> $own
+   *   The plugins that are their own surface, with the module and the id
+   *   their plugin definitions give them.
+   *
    * @return array<class-string, \Drupal\data_surface\SurfaceBuild\SurfaceDefinition>
    *   The definitions, keyed by surface class.
    */
-  protected function discover(): array {
+  protected function discover(array $own = []): array {
     $surfaces = [];
     $ids = [];
+    $found = [];
     foreach ($this->classes['surfaces'] ?? [] as $class => $module) {
+      $found[$class] = [$module, NULL];
+    }
+    // Decision: see docs/decisions.md#a-plugin-that-is-its-own-surface.
+    foreach ($own as $class => ['module' => $module, 'id' => $id]) {
+      $found[$class] ??= [$module, $id];
+    }
+    foreach ($found as $class => [$module, $plugin_id]) {
       $reflection = new \ReflectionClass($class);
-      $attribute = $reflection->getAttributes(Surface::class)[0]->newInstance();
-      if (!$reflection->implementsInterface(SurfaceInterface::class)) {
-        throw new \LogicException(sprintf('%s carries #[Surface] but does not implement %s.', $class, SurfaceInterface::class));
-      }
-      if (isset($ids[$attribute->id])) {
+      $attribute = ($reflection->getAttributes(Surface::class)[0] ?? NULL)?->newInstance();
+      self::assertSurfaceClass($reflection, $plugin_id !== NULL);
+      $id = $attribute->id ?? (string) $plugin_id;
+      if (isset($ids[$id])) {
         throw new \LogicException(sprintf(
           'Two surfaces claim the id "%s": %s and %s. A surface id is what things outside PHP ask for it by, so it names one class.',
-          $attribute->id,
-          $ids[$attribute->id],
+          $id,
+          $ids[$id],
           $class,
         ));
       }
-      $ids[$attribute->id] = $class;
+      $ids[$id] = $class;
       $surfaces[$class] = new SurfaceDefinition(
         class: $class,
-        id: $attribute->id,
+        id: $id,
         module: $module,
-        identity: array_values($attribute->identity),
-        target: $attribute->target,
-        access: $attribute->access,
+        identity: array_values($attribute->identity ?? []),
+        target: $attribute?->target,
+        access: $attribute?->access,
         refiners: self::refinersOf($reflection),
       );
     }
 
+    // A plugin that is its own surface may carry its situations too.
+    $situation_classes = $this->classes['situations'] ?? [];
+    foreach ($own as $class => ['module' => $module]) {
+      $situation_classes[$class] ??= $module;
+    }
     $situations = [];
-    foreach ($this->classes['situations'] ?? [] as $class => $module) {
+    foreach ($situation_classes as $class => $module) {
       foreach ((new \ReflectionClass($class))->getMethods() as $method) {
         foreach ($method->getAttributes(Situation::class) as $attribute) {
           $situation = $attribute->newInstance();
@@ -327,11 +353,49 @@ final class SurfaceRegistry {
   }
 
   /**
+   * Refuses a discovered class that cannot be a surface.
+   *
+   * A surface implements SurfaceInterface, whose shape methods are
+   * static. PHP itself refuses a class that implements the interface
+   * with an instance defineInputs(), so the class that reaches here with
+   * one is a class that dropped the interface to get it past the
+   * compiler; it is named for what it is.
+   *
+   * @param \ReflectionClass $class
+   *   The class carrying #[Surface], or a plugin that is its own surface.
+   * @param bool $plugin
+   *   Whether it was found as a plugin rather than in src/Surface.
+   *
+   * @throws \LogicException
+   *   Naming the class and what it is missing.
+   */
+  protected static function assertSurfaceClass(\ReflectionClass $class, bool $plugin): void {
+    $how = $plugin ? 'is its own surface, by #[UsesSurface] with no argument,' : 'carries #[Surface]';
+    foreach (['defineInputs' => SurfaceInterface::class, 'defineOutputs' => HasOutputsInterface::class] as $method => $interface) {
+      if ($class->hasMethod($method) && !$class->getMethod($method)->isStatic()) {
+        throw new \LogicException(sprintf(
+          '%s %s and declares %s() as an instance method. A surface\'s shape is a property of its class and takes nothing but the shape to fill: declare it `public static function %s(ShapeInterface $%s): void`, and implement %s.',
+          $class->getName(),
+          $how,
+          $method,
+          $method,
+          $method === 'defineInputs' ? 'inputs' : 'outputs',
+          $interface,
+        ));
+      }
+    }
+    if (!$class->implementsInterface(SurfaceInterface::class)) {
+      throw new \LogicException(sprintf('%s %s but does not implement %s.', $class->getName(), $how, SurfaceInterface::class));
+    }
+  }
+
+  /**
    * Answers whether a referenced surface is simply not here.
    *
    * A class that does not load belongs to a module that is not enabled,
    * so whatever names it has nothing to apply to and is skipped; so does
-   * a class that loads and carries #[Surface] without being discovered,
+   * a class that loads and is a surface without being discovered — it
+   * carries #[Surface], or it is a plugin that is its own surface —
    * because a test's autoloader knows every extension, enabled or not.
    * A class that loads and is no surface at all is a mistake.
    *
@@ -353,9 +417,9 @@ final class SurfaceRegistry {
       return FALSE;
     }
     // Decision: see docs/decisions.md#a-class-that-is-not-there.
-    if (class_exists($class) && (new \ReflectionClass($class))->getAttributes(Surface::class) === []) {
+    if (class_exists($class) && (new \ReflectionClass($class))->getAttributes(Surface::class) === [] && !SurfacePluginHooks::isOwnSurface($class)) {
       throw new \LogicException(sprintf(
-        '%s names %s, which is not a discovered surface: a surface carries #[Surface] and lives in its module\'s src/Surface directory.',
+        '%s names %s, which is not a discovered surface: a surface carries #[Surface] and lives in its module\'s src/Surface directory, or is a plugin carrying #[UsesSurface] with no argument.',
         $referrer,
         $class,
       ));
@@ -388,6 +452,7 @@ final class SurfaceRegistry {
             array_slice($parameters, 1),
           ),
           takesDefinition: $parameters !== [],
+          isStatic: $method->isStatic(),
         );
       }
     }

@@ -32,8 +32,11 @@ use Drupal\data_surface\SurfaceAttachment;
  * In order, for one surface and one context:
  *
  * 1. The owner's shape. defineInputs() and, for a surface with outputs,
- *    defineOutputs(), each over a SurfaceShape that writes straight into
- *    a fresh DataSurfaceBuilder.
+ *    defineOutputs(), called on the class, each over a SurfaceShape that
+ *    writes straight into a fresh DataSurfaceBuilder. A surface is never
+ *    instantiated: its shape and its refiners are static, so the class
+ *    may as well be a plugin's, as it is for a plugin that is its own
+ *    surface.
  * 2. The alters #[AltersSurface] names for this surface, in discovery
  *    order, skipping one whose situations leave this context's operation
  *    out: alterInputs() and alterOutputs() over a SurfaceShapeAdditions,
@@ -49,8 +52,10 @@ use Drupal\data_surface\SurfaceAttachment;
  *    shape, then bound: the keys it watches become the engine's
  *    refinement edges with addRefinement(), and its class becomes one
  *    RefinesInputRefiner link in the owner's chain of that key, the
- *    surface's links before any alter's. A method that watches nothing
- *    runs once, here, and is held to the narrowing check.
+ *    surface's links before any alter's. The surface's link holds its
+ *    class name, its refiners being static; an alter's holds the alter,
+ *    an autowired service. A method that watches nothing runs once,
+ *    here, and is held to the narrowing check.
  * 6. The children, each through this same build step in its own frame.
  * 7. The seal.
  *
@@ -69,8 +74,7 @@ final class Surfaces implements SurfacesInterface {
    *   The typed data manager, for the definitions add() creates.
    * @param \Drupal\Core\DependencyInjection\ClassResolverInterface $classResolver
    *   The class resolver, which returns an alter, a target or an access
-   *   class as the autowired service discovery registered, and makes a
-   *   surface with no constructor.
+   *   class as the autowired service discovery registered.
    * @param \Drupal\Core\Session\AccountInterface $currentUser
    *   The account an access question is about when none is named.
    * @param \Drupal\data_surface\SurfaceBuild\SituationArguments $situationArguments
@@ -117,12 +121,13 @@ final class Surfaces implements SurfacesInterface {
     $this->registry->getSituations($definition->class);
 
     $builder = new DataSurfaceBuilder();
-    $owner = $this->instance($definition->class, SurfaceInterface::class);
+    // Decision: see docs/decisions.md#a-surface-is-static.
+    $owner = static::surfaceClass($definition);
     $inputs = new SurfaceShape($builder, $this->typedDataManager);
     $outputs = new SurfaceShape($builder, $this->typedDataManager, TRUE);
-    $owner->defineInputs($inputs);
-    if ($owner instanceof HasOutputsInterface) {
-      $owner->defineOutputs($outputs);
+    $owner::defineInputs($inputs);
+    if (is_subclass_of($owner, HasOutputsInterface::class)) {
+      $owner::defineOutputs($outputs);
     }
 
     $links = [[$owner, $definition->refiners, NULL]];
@@ -450,10 +455,8 @@ final class Surfaces implements SurfacesInterface {
    * {@inheritdoc}
    */
   public function defaults(string $surface): array {
-    $definition = $this->registry->getDefinition($surface);
     $builder = new DataSurfaceBuilder();
-    $this->instance($definition->class, SurfaceInterface::class)
-      ->defineInputs(new SurfaceShape($builder, $this->typedDataManager));
+    static::surfaceClass($this->registry->getDefinition($surface))::defineInputs(new SurfaceShape($builder, $this->typedDataManager));
     return $builder->seal()->getDefaultValues();
   }
 
@@ -595,8 +598,9 @@ final class Surfaces implements SurfacesInterface {
    *   The builder holding the shape.
    * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $definition
    *   The surface.
-   * @param object $instance
-   *   The surface or alter instance the methods are called on.
+   * @param object|class-string $instance
+   *   The surface class, whose methods are static, or the alter instance
+   *   the methods are called on.
    * @param \Drupal\data_surface\SurfaceBuild\RefinerDefinition[] $refiners
    *   Its #[RefinesInput] methods.
    * @param string[] $input_keys
@@ -619,7 +623,7 @@ final class Surfaces implements SurfacesInterface {
    *   When a method fails a seal-time check, or one that watches nothing
    *   widens what it was given.
    */
-  protected function bindRefiners(DataSurfaceBuilderInterface $builder, SurfaceDefinition $definition, object $instance, array $refiners, array $input_keys, array $output_keys, array $subsurfaces = [], ?array $parent = NULL, ?string $module = NULL, array $extended = [], array $mounted = []): void {
+  protected function bindRefiners(DataSurfaceBuilderInterface $builder, SurfaceDefinition $definition, object|string $instance, array $refiners, array $input_keys, array $output_keys, array $subsurfaces = [], ?array $parent = NULL, ?string $module = NULL, array $extended = [], array $mounted = []): void {
     if ($refiners === []) {
       return;
     }
@@ -628,6 +632,7 @@ final class Surfaces implements SurfacesInterface {
     foreach ($refiners as $refiner) {
       // Decision: see docs/decisions.md#an-alter-refines-its-own-mounted-key.
       $own = $module !== NULL && in_array($refiner->key, $mounted, TRUE) && !in_array($refiner->key, $input_keys, TRUE);
+      static::assertStaticOnSurface($definition, $refiner, $module);
       static::assertWalled($definition, $refiner, $input_keys, $subsurfaces, $parent);
       static::assertNotWatchingMounted($definition, $refiner, $input_keys, $mounted);
       static::assertRefinable($definition, $refiner, $own ? [...$input_keys, $refiner->key] : $input_keys, $output_keys);
@@ -662,6 +667,32 @@ final class Surfaces implements SurfacesInterface {
         continue;
       }
       $builder->setDefinition($refiner->key, $refined);
+    }
+  }
+
+  /**
+   * Refuses a surface's #[RefinesInput] method that is not static.
+   *
+   * A surface is never instantiated, so its refiner has no instance to
+   * run on; an alter's may be either, since an alter is a service.
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $definition
+   *   The surface.
+   * @param \Drupal\data_surface\SurfaceBuild\RefinerDefinition $refiner
+   *   The method.
+   * @param string|null $module
+   *   The module of an alter, or NULL for the surface itself.
+   *
+   * @throws \LogicException
+   *   Naming the method.
+   */
+  protected static function assertStaticOnSurface(SurfaceDefinition $definition, RefinerDefinition $refiner, ?string $module): void {
+    if ($module === NULL && !$refiner->isStatic) {
+      throw new \LogicException(sprintf(
+        '%s is a #[RefinesInput] method of the %s surface and is not static. A surface is never instantiated, so its refiners are static, like its shape; an alter\'s refiner may be an instance method, because an alter is a service.',
+        $refiner->describe(),
+        $definition->id,
+      ));
     }
   }
 
@@ -832,6 +863,21 @@ final class Surfaces implements SurfacesInterface {
       return (string) $value;
     }, $permission);
     return $unknown ? NULL : $resolved;
+  }
+
+  /**
+   * Gets the class a surface's static methods are called on.
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $definition
+   *   The surface.
+   *
+   * @return class-string<\Drupal\data_surface\Surface\SurfaceInterface>
+   *   Its class, which discovery held to SurfaceInterface.
+   */
+  protected static function surfaceClass(SurfaceDefinition $definition): string {
+    $class = $definition->class;
+    assert(is_subclass_of($class, SurfaceInterface::class));
+    return $class;
   }
 
   /**

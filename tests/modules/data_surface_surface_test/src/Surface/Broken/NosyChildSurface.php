@@ -19,7 +19,7 @@ final class NosyChildSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(ShapeInterface $inputs): void {
     $inputs->add('height', 'integer', 'Height');
   }
 
@@ -27,7 +27,7 @@ final class NosyChildSurface implements SurfaceInterface {
    * Reads the parent's pantry.
    */
   #[RefinesInput('height')]
-  public function heightInPantry(DataDefinitionInterface $height, string $pantry): DataDefinitionInterface {
+  public static function heightInPantry(DataDefinitionInterface $height, string $pantry): DataDefinitionInterface {
     return $height;
   }
 

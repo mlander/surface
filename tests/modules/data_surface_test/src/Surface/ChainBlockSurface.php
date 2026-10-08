@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_test\Surface;
 
-use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Surface\Attribute\RefinesInput;
 use Drupal\data_surface\Surface\Attribute\Surface;
@@ -47,21 +46,21 @@ final class ChainBlockSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
-    $inputs->add('tier_one', 'string', new TranslatableMarkup('Tier one'), default: 'a')
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('tier_one', 'string', t('Tier one'), default: 'a')
       ->addConstraint('Choice', ['choices' => array_keys(self::SECOND)]);
-    $inputs->add('tier_two', 'string', new TranslatableMarkup('Tier two'));
-    $inputs->add('tier_three', 'string', new TranslatableMarkup('Tier three'));
+    $inputs->add('tier_two', 'string', t('Tier two'));
+    $inputs->add('tier_three', 'string', t('Tier three'));
     // A key that refines against nothing, so that a rebuild can be seen
     // to leave the rest of the form alone.
-    $inputs->add('note', 'string', new TranslatableMarkup('Note'), default: 'stored note');
+    $inputs->add('note', 'string', t('Note'), default: 'stored note');
   }
 
   /**
    * The second tier offers what the first tier's value names.
    */
   #[RefinesInput('tier_two')]
-  public function secondOfFirst(DataDefinitionInterface $tier_two, string $tier_one): DataDefinitionInterface {
+  public static function secondOfFirst(DataDefinitionInterface $tier_two, string $tier_one): DataDefinitionInterface {
     return static::tier($tier_two, self::SECOND[$tier_one] ?? NULL);
   }
 
@@ -69,7 +68,7 @@ final class ChainBlockSurface implements SurfaceInterface {
    * The third tier offers what the second tier's value names.
    */
   #[RefinesInput('tier_three')]
-  public function thirdOfSecond(DataDefinitionInterface $tier_three, string $tier_two): DataDefinitionInterface {
+  public static function thirdOfSecond(DataDefinitionInterface $tier_three, string $tier_two): DataDefinitionInterface {
     return static::tier($tier_three, self::THIRD[$tier_two] ?? NULL);
   }
 

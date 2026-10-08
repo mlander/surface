@@ -30,8 +30,12 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
  * Classes that must be built with services are registered as autowired
  * services here, keyed by class name, the way a hook class is: every
  * alter, and every target and access class a discovered surface names.
- * A surface itself is not registered. It has no constructor and holds no
- * service, and the class resolver makes one when asked.
+ * A surface itself is not registered and never instantiated: its shape
+ * and its refiners are static, called on the class.
+ *
+ * A plugin that is its own surface (#[UsesSurface] with no argument) is
+ * not found here: it lives where its plugin type says, and the registry
+ * reads it from the plugin definitions, which already list it.
  *
  * Nothing is refused here. A defect in one module's surface is reported
  * when that surface is built, naming the offender, rather than by a

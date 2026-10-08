@@ -65,9 +65,9 @@ final class ClassicDemoFormatter extends FormatterBase {
    */
   public static function casings(): array {
     return [
-      'none' => new TranslatableMarkup('As written'),
-      'uppercase' => new TranslatableMarkup('Upper case'),
-      'lowercase' => new TranslatableMarkup('Lower case'),
+      'none' => t('As written'),
+      'uppercase' => t('Upper case'),
+      'lowercase' => t('Lower case'),
     ];
   }
 
@@ -79,10 +79,10 @@ final class ClassicDemoFormatter extends FormatterBase {
    */
   public static function variants(): array {
     return [
-      'bold' => new TranslatableMarkup('Bold'),
-      'strong' => new TranslatableMarkup('Strong'),
-      'quiet' => new TranslatableMarkup('Quiet'),
-      'muted' => new TranslatableMarkup('Muted'),
+      'bold' => t('Bold'),
+      'strong' => t('Strong'),
+      'quiet' => t('Quiet'),
+      'muted' => t('Muted'),
     ];
   }
 
@@ -190,19 +190,19 @@ final class ClassicDemoFormatter extends FormatterBase {
     $values = $form_state->getValue($element['#parents']) ?? [];
     $prefix = (string) ($values['prefix'] ?? '');
     if (mb_strlen($prefix) > static::PREFIX_MAX_LENGTH) {
-      $form_state->setError($element['prefix'], new TranslatableMarkup(
+      $form_state->setError($element['prefix'], t(
         'Prefix cannot be longer than @max characters.',
         ['@max' => static::PREFIX_MAX_LENGTH],
       ));
     }
     $casing = (string) ($values['casing'] ?? '');
     if (!isset(static::casings()[$casing])) {
-      $form_state->setError($element['casing'], new TranslatableMarkup('The casing you selected is not a valid choice.'));
+      $form_state->setError($element['casing'], t('The casing you selected is not a valid choice.'));
       return;
     }
     $variant = (string) ($values['variant'] ?? '');
     if ($variant !== '' && !isset(static::variantsFor($casing)[$variant])) {
-      $form_state->setError($element['variant'], new TranslatableMarkup('The variant you selected is not a valid choice.'));
+      $form_state->setError($element['variant'], t('The variant you selected is not a valid choice.'));
     }
   }
 

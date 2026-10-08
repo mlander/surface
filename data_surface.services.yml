@@ -23,10 +23,11 @@ services:
     parent: logger.channel_base
     arguments: ['data_surface']
   # Surfaces discovered in src/Surface and src/SurfaceAlter by
-  # SurfaceCollectorPass, and the build step that builds and seals them.
+  # SurfaceCollectorPass, and plugins that are their own surface, read from
+  # their definitions; and the build step that builds and seals them.
   data_surface.surface_registry:
     class: Drupal\data_surface\SurfaceBuild\SurfaceRegistry
-    arguments: ['%data_surface.surface_classes%', '@cache.discovery']
+    arguments: ['%data_surface.surface_classes%', '@cache.discovery', '@data_surface.surface_plugins']
   data_surface.surfaces:
     class: Drupal\data_surface\SurfaceBuild\Surfaces
     arguments: ['@data_surface.surface_registry', '@typed_data_manager', '@class_resolver', '@current_user', '@data_surface.situation_arguments', '@data_surface.derived_variants']

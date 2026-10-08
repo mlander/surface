@@ -20,7 +20,7 @@ final class WatchesSubsurfaceSurface implements SurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(ShapeInterface $inputs): void {
     $inputs->add('note', 'string', 'Note');
     $inputs->attach('shelf', ShelfSurface::class);
   }
@@ -29,7 +29,7 @@ final class WatchesSubsurfaceSurface implements SurfaceInterface {
    * Reads the shelf.
    */
   #[RefinesInput('note')]
-  public function noteForShelf(DataDefinitionInterface $note, array $shelf): DataDefinitionInterface {
+  public static function noteForShelf(DataDefinitionInterface $note, array $shelf): DataDefinitionInterface {
     return $note;
   }
 
