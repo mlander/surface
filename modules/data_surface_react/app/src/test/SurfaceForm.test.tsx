@@ -84,6 +84,70 @@ describe('the React form of example 2', () => {
     expect(screen.getByLabelText(/Room/)).toHaveDisplayValue('- Select -');
     expect(screen.getByLabelText(/Room/)).not.toBeRequired();
     expect(screen.getByLabelText(/Event title/)).toHaveValue('Spring meetup!');
+    // The capacity is no longer capped by the room the room stands for.
+    expect(screen.getByLabelText(/Capacity/)).toHaveAttribute('max', '1000');
+    expect(screen.getByLabelText(/Capacity/)).toHaveValue(50);
+  });
+
+  it('sends the orphaned room back by its path, empty, on the next refine and on submit', async () => {
+    // A riverside room chosen stands, as the server answers it: no longer
+    // stale, nothing discarded.
+    const answered = (call: Call): Contract => {
+      const sent = JSON.parse(String(call.init?.body));
+      const contract = refined(call);
+      if (typeof sent.values.room !== 'string' || !sent.values.room.startsWith('riverside_')) {
+        return contract;
+      }
+      const room = contract.schema.properties!.room;
+      return {
+        ...contract,
+        schema: { ...contract.schema, properties: { ...contract.schema.properties, room: { ...room, 'x-surface': { ...room['x-surface']!, stale: false } } } },
+        values: { ...contract.values, room: sent.values.room },
+        stale: [],
+        discarded: [],
+      };
+    };
+    const { calls, fetcher } = server({
+      '/surface-api/registration.step2/configure/refine': answered,
+      '/surface-api/registration.step2/configure/submit': () => ({
+        committed: false,
+        valid: false,
+        violations: [{ path: 'room', message: 'The value you selected is not a valid choice.' }],
+        stale: [],
+        outputs: {},
+        contract: null,
+        created: null,
+      }),
+      '/surface-api/registration.step2/configure': () => example2,
+    });
+    render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
+    await userEvent.selectOptions(await screen.findByLabelText(/Venue/), 'Riverside Hall');
+    await waitFor(() => expect(screen.getByLabelText(/Room/)).toHaveDisplayValue('- Select -'));
+
+    // Another venue: the room is still the stored one's stand-in.
+    await userEvent.selectOptions(screen.getByLabelText(/Venue/), 'Harbour Centre');
+    await waitFor(() => expect(calls.filter((call) => call.url.endsWith('/refine'))).toHaveLength(2));
+    const second = JSON.parse(String(calls.filter((call) => call.url.endsWith('/refine'))[1].init?.body));
+    expect(second.stale).toEqual(['room']);
+    expect(second.values).toHaveProperty('room', null);
+    expect(second.values.venue).toBe('harbour');
+
+    await waitFor(() => expect(screen.getByLabelText(/Room/)).toHaveDisplayValue('- Select -'));
+    await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    await screen.findByRole('status');
+    const submitted = JSON.parse(String(calls.find((call) => call.url.endsWith('/submit'))?.init?.body));
+    expect(submitted.stale).toEqual(['room']);
+    expect(submitted.values).toHaveProperty('room', null);
+
+    // Choosing a room is an answer: it no longer stands for the stored one.
+    await userEvent.selectOptions(screen.getByLabelText(/Room/), 'East room');
+    await waitFor(() => expect(calls.filter((call) => call.url.endsWith('/refine'))).toHaveLength(3));
+    await waitFor(() => expect(screen.getByLabelText(/Room/)).toHaveDisplayValue('East room'));
+    await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    await waitFor(() => expect(calls.filter((call) => call.url.endsWith('/submit'))).toHaveLength(2));
+    const chosen = JSON.parse(String(calls.filter((call) => call.url.endsWith('/submit'))[1].init?.body));
+    expect(chosen.stale).toEqual([]);
+    expect(chosen.values.room).toBe('riverside_east');
   });
 
   it('validates, showing what was refused inline and in a summary', async () => {

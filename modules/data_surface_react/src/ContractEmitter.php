@@ -12,6 +12,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Options\OptionSet;
 use Drupal\data_surface\Pipeline\ValueState;
@@ -117,7 +118,12 @@ final class ContractEmitter {
    * @param array $values
    *   The values to describe it for, keyed by surface key: what the
    *   target holds over the defaults, with any in-progress answers over
-   *   that. A key not given shows its default.
+   *   that. A key not given shows its default. A refinement overlay
+   *   (DataSurfaceFormBuilderInterface::refinementOverlay()) is read the
+   *   way buildSurfaceForm() reads it: the surface is refined against the
+   *   keys as they stand, each orphan held unanswered, and each orphan
+   *   named under STANDING_KEY is shown stale, standing for its stored
+   *   value, which is not handed over.
    * @param string $surface_id
    *   The surface's `#[Surface]` id.
    * @param string|null $situation_id
@@ -131,7 +137,9 @@ final class ContractEmitter {
   public function emit(DataSurfaceInterface $surface, array $values, string $surface_id, ?string $situation_id = NULL, string|\Stringable|null $label = NULL): ServedContract {
     $cacheability = new CacheableMetadata();
     $stale = [];
-    [$schema, $shown] = $this->frame($surface, $values, '', $cacheability, $stale);
+    $standing = $values[DataSurfaceFormBuilderInterface::STANDING_KEY] ?? [];
+    unset($values[DataSurfaceFormBuilderInterface::STANDING_KEY]);
+    [$schema, $shown] = $this->frame($surface, $values, '', $cacheability, $stale, is_array($standing) ? $standing : []);
     $title = $label === NULL ? [] : ['title' => (string) $label];
     $document = [
       'surface' => $surface_id,
@@ -161,11 +169,15 @@ final class ContractEmitter {
    *   Collects what the description depends on.
    * @param string[] $stale
    *   Collects the dotted paths of stale values.
+   * @param array<string, mixed> $standing
+   *   The orphans of a refinement, by dotted path from the top, each
+   *   mapped to the stored value it stands for; held unanswered in
+   *   $values.
    *
    * @return array{0: array, 1: array|\stdClass}
    *   The object schema of the frame, and its values as shown.
    */
-  protected function frame(DataSurfaceInterface $declared, array $values, string $prefix, CacheableMetadata $cacheability, array &$stale): array {
+  protected function frame(DataSurfaceInterface $declared, array $values, string $prefix, CacheableMetadata $cacheability, array &$stale, array $standing = []): array {
     $refined = $declared->refine($values);
     $cacheability->addCacheableDependency($refined);
     $advertised = $declared->getDefinitions();
@@ -179,26 +191,42 @@ final class ContractEmitter {
       $current = $now->entry($name) ?? $entry;
       $depends = $advertised->dependencies($name);
       if ($entry->slot !== NULL) {
-        [$properties[$name], $shown[$name], $branches] = $this->slot($declared, $entry, $values, $prefix . $name, $cacheability, $stale);
+        [$properties[$name], $shown[$name], $branches] = $this->slot($declared, $entry, $values, $prefix . $name, $cacheability, $stale, $standing);
         array_push($conditions, ...$branches);
       }
       elseif ($entry->attachment !== NULL) {
         $child = $entry->attachment->child;
         $held = $values[$name] ?? NULL;
-        [$schema, $shown[$name]] = $this->frame($child, array_replace($child->getDefaultValues(), is_array($held) ? $held : []), $prefix . $name . '.', $cacheability, $stale);
+        [$schema, $shown[$name]] = $this->frame($child, array_replace($child->getDefaultValues(), is_array($held) ? $held : []), $prefix . $name . '.', $cacheability, $stale, $standing);
         $properties[$name] = $this->describe($current->definition) + $schema;
         $properties[$name][self::EXTENSION] = $this->extension('fieldset', $entry->locked, $depends, $this->anyRefined($schema));
       }
       else {
         // The value each element would be built with: a secret's is never
-        // handed over, a locked key holds what the situation knows, and
-        // anything else what it was given or failing that its default.
+        // handed over, a locked key holds what the situation knows, an
+        // orphan the stored value it stands for, and anything else what it
+        // was given or failing that its default.
+        $secret = DefinitionMetadata::isSecret($current->definition);
+        $orphan = !$secret && !$entry->locked && array_key_exists($prefix . $name, $standing);
         $value = match (TRUE) {
-          DefinitionMetadata::isSecret($current->definition) => NULL,
+          $secret => NULL,
           $entry->locked => $declared->getDefault($name),
+          $orphan => $standing[$prefix . $name],
           default => $values[$name] ?? $declared->getDefault($name),
         };
         [$properties[$name], $shown[$name]] = $this->property($current->definition, $entry->definition, $value, $prefix . $name, $entry->locked, $depends, $cacheability, $stale);
+        if ($orphan) {
+          // The edit moved what this key refines against, away from the
+          // stored value, which the new answer no longer offers: stale,
+          // whatever its widget, and shown as nothing. The caller sends
+          // the path back and an empty answer there stands for the stored
+          // value again, as for any stale key.
+          if (!$properties[$name][self::EXTENSION]['stale']) {
+            $properties[$name][self::EXTENSION]['stale'] = TRUE;
+            $stale[] = $prefix . $name;
+          }
+          $shown[$name] = NULL;
+        }
       }
       if ($current->definition->isRequired()) {
         $required[] = $name;
@@ -241,12 +269,15 @@ final class ContractEmitter {
    *   Collects what the description depends on.
    * @param string[] $stale
    *   Collects the dotted paths of stale values.
+   * @param array<string, mixed> $standing
+   *   The orphans of a refinement, by dotted path from the top; only the
+   *   chosen variant's are its own.
    *
    * @return array{0: array, 1: mixed, 2: array}
    *   The slot's property schema, its value as shown, and the
    *   conditionals for the parent's `allOf`.
    */
-  protected function slot(DataSurfaceInterface $declared, SurfaceEntry $entry, array $values, string $path, CacheableMetadata $cacheability, array &$stale): array {
+  protected function slot(DataSurfaceInterface $declared, SurfaceEntry $entry, array $values, string $path, CacheableMetadata $cacheability, array &$stale, array $standing = []): array {
     $slot = $entry->slot;
     assert($slot !== NULL);
     $by = $declared->getDefinitions()->get($slot->by);
@@ -270,7 +301,7 @@ final class ContractEmitter {
       $is_chosen = $id === $chosen;
       $own = $is_chosen && $slot->fits($id, $held) ? $held : [];
       $variant_stale = [];
-      [$schema, $variant_values] = $this->frame($child, array_replace($child->getDefaultValues(), $own), $path . '.', $cacheability, $variant_stale);
+      [$schema, $variant_values] = $this->frame($child, array_replace($child->getDefaultValues(), $own), $path . '.', $cacheability, $variant_stale, $is_chosen ? $standing : []);
       if ($is_chosen) {
         $shown = $variant_values;
         array_push($stale, ...$variant_stale);

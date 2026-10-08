@@ -91,7 +91,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
   modules/custom/data_surface'
 ```
 
-The baseline as of this writing: **718 tests, 6973 assertions, 0 errors,
+The baseline as of this writing: **719 tests, 7012 assertions, 0 errors,
 3 failures** — the three tests of the one class below. The test and
 assertion counts drift upward as work lands and are not the thing to
 check. **No test may error,
@@ -146,8 +146,9 @@ npx --yes cspell@8 --config /tmp/merged.json --no-progress --no-summary "**"
 `modules/data_surface_react` is the served contract: `ContractEmitter`
 turns a sealed surface and its values into JSON Schema 2020-12 with an
 `x-surface` keyword per property; `/surface-api/{surface}/{situation}`
-serves it, `/refine` re-narrows it (the AJAX rebuild's equivalent, the
-form builder's discard rule included), `/validate` runs the pipeline
+serves it, `/refine` re-narrows it (the AJAX rebuild's equivalent,
+emitted from the form builder's `refinementOverlay()`, so an orphan is
+held unanswered and listed `stale`), `/validate` runs the pipeline
 dry and `/submit` writes, answering a refusal as 200 data
 (`committed: false`), a write with the rebuilt contract, and a create
 with the situation the created thing now lives at (`created`, from the

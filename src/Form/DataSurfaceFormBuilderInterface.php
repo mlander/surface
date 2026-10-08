@@ -52,7 +52,8 @@ interface DataSurfaceFormBuilderInterface {
    * the value is not what anything below it refines against: the
    * overlay holds the key unanswered, and this key maps its dotted path
    * to the stored value, which the element is rendered standing for.
-   * Read by buildSurfaceForm() and by nothing that refines.
+   * Read by buildSurfaceForm() (and by the served contract's emitter, its
+   * twin) and by nothing that refines.
    *
    * In the reserved "@" namespace, which no definition is named in.
    *

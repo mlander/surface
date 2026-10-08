@@ -145,6 +145,10 @@ class ServedContractEndpointsTest extends BrowserTestBase {
 
   /**
    * Tests refine narrows the room by the venue, and keeps a stale room.
+   *
+   * The orphaned room is the form's own: shown stale, held unanswered so
+   * the capacity is no longer capped by it, round-tripped by its path,
+   * and refused by a save from there.
    */
   public function testRefineNarrowsTheRoomByTheVenue(): void {
     $this->drupalLogin($this->drupalCreateUser(['administer site configuration']));
@@ -169,6 +173,40 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $this->assertSame(['room'], $refined['stale']);
     $this->assertSame('riverside', $refined['values']['venue']);
     $this->assertSame('Spring meetup', $refined['values']['title']);
+    // The orphaned room is held unanswered, so the capacity is refined
+    // against no room at all: its declared limit, and no room's words
+    // under it. It falls back to what is stored.
+    $capacity = $refined['schema']['properties']['capacity'];
+    $this->assertSame(1000, $capacity['maximum']);
+    $this->assertArrayNotHasKey('description', $capacity);
+    $this->assertSame(50, $refined['values']['capacity']);
+
+    // The stale path round-trips: sent back with the room still empty, it
+    // stands for the stored room again, which the new venue orphans
+    // again, so the answer is the same one.
+    $again = $this->json($this->post('surface-api/registration.step2/configure/refine', [
+      'values' => $refined['values'],
+      'stale' => $refined['stale'],
+    ]));
+    $this->assertSame(['room'], $again['stale']);
+    $this->assertNull($again['values']['room']);
+    $this->assertSame(1000, $again['schema']['properties']['capacity']['maximum']);
+
+    // Saved from there, the empty room stands for the stored one, which
+    // the same submission's venue refuses, as the form refuses it
+    // (FullSubmitTest::testSaveAfterTheVenueRebuildRefusesTheLeftOverRoom):
+    // refused as the stored room, not as an unanswered one, and nothing
+    // is written.
+    $saved = $this->json($this->post('surface-api/registration.step2/configure/submit', [
+      'values' => $refined['values'],
+      'stale' => $refined['stale'],
+    ]));
+    $this->assertFalse($saved['committed']);
+    $this->assertSame(['room'], array_column($saved['violations'], 'path'));
+    $this->assertStringNotContainsString('required', $saved['violations'][0]['message']);
+    $this->container->get('config.factory')->reset();
+    $this->assertSame('library', $this->config(self::CONFIG)->get('venue'));
+    $this->assertSame('library_reading', $this->config(self::CONFIG)->get('room'));
 
     // A room of the new venue stands, and narrows the capacity.
     $chosen = $this->json($this->post('surface-api/registration.step2/configure/refine', [

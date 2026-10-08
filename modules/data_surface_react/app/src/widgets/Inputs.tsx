@@ -141,6 +141,17 @@ export function CheckboxField(props: FieldProps): JSX.Element {
   );
 }
 
+/**
+ * Whether a field stands for a stored value it shows as nothing.
+ *
+ * An orphan of a refine, whatever its widget: empty there means "keep",
+ * so the field is not required to the browser, and its label keeps the
+ * marker. The path goes back with the next refine, validate or submit.
+ */
+function standsForStored(props: FieldProps): boolean {
+  return Boolean(props.schema['x-surface']?.stale);
+}
+
 /** A number input: Range's bounds as min and max, a step by type. */
 export function NumberField(props: FieldProps): JSX.Element {
   const id = fieldId(props.path);
@@ -156,7 +167,7 @@ export function NumberField(props: FieldProps): JSX.Element {
         max={props.schema.maximum}
         step={jsonType(props.schema) === 'integer' ? 1 : 'any'}
         placeholder={example === undefined ? undefined : String(example)}
-        required={props.required}
+        required={props.required && !standsForStored(props)}
         disabled={isLocked(props)}
         aria-describedby={describedBy(props, id)}
         aria-invalid={(props.errors[props.path] ?? []).length > 0 || undefined}
@@ -192,7 +203,7 @@ export function TextField(props: FieldProps): JSX.Element {
         value={isEmpty(props.value) ? '' : String(props.value)}
         maxLength={props.schema.maxLength}
         placeholder={secret || example === undefined ? undefined : String(example)}
-        required={props.required && !secret}
+        required={props.required && !secret && !standsForStored(props)}
         disabled={isLocked(props)}
         autoComplete={secret ? 'new-password' : undefined}
         aria-describedby={describedBy(props, id)}
@@ -213,7 +224,7 @@ export function TextareaField(props: FieldProps): JSX.Element {
         name={props.path}
         rows={5}
         value={isEmpty(props.value) ? '' : String(props.value)}
-        required={props.required}
+        required={props.required && !standsForStored(props)}
         disabled={isLocked(props)}
         aria-describedby={describedBy(props, id)}
         aria-invalid={(props.errors[props.path] ?? []).length > 0 || undefined}

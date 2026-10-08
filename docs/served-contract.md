@@ -190,8 +190,26 @@ computes, the same way:
    what is stored, and if that is not offered either, it is shown on the
    empty option, `stale`, with the stored value kept on the server.
    Changing the venue answers the library's room as `null`, `stale:
-   ["room"]`, `discarded: ["room"]`; putting the venue back, with the
-   stale path sent, shows the reading room chosen again.
+   ["room"]`, `discarded: ["room", "capacity"]`; putting the venue back,
+   with the stale path sent, shows the reading room chosen again.
+
+The document is emitted from the form's own overlay,
+`refinementOverlay()`, settled to [the same fixed point](forms.md#the-in-form-half-discarding-orphaned-input)
+the AJAX rebuild reaches. A key that falls back to a stored value the
+edit itself orphaned — a dependency moved away from what is stored, and
+the new answer no longer offers the stored value — is an **orphan**: it
+is held unanswered, so nothing below it is refined against the value it
+stands for, and it is listed in `stale` with `x-surface.stale: true` and
+a `null` value, whatever its widget. `discarded` names the inputs
+dropped on the way there; `stale` names what is shown standing for a
+stored value, orphans and keys the site narrowed away alike. So moving
+the venue off the library leaves the capacity at its declared
+`maximum: 1000`, with no room's description under it, rather than
+capped by a reading room no longer on the screen. A client sends the
+`stale` paths back with the next refine, validate or submit; empty there
+stands for the stored value again, so a refine answers the same orphan,
+and a save judges the stored room under the venue the same submission
+moved, and refuses it, as the form's Save does.
 
 **`POST .../validate`**, body `{values, stale}`, is the pipeline's dry
 run: `submit(dry_run: TRUE)` with the access answer. Every value was

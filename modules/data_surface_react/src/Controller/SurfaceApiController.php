@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\data_surface_react\Controller;
 
 use Drupal\Component\Render\PlainTextOutput;
-use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Cache\CacheableJsonResponse;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
@@ -39,7 +38,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  *   empty stands for the stored value again, and an answer the new
  *   choice of its dependency orphans is discarded by the form builder's
  *   own rule, so it falls back to what is stored and, if that is not
- *   offered either, is shown stale.
+ *   offered either, is shown stale and held unanswered: nothing below
+ *   it is refined against the value it stands for.
  * - `POST .../validate`, body `{values, stale}`: the pipeline's dry run,
  *   which accepts, validates and prepares and writes nothing. Every
  *   value was sent on purpose, so nothing is discarded: it is judged.
@@ -124,8 +124,9 @@ final class SurfaceApiController implements ContainerInjectionInterface {
    *   The situation id.
    *
    * @return \Drupal\Core\Cache\CacheableJsonResponse
-   *   The contract, and under `discarded` the keys, or dotted paths into
-   *   a part, whose answer the new choices orphaned.
+   *   The contract, its `stale` naming every orphan as well as every key
+   *   the site narrowed away, and under `discarded` the keys, or dotted
+   *   paths into a part, whose answer the new choices orphaned.
    */
   public function refine(Request $request, string $surface, string $situation): CacheableJsonResponse {
     $served = $this->served($surface, $situation, $request);
@@ -138,13 +139,14 @@ final class SurfaceApiController implements ContainerInjectionInterface {
       ? array_intersect_key($body['values'], $served->surface->getDefinitions()->toArray())
       : [];
     $input = $this->servedSituations->keepStale($input, $current, $body['stale'] ?? []);
-    $discarded = $this->formBuilder->discardedRefinementInput($served->surface, $current, $input);
     // A key, or a dotted path to one inside an attached child or a slot,
     // dropped the way DataSurfaceHostTrait::surfaceFormValues() drops it.
-    foreach ($discarded as $dotted) {
-      NestedArray::unsetValue($input, explode('.', $dotted));
-    }
-    $contract = $this->emit($served, array_replace($current, $input));
+    $discarded = $this->formBuilder->discardedRefinementInput($served->surface, $current, $input);
+    // And emitted from the same overlay the form is rebuilt from, settled
+    // to its fixed point: a key falling back to a stored value this edit
+    // orphaned is held unanswered, so nothing below it is refined against
+    // it, and is shown stale, standing for that value.
+    $contract = $this->emit($served, $this->formBuilder->refinementOverlay($served->surface, $current, $input));
     return $this->respond($served, $contract, ['discarded' => array_values($discarded)]);
   }
 

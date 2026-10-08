@@ -116,6 +116,33 @@ describe('number and checkbox', () => {
     expect(screen.getByLabelText(/Price/)).toHaveAttribute('step', 'any');
   });
 
+  it('shows a stale number or text as nothing, not required to the browser, the marker kept', async () => {
+    let seen: Values = {};
+    render(
+      <Form
+        schema={object(
+          {
+            capacity: { title: 'Capacity', type: ['integer', 'null'], maximum: 1000, 'x-surface': x('number', { stale: true, dependsOn: ['room'] }) },
+            code: { title: 'Code', type: 'string', 'x-surface': x('text', { stale: true }) },
+          },
+          ['capacity', 'code'],
+        )}
+        initial={{ capacity: null, code: null }}
+        onValues={(values) => (seen = values)}
+      />,
+    );
+    const capacity = screen.getByLabelText(/Capacity/);
+    expect(capacity).toHaveValue(null);
+    expect(capacity).not.toBeRequired();
+    const code = screen.getByLabelText(/Code/);
+    expect(code).toHaveValue('');
+    expect(code).not.toBeRequired();
+    expect(screen.getAllByText('*')).toHaveLength(2);
+    // Typing is an answer, sent as typed.
+    await userEvent.type(capacity, '80');
+    expect(seen.capacity).toBe(80);
+  });
+
   it('renders a checkbox that is never marked required', () => {
     render(<Form schema={object({ open: { title: 'Registration open', type: 'boolean', 'x-surface': x('checkbox') } }, ['open'])} initial={{ open: true }} />);
     const box = screen.getByLabelText('Registration open');

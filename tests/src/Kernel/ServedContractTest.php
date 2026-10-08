@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
+use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Surface\SurfaceContext;
 use Drupal\data_surface_demo\Surface\DemoBlockSurface;
 use Drupal\node\Entity\NodeType;
@@ -266,6 +267,49 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     // The garden room seats 30.
     $garden = $this->contract('registration.step2', 'configure', [], ['room' => 'library_garden']);
     $this->assertSame(30, $garden['schema']['properties']['capacity']['maximum']);
+  }
+
+  /**
+   * Tests a refinement overlay is read as the form reads it.
+   *
+   * Refined against the keys as they stand, each orphan held unanswered;
+   * each orphan shown stale, standing for its stored value, whatever its
+   * widget, and the value itself never handed over.
+   */
+  public function testRefinementOverlay(): void {
+    $served = $this->container->get('data_surface_react.served_situations');
+    $situation = $served->resolve('registration.step2', 'configure', []);
+    $overlay = $this->container->get('data_surface.form_builder')->refinementOverlay(
+      $situation->surface,
+      $served->current($situation),
+      ['venue' => 'riverside', 'room' => 'library_reading'],
+    );
+    $this->assertSame(['room' => 'library_reading'], $overlay[DataSurfaceFormBuilderInterface::STANDING_KEY]);
+    $contract = $this->contract('registration.step2', 'configure', [], $overlay);
+    $this->assertArrayNotHasKey(DataSurfaceFormBuilderInterface::STANDING_KEY, $contract['values']);
+    $room = $contract['schema']['properties']['room'];
+    $this->assertTrue($room['x-surface']['stale']);
+    $this->assertSame(['show' => TRUE, 'label' => '- Select -'], $room['x-surface']['emptyOption']);
+    $this->assertNull($contract['values']['room']);
+    $this->assertSame(['room'], $contract['stale']);
+    // Nothing caps the capacity by a room no longer on the screen.
+    $capacity = $contract['schema']['properties']['capacity'];
+    $this->assertSame(1000, $capacity['maximum']);
+    $this->assertArrayNotHasKey('description', $capacity);
+    $this->assertFalse($capacity['x-surface']['refined']);
+    $this->assertSame(50, $contract['values']['capacity']);
+
+    // A number standing for a stored value is stale too, and shown as
+    // nothing: there is no option list to fall out of, only the overlay's
+    // word for it.
+    $number = $this->contract('registration.step1', 'configure', [], [
+      'capacity' => NULL,
+      DataSurfaceFormBuilderInterface::STANDING_KEY => ['capacity' => 70],
+    ]);
+    $this->assertTrue($number['schema']['properties']['capacity']['x-surface']['stale']);
+    $this->assertArrayNotHasKey('emptyOption', $number['schema']['properties']['capacity']['x-surface']);
+    $this->assertNull($number['values']['capacity']);
+    $this->assertSame(['capacity'], $number['stale']);
   }
 
   /**
