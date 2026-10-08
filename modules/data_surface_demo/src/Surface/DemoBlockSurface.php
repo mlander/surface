@@ -18,10 +18,15 @@ use Drupal\data_surface\Surface\SurfaceInterface;
  * What the demo block can be configured with.
  *
  * No target and no situations: the block host supplies both, because
- * only it holds the plugin instance. No services either: the bundle and
- * field lists need values another key holds, so each refiner points at
- * a list with a constraint and hands it those values, and the options
- * resolver for that constraint fetches.
+ * only it holds the plugin instance. Its presentation settings are a
+ * slot: a list and a grid need different things, so each is a surface
+ * of its own, chosen by the presentation key, and stored by the block
+ * under presentation_settings because neither names a target.
+ *
+ * No services either: the bundle and field lists need values another
+ * key holds, so each refiner points at a list with a constraint and
+ * hands it those values, and the options resolver for that constraint
+ * fetches.
  *
  * Strings are built as TranslatableMarkup rather than through $this->t():
  * a surface has no constructor, so nothing could inject the translation
@@ -66,8 +71,20 @@ final class DemoBlockSurface implements SurfaceInterface {
       ->setRequired(TRUE)
       ->addConstraint('Range', ['min' => 1, 'max' => 50]);
 
-    $inputs->add('show_summary', 'boolean', new TranslatableMarkup('Show summaries'), default: TRUE)
-      ->setDescription(new TranslatableMarkup('Whether item summaries render.'));
+    // How the items are laid out, and what that layout needs: a slot the
+    // presentation chooses, its two children named here by class.
+    $inputs->add('presentation', 'string', new TranslatableMarkup('Presentation'), default: 'list')
+      ->setDescription(new TranslatableMarkup('How the items are laid out.'))
+      ->setRequired(TRUE)
+      ->addConstraint('Choice', ['choices' => ['list', 'grid']]);
+    $inputs->attachBy('presentation_settings', by: 'presentation', children: [
+      'list' => ListPresentationSurface::class,
+      'grid' => GridPresentationSurface::class,
+    ]);
+    $inputs->describe('presentation_settings',
+      label: new TranslatableMarkup('Presentation settings'),
+      description: new TranslatableMarkup('What the chosen presentation needs.'),
+    );
   }
 
   /**

@@ -253,7 +253,11 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that an update writes the label and the settings in one save.
+   * Tests that an update writes the label and the settings in one run.
+   *
+   * One submission of the field instance surface: the field's target
+   * writes the label and the flag, then the address settings' own
+   * target writes the settings, after validation has passed for both.
    */
   public function testUpdateAppliesLabelAlongsideSettings(): void {
     $this->addField();

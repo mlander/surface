@@ -89,9 +89,10 @@ than the form".
 
 **Half built.** `DataSurfaceFieldTypeTrait` plus `FieldSettingsTarget`
 covers instance settings, and `data_surface_address` is the worked
-example — the address field type's settings declared in one method on
-the item class, with Field UI rendering the generated form and the
-address module unmodified. Storage settings and the `$has_data` lock are
+example — the address field type's settings declared as a surface
+class, `AddressFieldSettingsSurface`, which the swapped item class builds
+for Field UI and which fills the field instance surface's settings slot
+for the tool bridge, with the address module unmodified. Storage settings and the `$has_data` lock are
 the untouched half; address has no storage settings.
 
 Address was chosen because its settings form has no dependent settings at

@@ -24,9 +24,28 @@ block.settings.data_surface_demo_classic:
     limit:
       type: integer
       label: 'Number of items'
+    presentation:
+      type: string
+      label: 'Presentation'
+    presentation_settings:
+      type: block.settings.data_surface_demo_classic.presentation.[%parent.presentation]
+      label: 'Presentation settings'
+
+block.settings.data_surface_demo_classic.presentation.list:
+  type: mapping
+  label: 'List presentation settings'
+  mapping:
     show_summary:
       type: boolean
       label: 'Show summaries'
+
+block.settings.data_surface_demo_classic.presentation.grid:
+  type: mapping
+  label: 'Grid presentation settings'
+  mapping:
+    columns:
+      type: integer
+      label: 'Columns'
 
 field.formatter.settings.data_surface_demo_classic_string:
   type: mapping

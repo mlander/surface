@@ -42,12 +42,12 @@ prose.
 | | Classic | | Surface | |
 | --- | ---: | ---: | ---: | ---: |
 | | **lines** | **code** | **lines** | **code** |
-| Block plugin and its surface | 375 | 219 | 186 | 103 |
+| Block plugin and its surfaces | 437 | 264 | 267 | 143 |
 | Field list (constraint, validator, resolver) | — | — | 198 | 103 |
 | Formatter plugin | 285 | 167 | 151 | 101 |
 | Variant vocabulary | — | — | 116 | 40 |
-| Config schema | 45 | 41 | 60 | 53 |
-| **Total** | **705** | **427** | **711** | **400** |
+| Config schema | 64 | 58 | 81 | 70 |
+| **Total** | **786** | **489** | **813** | **457** |
 
 Four of those rows are worth a sentence.
 
@@ -62,9 +62,15 @@ Four of those rows are worth a sentence.
   Both versions hand-maintain a schema file; the surface one also
   declares the `third_party_settings` namespace other modules mount into,
   which the classic version has no way to offer.
-- The **block plugin** is two files on the surface side: the plugin,
-  which only renders, and `DemoBlockSurface`, which its `#[UsesSurface]`
-  names. Neither holds a service.
+- The **block plugin** is four files on the surface side: the plugin,
+  which only renders; `DemoBlockSurface`, which its `#[UsesSurface]`
+  names; and the two presentation surfaces its slot names,
+  `ListPresentationSurface` and `GridPresentationSurface`. None holds a
+  service. The slot is where the classic block grew most: a third
+  AJAX-wired select, a details element whose children depend on it,
+  per-presentation defaults, and storage written per presentation, all
+  by hand. On the surface side it is one `attachBy()` and two classes of
+  a few lines each.
 - The **field list** is where the services went. A surface refiner
   points at a list rather than fetching it, and no core constraint names
   a bundle's fields, so the demo brings one, its validator, and the
@@ -85,18 +91,19 @@ approach changes.
 
 | What the author has to touch | Classic | Surface |
 | --- | ---: | ---: |
-| Form API element definitions | 8 | 0 |
-| AJAX wiring (`#ajax` arrays, callbacks, wrappers) | 4 | 0 |
-| Value casting and storage assignments | 7 | 0 |
-| Default values written out | 6 | 0 |
+| Form API element definitions | 11 | 0 |
+| AJAX wiring (`#ajax` arrays, callbacks, wrappers) | 5 | 0 |
+| Value casting and storage assignments | 8 | 0 |
+| Default values written out | 8 | 0 |
+| Variant swapping by hand (rebuild read, per-variant defaults and storage) | 3 | 0 |
 | Validation written by hand | 1 | 0 |
 | Label lists kept in step with the form | 1 | 0 |
 | Live option lists read from the site | 3 | 1 |
 | Constraint naming a list, with its validator | 0 | 1 |
-| Surface class | 0 | 1 |
+| Surface classes (the block's, and its slot's two children) | 0 | 3 |
 | Refiner methods pointing at those lists | 0 | 2 |
 | Config schema files | 1 | 1 |
-| **Distinct mechanisms in play** | **8** | **5** |
+| **Distinct mechanisms in play** | **9** | **5** |
 
 ### The formatter
 
@@ -113,7 +120,7 @@ approach changes.
 | Config schema files | 1 | 1 |
 | **Distinct mechanisms in play** | **8** | **4** |
 
-Eight against five on the block, eight against four on the formatter. The
+Nine against five on the block, eight against four on the formatter. The
 mechanisms the classic version sheds — form elements, AJAX, storage,
 defaults, validation — are also the ones that have to agree with each
 other, and nothing checks that they do: a key added to

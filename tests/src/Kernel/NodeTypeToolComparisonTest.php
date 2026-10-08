@@ -138,7 +138,8 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Amount', $amount['title']);
     $this->assertSame(1, $amount['minimum']);
     $unit = $deadline['properties'][NodeTypeReviewSettings::UNIT];
-    $this->assertSame(['hours', 'days', 'weeks', NodeTypeReviewSettings::BUSINESS_DAYS], $unit['enum']);
+    // The Tool API lists null among an optional input's values (#3583072).
+    $this->assertSame(['hours', 'days', 'weeks', NodeTypeReviewSettings::BUSINESS_DAYS, NULL], $unit['enum']);
     $this->assertSame(NodeTypeReviewSettings::DEFAULT_UNIT, $unit['default']);
 
     $tags = $extras[NodeTypeReviewSettings::TAGS];
@@ -235,8 +236,11 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
   /**
    * Tests that a deadline past thirty days is refused, on the amount.
    *
-   * The pipeline refuses it on what the caller sent, in the caller's
-   * units, at the amount's path; nothing is created. The config schema's
+   * It is refused on what the caller sent, in the caller's units, at the
+   * amount's path; nothing is created. Through the tool, the Tool API's
+   * own input validation runs the surface's constraint first and reports
+   * it in its spelling; through the pipeline alone, the pipeline reports
+   * the full dotted path. The config schema's
    * Range on the stored seconds is the second gate, and it holds too:
    * the pipeline's check runs first, and every value the surface stores
    * satisfies it.
@@ -246,7 +250,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
     $result = $this->runSurfaceTool($this->contentType('late') + $this->extras($this->deadline(45, 'days'), []));
     $this->assertFalse($result->isSuccess());
     $message = (string) $result->getMessage();
-    $this->assertStringContainsString($path . ': ', $message);
+    $this->assertStringContainsString(static::toolApiPath(NodeTypeReviewSettings::DEADLINE, NodeTypeReviewSettings::AMOUNT), $message);
     $this->assertStringContainsString('at most thirty days; 45 days is outside that', $message);
     $this->assertNull(NodeType::load('late'));
 
@@ -290,11 +294,11 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
     $this->assertNull(NodeType::load('typed'));
 
     // Every item well formed, one of them twice: the list is refused as a
-    // whole, by the pipeline, because the Tool API validates a list's
-    // items and not the list.
+    // whole. The Tool API validates the list's own constraints now, so it
+    // refuses this before the pipeline is reached.
     $result = $this->runSurfaceTool($this->contentType('repeat') + $this->extras(NULL, ['news', 'news']));
     $this->assertFalse($result->isSuccess());
-    $this->assertStringContainsString('third_party_settings.' . self::EXTRAS . '.' . NodeTypeReviewSettings::TAGS . ': Each item may be listed only once.', (string) $result->getMessage());
+    $this->assertStringContainsString(static::toolApiPath(NodeTypeReviewSettings::TAGS) . 'Each item may be listed only once.', (string) $result->getMessage());
     $this->assertNull(NodeType::load('repeat'));
 
     // One string where the list goes: typed data wraps it into a list of
@@ -378,10 +382,9 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
     $result = $this->runSurfaceTool($this->contentType('business_max') + $this->extras($this->deadline(22, $business_days), NULL));
     $this->assertTrue($result->isSuccess(), (string) $result->getMessage());
     $this->assertSame(NodeTypeReviewSettings::DEADLINE_MAX, $this->stored('business_max')[NodeTypeReviewSettings::DEADLINE] ?? NULL);
-    $path = 'third_party_settings.' . self::EXTRAS . '.' . NodeTypeReviewSettings::DEADLINE . '.' . NodeTypeReviewSettings::AMOUNT;
     $result = $this->runSurfaceTool($this->contentType('business_late') + $this->extras($this->deadline(23, $business_days), NULL));
     $this->assertFalse($result->isSuccess());
-    $this->assertStringContainsString($path . ': ', (string) $result->getMessage());
+    $this->assertStringContainsString(static::toolApiPath(NodeTypeReviewSettings::DEADLINE, NodeTypeReviewSettings::AMOUNT), (string) $result->getMessage());
     $this->assertNull(NodeType::load('business_late'));
     $form_state = $this->submitClassicForm('business_person_max', '22', $business_days, '');
     $this->assertSame([], $form_state->getErrors());
@@ -992,6 +995,28 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
       return 'Refused: ' . static::plain((string) reset($errors));
     }
     return 'Stored `' . json_encode($this->stored($type), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '`.';
+  }
+
+  /**
+   * Spells a path under this module's settings the way the Tool API does.
+   *
+   * Since #3583085 the Tool API prints each input violation as
+   * "<input>.<leaf>: (property a) (property b) <message>": the input's
+   * name, then the violation's own path, then the segments between them
+   * as typed data writes them into the message.
+   *
+   * @param string $key
+   *   The key under this module's third-party settings.
+   * @param string|null $leaf
+   *   The property under that key the violation is on, if any.
+   *
+   * @return string
+   *   The prefix of that violation's line in the failure message.
+   */
+  protected static function toolApiPath(string $key, ?string $leaf = NULL): string {
+    $segments = ['third_party_settings', self::EXTRAS, $key];
+    return SurfaceProviderToolBase::VALUES . ($leaf === NULL ? '' : '.' . $leaf) . ': '
+      . implode(' ', array_map(static fn (string $segment): string => '(property ' . $segment . ')', $segments)) . ' ';
   }
 
   /**

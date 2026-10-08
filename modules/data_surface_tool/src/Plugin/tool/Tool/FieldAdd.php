@@ -34,6 +34,12 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * from, and the pipeline enforces exactly that. A field type that
  * declares no surface falls back to the serialized config schema, which
  * is what the free-form tool offers for every field type.
+ *
+ * A field type whose settings fill FieldInstanceSurface's settings slot
+ * is added through that surface as a whole: the add situation, knowing
+ * the storage's name and type, resolves the slot to the field type's
+ * settings, and one submission writes the field and, through the
+ * settings surface's own target, its settings.
  */
 #[Tool(
   id: 'data_surface:field_add',
@@ -130,6 +136,8 @@ class FieldAdd extends ToolBase implements InputDefinitionRefinerInterface {
     $instance->surfaceLocator = $container->get('data_surface_tool.field_surface_locator');
     $instance->surfaceInputDefinitions = $container->get('data_surface_tool.input_definitions');
     $instance->pipeline = $container->get('data_surface.pipeline');
+    $instance->surfaces = $container->get('data_surface.surfaces');
+    $instance->surfaceRegistry = $container->get('data_surface.surface_registry');
     return $instance;
   }
 
@@ -187,23 +195,36 @@ class FieldAdd extends ToolBase implements InputDefinitionRefinerInterface {
     }
     $field = FieldConfig::create($field_values);
 
-    $surface = $this->surfaceLocator->surfaceFor($field);
-    $target = $surface === NULL ? NULL : $this->surfaceLocator->targetFor($field);
     // What the run asks the caller to re-choose, as opposed to what it
     // refused: empty on every ordinary save, and left out of the result
     // when it is.
     $stale = [];
-    if ($surface !== NULL && $target !== NULL) {
+    if ($this->hasSettingsVariant($field_storage->getType())) {
+      // The field instance surface, as a whole: label, help text and
+      // requiredness beside the settings, validated together before
+      // anything is written, so an invalid payload leaves no field.
+      $payload = ['label' => $label, 'required' => $required ?? FALSE];
+      if (!empty($description)) {
+        $payload['description'] = $description;
+      }
+      if (is_array($settings)) {
+        $payload['settings'] = $settings;
+      }
+      $result = $this->submitInstance($this->addContext($entity_type_id, $bundle, $field_storage), $payload, $access);
+      if (!$result->isValid()) {
+        return $this->refusedResult($field_name, $result->violations);
+      }
+      $stale = $this->staleReferences($result->violations);
+      $field = $this->resolveField($values) ?? $field;
+    }
+    elseif (($surface = $this->surfaceLocator->surfaceFor($field)) !== NULL && ($target = $this->surfaceLocator->targetFor($field)) !== NULL) {
       // One call does the whole of it: the surface says what the values
       // may be, the target says what they are stored as, and the commit
       // is the field's own save, so an invalid payload leaves no field
       // behind.
       $result = $this->pipeline->submit($surface, is_array($settings) ? $settings : [], $target, access: $access);
       if (!$result->isValid()) {
-        return ExecutableResult::failure($this->t('The settings for field @field were refused: @violations', [
-          '@field' => $field_name,
-          '@violations' => $this->violationSummary($result->violations),
-        ]));
+        return $this->refusedResult($field_name, $result->violations);
       }
       $stale = $this->staleReferences($result->violations);
     }
@@ -265,7 +286,7 @@ class FieldAdd extends ToolBase implements InputDefinitionRefinerInterface {
             'field_storage' => $field_storage,
             'bundle' => $values['bundle'],
           ]);
-          $definition = $this->settingsInputDefinition($field, $definition, []);
+          $definition = $this->settingsInputDefinition($field, $definition, [], $this->addContext($values['entity_type_id'], $values['bundle'], $field_storage));
         }
         break;
     }

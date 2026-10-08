@@ -9,7 +9,7 @@ use Drupal\data_surface\Surface\ShapeInterface;
 use Drupal\data_surface\Surface\SurfaceInterface;
 
 /**
- * Attaches a subsurface before subsurfaces exist.
+ * An open slot nothing fills: the deciding key can choose nothing.
  */
 #[Surface('surface_test.broken.attaching')]
 final class AttachingSurface implements SurfaceInterface {

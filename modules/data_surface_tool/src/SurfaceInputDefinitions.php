@@ -8,12 +8,15 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
+use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Pipeline\ValueState;
+use Drupal\data_surface\SurfaceEntry;
+use Drupal\data_surface\SurfaceSlot;
 use Drupal\tool\TypedData\InputDefinition;
 use Drupal\tool\TypedData\InputDefinitionInterface;
 use Drupal\tool\TypedData\ListInputDefinition;
@@ -57,6 +60,12 @@ use Drupal\tool\TypedData\OutputDefinitionInterface;
  * The surface's outputs convert the same way, into the output
  * definitions the Tool API declares outputs with; outputsFromSurface()
  * says what that direction loses on top of these two.
+ *
+ * Subsurfaces convert by what they are. An attached child, and a slot
+ * whose deciding key already chose (or is locked), are a map like any
+ * other: a nested map input whose properties are the child's keys. An
+ * unresolved slot is the one shape the Tool API cannot say, and
+ * fromSlot() says why and what is emitted instead.
  *
  * One Tool API gap is worth naming here rather than in a method
  * docblock, because it is why the two tools in this module still
@@ -126,8 +135,8 @@ final class SurfaceInputDefinitions {
   public function fromSurface(DataSurfaceInterface $surface, TranslatableMarkup|string $label, TranslatableMarkup|string $description, bool $required = FALSE, mixed $default_value = NULL): MapInputDefinition {
     $properties = [];
     $definitions = $surface->getDefinitions();
-    foreach ($definitions as $name => $definition) {
-      $property = $this->fromDefinition($definition);
+    foreach ($definitions->entries() as $name => $entry) {
+      $property = $this->fromEntry($entry);
       if ($definitions->isLocked($name)) {
         // A locked surface key has exactly one legal value, and the Tool
         // API has the same idea for a whole input. It has no effect on a
@@ -143,6 +152,125 @@ final class SurfaceInputDefinitions {
       description: $description,
       required: $required,
       default_value: $default_value,
+      property_definitions: $properties,
+    );
+  }
+
+  /**
+   * Converts one key of a surface, subsurfaces included.
+   *
+   * @param \Drupal\data_surface\SurfaceEntry $entry
+   *   The key.
+   *
+   * @return \Drupal\tool\TypedData\InputDefinitionInterface
+   *   The input definition.
+   */
+  protected function fromEntry(SurfaceEntry $entry): InputDefinitionInterface {
+    if ($entry->slot !== NULL && DefinitionMetadata::slotOf($entry->definition) !== NULL) {
+      return $this->fromSlot($entry->slot, $entry->definition);
+    }
+    $child = $entry->attachment?->child;
+    if ($child === NULL || !$entry->definition instanceof ComplexDataDefinitionInterface) {
+      return $this->fromDefinition($entry->definition);
+    }
+    // An attached child is a map whose properties are the child's own
+    // keys, converted the way the child's own entries say: a slot inside
+    // the child is still a slot.
+    $map = $this->fromDefinition($entry->definition);
+    if ($map instanceof MapInputDefinition) {
+      $properties = $entry->definition->getPropertyDefinitions();
+      foreach ($child->getDefinitions()->entries() as $name => $child_entry) {
+        $map->setPropertyDefinition((string) $name, $child_entry->slot !== NULL && isset($properties[$name]) && DefinitionMetadata::slotOf($properties[$name]) !== NULL
+          ? $this->fromSlot($child_entry->slot, $properties[$name])
+          : $this->fromDefinition($properties[$name] ?? $child_entry->definition));
+      }
+    }
+    return $map;
+  }
+
+  /**
+   * Converts a slot whose deciding key has chosen nothing.
+   *
+   * The widest honest schema, and a known Tool API gap. What a slot is
+   * — "this map is exactly variant A's when the sibling is a, exactly
+   * variant B's when it is b" — is a union keyed by a sibling. JSON
+   * Schema can say it, but only on the parent: an `if` naming the
+   * sibling's `const` and a `then` naming this property's schema, once
+   * per variant, or a `oneOf` over whole parent objects. The Tool API's
+   * definitions have no place for either. A context definition carries
+   * one data type, constraints and, for a map, its property definitions;
+   * MapInputDefinition has no union, no conditional and no `oneOf`, and
+   * its normalizer emits one schema per property with no reference to a
+   * sibling. And `oneOf` on the slot's own schema would not do: the
+   * deciding key is not inside the slot's value, so nothing in that
+   * value could select a branch.
+   *
+   * So the slot is advertised as a map holding every key any variant
+   * declares, in variant order, none of them required and none with a
+   * default (both depend on the variant), each annotated with the values
+   * of the deciding key it belongs to, and the whole table said in the
+   * slot's own description. Nothing is promised that the pipeline does
+   * not keep: it refuses a key from another variant by name, and judges
+   * the chosen variant's keys by that variant's own rules. A key two
+   * variants share is advertised with the first variant's definition.
+   *
+   * @param \Drupal\data_surface\SurfaceSlot $slot
+   *   The slot's variant table.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $placeholder
+   *   The placeholder the slot advertises.
+   *
+   * @return \Drupal\tool\TypedData\MapInputDefinition
+   *   The union map.
+   */
+  public function fromSlot(SurfaceSlot $slot, DataDefinitionInterface $placeholder): MapInputDefinition {
+    $owners = [];
+    $first = [];
+    $table = [];
+    foreach ($slot->variants as $id => $variant) {
+      $keys = [];
+      foreach ($variant->child->getDefinitions() as $name => $definition) {
+        $owners[$name][] = (string) $id;
+        $first[$name] ??= $definition;
+        $keys[] = $name;
+      }
+      $table[] = $this->t('@value: @keys', [
+        '@value' => $id,
+        '@keys' => $keys === [] ? $this->t('nothing') : implode(', ', $keys),
+      ]);
+    }
+    $properties = [];
+    foreach ($first as $name => $definition) {
+      // A copy, said the way the union means it: optional, with no
+      // default, and the variants it belongs to named. Only its own
+      // flags change, so a shallow clone leaves the variant untouched.
+      $union = clone $definition;
+      $note = $this->t('Only when @by is @values.', [
+        '@by' => $slot->by,
+        '@values' => implode(', ', $owners[$name]),
+      ]);
+      $description = (string) $this->description($definition);
+      if ($union instanceof DataDefinition) {
+        $union->setRequired(FALSE);
+        $union->setDescription($description === '' ? $note : $this->t('@description @note', [
+          '@description' => $description,
+          '@note' => $note,
+        ]));
+      }
+      DefinitionMetadata::setDefaultValue($union, NULL);
+      $properties[$name] = $this->fromDefinition($union);
+    }
+    $note = $this->t('Its keys depend on @by. @table.', [
+      '@by' => $slot->by,
+      '@table' => $table === [] ? $this->t('No variant fills it') : implode('; ', array_map('strval', $table)),
+    ]);
+    $description = (string) $this->description($placeholder);
+    return new MapInputDefinition(
+      label: $this->label($placeholder),
+      description: $description === '' ? $note : $this->t('@description @note', [
+        '@description' => $description,
+        '@note' => $note,
+      ]),
+      required: $this->requiredInPayload($placeholder),
       property_definitions: $properties,
     );
   }

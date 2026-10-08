@@ -21,9 +21,14 @@ block.settings.data_surface_demo:
     limit:
       type: integer
       label: 'Number of items'
-    show_summary:
-      type: boolean
-      label: 'Show summaries'
+    presentation:
+      type: string
+      label: 'Presentation'
+    # The slot: its shape is the chosen presentation's, so the schema
+    # picks the mapping by the sibling's value.
+    presentation_settings:
+      type: block.settings.data_surface_demo.presentation.[%parent.presentation]
+      label: 'Presentation settings'
     # Namespace for surface definitions mounted by other modules through
     # the build event. Each module describes its own mount under its own
     # name, which is the core convention for a shape only the mounting
@@ -34,6 +39,22 @@ block.settings.data_surface_demo:
       requiredKey: false
       sequence:
         type: block.settings.data_surface_demo.third_party.[%key]
+
+block.settings.data_surface_demo.presentation.list:
+  type: mapping
+  label: 'List presentation settings'
+  mapping:
+    show_summary:
+      type: boolean
+      label: 'Show summaries'
+
+block.settings.data_surface_demo.presentation.grid:
+  type: mapping
+  label: 'Grid presentation settings'
+  mapping:
+    columns:
+      type: integer
+      label: 'Columns'
 
 field.formatter.settings.data_surface_demo_string:
   type: mapping

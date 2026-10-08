@@ -34,8 +34,8 @@ drush pm:install data_surface_address
 ```
 
 Describes the [Address](https://www.drupal.org/project/address) field
-type's instance settings as a surface declared on the field item class,
-and lets Field UI render the generated form. The address module itself is
+type's instance settings as a surface class, and lets Field UI render
+the generated form. The address module itself is
 not modified: the field type class is swapped for a subclass through
 `hook_field_info_alter()`.
 

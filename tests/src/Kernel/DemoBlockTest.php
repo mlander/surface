@@ -86,7 +86,9 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
       'bundle' => NULL,
       'field' => NULL,
       'limit' => 10,
-      'show_summary' => TRUE,
+      'presentation' => 'list',
+      // The slot starts as the variant its deciding key starts on.
+      'presentation_settings' => ['show_summary' => TRUE],
     ], $this->createBlock()->defaultConfiguration());
   }
 
@@ -244,7 +246,8 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
       'bundle' => 'article',
       'field' => 'title',
       'limit' => '5',
-      'show_summary' => 0,
+      'presentation' => 'list',
+      'presentation_settings' => ['show_summary' => 0],
     ], new PluginConfigurationTarget($block));
 
     $this->assertTrue($result->isValid());
@@ -254,13 +257,94 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     // Submitted strings arrived as the definitions' native types.
     $this->assertSame('Latest articles', $configuration['headline']);
     $this->assertSame(5, $configuration['limit']);
-    $this->assertFalse($configuration['show_summary']);
+    // At every depth: the list's checkbox, inside the slot, too.
+    $this->assertSame(['show_summary' => FALSE], $configuration['presentation_settings']);
     $this->assertSame('article', $configuration['bundle']);
     $this->assertSame('title', $configuration['field']);
     // Host-owned keys came through the same write untouched.
     $this->assertSame('A title', $configuration['label']);
     $this->assertSame('data_surface_demo', $configuration['id']);
     $this->assertSame('data_surface_demo', $configuration['provider']);
+  }
+
+  /**
+   * Tests the presentation slot: the form rebuilds as the chosen variant.
+   *
+   * The presentation is a refinement dependency of its slot, so it
+   * carries the AJAX rebuild. Moved from list to grid, the settings the
+   * person left in the list's checkbox answer a question no longer on
+   * the form: the discard cascade drops that input, and the slot comes
+   * back as the grid, from the grid's own defaults.
+   */
+  public function testPresentationSlotRebuildsAsTheChosenVariant(): void {
+    $stored = ['presentation' => 'list', 'presentation_settings' => ['show_summary' => FALSE]];
+    $form = $this->createBlock($stored)->buildConfigurationForm([], new FormState());
+    $this->assertArrayHasKey('#ajax', $form['presentation']);
+    $this->assertSame('details', $form['presentation_settings']['#type']);
+    $this->assertSame('Presentation settings', (string) $form['presentation_settings']['#title']);
+    $this->assertSame('checkbox', $form['presentation_settings']['show_summary']['#type']);
+    $this->assertFalse($form['presentation_settings']['show_summary']['#default_value']);
+    $this->assertArrayNotHasKey('columns', $form['presentation_settings']);
+
+    $form_state = new FormState();
+    $form_state->setTriggeringElement(['#parents' => ['settings', 'presentation']]);
+    $form_state->setUserInput([
+      'settings' => [
+        'presentation' => 'grid',
+      // Left behind by the list's checkbox, which was on the page.
+        'presentation_settings' => ['show_summary' => '1'],
+      ],
+    ]);
+    $form = $this->createBlock($stored)->buildConfigurationForm([], $form_state);
+    $this->assertSame('number', $form['presentation_settings']['columns']['#type']);
+    $this->assertEquals(3, $form['presentation_settings']['columns']['#default_value']);
+    $this->assertArrayNotHasKey('show_summary', $form['presentation_settings']);
+    // The orphaned input is gone from the raw input too, and only it.
+    $this->assertArrayNotHasKey('presentation_settings', $form_state->getUserInput()['settings']);
+    $this->assertSame('grid', $form_state->getUserInput()['settings']['presentation']);
+
+    // Input shaped for the variant chosen stands.
+    $form_state = new FormState();
+    $form_state->setTriggeringElement(['#parents' => ['settings', 'presentation']]);
+    $form_state->setUserInput([
+      'settings' => [
+        'presentation' => 'list',
+        'presentation_settings' => ['show_summary' => '1'],
+      ],
+    ]);
+    $this->createBlock($stored)->buildConfigurationForm([], $form_state);
+    $this->assertSame(['show_summary' => '1'], $form_state->getUserInput()['settings']['presentation_settings']);
+  }
+
+  /**
+   * Tests that the slot's value has to fit the chosen presentation.
+   */
+  public function testPresentationSettingsFitThePresentation(): void {
+    $block = $this->createBlock();
+    $target = new PluginConfigurationTarget($block);
+
+    // The list's key under a grid is refused by name, on its own path.
+    $result = $this->pipeline()->submit($block->getDataSurface(), [
+      'presentation' => 'grid',
+      'presentation_settings' => ['show_summary' => TRUE],
+    ], $target);
+    $this->assertFalse($result->isValid());
+    $violation = iterator_to_array($result->violations, FALSE)[0];
+    $this->assertSame('presentation_settings.show_summary', $violation->fullPath());
+    $this->assertSame('presentation_settings.show_summary belongs to the list variant, but presentation chose grid.', (string) $violation->message);
+
+    // The grid's own rules judge its own keys.
+    $result = $this->pipeline()->submit($block->getDataSurface(), [
+      'presentation' => 'grid',
+      'presentation_settings' => ['columns' => '9'],
+    ], $target);
+    $this->assertSame(['presentation_settings.columns'], array_map(static fn ($violation): string => $violation->fullPath(), iterator_to_array($result->violations, FALSE)));
+
+    // Moving to a grid and saying nothing else: the list's stored
+    // settings do not fit, so the grid starts from its own defaults.
+    $result = $this->pipeline()->submit($block->getDataSurface(), ['presentation' => 'grid'], $target);
+    $this->assertTrue($result->committed);
+    $this->assertSame(['columns' => 3], $block->getConfiguration()['presentation_settings']);
   }
 
   /**
@@ -296,7 +380,8 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     // reaches the page unescaped.
     $items = array_map('strval', $build['#items']);
     $this->assertContains('Number of items: 10', $items);
-    $this->assertContains('Show summaries: yes', $items);
+    $this->assertContains('Presentation: list', $items);
+    $this->assertContains('Presentation settings: 1 value', $items);
     // A key with no stored value says so in words rather than printing a
     // PHP literal.
     $this->assertContains('Bundle: not configured', $items);

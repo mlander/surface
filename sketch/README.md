@@ -82,9 +82,10 @@ alter is a class with the same two jobs and a narrower tool.
 
 - The shape methods get a shape to fill, and nothing else: no values,
   no context. The owner gets `ShapeInterface`; an alter gets
-  `ShapeAdditionsInterface`, which is the same minus `attachBy()`, so an
-  alter can add and attach but not change or remove what the owner
-  declared. Inputs and outputs use the same two interfaces.
+  `ShapeAdditionsInterface`, which is the same minus `attachBy()`. An
+  alter can add keys, attach a child, and reword a label or description
+  with `describe()`. It cannot remove a key, change its type, or widen
+  it. Inputs and outputs use the same two interfaces.
 - A `#[RefinesInput('bundle')]` method takes the key's definition first,
   then one parameter per sibling it watches, matched by name to that
   sibling's key, or listed on the attribute as `watches:` when you

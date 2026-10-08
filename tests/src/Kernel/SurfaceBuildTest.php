@@ -15,10 +15,19 @@ use Drupal\data_surface\Event\DataSurfaceBuildEvent;
 use Drupal\data_surface\Surface\Attribute\UsesSurface;
 use Drupal\data_surface\Surface\SurfaceContext;
 use Drupal\data_surface\SurfaceBuild\SurfaceShape;
+use Drupal\data_surface\SurfaceBuild\SurfaceShapeAdditions;
 use Drupal\data_surface\SurfaceBuild\SurfacesInterface;
 use Drupal\data_surface_demo\Plugin\Block\DataSurfaceDemoBlock;
 use Drupal\data_surface_demo\Surface\DemoBlockSurface;
+use Drupal\data_surface_demo\Surface\GridPresentationSurface;
+use Drupal\data_surface_demo\Surface\ListPresentationSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\AttachingSurface;
+use Drupal\data_surface_surface_test\Surface\Broken\NosyChildSurface;
+use Drupal\data_surface_surface_test\Surface\Broken\NosyParentSurface;
+use Drupal\data_surface_surface_test\Surface\Broken\RefinesSubsurfaceSurface;
+use Drupal\data_surface_surface_test\Surface\Broken\SelfAttachingSurface;
+use Drupal\data_surface_surface_test\Surface\Broken\UnofferedVariantSurface;
+use Drupal\data_surface_surface_test\Surface\Broken\WatchesSubsurfaceSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\ClashingSituationSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\RefinesOutputSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\UndeclaredIdentitySurface;
@@ -177,7 +186,19 @@ class SurfaceBuildTest extends DataSurfaceKernelTestBase {
     }
     $this->assertSame($legacy->getDefaultValues(), $surface->getDefaultValues());
     $this->assertSame($legacy->getDefinitions()->refinements(), $surface->getDefinitions()->refinements());
-    $this->assertSame(['bundle' => ['entity_type'], 'field' => ['entity_type', 'bundle']], $surface->getDefinitions()->refinements());
+    $this->assertSame([
+      'bundle' => ['entity_type'],
+      'field' => ['entity_type', 'bundle'],
+      'presentation_settings' => ['presentation'],
+    ], $surface->getDefinitions()->refinements());
+    // The slot's variants match too, child by child.
+    foreach (['list', 'grid'] as $variant) {
+      $legacy_child = $legacy->getDefinitions()->entry('presentation_settings')->slot->variant($variant)->child;
+      $child = $surface->getDefinitions()->entry('presentation_settings')->slot->variant($variant)->child;
+      foreach ($legacy_child->getDefinitions() as $name => $definition) {
+        $this->assertEquals($this->describe($definition), $this->describe($child->getDefinition($name)), $variant . '.' . $name);
+      }
+    }
   }
 
   /**
@@ -235,7 +256,9 @@ class SurfaceBuildTest extends DataSurfaceKernelTestBase {
     $values = ['entity_type' => 'node', 'bundle' => 'article'] + $this->demoSurface()->getDefaultValues();
     $legacy = $this->formBuilder()->buildSurfaceForm($this->legacyDemoSurface(), $values, new FormState());
     $surface = $this->formBuilder()->buildSurfaceForm($this->demoSurface(), $values, new FormState());
-    foreach (['headline', 'entity_type', 'bundle', 'field', 'limit', 'show_summary'] as $key) {
+    $this->assertSame('checkbox', $surface['presentation_settings']['show_summary']['#type']);
+    $this->assertSame($legacy['presentation_settings']['#type'], $surface['presentation_settings']['#type']);
+    foreach (['headline', 'entity_type', 'bundle', 'field', 'limit', 'presentation'] as $key) {
       $this->assertSame($legacy[$key]['#type'], $surface[$key]['#type'], $key);
       $this->assertSame(isset($legacy[$key]['#ajax']), isset($surface[$key]['#ajax']), $key);
       $this->assertSame(
@@ -259,7 +282,13 @@ class SurfaceBuildTest extends DataSurfaceKernelTestBase {
 
     $block = $this->container->get('plugin.manager.block')->createInstance('data_surface_demo');
     $this->assertInstanceOf(DataSurfaceDemoBlock::class, $block);
-    $this->assertSame([[DataSurfaceDemoBlock::class, 'block:data_surface_demo']], $this->builds);
+    // Each child of the presentation slot through the same build step,
+    // with its own build event, named for itself; then the block.
+    $this->assertSame([
+      [ListPresentationSurface::class, 'surface:block.data_surface_demo.presentation.list'],
+      [GridPresentationSurface::class, 'surface:block.data_surface_demo.presentation.grid'],
+      [DataSurfaceDemoBlock::class, 'block:data_surface_demo'],
+    ], $this->builds);
     $this->assertSame(
       array_keys($this->demoSurface()->getDefinitions()->toArray()),
       array_keys($block->getDataSurface()->getDefinitions()->toArray()),
@@ -268,7 +297,8 @@ class SurfaceBuildTest extends DataSurfaceKernelTestBase {
     // A surface built for no host is named for itself.
     $this->builds = [];
     $this->demoSurface();
-    $this->assertSame([[DemoBlockSurface::class, 'surface:block.data_surface_demo']], $this->builds);
+    $this->assertContains([DemoBlockSurface::class, 'surface:block.data_surface_demo'], $this->builds);
+    $this->assertNotContains([DataSurfaceDemoBlock::class, 'block:data_surface_demo'], $this->builds);
   }
 
   /**
@@ -408,21 +438,62 @@ class SurfaceBuildTest extends DataSurfaceKernelTestBase {
         WideningRefinerSurface::class,
         'Refining "name" for ' . WideningRefinerSurface::class . '::nameIsOptional() widened what it was given: the required flag was turned off.',
       ],
-      'subsurfaces wait for step 2' => [
-        AttachingSurface::class,
-        'attachBy() cannot attach a subsurface at "settings" yet: subsurfaces arrive in step 2 of the rework (REWORK.md).',
+      'a parent refines its subsurface' => [
+        RefinesSubsurfaceSurface::class,
+        RefinesSubsurfaceSurface::class . '::intoTheShelf() refines "shelf", which is a subsurface of the surface_test.broken.refines_subsurface surface.',
+      ],
+      'a parent watches its subsurface' => [
+        WatchesSubsurfaceSurface::class,
+        WatchesSubsurfaceSurface::class . '::noteForShelf() watches "shelf", which is a subsurface of the surface_test.broken.watches_subsurface surface.',
+      ],
+      'a child watches its parent' => [
+        NosyParentSurface::class,
+        NosyChildSurface::class . '::heightInPantry() watches "pantry", which is a key of the surface_test.broken.nosy_parent surface this one is attached inside at "nosy".',
+      ],
+      'a variant its deciding key cannot choose' => [
+        UnofferedVariantSurface::class,
+        'The "settings" slot has the tin variant, which "kind" does not allow',
+      ],
+      'a surface inside itself' => [
+        SelfAttachingSurface::class,
+        'The surface_test.broken.self_attaching surface is attached inside itself, through surface_test.broken.self_attaching.again',
       ],
     ];
   }
 
   /**
-   * Tests that attach() is declared and refuses until step 2.
+   * Tests an open slot nothing fills.
+   *
+   * It is a placeholder for good, and its deciding key can be answered
+   * with nothing at all, rather than the surface being refused on a site
+   * where no module brings a variant.
    */
-  public function testAttachWaitsForStepTwo(): void {
-    $shape = new SurfaceShape(new DataSurfaceBuilder(), $this->container->get('typed_data_manager'));
+  public function testAnOpenSlotNothingFillsChoosesNothing(): void {
+    $surface = $this->surfaces()->build(AttachingSurface::class, new SurfaceContext('configure'));
+    $this->assertNull(DefinitionMetadata::slotOf($surface->getDefinition('type')));
+    $this->assertSame('type', DefinitionMetadata::slotOf($surface->getDefinition('settings')));
+    $this->assertSame([], $surface->getDefinitions()->entry('settings')->slot->variantIds());
+    $this->assertSame(['choices' => []], $surface->getDefinition('type')->getConstraints()['Choice']);
+    $this->assertContains('type', $this->pipeline()->validate($surface, ['type' => 'anything'])->keys());
+  }
+
+  /**
+   * Tests that an alter's attach, and an output's, are refused for now.
+   */
+  public function testAttachIsTheOwnersInputVerbForNow(): void {
+    $builder = new DataSurfaceBuilder();
+    $outputs = new SurfaceShape($builder, $this->container->get('typed_data_manager'), TRUE);
+    try {
+      $outputs->attach('storage', RecipeSurface::class);
+      $this->fail('An output attached a subsurface.');
+    }
+    catch (\LogicException $e) {
+      $this->assertStringContainsString('outputs do not hold subsurfaces yet', $e->getMessage());
+    }
+    $additions = new SurfaceShapeAdditions($builder, $this->container->get('typed_data_manager'), 'data_surface_surface_test');
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('attach() cannot attach a subsurface at "storage" yet: subsurfaces arrive in step 2');
-    $shape->attach('storage', RecipeSurface::class);
+    $this->expectExceptionMessage('a subsurface inside that mount is not built');
+    $additions->attach('storage', RecipeSurface::class);
   }
 
   /**

@@ -187,7 +187,8 @@ final class SurfaceRegistry {
   /**
    * Gets the surfaces marked as variants for one slot of one surface.
    *
-   * Collected now; the slot they fill is built in step 2 of the rework.
+   * What fills an open slot: one declared with attachBy() and no
+   * children, which the build step fills from here.
    *
    * @param string $surface
    *   The surface class or id.
@@ -328,8 +329,10 @@ final class SurfaceRegistry {
    * Answers whether a referenced surface is simply not here.
    *
    * A class that does not load belongs to a module that is not enabled,
-   * so whatever names it has nothing to apply to and is skipped. A class
-   * that loads and is not a discovered surface is a mistake.
+   * so whatever names it has nothing to apply to and is skipped; so does
+   * a class that loads and carries #[Surface] without being discovered,
+   * because a test's autoloader knows every extension, enabled or not.
+   * A class that loads and is no surface at all is a mistake.
    *
    * @param string $class
    *   The referenced surface class.
@@ -349,8 +352,8 @@ final class SurfaceRegistry {
       return FALSE;
     }
     // phpcs:ignore Drupal.Files.LineLength.TooLong
-    // SKETCH GAP: the sketch does not say what an alter, situation or variant naming a surface that is not there means; a class that does not load (its module is off) is skipped, one that loads and is no surface is refused.
-    if (class_exists($class)) {
+    // SKETCH GAP: the sketch does not say what an alter, situation or variant naming a surface that is not there means; a class that does not load, or loads and carries #[Surface] (its module is off, though an autoloader that knows every extension still finds it), is skipped; one that loads and is no surface is refused.
+    if (class_exists($class) && (new \ReflectionClass($class))->getAttributes(Surface::class) === []) {
       throw new \LogicException(sprintf(
         '%s names %s, which is not a discovered surface: a surface carries #[Surface] and lives in its module\'s src/Surface directory.',
         $referrer,

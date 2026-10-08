@@ -23,8 +23,15 @@ use Drupal\data_surface_demo\Surface\DemoBlockSurface;
  *   build mounts under this module's name, at
  *   third_party_settings.data_surface_demo_extras.badge, so the block's
  *   configuration and schema hold it without the demo module knowing.
- * - It tightens an owner's key against a sibling. With summaries shown,
- *   a teaser list stays short.
+ * - It tightens an owner's key against a sibling. A grid stays short.
+ * - It rewords an owner's key with describe(), the one change to an
+ *   existing key an alter may make: the headline's help text mentions
+ *   the badge this module renders beside it.
+ *
+ * Summaries are no longer the block's own key — they moved into the
+ * list presentation's subsurface — so a rule reading them would have to
+ * live there: a parent's refiner, and an alter of the parent, cannot see
+ * into a child.
  *
  * Found in src/SurfaceAlter by its attribute and autowired as a service,
  * so it is translated through the injected service like any other class
@@ -38,9 +45,9 @@ final class DemoBlockAlter implements SurfaceAlterInterface {
   use StringTranslationTrait;
 
   /**
-   * The most items a list with summaries offers.
+   * The most items a grid offers.
    */
-  public const SUMMARY_LIMIT = 20;
+  public const GRID_LIMIT = 20;
 
   /**
    * Constructs a DemoBlockAlter.
@@ -64,21 +71,22 @@ final class DemoBlockAlter implements SurfaceAlterInterface {
           'flame' => $this->t('Flame'),
         ],
       ]);
+    $inputs->describe('headline', description: $this->t('Shown above the featured content, beside its badge.'));
   }
 
   /**
-   * With summaries shown, at most twenty items.
+   * In a grid, at most twenty items.
    *
-   * A long list of teasers with their summaries is a page, not a block.
+   * A grid of fifty teasers is a page, not a block.
    */
   #[RefinesInput('limit')]
-  public function shortWithSummaries(DataDefinitionInterface $limit, bool $show_summary): DataDefinitionInterface {
-    if (!$show_summary) {
+  public function shortInGrid(DataDefinitionInterface $limit, string $presentation): DataDefinitionInterface {
+    if ($presentation !== 'grid') {
       return $limit;
     }
     // Only the maximum moves, so a minimum anybody else raised stands.
     $range = $limit->getConstraints()['Range'] ?? [];
-    $range['max'] = min($range['max'] ?? self::SUMMARY_LIMIT, self::SUMMARY_LIMIT);
+    $range['max'] = min($range['max'] ?? self::GRID_LIMIT, self::GRID_LIMIT);
     return $limit->addConstraint('Range', $range);
   }
 

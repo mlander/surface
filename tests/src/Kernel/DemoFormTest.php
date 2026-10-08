@@ -88,7 +88,12 @@ class DemoFormTest extends DataSurfaceKernelTestBase {
     $this->assertSame('textfield', $form['surface']['headline']['#type']);
     $this->assertSame('select', $form['surface']['entity_type']['#type']);
     $this->assertSame('number', $form['surface']['limit']['#type']);
-    $this->assertSame('checkbox', $form['surface']['show_summary']['#type']);
+    $this->assertSame('select', $form['surface']['presentation']['#type']);
+    // The slot, rendered as the variant the presentation starts on: the
+    // list's own checkbox, inside the slot's details.
+    $this->assertSame('details', $form['surface']['presentation_settings']['#type']);
+    $this->assertSame('checkbox', $form['surface']['presentation_settings']['show_summary']['#type']);
+    $this->assertArrayNotHasKey('columns', $form['surface']['presentation_settings']);
     // The default entity type already narrowed the bundle, on the first
     // page load and without any JavaScript: the user entity type has
     // exactly one bundle, itself.
@@ -113,8 +118,9 @@ class DemoFormTest extends DataSurfaceKernelTestBase {
       'bundle' => 'article',
       'field' => 'title',
       'limit' => '5',
+      'presentation' => 'list',
       // A browser sends nothing at all for an unchecked checkbox.
-      'show_summary' => NULL,
+      'presentation_settings' => ['show_summary' => NULL],
     ]);
 
     // The pipeline's accept() cast the submitted strings on the way, so
@@ -126,14 +132,15 @@ class DemoFormTest extends DataSurfaceKernelTestBase {
       'bundle' => 'article',
       'field' => 'title',
       'limit' => 5,
-      'show_summary' => FALSE,
+      'presentation' => 'list',
+      'presentation_settings' => ['show_summary' => FALSE],
     ], $this->container->get('state')->get(self::STATE_KEY));
 
     // What was saved is on the form; the message says how much, in a
     // translatable sentence rather than a serialized dump of the stored
     // values.
     $messages = $this->container->get('messenger')->messagesByType('status');
-    $this->assertSame('Saved 6 values.', (string) reset($messages));
+    $this->assertSame('Saved 7 values.', (string) reset($messages));
   }
 
   /**
@@ -146,7 +153,8 @@ class DemoFormTest extends DataSurfaceKernelTestBase {
       'bundle' => 'article',
       'field' => 'title',
       'limit' => '5',
-      'show_summary' => 1,
+      'presentation' => 'list',
+      'presentation_settings' => ['show_summary' => 1],
     ]);
 
     $form = $this->container->get('form_builder')
@@ -166,7 +174,8 @@ class DemoFormTest extends DataSurfaceKernelTestBase {
       'entity_type' => 'node',
       'bundle' => 'not-a-bundle',
       'limit' => '5',
-      'show_summary' => 1,
+      'presentation' => 'list',
+      'presentation_settings' => ['show_summary' => 1],
     ]);
 
     $errors = $form_state->getErrors();
@@ -183,7 +192,8 @@ class DemoFormTest extends DataSurfaceKernelTestBase {
       'entity_type' => 'node',
       'bundle' => 'article',
       'limit' => '999',
-      'show_summary' => 1,
+      'presentation' => 'list',
+      'presentation_settings' => ['show_summary' => 1],
     ]);
 
     $this->assertArrayHasKey('surface][limit', $form_state->getErrors());

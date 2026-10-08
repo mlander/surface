@@ -51,6 +51,35 @@ final class SurfaceShapeAdditions extends ShapeAdapterBase {
   /**
    * {@inheritdoc}
    */
+  public function attach(string $key, string $child): static {
+    // phpcs:ignore Drupal.Files.LineLength.TooLong
+    // SKETCH GAP: the sketch lets an alter attach a child; an alter's keys are mounted at third_party_settings.<module>, and a subsurface inside that mount is not built in step 2, so an alter's attach() is refused.
+    throw new \LogicException(sprintf(
+      'The %s alter cannot attach %s at "%s" yet: an alter\'s keys are mounted under third_party_settings.%s, and a subsurface inside that mount is not built.',
+      $this->provider,
+      $child,
+      $key,
+      $this->provider,
+    ));
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * This shape's own keys answer by their plain name first: they live in
+   * this module's namespace, where another declaration of the same name
+   * could not collide with them.
+   */
+  protected function find(string $key): ?DataDefinitionInterface {
+    if (in_array($key, $this->keys, TRUE)) {
+      return $this->builder->getThirdPartyDefinition($this->provider, $key, $this->outputs);
+    }
+    return parent::find($key);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   protected function declare(string $key, DataDefinitionInterface $definition, mixed $default): void {
     // phpcs:ignore Drupal.Files.LineLength.TooLong
     // SKETCH GAP: the sketch puts an alter's key beside the owner's; here it is mounted at third_party_settings.<module>.<key> (outputs: third_party_outputs) so the owner's storage and schema need not know it.

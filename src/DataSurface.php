@@ -134,8 +134,8 @@ final class DataSurface implements DataSurfaceInterface {
    * {@inheritdoc}
    */
   public function getDefault(string $name): mixed {
-    $definition = $this->definitions->get($name);
-    return $definition === NULL ? NULL : DefinitionMetadata::defaultOf($definition);
+    $entry = $this->definitions->entry($name);
+    return $entry === NULL ? NULL : $this->defaultOf($entry);
   }
 
   /**
@@ -143,10 +143,35 @@ final class DataSurface implements DataSurfaceInterface {
    */
   public function getDefaultValues(): array {
     $defaults = [];
-    foreach ($this->definitions as $name => $definition) {
-      $defaults[$name] = DefinitionMetadata::defaultOf($definition);
+    foreach ($this->definitions->entries() as $name => $entry) {
+      $defaults[$name] = $this->defaultOf($entry);
     }
     return $defaults;
+  }
+
+  /**
+   * Reads what one key starts from.
+   *
+   * An attached child starts from its own defaults, read from the child
+   * so its own subsurfaces answer for themselves. A slot starts from the
+   * defaults of the variant its deciding key's default chooses, and from
+   * nothing when that chooses none.
+   *
+   * @param \Drupal\data_surface\SurfaceEntry $entry
+   *   The key.
+   *
+   * @return mixed
+   *   The default.
+   */
+  protected function defaultOf(SurfaceEntry $entry): mixed {
+    if ($entry->attachment !== NULL) {
+      return $entry->attachment->child->getDefaultValues();
+    }
+    if ($entry->slot !== NULL) {
+      $chosen = $entry->slot->chosen($this->getDefault($entry->slot->by));
+      return $chosen === NULL ? NULL : $entry->slot->defaultsOf($chosen);
+    }
+    return DefinitionMetadata::defaultOf($entry->definition);
   }
 
   /**
@@ -175,30 +200,39 @@ final class DataSurface implements DataSurfaceInterface {
    */
   public function refine(array $values): static {
     $refines = $this->refines();
-    if (!$refines && $this->filters === []) {
+    $nested = $this->definitions->hasNested();
+    if (!$refines && !$nested && $this->filters === []) {
       return $this;
     }
     $definitions = $this->definitions;
     $cacheability = CacheableMetadata::createFromObject($this);
     $changed = FALSE;
-    if ($refines) {
-      foreach ($this->definitions->entries() as $entry) {
-        if ($entry->dependencies === []) {
-          continue;
+    foreach ($this->definitions->entries() as $entry) {
+      if ($entry->isNested()) {
+        // A subsurface is refined by its child, in the child's frame, and
+        // by nothing in the parent: no parent refiner can name it.
+        $resolved = $this->refineNested($entry, $values, $cacheability);
+        if ($resolved !== NULL) {
+          $definitions = $definitions->with($entry->withDefinition($resolved));
+          $changed = TRUE;
         }
-        $dependency_values = $this->dependencyValues($entry->dependencies, $values);
-        if ($dependency_values === NULL) {
-          continue;
-        }
-        $chains = $this->chainsFor($entry);
-        if ($chains === [] && $entry->contributions === []) {
-          continue;
-        }
-        $definitions = $definitions->with($entry->withDefinition(
-          $this->unionOfContributions($entry, $chains, $dependency_values, $cacheability),
-        ));
-        $changed = TRUE;
+        continue;
       }
+      if (!$refines || $entry->dependencies === []) {
+        continue;
+      }
+      $dependency_values = $this->dependencyValues($entry->dependencies, $values);
+      if ($dependency_values === NULL) {
+        continue;
+      }
+      $chains = $this->chainsFor($entry);
+      if ($chains === [] && $entry->contributions === []) {
+        continue;
+      }
+      $definitions = $definitions->with($entry->withDefinition(
+        $this->unionOfContributions($entry, $chains, $dependency_values, $cacheability),
+      ));
+      $changed = TRUE;
     }
     if ($this->filters !== []) {
       $definitions = $this->applyFilters($definitions, $values, $cacheability);
@@ -207,6 +241,63 @@ final class DataSurface implements DataSurfaceInterface {
     return $changed
       ? new self($definitions, $this->refiner, $this->filters, $cacheability, $this->outputs, $this->outputRefiner, $this->thirdPartyShapes)
       : $this;
+  }
+
+  /**
+   * Refines one subsurface in its child's own frame.
+   *
+   * The child is refined against the value at this key, merged over the
+   * child's own defaults, under the child's own key names: no parent
+   * refiner reaches into it and its refiners never see a parent value.
+   * What comes back is the key's definition for these values — the
+   * child's refined map for an attached child, and for a slot the chosen
+   * variant's refined map, or nothing while no variant is chosen.
+   *
+   * The result is held to the same narrowing check as any refiner link,
+   * against what the key advertises. For an attached child that is the
+   * map rule: the same properties, each no wider. For a slot it is the
+   * one resolution refinement allows from a placeholder: `any`, to the
+   * map of a variant declared before anything was chosen.
+   *
+   * @param \Drupal\data_surface\SurfaceEntry $entry
+   *   The key, as advertised.
+   * @param array $values
+   *   The values the surface is being refined against.
+   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
+   *   Collects what the child's refinement depended on.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
+   *   The key's definition for these values, or NULL when nothing about
+   *   it changes.
+   */
+  protected function refineNested(SurfaceEntry $entry, array $values, CacheableMetadata $cacheability): ?DataDefinitionInterface {
+    $child = $entry->childFor($values);
+    if ($child === NULL) {
+      return NULL;
+    }
+    $value = $values[$entry->name] ?? NULL;
+    $chosen = $entry->slot?->chosen($values[$entry->slot->by] ?? NULL);
+    if ($chosen !== NULL && !$entry->slot->fits($chosen, $value)) {
+      // A value left behind by another variant says nothing about this
+      // one, so the variant is refined from its own defaults.
+      $value = [];
+    }
+    $refined = $child->refine(array_replace($child->getDefaultValues(), is_array($value) ? $value : []));
+    $cacheability->addCacheableDependency($refined);
+    if ($chosen !== NULL) {
+      $definition = $entry->slot->definitionFor($chosen, $refined);
+    }
+    elseif ($refined === $child) {
+      return NULL;
+    }
+    elseif ($entry->definition instanceof MapDataDefinition) {
+      $definition = SurfaceAttachment::mapOf($entry->definition, $refined);
+    }
+    else {
+      throw new \LogicException(sprintf('The "%s" subsurface no longer holds a map, so its child has nowhere to be written.', $entry->name));
+    }
+    Narrowing::assertNarrows($entry->name, 'the surface attached there', $entry->definition, $definition);
+    return $definition;
   }
 
   /**

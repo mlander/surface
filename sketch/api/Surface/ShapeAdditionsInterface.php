@@ -33,4 +33,12 @@ interface ShapeAdditionsInterface {
    */
   public function attach(string $key, string $child): static;
 
+  /**
+   * Rewords a key anyone declared. Label and description only: the one
+   * change to an existing key an alter may make, because it changes
+   * nothing about what is accepted. Type, presence and width stay the
+   * owner's; tightening is a #[RefinesInput] method.
+   */
+  public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL): static;
+
 }

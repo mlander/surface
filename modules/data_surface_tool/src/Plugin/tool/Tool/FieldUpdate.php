@@ -33,6 +33,11 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * sending one key changes that key alone, and sending a key as null
  * clears it. That is deliberate, and it is what makes "remove the
  * override on this one property" expressible at all.
+ *
+ * A field type whose settings fill FieldInstanceSurface's settings slot
+ * is updated through that surface as a whole, in its edit situation:
+ * what the caller sent — and only that — is merged over what the
+ * composed target loads, and written by it.
  */
 #[Tool(
   id: 'data_surface:field_update',
@@ -121,6 +126,8 @@ class FieldUpdate extends ToolBase implements InputDefinitionRefinerInterface {
     $instance->surfaceLocator = $container->get('data_surface_tool.field_surface_locator');
     $instance->surfaceInputDefinitions = $container->get('data_surface_tool.input_definitions');
     $instance->pipeline = $container->get('data_surface.pipeline');
+    $instance->surfaces = $container->get('data_surface.surfaces');
+    $instance->surfaceRegistry = $container->get('data_surface.surface_registry');
     return $instance;
   }
 
@@ -162,6 +169,27 @@ class FieldUpdate extends ToolBase implements InputDefinitionRefinerInterface {
       return ExecutableResult::failure($this->t('You do not have permission to update this field.'));
     }
 
+    if ($this->hasSettingsVariant($field->getType())) {
+      // Only what the caller said: a NULL here is an input left out, and
+      // what the field holds stands for it.
+      $payload = array_filter(
+        ['label' => $label, 'description' => $description, 'required' => $required],
+        static fn (mixed $value): bool => $value !== NULL,
+      );
+      if (is_array($settings)) {
+        $payload['settings'] = $settings;
+      }
+      if ($payload === []) {
+        return $this->updatedResult($field, $field_name, $bundle, [], FALSE);
+      }
+      $result = $this->submitInstance($this->editContext($field), $payload, $access);
+      if (!$result->isValid()) {
+        return $this->refusedResult($field_name, $result->violations);
+      }
+      $reloaded = FieldConfig::loadByName($entity_type_id, $bundle, $field_name);
+      return $this->updatedResult($reloaded instanceof FieldConfig ? $reloaded : $field, $field_name, $bundle, array_keys($payload), FALSE, $this->staleReferences($result->violations));
+    }
+
     $updated = [];
     if ($label !== NULL) {
       $field->setLabel($label);
@@ -185,10 +213,7 @@ class FieldUpdate extends ToolBase implements InputDefinitionRefinerInterface {
         // is written once.
         $result = $this->pipeline->submit($surface, $settings, $target, access: $access);
         if (!$result->isValid()) {
-          return ExecutableResult::failure($this->t('The settings for field @field were refused: @violations', [
-            '@field' => $field_name,
-            '@violations' => $this->violationSummary($result->violations),
-          ]));
+          return $this->refusedResult($field_name, $result->violations);
         }
         $updated[] = 'settings';
         // What the run asks the caller to re-choose, as opposed to what
@@ -281,7 +306,7 @@ class FieldUpdate extends ToolBase implements InputDefinitionRefinerInterface {
       case 'settings':
         $field = FieldConfig::loadByName($values['entity_type_id'], $values['bundle'], $values['field_name']);
         if ($field instanceof FieldConfig) {
-          $definition = $this->settingsInputDefinition($field, $definition, NULL);
+          $definition = $this->settingsInputDefinition($field, $definition, NULL, $this->editContext($field));
         }
         break;
     }

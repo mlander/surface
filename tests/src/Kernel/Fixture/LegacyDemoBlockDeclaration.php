@@ -10,17 +10,22 @@ use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DataSurfaceDeclarationInterface;
 use Drupal\data_surface\DataSurfaceRefinerInterface;
 use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\SurfaceAttachment;
 
 /**
  * The demo block's surface as the old spelling declared it.
  *
  * Kept verbatim from DataSurfaceDemoBlock before it moved to
  * #[UsesSurface], so the new spelling can be held to what the old one
- * produced. Deleted with the old spelling, in step 5 of the rework.
+ * produced, and given the presentation slot the way the engine's own
+ * spelling says one: attachBy() over sealed children. Deleted with the
+ * old spelling, in step 5 of the rework.
  */
 final class LegacyDemoBlockDeclaration implements DataSurfaceDeclarationInterface, DataSurfaceRefinerInterface {
 
@@ -78,10 +83,34 @@ final class LegacyDemoBlockDeclaration implements DataSurfaceDeclarationInterfac
       ->addConstraint('Range', ['min' => 1, 'max' => 50]));
     $builder->setDefault('limit', 10);
 
-    $builder->setDefinition('show_summary', DataDefinition::create('boolean')
+    $builder->setDefinition('presentation', DataDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Presentation'))
+      ->setDescription(new TranslatableMarkup('How the items are laid out.'))
+      ->setRequired(TRUE)
+      ->addConstraint('Choice', ['choices' => ['list', 'grid']]));
+    $builder->setDefault('presentation', 'list');
+
+    // The slot, in the engine's own words: a shell describing the key,
+    // then one sealed child per value of the deciding key.
+    $list = new DataSurfaceBuilder();
+    $list->setDefinition('show_summary', DataDefinition::create('boolean')
       ->setLabel(new TranslatableMarkup('Show summaries'))
       ->setDescription(new TranslatableMarkup('Whether item summaries render.')));
-    $builder->setDefault('show_summary', TRUE);
+    $list->setDefault('show_summary', TRUE);
+    $grid = new DataSurfaceBuilder();
+    $grid->setDefinition('columns', DataDefinition::create('integer')
+      ->setLabel(new TranslatableMarkup('Columns'))
+      ->setDescription(new TranslatableMarkup('How many items sit side by side.'))
+      ->setRequired(TRUE)
+      ->addConstraint('Range', ['min' => 1, 'max' => 6]));
+    $grid->setDefault('columns', 3);
+    $builder->setDefinition('presentation_settings', MapDataDefinition::create()
+      ->setLabel(new TranslatableMarkup('Presentation settings'))
+      ->setDescription(new TranslatableMarkup('What the chosen presentation needs.')));
+    $builder->attachBy('presentation_settings', 'presentation', [
+      'list' => new SurfaceAttachment($list->seal()),
+      'grid' => new SurfaceAttachment($grid->seal()),
+    ]);
   }
 
   /**

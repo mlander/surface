@@ -12,6 +12,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Refinement\ChoiceSet;
+use Drupal\data_surface\Refinement\Narrowing;
 use Drupal\data_surface\Target\SettingsShapeInterface;
 
 /**
@@ -82,6 +83,20 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
    * @var \Drupal\data_surface\DataSurfaceFilterInterface[]
    */
   protected array $filters = [];
+
+  /**
+   * Children fixed at a key, keyed by surface key.
+   *
+   * @var array<string, \Drupal\data_surface\SurfaceAttachment>
+   */
+  protected array $attachments = [];
+
+  /**
+   * Slots, keyed by surface key: the deciding key and the variants.
+   *
+   * @var array<string, array{by: string, variants: array<string, \Drupal\data_surface\SurfaceAttachment>}>
+   */
+  protected array $slots = [];
 
   /**
    * Locked surface keys.
@@ -262,6 +277,68 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * {@inheritdoc}
    */
+  public function attach(string $key, SurfaceAttachment $attachment): static {
+    $this->assertMutable();
+    $this->assertNotNested($key);
+    $this->definitions[$key] = $this->shellFor($key);
+    $this->attachments[$key] = $attachment;
+    $this->cacheability->addCacheableDependency($attachment->child);
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function attachBy(string $key, string $by, array $variants): static {
+    $this->assertMutable();
+    $this->assertNotNested($key);
+    if ($by === $key) {
+      throw new \InvalidArgumentException(sprintf('The "%s" slot cannot choose its own variant: the deciding key is a sibling.', $key));
+    }
+    $deciding = $this->named($by);
+    if ($deciding instanceof ListDataDefinitionInterface || $deciding instanceof ComplexDataDefinitionInterface) {
+      throw new \InvalidArgumentException(sprintf('The "%s" slot is chosen by "%s", which is a %s: a deciding key holds one value.', $key, $by, $deciding->getDataType()));
+    }
+    $ids = array_map('strval', array_keys($variants));
+    $before = DataSurface::deepClone($deciding);
+    $set = ChoiceSet::of($deciding);
+    if ($set === NULL) {
+      // The complete set of values the slot can be chosen by is part of
+      // what it advertises, so the deciding key says it in its own
+      // vocabulary.
+      $deciding->addConstraint('Choice', ['choices' => $ids]);
+    }
+    else {
+      // A variant its deciding key never allowed would be a shape nobody
+      // can reach, and declaring one is a mistake worth hearing now.
+      $unoffered = array_diff($ids, array_map('strval', $set->values));
+      if ($unoffered !== []) {
+        throw new \LogicException(sprintf(
+          'The "%s" slot has the %s %s, which "%s" does not allow: a variant its deciding key cannot choose would never be reached.',
+          $key,
+          implode(', ', $unoffered),
+          count($unoffered) === 1 ? 'variant' : 'variants',
+          $by,
+        ));
+      }
+      $set->withValues(array_values(array_filter(
+        $set->values,
+        static fn (mixed $value): bool => in_array((string) $value, $ids, TRUE),
+      )))->applyTo($deciding);
+    }
+    Narrowing::assertNarrows($by, sprintf('the "%s" slot', $key), $before, $deciding);
+    $this->definitions[$key] = $this->shellFor($key);
+    $this->slots[$key] = ['by' => $by, 'variants' => $variants];
+    $this->refinements[$key] = array_values(array_unique(array_merge($this->refinements[$key] ?? [], [$by])));
+    foreach ($variants as $variant) {
+      $this->cacheability->addCacheableDependency($variant->child);
+    }
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function getOutputDefinition(string $name): ?DataDefinitionInterface {
     return $this->outputs[$name] ?? NULL;
   }
@@ -291,6 +368,15 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
     static::assertNoDefault(self::THIRD_PARTY_OUTPUTS . '.' . $provider . '.' . $key, $definition);
     $this->thirdPartyOutputs[$provider][$key] = $definition;
     return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getThirdPartyDefinition(string $provider, string $key, bool $output = FALSE): ?DataDefinitionInterface {
+    return $output
+      ? ($this->thirdPartyOutputs[$provider][$key] ?? NULL)
+      : ($this->thirdParty[$provider][$key] ?? NULL);
   }
 
   /**
@@ -373,6 +459,21 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
       ));
     }
     $definitions = $this->definitions;
+    foreach ($this->attachments as $key => $attachment) {
+      $definitions[$key] = SurfaceAttachment::mapOf($this->assertShell((string) $key), $attachment->child);
+    }
+    $slots = [];
+    foreach ($this->slots as $key => ['by' => $by, 'variants' => $variants]) {
+      $slot = new SurfaceSlot($by, $this->assertShell((string) $key), $variants);
+      $slots[$key] = $slot;
+      // A locked deciding key has its one value already, so the slot is
+      // that variant from the start: what the surface advertises is the
+      // shape the caller will actually be held to.
+      $chosen = in_array($by, $this->locked, TRUE)
+        ? $slot->chosen(DefinitionMetadata::defaultOf($this->named($by)))
+        : NULL;
+      $definitions[$key] = $chosen === NULL ? $slot->placeholder() : $slot->definitionFor($chosen);
+    }
     if ($this->thirdParty !== []) {
       $definitions['third_party_settings'] = $this->mountedMap($this->thirdParty, FALSE);
     }
@@ -393,6 +494,8 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
         locked: $this->locked,
         refiners: $this->refiners,
         contributions: $this->contributions,
+        attachments: $this->attachments,
+        slots: $slots,
       ),
       $this->refiner,
       $this->filters,
@@ -449,6 +552,75 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
       $providers->setPropertyDefinition((string) $provider, $provider_map);
     }
     return $providers;
+  }
+
+  /**
+   * Gets the map describing a subsurface key, before it is filled.
+   *
+   * A key may be described before it is attached, with an empty map
+   * carrying its label and description, and that map is kept; otherwise
+   * a bare one is made.
+   *
+   * @param string $key
+   *   The surface key.
+   *
+   * @return \Drupal\Core\TypedData\MapDataDefinition
+   *   The shell.
+   *
+   * @throws \InvalidArgumentException
+   *   When the key already holds anything but an empty map.
+   */
+  protected function shellFor(string $key): MapDataDefinition {
+    $existing = $this->definitions[$key] ?? NULL;
+    if ($existing === NULL) {
+      return MapDataDefinition::create();
+    }
+    if (!$existing instanceof MapDataDefinition || $existing->getPropertyDefinitions() !== []) {
+      throw new \InvalidArgumentException(sprintf(
+        'The "%s" key already holds a %s definition. An attached child is the whole of what the key holds; describe the key beforehand with an empty map, if at all.',
+        $key,
+        $existing->getDataType(),
+      ));
+    }
+    return $existing;
+  }
+
+  /**
+   * Checks that a subsurface key still holds an empty map at seal.
+   *
+   * @param string $key
+   *   The surface key.
+   *
+   * @return \Drupal\Core\TypedData\MapDataDefinition
+   *   The shell.
+   *
+   * @throws \LogicException
+   *   When something replaced the shell or gave it properties.
+   */
+  protected function assertShell(string $key): MapDataDefinition {
+    $shell = $this->definitions[$key] ?? NULL;
+    if (!$shell instanceof MapDataDefinition || $shell->getPropertyDefinitions() !== []) {
+      throw new \LogicException(sprintf(
+        'The "%s" key is a subsurface, so what it holds is its child\'s to say: its definition was replaced or given properties of its own after it was attached.',
+        $key,
+      ));
+    }
+    return $shell;
+  }
+
+  /**
+   * Refuses to attach at a key twice.
+   *
+   * @param string $key
+   *   The surface key.
+   *
+   * @throws \LogicException
+   *   When the key is already attached or a slot.
+   */
+  protected function assertNotNested(string $key): void {
+    if (isset($this->attachments[$key]) || isset($this->slots[$key])) {
+      throw new \LogicException(sprintf('The "%s" key is already a subsurface: one key holds one child, or one set of variants.', $key));
+    }
   }
 
   /**

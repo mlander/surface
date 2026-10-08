@@ -343,6 +343,21 @@ interface DataSurfaceBuilderInterface {
   public function setThirdPartyOutputDefinition(string $provider, string $key, DataDefinitionInterface $definition): static;
 
   /**
+   * Gets a definition a provider mounted, by provider and key.
+   *
+   * @param string $provider
+   *   The module that mounted it.
+   * @param string $key
+   *   The key within that provider's namespace.
+   * @param bool $output
+   *   TRUE for a mounted output, FALSE for a mounted setting.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
+   *   The definition, or NULL when the provider mounted no such key.
+   */
+  public function getThirdPartyDefinition(string $provider, string $key, bool $output = FALSE): ?DataDefinitionInterface;
+
+  /**
    * Declares that a target refines against sibling values.
    *
    * @param string $target
@@ -481,6 +496,61 @@ interface DataSurfaceBuilderInterface {
    *   TRUE once seal() has run, after which every mutator throws.
    */
   public function isSealed(): bool;
+
+  /**
+   * Fixes a child surface at a key: a subsurface.
+   *
+   * The key's value is a map whose properties are the child's keys, and
+   * it is the child that accepts, validates and refines it, in its own
+   * frame: nothing in the parent refines into the child, and the child
+   * never sees the parent's values. The child's cacheability becomes the
+   * parent's. The key may be described beforehand with an empty map
+   * carrying its label and description; that map is kept as the shell
+   * the child is advertised in.
+   *
+   * @param string $key
+   *   The surface key.
+   * @param \Drupal\data_surface\SurfaceAttachment $attachment
+   *   The sealed child, and the surface class it was built from.
+   *
+   * @return $this
+   *
+   * @throws \InvalidArgumentException
+   *   When the key already holds anything but an empty map.
+   * @throws \LogicException
+   *   When the key is already a subsurface.
+   */
+  public function attach(string $key, SurfaceAttachment $attachment): static;
+
+  /**
+   * Declares a slot: a subsurface a sibling key chooses.
+   *
+   * Advertised as an `any` placeholder marked as a slot until the deciding
+   * key holds a value, and as exactly the chosen variant's map once it
+   * does — or from the start, when the deciding key is locked. The
+   * deciding key gains a Choice over the variant ids, checked narrower
+   * against any list of values it already declares, and becomes a
+   * refinement dependency of the slot, so a form rebuilds on it and the
+   * discard cascade resets a variant it orphaned.
+   *
+   * @param string $key
+   *   The surface key.
+   * @param string $by
+   *   The sibling key whose value chooses the variant.
+   * @param array<string, \Drupal\data_surface\SurfaceAttachment> $variants
+   *   One sealed child per value of the deciding key. May be empty: an
+   *   open slot nothing has filled offers nothing to choose.
+   *
+   * @return $this
+   *
+   * @throws \InvalidArgumentException
+   *   When the deciding key is the slot itself, is not declared, holds a
+   *   list or a map, or the key already holds anything but an empty map.
+   * @throws \LogicException
+   *   When the key is already a subsurface, or a variant names a value
+   *   the deciding key does not allow.
+   */
+  public function attachBy(string $key, string $by, array $variants): static;
 
   /**
    * Seals the builder into an immutable surface.

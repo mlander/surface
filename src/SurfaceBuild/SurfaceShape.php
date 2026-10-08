@@ -21,10 +21,37 @@ use Drupal\data_surface\Surface\ShapeInterface;
 final class SurfaceShape extends ShapeAdapterBase implements ShapeInterface {
 
   /**
+   * The slots declared through this shape, keyed by key.
+   *
+   * @var array<string, array{by: string, children: array<string, class-string>}>
+   */
+  protected array $slots = [];
+
+  /**
    * {@inheritdoc}
    */
   public function attachBy(string $key, string $by, array $children = []): static {
-    throw static::notYet('attachBy', $key);
+    $this->reserveSubsurface('attachBy', $key);
+    $this->slots[$key] = ['by' => $by, 'children' => $children];
+    return $this;
+  }
+
+  /**
+   * Gets the slots declared through this shape.
+   *
+   * @return array<string, array{by: string, children: array<string, class-string>}>
+   *   The deciding key and the named children of each slot, keyed by
+   *   key, in declaration order. Empty children mark an open slot.
+   */
+  public function slots(): array {
+    return $this->slots;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function declared(): array {
+    return array_merge(parent::declared(), array_keys($this->slots));
   }
 
   /**

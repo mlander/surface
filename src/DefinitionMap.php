@@ -119,6 +119,10 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * @param string[]|null $dependency_names
    *   The names a refinement edge may point at, or NULL when an edge
    *   names a sibling of this same map.
+   * @param array<string, \Drupal\data_surface\SurfaceAttachment> $attachments
+   *   The child surfaces fixed at keys, keyed by surface key.
+   * @param array<string, \Drupal\data_surface\SurfaceSlot> $slots
+   *   The variant tables of the slot keys, keyed by surface key.
    *
    * @return static
    *   The map.
@@ -134,8 +138,10 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
     array $refiners = [],
     array $contributions = [],
     ?array $dependency_names = NULL,
+    array $attachments = [],
+    array $slots = [],
   ): static {
-    foreach (array_merge(array_keys($refiners), array_keys($contributions), $locked) as $key) {
+    foreach (array_merge(array_keys($refiners), array_keys($contributions), $locked, array_keys($attachments), array_keys($slots)) as $key) {
       if (!isset($definitions[$key])) {
         throw new \InvalidArgumentException(sprintf('"%s" is not a surface definition.', $key));
       }
@@ -155,6 +161,8 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
         dependencies: array_values(array_map('strval', $refinements[$name] ?? [])),
         refiners: $refiners[$name] ?? [],
         contributions: $contributions[$name] ?? [],
+        attachment: $attachments[$name] ?? NULL,
+        slot: $slots[$name] ?? NULL,
       );
     }
     return new static($entries, $dependency_names);
@@ -343,6 +351,48 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
     }
     $map = clone $this;
     $map->entries[$entry->name] = $entry;
+    return $map;
+  }
+
+  /**
+   * Returns whether any key holds a subsurface: attached or a slot.
+   *
+   * @return bool
+   *   TRUE when at least one entry is nested.
+   */
+  public function hasNested(): bool {
+    foreach ($this->entries as $entry) {
+      if ($entry->isNested()) {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
+
+  /**
+   * Returns the map with every slot resolved to its chosen variant.
+   *
+   * Only the shape: each slot whose deciding key holds a variant id in
+   * the given values takes that variant's advertised map, and nothing is
+   * refined. This is what reading a value needs — a form's extraction
+   * places the value by the shape the deciding key chose, and leaves
+   * narrowing to validation. A slot whose deciding key holds nothing, or
+   * a value naming no variant, keeps its placeholder.
+   *
+   * @param array $values
+   *   The values the deciding keys are read from.
+   *
+   * @return static
+   *   The map, or this same map when no slot resolved.
+   */
+  public function withSlotsResolved(array $values): static {
+    $map = $this;
+    foreach ($this->entries as $entry) {
+      $chosen = $entry->slot?->chosen($values[$entry->slot->by] ?? NULL);
+      if ($chosen !== NULL) {
+        $map = $map->with($entry->withDefinition($entry->slot->definitionFor($chosen)));
+      }
+    }
     return $map;
   }
 

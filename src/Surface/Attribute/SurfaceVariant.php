@@ -10,8 +10,8 @@ namespace Drupal\data_surface\Surface\Attribute;
  * The child declares it, so the parent never has to know its children:
  * a new field type brings its own settings surface.
  *
- * Collected by discovery now; the slots it fills are built in step 2 of
- * the rework.
+ * Discovery collects it, and the build step fills the open slot it names
+ * with this surface, for the value it names.
  */
 #[\Attribute(\Attribute::TARGET_CLASS)]
 final class SurfaceVariant {

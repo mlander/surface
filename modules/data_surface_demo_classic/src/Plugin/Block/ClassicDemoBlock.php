@@ -19,9 +19,10 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * The demo block, written the way blocks were written before surfaces.
  *
- * Behaviorally identical to `data_surface_demo`: the same six settings,
- * the same defaults, the same entity-type-to-bundle-to-field narrowing
- * over AJAX, the same stored configuration and the same rendered list.
+ * Behaviorally identical to `data_surface_demo`: the same settings, the
+ * same defaults, the same entity-type-to-bundle-to-field narrowing over
+ * AJAX, the same presentation settings swapped by the presentation over
+ * AJAX, the same stored configuration and the same rendered list.
  * Everything the other block gets from one declaration is written out
  * here — defaults, form, AJAX, validation, storage, labels and the
  * config schema beside them.
@@ -95,7 +96,8 @@ final class ClassicDemoBlock extends BlockBase implements ContainerFactoryPlugin
       'bundle' => NULL,
       'field' => NULL,
       'limit' => 10,
-      'show_summary' => TRUE,
+      'presentation' => 'list',
+      'presentation_settings' => $this->presentationDefaults('list'),
     ];
   }
 
@@ -108,6 +110,12 @@ final class ClassicDemoBlock extends BlockBase implements ContainerFactoryPlugin
     // lists have to be built from; on a first build there are none.
     $entity_type_id = (string) $form_state->getValue('entity_type', $configuration['entity_type']);
     $bundle = (string) $form_state->getValue('bundle', $configuration['bundle'] ?? '');
+    $presentation = (string) $form_state->getValue('presentation', $configuration['presentation']);
+    // Settings written for the other presentation answer a question that
+    // is no longer asked, so the chosen one's defaults stand in for them.
+    $presentation_settings = $presentation === $configuration['presentation']
+      ? $configuration['presentation_settings'] + $this->presentationDefaults($presentation)
+      : $this->presentationDefaults($presentation);
 
     $form['#prefix'] = '<div id="' . static::WRAPPER_ID . '">';
     $form['#suffix'] = '</div>';
@@ -186,12 +194,45 @@ final class ClassicDemoBlock extends BlockBase implements ContainerFactoryPlugin
       '#max' => 50,
     ];
 
-    $form['show_summary'] = [
-      '#type' => 'checkbox',
-      '#title' => $this->t('Show summaries'),
-      '#description' => $this->t('Whether item summaries render.'),
-      '#default_value' => $configuration['show_summary'],
+    $form['presentation'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Presentation'),
+      '#description' => $this->t('How the items are laid out.'),
+      '#default_value' => $presentation,
+      '#required' => TRUE,
+      '#options' => ['list' => $this->t('list'), 'grid' => $this->t('grid')],
+      '#ajax' => [
+        'callback' => [static::class, 'refreshSettings'],
+        'wrapper' => static::WRAPPER_ID,
+      ],
     ];
+
+    $form['presentation_settings'] = [
+      '#type' => 'details',
+      '#title' => $this->t('Presentation settings'),
+      '#description' => $this->t('What the chosen presentation needs.'),
+      '#open' => TRUE,
+      '#tree' => TRUE,
+    ];
+    if ($presentation === 'grid') {
+      $form['presentation_settings']['columns'] = [
+        '#type' => 'number',
+        '#title' => $this->t('Columns'),
+        '#description' => $this->t('How many items sit side by side.'),
+        '#default_value' => $presentation_settings['columns'],
+        '#required' => TRUE,
+        '#min' => 1,
+        '#max' => 6,
+      ];
+    }
+    else {
+      $form['presentation_settings']['show_summary'] = [
+        '#type' => 'checkbox',
+        '#title' => $this->t('Show summaries'),
+        '#description' => $this->t('Whether item summaries render.'),
+        '#default_value' => $presentation_settings['show_summary'],
+      ];
+    }
 
     return $form;
   }
@@ -238,7 +279,24 @@ final class ClassicDemoBlock extends BlockBase implements ContainerFactoryPlugin
     $this->configuration['bundle'] = $this->storedChoice($form_state->getValue('bundle'));
     $this->configuration['field'] = $this->storedChoice($form_state->getValue('field'));
     $this->configuration['limit'] = (int) $form_state->getValue('limit');
-    $this->configuration['show_summary'] = (bool) $form_state->getValue('show_summary');
+    $presentation = (string) $form_state->getValue('presentation');
+    $this->configuration['presentation'] = $presentation;
+    $this->configuration['presentation_settings'] = $presentation === 'grid'
+      ? ['columns' => (int) $form_state->getValue(['presentation_settings', 'columns'])]
+      : ['show_summary' => (bool) $form_state->getValue(['presentation_settings', 'show_summary'])];
+  }
+
+  /**
+   * What each presentation's settings start from.
+   *
+   * @param string $presentation
+   *   The presentation, list or grid.
+   *
+   * @return array
+   *   The defaults.
+   */
+  protected function presentationDefaults(string $presentation): array {
+    return $presentation === 'grid' ? ['columns' => 3] : ['show_summary' => TRUE];
   }
 
   /**
@@ -276,7 +334,8 @@ final class ClassicDemoBlock extends BlockBase implements ContainerFactoryPlugin
       'bundle' => $this->t('Bundle'),
       'field' => $this->t('Highlight field'),
       'limit' => $this->t('Number of items'),
-      'show_summary' => $this->t('Show summaries'),
+      'presentation' => $this->t('Presentation'),
+      'presentation_settings' => $this->t('Presentation settings'),
     ];
   }
 

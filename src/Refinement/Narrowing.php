@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface\Refinement;
 
+use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\Core\TypedData\ListDataDefinitionInterface;
 
 /**
  * The check that refinement only ever narrows.
@@ -31,6 +33,8 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
  * | Turning off the required flag | refused |
  * | Removing a constraint | refused |
  * | Replacing the options of any other constraint | refused |
+ * | Adding or removing a map property | refused |
+ * | Any of the above inside a map property or a list item | as above |
  *
  * The last row is the conservative half: two Regex patterns cannot be
  * compared for containment, so replacing one is refused rather than
@@ -38,7 +42,14 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
  * advertising the narrower one in the first place.
  *
  * 'any' is the one declared escape hatch: it advertises nothing, so
- * every type is narrower than it.
+ * every type is narrower than it. That is also the one way a shape may
+ * appear during refinement: a slot's placeholder resolving to the map of
+ * a variant the surface declared before anything was chosen.
+ *
+ * Inside a map the rules recurse. A refined map holds exactly the
+ * properties it was handed — gaining one would accept a key nobody was
+ * told about, losing one would refuse a key everybody was — and every
+ * property is held to this same table, as is a list's item definition.
  *
  * @see \Drupal\data_surface\DataSurfaceInterface::refine()
  */
@@ -94,9 +105,84 @@ final class Narrowing {
    *   What widened, in words, or NULL.
    */
   protected static function widening(DataDefinitionInterface $before, DataDefinitionInterface $after): ?string {
-    if ($before->getDataType() !== 'any' && $before->getDataType() !== $after->getDataType()) {
+    if ($before->getDataType() === 'any') {
+      // Advertised as anything, so no shape it becomes is wider; only
+      // its own flag and constraints are left to compare.
+      return self::ownWidening($before, $after);
+    }
+    if ($before->getDataType() !== $after->getDataType()) {
       return sprintf('the data type changed from %s to %s', $before->getDataType(), $after->getDataType());
     }
+    return self::ownWidening($before, $after)
+      ?? self::propertyWidening($before, $after)
+      ?? self::itemWidening($before, $after);
+  }
+
+  /**
+   * Says how a map's properties widened, or NULL when they did not.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $before
+   *   The definition handed over.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $after
+   *   What came back, of the same data type.
+   *
+   * @return string|null
+   *   What widened, in words, or NULL.
+   */
+  protected static function propertyWidening(DataDefinitionInterface $before, DataDefinitionInterface $after): ?string {
+    $declared = $before instanceof ComplexDataDefinitionInterface ? $before->getPropertyDefinitions() : [];
+    $refined = $after instanceof ComplexDataDefinitionInterface ? $after->getPropertyDefinitions() : [];
+    if ($declared === [] && $refined === []) {
+      return NULL;
+    }
+    $added = array_keys(array_diff_key($refined, $declared));
+    if ($added !== []) {
+      return sprintf('the map gained the %s %s', count($added) === 1 ? 'property' : 'properties', implode(', ', array_map('strval', $added)));
+    }
+    $removed = array_keys(array_diff_key($declared, $refined));
+    if ($removed !== []) {
+      return sprintf('the map lost the %s %s', count($removed) === 1 ? 'property' : 'properties', implode(', ', array_map('strval', $removed)));
+    }
+    foreach ($declared as $name => $property) {
+      $widening = self::widening($property, $refined[$name]);
+      if ($widening !== NULL) {
+        return sprintf('inside the %s property, %s', $name, $widening);
+      }
+    }
+    return NULL;
+  }
+
+  /**
+   * Says how a list's item definition widened, or NULL when it did not.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $before
+   *   The definition handed over.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $after
+   *   What came back, of the same data type.
+   *
+   * @return string|null
+   *   What widened, in words, or NULL.
+   */
+  protected static function itemWidening(DataDefinitionInterface $before, DataDefinitionInterface $after): ?string {
+    if (!$before instanceof ListDataDefinitionInterface || !$after instanceof ListDataDefinitionInterface) {
+      return NULL;
+    }
+    $widening = self::widening($before->getItemDefinition(), $after->getItemDefinition());
+    return $widening === NULL ? NULL : sprintf('inside the list items, %s', $widening);
+  }
+
+  /**
+   * Says how a definition's own flag and constraints widened.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $before
+   *   The definition handed over.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $after
+   *   What came back.
+   *
+   * @return string|null
+   *   What widened, in words, or NULL.
+   */
+  protected static function ownWidening(DataDefinitionInterface $before, DataDefinitionInterface $after): ?string {
     if ($before->isRequired() && !$after->isRequired()) {
       return 'the required flag was turned off';
     }

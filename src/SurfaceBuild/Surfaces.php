@@ -23,6 +23,7 @@ use Drupal\data_surface\Surface\SurfaceAlterInterface;
 use Drupal\data_surface\Surface\SurfaceContext;
 use Drupal\data_surface\Surface\SurfaceInterface;
 use Drupal\data_surface\Surface\SurfaceTargetInterface;
+use Drupal\data_surface\SurfaceAttachment;
 
 /**
  * The build step, over the engine's builder and factory.
@@ -92,6 +93,29 @@ final class Surfaces implements SurfacesInterface {
    * {@inheritdoc}
    */
   public function build(string $surface, SurfaceContext $context, ?string $host_class = NULL, ?string $host_id = NULL): DataSurfaceInterface {
+    return $this->buildSurface($surface, $context, $host_class, $host_id, []);
+  }
+
+  /**
+   * Builds one surface, or one subsurface inside the build of its parent.
+   *
+   * @param string $surface
+   *   The surface class, or its #[Surface] id.
+   * @param \Drupal\data_surface\Surface\SurfaceContext $context
+   *   Where it is being asked for.
+   * @param class-string|null $host_class
+   *   The class the build event names as the host.
+   * @param string|null $host_id
+   *   The host id the build event carries.
+   * @param array<int, array{class: class-string, id: string, key: string, inputs: string[]}> $ancestry
+   *   The surfaces this one is being built inside, outermost first, each
+   *   with the key it is attached at and its own input keys; empty for
+   *   a surface asked for on its own.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The sealed surface.
+   */
+  protected function buildSurface(string $surface, SurfaceContext $context, ?string $host_class, ?string $host_id, array $ancestry): DataSurfaceInterface {
     $definition = $this->registry->getDefinition($surface);
     // Refuses two providers of one situation id, whichever is asked for.
     $this->registry->getSituations($definition->class);
@@ -122,20 +146,47 @@ final class Surfaces implements SurfacesInterface {
     }
 
     $input_keys = $inputs->keys();
+    $subsurfaces = array_merge(array_keys($inputs->attachments()), array_keys($inputs->slots()));
     foreach ($definition->identity as $key) {
       if (!in_array($key, $input_keys, TRUE)) {
         throw new \LogicException(sprintf(
-          'The %s surface (%s) names "%s" as an identity key in #[Surface(identity:)], but its shape never declares that input.',
+          'The %s surface (%s) names "%s" as an identity key in #[Surface(identity:)], but its shape never declares that input%s.',
           $definition->id,
           $definition->class,
           $key,
+          in_array($key, $subsurfaces, TRUE) ? ' (it is a subsurface, which holds a map and cannot say which thing this is)' : '',
         ));
       }
     }
+    foreach ($ancestry as $ancestor) {
+      if ($ancestor['class'] === $definition->class) {
+        throw new \LogicException(sprintf(
+          'The %s surface is attached inside itself, through %s: a surface cannot contain itself.',
+          $definition->id,
+          implode(' -> ', array_map(static fn (array $level): string => $level['id'] . '.' . $level['key'], $ancestry)),
+        ));
+      }
+    }
+    $slots = $this->slotsOf($definition, $inputs, $input_keys);
 
-    $this->applyContext($builder, $definition, $context, $input_keys);
+    $this->applyContext($builder, $definition, $context, $input_keys, $subsurfaces);
     foreach ($links as [$instance, $refiners]) {
-      $this->bindRefiners($builder, $definition, $instance, $refiners, $input_keys, $outputs->keys());
+      $this->bindRefiners($builder, $definition, $instance, $refiners, $input_keys, $outputs->keys(), $subsurfaces, $ancestry === [] ? NULL : $ancestry[count($ancestry) - 1]);
+    }
+
+    // The children, each through this same build step in its own frame:
+    // its own shape, its own alters, its own refiners, its own build
+    // event, and the context the parent's context hands it.
+    $frame = ['class' => $definition->class, 'id' => $definition->id, 'key' => '', 'inputs' => $input_keys];
+    foreach ($inputs->attachments() as $key => $child) {
+      $builder->attach($key, $this->buildChild($child, $context, $key, $frame, $ancestry));
+    }
+    foreach ($slots as $key => ['by' => $by, 'children' => $children]) {
+      $variants = [];
+      foreach ($children as $value => $child) {
+        $variants[(string) $value] = $this->buildChild($child, $context, $key, $frame, $ancestry);
+      }
+      $builder->attachBy($key, $by, $variants);
     }
 
     // phpcs:ignore Drupal.Files.LineLength.TooLong
@@ -147,6 +198,98 @@ final class Surfaces implements SurfacesInterface {
       $host_class ?? $definition->class,
       $host_id ?? self::HOST_PREFIX . $definition->id,
     );
+  }
+
+  /**
+   * Builds one child at a key, in the context its parent's hands it.
+   *
+   * @param class-string $child
+   *   The child surface class.
+   * @param \Drupal\data_surface\Surface\SurfaceContext $context
+   *   The parent's context.
+   * @param string $key
+   *   The key the child sits at.
+   * @param array{class: class-string, id: string, key: string, inputs: string[]} $frame
+   *   The parent, for messages and the cycle check.
+   * @param array $ancestry
+   *   The parent's own ancestry.
+   *
+   * @return \Drupal\data_surface\SurfaceAttachment
+   *   The sealed child.
+   */
+  protected function buildChild(string $child, SurfaceContext $context, string $key, array $frame, array $ancestry): SurfaceAttachment {
+    $class = $this->registry->getDefinition($child)->class;
+    $frame['key'] = $key;
+    return new SurfaceAttachment(
+      $this->buildSurface($class, static::childContext($context, $key), NULL, NULL, [...$ancestry, $frame]),
+      $class,
+    );
+  }
+
+  /**
+   * Gets the context a child at a key is built and stored in.
+   *
+   * Its own, when the parent's context hands it one with withChild(),
+   * as a situation does to tell a child the parent's identity. Otherwise
+   * the parent's operation, whether it creates, and the identity it
+   * knows, which is what lets a child's target load by the same thing
+   * its parent's does.
+   *
+   * @param \Drupal\data_surface\Surface\SurfaceContext $context
+   *   The parent's context.
+   * @param string $key
+   *   The key the child sits at.
+   *
+   * @return \Drupal\data_surface\Surface\SurfaceContext
+   *   The child's context.
+   */
+  public static function childContext(SurfaceContext $context, string $key): SurfaceContext {
+    $child = $context->forChild($key);
+    if ($child !== $context) {
+      return $child;
+    }
+    // phpcs:ignore Drupal.Files.LineLength.TooLong
+    // SKETCH GAP: the sketch says a child "otherwise sees its parent's" context; it sees the operation, creates and known identity, but not the parent's constraints, starting values or child contexts, which all name the parent's keys.
+    return new SurfaceContext($context->operation, $context->creates, $context->known);
+  }
+
+  /**
+   * Resolves each slot's children and checks its deciding key.
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $definition
+   *   The surface.
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceShape $inputs
+   *   The owner's input shape.
+   * @param string[] $input_keys
+   *   The owner's plain input keys.
+   *
+   * @return array<string, array{by: string, children: array<string, class-string>}>
+   *   The slots, an open one filled from discovery's variants.
+   *
+   * @throws \LogicException
+   *   When a deciding key is not a plain input of the surface.
+   */
+  protected function slotsOf(SurfaceDefinition $definition, SurfaceShape $inputs, array $input_keys): array {
+    $slots = [];
+    foreach ($inputs->slots() as $key => ['by' => $by, 'children' => $children]) {
+      if (!in_array($by, $input_keys, TRUE)) {
+        throw new \LogicException(sprintf(
+          'The %s surface\'s "%s" slot is chosen by "%s", which its shape never declares as a plain input: a slot is chosen by a sibling that holds one value.',
+          $definition->id,
+          $key,
+          $by,
+        ));
+      }
+      // An open slot lists no children: every surface whose
+      // #[SurfaceVariant] names this surface and key fills it.
+      // phpcs:ignore Drupal.Files.LineLength.TooLong
+      // SKETCH GAP: the sketch does not say what an open slot nothing fills is; it stays a placeholder and its deciding key gains an empty Choice, so nothing can be chosen, rather than refusing the surface on a site with no variant module.
+      $slots[$key] = [
+        'by' => $by,
+        'children' => $children === [] ? $this->registry->getVariants($definition->class, $key) : $children,
+      ];
+    }
+    return $slots;
   }
 
   /**
@@ -221,7 +364,7 @@ final class Surfaces implements SurfacesInterface {
   /**
    * {@inheritdoc}
    */
-  public function target(string $surface, SurfaceContext $context): DataSurfaceTargetInterface {
+  public function target(string $surface, SurfaceContext $context, ?DataSurfaceInterface $built = NULL): DataSurfaceTargetInterface {
     $definition = $this->registry->getDefinition($surface);
     if ($definition->target === NULL) {
       throw new \LogicException(sprintf(
@@ -229,7 +372,47 @@ final class Surfaces implements SurfacesInterface {
         $definition->id,
       ));
     }
-    return new SurfaceTargetAdapter($this->instance($definition->target, SurfaceTargetInterface::class), $context);
+    return $this->targetFor($definition, $context, $built ?? $this->build($definition->class, $context));
+  }
+
+  /**
+   * Composes a surface's target with its children's, along the tree.
+   *
+   * Each subsurface whose class names a target of its own is routed to
+   * it, in the context the parent's hands that child, and recursively
+   * for the child's own children; a subsurface without one stays in its
+   * parent's values, stored by the parent under its key. A slot routes
+   * per variant, by what its deciding key holds.
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $definition
+   *   The surface, which has a target.
+   * @param \Drupal\data_surface\Surface\SurfaceContext $context
+   *   Its context.
+   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   *   The surface as built, whose entries carry the children.
+   *
+   * @return \Drupal\data_surface\SurfaceBuild\SurfaceTargetAdapter
+   *   The target.
+   */
+  protected function targetFor(SurfaceDefinition $definition, SurfaceContext $context, DataSurfaceInterface $built): SurfaceTargetAdapter {
+    $routes = [];
+    foreach ($built->getDefinitions()->entries() as $key => $entry) {
+      $children = $entry->attachment !== NULL
+        ? [SurfaceTargetAdapter::ATTACHED => $entry->attachment]
+        : ($entry->slot !== NULL ? $entry->slot->variants : []);
+      foreach ($children as $id => $attachment) {
+        $child = $attachment->source === NULL ? NULL : $this->registry->getDefinition($attachment->source);
+        if ($child?->target !== NULL) {
+          $routes[(string) $key][(string) $id] = $this->targetFor($child, static::childContext($context, (string) $key), $attachment->child);
+        }
+      }
+    }
+    return new SurfaceTargetAdapter(
+      $this->instance((string) $definition->target, SurfaceTargetInterface::class),
+      $context,
+      $routes,
+      $definition->identity,
+    );
   }
 
   /**
@@ -243,13 +426,27 @@ final class Surfaces implements SurfacesInterface {
    *   The context.
    * @param string[] $input_keys
    *   The owner's input keys.
+   * @param string[] $subsurfaces
+   *   The owner's subsurface keys.
    *
    * @throws \LogicException
    *   When the context names a key the shape does not declare, carries
    *   starting values without creating, or widens a key.
    */
-  protected function applyContext(DataSurfaceBuilderInterface $builder, SurfaceDefinition $definition, SurfaceContext $context, array $input_keys): void {
-    $assert_input = static function (string $key, string $what) use ($definition, $context, $input_keys): void {
+  protected function applyContext(DataSurfaceBuilderInterface $builder, SurfaceDefinition $definition, SurfaceContext $context, array $input_keys, array $subsurfaces = []): void {
+    $assert_input = static function (string $key, string $what) use ($definition, $context, $input_keys, $subsurfaces): void {
+      if (in_array($key, $subsurfaces, TRUE)) {
+        // phpcs:ignore Drupal.Files.LineLength.TooLong
+        // SKETCH GAP: the sketch narrows a child through the child's own context; a constraint or starting value the parent's context names for a subsurface key is refused, and pointed at withChild().
+        throw new \LogicException(sprintf(
+          'The "%s" context gives a %s for "%s", which is a subsurface of the %s surface: a child is narrowed and started by its own context, handed to it with withChild(\'%s\', ...).',
+          $context->operation,
+          $what,
+          $key,
+          $definition->id,
+          $key,
+        ));
+      }
       if (!in_array($key, $input_keys, TRUE)) {
         throw new \LogicException(sprintf(
           'The "%s" context gives a %s for "%s", which the %s surface does not declare as an input.',
@@ -317,18 +514,23 @@ final class Surfaces implements SurfacesInterface {
    *   The owner's input keys.
    * @param string[] $output_keys
    *   The owner's output keys.
+   * @param string[] $subsurfaces
+   *   The owner's subsurface keys.
+   * @param array{class: class-string, id: string, key: string, inputs: string[]}|null $parent
+   *   The surface this one is attached inside, or NULL.
    *
    * @throws \LogicException
    *   When a method fails a seal-time check, or one that watches nothing
    *   widens what it was given.
    */
-  protected function bindRefiners(DataSurfaceBuilderInterface $builder, SurfaceDefinition $definition, object $instance, array $refiners, array $input_keys, array $output_keys): void {
+  protected function bindRefiners(DataSurfaceBuilderInterface $builder, SurfaceDefinition $definition, object $instance, array $refiners, array $input_keys, array $output_keys, array $subsurfaces = [], ?array $parent = NULL): void {
     if ($refiners === []) {
       return;
     }
     $bindings = [];
     $once = [];
     foreach ($refiners as $refiner) {
+      static::assertWalled($definition, $refiner, $input_keys, $subsurfaces, $parent);
       static::assertRefinable($definition, $refiner, $input_keys, $output_keys);
       if ($refiner->watched() === []) {
         $once[] = $refiner;
@@ -356,6 +558,62 @@ final class Surfaces implements SurfacesInterface {
       Narrowing::assertNarrows($refiner->key, $refiner->describe(), $advertised, $refined);
       DataSurface::carryMetadata($advertised, $refined);
       $builder->setDefinition($refiner->key, $refined);
+    }
+  }
+
+  /**
+   * Refuses a #[RefinesInput] method that reaches across a subsurface.
+   *
+   * The sketch's wall between a parent and its child, in both
+   * directions. A parent's method may neither refine a subsurface key —
+   * the child refines its own keys, in its own frame — nor watch one; a
+   * child's method may not watch its parent's keys, because a child sees
+   * only its context. The one door is the context: a parent hands a
+   * child what it needs as identity with withChild().
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $definition
+   *   The surface.
+   * @param \Drupal\data_surface\SurfaceBuild\RefinerDefinition $refiner
+   *   The method.
+   * @param string[] $input_keys
+   *   The surface's own plain input keys.
+   * @param string[] $subsurfaces
+   *   The surface's subsurface keys.
+   * @param array{class: class-string, id: string, key: string, inputs: string[]}|null $parent
+   *   The surface this one is attached inside, or NULL.
+   *
+   * @throws \LogicException
+   *   Naming the method and the key it reached for.
+   */
+  protected static function assertWalled(SurfaceDefinition $definition, RefinerDefinition $refiner, array $input_keys, array $subsurfaces, ?array $parent): void {
+    // phpcs:ignore Drupal.Files.LineLength.TooLong
+    // SKETCH GAP: the sketch says a parent cannot refine a child's key and a child cannot read a parent's value; a parent watching a whole subsurface key is not mentioned and is refused too, so the wall holds both ways.
+    if (in_array($refiner->key, $subsurfaces, TRUE)) {
+      throw new \LogicException(sprintf(
+        '%s refines "%s", which is a subsurface of the %s surface. A subsurface is refined by its own #[RefinesInput] methods, in its own frame; a parent cannot refine into it.',
+        $refiner->describe(),
+        $refiner->key,
+        $definition->id,
+      ));
+    }
+    foreach ($refiner->watched() as $watched) {
+      if (in_array($watched, $subsurfaces, TRUE)) {
+        throw new \LogicException(sprintf(
+          '%s watches "%s", which is a subsurface of the %s surface. A parent does not read its child\'s values: what depends on both belongs in the child.',
+          $refiner->describe(),
+          $watched,
+          $definition->id,
+        ));
+      }
+      if ($parent !== NULL && !in_array($watched, $input_keys, TRUE) && in_array($watched, $parent['inputs'], TRUE)) {
+        throw new \LogicException(sprintf(
+          '%s watches "%s", which is a key of the %s surface this one is attached inside at "%s". A child never reads its parent\'s values; the parent hands it what it needs as identity in the child\'s context, with withChild().',
+          $refiner->describe(),
+          $watched,
+          $parent['id'],
+          $parent['key'],
+        ));
+      }
     }
   }
 

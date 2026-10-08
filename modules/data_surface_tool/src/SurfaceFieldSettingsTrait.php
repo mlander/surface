@@ -12,9 +12,18 @@ use Drupal\Core\Field\FieldConfigInterface;
 use Drupal\Core\Field\FieldTypePluginManagerInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\data_surface\DataSurfaceAccess;
+use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
+use Drupal\data_surface\Pipeline\DataSurfaceResult;
+use Drupal\data_surface\Pipeline\ViolationSet;
+use Drupal\data_surface\Surface\SurfaceContext;
+use Drupal\data_surface\SurfaceBuild\SurfaceRegistry;
+use Drupal\data_surface\SurfaceBuild\SurfacesInterface;
+use Drupal\data_surface_tool\Surface\FieldInstanceSurface;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
+use Drupal\field\FieldStorageConfigInterface;
+use Drupal\tool\ExecutableResult;
 use Drupal\tool\TypedData\InputDefinition;
 use Drupal\tool\TypedData\InputDefinitionInterface;
 
@@ -27,6 +36,19 @@ use Drupal\tool\TypedData\InputDefinitionInterface;
  * conversion, and executing is one call to the pipeline. Everything the
  * settings could get wrong is described by the surface and enforced by
  * the pipeline, which is the point being demonstrated.
+ *
+ * Three ways a field type's settings can be described, tried in order:
+ * - In the new spelling, as the variant that fills FieldInstanceSurface's
+ *   settings slot for the field type (the address field type). The tool
+ *   builds the field instance surface from its subject — edit() for an
+ *   existing field, add() knowing the storage's name and type for a new
+ *   one — so the slot is resolved by the locked field type, and the
+ *   settings input is that variant. Executing submits the whole field
+ *   instance surface to its composed target.
+ * - In the old spelling, through a field item implementing
+ *   FieldSurfaceProviderInterface (the test module's gated field type).
+ * - Not at all: the field type's config schema, as the free-form tools
+ *   offer for every field type.
  */
 trait SurfaceFieldSettingsTrait {
 
@@ -73,6 +95,125 @@ trait SurfaceFieldSettingsTrait {
    * @var \Drupal\Core\Config\TypedConfigManagerInterface
    */
   protected TypedConfigManagerInterface $typedConfigManager;
+
+  /**
+   * The build step for surfaces written in the new spelling.
+   *
+   * @var \Drupal\data_surface\SurfaceBuild\SurfacesInterface
+   */
+  protected SurfacesInterface $surfaces;
+
+  /**
+   * What discovery found, asked which field types fill the settings slot.
+   *
+   * @var \Drupal\data_surface\SurfaceBuild\SurfaceRegistry
+   */
+  protected SurfaceRegistry $surfaceRegistry;
+
+  /**
+   * Builds the failure a refused submission reports.
+   *
+   * @param string $field_name
+   *   The field machine name.
+   * @param \Drupal\data_surface\Pipeline\ViolationSet $violations
+   *   What was refused.
+   *
+   * @return \Drupal\tool\ExecutableResult
+   *   The failure.
+   */
+  protected function refusedResult(string $field_name, ViolationSet $violations): ExecutableResult {
+    return ExecutableResult::failure($this->t('The settings for field @field were refused: @violations', [
+      '@field' => $field_name,
+      '@violations' => $this->violationSummary($violations),
+    ]));
+  }
+
+  /**
+   * Answers whether a field type's settings are a variant of the slot.
+   *
+   * @param string $field_type
+   *   The field type plugin id.
+   *
+   * @return bool
+   *   TRUE when a surface marked #[SurfaceVariant] fills
+   *   FieldInstanceSurface's settings slot for it.
+   */
+  protected function hasSettingsVariant(string $field_type): bool {
+    return isset($this->surfaceRegistry->getVariants(FieldInstanceSurface::class, 'settings')[$field_type]);
+  }
+
+  /**
+   * Gets the context a field about to be added is described in.
+   *
+   * The add situation, knowing besides the entity type and bundle what
+   * the existing storage says: the field's name and type. The type is
+   * identity, so it is locked, and the settings slot resolves by it.
+   *
+   * @param string $entity_type_id
+   *   The entity type.
+   * @param string $bundle
+   *   The bundle.
+   * @param \Drupal\field\FieldStorageConfigInterface $storage
+   *   The storage the field is added for.
+   *
+   * @return \Drupal\data_surface\Surface\SurfaceContext
+   *   The context.
+   */
+  protected function addContext(string $entity_type_id, string $bundle, FieldStorageConfigInterface $storage): SurfaceContext {
+    return $this->surfaces->situation(FieldInstanceSurface::class, 'add', [$entity_type_id, $bundle])
+      ->withKnown(['field_name' => $storage->getName(), 'field_type' => $storage->getType()]);
+  }
+
+  /**
+   * Gets the context an existing field is described in.
+   *
+   * @param \Drupal\Core\Field\FieldConfigInterface $field
+   *   The field.
+   *
+   * @return \Drupal\data_surface\Surface\SurfaceContext
+   *   The edit situation's context, which knows all of its identity.
+   */
+  protected function editContext(FieldConfigInterface $field): SurfaceContext {
+    return $this->surfaces->situation(FieldInstanceSurface::class, 'edit', [$field]);
+  }
+
+  /**
+   * Gets the settings surface the field instance surface resolves to.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $instance
+   *   The field instance surface, built in a context that knows the
+   *   field type.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface|null
+   *   The settings variant the locked field type chose, or NULL when the
+   *   slot did not resolve.
+   */
+  protected function resolvedSettings(DataSurfaceInterface $instance): ?DataSurfaceInterface {
+    return $instance->getDefinitions()->entry('settings')?->childFor($instance->getDefaultValues());
+  }
+
+  /**
+   * Submits a field instance through its surface and composed target.
+   *
+   * @param \Drupal\data_surface\Surface\SurfaceContext $context
+   *   The situation's context.
+   * @param array $payload
+   *   The values the caller sent: only what it said.
+   * @param \Drupal\Core\Access\AccessResultInterface $access
+   *   The tool's own access answer, gated with the surface's.
+   *
+   * @return \Drupal\data_surface\Pipeline\DataSurfaceResult
+   *   The pipeline's result.
+   */
+  protected function submitInstance(SurfaceContext $context, array $payload, AccessResultInterface $access): DataSurfaceResult {
+    $surface = $this->surfaces->build(FieldInstanceSurface::class, $context);
+    return $this->pipeline->submit(
+      $surface,
+      $payload,
+      $this->surfaces->target(FieldInstanceSurface::class, $context, $surface),
+      access: DataSurfaceAccess::gate($access, $this->surfaces->access(FieldInstanceSurface::class, $context, $this->currentUser)),
+    );
+  }
 
   /**
    * Answers whether an account may administer an entity type's fields.
@@ -244,12 +385,18 @@ trait SurfaceFieldSettingsTrait {
    *   surface nor a config schema can say anything better.
    * @param mixed $default_value
    *   The default for the settings map as a whole.
+   * @param \Drupal\data_surface\Surface\SurfaceContext|null $context
+   *   The field instance surface's context, when the field type's
+   *   settings are a variant of its slot; the field type's own surface,
+   *   or its config schema, otherwise.
    *
    * @return \Drupal\tool\TypedData\InputDefinitionInterface
    *   The refined definition.
    */
-  protected function settingsInputDefinition(FieldConfigInterface $field, InputDefinitionInterface $advertised, mixed $default_value): InputDefinitionInterface {
-    $surface = $this->surfaceLocator->surfaceFor($field);
+  protected function settingsInputDefinition(FieldConfigInterface $field, InputDefinitionInterface $advertised, mixed $default_value, ?SurfaceContext $context = NULL): InputDefinitionInterface {
+    $surface = $context !== NULL && $this->hasSettingsVariant($field->getType())
+      ? $this->resolvedSettings($this->surfaces->build(FieldInstanceSurface::class, $context))
+      : $this->surfaceLocator->surfaceFor($field);
     if ($surface !== NULL) {
       return $this->surfaceInputDefinitions->fromSurface(
         $surface,

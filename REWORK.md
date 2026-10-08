@@ -73,6 +73,52 @@ Rules for the whole rework:
    `#[SurfaceVariant]`, narrowing inside maps, targets composing along
    the tree. Consumers: the field tools' settings as a child resolved
    from the subject; the demo block's presentation slot.
+
+   **Done.** The engine carries subsurfaces on the entry:
+   `SurfaceAttachment` (a sealed child and the class it came from) and
+   `SurfaceSlot` (the deciding key, a shell, a variant table of
+   attachments), set by the builder's `attach()` / `attachBy()`.
+   Seams: the shapes reserve a subsurface key as an empty map in
+   declaration order and record the class; `Surfaces` builds each child
+   after the parent's context and refiners, through the same build step
+   (own shape, alters, refiners, build event) in
+   `Surfaces::childContext()` — the context `withChild()` handed it, or
+   the parent's operation, `creates` and known identity — and an open
+   slot's children come from `SurfaceRegistry::getVariants()`.
+   `attachBy()` adds a Choice over the variant ids to the deciding key,
+   held to `Narrowing`, and a refinement edge from the slot to it, which
+   is what the form's AJAX rebuild and discard cascade ride; a locked
+   deciding key resolves the slot at seal. `DataSurface::refine()`
+   refines each child in its own frame over its own defaults; the
+   pipeline's `accept()` / `validate()` recurse level by level, refuse
+   another variant's keys (`VariantMismatchException`, a path-aware
+   violation), reset a stored value that does not fit a newly chosen
+   variant to its defaults, and re-file child violations under the
+   parent key; `Narrowing` reads inside maps and list items.
+   `SurfaceTargetAdapter` composes targets along the tree (a routed
+   child is committed after its parent, in its context plus the
+   parent's accepted identity); `SurfaceInputDefinitions::fromSlot()`
+   emits an unresolved slot as the widest honest map. The wall is
+   enforced in `Surfaces::assertWalled()`. `describe()` (label and
+   description only) landed on both shapes at the owner's request.
+   Consumers: `DemoBlockSurface` gained `presentation` and a two-child
+   slot (and the classic block the same keys); `FieldInstanceSurface`
+   in `data_surface_tool` with `add` / `edit`, `FieldInstanceTarget`
+   and `FieldInstanceAccess`; `AddressFieldSettingsSurface` (with
+   `AddressFieldSettingsTarget`) fills its open slot, `SurfaceAddressItem`
+   builds it for Field UI; the field tools build the field instance
+   surface from their subject for a field type with a variant, and keep
+   the old path (`FieldSurfaceLocator`) for the test module's
+   `SurfaceGatedItem`, the one old-spelling field type left. Deviations:
+   `SurfacesInterface::target()` takes the built surface optionally; an
+   alter's `attach()` and output subsurfaces are refused for now; a
+   routed child target is wired inside `SurfaceTargetAdapter` rather than
+   through `CompositeTarget`, because a slot's route needs its sibling's
+   value and a composite hands each child only its own keys; the
+   registry skips an undiscovered class that carries `#[Surface]`
+   (a test autoloader knows disabled modules). `DemoBlockAlter` now caps
+   a grid instead of a list with summaries, since `show_summary` moved
+   into the list child and an alter of the parent cannot see it.
 3. **Situations end to end.** The node type provider becomes a surface
    with situations, a target and an access class. The generic provider
    form and the tool bridge are driven by situations: one route per

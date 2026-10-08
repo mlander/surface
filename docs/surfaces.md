@@ -80,7 +80,9 @@ final class DemoBlockSurface implements SurfaceInterface {
 - **The shape methods get a shape to fill, and nothing else**: no
   values, no context. The owner gets `ShapeInterface`; an alter gets
   `ShapeAdditionsInterface`, which can add but not change or remove
-  what the owner declared. Adding a key twice is refused.
+  what the owner declared. Adding a key twice is refused. The one change
+  anyone may make to a key already declared is `describe()`: its label
+  and description, which change nothing about what is accepted.
 - **`add()` takes name, type and label** and returns the core
   definition, so the rest is plain core API. `addDefinition()` is the
   long form, for a map or a list.
@@ -176,8 +178,9 @@ storage and schema never have to know a contributor's keys. Its
 `#[RefinesInput]` methods tighten the owner's keys, running after the
 owner's own.
 
-`DemoBlockAlter` in the demo extras module does both: it adds a badge,
-and caps the number of items while summaries are shown.
+`DemoBlockAlter` in the demo extras module does all three things an
+alter can: it adds a badge, rewords the headline's help text with
+`describe()`, and caps the number of items while the block is a grid.
 
 ```php
 #[AltersSurface(DemoBlockSurface::class)]
@@ -185,15 +188,20 @@ final class DemoBlockAlter implements SurfaceAlterInterface {
 
   public function alterInputs(ShapeAdditionsInterface $inputs): void {
     $inputs->add('badge', 'string', $this->t('Badge'), default: 'star');
+    $inputs->describe('headline', description: $this->t('Shown above the featured content, beside its badge.'));
   }
 
   #[RefinesInput('limit')]
-  public function shortWithSummaries(DataDefinitionInterface $limit, bool $show_summary): DataDefinitionInterface {
+  public function shortInGrid(DataDefinitionInterface $limit, string $presentation): DataDefinitionInterface {
     // ...
   }
 
 }
 ```
+
+`describe()` takes the owner's key by its name, the alter's own key by
+its name, and another alter's key by its mounted path,
+`third_party_settings.<module>.<key>`.
 
 A build event subscriber written for the older spelling still runs on a
 surface built this way, after the alters and the context, so the two
@@ -210,12 +218,99 @@ Each refusal names the class and method at fault:
 - a `watches:` list that does not match the parameters, in order;
 - two providers of one situation id;
 - a context constraint, or a refiner that watches nothing, that widens;
-- starting values on a context that does not create.
+- starting values on a context that does not create;
+- a refiner that refines or watches a subsurface key, or a child's
+  refiner that watches a key only its parent declares;
+- a slot chosen by a key that is not a plain input, or a variant its
+  deciding key does not allow;
+- a context constraint or starting value for a subsurface key;
+- a surface attached inside itself.
+
+## Subsurfaces
+
+A surface attaches other surfaces at a key. Each child is its own class,
+with its own shape and refiners, and alters can target it alone.
+
+- `attach('key', Child::class)` is a fixed child.
+- `attachBy('key', by: 'sibling', children: [...])` is a child the
+  sibling's value chooses: a **slot**. With no children it is an
+  **open** slot, filled by every surface marked
+  `#[SurfaceVariant(of: Parent::class, key: 'key', value: '...')]`, so a
+  new variant brings itself and the parent never changes.
+
+The demo block's presentation is a slot with two children named by
+class; the field instance surface's settings are an open slot the
+address module fills:
+
+```php
+// DemoBlockSurface
+$inputs->add('presentation', 'string', new TranslatableMarkup('Presentation'), default: 'list')
+  ->setRequired(TRUE)
+  ->addConstraint('Choice', ['choices' => ['list', 'grid']]);
+$inputs->attachBy('presentation_settings', by: 'presentation', children: [
+  'list' => ListPresentationSurface::class,
+  'grid' => GridPresentationSurface::class,
+]);
+$inputs->describe('presentation_settings', label: new TranslatableMarkup('Presentation settings'));
+
+// FieldInstanceSurface, in data_surface_tool
+$inputs->attachBy('settings', by: 'field_type');
+
+// AddressFieldSettingsSurface, in data_surface_address
+#[Surface('field.settings.address', target: AddressFieldSettingsTarget::class)]
+#[SurfaceVariant(of: FieldInstanceSurface::class, key: 'settings', value: 'address')]
+```
+
+What that means, end to end:
+
+- **A child is built by the same build step**, after its parent's
+  context is applied: its own shape, its own alters, its own refiners,
+  its own build event (named `surface:<child id>`). It sees the context
+  the parent's context hands it with `withChild()`, and otherwise the
+  parent's operation, `creates` and known identity — never the parent's
+  constraints or starting values, which name the parent's keys.
+- **Its value is a map at the key**, advertised as a map whose
+  properties are the child's keys. The child accepts, validates and
+  refines it, in its own frame. Violations come back dotted under the
+  parent's key (`presentation_settings.columns`); that, and an emitted
+  schema, are the only places a path crosses into a child.
+- **The wall.** A parent cannot refine a subsurface key or watch one;
+  a child cannot watch its parent's keys. The one door is the context:
+  a parent hands a child what it needs as identity, the way the field
+  instance surface's situations tell its settings which field they
+  belong to.
+- **A slot** is advertised as an `any` placeholder marked as a slot
+  (`DefinitionMetadata::slotOf()`) while its deciding key holds
+  nothing, and as exactly the chosen variant's map once it does — or
+  from the start, when the context locks the deciding key. The deciding
+  key gains a Choice over the variants' values, checked narrower than
+  any list it already had, and becomes a refinement dependency of the
+  slot, so the form rebuilds on it over AJAX and the discard cascade
+  drops input left by another variant. A payload carrying another
+  variant's keys is refused by name
+  (`presentation_settings.show_summary belongs to the list variant, but
+  presentation chose grid.`); a stored value that does not fit a newly
+  chosen variant falls back to that variant's defaults.
+- **Narrowing reads inside maps.** A refined map holds exactly the
+  properties it was handed, each held to the same table, list items
+  too; the one shape refinement may introduce is a slot's placeholder
+  resolving to its variant.
+- **Targets compose along the tree.** A child whose `#[Surface(target:)]`
+  names a target is loaded from and committed to it, after its parent,
+  in its own context plus whatever identity the parent accepted that it
+  did not already know; a child without one is stored by its parent
+  under its key. `SurfacesInterface::target()` builds the composed
+  target.
+- **Emission.** The tool bridge converts an attached child to a nested
+  map input, and an unresolved slot to the widest honest map: every
+  variant's keys, none required and none with a default, each
+  annotated with the values it belongs to, the table in the
+  description. The Tool API cannot say a union keyed by a sibling.
+
+An alter cannot attach yet (its keys are mounted under its module), and
+neither can an output; both are refused by name.
 
 ## Not built yet
 
-Subsurfaces. `attach()` and `attachBy()` are declared on the shapes and
-refuse until they are built, and `#[SurfaceVariant]` is collected by
-discovery but fills nothing yet. Options lists, and the alters of them,
-are a separate piece of work; until then a live list is a constraint
-with an options resolver.
+Options lists, and the alters of them, are a separate piece of work;
+until then a live list is a constraint with an options resolver.

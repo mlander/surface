@@ -171,12 +171,20 @@ refused refinement.
 | Dropping a choice constraint's list of values | **refused** |
 | Adding values to a list of allowed values | **refused** |
 | Replacing the options of any other constraint | **refused** |
+| Adding or removing a map property | **refused** |
+| Any of the above, inside a map property or a list item | as above |
 
 The last row is where the conservatism lives: two `Regex` patterns
 cannot be compared for containment, so replacing one is refused rather
 than guessed at. A refiner that needs a different pattern advertises the
 narrower one in the first place. For `Length` and `Range` only `min` and
 `max` are compared, because the rest of their options are messages.
+
+Inside a map the table recurses, which is what holds a subsurface to
+it: the child narrows its own keys, and the map its parent advertises
+narrows with them. Refining `any` to a map is how a slot's placeholder
+resolves to the variant its deciding key chose (see
+[Surfaces as classes](surfaces.md#subsurfaces)).
 
 A refusal is a `\LogicException` naming the key, the contributor and
 what widened:

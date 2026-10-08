@@ -16,7 +16,11 @@ interface ShapeInterface extends ShapeAdditionsInterface {
   /**
    * A subsurface whose shape one sibling INPUT key chooses.
    *
-   * Declared now and built in step 2 of the rework: until then it throws.
+   * The sibling gains a Choice over the variants' values, narrower than
+   * any list it already declares. Until it holds a value the slot is a
+   * placeholder that lists every variant; once it does, the slot is
+   * exactly that variant. A sibling the context locks resolves the slot
+   * from the start.
    *
    * @param string $key
    *   The key the subsurface sits at.
@@ -29,7 +33,8 @@ interface ShapeInterface extends ShapeAdditionsInterface {
    * @return $this
    *
    * @throws \LogicException
-   *   Always, until subsurfaces are built.
+   *   When the key is already declared, or for outputs, which do not
+   *   attach yet.
    */
   public function attachBy(string $key, string $by, array $children = []): static;
 

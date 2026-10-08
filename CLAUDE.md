@@ -24,9 +24,19 @@ discovered by `SurfaceBuild\SurfaceCollectorPass` and built by the
 `data_surface.surfaces` service (`docs/surfaces.md`). The **old
 spelling** is `declareDataSurface()`, provider services and build event
 subscribers, and the build event still fires for new-spelling surfaces,
-so an old subscriber extends a new surface. The demo block is the one
-consumer moved so far. A decision the sketch does not cover is marked
-`// SKETCH GAP:` where it is made; grep for it.
+so an old subscriber extends a new surface. Moved so far: the demo
+block (with its presentation slot), the field instance surface in
+`data_surface_tool`, and the address settings that fill its slot. A
+decision the sketch does not cover is marked `// SKETCH GAP:` where it
+is made; grep for it.
+
+Subsurfaces are `attach()` (a fixed child, by class) and `attachBy()`
+(a slot a sibling chooses; open when it lists no children, filled by
+`#[SurfaceVariant]`). A child is built by the same build step in its
+own frame and sealed into the parent's entry as a `SurfaceAttachment`,
+or a `SurfaceSlot` of them; the pipeline, refinement, the form and the
+tool bridge recurse through those entries, and nothing in a parent can
+name a key inside its child. `docs/surfaces.md` has the rules.
 
 ## Running the suite
 
@@ -39,17 +49,11 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
   modules/custom/data_surface'
 ```
 
-The baseline as of this writing: **602 tests, 3474 assertions, 0 errors,
-9 failures** — the two below, plus seven in `FieldToolsComparisonTest`
-and `NodeTypeToolComparisonTest` that fail identically on the step's
-base commit (796f278): the `tool` module's own update of 2026-10-07
-(488f4c7, violation paths and schema enums) changed what both tools
-advertise, so both generated COMPARISON.md files and those assertions
-need an owner's decision to regenerate. They are not this module's
-regression, and `scripts/check.sh` stops on them until then. The test and assertion counts drift upward as work lands
-and are not the thing to check. **No test may error, and the only tests
-that may fail are the ones in `DataSurfaceRefinementTest`**, for a reason
-that is not this module's:
+The baseline as of this writing: **638 tests, 3787 assertions, 0 errors,
+2 failures** — the two below. The test and assertion counts drift upward
+as work lands and are not the thing to check. **No test may error,
+and the only tests that may fail are the ones in
+`DataSurfaceRefinementTest`**, for a reason that is not this module's:
 
 1. `DataSurfaceRefinementTest` — environmental, every test in it.
    `DriverException: Could not open connection` on port 4444; ddev runs

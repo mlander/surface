@@ -20,7 +20,12 @@ bundle refines against the entity type and the field against both,
 through two `#[RefinesInput]` methods that point at a list with a
 constraint rather than fetch one: core's `EntityBundleExists` for the
 bundle, and this module's `DataSurfaceDemoBundleField`, with its options
-resolver, for the field. See [docs/surfaces.md](../../docs/surfaces.md).
+resolver, for the field. Its presentation settings are a slot: a list
+and a grid need different things, so each is a surface of its own,
+`ListPresentationSurface` and `GridPresentationSurface`, chosen by the
+`presentation` key with `attachBy()`; the form swaps them over AJAX and
+the config schema picks the mapping with `[%parent.presentation]`. See
+[docs/surfaces.md](../../docs/surfaces.md).
 
 ### The formatter: `data_surface_demo_string`
 

@@ -120,13 +120,19 @@ interface SurfacesInterface {
    *   The surface class, or its #[Surface] id.
    * @param \Drupal\data_surface\Surface\SurfaceContext $context
    *   The context the target loads and commits by.
+   * @param \Drupal\data_surface\DataSurfaceInterface|null $built
+   *   The surface already built in that context, which saves building
+   *   it again to find its subsurfaces; NULL builds it.
    *
    * @return \Drupal\data_surface\Pipeline\DataSurfaceTargetInterface
-   *   The target, for the pipeline's submit().
+   *   The target, for the pipeline's submit(). Composed along the
+   *   subsurface tree: a child whose class names a target of its own
+   *   has its values routed there, in the context its parent's hands
+   *   it; a child without one is stored by its parent under its key.
    *
    * @throws \LogicException
    *   When the surface names no target: its host supplies one.
    */
-  public function target(string $surface, SurfaceContext $context): DataSurfaceTargetInterface;
+  public function target(string $surface, SurfaceContext $context, ?DataSurfaceInterface $built = NULL): DataSurfaceTargetInterface;
 
 }

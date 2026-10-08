@@ -70,7 +70,10 @@ class DataSurfaceDemoFormTest extends BrowserTestBase {
     // form nests its surface at, with the declaration's own defaults.
     $assert_session->fieldValueEquals('surface[headline]', 'Featured content');
     $assert_session->fieldValueEquals('surface[limit]', '10');
-    $assert_session->checkboxChecked('surface[show_summary]');
+    $assert_session->fieldValueEquals('surface[presentation]', 'list');
+    // The presentation slot, rendered as the list it starts on.
+    $assert_session->checkboxChecked('surface[presentation_settings][show_summary]');
+    $assert_session->fieldNotExists('surface[presentation_settings][columns]');
     // The declared entity type already narrowed the bundle on the first
     // page load, with no JavaScript: a user has one bundle, itself.
     $assert_session->optionExists('surface[bundle]', 'user');
@@ -83,11 +86,11 @@ class DataSurfaceDemoFormTest extends BrowserTestBase {
       'surface[bundle]' => 'user',
       'surface[field]' => 'name',
       'surface[limit]' => '3',
-      'surface[show_summary]' => FALSE,
+      'surface[presentation_settings][show_summary]' => FALSE,
     ], 'Save');
 
     // The message counts what was saved rather than dumping it.
-    $assert_session->pageTextContains('Saved 6 values.');
+    $assert_session->pageTextContains('Saved 7 values.');
 
     // The browser sent strings and an unchecked checkbox; accept() cast
     // them through the definitions, so State holds the native types.
@@ -98,7 +101,8 @@ class DataSurfaceDemoFormTest extends BrowserTestBase {
       'bundle' => 'user',
       'field' => 'name',
       'limit' => 3,
-      'show_summary' => FALSE,
+      'presentation' => 'list',
+      'presentation_settings' => ['show_summary' => FALSE],
     ], $stored);
 
     // Reopening the page shows what State holds, not the declaration's
@@ -107,7 +111,7 @@ class DataSurfaceDemoFormTest extends BrowserTestBase {
     $this->drupalGet(self::FORM_ROUTE);
     $assert_session->fieldValueEquals('surface[headline]', 'Recent accounts');
     $assert_session->fieldValueEquals('surface[limit]', '3');
-    $assert_session->checkboxNotChecked('surface[show_summary]');
+    $assert_session->checkboxNotChecked('surface[presentation_settings][show_summary]');
     $assert_session->optionExists('surface[field]', 'name');
     $assert_session->optionExists('surface[field]', 'mail');
   }

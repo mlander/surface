@@ -149,11 +149,18 @@ class SurfaceDiscoveryTest extends DataSurfaceKernelTestBase {
       $surface->getDefaultValues()['third_party_settings'],
     );
 
-    // The limit is refined against show_summary, after the owner.
-    $this->assertSame(['limit' => ['show_summary']], array_intersect_key($surface->getDefinitions()->refinements(), ['limit' => TRUE]));
+    // The limit is refined against the presentation, after the owner.
+    $this->assertSame(['limit' => ['presentation']], array_intersect_key($surface->getDefinitions()->refinements(), ['limit' => TRUE]));
     $range = static fn (array $values): array => $surface->refine($values)->getDefinition('limit')->getConstraints()['Range'];
-    $this->assertSame(['min' => 1, 'max' => DemoBlockAlter::SUMMARY_LIMIT], $range(['show_summary' => TRUE]));
-    $this->assertSame(['min' => 1, 'max' => 50], $range(['show_summary' => FALSE]));
+    $this->assertSame(['min' => 1, 'max' => DemoBlockAlter::GRID_LIMIT], $range(['presentation' => 'grid']));
+    $this->assertSame(['min' => 1, 'max' => 50], $range(['presentation' => 'list']));
+
+    // And it rewords the headline, the one change to an owner's key an
+    // alter may make: its help text, not its width.
+    $headline = $surface->getDefinition('headline');
+    $this->assertSame('Shown above the featured content, beside its badge.', (string) $headline->getDescription());
+    $this->assertSame('Headline', (string) $headline->getLabel());
+    $this->assertSame(['max' => 50], $headline->getConstraints()['Length']);
 
     // And the block, built by its host, carries both and stores both.
     $this->container->get('theme_installer')->install(['stark']);
@@ -162,7 +169,7 @@ class SurfaceDiscoveryTest extends DataSurfaceKernelTestBase {
     $this->assertSame('star', $block->getConfiguration()['third_party_settings']['data_surface_demo_extras']['badge']);
     $this->assertContains('limit', $this->pipeline()->validate(
       $block->getDataSurface(),
-      ['limit' => 30] + $block->getConfiguration(),
+      ['limit' => 30, 'presentation' => 'grid', 'presentation_settings' => ['columns' => 3]] + $block->getConfiguration(),
     )->keys());
 
     // The schema the extras module ships describes the mount, which the

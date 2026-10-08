@@ -43,11 +43,16 @@ discovery finds it and builds it as an autowired service.
 
 - `alterInputs()` adds the same `badge` the formatter gets, which the
   build mounts at `third_party_settings.data_surface_demo_extras.badge`.
-- `#[RefinesInput('limit')]` on `shortWithSummaries()` watches
-  `show_summary`, by parameter name, and caps the number of items at
-  twenty while summaries are shown.
+- `#[RefinesInput('limit')]` on `shortInGrid()` watches
+  `presentation`, by parameter name, and caps the number of items at
+  twenty while the block is a grid. It used to watch `show_summary`;
+  that key now lives inside the list presentation's subsurface, and an
+  alter of the block cannot see into a child.
+- `describe('headline', ...)` rewords the headline's help text, the one
+  change to an existing key an alter may make.
 
-`Kernel\SurfaceBuildTest` asserts both.
+`Kernel\SurfaceBuildTest` and `Kernel\SurfaceDiscoveryTest` assert
+them.
 
 ## The same extension, written twice
 

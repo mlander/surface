@@ -7,27 +7,36 @@ A/B for what a typed contract adds over a config schema.
 
 The `address` field type's instance settings (`available_countries`,
 `langcode_override`, `field_overrides`) are described by a surface
-declared on the field item class instead of by the form that collects
-them. Field UI renders the generated form; the address module is not
-modified.
+instead of by the form that collects them. Field UI renders the
+generated form; the address module is not modified.
 
-Three pieces, all on `SurfaceAddressItem`:
+Four pieces:
 
-- `declareDataSurface()` — the definitions, readable from the class
-  without instantiating anything. The country list and the language list
-  are not in it: the items carry the address module's `Country`
-  constraint and the `LanguageExists` constraint, and `CountryOptions`
-  and `LanguageExistsOptions` resolve them live, which is what lets the
-  declaration be static. The twelve override properties are set on the
-  same builder in the same method, because core's `MapDataDefinition`
-  cannot take property definitions in its constructor.
-- `toStorage()` / `fromStorage()` — the shape transform between the input
+- `Surface\AddressFieldSettingsSurface` — the definitions, in the new
+  spelling: a class with `defineInputs()` and no services. The country
+  list and the language list are not in it: the items carry the address
+  module's `Country` constraint and the `LanguageExists` constraint, and
+  `CountryOptions` and `LanguageExistsOptions` resolve them live. It is
+  also the variant that fills the field instance surface's open
+  `settings` slot for the address field type, by
+  `#[SurfaceVariant(of: FieldInstanceSurface::class, key: 'settings', value: 'address')]`,
+  so the tool bridge's field surface never names it.
+- `SurfaceAddressItem` — the Field UI host. It builds that surface
+  through the build step in `getFieldSurface()` (no field type host reads
+  `#[UsesSurface]` yet) and supplies the target bound to the field config
+  entity Field UI is editing.
+- `Target\AddressFieldSettingsTarget` — the surface's own target, for a
+  caller that addresses the field by its identity rather than holding
+  it: the field instance surface routes its settings here, after the
+  field itself is stored.
+- `AddressSettingsShape::toStorage()` / `fromStorage()` — the shape transform between the input
   shape and the stored shape. It is not new logic: it is the settings
   form's validate handler (strip the rows with an empty override) plus
   the item class's accessors (unwrap each override, drop the falsy
   countries, let the deprecated `fields` key win when it is set), given
   one visible home.
-- `hook_field_info_alter()` — the class swap.
+- `hook_field_info_alter()` — the class swap, which is a fifth piece
+  only in name.
 
 The surface deliberately describes the input shape, not the storage
 shape: a list of country codes rather than a map of each code to itself,

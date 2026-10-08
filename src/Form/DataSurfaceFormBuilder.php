@@ -10,6 +10,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Render\ElementInfoManagerInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
@@ -98,6 +99,27 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
     $definitions = $surface->getDefinitions();
     $dependencies = $definitions->refinementDependencies();
     foreach ($definitions as $name => $definition) {
+      $slot = $definitions->entry($name)?->slot;
+      if ($slot !== NULL && DefinitionMetadata::slotOf($definition) !== NULL) {
+        // The values said nothing about the deciding key, so its own
+        // default is what the person sees chosen, and the slot is that
+        // variant's.
+        $chosen = $slot->chosen($values[$slot->by] ?? $surface->getDefault($slot->by));
+        if ($chosen === NULL) {
+          // A slot whose deciding key chose nothing has no shape to
+          // render. Offering nothing is honest: a key with no element
+          // has said nothing, so what it holds is kept, and the slot
+          // appears the moment its deciding key is answered, through the
+          // rebuild the deciding key is wired to.
+          continue;
+        }
+        $child = $slot->variant($chosen)->child;
+        $held = $values[$name] ?? NULL;
+        $definition = $slot->definitionFor($chosen, $child->refine(array_replace(
+          $child->getDefaultValues(),
+          $slot->fits($chosen, $held) ? $held : [],
+        )));
+      }
       $value = match (TRUE) {
         // A secret is never handed to a widget, whatever the widget
         // would do with it. Being secret means the stored value does not
@@ -111,6 +133,12 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
         $definitions->isLocked($name) => $surface->getDefault($name),
         default => $values[$name] ?? $surface->getDefault($name),
       };
+      if ($slot !== NULL) {
+        // Rendered for the variant now chosen, from that variant's
+        // defaults when what is held was written for another one.
+        $chosen = (string) $slot->chosen($values[$slot->by] ?? $surface->getDefault($slot->by));
+        $value = $slot->fits($chosen, $value) ? $value : $slot->defaultsOf($chosen);
+      }
       $element = $this->widgetManager->getWidgetFor($definition)->buildElement($definition, $value);
       if ($definitions->isLocked($name)) {
         // Visible but fixed: the consumer sees the key and its value and
@@ -202,6 +230,15 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
       if (($overlay[$dependency] ?? NULL) !== ($values[$dependency] ?? NULL)) {
         return FALSE;
       }
+    }
+    $slot = $refined->getDefinitions()->entry($name)?->slot;
+    if ($slot !== NULL) {
+      // A slot's input stands while it is shaped for the variant now
+      // chosen. Input left by another variant answered a question that
+      // is no longer on the form, so it goes, and the rebuilt slot
+      // starts from the chosen variant's own values.
+      $chosen = $slot->chosen($values[$slot->by] ?? NULL);
+      return $chosen === NULL || $slot->fits($chosen, $value);
     }
     // Only a value a select could have offered can be tested for
     // membership at all; anything else is not a choice and is left
@@ -339,19 +376,58 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
   public function extractSurfaceValues(DataSurfaceInterface $surface, array $container, FormStateInterface $form_state, array $current = []): array {
     $container = static::findSurfaceContainer($container);
     $raw = [];
-    foreach ($surface->getDefinitions() as $name => $definition) {
-      // A key with no element was never offered to the user, so it has
-      // nothing to say: accept() keeps whatever the key already holds.
-      if (!isset($container[$name]) || !is_array($container[$name])) {
+    $definitions = $surface->getDefinitions();
+    $slots = [];
+    foreach ($definitions->entries() as $name => $entry) {
+      if ($entry->slot !== NULL) {
+        $slots[] = $name;
         continue;
       }
-      $raw[$name] = $this->widgetManager->getWidgetFor($definition)
-        ->extractValue($definition, $container[$name], $form_state, [$name]);
+      $raw += $this->extractKey((string) $name, $entry->definition, $container, $form_state);
+    }
+    if ($slots !== []) {
+      // A slot's element is the chosen variant's, so it is read through
+      // that variant's shape, chosen by what the deciding key holds in
+      // this same submission.
+      $resolved = $definitions->withSlotsResolved($raw + $current + $surface->getDefaultValues());
+      foreach ($slots as $name) {
+        $definition = $resolved->get((string) $name);
+        if ($definition !== NULL && DefinitionMetadata::slotOf($definition) === NULL) {
+          $raw += $this->extractKey((string) $name, $definition, $container, $form_state);
+        }
+      }
     }
     // One coercion path for every caller: the form hands its raw tree to
     // the same accept() a payload goes through, which is also where
     // locked keys take the value the surface declares.
     return $this->pipeline->accept($surface, $raw, $current);
+  }
+
+  /**
+   * Reads one key's raw value out of the container, if it was rendered.
+   *
+   * @param string $name
+   *   The surface key.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $definition
+   *   The definition to read it through.
+   * @param array $container
+   *   The surface container.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   *
+   * @return array
+   *   The raw value keyed by surface key, or nothing for a key with no
+   *   element: it was never offered, so it has nothing to say, and
+   *   accept() keeps whatever the key already holds.
+   */
+  protected function extractKey(string $name, ?DataDefinitionInterface $definition, array $container, FormStateInterface $form_state): array {
+    if ($definition === NULL || !isset($container[$name]) || !is_array($container[$name])) {
+      return [];
+    }
+    return [
+      $name => $this->widgetManager->getWidgetFor($definition)
+        ->extractValue($definition, $container[$name], $form_state, [$name]),
+    ];
   }
 
   /**

@@ -52,6 +52,13 @@ final class SurfaceEntry {
    * @param array<string, array> $contributions
    *   The values contributed to this key at build time, keyed by the
    *   provider that added them. What is not here is the owner's.
+   * @param \Drupal\data_surface\SurfaceAttachment|null $attachment
+   *   The child surface fixed at this key, when the key is a subsurface:
+   *   its definition is then the child's definitions as a map.
+   * @param \Drupal\data_surface\SurfaceSlot|null $slot
+   *   The variant table, when the key is a slot whose shape a sibling
+   *   chooses: its definition is then the `any` placeholder until the
+   *   sibling holds a value, and that variant's map afterwards.
    */
   public function __construct(
     public readonly string $name,
@@ -61,6 +68,8 @@ final class SurfaceEntry {
     public readonly array $dependencies = [],
     public readonly array $refiners = [],
     public readonly array $contributions = [],
+    public readonly ?SurfaceAttachment $attachment = NULL,
+    public readonly ?SurfaceSlot $slot = NULL,
   ) {
   }
 
@@ -87,7 +96,45 @@ final class SurfaceEntry {
       $this->dependencies,
       $this->refiners,
       $this->contributions,
+      $this->attachment,
+      $this->slot,
     );
+  }
+
+  /**
+   * Gets the child surface answering for this key's value, if any.
+   *
+   * An attached child always; a slot's only once the deciding key, read
+   * from the given values, names a variant. Everything that hands a
+   * nested value to the surface describing it — accept, validate,
+   * refine, the form — asks this one question.
+   *
+   * @param array $values
+   *   The values of the surface this key belongs to, which is where a
+   *   slot's deciding key is read.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface|null
+   *   The child, or NULL for a plain key and for an unresolved slot.
+   */
+  public function childFor(array $values): ?DataSurfaceInterface {
+    if ($this->attachment !== NULL) {
+      return $this->attachment->child;
+    }
+    if ($this->slot === NULL) {
+      return NULL;
+    }
+    $chosen = $this->slot->chosen($values[$this->slot->by] ?? NULL);
+    return $chosen === NULL ? NULL : $this->slot->variant($chosen)->child;
+  }
+
+  /**
+   * Returns whether this key holds a subsurface: attached or a slot.
+   *
+   * @return bool
+   *   TRUE for an attached child or a slot.
+   */
+  public function isNested(): bool {
+    return $this->attachment !== NULL || $this->slot !== NULL;
   }
 
   /**

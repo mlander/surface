@@ -102,8 +102,9 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
     $overrides = $schema['properties']['field_overrides']['properties'];
     $this->assertArrayHasKey('givenName', $overrides);
     $this->assertArrayHasKey('administrativeArea', $overrides);
-    // And the values each one takes, with a label a person can read.
-    $this->assertSame(['hidden', 'optional', 'required'], $overrides['givenName']['enum']);
+    // And the values each one takes, with a label a person can read. The
+    // Tool API lists null among an optional input's values (#3583072).
+    $this->assertSame(['hidden', 'optional', 'required', NULL], $overrides['givenName']['enum']);
     $this->assertSame('First name', $overrides['givenName']['title']);
     $this->assertSame('Organization', $overrides['organization']['title']);
 

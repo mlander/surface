@@ -20,6 +20,7 @@ final class RequiredFieldsNeedHelpTextAlter implements SurfaceAlterInterface {
 
   public function alterInputs(ShapeAdditionsInterface $inputs): void {
     $inputs->add('help_link', 'uri', 'Link to editorial guidance');
+    $inputs->describe('description', description: 'Shown under the field. Required when the field is required.');
   }
 
   /**

@@ -311,9 +311,9 @@ What to look at:
                     "EH",
                     "YE",
                     "ZM",
-                    "ZW"
+                    "ZW",
+                    null
                 ],
-                "description": "Country",
                 "title": "Country"
             },
             "title": "Available countries"
@@ -328,7 +328,8 @@ What to look at:
                 }
             ],
             "enum": [
-                "en"
+                "en",
+                null
             ],
             "description": "Language override: Ensures entered addresses are always formatted in the same language.",
             "title": "Language override"
@@ -351,9 +352,9 @@ What to look at:
                     "enum": [
                         "hidden",
                         "optional",
-                        "required"
+                        "required",
+                        null
                     ],
-                    "description": "First name",
                     "title": "First name"
                 },
                 "additionalName": {
@@ -368,9 +369,9 @@ What to look at:
                     "enum": [
                         "hidden",
                         "optional",
-                        "required"
+                        "required",
+                        null
                     ],
-                    "description": "Middle name",
                     "title": "Middle name"
                 },
                 "familyName": {
@@ -385,9 +386,9 @@ What to look at:
                     "enum": [
                         "hidden",
                         "optional",
-                        "required"
+                        "required",
+                        null
                     ],
-                    "description": "Last name",
                     "title": "Last name"
                 },
                 "organization": {
@@ -402,9 +403,9 @@ What to look at:
                     "enum": [
                         "hidden",
                         "optional",
-                        "required"
+                        "required",
+                        null
                     ],
-                    "description": "Organization",
                     "title": "Organization"
                 },
                 "addressLine1": {
@@ -419,9 +420,9 @@ What to look at:
                     "enum": [
                         "hidden",
                         "optional",
-                        "required"
+                        "required",
+                        null
                     ],
-                    "description": "Address line 1",
                     "title": "Address line 1"
                 },
                 "addressLine2": {
@@ -436,9 +437,9 @@ What to look at:
                     "enum": [
                         "hidden",
                         "optional",
-                        "required"
+                        "required",
+                        null
                     ],
-                    "description": "Address line 2",
                     "title": "Address line 2"
                 },
                 "addressLine3": {
@@ -453,9 +454,9 @@ What to look at:
                     "enum": [
                         "hidden",
                         "optional",
-                        "required"
+                        "required",
+                        null
                     ],
-                    "description": "Address line 3",
                     "title": "Address line 3"
                 },
                 "postalCode": {
@@ -470,9 +471,9 @@ What to look at:
                     "enum": [
                         "hidden",
                         "optional",
-                        "required"
+                        "required",
+                        null
                     ],
-                    "description": "Postal code",
                     "title": "Postal code"
                 },
                 "sortingCode": {
@@ -487,9 +488,9 @@ What to look at:
                     "enum": [
                         "hidden",
                         "optional",
-                        "required"
+                        "required",
+                        null
                     ],
-                    "description": "Sorting code",
                     "title": "Sorting code"
                 },
                 "dependentLocality": {
@@ -504,9 +505,9 @@ What to look at:
                     "enum": [
                         "hidden",
                         "optional",
-                        "required"
+                        "required",
+                        null
                     ],
-                    "description": "Dependent locality (e.g. Neighbourhood)",
                     "title": "Dependent locality (e.g. Neighbourhood)"
                 },
                 "locality": {
@@ -521,9 +522,9 @@ What to look at:
                     "enum": [
                         "hidden",
                         "optional",
-                        "required"
+                        "required",
+                        null
                     ],
-                    "description": "Locality (e.g. City)",
                     "title": "Locality (e.g. City)"
                 },
                 "administrativeArea": {
@@ -538,9 +539,9 @@ What to look at:
                     "enum": [
                         "hidden",
                         "optional",
-                        "required"
+                        "required",
+                        null
                     ],
-                    "description": "Administrative area (e.g. State or Province)",
                     "title": "Administrative area (e.g. State or Province)"
                 }
             },
