@@ -129,30 +129,92 @@ prevent.
 ## Wrapper ids and AJAX
 
 The container carries a private marker, `#data_surface_wrapper`, holding
-the DOM id the AJAX path replaces. The id itself comes from
-`Html::getUniqueId()` over the wrapper key the host passed, so two
-surfaces on one page cannot share a wrapper and rebuild each other.
+its DOM id. The id itself comes from `Html::getUniqueId()` over the
+wrapper key the host passed, so two surfaces on one page cannot share a
+wrapper and rebuild each other.
 
 When the host already named its element, **the host's id wins**: the
 container is pointed at that id instead, and the generated one is
 discarded, including in the `#ajax` already attached to the children.
 
-Every key another key refines against gets an `#ajax` pointing at that
-wrapper, with `refreshSurface()` as the callback. One exception, on
-purpose: an element whose `#type` is a grouping type — `details`,
-`fieldset`, `container`, which is what the map widget renders — is left
-unwired. A `details` is not an input, emits no change event, and an
-`#ajax` on it never fires, which is worse than nothing because the form
-looks wired and is not. Attaching to each leaf inside it was considered
-and rejected: a refiner depends on the whole value of a key, so a rebuild
-fired by one leaf would refine against a half-filled map. A map
-dependency is declared and left unwired; the surface still refines when
-the form is submitted, or when a scalar dependency is touched.
+Every key another key refines against gets an `#ajax` with
+`refreshSurface()` as the callback, at any depth: an attached child's or
+a chosen slot variant's own dependency is wired too, as a trigger of the
+child's own refiners. One exception, on purpose: an element whose
+`#type` is a grouping type — `details`, `fieldset`, `container`, which
+is what the map widget renders — is left unwired. A `details` is not an
+input, emits no change event, and an `#ajax` on it never fires, which is
+worse than nothing because the form looks wired and is not. Attaching to
+each leaf inside it was considered and rejected: a refiner depends on the
+whole value of a key, so a rebuild fired by one leaf would refine against
+a half-filled map. A map dependency is declared and left unwired; the
+surface still refines when the form is submitted, or when a scalar
+dependency is touched.
+
+### What a change replaces
+
+**Only what the change moved, and never the element that was touched.**
+Changing a key replaces the keys that refine against it, then the keys
+that refine against those, until nothing new is reached: the same
+closure the [discard cascade](#the-in-form-half-discarding-orphaned-input)
+walks. In the registration example, the venue replaces the room and the
+capacity; the room replaces the capacity; the pricing replaces the
+ticket slot. In the demo block, the entity type replaces the bundle and
+the field, and the bundle replaces the field. Replacing the whole
+container, as the form once did, redrew the select the person had just
+changed and left the real change — a maximum moving on another field —
+looking like nothing happened.
+
+The callback answers with an `AjaxResponse`:
+
+| Command | For |
+| --- | --- |
+| `ReplaceCommand` | Each dependent, by its own wrapper. A slot whose deciding key moved is replaced whole, by the slot's wrapper. |
+| `ReplaceCommand` | Each element placed with `placeRefreshed()` — the situation form's panel — on every rebuild. |
+| `RemoveCommand`, then `AppendCommand` | The [stale marker](#stale-values-on-a-form): removed, and appended to the container again when the rebuild left one. It names stale selects across the whole container and may appear or disappear with the rebuild, so it is never replaced in place. |
+| `RemoveCommand`, then `PrependCommand` | The messages the request produced — an error on the trigger itself, the one value a refinement request judges — printed inside the container where the render-array path printed them, after the previous request's are taken away. |
+
+Each refinement target, each slot and each placed element gets a
+wrapper of its own, a `div` in its `#prefix` and `#suffix`, with its id
+on the element under `REFRESH_ID_KEY`. The ids are derived from the
+container's id and the element's path below it
+(`<container>--shelf--height`), so they are unique wherever the
+container's is. They are placed by the container's `#process`, since
+the container's id is only final once a host has merged it. A slot whose
+deciding key chose nothing renders as its wrapper and nothing else, so
+the rebuild that chooses a variant has a place to put it; extraction
+reads nothing from it.
+
+Each trigger carries, under `TRIGGER_KEY`, its own path below the
+container and the dotted paths it replaces. The dependency edges are
+fixed when a surface is sealed, so the closure the previous build wrote
+is the closure of this one; each element is then taken from the rebuilt
+container. When a dependent cannot be found there — a host or a
+cosmetic layer took it out — the callback falls back to returning the
+container, which the browser puts in place of the wrapper the trigger
+names: coarser, never wrong.
+
+**The ids have to survive the rebuild.** `Html::getUniqueId()` answers
+an AJAX request with a random suffix, so a rebuild would name wrappers
+the page has never seen, and the elements a partial rebuild leaves in
+place keep their old ids. So each trigger posts its container's id with
+the request (core's `#ajax['submit']`, under `WRAPPER_INPUT`), and
+`buildSurfaceForm()` takes it back when it is one this wrapper key could
+have generated. The container keeps the id it was first rendered with
+for as long as the page lives.
+
+One consequence of not replacing the trigger: it keeps the options it
+was rendered with. A required select first offered on `- Select -`
+keeps that option in the page after a choice, while the rebuilt form no
+longer has it, so choosing it again is refused as a value the select
+does not offer, and printed inside the container. The trigger's own
+answer is the one value a refinement request judges, so this is the
+error that request can produce, and nothing else is affected.
 
 ### `#limit_validation_errors`
 
-Every `#ajax` the builder attached is limited to **that element's own
-value path** and nothing wider. Touching one select says one thing about
+Every `#ajax` the builder attached, at any depth, is limited to **that
+element's own value path** and nothing wider. Touching one select says one thing about
 one key: the host form around the surface is not being answered, and
 neither is the rest of the surface.
 
@@ -205,7 +267,10 @@ absolute path: `DataSurfaceWidgetBase::rawValue()` when extracting, and
 `DataSurfaceHostTrait::surfaceRefinementInput()` when reading what an
 in-progress AJAX rebuild has collected. The second locates the submitted
 tree through the triggering element's own position rather than through a
-fixed path, which is what makes it nesting-agnostic. If you write a host
+fixed path, which is what makes it nesting-agnostic: the trigger's
+absolute `#parents`, less the path below the container it carries under
+`TRIGGER_KEY` — one key for a key of the surface, two for a key of an
+attached child. If you write a host
 adapter of your own, go through those rather than reading `$form_state`
 directly.
 
@@ -319,7 +384,9 @@ to judge and nothing to report.
 Three rules keep it honest:
 
 - **Only input is ever dropped.** `discardedRefinementInput()` names
-  keys; a stored value is never touched by it. A rule that could reach
+  keys — and, inside an attached child or a chosen slot variant, the
+  dotted paths of the child's own keys its own refiners orphaned, asked
+  of the child in its own frame; a stored value is never touched by it. A rule that could reach
   storage would be the stale model with the safety taken off.
 - **The chain settles in one rebuild.** Dropping a value moves what the
   next target refines against, which invalidates that target's input the
@@ -524,8 +591,9 @@ anything that reads submitted values by path.
 A route may name a panel in `_data_surface_panel`. The form hands it the
 situation, the surface built in it, and the values the elements are
 built with, and places what it returns inside the surface container,
-under `DataSurfaceSituationForm::PANEL_KEY`. Inside, because the AJAX
-rebuild a refinement triggers replaces the container: a panel that
+under `DataSurfaceSituationForm::PANEL_KEY`, with the builder's
+`placeRefreshed()`: every AJAX rebuild a refinement triggers replaces
+it beside the dependents, whichever key moved, because a panel that
 describes the surface as the answers stand changes when they do.
 Extraction reads only the surface's own keys, so nothing in a panel is
 ever taken for a value.

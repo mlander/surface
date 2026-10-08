@@ -347,7 +347,11 @@ trait DataSurfaceHostTrait {
       $discarded = $this->surfaceFormBuilder()->discardedRefinementInput($surface, $stored, $input);
       if ($discarded !== []) {
         $this->forgetSurfaceInput($discarded, $form_state);
-        $input = array_diff_key($input, array_flip($discarded));
+        // A key, or a dotted path to one inside an attached child or a
+        // slot: the child's own refiners orphan the child's own keys.
+        foreach ($discarded as $dotted) {
+          NestedArray::unsetValue($input, explode('.', $dotted));
+        }
       }
     }
     return $input === [] ? $stored : array_replace($stored, $input);
@@ -500,8 +504,12 @@ trait DataSurfaceHostTrait {
   /**
    * Locates the surface container inside the raw input, via the trigger.
    *
-   * A refinement trigger is one of the surface's own elements, so its
-   * siblings are the rest of the surface wherever the host nested it.
+   * A refinement trigger is one of the surface's own elements, and it
+   * says how far below the container it sits: one level for a key of the
+   * surface, two for a key of an attached child or a slot variant, which
+   * is wired as a dependency of the child's own refiners. Its absolute
+   * #parents less that path is the container, wherever the host nested
+   * it. A trigger that says nothing is read as a key of the surface.
    *
    * @param \Drupal\Core\Form\FormStateInterface $state
    *   The complete form state.
@@ -512,9 +520,11 @@ trait DataSurfaceHostTrait {
    */
   protected static function surfaceInputPath(FormStateInterface $state): ?array {
     $trigger = $state->getTriggeringElement();
-    return $trigger === NULL || !isset($trigger['#parents'])
-      ? NULL
-      : array_slice($trigger['#parents'], 0, -1);
+    if ($trigger === NULL || !isset($trigger['#parents'])) {
+      return NULL;
+    }
+    $below = $trigger[DataSurfaceFormBuilderInterface::TRIGGER_KEY]['path'] ?? [NULL];
+    return array_slice($trigger['#parents'], 0, -max(1, count($below)));
   }
 
 }

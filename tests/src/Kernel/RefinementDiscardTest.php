@@ -4,10 +4,17 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
+use Drupal\Core\Form\FormBase;
+use Drupal\Core\Form\FormInterface;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\data_surface\DataSurfaceBuilder;
+use Drupal\data_surface\DataSurfaceHostTrait;
+use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
+use Drupal\data_surface\SurfaceAttachment;
 use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
+use Drupal\data_surface_surface_test\Surface\Pantry\PantrySurface;
 use Drupal\data_surface_test\Plugin\Block\DataSurfaceChainTestBlock;
 use Drupal\node\Entity\NodeType;
 use PHPUnit\Framework\Attributes\Group;
@@ -66,6 +73,7 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
     'data_surface',
     'data_surface_demo',
     'data_surface_test',
+    'data_surface_surface_test',
   ];
 
   /**
@@ -444,6 +452,252 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
       $stored,
       ['note' => 'anything at all'],
     ));
+  }
+
+  /**
+   * Tests a child's own refiner orphans the child's own key, by its path.
+   *
+   * A child refines in its own frame, so the discard rule is asked of
+   * the child, against the value the parent's input holds for it, and
+   * names what it drops below the parent's key.
+   */
+  public function testTheOrphanOfChildIsNamedByItsPath(): void {
+    $parent = new DataSurfaceBuilder();
+    $parent->attach('style', new SurfaceAttachment($this->casingVariantSurface()));
+    $surface = $parent->seal();
+    $stored = ['style' => ['casing' => 'uppercase', 'variant' => 'bold']];
+
+    // The child's casing moved, and "bold" is not a lowercase variant.
+    $this->assertSame(['style.variant'], $this->formBuilder()->discardedRefinementInput(
+      $surface,
+      $stored,
+      ['style' => ['casing' => 'lowercase', 'variant' => 'bold']],
+    ));
+    // Still offered: kept.
+    $this->assertSame([], $this->formBuilder()->discardedRefinementInput(
+      $surface,
+      $stored,
+      ['style' => ['casing' => 'uppercase', 'variant' => 'strong']],
+    ));
+  }
+
+  /**
+   * Posts the demo form as an AJAX request naming a trigger does.
+   *
+   * @param array $surface
+   *   The surface's input, keyed by surface key.
+   * @param string $trigger
+   *   The surface key that was touched.
+   * @param string|null $build_id
+   *   The build id of the form a previous request rebuilt and cached,
+   *   which a browser posts back; NULL for the first request.
+   *
+   * @return \Drupal\Core\Form\FormStateInterface
+   *   The form state after the request.
+   */
+  protected function postDemo(array $surface, string $trigger, ?string $build_id = NULL): FormStateInterface {
+    $request = Request::create('/demo', 'POST');
+    $request->setSession(new Session(new MockArraySessionStorage()));
+    $this->container->get('request_stack')->push($request);
+    $form_state = new FormState();
+    $form_state->setUserInput([
+      'form_id' => 'data_surface_demo_form',
+      'surface' => $surface + [
+        'headline' => 'Featured content',
+        'limit' => '10',
+        'presentation' => 'list',
+        'presentation_settings' => ['show_summary' => '1'],
+      ],
+      '_triggering_element_name' => 'surface[' . $trigger . ']',
+    ] + ($build_id === NULL ? [] : ['form_build_id' => $build_id]));
+    $this->container->get('form_builder')->buildForm('Drupal\data_surface_demo\Form\DataSurfaceDemoForm', $form_state);
+    $this->assertTrue($form_state->isRebuilding());
+    $this->assertSame([], $form_state->getErrors());
+    return $form_state;
+  }
+
+  /**
+   * Tests the demo's three-level chain replaces what each link moves.
+   *
+   * The entity type narrows the bundle, and the two together narrow the
+   * field: changing the entity type moves both, changing the bundle
+   * moves the field alone. The element touched is never replaced, and
+   * the container around them never is.
+   */
+  public function testTheDemoChainReplacesOnlyWhatEachLinkMoves(): void {
+    $state = $this->postDemo(['entity_type' => 'node', 'bundle' => 'user', 'field' => ''], 'entity_type');
+    $container = $state->getCompleteForm()['surface'];
+    $response = $this->ajaxResponse($state);
+    $this->assertSame([
+      $this->wrapperSelector($container['bundle']),
+      $this->wrapperSelector($container['field']),
+    ], $this->ajaxSelectors($response, 'replaceWith'));
+    $this->assertArrayNotHasKey(DataSurfaceFormBuilderInterface::REFRESH_ID_KEY, $container['entity_type']);
+    $this->assertStringContainsString('value="article"', $this->ajaxMarkup($response, $this->wrapperSelector($container['bundle'])));
+
+    // The next request is processed against the form this one rebuilt,
+    // from the form cache, as a browser's is: the bundle select it holds
+    // offers node's bundles.
+    $state = $this->postDemo(['entity_type' => 'node', 'bundle' => 'article', 'field' => ''], 'bundle', $state->getCompleteForm()['#build_id']);
+    $container = $state->getCompleteForm()['surface'];
+    $response = $this->ajaxResponse($state);
+    $replaced = $this->ajaxSelectors($response, 'replaceWith');
+    $this->assertSame([$this->wrapperSelector($container['field'])], $replaced);
+    // The bundle is a target of the entity type, so it has a wrapper;
+    // as the trigger, it is the one never named.
+    $this->assertNotContains($this->wrapperSelector($container['bundle']), $replaced);
+    $this->assertStringContainsString('value="title"', $this->ajaxMarkup($response, $this->wrapperSelector($container['field'])));
+    $this->assertNotContains('#' . $container['#attributes']['id'], $replaced);
+
+    // The presentation decides a slot: the slot's own wrapper goes, whole.
+    $state = $this->postDemo(['entity_type' => 'node', 'bundle' => 'article', 'field' => '', 'presentation' => 'grid'], 'presentation', $state->getCompleteForm()['#build_id']);
+    $container = $state->getCompleteForm()['surface'];
+    $response = $this->ajaxResponse($state);
+    $this->assertSame([$this->wrapperSelector($container['presentation_settings'])], $this->ajaxSelectors($response, 'replaceWith'));
+    $this->assertStringContainsString('name="surface[presentation_settings][columns]"', $this->ajaxMarkup($response, $this->wrapperSelector($container['presentation_settings'])));
+  }
+
+  /**
+   * Builds the pantry into a form with nothing else in it.
+   *
+   * The pantry is the one surface with a child whose own refiner narrows
+   * one of the child's keys: the shelf's unit caps its height. Not
+   * cached, since an anonymous class cannot be serialized; nothing about
+   * the AJAX path depends on the cache.
+   *
+   * @return \Drupal\Core\Form\FormInterface
+   *   The form.
+   */
+  protected function pantryForm(): FormInterface {
+    $surfaces = $this->container->get('data_surface.surfaces');
+    return new class($surfaces->build(PantrySurface::class, PantrySurface::add())) extends FormBase {
+
+      use DataSurfaceHostTrait;
+
+      /**
+       * Constructs the form around a built pantry.
+       */
+      public function __construct(protected DataSurfaceInterface $surface) {
+      }
+
+      /**
+       * {@inheritdoc}
+       */
+      public function getFormId(): string {
+        return 'data_surface_pantry_test_form';
+      }
+
+      /**
+       * {@inheritdoc}
+       */
+      public function buildForm(array $form, FormStateInterface $form_state): array {
+        $form_state->disableCache();
+        $values = $this->surfaceFormValues($this->surface, $this->surface->getDefaultValues(), $form_state);
+        $form['surface'] = $this->surfaceFormBuilder()->buildSurfaceForm($this->surface, $values, $form_state, 'pantry');
+        return $form;
+      }
+
+      /**
+       * {@inheritdoc}
+       */
+      public function submitForm(array &$form, FormStateInterface $form_state): void {
+      }
+
+    };
+  }
+
+  /**
+   * Posts the pantry form as an AJAX request naming a trigger does.
+   *
+   * @param array $surface
+   *   The surface's input over the pantry's defaults.
+   * @param string $trigger
+   *   The trigger's name.
+   *
+   * @return \Drupal\Core\Form\FormStateInterface
+   *   The form state after the request.
+   */
+  protected function postPantry(array $surface, string $trigger): FormStateInterface {
+    $request = Request::create('/pantry', 'POST');
+    $request->setSession(new Session(new MockArraySessionStorage()));
+    $this->container->get('request_stack')->push($request);
+    $form_state = new FormState();
+    $form_state->setUserInput([
+      'form_id' => 'data_surface_pantry_test_form',
+      'surface' => array_replace_recursive([
+        'pantry' => 'larder',
+        'kind' => 'jar',
+        'shelf' => ['unit' => 'cm', 'height' => '30'],
+        'label' => ['text' => 'Pantry'],
+        'kind_settings' => ['lid' => 'screw', 'volume' => '500'],
+      ], $surface),
+      '_triggering_element_name' => $trigger,
+    ]);
+    $this->container->get('form_builder')->buildForm($this->pantryForm(), $form_state);
+    $this->assertTrue($form_state->isRebuilding());
+    $this->assertSame([], $form_state->getErrors());
+    return $form_state;
+  }
+
+  /**
+   * Tests a child's own dependency replaces only inside that child.
+   *
+   * The shelf's unit is wired as a trigger of the shelf's own refiner:
+   * the limit is the unit's own value path, two levels below the
+   * container; the rebuild refines the height against the unit just
+   * chosen, read from raw input through the trigger's own depth; and the
+   * one element replaced is the shelf's height. Nothing outside the
+   * shelf moves, and the shelf itself is not replaced.
+   */
+  public function testTheOwnDependencyOfChildReplacesOnlyInsideIt(): void {
+    $state = $this->postPantry(['shelf' => ['unit' => 'in']], 'surface[shelf][unit]');
+    $this->assertSame([['surface', 'shelf', 'unit']], $state->getTriggeringElement()['#limit_validation_errors']);
+    $this->assertSame(['shelf', 'unit'], $state->getTriggeringElement()[DataSurfaceFormBuilderInterface::TRIGGER_KEY]['path']);
+    $container = $state->getCompleteForm()['surface'];
+    $this->assertEquals(80, $container['shelf']['height']['#max']);
+
+    $response = $this->ajaxResponse($state);
+    $this->assertSame(
+      [$this->wrapperSelector($container['shelf']['height'])],
+      $this->ajaxSelectors($response, 'replaceWith'),
+    );
+    $this->assertSame('#' . $container['#attributes']['id'] . '--shelf--height', $this->wrapperSelector($container['shelf']['height']));
+    $this->assertArrayNotHasKey(DataSurfaceFormBuilderInterface::REFRESH_ID_KEY, $container['shelf']);
+    $this->assertArrayNotHasKey(DataSurfaceFormBuilderInterface::REFRESH_ID_KEY, $container['shelf']['unit']);
+    $this->assertStringContainsString('max="80"', $this->ajaxMarkup($response, $this->wrapperSelector($container['shelf']['height'])));
+
+    // The kind decides a slot of the parent's: the slot goes whole, as
+    // the variant the new kind chose, and the shelf does not move.
+    $state = $this->postPantry(['kind' => 'tin', 'kind_settings' => ['lid' => 'screw']], 'surface[kind]');
+    $container = $state->getCompleteForm()['surface'];
+    $response = $this->ajaxResponse($state);
+    $this->assertSame([$this->wrapperSelector($container['kind_settings'])], $this->ajaxSelectors($response, 'replaceWith'));
+    $this->assertStringContainsString('name="surface[kind_settings][opener]"', $this->ajaxMarkup($response, $this->wrapperSelector($container['kind_settings'])));
+  }
+
+  /**
+   * Tests a slot whose deciding key chose nothing still has a wrapper.
+   *
+   * Nothing is rendered for it but the wrapper, so the rebuild that
+   * chooses a variant has a place on the page to put it, and the empty
+   * wrapper says nothing on extraction.
+   */
+  public function testAnUnchosenSlotKeepsItsWrapper(): void {
+    $state = $this->postPantry(['kind' => ''], 'surface[kind]');
+    $container = $state->getCompleteForm()['surface'];
+    // No kind, no variant: the slot is its wrapper and nothing else.
+    $this->assertArrayHasKey(DataSurfaceFormBuilderInterface::REFRESH_ID_KEY, $container['kind_settings']);
+    $this->assertSame([], array_values(array_filter(array_keys($container['kind_settings']), static fn ($key): bool => !str_starts_with((string) $key, '#'))));
+    $response = $this->ajaxResponse($state);
+    $this->assertSame([$this->wrapperSelector($container['kind_settings'])], $this->ajaxSelectors($response, 'replaceWith'));
+    $this->assertSame(
+      '<div id="' . $container['kind_settings'][DataSurfaceFormBuilderInterface::REFRESH_ID_KEY] . '"></div>',
+      trim($this->ajaxMarkup($response, $this->wrapperSelector($container['kind_settings']))),
+    );
+    $surfaces = $this->container->get('data_surface.surfaces');
+    $surface = $surfaces->build(PantrySurface::class, PantrySurface::add());
+    $values = $this->formBuilder()->extractSurfaceValues($surface, $container, $state, ['kind_settings' => ['lid' => 'clip']]);
+    $this->assertSame(['lid' => 'clip'], $values['kind_settings']);
   }
 
 }

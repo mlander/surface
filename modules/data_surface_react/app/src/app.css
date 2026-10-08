@@ -1,0 +1,197 @@
+/*
+ * The React form, theme-neutral: it inherits the theme's font and
+ * colors, draws borders in the current color, and only lays things out.
+ * One column at every width; inputs never wider than their container.
+ */
+
+.dsr {
+  max-width: 48rem;
+  box-sizing: border-box;
+}
+
+.dsr *,
+.dsr *::before,
+.dsr *::after {
+  box-sizing: inherit;
+}
+
+.dsr-item {
+  margin: 0 0 1rem;
+}
+
+.dsr-label,
+.dsr-legend {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: bold;
+}
+
+.dsr-required {
+  margin-inline-start: 0.25em;
+  color: #b3261e;
+}
+
+.dsr input[type="text"],
+.dsr input[type="email"],
+.dsr input[type="url"],
+.dsr input[type="password"],
+.dsr input[type="number"],
+.dsr select,
+.dsr textarea {
+  width: 100%;
+  max-width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.dsr select[multiple] {
+  padding: 0.25rem;
+}
+
+.dsr input:disabled,
+.dsr select:disabled,
+.dsr textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dsr-option {
+  display: block;
+  margin: 0.25rem 0;
+}
+
+.dsr-description,
+.dsr-note {
+  margin-top: 0.25rem;
+  font-size: 0.875em;
+  opacity: 0.8;
+}
+
+.dsr-error {
+  margin-top: 0.25rem;
+  color: #b3261e;
+  font-size: 0.875em;
+}
+
+.dsr-item--error input,
+.dsr-item--error select,
+.dsr-item--error textarea {
+  border-width: 2px;
+  border-color: #b3261e;
+}
+
+.dsr-fieldset {
+  min-width: 0;
+  margin: 0 0 1rem;
+  padding: 0.75rem;
+  border: 1px solid currentColor;
+  border-radius: 0.25rem;
+}
+
+.dsr-fieldset > .dsr-legend {
+  padding: 0 0.25rem;
+}
+
+.dsr-list__rows {
+  margin: 0 0 0.5rem;
+  padding-inline-start: 1.25rem;
+}
+
+.dsr-list__row {
+  margin-bottom: 0.5rem;
+}
+
+.dsr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 1.5rem 0;
+}
+
+.dsr-actions .dsr-note {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.dsr-button {
+  padding: 0.5rem 1rem;
+  border: 1px solid currentColor;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.dsr-button--primary {
+  font-weight: bold;
+}
+
+.dsr-button--small {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875em;
+}
+
+.dsr-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dsr-summary {
+  margin: 0 0 1rem;
+  padding: 0.75rem;
+  border: 1px solid currentColor;
+  border-inline-start-width: 0.5rem;
+  border-radius: 0.25rem;
+}
+
+.dsr-summary p {
+  margin: 0;
+}
+
+.dsr-summary--error {
+  border-color: #b3261e;
+}
+
+.dsr-summary--valid {
+  border-color: #1e7b34;
+}
+
+.dsr-contract {
+  margin-top: 1.5rem;
+}
+
+.dsr-contract summary {
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.dsr-contract__table {
+  overflow-x: auto;
+}
+
+.dsr-contract table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875em;
+}
+
+.dsr-contract th,
+.dsr-contract td {
+  padding: 0.25rem 0.5rem;
+  border-bottom: 1px solid currentColor;
+  text-align: start;
+  vertical-align: top;
+}
+
+.dsr-contract pre {
+  overflow-x: auto;
+  max-height: 32rem;
+  font-size: 0.8125em;
+  white-space: pre;
+}

@@ -15,6 +15,7 @@ MACBYTES
 mkdocs
 Neighbourhood
 NONCEBYTES
+opis
 pymdownx
 refinable
 refinement
@@ -30,4 +31,5 @@ subforms
 superfences
 textareas
 toolkits
+unstub
 unwired

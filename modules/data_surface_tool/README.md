@@ -120,9 +120,11 @@ Tool Belt's update tool strips every null from the settings it is given
 before merging them over the stored ones, so a setting can be set but
 never cleared. Here the pipeline merges the payload over what the target
 loads, key by key and at every depth, and a null is a value like any
-other. Sending `{"settings": {"field_overrides": {"organization": null}}}`
-to the edit tool removes that one override and leaves the rest alone,
-which is what a caller correcting one mistake actually wants to say.
+other. Sending `{"label": "Address", "settings": {"field_overrides":
+{"organization": null}}}` to the edit tool removes that one override and
+leaves the rest alone, which is what a caller correcting one mistake
+actually wants to say. The label is there because the surface requires
+it, and the Tool API refuses a required key left out (below).
 
 ## How to try it
 
@@ -133,7 +135,12 @@ drush tool:list
 ```
 
 `drush tool:info data_surface:field.instance:reuse` prints the input
-definitions. The `values` input's `settings` carry every field type's
+definitions. Every key in `values` is required exactly when the surface
+requires it, on an edit as on an add; a tool for a situation that needs
+nothing and changes what exists, such as
+`data_surface:registration.step3:configure`, defaults each key to what
+is stored now, and a tool that needs a subject does the same once its
+parameters name one. The `values` input's `settings` carry every field type's
 settings until the storage is known, and refine into the address surface
 once `storage` names an address storage. Compare with
 `drush tool:info tool_belt:field_add` on the same site, or read
@@ -161,6 +168,7 @@ derived tool for the same situation advertises. The routes of
 | `Kernel\SituationToolsTest` | The generated tools: which exist, the two derivation rules, what they advertise, refinement to the thing a parameter names, execution, dry run, access, the storage tool's has-data constraint. |
 | `Kernel\SurfaceCatalogueTest` | The catalogue read from the static layer, and `docs/catalogue.md` against it, where each derived slot is listed. |
 | `Kernel\ExamplesStepsTest` | The contract panel: its rows as the answers narrow them, and the tool's schema beside them. |
+| `Kernel\ExamplesToolTest` | `data_surface:registration.step3:configure`: the example calls, its definition (required as the surface says, defaulting to what is stored, and current again after a write), and a partial update the Tool API refuses. |
 
 ## Who may run them
 
@@ -208,6 +216,19 @@ changing the Tool API.
   key converts to a locked property definition, but only top level inputs
   are filtered by it, and the map normalizer walks every property. The
   statement is carried anyway.
+- **A required map property's default is not honoured.** A surface's
+  required key must hold a value, which a default or a stored value
+  can supply; the bridge says `required` as the surface does, and puts
+  what is stored in each property's `default`. But
+  `TypedInputsTrait::validateInputValue()` refuses a required property
+  the payload leaves out ("This property is required.") whatever its
+  default, and the `!isset($default_value) && isRequired()` check that
+  does honour a default covers top level inputs only. So until the Tool
+  API honours a property's default (issue 5 of the Tool API gaps raised
+  upstream), a caller sends every required key on an edit, as stored if
+  it means to keep it; beyond them, a payload is partial and the
+  pipeline fills the rest from what is stored. `ExamplesToolTest` pins
+  the refusal.
 - **Input validation runs before the tool does.** Because the added
   `Choice` constraint validates as well as describes, a bad settings
   value is refused by `getExecutableValues()` and the tool's own pipeline

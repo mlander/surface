@@ -1,0 +1,3 @@
+# The app's dependencies are installed on demand; dist/ is committed so
+# the module works without Node.
+/app/node_modules/

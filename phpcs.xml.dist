@@ -17,6 +17,9 @@
   <file>data_surface.info.yml</file>
   <file>data_surface.services.yml</file>
 
+  <!-- data_surface_react's app installs its Node dependencies beside it. -->
+  <exclude-pattern>*/node_modules/*</exclude-pattern>
+
   <!-- Test modules are never packaged by drupal.org, so the version line
        core's own test modules carry is correct here rather than left out. -->
   <rule ref="Drupal.InfoFiles.AutoAddedKeys.Version">

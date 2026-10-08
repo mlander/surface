@@ -1,0 +1,12 @@
+# The React app, built from app/ into dist/ by `npm run build`. dist/ is
+# committed, so the module works on a site with no Node; rebuild it
+# whenever app/ changes.
+app:
+  js:
+    dist/app.js: { minified: true }
+  css:
+    component:
+      dist/app.css: {}
+  dependencies:
+    - core/drupal
+    - core/drupalSettings

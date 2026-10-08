@@ -41,6 +41,7 @@ nav:
       - Generated forms: forms.md
       - Widgets: widgets.md
       - Options and resolvers: options.md
+      - The served contract: served-contract.md
   - Extending a surface:
       - Refinement and contributions: refinement.md
   - For core:

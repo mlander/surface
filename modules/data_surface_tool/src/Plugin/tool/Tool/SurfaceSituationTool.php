@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_tool\Plugin\tool\Tool;
 
+use Drupal\Component\Plugin\Discovery\CachedDiscoveryInterface;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Session\AccountInterface;
@@ -89,6 +90,11 @@ final class SurfaceSituationTool extends ToolBase implements InputDefinitionRefi
   protected DataSurfacePipelineInterface $pipeline;
 
   /**
+   * The tool plugin manager, whose cached definitions a write can outdate.
+   */
+  protected CachedDiscoveryInterface $toolManager;
+
+  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
@@ -97,6 +103,7 @@ final class SurfaceSituationTool extends ToolBase implements InputDefinitionRefi
     $instance->surfaceRegistry = $container->get('data_surface.surface_registry');
     $instance->situationInputs = $container->get('data_surface_tool.situation_inputs');
     $instance->pipeline = $container->get('data_surface.pipeline');
+    $instance->toolManager = $container->get('plugin.manager.tool');
     return $instance;
   }
 
@@ -106,8 +113,10 @@ final class SurfaceSituationTool extends ToolBase implements InputDefinitionRefi
    * The values input, once the parameters are known: the surface built
    * in the situation's real context, so a settings slot the subject's
    * type chooses is that variant, and exactly the identity keys the
-   * situation knows are left out. Parameters that name nothing leave the
-   * declared definition standing; executing refuses them.
+   * situation knows are left out, and, for a situation that changes a
+   * thing that exists, each property defaults to what is stored for it
+   * now. Parameters that name nothing leave the declared definition
+   * standing; executing refuses them.
    */
   public function refineInputDefinition(string $name, InputDefinitionInterface $definition, array $values): InputDefinitionInterface {
     if ($name !== SituationInputs::VALUES) {
@@ -163,6 +172,11 @@ final class SurfaceSituationTool extends ToolBase implements InputDefinitionRefi
       return ExecutableResult::failure($this->t('The values were refused: @violations', [
         '@violations' => $this->violationSummary($result->violations),
       ]));
+    }
+    if ($result->committed && $situation->needsNothing() && !$context->creates) {
+      // This tool's own definition defaults its values to what was stored
+      // when it was derived, and that has just changed.
+      $this->toolManager->clearCachedDefinitions();
     }
     $outputs = $result->committed && $target instanceof SurfaceTargetAdapter
       ? $target->outputs($built, $result->values)

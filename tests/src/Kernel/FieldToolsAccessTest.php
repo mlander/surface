@@ -169,7 +169,7 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
     $this->setFieldTypeRefusal(TRUE);
     $tool = $this->toolManager->createInstance('data_surface:field.instance:edit');
     $tool->setInputValue('field', 'entity_test.entity_test.field_gated');
-    $tool->setInputValue(SituationInputs::VALUES, ['settings' => ['note' => 'Refused.']]);
+    $tool->setInputValue(SituationInputs::VALUES, ['label' => 'Gated', 'settings' => ['note' => 'Refused.']]);
 
     $tool->execute();
 
@@ -195,7 +195,7 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
     $this->createField();
     $tool = $this->toolManager->createInstance('data_surface:field.instance:edit');
     $tool->setInputValue('field', 'entity_test.entity_test.field_gated');
-    $tool->setInputValue(SituationInputs::VALUES, ['settings' => ['note' => 'Allowed.']]);
+    $tool->setInputValue(SituationInputs::VALUES, ['label' => 'Gated', 'settings' => ['note' => 'Allowed.']]);
 
     $tool->execute();
 

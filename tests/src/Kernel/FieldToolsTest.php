@@ -406,12 +406,23 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
 
   /**
    * Tests a partial edit clearing one key and keeping its siblings.
+   *
+   * The label is the one key the surface requires, so it is sent as an
+   * edit sends it, with what is stored; the Tool API refuses a required
+   * property left out. Below it, everything is partial.
    */
   public function testEditClearsOneOverrideAndKeepsTheCountries(): void {
     $this->addField();
 
     $tool = $this->createTool(self::EDIT);
-    $tool->setInputValue(SituationInputs::VALUES, ['settings' => ['field_overrides' => ['organization' => NULL]]]);
+    $values = $tool->getInputDefinition(SituationInputs::VALUES);
+    $this->assertInstanceOf(MapInputDefinition::class, $values);
+    $this->assertTrue($values->getPropertyDefinitions()['label']->isRequired());
+    $this->assertSame('Address', $values->getPropertyDefinitions()['label']->getDefaultValue());
+    $tool->setInputValue(SituationInputs::VALUES, [
+      'label' => 'Address',
+      'settings' => ['field_overrides' => ['organization' => NULL]],
+    ]);
     $tool->execute();
 
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResultMessage());
@@ -538,9 +549,10 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
 
     $tool = $this->toolManager->createInstance(self::EDIT);
     $tool->setInputValue('field', 'entity_test.entity_test.field_count');
-    $tool->setInputValue(SituationInputs::VALUES, ['settings' => ['max' => 'ten']]);
+    $tool->setInputValue(SituationInputs::VALUES, ['label' => 'Count', 'settings' => ['max' => 'ten']]);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
+    $this->assertStringContainsString('max', (string) $tool->getResultMessage());
     $this->assertSame(10, $this->reloadField('field_count')->getSettings()['max']);
   }
 

@@ -1,0 +1,42 @@
+# The page and the three endpoints of one situation of one surface, both
+# named by id: /surface-react/registration.step2/configure. A situation's
+# parameters arrive in the query string (and, on a POST, in the body's
+# "parameters"), by the situation method's parameter names.
+#
+# One requirement on all four, the situation's: its permission, then the
+# surface's access class, and no opinion is a refusal. The two POSTs also
+# want the X-CSRF-Token header a session token from /session/token is.
+
+data_surface_react.page:
+  path: '/surface-react/{surface}/{situation}'
+  defaults:
+    _controller: '\Drupal\data_surface_react\Controller\SurfaceReactPage::page'
+    _title_callback: '\Drupal\data_surface_react\Controller\SurfaceReactPage::title'
+  requirements:
+    _data_surface_react_access: 'TRUE'
+
+data_surface_react.contract:
+  path: '/surface-api/{surface}/{situation}'
+  defaults:
+    _controller: '\Drupal\data_surface_react\Controller\SurfaceApiController::contract'
+  methods: [GET]
+  requirements:
+    _data_surface_react_access: 'TRUE'
+
+data_surface_react.refine:
+  path: '/surface-api/{surface}/{situation}/refine'
+  defaults:
+    _controller: '\Drupal\data_surface_react\Controller\SurfaceApiController::refine'
+  methods: [POST]
+  requirements:
+    _data_surface_react_access: 'TRUE'
+    _csrf_request_header_token: 'TRUE'
+
+data_surface_react.validate:
+  path: '/surface-api/{surface}/{situation}/validate'
+  defaults:
+    _controller: '\Drupal\data_surface_react\Controller\SurfaceApiController::validate'
+  methods: [POST]
+  requirements:
+    _data_surface_react_access: 'TRUE'
+    _csrf_request_header_token: 'TRUE'

@@ -58,7 +58,9 @@ cat > "$WORK/merge.php" <<'PHP'
 [, $core, $module, $out] = $argv;
 $config = json_decode(file_get_contents($core . '/.cspell.json'), TRUE);
 $config['globRoot'] = $module;
-$config['ignorePaths'] = ['.git/**', 'node_modules/**', '.cspell-project-words.txt'];
+// data_surface_react's built app and its lock file are generated, and its
+// Node dependencies are not this module's to spell.
+$config['ignorePaths'] = ['.git/**', '**/node_modules/**', '.cspell-project-words.txt', 'modules/data_surface_react/dist/**', '**/package-lock.json'];
 foreach ($config['dictionaryDefinitions'] as &$dictionary) {
   $dictionary['path'] = $core . '/' . ltrim($dictionary['path'], './');
 }

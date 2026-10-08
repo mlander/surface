@@ -326,8 +326,9 @@ own is a tool, `data_surface:<surface id>:<situation id>`, derived by
   parameter named for one of the surface's keys described as that key,
   with its label, meaning and allowed values — then `values`, the
   surface's keys less the identity keys the situation knows, then
-  `dry_run`. Nothing in `values` is required unless the situation
-  creates. The definition is static, which is what situations make
+  `dry_run`. A key the surface requires is required in `values`, whatever
+the situation, and for a situation that needs nothing and does not
+create, each key's default is the value stored now. The definition is static, which is what situations make
   possible: a situation that needs nothing is the exact contract before
   anyone calls, and one that needs an existing thing refines `values`
   to its real context (a field's settings become its type's) through

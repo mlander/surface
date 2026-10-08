@@ -37,6 +37,11 @@ final class ExamplesController extends ControllerBase {
   public const COMPLIANCE_ALTER = 'src/SurfaceAlter/RegistrationComplianceAlter.php';
 
   /**
+   * The module serving examples 1 to 3 as React forms.
+   */
+  public const REACT = 'data_surface_react';
+
+  /**
    * Constructs the controller.
    *
    * @param \Drupal\Core\Extension\ModuleExtensionList $moduleList
@@ -158,6 +163,7 @@ final class ExamplesController extends ControllerBase {
         'sentence' => $this->t('Three settings, each with its type, its label and what it allows, declared once; the form, its validation and a tool are all read from that one class.'),
         'items' => [
           $this->route('data_surface_examples.step1'),
+          $this->react('registration.step1'),
           $this->lines(RegistrationStep1Surface::class),
           $this->route('data_surface_examples.step1_classic'),
           $this->t('The classic twin, a config form: @lines lines of code.', ['@lines' => CodeLines::count($this->file(RegistrationStep1ClassicForm::class))]),
@@ -166,12 +172,20 @@ final class ExamplesController extends ControllerBase {
       2 => [
         'title' => $this->t('answers depend on answers'),
         'sentence' => $this->t('The venue narrows the rooms on offer, and the room narrows how many people fit: one small method each, whose signature says what it reads.'),
-        'items' => [$this->route('data_surface_examples.step2'), $this->lines(RegistrationStep2Surface::class)],
+        'items' => [
+          $this->route('data_surface_examples.step2'),
+          $this->react('registration.step2'),
+          $this->lines(RegistrationStep2Surface::class),
+        ],
       ],
       3 => [
         'title' => $this->t('made of parts'),
         'sentence' => $this->t('The pricing chooses which ticket surface fills a slot, and a contact surface is always attached; each part is a class of its own.'),
-        'items' => [$this->route('data_surface_examples.step3'), $this->lines(RegistrationStep3Surface::class)],
+        'items' => [
+          $this->route('data_surface_examples.step3'),
+          $this->react('registration.step3'),
+          $this->lines(RegistrationStep3Surface::class),
+        ],
       ],
       4 => [
         'title' => $this->t('others get a say'),
@@ -206,6 +220,30 @@ final class ExamplesController extends ControllerBase {
   protected function route(string $route): array {
     $url = Url::fromRoute($route);
     return Link::fromTextAndUrl($url->toString(), $url)->toRenderable();
+  }
+
+  /**
+   * Links an example's form in React, or says where it will be.
+   *
+   * The same situation, rendered by data_surface_react from the contract
+   * it serves; the examples do not depend on that module, so while it is
+   * off the path is named rather than linked.
+   *
+   * @param string $surface
+   *   The example's surface id.
+   *
+   * @return array|\Drupal\Core\StringTranslation\TranslatableMarkup
+   *   A link render array, or the sentence naming the path.
+   */
+  protected function react(string $surface): array|TranslatableMarkup {
+    if (!$this->moduleHandler()->moduleExists(self::REACT)) {
+      return $this->t('In React at /surface-react/@surface/configure, once @module is enabled.', [
+        '@surface' => $surface,
+        '@module' => self::REACT,
+      ]);
+    }
+    $url = Url::fromRoute('data_surface_react.page', ['surface' => $surface, 'situation' => 'configure']);
+    return Link::fromTextAndUrl($this->t('In React: @path', ['@path' => $url->toString()]), $url)->toRenderable();
   }
 
   /**

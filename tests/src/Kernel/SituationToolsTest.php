@@ -10,6 +10,7 @@ use Drupal\data_surface_tool\SituationInputs;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\node\Entity\NodeType;
+use Drupal\node\NodePreviewMode;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolInterface;
 use Drupal\tool\TypedData\MapInputDefinition;
@@ -29,6 +30,17 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 class SituationToolsTest extends DataSurfaceKernelTestBase {
 
   use UserCreationTrait;
+
+  /**
+   * The keys the node type surface requires whose defaults hold a value.
+   *
+   * Required is the surface's word, so a payload names them too: the Tool
+   * API refuses a required property left out, default or not.
+   */
+  protected const NODE_TYPE_REQUIRED = [
+    'title_label' => 'Title',
+    'preview_mode' => NodePreviewMode::Optional->value,
+  ];
 
   /**
    * {@inheritdoc}
@@ -153,7 +165,8 @@ class SituationToolsTest extends DataSurfaceKernelTestBase {
     $this->assertSame([], $add->getInputDefinitionRefiners());
 
     // Editing one needs the content type, by id; its machine name is
-    // known, so it is no input, and nothing has to be sent again.
+    // known, so it is no input. What the surface requires is required
+    // here as on add: editing does not make a key optional.
     $edit = $manager->getDefinition('data_surface:node.type:edit');
     $this->assertSame(['type', SituationInputs::VALUES, SituationInputs::DRY_RUN], array_keys($edit->getInputDefinitions()));
     $this->assertSame('string', $edit->getInputDefinition('type')->getDataType());
@@ -161,7 +174,12 @@ class SituationToolsTest extends DataSurfaceKernelTestBase {
     $values = $edit->getInputDefinition(SituationInputs::VALUES);
     $this->assertArrayNotHasKey('type', $values->getPropertyDefinitions());
     $this->assertArrayHasKey('name', $values->getPropertyDefinitions());
-    $this->assertFalse($values->isRequired());
+    $this->assertTrue($values->getPropertyDefinitions()['name']->isRequired());
+    $this->assertTrue($values->getPropertyDefinitions()['title_label']->isRequired());
+    $this->assertFalse($values->getPropertyDefinitions()['description']->isRequired());
+    $this->assertTrue($values->isRequired());
+    // With no content type named yet, the defaults are the declared ones.
+    $this->assertSame('Title', $values->getPropertyDefinitions()['title_label']->getDefaultValue());
     $this->assertSame([SituationInputs::VALUES => ['type']], $edit->getInputDefinitionRefiners());
 
     // A field: add takes the entity type and bundle, reuse a storage and
@@ -210,16 +228,43 @@ class SituationToolsTest extends DataSurfaceKernelTestBase {
    */
   public function testNodeTypeToolsCreateThenUpdate(): void {
     $tool = $this->tool('data_surface:node.type:add');
-    $tool->setInputValue(SituationInputs::VALUES, ['name' => 'Recipe', 'type' => 'recipe', 'title_label' => 'Dish']);
+    $tool->setInputValue(SituationInputs::VALUES, [
+      'name' => 'Recipe',
+      'type' => 'recipe',
+      'description' => 'Food',
+      'title_label' => 'Dish',
+    ] + self::NODE_TYPE_REQUIRED);
     $tool->execute();
     $result = $tool->getResult();
     $this->assertTrue($result->isSuccess(), (string) $result->getMessage());
     $this->assertTrue($result->getContextValues()[SituationInputs::COMMITTED]);
     $this->assertSame('Recipe', NodeType::load('recipe')?->label());
 
+    // Once the content type is named, the values input is refined to it:
+    // required as the surface says, and each key defaulting to what the
+    // content type stores now.
     $tool = $this->tool('data_surface:node.type:edit');
     $tool->setInputValue('type', 'recipe');
+    $values = $tool->getInputDefinition(SituationInputs::VALUES);
+    $this->assertInstanceOf(MapInputDefinition::class, $values);
+    $properties = $values->getPropertyDefinitions();
+    $this->assertSame('Recipe', $properties['name']->getDefaultValue());
+    $this->assertSame('Dish', $properties['title_label']->getDefaultValue());
+    $this->assertSame('Food', $properties['description']->getDefaultValue());
+    $this->assertTrue($properties['title_label']->isRequired());
+
+    // A required key left out is refused by the Tool API, stored value or
+    // not, before the tool runs.
     $tool->setInputValue(SituationInputs::VALUES, ['name' => 'Recipes']);
+    $tool->execute();
+    $this->assertFalse($tool->getResult()->isSuccess());
+    $this->assertStringContainsString('values.title_label: This property is required.', (string) $tool->getResult()->getMessage());
+
+    // Every required key sent, a key that is not required is still left
+    // alone: it keeps what is stored.
+    $tool = $this->tool('data_surface:node.type:edit');
+    $tool->setInputValue('type', 'recipe');
+    $tool->setInputValue(SituationInputs::VALUES, ['name' => 'Recipes', 'title_label' => 'Dish'] + self::NODE_TYPE_REQUIRED);
     $tool->execute();
     $result = $tool->getResult();
     $this->assertTrue($result->isSuccess(), (string) $result->getMessage());
@@ -227,11 +272,12 @@ class SituationToolsTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Recipes', NodeType::load('recipe')->label());
     $this->assertSame('recipe', $result->getContextValues()[SituationInputs::VALUES]['type']);
     $this->assertSame('Dish', $result->getContextValues()[SituationInputs::VALUES]['title_label']);
+    $this->assertSame('Food', NodeType::load('recipe')->getDescription());
 
     // A content type that is not there is the caller's to correct.
     $tool = $this->tool('data_surface:node.type:edit');
     $tool->setInputValue('type', 'ghost');
-    $tool->setInputValue(SituationInputs::VALUES, ['name' => 'Ghost']);
+    $tool->setInputValue(SituationInputs::VALUES, ['name' => 'Ghost'] + self::NODE_TYPE_REQUIRED);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
     $this->assertStringContainsString('there is none with the id', (string) $tool->getResult()->getMessage());
@@ -242,7 +288,7 @@ class SituationToolsTest extends DataSurfaceKernelTestBase {
    */
   public function testDryRunWritesNothing(): void {
     $tool = $this->tool('data_surface:node.type:add');
-    $tool->setInputValue(SituationInputs::VALUES, ['name' => 'Rehearsal', 'type' => 'rehearsal']);
+    $tool->setInputValue(SituationInputs::VALUES, ['name' => 'Rehearsal', 'type' => 'rehearsal'] + self::NODE_TYPE_REQUIRED);
     $tool->setInputValue(SituationInputs::DRY_RUN, TRUE);
     $tool->execute();
     $result = $tool->getResult();
@@ -257,7 +303,7 @@ class SituationToolsTest extends DataSurfaceKernelTestBase {
 
     // A dry run is refused for what storage would refuse.
     $tool = $this->tool('data_surface:node.type:add');
-    $tool->setInputValue(SituationInputs::VALUES, ['name' => "Two\nlines", 'type' => 'two_lines']);
+    $tool->setInputValue(SituationInputs::VALUES, ['name' => "Two\nlines", 'type' => 'two_lines'] + self::NODE_TYPE_REQUIRED);
     $tool->setInputValue(SituationInputs::DRY_RUN, TRUE);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
@@ -270,7 +316,7 @@ class SituationToolsTest extends DataSurfaceKernelTestBase {
   public function testAccessIsTheSituations(): void {
     $this->setUpCurrentUser([], ['administer content types']);
     $tool = $this->tool('data_surface:node.type:add');
-    $tool->setInputValue(SituationInputs::VALUES, ['name' => 'Refused', 'type' => 'refused']);
+    $tool->setInputValue(SituationInputs::VALUES, ['name' => 'Refused', 'type' => 'refused'] + self::NODE_TYPE_REQUIRED);
     $this->assertFalse($tool->access());
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
@@ -278,7 +324,7 @@ class SituationToolsTest extends DataSurfaceKernelTestBase {
 
     $this->setUpCurrentUser([], ['administer content types', 'administer data surface node type demo']);
     $tool = $this->tool('data_surface:node.type:add');
-    $tool->setInputValue(SituationInputs::VALUES, ['name' => 'Allowed', 'type' => 'allowed']);
+    $tool->setInputValue(SituationInputs::VALUES, ['name' => 'Allowed', 'type' => 'allowed'] + self::NODE_TYPE_REQUIRED);
     $this->assertTrue($tool->access());
   }
 

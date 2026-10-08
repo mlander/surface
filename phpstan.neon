@@ -6,6 +6,10 @@ parameters:
   reportUnmatchedIgnoredErrors: false
   paths:
     - .
+  # data_surface_react's app installs its Node dependencies beside it.
+  excludePaths:
+    analyseAndScan:
+      - */node_modules/*
   fileExtensions:
     - php
     - module

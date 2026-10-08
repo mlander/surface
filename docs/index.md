@@ -125,11 +125,13 @@ by hand.
 - **Writing a widget or an options resolver**: [Widgets](widgets.md),
   [Options and resolvers](options.md).
 - **Storing the values somewhere new**: [Targets](targets.md).
+- **Serving a surface to a client with no PHP**: [The served
+  contract](served-contract.md).
 - **Reading this as a core proposal**: [Adoption
   catalogue](adoption.md) and [Core gaps](core-gaps.md).
 
 The module ships no surfaces of its own on a production site. It provides
 the surface model, the pipeline, the two plugin types and the host
-adoption layer; surfaces come from the modules that declare them. Nine
+adoption layer; surfaces come from the modules that declare them. Ten
 experimental submodules demonstrate the model and double as the fixtures
 the tests run against — see [Installation](installation.md).

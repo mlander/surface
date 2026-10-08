@@ -183,7 +183,8 @@ class DataSurfaceSituationForm extends FormBase {
       $surface->getDefaultValues(),
       $this->storedSurfaceValues($surface, $target),
     ), $form_state);
-    $form[static::SURFACE_KEY] = $this->surfaceFormBuilder()->buildSurfaceForm(
+    $builder = $this->surfaceFormBuilder();
+    $form[static::SURFACE_KEY] = $builder->buildSurfaceForm(
       $surface,
       $values,
       $form_state,
@@ -191,9 +192,14 @@ class DataSurfaceSituationForm extends FormBase {
     );
     $panel = $this->surfacePanel();
     if ($panel !== NULL) {
-      // Inside the container, so the rebuild a refinement triggers
-      // replaces the panel with the elements it describes.
-      $form[static::SURFACE_KEY][static::PANEL_KEY] = $panel->buildPanel($served, $surface, $values);
+      // Inside the container and placed as refreshed, so every rebuild a
+      // refinement triggers replaces the panel beside the elements it
+      // describes, whichever key moved.
+      $form[static::SURFACE_KEY] = $builder->placeRefreshed(
+        $form[static::SURFACE_KEY],
+        static::PANEL_KEY,
+        $panel->buildPanel($served, $surface, $values),
+      );
     }
     $form['actions'] = [
       '#type' => 'actions',

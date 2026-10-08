@@ -210,6 +210,12 @@ their configuration may change without a deprecation path.
 - **Data Surface Examples - Compliance**
   (`data_surface_examples_compliance`) — example 4: one alter class
   changing example 3's surface, which does not know it.
+- **Data Surface - React** (`data_surface_react`) — the served contract:
+  a situation as JSON Schema 2020-12 with an `x-surface` extension, a
+  refine endpoint that re-narrows it as answers change, a validate
+  endpoint that rehearses the write, and a React app that renders the
+  form from it at `/surface-react/{surface}/{situation}`. Its built app
+  is committed, so it needs no Node.
 
 Each submodule's README says what it shows, how to try it, and what gates
 it.
@@ -232,6 +238,7 @@ Full documentation is under [`docs/`](docs/).
 | [Value semantics](docs/semantics.md) | Configured or not, the casting table, secrets, stale values, shape mismatches, required, locked keys. |
 | [Outputs](docs/outputs.md) | Declaring what a host emits, the Omitted sentinel, conformance, its two consumers, an alter's outputs. |
 | [Targets](docs/targets.md) | What a target is, prepare and commit, the six engine targets, config schema, settings shapes, secrets, the serialization rule. |
+| [The served contract](docs/served-contract.md) | A situation as JSON Schema with `x-surface`, its refine and validate endpoints, and the React form rendered from it. |
 | [Generated forms](docs/forms.md) | Host families, the merge rule, AJAX, extraction, stale values, the situation form with its panel and cosmetic seam. |
 | [Widgets](docs/widgets.md) | The widget plugin type, and writing one. |
 | [Options and resolvers](docs/options.md) | `LabeledChoice`, the resolver plugin type, the stock resolvers. |

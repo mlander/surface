@@ -195,7 +195,24 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
    *   The form state after the request.
    */
   protected function postStepTwo(array $surface, array $extra = ['op' => 'Save']): FormStateInterface {
-    $route_name = 'data_surface_examples.step2';
+    return $this->postStep(2, $surface + ['title' => 'Spring meetup', 'capacity' => '50', 'open' => '1'], $extra);
+  }
+
+  /**
+   * Posts one step's generic form the way a browser does.
+   *
+   * @param int $step
+   *   The step, 2 or 3.
+   * @param array $surface
+   *   The surface's input, keyed by surface key, complete.
+   * @param array $extra
+   *   The rest of the POST: the button, or the AJAX trigger's name.
+   *
+   * @return \Drupal\Core\Form\FormStateInterface
+   *   The form state after the request.
+   */
+  protected function postStep(int $step, array $surface, array $extra): FormStateInterface {
+    $route_name = 'data_surface_examples.step' . $step;
     $route = $this->container->get('router.route_provider')->getRouteByName($route_name);
     $stack = $this->container->get('request_stack');
     $request = Request::create($route->getPath(), 'POST');
@@ -205,8 +222,8 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
     $stack->push($request);
     $form_state = new FormState();
     $form_state->setUserInput([
-      'form_id' => 'data_surface_situation_form_data_surface_examples_step2',
-      'surface' => $surface + ['title' => 'Spring meetup', 'capacity' => '50', 'open' => '1'],
+      'form_id' => 'data_surface_situation_form_data_surface_examples_step' . $step,
+      'surface' => $surface,
     ] + $extra);
     try {
       $this->container->get('form_builder')->buildForm(DataSurfaceSituationForm::class, $form_state);
@@ -445,7 +462,11 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
    */
   public function testTheToolRefusesTheRoomOrphanedByTheSameCall(): void {
     $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:registration.step2:configure');
-    $tool->setInputValue(SituationInputs::VALUES, ['venue' => 'riverside', 'room' => 'harbour_deck']);
+    $tool->setInputValue(SituationInputs::VALUES, [
+      'title' => 'Orphaned',
+      'venue' => 'riverside',
+      'room' => 'harbour_deck',
+    ]);
     $tool->setInputValue(SituationInputs::DRY_RUN, FALSE);
     $tool->execute();
     $result = $tool->getResult();
@@ -502,6 +523,236 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
     $this->assertEquals(['price' => 25.0, 'currency' => 'USD'], $after['ticket']);
     $this->assertSame('riverside_east', $after['room']);
     $this->assertSame('Gala', $after['title']);
+  }
+
+  /**
+   * Tests a changed venue replaces the room, the capacity and the panel.
+   *
+   * And nothing else: not the venue select the person just changed, and
+   * not the container around everything. The room refines against the
+   * venue and the capacity against the room, so both move; the panel
+   * describes the surface as the answers stand, so it moves on every
+   * rebuild. In declaration order, which puts the capacity first.
+   */
+  public function testChangingTheVenueReplacesItsDependentsAndThePanel(): void {
+    $this->actAsAnonymousAdministrator();
+    $state = $this->postStepTwo(
+      ['venue' => 'riverside', 'room' => 'harbour_deck'],
+      ['_triggering_element_name' => 'surface[venue]'],
+    );
+    $this->assertTrue($state->isRebuilding());
+    $this->assertSame([], array_map('strval', $state->getErrors()));
+    $container = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY];
+    $response = $this->ajaxResponse($state);
+
+    $this->assertSame([
+      $this->wrapperSelector($container['capacity']),
+      $this->wrapperSelector($container['room']),
+      $this->wrapperSelector($container[DataSurfaceSituationForm::PANEL_KEY]),
+    ], $this->ajaxSelectors($response, 'replaceWith'));
+    // The venue is no target, so it has no wrapper to be replaced by,
+    // and neither it nor the container is replaced.
+    $this->assertArrayNotHasKey(DataSurfaceFormBuilderInterface::REFRESH_ID_KEY, $container['venue']);
+    $this->assertNotContains('#' . $container['#attributes']['id'], $this->ajaxSelectors($response, 'replaceWith'));
+    // The rebuilt room is the riverside's, on its empty option.
+    $room = $this->ajaxMarkup($response, $this->wrapperSelector($container['room']));
+    $this->assertStringContainsString('riverside_main', $room);
+    $this->assertStringNotContainsString('harbour_auditorium', $room);
+
+    // The stored room is not a riverside room, so the rebuild stands the
+    // room's empty option for it, and the marker has to say so on the
+    // page: taken out wherever it was, and put back as the rebuild left
+    // it, inside the container.
+    $this->assertSame('room', $container[DataSurfaceFormBuilderInterface::STALE_MARKER_KEY]['#value']);
+    $wrapper = '#' . $container['#attributes']['id'];
+    $this->assertSame([$wrapper . '__stale', $wrapper . '__messages'], $this->ajaxSelectors($response, 'remove'));
+    $this->assertSame([$wrapper], $this->ajaxSelectors($response, 'append'));
+    $marker = $this->ajaxMarkup($response, $wrapper);
+    $this->assertStringContainsString('id="' . substr($wrapper, 1) . '__stale"', $marker);
+    $this->assertStringContainsString('name="surface[@stale]"', $marker);
+    $this->assertStringContainsString('value="room"', $marker);
+    // Nothing was said, so nothing is printed.
+    $this->assertSame([], $this->ajaxSelectors($response, 'prepend'));
+
+    // Moving the venue back shows the stored room chosen again: nothing
+    // is stale, so the marker is taken out and not put back. Posted as
+    // the page now stands — the room on the empty option the response
+    // put there, the marker it appended — against the form the first
+    // request rebuilt and cached, with the container id the trigger was
+    // rendered with, which is what a browser sends.
+    $replaced = $this->ajaxSelectors($response, 'replaceWith');
+    $state = $this->postStepTwo(
+      [
+        'venue' => 'harbour',
+        'room' => '',
+        DataSurfaceFormBuilderInterface::STALE_MARKER_KEY => 'room',
+      ],
+      [
+        '_triggering_element_name' => 'surface[venue]',
+        'form_build_id' => $state->getCompleteForm()['#build_id'],
+        DataSurfaceFormBuilderInterface::WRAPPER_INPUT => substr($wrapper, 1),
+      ],
+    );
+    $this->assertSame([], array_map('strval', $state->getErrors()));
+    $container = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY];
+    $this->assertSame('harbour_deck', $container['room']['#value']);
+    $this->assertArrayNotHasKey(DataSurfaceFormBuilderInterface::STALE_MARKER_KEY, $container);
+    $response = $this->ajaxResponse($state);
+    // The same wrappers as the first response named: the ids on the page.
+    $this->assertSame($replaced, $this->ajaxSelectors($response, 'replaceWith'));
+    $this->assertSame([$wrapper . '__stale', $wrapper . '__messages'], $this->ajaxSelectors($response, 'remove'));
+    $this->assertSame([], $this->ajaxSelectors($response, 'append'));
+  }
+
+  /**
+   * Tests a changed room replaces the capacity and the panel, not itself.
+   *
+   * The room is a target of the venue and a dependency of the capacity.
+   * Touching it moves the capacity's maximum, which is the change the
+   * person has to see, and nothing above it.
+   */
+  public function testChangingTheRoomReplacesOnlyTheCapacityAndThePanel(): void {
+    $this->actAsAnonymousAdministrator();
+    $state = $this->postStepTwo(
+      ['venue' => 'harbour', 'room' => 'harbour_auditorium'],
+      ['_triggering_element_name' => 'surface[room]'],
+    );
+    $this->assertSame([], array_map('strval', $state->getErrors()));
+    $container = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY];
+    $response = $this->ajaxResponse($state);
+
+    $replaced = $this->ajaxSelectors($response, 'replaceWith');
+    $this->assertSame([
+      $this->wrapperSelector($container['capacity']),
+      $this->wrapperSelector($container[DataSurfaceSituationForm::PANEL_KEY]),
+    ], $replaced);
+    // The room has a wrapper, being a target of the venue, and it is the
+    // trigger here, so it is the one wrapper that must not be named.
+    $this->assertNotContains($this->wrapperSelector($container['room']), $replaced);
+    // The capacity now allows what the auditorium seats.
+    $this->assertStringContainsString('max="800"', $this->ajaxMarkup($response, $this->wrapperSelector($container['capacity'])));
+    // Nothing stale, so the marker is taken out and nothing put back.
+    $this->assertSame([], $this->ajaxSelectors($response, 'append'));
+  }
+
+  /**
+   * Tests a changed pricing replaces the ticket slot and the panel.
+   *
+   * The slot is replaced by its own wrapper, whole: the variant's keys
+   * are a different set, so there is nothing inside the old one to keep.
+   */
+  public function testChangingThePricingReplacesTheTicketSlot(): void {
+    $this->actAsAnonymousAdministrator();
+    $state = $this->postStep(3, [
+      'title' => 'Spring meetup',
+      'capacity' => '50',
+      'open' => '1',
+      'venue' => 'library',
+      'room' => 'library_reading',
+      'pricing' => 'paid',
+      'ticket' => ['note' => ''],
+      'contact' => ['email' => 'events@example.com', 'phone' => ''],
+    ], ['_triggering_element_name' => 'surface[pricing]']);
+    $this->assertSame([], array_map('strval', $state->getErrors()));
+    $container = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY];
+    $response = $this->ajaxResponse($state);
+
+    $this->assertSame([
+      $this->wrapperSelector($container['ticket']),
+      $this->wrapperSelector($container[DataSurfaceSituationForm::PANEL_KEY]),
+    ], $this->ajaxSelectors($response, 'replaceWith'));
+    $this->assertArrayNotHasKey(DataSurfaceFormBuilderInterface::REFRESH_ID_KEY, $container['pricing']);
+    // The paid variant's keys, and not the free one's.
+    $ticket = $this->ajaxMarkup($response, $this->wrapperSelector($container['ticket']));
+    $this->assertStringContainsString('name="surface[ticket][price]"', $ticket);
+    $this->assertStringNotContainsString('name="surface[ticket][note]"', $ticket);
+
+    // And the venue on this step moves the room and the capacity, as on
+    // step two, and not the ticket.
+    $state = $this->postStep(3, [
+      'title' => 'Spring meetup',
+      'capacity' => '50',
+      'open' => '1',
+      'venue' => 'harbour',
+      'room' => 'library_reading',
+      'pricing' => 'free',
+      'ticket' => ['note' => ''],
+      'contact' => ['email' => 'events@example.com', 'phone' => ''],
+    ], ['_triggering_element_name' => 'surface[venue]']);
+    $container = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY];
+    $this->assertSame([
+      $this->wrapperSelector($container['capacity']),
+      $this->wrapperSelector($container['room']),
+      $this->wrapperSelector($container[DataSurfaceSituationForm::PANEL_KEY]),
+    ], $this->ajaxSelectors($this->ajaxResponse($state), 'replaceWith'));
+  }
+
+  /**
+   * Tests an error on the trigger itself is printed inside the container.
+   *
+   * The one value a refinement request judges is the trigger's own, and
+   * a value its select never offered is refused before anything is
+   * rebuilt. The render-array path printed that inside the container it
+   * replaced; the commands print it in the same place, after taking the
+   * previous request's messages away, and replace nothing else's markup
+   * with anything new.
+   */
+  public function testAnErrorOnTheTriggerIsPrintedInsideTheContainer(): void {
+    $this->actAsAnonymousAdministrator();
+    $state = $this->postStepTwo(
+      ['venue' => 'harbour', 'room' => 'library_garden'],
+      ['_triggering_element_name' => 'surface[room]'],
+    );
+    $this->assertFalse($state->isRebuilding());
+    $this->assertNotSame([], $state->getErrors());
+    $container = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY];
+    $response = $this->ajaxResponse($state);
+    $wrapper = '#' . $container['#attributes']['id'];
+    $this->assertSame([$wrapper . '__stale', $wrapper . '__messages'], $this->ajaxSelectors($response, 'remove'));
+    $this->assertSame([$wrapper], $this->ajaxSelectors($response, 'prepend'));
+    $messages = $this->ajaxMarkup($response, $wrapper);
+    $this->assertStringContainsString('id="' . substr($wrapper, 1) . '__messages"', $messages);
+    $this->assertStringContainsString('is not allowed', $messages);
+    // Printed once, and gone from the messenger with it.
+    $this->assertSame([], $this->container->get('messenger')->all());
+  }
+
+  /**
+   * Tests a rebuild keeps the container id the page holds.
+   *
+   * An AJAX request makes every generated id random, so a rebuild would
+   * otherwise name wrappers the page has never seen: the trigger sends
+   * the id it was rendered with, and the rebuild takes it back. Only an
+   * id this form could have generated is taken.
+   */
+  public function testTheRebuildKeepsTheIdThePageHolds(): void {
+    $this->actAsAnonymousAdministrator();
+    $held = 'data-surface-configure-wrapper--held-by-the-page';
+    $state = $this->postStepTwo(
+      ['venue' => 'harbour', 'room' => 'harbour_auditorium'],
+      [
+        '_triggering_element_name' => 'surface[room]',
+        DataSurfaceFormBuilderInterface::WRAPPER_INPUT => $held,
+      ],
+    );
+    $container = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY];
+    $this->assertSame($held, $container['#attributes']['id']);
+    $this->assertSame($held . '--capacity', $container['capacity'][DataSurfaceFormBuilderInterface::REFRESH_ID_KEY]);
+    // Every trigger sends it back on the next request too.
+    $this->assertSame($held, $container['venue']['#ajax']['submit'][DataSurfaceFormBuilderInterface::WRAPPER_INPUT]);
+    $this->assertSame(['#' . $held . '--capacity', '#' . $held . '--data-surface-panel'], $this->ajaxSelectors($this->ajaxResponse($state), 'replaceWith'));
+
+    foreach (['other-form-wrapper', 'data-surface-configure-wrapper"><b>'] as $forged) {
+      $state = $this->postStepTwo(
+        ['venue' => 'harbour', 'room' => 'harbour_auditorium'],
+        [
+          '_triggering_element_name' => 'surface[room]',
+          DataSurfaceFormBuilderInterface::WRAPPER_INPUT => $forged,
+        ],
+      );
+      $this->assertStringStartsWith('data-surface-configure-wrapper', $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY]['#attributes']['id']);
+      $this->assertNotSame($forged, $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY]['#attributes']['id']);
+    }
   }
 
 }

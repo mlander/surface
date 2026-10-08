@@ -39,9 +39,11 @@ final class ExampleCalls {
     'over_capacity' => [
       'label' => 'A capacity above the room\'s',
       'values' => [
+        'title' => 'Garden party',
         'venue' => 'library',
         'room' => 'library_garden',
         'capacity' => 45,
+        'pricing' => 'free',
       ],
       'dry_run' => FALSE,
     ],

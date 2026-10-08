@@ -1,0 +1,151 @@
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import type { Settings } from '../api';
+import type { Contract } from '../contract';
+import { SurfaceForm } from '../SurfaceForm';
+import example2 from './fixtures/example2.json';
+import riverside from './fixtures/example2-riverside.json';
+import example3 from './fixtures/example3.json';
+
+// One integration test over a mocked server: the contracts are what the
+// module's emitter wrote for examples 2 and 3 (ServedContractTest's
+// subjects), so the app is exercised against the real shape.
+
+const settings: Settings = {
+  apiBase: '/surface-api',
+  surface: 'registration.step2',
+  situation: 'configure',
+  parameters: {},
+  tokenUrl: '/session/token',
+};
+
+interface Call {
+  url: string;
+  init?: RequestInit;
+}
+
+function json(body: unknown): Response {
+  return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+}
+
+/** The server's refine: the riverside contract, over the title as sent. */
+function refined({ init }: Call): Contract {
+  const sent = JSON.parse(String(init?.body));
+  return { ...(riverside as unknown as Contract), values: { ...riverside.values, title: sent.values.title } };
+}
+
+function server(routes: Record<string, (call: Call) => unknown>) {
+  const calls: Call[] = [];
+  const fetcher = vi.fn(async (url: string, init?: RequestInit) => {
+    calls.push({ url, init });
+    if (url === '/session/token') {
+      return new Response('the-token');
+    }
+    const route = Object.keys(routes).find((path) => url.startsWith(path));
+    if (route === undefined) {
+      return new Response('Not found', { status: 404, statusText: 'Not Found' });
+    }
+    return json(routes[route]({ url, init }));
+  });
+  return { calls, fetcher };
+}
+
+describe('the React form of example 2', () => {
+  it('re-narrows the room when the venue changes, and shows the orphaned room stale', async () => {
+    const { calls, fetcher } = server({
+      '/surface-api/registration.step2/configure/refine': refined,
+      '/surface-api/registration.step2/configure': () => example2,
+    });
+    render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
+
+    const room = await screen.findByLabelText(/Room/);
+    expect(within(room).getAllByRole('option').map((option) => option.textContent)).toEqual(['Reading room', 'Garden room']);
+    expect(room).toHaveDisplayValue('Reading room');
+    expect(screen.getByLabelText(/Capacity/)).toHaveAttribute('max', '60');
+
+    // The title is not something anything depends on: no refine.
+    await userEvent.type(screen.getByLabelText(/Event title/), '!');
+    expect(calls.some((call) => call.url.endsWith('/refine'))).toBe(false);
+
+    await userEvent.selectOptions(screen.getByLabelText(/Venue/), 'Riverside Hall');
+    await waitFor(() => expect(within(screen.getByLabelText(/Room/)).getAllByRole('option').map((option) => option.textContent)).toEqual(['- Select -', 'Main hall', 'East room']));
+
+    const refine = calls.find((call) => call.url.endsWith('/refine'));
+    expect(refine?.init?.method).toBe('POST');
+    expect((refine?.init?.headers as Record<string, string>)['X-CSRF-Token']).toBe('the-token');
+    const body = JSON.parse(String(refine?.init?.body));
+    expect(body.values.venue).toBe('riverside');
+    expect(body.values.room).toBe('library_reading');
+    expect(body.values.title).toBe('Spring meetup!');
+    expect(body.stale).toEqual([]);
+
+    // The room is on its empty option, standing for the stored value; the
+    // title the person typed is kept.
+    expect(screen.getByLabelText(/Room/)).toHaveDisplayValue('- Select -');
+    expect(screen.getByLabelText(/Room/)).not.toBeRequired();
+    expect(screen.getByLabelText(/Event title/)).toHaveValue('Spring meetup!');
+  });
+
+  it('validates, showing what was refused inline and in a summary', async () => {
+    const { calls, fetcher } = server({
+      '/surface-api/registration.step2/configure/refine': () => riverside,
+      '/surface-api/registration.step2/configure/validate': () => ({
+        valid: false,
+        violations: [{ path: 'room', message: 'The value you selected is not a valid choice.' }],
+        stale: [],
+        values: {},
+        prepared: null,
+      }),
+      '/surface-api/registration.step2/configure': () => example2,
+    });
+    render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
+    await userEvent.selectOptions(await screen.findByLabelText(/Venue/), 'Riverside Hall');
+    await waitFor(() => expect(screen.getByLabelText(/Room/)).toHaveDisplayValue('- Select -'));
+
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Validate' }));
+    const summary = await screen.findByRole('status');
+    expect(summary).toHaveTextContent('One value was refused. Nothing was written.');
+    expect(summary).toHaveTextContent('room: The value you selected is not a valid choice.');
+    expect(screen.getByLabelText(/Room/)).toHaveAccessibleDescription('The value you selected is not a valid choice.');
+
+    // The stale room went back as its path, never as its value.
+    const validate = calls.find((call) => call.url.endsWith('/validate'));
+    const body = JSON.parse(String(validate?.init?.body));
+    expect(body.stale).toEqual(['room']);
+    expect(body.values.room).toBeNull();
+  });
+
+  it('shows the contract, collapsed', async () => {
+    const { fetcher } = server({ '/surface-api/registration.step2/configure': () => example2 });
+    render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
+    const summary = await screen.findByText('Contract');
+    const panel = summary.closest('details');
+    expect(panel).not.toHaveAttribute('open');
+    expect(panel?.querySelector('tr[data-surface-key="room"]')).toHaveTextContent('narrowed');
+    expect(panel?.querySelector('tr[data-surface-key="room"]')).toHaveTextContent('venue');
+  });
+});
+
+describe('the browser fetch', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('fetches the contract once, however often the form renders', async () => {
+    const { calls, fetcher } = server({ '/surface-api/registration.step2/configure': () => example2 });
+    vi.stubGlobal('fetch', fetcher);
+    render(<SurfaceForm settings={settings} />);
+    await userEvent.type(await screen.findByLabelText(/Event title/), ' again');
+    expect(screen.getByLabelText(/Event title/)).toHaveValue('Spring meetup again');
+    expect(calls.map((call) => call.url)).toEqual(['/surface-api/registration.step2/configure']);
+  });
+});
+
+describe('the React form of example 3', () => {
+  it('renders the chosen ticket and the contact part', async () => {
+    const { fetcher } = server({ '/surface-api/registration.step3/configure': () => example3 as unknown as Contract });
+    render(<SurfaceForm settings={{ ...settings, surface: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
+    expect(await screen.findByRole('group', { name: 'Ticket' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Note')).toHaveValue('');
+    expect(within(screen.getByRole('group', { name: 'Contact' })).getByLabelText(/Email/)).toHaveValue('events@example.com');
+  });
+});

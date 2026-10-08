@@ -7,6 +7,7 @@ namespace Drupal\data_surface_tool;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
+use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Surface\HasOutputsInterface;
 use Drupal\data_surface\Surface\SurfaceContext;
@@ -47,9 +48,13 @@ use Drupal\tool\TypedData\OutputDefinition;
  * A situation that needs nothing is built in its real context from the
  * start.
  *
- * Requiredness in the payload is the creating situation's alone: a
- * situation that changes a thing that exists starts from what its target
- * loads, so no key has to be sent.
+ * Every property of `values` is required exactly when the surface, built
+ * for that situation, requires it, whether the situation creates or not.
+ * Built in a real context that changes a thing that exists, each
+ * property's default is what the target loads for it now, falling back
+ * to the declared default, so a caller reads what is there; the static
+ * definition of a situation that needs a subject has no subject to load,
+ * so it keeps the declared defaults until the parameters arrive.
  */
 final class SituationInputs {
 
@@ -137,8 +142,7 @@ final class SituationInputs {
     }
     else {
       // Decision: see docs/decisions.md#identity-before-the-parameters.
-      $supplied = $this->suppliedIdentity($surface, $situation);
-      $inputs[self::VALUES] = $this->values($surface, $neutral ?? $this->surfaces->build($surface->class, new SurfaceContext($situation->id)), new SurfaceContext($situation->id), $supplied);
+      $inputs[self::VALUES] = $this->map($surface, $neutral ?? $this->surfaces->build($surface->class, new SurfaceContext($situation->id)), $this->suppliedIdentity($surface, $situation));
     }
     $inputs[self::DRY_RUN] = new InputDefinition(
       data_type: 'boolean',
@@ -153,36 +157,52 @@ final class SituationInputs {
   /**
    * Gets the `values` input for a situation's real context.
    *
+   * A context that changes a thing that exists defaults each property to
+   * what its target loads now; one that creates has nothing stored, and
+   * keeps the declared defaults.
+   *
    * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $surface
    *   The surface.
    * @param \Drupal\data_surface\DataSurfaceInterface $built
    *   The surface, built in the context.
    * @param \Drupal\data_surface\Surface\SurfaceContext $context
    *   The context.
-   * @param string[]|null $known
-   *   The identity keys the context knows; NULL reads them off it.
    *
    * @return \Drupal\tool\TypedData\MapInputDefinition
-   *   The map: the surface's keys less the known identity keys, nothing
-   *   required unless the context creates.
+   *   The map: the surface's keys less the identity keys the context
+   *   knows, each required as the surface says.
    */
-  public function values(SurfaceDefinition $surface, DataSurfaceInterface $built, SurfaceContext $context, ?array $known = NULL): MapInputDefinition {
-    $known ??= array_keys(array_intersect_key($context->known, array_flip($surface->identity)));
+  public function values(SurfaceDefinition $surface, DataSurfaceInterface $built, SurfaceContext $context): MapInputDefinition {
+    $map = $this->map($surface, $built, array_keys(array_intersect_key($context->known, array_flip($surface->identity))));
+    if (!$context->creates) {
+      // Decision: see docs/decisions.md#required-is-the-surfaces-and-defaults-are-what-is-stored.
+      $this->inputDefinitions->withStored($map, $built, $this->surfaces->target($surface->class, $context, $built)->load($built));
+    }
+    return $map;
+  }
+
+  /**
+   * Converts a built surface into the `values` input.
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $surface
+   *   The surface.
+   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   *   The surface, built.
+   * @param string[] $known
+   *   The identity keys the situation knows, which are no properties.
+   *
+   * @return \Drupal\tool\TypedData\MapInputDefinition
+   *   The map, required when any of its properties is.
+   */
+  protected function map(SurfaceDefinition $surface, DataSurfaceInterface $built, array $known): MapInputDefinition {
     $map = $this->inputDefinitions->fromSurface(
       $built,
       $this->t('@surface values', ['@surface' => $surface->id]),
       $this->t('The values, as the @surface surface describes them: every key it takes that the situation does not already know, including those other modules add, with its label, its meaning and the values it allows.', ['@surface' => $surface->id]),
     );
     $properties = array_diff_key($map->getPropertyDefinitions(), array_flip($known));
-    $required = FALSE;
-    foreach ($properties as $property) {
-      if (!$context->creates) {
-        $property->setRequired(FALSE);
-      }
-      $required = $required || $property->isRequired();
-    }
     $map->setPropertyDefinitions($properties);
-    $map->setRequired($required);
+    $map->setRequired(array_filter($properties, static fn (DataDefinitionInterface $property): bool => $property->isRequired()) !== []);
     return $map;
   }
 

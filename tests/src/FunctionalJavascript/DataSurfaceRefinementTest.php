@@ -19,12 +19,15 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * of that had been tested by calling the pieces — the refiner, the
  * builder, the callback — and the one thing that had never run was the
  * whole of it: a person choosing a value in a browser, Form API
- * rebuilding, the callback finding the container it built, and the
- * browser replacing exactly that container.
+ * rebuilding, the callback answering with one replace command per
+ * element the change moved, and the browser replacing exactly those:
+ * never the select the person just touched, and never the container
+ * around everything.
  *
  * Three keys, two links in the chain: the entity type narrows the
- * bundle, and the two together narrow the field. Each is an independent
- * rebuild of the same container.
+ * bundle, and the two together narrow the field. Changing the entity
+ * type replaces the bundle and the field; changing the bundle replaces
+ * the field alone.
  *
  * What is also proven, and is only visible here, is that the rebuild
  * judges nothing: the region is still unchosen and required while the
@@ -94,12 +97,19 @@ class DataSurfaceRefinementTest extends WebDriverTestBase {
     $assert_session->optionExists('settings[bundle]', 'user');
     $assert_session->optionNotExists('settings[bundle]', 'article');
 
-    // Choosing node rebuilds the same container against the new choice,
-    // and the bundles arrive with the labels the site gives them, from
-    // the definition the refiner replaced rather than from a second list
-    // kept somewhere beside it.
+    // Choosing node rebuilds the surface against the new choice, and the
+    // bundles arrive with the labels the site gives them, from the
+    // definition the refiner replaced rather than from a second list
+    // kept somewhere beside it. Only what the entity type moves is
+    // replaced: the bundle and the field, and not the entity type select
+    // itself or the headline beside it.
+    $this->probe(['settings[entity_type]', 'settings[headline]', 'settings[bundle]', 'settings[field]']);
     $assert_session->selectExists('settings[entity_type]')->selectOption('node');
     $assert_session->assertWaitOnAjaxRequest();
+    $this->assertTrue($this->stillProbed('settings[entity_type]'));
+    $this->assertTrue($this->stillProbed('settings[headline]'));
+    $this->assertFalse($this->stillProbed('settings[bundle]'));
+    $this->assertFalse($this->stillProbed('settings[field]'));
     $assert_session->optionExists('settings[bundle]', 'article');
     $assert_session->optionExists('settings[bundle]', 'lesson');
     $assert_session->elementTextContains('css', 'select[name="settings[bundle]"] option[value="article"]', 'Article');
@@ -111,8 +121,13 @@ class DataSurfaceRefinementTest extends WebDriverTestBase {
     // open text input, and choosing one narrows it to that bundle's
     // fields.
     $assert_session->elementExists('css', 'input[name="settings[field]"]');
+    $this->probe(['settings[entity_type]', 'settings[bundle]', 'settings[field]']);
     $assert_session->selectExists('settings[bundle]')->selectOption('article');
     $assert_session->assertWaitOnAjaxRequest();
+    // The bundle moves the field and nothing above it.
+    $this->assertTrue($this->stillProbed('settings[entity_type]'));
+    $this->assertTrue($this->stillProbed('settings[bundle]'));
+    $this->assertFalse($this->stillProbed('settings[field]'));
     $assert_session->selectExists('settings[field]');
     $assert_session->optionExists('settings[field]', 'title');
     $assert_session->optionExists('settings[field]', 'created');
@@ -240,6 +255,9 @@ class DataSurfaceRefinementTest extends WebDriverTestBase {
     $assert_session->selectExists('settings[entity_type]')->selectOption('node');
     $assert_session->assertWaitOnAjaxRequest();
     $this->assertSame('article', $assert_session->selectExists('settings[bundle]')->getValue());
+    // Nothing stands for a stored value any more, so the marker the
+    // previous response appended has been taken away again.
+    $assert_session->hiddenFieldNotExists('settings[@stale]');
 
     $assert_session->selectExists('settings[entity_type]')->selectOption('user');
     $assert_session->assertWaitOnAjaxRequest();
@@ -247,6 +265,40 @@ class DataSurfaceRefinementTest extends WebDriverTestBase {
     $assert_session->pageTextNotContains('The block configuration has been saved.');
     $assert_session->elementExists('css', 'select[name="settings[bundle]"].error');
     $this->assertSame('article', Block::load('orphaned')->get('settings')['bundle']);
+  }
+
+  /**
+   * Marks form elements in the page, so a replaced one can be told apart.
+   *
+   * A replaced element is a new DOM node, which does not carry what was
+   * set on the old one.
+   *
+   * @param string[] $names
+   *   The elements' names.
+   */
+  protected function probe(array $names): void {
+    foreach ($names as $name) {
+      $this->getSession()->executeScript(sprintf(
+        'document.querySelector(%s).dataset.dataSurfaceProbe = "kept";',
+        json_encode('[name="' . $name . '"]'),
+      ));
+    }
+  }
+
+  /**
+   * Answers whether an element is still the node probe() marked.
+   *
+   * @param string $name
+   *   The element's name.
+   *
+   * @return bool
+   *   TRUE when it was not replaced since it was marked.
+   */
+  protected function stillProbed(string $name): bool {
+    return $this->getSession()->evaluateScript(sprintf(
+      'return (document.querySelector(%s) || {dataset: {}}).dataset.dataSurfaceProbe === "kept";',
+      json_encode('[name="' . $name . '"]'),
+    ));
   }
 
 }

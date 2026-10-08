@@ -40,6 +40,11 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * take every other tool down with it; building that surface reports it
  * by name.
  *
+ * A situation that needs nothing and changes a thing that exists is
+ * described in its real context, its values defaulting to what is stored
+ * when the definitions are derived; they are cached, so the tool clears
+ * them after it writes.
+ *
  * @see \Drupal\data_surface_tool\SituationInputs
  * @see \Drupal\data_surface_tool\Plugin\tool\Tool\SurfaceSituationTool
  */

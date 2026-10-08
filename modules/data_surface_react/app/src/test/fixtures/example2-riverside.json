@@ -1,0 +1,132 @@
+{
+  "surface": "registration.step2",
+  "situation": "configure",
+  "label": "Configure registration",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Configure registration",
+    "type": "object",
+    "properties": {
+      "title": {
+        "title": "Event title",
+        "type": "string",
+        "x-surface": {
+          "widget": "text",
+          "locked": false,
+          "dependsOn": [],
+          "refined": false,
+          "stale": false
+        }
+      },
+      "capacity": {
+        "title": "Capacity",
+        "type": [
+          "integer",
+          "null"
+        ],
+        "minimum": 1,
+        "maximum": 60,
+        "default": 50,
+        "x-surface": {
+          "widget": "number",
+          "locked": false,
+          "dependsOn": [
+            "room"
+          ],
+          "refined": true,
+          "stale": false
+        }
+      },
+      "open": {
+        "title": "Registration open",
+        "type": [
+          "boolean",
+          "null"
+        ],
+        "default": true,
+        "x-surface": {
+          "widget": "checkbox",
+          "locked": false,
+          "dependsOn": [],
+          "refined": false,
+          "stale": false
+        }
+      },
+      "venue": {
+        "title": "Venue",
+        "type": "string",
+        "oneOf": [
+          {
+            "const": "riverside",
+            "title": "Riverside Hall"
+          },
+          {
+            "const": "library",
+            "title": "Old Library"
+          },
+          {
+            "const": "harbour",
+            "title": "Harbour Centre"
+          }
+        ],
+        "x-surface": {
+          "widget": "select",
+          "locked": false,
+          "dependsOn": [],
+          "refined": false,
+          "stale": false,
+          "emptyOption": {
+            "show": false,
+            "label": "- Select -"
+          }
+        }
+      },
+      "room": {
+        "title": "Room",
+        "type": "string",
+        "oneOf": [
+          {
+            "const": "riverside_main",
+            "title": "Main hall"
+          },
+          {
+            "const": "riverside_east",
+            "title": "East room"
+          }
+        ],
+        "x-surface": {
+          "widget": "select",
+          "locked": false,
+          "dependsOn": [
+            "venue"
+          ],
+          "refined": true,
+          "stale": true,
+          "emptyOption": {
+            "show": true,
+            "label": "- Select -"
+          }
+        }
+      }
+    },
+    "additionalProperties": false,
+    "required": [
+      "title",
+      "venue",
+      "room"
+    ]
+  },
+  "values": {
+    "title": "Spring meetup",
+    "capacity": 50,
+    "open": true,
+    "venue": "riverside",
+    "room": null
+  },
+  "stale": [
+    "room"
+  ],
+  "discarded": [
+    "room"
+  ]
+}

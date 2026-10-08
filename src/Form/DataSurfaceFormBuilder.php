@@ -5,8 +5,15 @@ declare(strict_types=1);
 namespace Drupal\data_surface\Form;
 
 use Drupal\Component\Utility\Html;
+use Drupal\Component\Utility\NestedArray;
+use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Ajax\AppendCommand;
+use Drupal\Core\Ajax\PrependCommand;
+use Drupal\Core\Ajax\RemoveCommand;
+use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Render\ElementInfoManagerInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
@@ -39,6 +46,26 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
    * Render key marking the surface container the AJAX path rebuilds.
    */
   protected const WRAPPER_KEY = '#data_surface_wrapper';
+
+  /**
+   * Render key on an element the AJAX callback may replace: its path.
+   *
+   * Dotted, below the container. The container's #process turns it into
+   * a wrapper and REFRESH_ID_KEY once the container's id is final.
+   */
+  protected const REFRESH_KEY = '#data_surface_refresh';
+
+  /**
+   * Render key on the container listing the keys every rebuild replaces.
+   *
+   * Filled by placeRefreshed().
+   */
+  protected const REFRESHED_KEY = '#data_surface_refreshed';
+
+  /**
+   * Render key marking a slot rendered as nothing but its wrapper.
+   */
+  protected const PLACEHOLDER_KEY = '#data_surface_placeholder';
 
   /**
    * Element types that hold children rather than a value of their own.
@@ -86,11 +113,11 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
     // One id per built container, not one per plugin. Two placements of
     // the same block on one page, or one block rendered twice by Layout
     // Builder, would otherwise share a wrapper id and each rebuild would
-    // replace the other's container. The id only has to be stable within
-    // one build: the AJAX callback finds the container by its marker,
-    // not by its id, and the browser replaces whatever the trigger was
-    // rendered pointing at.
-    $wrapper_id = Html::getUniqueId($wrapper_key . '-wrapper');
+    // replace the other's container. On a rebuild the id is the one the
+    // browser holds, which the trigger sent: the rebuild replaces only
+    // what moved, so the container and everything around the replaced
+    // elements stay on the page with the ids they were rendered with.
+    $wrapper_id = static::postedWrapperId($form_state, $wrapper_key) ?? Html::getUniqueId($wrapper_key . '-wrapper');
     $container = [
       '#type' => 'container',
       '#tree' => TRUE,
@@ -99,7 +126,6 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
       self::WRAPPER_KEY => $wrapper_id,
     ];
     $definitions = $surface->getDefinitions();
-    $dependencies = $definitions->refinementDependencies();
     foreach ($definitions as $name => $definition) {
       $slot = $definitions->entry($name)?->slot;
       if ($slot !== NULL && DefinitionMetadata::slotOf($definition) !== NULL) {
@@ -112,7 +138,9 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
           // render. Offering nothing is honest: a key with no element
           // has said nothing, so what it holds is kept, and the slot
           // appears the moment its deciding key is answered, through the
-          // rebuild the deciding key is wired to.
+          // rebuild the deciding key is wired to. Nothing but its
+          // wrapper is rendered, so that rebuild has a place to put it.
+          $container[$name] = ['#markup' => '', self::PLACEHOLDER_KEY => TRUE];
           continue;
         }
         $child = $slot->variant($chosen)->child;
@@ -148,11 +176,9 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
         $element['#disabled'] = TRUE;
         $element = static::describeLocked($element);
       }
-      if (in_array($name, $dependencies, TRUE)) {
-        $element = $this->attachRefinementAjax($element, $wrapper_id);
-      }
       $container[$name] = $element;
     }
+    $container = $this->wireRefinement($container, $surface, $values, [], $wrapper_id);
     $stale = static::stalePaths($container);
     if ($stale !== []) {
       // Fixed to this build: what the person is looking at now, not what
@@ -176,6 +202,49 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
    * {@inheritdoc}
    */
   public function discardedRefinementInput(DataSurfaceInterface $surface, array $stored, array $input): array {
+    $discarded = $this->discardedInFrame($surface, $stored, $input);
+    // A child refines in its own frame, under its own names, so what its
+    // own refiners orphan is asked of the child, against the value the
+    // parent's input now holds for it. A key discarded whole above has
+    // nothing left inside it to ask about.
+    $values = array_replace($stored, array_diff_key($input, array_flip($discarded)));
+    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+      $name = (string) $name;
+      if (!$entry->isNested() || in_array($name, $discarded, TRUE) || !is_array($input[$name] ?? NULL)) {
+        continue;
+      }
+      $child = $entry->childFor($values);
+      if ($child === NULL) {
+        continue;
+      }
+      $held = $stored[$name] ?? NULL;
+      if ($entry->slot !== NULL && !$entry->slot->fits((string) $entry->slot->chosen($values[$entry->slot->by] ?? NULL), $held)) {
+        // What is stored was written for another variant, and says
+        // nothing about this one.
+        $held = NULL;
+      }
+      $child_stored = array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
+      foreach ($this->discardedRefinementInput($child, $child_stored, $input[$name]) as $path) {
+        $discarded[] = $name . '.' . $path;
+      }
+    }
+    return $discarded;
+  }
+
+  /**
+   * Names the keys of one frame whose in-progress input a rebuild drops.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The surface or child surface, as advertised.
+   * @param array $stored
+   *   What is stored for its keys.
+   * @param array $input
+   *   The in-progress input for its keys.
+   *
+   * @return string[]
+   *   The keys, in the order they were found orphaned.
+   */
+  protected function discardedInFrame(DataSurfaceInterface $surface, array $stored, array $input): array {
     $targets = array_intersect_key($surface->getDefinitions()->refinements(), $input);
     if ($targets === []) {
       return [];
@@ -311,12 +380,102 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
 
   /**
    * {@inheritdoc}
+   */
+  public function placeRefreshed(array $container, string $key, array $element): array {
+    $element[self::REFRESH_KEY] = $key;
+    $container[$key] = $element;
+    $container[self::REFRESHED_KEY] = array_values(array_unique([...($container[self::REFRESHED_KEY] ?? []), $key]));
+    return $container;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * What is replaced is read off the trigger, which carries the
+   * dependent closure it was built with: the dependency edges are fixed
+   * when a surface is sealed and no refinement changes them, so the
+   * closure the previous build computed is the closure of this one. Each
+   * element is then taken from the rebuilt container, because that is
+   * the one built against the new answer.
+   */
+  public static function refreshSurface(array &$form, FormStateInterface $form_state): AjaxResponse|array {
+    $trigger = $form_state->getTriggeringElement() ?? [];
+    $container = static::containerOf($form, $trigger['#array_parents'] ?? []);
+    $replaces = $trigger[self::TRIGGER_KEY]['replaces'] ?? NULL;
+    if ($container === NULL || !is_array($replaces)) {
+      return $container ?? $form;
+    }
+    $own = implode('.', $trigger[self::TRIGGER_KEY]['path'] ?? []);
+    $elements = [];
+    foreach ([...$replaces, ...($container[self::REFRESHED_KEY] ?? [])] as $dotted) {
+      if ($dotted === $own) {
+        // Never the element that was touched: it already shows what the
+        // person chose, and redrawing it is what made the change look
+        // like a reload of the field rather than of what it changed.
+        continue;
+      }
+      $exists = FALSE;
+      $element = NestedArray::getValue($container, explode('.', (string) $dotted), $exists);
+      if (!$exists || !is_array($element) || !isset($element[self::REFRESH_ID_KEY])) {
+        // Taken out by a host or a cosmetic layer, or never wrapped:
+        // there is no telling where it went, so the container goes
+        // whole, which is coarser and never wrong.
+        return $container;
+      }
+      // A member of a group is not rendered on its own, and a replaced
+      // element is rendered on its own; core's own AJAX response builder
+      // does the same to the element a callback returns.
+      unset($element['#group']);
+      $elements[$element[self::REFRESH_ID_KEY]] = $element;
+    }
+    $response = new AjaxResponse();
+    foreach ($elements as $id => $element) {
+      $response->addCommand(new ReplaceCommand('#' . $id, $element));
+    }
+    $wrapper_id = (string) $container[self::WRAPPER_KEY];
+    // The stale marker names stale selects across the whole container,
+    // and whether it exists at all depends on the rebuild, so it is not
+    // replaced but taken out and put back as the rebuild left it. A
+    // marker left naming a select that now holds a real choice would
+    // read that select back as its stored value on the next request.
+    $response->addCommand(new RemoveCommand('#' . static::reservedId($wrapper_id, 'stale')));
+    if (isset($container[self::STALE_MARKER_KEY])) {
+      $response->addCommand(new AppendCommand('#' . $wrapper_id, $container[self::STALE_MARKER_KEY]));
+    }
+    // What the render-array path printed into the replaced container,
+    // printed in the same place: an error on the trigger itself — the
+    // one value a refinement request judges — would otherwise be held
+    // over to the next page. The previous request's are taken away
+    // first, as replacing the container used to.
+    $messages = static::reservedId($wrapper_id, 'messages');
+    $response->addCommand(new RemoveCommand('#' . $messages));
+    // @phpstan-ignore globalDrupalDependencyInjection.useDependencyInjection
+    if (\Drupal::messenger()->all() !== []) {
+      $response->addCommand(new PrependCommand('#' . $wrapper_id, [
+        '#type' => 'container',
+        '#attributes' => ['id' => $messages],
+        'messages' => ['#type' => 'status_messages'],
+      ]));
+    }
+    return $response;
+  }
+
+  /**
+   * Finds the surface container around an element of a built form.
    *
    * The walk reads the form and never writes to it: a walk by reference
    * would create every key it looked for.
+   *
+   * @param array $form
+   *   The form.
+   * @param array $array_parents
+   *   The element's #array_parents.
+   *
+   * @return array|null
+   *   The nearest container above the element, or NULL when none is.
    */
-  public static function refreshSurface(array &$form, FormStateInterface $form_state): array {
-    $parents = $form_state->getTriggeringElement()['#array_parents'];
+  protected static function containerOf(array $form, array $array_parents): ?array {
+    $parents = $array_parents;
     while ($parents !== []) {
       array_pop($parents);
       $candidate = $form;
@@ -330,7 +489,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
         return $candidate;
       }
     }
-    return $form;
+    return NULL;
   }
 
   /**
@@ -359,19 +518,150 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
     // The surface's real validation is unaffected: it runs on submit,
     // through the host's validate stage, where every key has been
     // answered on purpose.
-    $parents = $element['#parents'] ?? [];
-    $tree = !empty($element['#tree']);
-    foreach (static::elementChildren($element) as $key) {
-      if (isset($element[$key]['#ajax']) && !isset($element[$key]['#limit_validation_errors'])) {
-        // The child's own value path, computed the way Form API is about
-        // to compute it: children of a tree container are nested under
-        // it, and children of anything else are top level.
-        $element[$key]['#limit_validation_errors'] = [
-          $element[$key]['#parents'] ?? ($tree ? [...$parents, $key] : [$key]),
-        ];
+    //
+    // At any depth: an attached child's own dependency sits inside the
+    // child's details, and is as much a trigger as a top level key.
+    static::limitAjax($element, $element['#parents'] ?? [], !empty($element['#tree']));
+    // The wrappers the AJAX callback replaces by. Placed here rather than
+    // at build time because the container's id is only final once a host
+    // has merged it into its own element, and every wrapper id is derived
+    // from it.
+    $wrapper_id = $element[self::WRAPPER_KEY] ?? NULL;
+    if (is_string($wrapper_id)) {
+      static::wrapRefreshed($element, $wrapper_id);
+      if (isset($element[self::STALE_MARKER_KEY]) && !isset($element[self::STALE_MARKER_KEY][self::REFRESH_ID_KEY])) {
+        $element[self::STALE_MARKER_KEY] = static::wrapped($element[self::STALE_MARKER_KEY], static::reservedId($wrapper_id, 'stale'));
       }
     }
     return $element;
+  }
+
+  /**
+   * Limits every #ajax below an element to that element's own value.
+   *
+   * @param array $element
+   *   The element whose children are walked.
+   * @param array $parents
+   *   The element's #parents.
+   * @param bool $tree
+   *   The element's #tree.
+   */
+  protected static function limitAjax(array &$element, array $parents, bool $tree): void {
+    foreach (static::elementChildren($element) as $key) {
+      // The child's own value path, computed the way Form API is about
+      // to compute it: a child inherits its parent's #tree, and is
+      // nested under its parent only when both are trees; anything else
+      // is top level.
+      $child_tree = (bool) ($element[$key]['#tree'] ?? $tree);
+      $child_parents = $element[$key]['#parents'] ?? ($child_tree && $tree ? [...$parents, $key] : [$key]);
+      if (isset($element[$key]['#ajax']) && !isset($element[$key]['#limit_validation_errors'])) {
+        $element[$key]['#limit_validation_errors'] = [$child_parents];
+      }
+      static::limitAjax($element[$key], $child_parents, $child_tree);
+    }
+  }
+
+  /**
+   * Gives every element the AJAX callback may replace its wrapper.
+   *
+   * @param array $element
+   *   The element whose children are walked.
+   * @param string $wrapper_id
+   *   The container's id.
+   */
+  protected static function wrapRefreshed(array &$element, string $wrapper_id): void {
+    foreach (static::elementChildren($element) as $key) {
+      if (isset($element[$key][self::REFRESH_KEY]) && !isset($element[$key][self::REFRESH_ID_KEY])) {
+        $element[$key] = static::wrapped($element[$key], static::refreshId($wrapper_id, (string) $element[$key][self::REFRESH_KEY]));
+      }
+      static::wrapRefreshed($element[$key], $wrapper_id);
+    }
+  }
+
+  /**
+   * Wraps an element in a div the AJAX callback can replace by id.
+   *
+   * A prefix and a suffix rather than a theme wrapper: they sit outside
+   * everything the element renders, its own form element wrapper and
+   * description included, so the replacement carries all of it, and they
+   * do not touch the element's own attributes, which are the input's.
+   *
+   * @param array $element
+   *   The element.
+   * @param string $id
+   *   The wrapper's id.
+   *
+   * @return array
+   *   The element, wrapped, and carrying the id.
+   */
+  protected static function wrapped(array $element, string $id): array {
+    $element[self::REFRESH_ID_KEY] = $id;
+    $element['#prefix'] = '<div id="' . Html::escape($id) . '">' . ($element['#prefix'] ?? '');
+    $element['#suffix'] = ($element['#suffix'] ?? '') . '</div>';
+    return $element;
+  }
+
+  /**
+   * Derives the wrapper id of an element from its container's.
+   *
+   * Unique wherever the container's id is, because no two elements of
+   * one container share a path, and the same on every rebuild, because
+   * the container's is.
+   *
+   * @param string $wrapper_id
+   *   The container's id.
+   * @param string $dotted
+   *   The element's dotted path below the container.
+   *
+   * @return string
+   *   The id.
+   */
+  protected static function refreshId(string $wrapper_id, string $dotted): string {
+    return $wrapper_id . '--' . implode('--', array_map([Html::class, 'getId'], explode('.', $dotted)));
+  }
+
+  /**
+   * Derives the id of one of the container's own wrappers.
+   *
+   * With an underscore, which Html::getId() never leaves in a key's part
+   * of a refreshId(), so no surface key can collide with it.
+   *
+   * @param string $wrapper_id
+   *   The container's id.
+   * @param string $name
+   *   What the wrapper holds.
+   *
+   * @return string
+   *   The id.
+   */
+  protected static function reservedId(string $wrapper_id, string $name): string {
+    return $wrapper_id . '__' . $name;
+  }
+
+  /**
+   * Reads the container id a refinement trigger sent back.
+   *
+   * Only an id this wrapper key could have generated is taken back: a
+   * value from the request names an id on the page, so anything else is
+   * ignored and a fresh one is generated.
+   *
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state of the containing form.
+   * @param string $wrapper_key
+   *   The wrapper key the host builds the container with.
+   *
+   * @return string|null
+   *   The id the browser holds, or NULL when the request sent none.
+   */
+  protected static function postedWrapperId(FormStateInterface $form_state, string $wrapper_key): ?string {
+    $state = $form_state instanceof SubformStateInterface ? $form_state->getCompleteFormState() : $form_state;
+    $posted = $state->getUserInput()[self::WRAPPER_INPUT] ?? NULL;
+    $generated = Html::getId($wrapper_key . '-wrapper');
+    return is_string($posted)
+      && preg_match('/^[A-Za-z0-9_-]+$/', $posted)
+      && ($posted === $generated || str_starts_with($posted, $generated . '--'))
+      ? $posted
+      : NULL;
   }
 
   /**
@@ -439,7 +729,9 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
    *   accept() keeps whatever the key already holds.
    */
   protected function extractKey(string $name, ?DataDefinitionInterface $definition, array $container, FormStateInterface $form_state): array {
-    if ($definition === NULL || !isset($container[$name]) || !is_array($container[$name])) {
+    if ($definition === NULL || !isset($container[$name]) || !is_array($container[$name]) || !empty($container[$name][self::PLACEHOLDER_KEY])) {
+      // A placeholder is a slot's wrapper and nothing else: no element
+      // was offered, so the key has said nothing.
       return [];
     }
     return [
@@ -505,23 +797,147 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
    * is therefore declared and left unwired; the surface still refines
    * when the form is submitted, or when a scalar dependency is touched.
    *
+   * The wrapper the #ajax names is the container's. The callback answers
+   * with commands that name their own targets, so the wrapper is only
+   * used when it falls back to returning the container; and the id is
+   * sent back with every request, so the rebuild takes the same one.
+   *
    * @param array $element
    *   The element built for the dependency.
    * @param string $wrapper_id
-   *   The DOM id of the container the rebuild replaces.
+   *   The DOM id of the container.
+   * @param string[] $path
+   *   The element's path below the container.
+   * @param string[] $replaces
+   *   The dotted paths of the elements depending on it, transitively.
    *
    * @return array
    *   The element, wired or left as it was.
    */
-  protected function attachRefinementAjax(array $element, string $wrapper_id): array {
+  protected function attachRefinementAjax(array $element, string $wrapper_id, array $path, array $replaces): array {
     if (!isset($element['#type']) || in_array($element['#type'], self::GROUPING_TYPES, TRUE)) {
       return $element;
     }
     $element['#ajax'] = [
       'callback' => [static::class, 'refreshSurface'],
       'wrapper' => $wrapper_id,
+      // Core posts what is under 'submit' with the request, beside the
+      // trigger's name, which it puts there itself.
+      'submit' => [self::WRAPPER_INPUT => $wrapper_id],
     ];
+    $element[self::TRIGGER_KEY] = ['path' => $path, 'replaces' => $replaces];
     return $element;
+  }
+
+  /**
+   * Marks what a rebuild may replace and wires what triggers one.
+   *
+   * One frame at a time, the surface's own and then each child's, under
+   * the names each frame gives its keys: a child's refiners run in the
+   * child's frame, so its dependencies and its targets are the child's
+   * keys, and what one of them moves is inside that child and nowhere
+   * else.
+   *
+   * @param array $element
+   *   The container, or the element an attached child or a slot variant
+   *   is rendered as.
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The surface or child surface the element renders.
+   * @param array $values
+   *   The values the frame is rendered with.
+   * @param string[] $path
+   *   The frame's path below the container.
+   * @param string $wrapper_id
+   *   The container's id.
+   *
+   * @return array
+   *   The element, marked and wired.
+   */
+  protected function wireRefinement(array $element, DataSurfaceInterface $surface, array $values, array $path, string $wrapper_id): array {
+    $definitions = $surface->getDefinitions();
+    $refinements = $definitions->refinements();
+    foreach ($definitions->entries() as $name => $entry) {
+      $name = (string) $name;
+      if (!isset($element[$name]) || !is_array($element[$name])) {
+        continue;
+      }
+      $at = [...$path, $name];
+      if (isset($refinements[$name])) {
+        // A target — a slot is one too, of its deciding key — has a
+        // wrapper of its own, which is what the rebuild replaces.
+        $element[$name][self::REFRESH_KEY] = implode('.', $at);
+      }
+      if (!$entry->isNested() || !empty($element[$name][self::PLACEHOLDER_KEY])) {
+        continue;
+      }
+      $child = $entry->attachment?->child;
+      $held = $values[$name] ?? NULL;
+      if ($entry->slot !== NULL) {
+        // The variant the slot was rendered as, from what it was rendered
+        // with: its own defaults when what is held was another's.
+        $chosen = $entry->slot->chosen($values[$entry->slot->by] ?? $surface->getDefault($entry->slot->by));
+        $child = $chosen === NULL ? NULL : $entry->slot->variant($chosen)->child;
+        $held = $chosen !== NULL && $entry->slot->fits($chosen, $held) ? $held : NULL;
+      }
+      if ($child !== NULL) {
+        $element[$name] = $this->wireRefinement(
+          $element[$name],
+          $child,
+          array_replace($child->getDefaultValues(), is_array($held) ? $held : []),
+          $at,
+          $wrapper_id,
+        );
+      }
+    }
+    foreach ($definitions->refinementDependencies() as $dependency) {
+      if (!isset($element[$dependency]) || !is_array($element[$dependency])) {
+        continue;
+      }
+      $element[$dependency] = $this->attachRefinementAjax(
+        $element[$dependency],
+        $wrapper_id,
+        [...$path, $dependency],
+        array_map(
+          static fn (string $target): string => implode('.', [...$path, $target]),
+          static::dependentsOf($dependency, $refinements),
+        ),
+      );
+    }
+    return $element;
+  }
+
+  /**
+   * Lists the keys depending on one key, directly or through others.
+   *
+   * The closure the discard cascade walks: a target of the key, then a
+   * target of that target, until nothing new is reached. A change to the
+   * key may move every one of them and nothing else.
+   *
+   * @param string $key
+   *   The key that changed.
+   * @param array<string, string[]> $refinements
+   *   The frame's refinement map: target => the keys it refines against.
+   *
+   * @return string[]
+   *   The dependents, in declaration order; never the key itself.
+   */
+  protected static function dependentsOf(string $key, array $refinements): array {
+    $reached = [];
+    $queue = [$key];
+    while ($queue !== []) {
+      $moved = array_shift($queue);
+      foreach ($refinements as $target => $dependencies) {
+        $target = (string) $target;
+        if ($target !== $key && !isset($reached[$target]) && in_array($moved, $dependencies, TRUE)) {
+          $reached[$target] = TRUE;
+          $queue[] = $target;
+        }
+      }
+    }
+    return array_values(array_filter(
+      array_map('strval', array_keys($refinements)),
+      static fn (string $target): bool => isset($reached[$target]),
+    ));
   }
 
   /**
@@ -581,12 +997,35 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
   protected static function retargetWrapper(array $container, string $wrapper_id): array {
     $container[self::WRAPPER_KEY] = $wrapper_id;
     $container['#attributes']['id'] = $wrapper_id;
-    foreach (static::elementChildren($container) as $key) {
-      if (isset($container[$key]['#ajax']['wrapper'])) {
-        $container[$key]['#ajax']['wrapper'] = $wrapper_id;
+    return static::retargetAjax($container, $wrapper_id);
+  }
+
+  /**
+   * Points every refinement #ajax below an element at a container id.
+   *
+   * At any depth, because an attached child's own dependency is wired
+   * too, and the id the request sends back with it as well as the
+   * wrapper, so the rebuild takes the id the page holds.
+   *
+   * @param array $element
+   *   The element whose children are walked.
+   * @param string $wrapper_id
+   *   The id to point at.
+   *
+   * @return array
+   *   The element, re-pointed.
+   */
+  protected static function retargetAjax(array $element, string $wrapper_id): array {
+    foreach (static::elementChildren($element) as $key) {
+      if (isset($element[$key]['#ajax']['wrapper'])) {
+        $element[$key]['#ajax']['wrapper'] = $wrapper_id;
       }
+      if (isset($element[$key]['#ajax']['submit'][self::WRAPPER_INPUT])) {
+        $element[$key]['#ajax']['submit'][self::WRAPPER_INPUT] = $wrapper_id;
+      }
+      $element[$key] = static::retargetAjax($element[$key], $wrapper_id);
     }
-    return $container;
+    return $element;
   }
 
   /**

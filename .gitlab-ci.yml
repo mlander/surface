@@ -16,7 +16,7 @@ variables:
   OPT_IN_TEST_CURRENT: 1
   RUN_JOB_UPGRADE_STATUS: 0
   _PHPUNIT_CONCURRENT: 1
-  _CSPELL_IGNORE_PATHS: "'.cspell-project-words.txt'"
+  _CSPELL_IGNORE_PATHS: "'.cspell-project-words.txt', 'modules/data_surface_react/dist/**', '**/package-lock.json'"
 
 # The template's docs job builds mkdocs.yml and publishes docs/ to
 # GitLab Pages. Enabled now that the docs tree exists.

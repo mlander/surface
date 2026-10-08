@@ -72,6 +72,8 @@ class ExamplesRoutesTest extends BrowserTestBase {
     $assert->pageTextMatches('/The surface: \d+ lines of code\./');
     $assert->pageTextMatches('/The classic twin, a config form: \d+ lines of code\./');
     $assert->linkByHrefExists('/surface-examples/reset');
+    // Without data_surface_react the React twin is named, not linked.
+    $assert->pageTextContains('In React at /surface-react/registration.step2/configure, once data_surface_react is enabled.');
 
     $this->drupalGet('surface-examples/3');
     $assert->pageTextContains('The contract, as it stands');

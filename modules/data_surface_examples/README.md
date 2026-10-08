@@ -437,7 +437,7 @@ drush tool:info data_surface:registration.step3:configure
 
 drush tool:run data_surface:registration.step3:configure --uid=1 --input='{"values":{"title":"Autumn meetup","capacity":90,"venue":"harbour","room":"harbour_deck","pricing":"paid","ticket":{"price":12.5,"currency":"EUR"}}}'
 
-drush tool:run data_surface:registration.step3:configure --uid=1 --input='{"values":{"venue":"library","room":"library_garden","capacity":45}}'
+drush tool:run data_surface:registration.step3:configure --uid=1 --input='{"values":{"title":"Garden party","venue":"library","room":"library_garden","capacity":45,"pricing":"free"}}'
 
 drush tool:run data_surface:registration.step3:configure --uid=1 --input='{"values":{"title":"Winter social","capacity":100,"venue":"riverside","room":"riverside_east","pricing":"free","ticket":{"note":"Donations welcome"}}}' --input=dry_run=true
 ```
@@ -459,6 +459,34 @@ depends on an earlier one, and every capacity is a hundred or fewer, so
 example 4's module does not change the answers. Enable it and send a
 capacity of 120 without a privacy notice to see it refuse.
 
+## In React
+
+Examples 1 to 3 again, with no Form API: the same situation served as a
+JSON contract and rendered by a React app, from the experimental
+submodule `data_surface_react`.
+
+```bash
+drush pm:install data_surface_react
+```
+
+The landing page then links each example "In React":
+`/surface-react/registration.step1/configure`,
+`/surface-react/registration.step2/configure` and
+`/surface-react/registration.step3/configure`. Each is the same surface
+as the form beside it, read from `/surface-api/registration.stepN/configure`:
+JSON Schema with the labels as `oneOf` titles, the bounds as `minimum`
+and `maximum`, the ticket slot as a conditional on the pricing, and an
+`x-surface` note on every key saying what the form knows about it.
+
+Change the venue on example 2: the app posts the answers to `/refine`,
+which re-narrows the contract the way the form's AJAX rebuild does, and
+the room comes back on its empty option, standing for the stored room,
+which stays on the server. Press Validate: the answers go to `/validate`,
+the pipeline's dry run, and what it refuses shows beside each field and
+in a summary. Nothing is written; Submit is there and disabled. The
+collapsed Contract panel under the form is the contract as it stands.
+[The served contract](../../docs/served-contract.md) has the format.
+
 ## Example 6: every door
 
 To be written: the same contract through ECA, a decoupled page, and an
@@ -479,4 +507,5 @@ Drush commands are checked against `ExampleCalls`.
 | `Kernel\ExamplesToolTest` | Example 5: the three calls and their answers; what the script prints. |
 | `Unit\ExamplesReadmeTest` | This page against the files it quotes, and its Drush commands. |
 | `Functional\ExamplesRoutesTest` | Every route answers an administrator and refuses anonymous; the landing page; a save through example 3. |
+| `Functional\ServedContractEndpointsTest` | In React: the landing page's links, and example 2's contract, refine and validate over HTTP. |
 | `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files. |

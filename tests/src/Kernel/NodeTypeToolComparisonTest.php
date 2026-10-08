@@ -16,6 +16,7 @@ use Drupal\data_surface_tool\Plugin\Derivative\SurfaceSituationToolDeriver;
 use Drupal\data_surface_tool\Plugin\tool\Tool\SurfaceSituationTool;
 use Drupal\data_surface_tool\SituationInputs;
 use Drupal\node\Entity\NodeType;
+use Drupal\node\NodePreviewMode;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\ToolResultInterface;
 use Drupal\tool\ExecutableResult;
@@ -149,9 +150,10 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
     $this->assertSame('^[a-z0-9]+(?:[ -][a-z0-9]+)*$', $tags['items']['pattern']);
     $this->assertStringContainsString('each tag listed once and in lower case', $tags['description']);
 
-    // A key the surface requires but whose default already satisfies it
-    // is not demanded of the payload: the pipeline fills it in.
-    $this->assertSame(['name', 'type'], $values['required']);
+    // Required is what the surface says, default or not: a key whose
+    // default already holds a value is still in `required`, and the
+    // default is advertised beside it.
+    $this->assertSame(['name', 'type', 'title_label', 'preview_mode'], $values['required']);
     $this->assertSame('Title', $values['properties']['title_label']['default']);
   }
 
@@ -848,10 +850,17 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
    *   The machine name.
    *
    * @return array
-   *   The name and machine name.
+   *   The name and machine name, and the two keys the surface requires
+   *   whose defaults already hold a value: the Tool API refuses a
+   *   required property a payload leaves out, default or not.
    */
   protected function contentType(string $type): array {
-    return ['name' => ucfirst($type), 'type' => $type];
+    return [
+      'name' => ucfirst($type),
+      'type' => $type,
+      'title_label' => 'Title',
+      'preview_mode' => NodePreviewMode::Optional->value,
+    ];
   }
 
   /**

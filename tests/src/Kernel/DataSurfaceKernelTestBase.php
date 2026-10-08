@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
+use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\data_surface\DataSurface;
 use Drupal\data_surface\DefinitionMap;
@@ -135,6 +137,82 @@ abstract class DataSurfaceKernelTestBase extends KernelTestBase {
         refiners: $refiners,
       ),
     );
+  }
+
+  /**
+   * Calls the triggering element's #ajax callback, as core's AJAX does.
+   *
+   * With the form Form API rebuilt, which is what core hands the
+   * callback once a refinement rebuild has run.
+   *
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state after an AJAX request was processed.
+   *
+   * @return \Drupal\Core\Ajax\AjaxResponse
+   *   The response the callback built.
+   */
+  protected function ajaxResponse(FormStateInterface $form_state): AjaxResponse {
+    $form = $form_state->getCompleteForm();
+    $callback = $form_state->prepareCallback($form_state->getTriggeringElement()['#ajax']['callback']);
+    $response = call_user_func_array($callback, [&$form, $form_state]);
+    $this->assertInstanceOf(AjaxResponse::class, $response);
+    return $response;
+  }
+
+  /**
+   * Lists the selectors an AJAX response's commands of one kind name.
+   *
+   * @param \Drupal\Core\Ajax\AjaxResponse $response
+   *   The response.
+   * @param string $kind
+   *   An insert method ('replaceWith', 'append', 'prepend') or a command
+   *   name ('remove').
+   *
+   * @return string[]
+   *   The selectors, in command order.
+   */
+  protected function ajaxSelectors(AjaxResponse $response, string $kind): array {
+    $selectors = [];
+    foreach ($response->getCommands() as $command) {
+      if (($command['method'] ?? $command['command']) === $kind) {
+        $selectors[] = $command['selector'];
+      }
+    }
+    return $selectors;
+  }
+
+  /**
+   * Gets the rendered markup of the command replacing one selector.
+   *
+   * @param \Drupal\Core\Ajax\AjaxResponse $response
+   *   The response.
+   * @param string $selector
+   *   The selector.
+   *
+   * @return string
+   *   The markup, or the empty string when nothing replaces it.
+   */
+  protected function ajaxMarkup(AjaxResponse $response, string $selector): string {
+    foreach ($response->getCommands() as $command) {
+      if (($command['selector'] ?? NULL) === $selector && isset($command['data'])) {
+        return (string) $command['data'];
+      }
+    }
+    return '';
+  }
+
+  /**
+   * Gets the selector of an element's own AJAX wrapper.
+   *
+   * @param array $element
+   *   A processed element.
+   *
+   * @return string
+   *   The selector.
+   */
+  protected function wrapperSelector(array $element): string {
+    $this->assertArrayHasKey(DataSurfaceFormBuilderInterface::REFRESH_ID_KEY, $element);
+    return '#' . $element[DataSurfaceFormBuilderInterface::REFRESH_ID_KEY];
   }
 
 }

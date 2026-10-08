@@ -14,7 +14,6 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Options\DataSurfaceOptions;
-use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\data_surface\SurfaceEntry;
 use Drupal\data_surface\SurfaceSlot;
 use Drupal\tool\TypedData\InputDefinition;
@@ -270,7 +269,7 @@ final class SurfaceInputDefinitions {
         '@description' => $description,
         '@note' => $note,
       ]),
-      required: $this->requiredInPayload($placeholder),
+      required: $placeholder->isRequired(),
       property_definitions: $properties,
     );
   }
@@ -383,7 +382,7 @@ final class SurfaceInputDefinitions {
     $label = $this->label($definition);
     $description = $this->description($definition);
     $constraints = $this->constraints($definition);
-    $required = $this->requiredInPayload($definition);
+    $required = $definition->isRequired();
     $secret = DefinitionMetadata::isSecret($definition);
     // A secret carries no default across. A default is a value the
     // advertised schema shows to every caller, and a secret's whole
@@ -434,36 +433,47 @@ final class SurfaceInputDefinitions {
   }
 
   /**
-   * Answers whether a caller has to send a value for a key at all.
+   * Defaults each property to the value storage holds for it now.
    *
-   * The two vocabularies mean different things by "required", and the
-   * difference is where this bridge has to translate rather than copy. A
-   * surface says a required key must hold a configured value once the
-   * pipeline's accept() has merged the declared default, what storage
-   * holds and the input, in that order. The Tool API, and the JSON Schema
-   * it advertises, say a required property must be present in the
-   * payload: its map validation refuses an absent one before the tool
-   * runs, whatever the definition defaults to.
+   * For a `values` input built in a context that changes a thing that
+   * exists, so a caller reads what is there, not what a new one would
+   * start from. A key storage holds nothing for keeps its declared
+   * default. A secret keeps none: its stored value is never read back. A
+   * subsurface is walked key by key through the child that describes the
+   * stored value (a slot's, the variant its stored deciding key chooses,
+   * and only when the stored value fits it), so a secret inside a child
+   * is kept off the schema too, and the map itself carries no default:
+   * fromSurface() says why a map's default would act rather than describe.
    *
-   * So a required key whose declared default is itself configured — a
-   * title label that starts as "Title", a preview mode that starts as
-   * optional — is satisfied by a payload that says nothing about it, and
-   * converts as not required. Advertising it as required would demand a
-   * value the pipeline never asked for; it stays required on the
-   * surface, so a caller that sends it empty is still refused, by the
-   * pipeline, with the surface's own message. A required key with no
-   * default, or with a default that holds nothing, stays required here
-   * too.
+   * @param \Drupal\tool\TypedData\MapInputDefinition $map
+   *   The converted surface, or a converted subsurface; changed in place.
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The surface it was converted from.
+   * @param array $stored
+   *   What the surface's target loads, keyed by surface key.
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition to read.
-   *
-   * @return bool
-   *   TRUE when a payload that omits the key would be refused.
+   * @return \Drupal\tool\TypedData\MapInputDefinition
+   *   The same map.
    */
-  protected function requiredInPayload(DataDefinitionInterface $definition): bool {
-    return $definition->isRequired()
-      && !ValueState::isConfigured(DefinitionMetadata::defaultOf($definition));
+  public function withStored(MapInputDefinition $map, DataSurfaceInterface $surface, array $stored): MapInputDefinition {
+    $properties = $map->getPropertyDefinitions();
+    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+      $property = $properties[$name] ?? NULL;
+      if (!$property instanceof InputDefinitionInterface || !array_key_exists($name, $stored) || DefinitionMetadata::isSecret($entry->definition)) {
+        continue;
+      }
+      if (!$entry->isNested()) {
+        $property->setDefaultValue($stored[$name]);
+        continue;
+      }
+      $child = $entry->childFor($stored);
+      $chosen = $entry->slot?->chosen($stored[$entry->slot->by] ?? NULL);
+      if ($child !== NULL && $property instanceof MapInputDefinition && is_array($stored[$name])
+        && ($chosen === NULL || $entry->slot->fits($chosen, $stored[$name]))) {
+        $this->withStored($property, $child, $stored[$name]);
+      }
+    }
+    return $map;
   }
 
   /**

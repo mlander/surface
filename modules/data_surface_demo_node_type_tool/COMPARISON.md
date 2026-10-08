@@ -295,7 +295,9 @@ caller sends that.
             },
             "required": [
                 "name",
-                "type"
+                "type",
+                "title_label",
+                "preview_mode"
             ],
             "description": "node.type values: The values, as the node.type surface describes them: every key it takes that the situation does not already know, including those other modules add, with its label, its meaning and the values it allows.",
             "title": "node.type values"

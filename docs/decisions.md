@@ -300,6 +300,23 @@ line is escaped there, so a message's own placeholder markup (Range's
 `<em class="placeholder">`) would otherwise reach the caller, Drush
 included, as literal tags. (`SurfaceResultReportingTrait::violationSummary()`)
 
+### Required is the surface's, and defaults are what is stored
+
+A derived tool's `values` property is required exactly when the surface,
+built for the situation, requires the key, whatever its default and
+whether or not the situation creates; built in a real context that
+changes a thing that exists, each property defaults to what the target
+loads now (a secret to nothing). `drush tool:info` has to say what the
+surface requires and what is there. The cost is the Tool API's: it
+refuses a required map property a payload leaves out, default or not
+(`TypedInputsTrait::validateInputValue()`), so an edit sends every
+required key. A situation that needs a subject keeps declared defaults
+until its parameters refine it. A static definition is cached, so its
+stored defaults are as of the last discovery; a write through the tool
+clears it, a write by any other path shows at the next cache rebuild.
+(`SituationInputs::values()`, `SurfaceInputDefinitions::withStored()`,
+`SurfaceSituationTool::doExecute()`)
+
 ## Forms
 
 ### A panel inside the situation form
@@ -307,9 +324,9 @@ included, as literal tags. (`SurfaceResultReportingTrait::violationSummary()`)
 A route may name a read-only panel in `_data_surface_panel`, a service
 id or class implementing `DataSurfaceFormPanelInterface`, the way it
 names a cosmetic layer. The situation form places what it returns
-inside the surface container, because the AJAX rebuild replaces the
-container and a panel describing the surface as it stands has to be
-replaced with it; it is handed the values the elements are built with,
+inside the surface container, and the AJAX rebuild replaces it along
+with the dependents of whatever changed, because a panel describing the
+surface as it stands has to follow every change; it is handed the values the elements are built with,
 not a refined surface, so it can tell which variant a slot shows. The
 contract panel lives in `data_surface_tool`, since half of it is the
 derived tool's JSON Schema. (`DataSurfaceSituationForm::surfacePanel()`)
@@ -454,3 +471,38 @@ The README quotes each example's class from its first attribute down, and
 Generating it would need a kernel for the answers and a generator for
 prose written for a viewer; a drift test keeps the prose free and the
 code true.
+
+## Served contract
+
+### The emitter is the React module's
+
+The served contract's emitter reads any sealed surface and could live in
+the main module, but it writes `x-surface.widget`, the Form API mapping
+said for a renderer, and the roadmap rejects widget vocabulary in the
+contract. So it is `data_surface_react`'s, and a widget-free emitter in
+the main module stays roadmap item 4. (`ContractEmitter`)
+
+### A served contract is never stored
+
+The contract response carries the surface's, the option lists' and the
+access answer's cacheability as HTTP cache metadata, and max-age 0: its
+values are what a target loaded, and a target does not say how long that
+holds, so a cached contract would serve values from before a save.
+(`SurfaceApiController::respond()`)
+
+### Stale paths travel, stored values do not
+
+A stale value is served as `null`, its path listed under `stale`; a
+client sends the paths back, and an empty answer at one of them stands
+for the stored value again. It is the situation form's stale marker,
+said in JSON, and it keeps a stored value off the wire whether or not a
+person may still choose it. (`ServedSituations::keepStale()`)
+
+### Required means must hold a value
+
+A key the surface requires is in the schema's `required`, whatever its
+default: the surface's meaning, which a form's required marker shows.
+The Tool API bridge copies the same flag unchanged (see "Required is
+the surface's, and defaults are what is stored"); the served contract's
+`values` always carry every key, so presence is never the question
+there. (`ContractEmitter::frame()`)

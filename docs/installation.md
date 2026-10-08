@@ -74,6 +74,7 @@ of them is meant to replace core's own forms on a production site.
 | `data_surface_demo_node_type_tool` | A content type add tool whose input is the content type surface, compared with Tool Belt's bundle tool once another module has extended content types. Needs Tool. |
 | `data_surface_examples` | One surface that grows, one idea per example, each example a form beside the contract it emits, at `/surface-examples`: declaring, refining, parts, and the same contract as a tool. Needs Tool. |
 | `data_surface_examples_compliance` | Example 4: one alter class that changes example 3's surface, and nothing else. |
+| `data_surface_react` | The served contract: a situation as JSON Schema with refine and validate endpoints, and a React form rendered from it at `/surface-react/{surface}/{situation}`. Its built app is committed, so it needs no Node. |
 
 Each submodule's own README says what it shows, how to try it, and which
 tests gate it.
@@ -89,6 +90,13 @@ when you reach example 4.
 ```bash
 drush pm:install data_surface_examples
 drush pm:install data_surface_examples_compliance
+```
+
+With `data_surface_react` enabled as well, the landing page links each
+of examples 1 to 3 in React, rendered from the contract it serves:
+
+```bash
+drush pm:install data_surface_react
 ```
 
 `data_surface_demo_node_type` also defines

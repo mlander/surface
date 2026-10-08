@@ -86,7 +86,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
   modules/custom/data_surface'
 ```
 
-The baseline as of this writing: **686 tests, 6206 assertions, 0 errors,
+The baseline as of this writing: **706 tests, 6751 assertions, 0 errors,
 3 failures** — the three tests of the one class below. The test and
 assertion counts drift upward as work lands and are not the thing to
 check. **No test may error,
@@ -135,6 +135,36 @@ npx --yes cspell@8 --config /tmp/merged.json --no-progress --no-summary "**"
 ```
 
 `scripts/check.sh` bakes all four in; read it rather than retyping them.
+
+## The React submodule and its app
+
+`modules/data_surface_react` is the served contract: `ContractEmitter`
+turns a sealed surface and its values into JSON Schema 2020-12 with an
+`x-surface` keyword per property; `/surface-api/{surface}/{situation}`
+serves it, `/refine` re-narrows it (the AJAX rebuild's equivalent, the
+form builder's discard rule included) and `/validate` runs the pipeline
+dry; `/surface-react/{surface}/{situation}` renders it with a React app.
+`docs/served-contract.md` has the format, `docs/decisions.md` (Served
+contract) the four points it settled.
+
+The app is `modules/data_surface_react/app/`: Vite, React 18 and
+TypeScript, every version pinned exactly. Run npm on the host, never
+inside ddev:
+
+```
+cd modules/data_surface_react/app
+npm ci          # node_modules/ is ignored
+npm test        # Vitest + React Testing Library
+npm run build   # tsc --noEmit, then dist/app.js and dist/app.css
+```
+
+**`dist/` is committed**, so the module works on a site with no Node,
+and it must be rebuilt and committed with every change under `app/`.
+Nothing checks that the two agree (a timestamp test would be fragile),
+so the rule is this sentence. `npm test` is not part of
+`scripts/check.sh`; run it beside the check when `app/` changed.
+`node_modules/` is excluded from phpcs and phpstan, and cspell skips it,
+`dist/` and `package-lock.json`.
 
 ## Conventions that are load-bearing
 
@@ -201,7 +231,7 @@ src/Form/                Form builder, host traits, the situation form.
 src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constraints.
 src/Options/             Option sets, the resolver plugin base and manager.
 src/Refinement/          Narrowing and choice sets.
-modules/                 Nine experimental submodules; each has its own README.
+modules/                 Ten experimental submodules; each has its own README.
 tests/src/               Unit, Kernel, Functional, FunctionalJavascript.
 docs/ scripts/           Published documentation; check.sh and the generator.
 ```
