@@ -116,6 +116,7 @@ pre.code .t-n { color: var(--refine); font-weight: 500; }
 #gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
 #gl.grabbing { cursor: grabbing; }
 #gl.pointing { cursor: pointer; }
+#gl.panning { cursor: move; }
 #labels { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .lb { position: absolute; left: 0; top: 0; white-space: nowrap; will-change: transform, opacity; transition: opacity .25s linear; }
 .lb-major { font: 600 12px/1 var(--f-body); color: var(--ink); background: var(--panel); border: 1px solid var(--line);
@@ -291,9 +292,9 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
   </aside>
 
   <main class="stage" id="stage">
-    <canvas id="gl" tabindex="0" aria-label="3D model of a surface, its subsurfaces and the doors that read its contract. Arrow keys turn it, plus and minus zoom."></canvas>
+    <canvas id="gl" tabindex="0" aria-label="3D model of a surface, its subsurfaces and the doors that read its contract. Arrow keys turn it, Shift with arrow keys moves it, plus and minus zoom."></canvas>
     <div id="labels"></div>
-    <div class="hint" id="hint">Drag to turn. Scroll or pinch to zoom.<br>Pick a door to see what it reads.</div>
+    <div class="hint" id="hint">Drag to turn. Shift-drag, right-drag or two fingers to move.<br>Scroll or pinch to zoom. Pick a door to see what it reads.</div>
     <div class="fallback">The 3D model needs WebGL, which this browser did not provide. The layers are still described in the panel.</div>
   </main>
 </div>
@@ -987,6 +988,20 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
   function clampGoal() {
     goal.ph = Math.max(0.22, Math.min(1.46, goal.ph));
     goal.r = Math.max(7, Math.min(110, goal.r));
+    goal.tx = Math.max(-52, Math.min(26, goal.tx));
+    goal.ty = Math.max(-3, Math.min(14, goal.ty));
+    goal.tz = Math.max(-26, Math.min(22, goal.tz));
+  }
+  /* Slide the point the camera looks at across the screen plane, so the model follows the hand. */
+  function pan(dx, dy) {
+    var fit = Math.max(1, 1.5 / camera.aspect);
+    var perPx = 2 * goal.r * fit * Math.tan(camera.fov * Math.PI / 360) / Math.max(1, stage.clientHeight);
+    var st = Math.sin(goal.th), ct = Math.cos(goal.th), sp = Math.sin(goal.ph), cp = Math.cos(goal.ph);
+    goal.tx += (-dx * ct - dy * cp * st) * perPx;
+    goal.ty += dy * sp * perPx;
+    goal.tz += (dx * st - dy * cp * ct) * perPx;
+    clampGoal();
+    cam.tx = goal.tx; cam.ty = goal.ty; cam.tz = goal.tz;
   }
   function resize() {
     var w = stage.clientWidth, h = stage.clientHeight;
@@ -997,7 +1012,7 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
   if (window.ResizeObserver) { new ResizeObserver(resize).observe(stage); } else { window.addEventListener('resize', resize); }
   resize();
 
-  var pointers = {}, nPtr = 0, drag = null, pinch = 0, touched = false;
+  var pointers = {}, nPtr = 0, drag = null, pinch = 0, mid = null, touched = false;
   var ray = new T.Raycaster(), ndc = new T.Vector2();
   function pick(e) {
     var r = canvas.getBoundingClientRect();
@@ -1009,21 +1024,33 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
   function firstTouch() {
     if (!touched) { touched = true; document.getElementById('hint').style.opacity = '0'; }
   }
+  canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
   canvas.addEventListener('pointerdown', function (e) {
     pointers[e.pointerId] = { x: e.clientX, y: e.clientY }; nPtr = Object.keys(pointers).length;
     try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* synthetic pointers */ }
-    if (nPtr === 1) { drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: Date.now() }; canvas.classList.add('grabbing'); }
-    else { drag = null; pinch = 0; }
+    if (nPtr === 1) {
+      var moving = e.button === 1 || e.button === 2 || e.shiftKey || e.ctrlKey || e.metaKey;
+      if (e.button === 1) { e.preventDefault(); }
+      drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: Date.now(), pan: moving };
+      canvas.classList.add(moving ? 'panning' : 'grabbing');
+    }
+    else { drag = null; pinch = 0; mid = null; }
   });
   canvas.addEventListener('pointermove', function (e) {
     if (pointers[e.pointerId]) { pointers[e.pointerId].x = e.clientX; pointers[e.pointerId].y = e.clientY; }
     if (nPtr === 2) {
-      var k = Object.keys(pointers), d = Math.hypot(pointers[k[0]].x - pointers[k[1]].x, pointers[k[0]].y - pointers[k[1]].y);
+      /* two fingers: spreading zooms, moving together slides the model */
+      var k = Object.keys(pointers), a = pointers[k[0]], b = pointers[k[1]];
+      var d = Math.hypot(a.x - b.x, a.y - b.y), cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
       if (pinch) { goal.r *= pinch / d; clampGoal(); }
-      pinch = d; firstTouch();
+      if (mid) { pan(cx - mid.x, cy - mid.y); }
+      pinch = d; mid = { x: cx, y: cy }; firstTouch();
     } else if (drag) {
-      goal.th -= (e.clientX - drag.x) * 0.006; goal.ph -= (e.clientY - drag.y) * 0.005; clampGoal();
-      cam.th = goal.th; cam.ph = goal.ph;
+      if (drag.pan) { pan(e.clientX - drag.x, e.clientY - drag.y); }
+      else {
+        goal.th -= (e.clientX - drag.x) * 0.006; goal.ph -= (e.clientY - drag.y) * 0.005; clampGoal();
+        cam.th = goal.th; cam.ph = goal.ph;
+      }
       drag.x = e.clientX; drag.y = e.clientY;
       if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 6) { firstTouch(); }
     } else if (e.pointerType === 'mouse') {
@@ -1033,12 +1060,12 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
     }
   });
   function up(e) {
-    if (drag && nPtr === 1 && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 6 && Date.now() - drag.t < 500) {
+    if (drag && !drag.pan && nPtr === 1 && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 6 && Date.now() - drag.t < 500) {
       var id = pick(e);
       if (id) { selectDoor(id, true); }
     }
-    delete pointers[e.pointerId]; nPtr = Object.keys(pointers).length; drag = null; pinch = 0;
-    canvas.classList.remove('grabbing');
+    delete pointers[e.pointerId]; nPtr = Object.keys(pointers).length; drag = null; pinch = 0; mid = null;
+    canvas.classList.remove('grabbing'); canvas.classList.remove('panning');
   }
   canvas.addEventListener('pointerup', up);
   canvas.addEventListener('pointercancel', up);
@@ -1047,7 +1074,11 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
   }, { passive: false });
   canvas.addEventListener('keydown', function (e) {
     var k = e.key, used = true;
-    if (k === 'ArrowLeft') { goal.th -= 0.14; } else if (k === 'ArrowRight') { goal.th += 0.14; }
+    if (e.shiftKey && k.indexOf('Arrow') === 0) {
+      var step = Math.max(24, stage.clientHeight * 0.06);
+      pan(k === 'ArrowLeft' ? step : k === 'ArrowRight' ? -step : 0, k === 'ArrowUp' ? step : k === 'ArrowDown' ? -step : 0);
+    }
+    else if (k === 'ArrowLeft') { goal.th -= 0.14; } else if (k === 'ArrowRight') { goal.th += 0.14; }
     else if (k === 'ArrowUp') { goal.ph -= 0.1; } else if (k === 'ArrowDown') { goal.ph += 0.1; }
     else if (k === '+' || k === '=') { goal.r *= 0.9; } else if (k === '-') { goal.r *= 1.1; }
     else { used = false; }
