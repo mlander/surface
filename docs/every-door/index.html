@@ -1,0 +1,1155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="An interactive 3D model of a data surface, its subsurfaces and alters, and how one contract feeds Form API, a headless client, Tool API, MCP, agents, ECA and FlowDrop.">
+<style>
+/* What a host page would otherwise supply. [hidden] has to win over the layout rules below. */
+:root { color-scheme: light; }
+body { margin: 0; }
+[hidden] { display: none !important; }
+</style>
+<title>One Surface, Every Door</title>
+<!-- cspell:ignore lerp metalness Raycaster -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a one-screen app. An exploded architectural model fills the stage; a narrow reading column beside it names each layer. */
+:root {
+  --bg: #E8EDF1;
+  --bg-2: #D9E1E8;
+  --panel: #F5F8FA;
+  --ink: #12202C;
+  --ink-2: #4B5C6B;
+  --line: #B7C4CF;
+  --slab: #C3CED8;
+  --owner: #0A6EB4;
+  --part: #1B978F;
+  --alter: #D48F12;
+  --refine: #C93A6E;
+  --contract: #2C95E0;
+  --old: #7B8998;
+  --code-bg: #E9EEF2;
+  --f-display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E151B; --bg-2: #16212B; --panel: #131C24; --ink: #E6EDF2; --ink-2: #9DB1C0;
+    --line: #2E3E4C; --slab: #25333F; --owner: #2F93DB; --part: #35BDB4; --alter: #EDB23C;
+    --refine: #EE5C8F; --contract: #7CC8FF; --old: #73869A; --code-bg: #0B1116; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E151B; --bg-2: #16212B; --panel: #131C24; --ink: #E6EDF2; --ink-2: #9DB1C0;
+  --line: #2E3E4C; --slab: #25333F; --owner: #2F93DB; --part: #35BDB4; --alter: #EDB23C;
+  --refine: #EE5C8F; --contract: #7CC8FF; --old: #73869A; --code-bg: #0B1116; color-scheme: dark;
+}
+
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--f-body); overflow: hidden; }
+* { box-sizing: border-box; }
+
+.app { height: 100%; display: grid; grid-template-columns: minmax(320px, 410px) minmax(0, 1fr); }
+
+/* Reading column */
+.panel { background: var(--panel); border-right: 1px solid var(--line); overflow-y: auto; min-width: 0;
+  padding-block: 22px 28px; padding-inline: 22px; display: flex; flex-direction: column; gap: 18px; }
+.eyebrow { font: 500 11px/1 var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); margin: 0; }
+h1 { font: 750 30px/1.02 var(--f-display); font-stretch: 122%; letter-spacing: -.01em; margin: 6px 0 0; text-wrap: balance; }
+h2 { font: 700 19px/1.15 var(--f-display); font-stretch: 112%; margin: 0; text-wrap: balance; }
+h3 { font: 500 11px/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); margin: 0; }
+p { margin: 0; max-width: 62ch; }
+.muted { color: var(--ink-2); font-size: 13.5px; }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tab { font: 500 13px/1 var(--f-body); color: var(--ink); background: transparent; border: 1px solid var(--line);
+  padding: 8px 11px; border-radius: 3px; cursor: pointer; }
+.tab:hover { border-color: var(--ink-2); }
+.tab[aria-pressed="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+button:focus-visible, canvas:focus-visible { outline: 2px solid var(--contract); outline-offset: 2px; }
+
+.chapter { display: flex; flex-direction: column; gap: 11px; }
+pre.code { margin: 0; background: var(--code-bg); border-left: 2px solid var(--line); padding: 11px 12px;
+  font: 400 11.5px/1.55 var(--f-mono); overflow-x: auto; white-space: pre; tab-size: 2; color: var(--ink); }
+pre.code .t-a { color: var(--owner); font-weight: 500; }
+pre.code .t-s { color: var(--part); }
+pre.code .t-c { color: var(--ink-2); }
+pre.code .t-n { color: var(--refine); font-weight: 500; }
+
+/* Try it */
+.try { border-top: 1px solid var(--line); padding-top: 16px; display: flex; flex-direction: column; gap: 11px; }
+.try-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.try-row span { font: 400 12.5px/1 var(--f-mono); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
+.seg button { font: 500 13px/1 var(--f-body); background: transparent; color: var(--ink); border: 0; padding: 8px 13px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--owner); color: #fff; }
+
+/* Doors */
+.door-list { display: flex; flex-direction: column; gap: 5px; }
+.door-btn { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; text-align: left; width: 100%;
+  font: 500 14px/1.2 var(--f-body); color: var(--ink); background: transparent; border: 1px solid transparent;
+  border-bottom-color: var(--line); padding: 8px 6px; cursor: pointer; }
+.door-btn small { font: 400 11px/1 var(--f-mono); color: var(--ink-2); white-space: nowrap; }
+.door-btn:hover { background: var(--code-bg); }
+.door-btn[aria-pressed="true"] { border-color: var(--contract); background: var(--code-bg); }
+.door-detail { display: flex; flex-direction: column; gap: 9px; border: 1px solid var(--line); padding: 13px; background: var(--bg); }
+.door-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.pill { font: 500 10.5px/1 var(--f-mono); letter-spacing: .06em; text-transform: uppercase; padding: 5px 7px; border-radius: 2px;
+  border: 1px solid var(--part); color: var(--part); white-space: nowrap; }
+.pill.via { border-color: var(--line); color: var(--ink-2); }
+
+.legend { border-top: 1px solid var(--line); padding-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px 14px;
+  font-size: 12.5px; color: var(--ink-2); margin: 0; padding-left: 0; list-style: none; }
+.legend li { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.sw { width: 12px; height: 12px; flex: none; background: var(--c); }
+.sw.dot { border-radius: 50%; width: 9px; height: 9px; margin-inline: 1.5px; }
+
+/* Stage */
+.stage { position: relative; min-width: 0; min-height: 0; overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 70%, var(--bg-2) 0%, var(--bg) 62%); }
+#gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+#gl.grabbing { cursor: grabbing; }
+#gl.pointing { cursor: pointer; }
+#labels { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.lb { position: absolute; left: 0; top: 0; white-space: nowrap; will-change: transform, opacity; transition: opacity .25s linear; }
+.lb-major { font: 600 12px/1 var(--f-body); color: var(--ink); background: var(--panel); border: 1px solid var(--line);
+  padding: 5px 8px 5px 7px; border-left: 3px solid var(--c, var(--ink-2)); }
+.lb-mid, .lb-note { font: 500 11px/1 var(--f-mono); color: var(--ink); background: var(--panel); border: 1px solid var(--line); padding: 4px 6px; }
+.lb-minor { font: 500 10.5px/1 var(--f-mono); color: var(--ink);
+  text-shadow: 0 0 3px var(--bg), 0 0 3px var(--bg), 0 0 6px var(--bg), 0 0 6px var(--bg); }
+.lb-door { font: 600 12px/1 var(--f-body); color: var(--ink); background: var(--panel);
+  border: 1px solid var(--line); padding: 5px 8px; border-radius: 0; }
+button.lb-door { pointer-events: auto; cursor: pointer; }
+button.lb-door:hover, button.lb-door.on { border-color: var(--contract); box-shadow: inset 0 -2px 0 var(--contract); }
+.lb-door.t2 { font-weight: 500; font-size: 11.5px; }
+.lb-door.shut { border-style: dashed; color: var(--ink-2); }
+.lb-title { font: 700 15px/1.1 var(--f-display); font-stretch: 114%; color: var(--ink);
+  text-shadow: 0 0 4px var(--bg), 0 0 4px var(--bg), 0 0 8px var(--bg); }
+.table-wrap { overflow-x: auto; }
+table.cmp { border-collapse: collapse; width: 100%; font-size: 13px; }
+table.cmp th, table.cmp td { text-align: left; vertical-align: top; padding: 7px 8px 7px 0; border-bottom: 1px solid var(--line); }
+table.cmp thead th { font: 500 11px/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); }
+table.cmp tbody th { font-weight: 500; color: var(--ink-2); }
+table.cmp td:last-child { color: var(--owner); font-weight: 600; }
+.hint { position: absolute; right: 16px; bottom: 14px; font: 400 11.5px/1.3 var(--f-mono); color: var(--ink-2); text-align: right;
+  pointer-events: none; transition: opacity .6s; }
+.fallback { position: absolute; inset: 0; display: none; place-items: center; padding: 24px; text-align: center; color: var(--ink-2); }
+.stage.flat-only .fallback { display: grid; }
+.stage.flat-only .hint { display: none; }
+
+@media (max-width: 820px) {
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 46% minmax(0, 1fr); }
+  .stage { order: -1; }
+  .panel { border-right: 0; border-top: 1px solid var(--line); padding-block: 16px 24px; padding-inline: 16px; gap: 15px; }
+  h1 { font-size: 23px; }
+  .lb-major, .lb-door { font-size: 10.5px; padding: 4px 6px; }
+  .lb-door.t2 { font-size: 10px; }
+  .lb-title { font-size: 12px; }
+  .lb-minor { font-size: 9.5px; }
+  .hint { font-size: 10.5px; right: 10px; bottom: 8px; }
+}
+@media (prefers-reduced-motion: reduce) { .lb, .hint { transition: none; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="panel">
+    <header>
+      <p class="eyebrow">Data surfaces</p>
+      <h1>One surface, every door</h1>
+    </header>
+
+    <nav class="tabs" aria-label="Layers of the model" id="tabs">
+      <button class="tab" data-ch="all" aria-pressed="true">Whole picture</button>
+      <button class="tab" data-ch="today" aria-pressed="false">Today</button>
+      <button class="tab" data-ch="compare" aria-pressed="false">Side by side</button>
+      <button class="tab" data-ch="surface" aria-pressed="false">Surface</button>
+      <button class="tab" data-ch="parts" aria-pressed="false">Subsurfaces</button>
+      <button class="tab" data-ch="refine" aria-pressed="false">Refinement</button>
+      <button class="tab" data-ch="alter" aria-pressed="false">Alters</button>
+      <button class="tab" data-ch="contract" aria-pressed="false">Contract</button>
+      <button class="tab" data-ch="doors" aria-pressed="false">Doors</button>
+    </nav>
+
+    <section class="chapter" id="ch-all">
+      <h2>Declare the shape once</h2>
+      <p>A surface says what a thing takes: its keys, their types and their limits. It says nothing about forms, routes or tools.</p>
+      <p>Everything that needs those values reads the same contract. A form, a React page and an agent accept and refuse exactly the same things.</p>
+      <p class="muted">Turn the model, pick a layer above, or change a value below and watch it reach every door.</p>
+    </section>
+
+    <section class="chapter" id="ch-today" hidden>
+      <h2>Today: written twice, and they never meet</h2>
+      <p>A form array describes the inputs with their callbacks, its validation and its submit handler. A tool plugin lists the same inputs again, with its own constraints and its own save.</p>
+      <p>Each is real work, and neither reads the other. Another module alters the form. The tool never hears about it, so a call with 150 is saved although the form would refuse it. To close the gap the module has to write its rule a second time.</p>
+      <p>A headless admin has nothing to draw from. The form's rules are PHP callbacks, and the tool's inputs carry no dependencies between keys.</p>
+      <pre class="code" data-code="today"></pre>
+      <p class="muted">Change the licence below. Only the form's doors light up.</p>
+    </section>
+
+    <section class="chapter" id="ch-compare" hidden>
+      <h2>Side by side</h2>
+      <p>On the left, the inputs are written twice and nothing is shared. On the right, one declaration that every door reads before anything is submitted.</p>
+      <div class="table-wrap">
+        <table class="cmp">
+          <thead><tr><th></th><th>Today</th><th>With a surface</th></tr></thead>
+          <tbody>
+            <tr><th>The inputs are described</th><td>twice</td><td>once</td></tr>
+            <tr><th>Another module's rule reaches</th><td>the form, unless written again</td><td>every door</td></tr>
+            <tr><th>The form and the tool share</th><td>nothing</td><td>the whole contract</td></tr>
+            <tr><th>A dependency between keys lives in</th><td>a PHP callback</td><td>the contract</td></tr>
+            <tr><th>A headless admin</th><td>has nothing to draw from</td><td>draws from the schema</td></tr>
+            <tr><th>A new consumer</th><td>writes its own copy</td><td>reads the contract</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="chapter" id="ch-surface" hidden>
+      <h2>The surface</h2>
+      <p>One class declares the inputs. Each key is an ordinary typed data definition with ordinary constraints.</p>
+      <p>A target underneath loads the current values and commits the new ones, so the surface never knows where they are stored.</p>
+      <pre class="code" data-code="surface"></pre>
+    </section>
+
+    <section class="chapter" id="ch-parts" hidden>
+      <h2>Subsurfaces</h2>
+      <p>A surface can dock another surface at one of its keys. The part keeps its own keys, refinement and validation, and the parent cannot reach into it. That is what makes Contact reusable anywhere.</p>
+      <p>A slot is a key whose part depends on another value. Pricing decides whether the free ticket or the paid ticket is docked.</p>
+      <pre class="code" data-code="parts"></pre>
+    </section>
+
+    <section class="chapter" id="ch-refine" hidden>
+      <h2>Refinement</h2>
+      <p>Some keys are only fully known once another value is. A refiner is a method that names the key it narrows. Its parameters are the keys it watches, so the signature is the dependency.</p>
+      <p>A refiner may only tighten what was declared. Room narrows to the venue's rooms, and capacity stops at the room's seats.</p>
+      <pre class="code" data-code="refine"></pre>
+    </section>
+
+    <section class="chapter" id="ch-alter" hidden>
+      <h2>Others get a say</h2>
+      <p>Another module can add keys to a surface it does not own, stored under its own name. It can tighten the owner's keys and say where its fieldset is drawn.</p>
+      <p>Here Compliance adds a licence and stewards. Without a licence it holds capacity at 100. The owner's class is not touched.</p>
+      <pre class="code" data-code="alter"></pre>
+    </section>
+
+    <section class="chapter" id="ch-contract" hidden>
+      <h2>The contract</h2>
+      <p>Ask the surface with the values so far and it answers with its shape as it stands: JSON Schema, with labelled choices as <code>oneOf</code> and slots as <code>if</code> / <code>then</code>.</p>
+      <p>Nothing in it depends on who is asking.</p>
+      <pre class="code" data-code="contract"></pre>
+    </section>
+
+    <section class="chapter" id="ch-doors" hidden>
+      <h2>Every door</h2>
+      <p>Three things read the contract directly. Everything else walks through one of them, so a new consumer costs the surface nothing.</p>
+      <h3>Read the contract directly</h3>
+      <div class="door-list" id="doors-1"></div>
+      <h3>Walk through one of those</h3>
+      <div class="door-list" id="doors-2"></div>
+      <div class="door-detail" id="door-detail" hidden>
+        <div class="door-head"><h2 id="dd-name"></h2><span class="pill" id="dd-pill"></span></div>
+        <p id="dd-body"></p>
+        <pre class="code" id="dd-sample"></pre>
+      </div>
+    </section>
+
+    <section class="try" aria-label="Change a value">
+      <h3>Change a value</h3>
+      <div class="try-row"><span>pricing</span>
+        <div class="seg" role="group" aria-label="Pricing">
+          <button id="pricing-free" data-set="pricing" data-val="free" aria-pressed="true">Free</button>
+          <button id="pricing-paid" data-set="pricing" data-val="paid" aria-pressed="false">Paid</button>
+        </div>
+      </div>
+      <div class="try-row"><span>licence</span>
+        <div class="seg" role="group" aria-label="Event licence">
+          <button id="licence-none" data-set="licence" data-val="" aria-pressed="true">None</button>
+          <button id="licence-2048" data-set="licence" data-val="2048" aria-pressed="false">2048</button>
+        </div>
+      </div>
+      <pre class="code" id="readout" aria-live="polite"></pre>
+      <p class="muted">The contract changes once. Every door gets the same answer.</p>
+    </section>
+
+    <ul class="legend" aria-label="Legend">
+      <li><span class="sw" style="--c: var(--owner)"></span>Owner's surface</li>
+      <li><span class="sw" style="--c: var(--part)"></span>Subsurface</li>
+      <li><span class="sw" style="--c: var(--alter)"></span>Another module</li>
+      <li><span class="sw" style="--c: var(--refine)"></span>Refinement</li>
+      <li><span class="sw" style="--c: var(--old)"></span>Written by hand today</li>
+      <li><span class="sw dot" style="--c: var(--contract)"></span>Contract going out</li>
+      <li><span class="sw dot" style="--c: var(--ink)"></span>Values coming in</li>
+    </ul>
+  </aside>
+
+  <main class="stage" id="stage">
+    <canvas id="gl" tabindex="0" aria-label="3D model of a surface, its subsurfaces and the doors that read its contract. Arrow keys turn it, plus and minus zoom."></canvas>
+    <div id="labels"></div>
+    <div class="hint" id="hint">Drag to turn. Scroll or pinch to zoom.<br>Pick a door to see what it reads.</div>
+    <div class="fallback">The 3D model needs WebGL, which this browser did not provide. The layers are still described in the panel.</div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- content ---------- */
+  var CODE = {
+    today: `// 1. The form
+$form['capacity'] = [
+  '#type' => 'number',
+  '#max' => $seats,
+  '#ajax' => ['callback' => '::refreshCapacity'],
+];
+
+// 2. Another module, heard by the form only
+function compliance_form_alter(&$form, $form_state, $form_id) {
+  $form['capacity']['#element_validate'][] = 'compliance_cap';
+}
+
+// 3. The tool, written again
+'capacity' => new InputDefinition(
+  data_type: 'integer',
+  label: new TranslatableMarkup('Capacity'),
+  constraints: ['Range' => ['min' => 1, 'max' => 1000]],
+),`,
+    surface: `#[Surface('registration.step3', target: RegistrationStep3Target::class)]
+final class RegistrationStep3Surface implements SurfaceInterface {
+
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('title', 'string', t('Event title'))
+      ->setRequired(TRUE);
+    $inputs->add('venue', 'string', t('Venue'))
+      ->addConstraint('LabeledChoice', ['choices' => Venues::VENUES]);
+    $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
+      ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
+    // open, room, pricing
+  }
+
+}`,
+    parts: `$inputs->attach('contact', ContactSurface::class)
+  ->setLabel(t('Contact'));
+
+$inputs->attachBy('ticket', by: 'pricing')
+  ->setLabel(t('Ticket'));
+
+#[SurfaceVariant(of: RegistrationStep3Surface::class, key: 'ticket', value: 'paid')]
+final class PaidTicketSurface implements SurfaceInterface {
+  // price, currency
+}`,
+    refine: `#[RefinesInput('room')]
+public static function roomInVenue(
+  DataDefinitionInterface $room,
+  string $venue,
+): DataDefinitionInterface {
+  return $room->addConstraint('LabeledChoice', [
+    'choices' => Venues::rooms($venue),
+  ]);
+}`,
+    alter: `#[AltersSurface(RegistrationStep3Surface::class)]
+final class RegistrationComplianceAlter implements SurfaceAlterInterface {
+
+  public function alterInputs(ShapeAdditionsInterface $inputs): void {
+    $inputs->add('licence', 'string', $this->t('Event licence'));
+    $inputs->add('stewards', 'integer', $this->t('Stewards'), default: 1);
+    $inputs->describe(
+      'third_party_settings.data_surface_examples_compliance',
+      label: $this->t('Compliance'),
+      after: 'capacity',
+    );
+  }
+
+  #[RefinesInput('capacity')]
+  public function capacityWithoutLicence(
+    DataDefinition $capacity,
+    ?string $licence,
+  ): DataDefinition { /* stops at 100 */ }
+
+}`,
+    contract: `{
+  "properties": {
+    "capacity": {
+      "type": ["integer", "null"],
+      "minimum": 1, "maximum": 100,
+      "x-surface": { "refined": true,
+        "dependsOn": ["room", "third_party_settings...licence"] }
+    }
+  },
+  "allOf": [{
+    "if":   { "properties": { "pricing": { "const": "paid" } } },
+    "then": { "properties": { "ticket": {
+      "required": ["price", "currency"] } } }
+  }]
+}`
+  };
+
+  var DOORS = [
+    { id: 'form', name: 'Form API', tier: 1, ang: 152, shipped: true,
+      body: 'Each key is drawn by a widget chosen from its definition. A key that something watches gets AJAX, and only its dependents are replaced. An error lands under the field that caused it.',
+      sample: "$form['surface'] = $builder->buildSurfaceForm(\n  $surface, $values, $form_state);" },
+    { id: 'schema', name: 'JSON Schema', tier: 1, ang: 103, shipped: true,
+      body: 'The contract is served as JSON Schema 2020-12. Post the values so far to refine and it comes back narrowed. Validate and submit refuse exactly what the form refuses.',
+      sample: "GET  /surface-api/registration.step3/configure\nPOST /surface-api/registration.step3/configure/refine\nPOST /surface-api/registration.step3/configure/validate\nPOST /surface-api/registration.step3/configure/submit" },
+    { id: 'tool', name: 'Tool API', tier: 1, ang: 45, shipped: true,
+      body: 'Every situation of a surface is derived as a tool. Its inputs, required flags and constraints are the contract\'s, so nothing is declared twice.',
+      sample: "data_surface:registration.step3:configure" },
+    { id: 'settings', name: 'Settings pages', tier: 2, ang: 171, via: 'form', shipped: true,
+      body: 'A route names a surface and a situation. The page, its access check and its save handler follow from those two names.',
+      sample: "defaults:\n  _form: DataSurfaceSituationForm\n  _data_surface_surface: RegistrationStep3Surface\n  _data_surface_situation: configure" },
+    { id: 'plugin', name: 'Plugin forms', tier: 2, ang: 151, via: 'form', shipped: true,
+      body: 'A formatter, a block or any plugin with settings names a surface, or is one. Its configuration form is drawn from it.',
+      sample: "#[UsesSurface]\nfinal class DataSurfaceDemoFormatter extends FormatterBase {\n  public static function defineInputs(ShapeInterface $inputs): void {}\n}" },
+    { id: 'headless', name: 'Headless', tier: 2, ang: 119, via: 'schema', shipped: true,
+      body: 'A React app that knows nothing about this surface draws it from the schema: selects from oneOf, slots from if / then, order and grouping from the x-surface hints.',
+      sample: "/surface-react/registration.step3/configure" },
+    { id: 'drush', name: 'Drush', tier: 2, ang: 90, via: 'tool', shipped: true,
+      body: 'The command line describes the tool and calls it. A refused value comes back with the message a person would see on the form.',
+      sample: "drush tool:info data_surface:registration.step3:configure\ndrush tool:run data_surface:registration.step3:configure \\\n  --uid=1 --input='{\"capacity\": 150}'\n\n// capacity: This value should be between 1 and 100." },
+    { id: 'mcp', name: 'MCP', tier: 2, ang: 77, via: 'tool', shipped: false,
+      body: 'An MCP server that lists Tool API tools lists this one, input schema included. The client sees the same required keys and the same ceilings.',
+      sample: "tools/list  ->  data_surface:registration.step3:configure\n                inputSchema: the contract" },
+    { id: 'agents', name: 'AI agents', tier: 2, ang: 50, via: 'tool', shipped: false,
+      body: 'An agent given the tool reads what it takes before calling it. When a value is refused, the reason comes back in words, so the agent can correct itself.',
+      sample: "// agent sends capacity 150, no licence\n// capacity: This value should be between 1 and 100." },
+    { id: 'eca', name: 'ECA', tier: 2, ang: 37, via: 'tool', shipped: false,
+      body: 'An action that runs the tool is configured from the same definitions. A model cannot save what the form would refuse.',
+      sample: "event  ->  condition  ->  run tool\n                          data_surface:registration.step3:configure" },
+    { id: 'flow-drop', name: 'FlowDrop', tier: 2, ang: 24, via: 'tool', shipped: false,
+      body: 'A workflow node that runs the tool takes its inputs from the tool\'s definitions, so the node asks for what the surface asks for.',
+      sample: "node: run tool\n  inputs: title, venue, room, capacity, pricing, ticket, contact" }
+  ];
+  var DOOR = {};
+  DOORS.forEach(function (d) { DOOR[d.id] = d; });
+
+  var CHAPTERS = {
+    today:    { focus: ['today'], solo: true, cam: { tx: -27.2, ty: 1.4, tz: 0.2, th: 0.08, ph: 0.95, r: 36 } },
+    compare:  { focus: null, cam: { tx: -12.5, ty: 0.6, tz: 1.2, th: 0.0, ph: 0.9, r: 62 } },
+    all:      { focus: ['surface', 'target', 'parts', 'refine', 'alter', 'contract', 'doors'], cam: { tx: 0, ty: 1.8, tz: -1.5, th: 0.18, ph: 0.97, r: 30 } },
+    surface:  { focus: ['surface', 'target'], cam: { tx: -0.6, ty: 1.0, tz: 1.6, th: 0.22, ph: 0.92, r: 16 } },
+    parts:    { focus: ['surface', 'parts'], cam: { tx: 0.6, ty: 1.9, tz: 1.6, th: 0.34, ph: 0.98, r: 11.5 } },
+    refine:   { focus: ['surface', 'parts', 'refine'], cam: { tx: -1.6, ty: 1.9, tz: 0.2, th: -0.22, ph: 0.9, r: 11 } },
+    alter:    { focus: ['surface', 'alter'], cam: { tx: 1.5, ty: 2.3, tz: -0.7, th: 0.62, ph: 0.98, r: 11 } },
+    contract: { focus: ['surface', 'parts', 'alter', 'refine', 'contract'], cam: { tx: 0, ty: 2.9, tz: 0, th: 0.3, ph: 1.16, r: 15.5 } },
+    doors:    { focus: ['contract', 'doors', 'surface'], cam: { tx: 0, ty: 1.4, tz: -4.6, th: 0.2, ph: 0.74, r: 31 } }
+  };
+
+  var state = { pricing: 'free', licence: '' };
+  var chapter = 'all';
+  var selected = null;
+  var gl = null; // filled in when WebGL is available
+
+  /* ---------- panel ---------- */
+  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function hl(src) {
+    return esc(src).replace(/(#\[[^\]\n]*\])|(\/\/[^\n]*|\/\*.*?\*\/)|('[^'\n]*'|"[^"\n]*")/g, function (m, a, c) {
+      return '<span class="' + (a ? 't-a' : c ? 't-c' : 't-s') + '">' + m + '</span>';
+    });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('[data-code]'), function (el) {
+    el.innerHTML = hl(CODE[el.getAttribute('data-code')]);
+  });
+
+  function setChapter(id) {
+    chapter = id;
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (b) {
+      b.setAttribute('aria-pressed', String(b.getAttribute('data-ch') === id));
+    });
+    Object.keys(CHAPTERS).forEach(function (k) { document.getElementById('ch-' + k).hidden = k !== id; });
+    if (gl) { gl.focus(CHAPTERS[id].focus, CHAPTERS[id].solo); gl.fly(CHAPTERS[id].cam); }
+  }
+  document.getElementById('tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('.tab');
+    if (b) { setChapter(b.getAttribute('data-ch')); }
+  });
+
+  DOORS.forEach(function (d) {
+    var b = document.createElement('button');
+    b.className = 'door-btn'; b.id = 'door-btn-' + d.id; b.setAttribute('aria-pressed', 'false');
+    b.innerHTML = '<span>' + esc(d.name) + '</span><small>' + (d.via ? 'via ' + esc(DOOR[d.via].name) : 'direct') + '</small>';
+    b.addEventListener('click', function () { selectDoor(d.id, false); });
+    document.getElementById(d.tier === 1 ? 'doors-1' : 'doors-2').appendChild(b);
+  });
+
+  function selectDoor(id, fromScene) {
+    selected = id;
+    var d = DOOR[id];
+    if (fromScene && chapter !== 'doors') { setChapter('doors'); }
+    DOORS.forEach(function (x) {
+      document.getElementById('door-btn-' + x.id).setAttribute('aria-pressed', String(x.id === id));
+    });
+    document.getElementById('door-detail').hidden = false;
+    document.getElementById('dd-name').textContent = d.name;
+    var pill = document.getElementById('dd-pill');
+    pill.textContent = d.shipped ? 'In the examples' : 'Through the tool';
+    pill.className = 'pill' + (d.shipped ? '' : ' via');
+    document.getElementById('dd-body').textContent = d.body +
+      (d.shipped ? '' : ' Not wired in the example modules: it reaches the surface by calling the tool.');
+    document.getElementById('dd-sample').innerHTML = hl(d.sample);
+    if (gl) { gl.select(id); }
+    if (fromScene) {
+      var det = document.getElementById('door-detail');
+      if (det.scrollIntoView) { det.scrollIntoView({ block: 'nearest' }); }
+    }
+  }
+
+  function readout() {
+    var max = state.licence ? 400 : 100;
+    var why = state.licence ? 'the Main hall seats 400' : 'no licence, so Compliance stops it at 100';
+    var ticket = state.pricing === 'paid'
+      ? '{ "required": ["price", "currency"] }'
+      : '{ "properties": { "note": {} } }';
+    var src = '"capacity": { "minimum": 1, "maximum": ' + max + ' }\n// ' + why + '\n"ticket":   ' + ticket +
+      '\n// the ' + state.pricing + ' ticket is docked';
+    document.getElementById('readout').innerHTML = hl(src).replace(': ' + max + ' }', ': <span class="t-n">' + max + '</span> }');
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('[data-set]'), function (b) {
+    b.addEventListener('click', function () {
+      var key = b.getAttribute('data-set'), val = b.getAttribute('data-val');
+      if (state[key] === val) { return; }
+      state[key] = val;
+      Array.prototype.forEach.call(document.querySelectorAll('[data-set="' + key + '"]'), function (o) {
+        o.setAttribute('aria-pressed', String(o.getAttribute('data-val') === val));
+      });
+      readout();
+      if (gl) { gl.state(state, true); }
+    });
+  });
+  readout();
+
+  /* ---------- scene ---------- */
+  var T = window.THREE;
+  var stage = document.getElementById('stage');
+  var canvas = document.getElementById('gl');
+  var labelsEl = document.getElementById('labels');
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var renderer;
+  try {
+    if (!T) { throw new Error('no three'); }
+    renderer = new T.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+  } catch (err) {
+    stage.classList.add('flat-only');
+    return;
+  }
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setClearColor(0x000000, 0);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = T.PCFSoftShadowMap;
+
+  var scene = new T.Scene();
+  var camera = new T.PerspectiveCamera(36, 1, 0.5, 200);
+  var skyLight = new T.HemisphereLight(0xffffff, 0x888888, 0.9);
+  scene.add(skyLight);
+  var sun = new T.DirectionalLight(0xffffff, 0.6);
+  sun.position.set(-5, 24, 13);
+  sun.target.position.set(-14, 0, -2);
+  scene.add(sun.target);
+  sun.castShadow = true;
+  var shadowSize = Math.min(window.innerWidth, window.innerHeight) < 700 ? 2048 : 4096;
+  sun.shadow.mapSize.set(shadowSize, shadowSize);
+  sun.shadow.camera.left = -38; sun.shadow.camera.right = 38;
+  sun.shadow.camera.top = 28; sun.shadow.camera.bottom = -28;
+  sun.shadow.camera.near = 1; sun.shadow.camera.far = 90;
+  sun.shadow.bias = -0.0006;
+  scene.add(sun);
+
+  var items = [];   // everything whose color and opacity the page controls
+  var labels = [];
+  var focusSet = null, solo = false;
+
+  function track(obj, role, tags, base, grp) {
+    var it = { obj: obj, role: role, tags: tags, base: base === undefined ? 1 : base, cur: 1, boost: 0, grp: grp || null, cast: false,
+      keepT: obj.material.transparent === true && obj.material.depthWrite === false };
+    obj.material.transparent = true;
+    items.push(it);
+    return it;
+  }
+  function solid(geo, role, tags, base, grp) {
+    var m = new T.Mesh(geo, new T.MeshStandardMaterial({ roughness: 0.86, metalness: 0 }));
+    m.castShadow = true; m.receiveShadow = true;
+    m.userData.it = track(m, role, tags, base, grp);
+    m.userData.it.cast = true;
+    return m;
+  }
+  function flat(geo, role, tags, base, grp, opts) {
+    var m = new T.Mesh(geo, new T.MeshBasicMaterial(opts || {}));
+    m.userData.it = track(m, role, tags, base, grp);
+    return m;
+  }
+  function box(w, h, d, role, tags, base, grp) { return solid(new T.BoxGeometry(w, h, d), role, tags, base, grp); }
+  function lines(points, role, tags, base, grp, segments) {
+    var g = new T.BufferGeometry().setFromPoints(points);
+    var l = new (segments ? T.LineSegments : T.Line)(g, new T.LineBasicMaterial());
+    l.userData.it = track(l, role, tags, base, grp);
+    return l;
+  }
+  function edges(mesh, tags, grp) {
+    var l = new T.LineSegments(new T.EdgesGeometry(mesh.geometry), new T.LineBasicMaterial());
+    l.userData.it = track(l, 'edge', tags, 0.55, grp);
+    mesh.add(l);
+  }
+  function label(text, parent, x, y, z, tags, level, opts) {
+    opts = opts || {};
+    var el = document.createElement(opts.door ? 'button' : 'div');
+    el.className = 'lb lb-' + level + (opts.cls ? ' ' + opts.cls : '');
+    el.textContent = text;
+    if (opts.c) { el.style.setProperty('--c', 'var(--' + opts.c + ')'); }
+    labelsEl.appendChild(el);
+    var L = { el: el, parent: parent, pos: new T.Vector3(x, y, z), tags: tags, level: level, grp: opts.grp || null, shown: -1 };
+    labels.push(L);
+    return L;
+  }
+  function v(x, y, z) { return new T.Vector3(x, y, z); }
+  function arc(a, b, lift, side) {
+    var mid = a.clone().add(b).multiplyScalar(0.5);
+    mid.y = Math.max(a.y, b.y) + lift;
+    if (side) { mid.z += side; }
+    return new T.QuadraticBezierCurve3(a, mid, b);
+  }
+
+  /* ground and the two arcs the doors stand on */
+  var ground = new T.Mesh(new T.CircleGeometry(90, 64), new T.ShadowMaterial({ opacity: 0.16 }));
+  ground.rotation.x = -Math.PI / 2; ground.position.x = -14; ground.receiveShadow = true; scene.add(ground);
+  [8.5, 14].forEach(function (r) {
+    var pts = [];
+    for (var i = 0; i <= 64; i++) { var a = Math.PI * i / 64; pts.push(v(r * Math.cos(a), 0.02, -r * Math.sin(a))); }
+    scene.add(lines(pts, 'line', ['doors'], 0.7));
+  });
+
+  /* target */
+  var slab = box(9.6, 0.3, 5.8, 'slab', ['target']); slab.position.set(0, 0.15, 0); scene.add(slab); edges(slab, ['target']);
+  label('Target: load, prepare, commit', scene, 3.4, 0.2, 3.25, ['target'], 'major', { c: 'ink-2' });
+  function drum(x, z, tags) {
+    for (var i = 0; i < 3; i++) {
+      var c = solid(new T.CylinderGeometry(0.95, 0.95, 0.34, 40), 'store', tags); c.position.set(x, 0.17 + i * 0.4, z); scene.add(c);
+    }
+  }
+
+  /* the surface plate and its keys */
+  var TOP = 1.525;
+  var plate = box(8.4, 0.25, 5.0, 'owner', ['surface']); plate.position.set(0, 1.4, 0); scene.add(plate); edges(plate, ['surface']);
+  label('Registration surface', scene, -4.2, 1.75, 2.5, ['surface'], 'major', { c: 'owner' });
+  var pins = [];
+  [[-4.0, -2.3], [4.0, -2.3], [-4.0, 2.3], [4.0, 2.3]].forEach(function (p) { pins.push(v(p[0], 0.3, p[1]), v(p[0], 1.275, p[1])); });
+  scene.add(lines(pins, 'line', ['surface', 'target'], 0.9, null, true));
+
+  function tile(parent, name, x, z, top, role, tags, w, grp) {
+    var m = box(w || 1.35, 0.16, 0.8, role, tags, 1, grp);
+    m.position.set(x, top + 0.08, z); parent.add(m);
+    label(name, parent, x, top + 0.42, z, tags, 'minor', { grp: grp });
+    return m;
+  }
+  tile(scene, 'title', -3.2, -1.6, TOP, 'ownerTile', ['surface']);
+  tile(scene, 'open', -1.6, -1.6, TOP, 'ownerTile', ['surface']);
+  tile(scene, 'venue', -3.2, -0.4, TOP, 'ownerTile', ['surface']);
+  tile(scene, 'room', -1.6, -0.4, TOP, 'ownerTile', ['surface']);
+  tile(scene, 'capacity', 0, -0.4, TOP, 'ownerTile', ['surface']);
+  tile(scene, 'pricing', -3.2, 1.3, TOP, 'ownerTile', ['surface']);
+
+  /* slots cut into the plate, and the parts hovering over them */
+  function slot(x, z, w, d) {
+    var s = box(w, 0.03, d, 'slot', ['parts']); s.position.set(x, TOP + 0.015, z); s.castShadow = false; scene.add(s);
+    var pts = [];
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) {
+      pts.push(v(x + c[0] * w / 2, TOP + 0.03, z + c[1] * d / 2), v(x + c[0] * w / 2, DOCK - 0.1, z + c[1] * d / 2));
+    });
+    scene.add(lines(pts, 'line', ['parts'], 0.9, null, true));
+  }
+  var DOCK = 2.2;
+  slot(-0.9, 1.3, 2.6, 1.6);
+  slot(2.6, 1.3, 2.9, 1.6);
+
+  function part(name, x, y, z, w, keys, role) {
+    var g = new T.Group(); g.position.set(x, y, z); g.userData.fade = 1; g.userData.fadeGoal = 1; scene.add(g);
+    var p = box(w, 0.2, 1.6, role, ['parts'], 1, g); g.add(p); edges(p, ['parts'], g);
+    var kw = keys.length > 1 ? 1.12 : 1.35, span = keys.length > 1 ? 0.65 : 0;
+    keys.forEach(function (k, i) { tile(g, k, keys.length > 1 ? (i === 0 ? -span : span) : 0, 0, 0.1, role + 'Tile', ['parts'], kw, g); });
+    g.userData.label = label(name, g, 0, 0.98, 0, ['parts'], 'mid', { grp: g });
+    return g;
+  }
+  var PARK = v(-4.6, 0.95, 4.7), DOCKED = v(-0.9, DOCK, 1.3);
+  var gFree = part('FreeTicketSurface', DOCKED.x, DOCKED.y, DOCKED.z, 2.6, ['note'], 'part');
+  var gPaid = part('PaidTicketSurface', PARK.x, PARK.y, PARK.z, 2.6, ['price', 'currency'], 'part');
+  gPaid.userData.fade = gPaid.userData.fadeGoal = 0.4;
+  var gContact = part('ContactSurface', 2.6, DOCK, 1.3, 2.9, ['email', 'phone'], 'part');
+  label('ticket: a slot', scene, -0.9, TOP + 0.05, 2.35, ['parts'], 'major', { c: 'part' });
+  label('contact: a subsurface', scene, 2.6, TOP + 0.05, 2.35, ['parts'], 'major', { c: 'part' });
+
+  /* another module's alter, mounted beside capacity */
+  var ALT = 2.8;
+  var gAlter = new T.Group(); gAlter.position.set(2.6, ALT, -1.05); scene.add(gAlter);
+  var aPlate = box(2.9, 0.2, 1.7, 'alter', ['alter']); gAlter.add(aPlate); edges(aPlate, ['alter']);
+  tile(gAlter, 'licence', -0.65, 0, 0.1, 'alterTile', ['alter'], 1.12);
+  tile(gAlter, 'stewards', 0.65, 0, 0.1, 'alterTile', ['alter'], 1.12);
+  label('Compliance: another module', gAlter, 0, 1.05, 0, ['alter'], 'major', { c: 'alter' });
+  var aPins = [];
+  [[-1.45, -0.85], [1.45, -0.85], [-1.45, 0.85], [1.45, 0.85]].forEach(function (c) {
+    aPins.push(v(2.6 + c[0], TOP, -1.05 + c[1]), v(2.6 + c[0], ALT - 0.1, -1.05 + c[1]));
+  });
+  scene.add(lines(aPins, 'line', ['alter'], 0.9, null, true));
+
+  /* refinement: who narrows whom */
+  var arcs = [];
+  function arrow(a, b, lift, tags, role, side) {
+    var c = arc(a, b, lift, side);
+    var tube = flat(new T.TubeGeometry(c, 28, 0.028, 6, false), role, tags); scene.add(tube);
+    var head = flat(new T.ConeGeometry(0.09, 0.24, 10), role, tags);
+    var tan = c.getTangent(1).normalize();
+    head.position.copy(c.getPoint(1)).addScaledVector(tan, -0.1);
+    head.quaternion.setFromUnitVectors(v(0, 1, 0), tan); scene.add(head);
+    var bead = flat(new T.SphereGeometry(0.075, 10, 8), role, tags); scene.add(bead);
+    arcs.push({ c: c, bead: bead, off: arcs.length * 0.23 });
+  }
+  function refine(a, b, lift, tags, side) { arrow(a, b, lift, tags, 'refine', side); }
+  var KT = TOP + 0.17;
+  refine(v(-3.2, KT, -0.4), v(-1.85, KT, -0.4), 0.75, ['refine']);
+  refine(v(-1.6, KT, -0.4), v(-0.4, KT, -0.4), 0.75, ['refine']);
+  refine(v(-3.2, KT, 1.3), v(-2.05, DOCK + 0.15, 1.3), 0.6, ['refine']);
+  refine(v(1.95, ALT + 0.27, -1.05), v(0.42, KT, -0.4), 0.55, ['alter', 'refine']);
+  refine(v(0.2, KT, -0.72), v(3.25, ALT + 0.27, -1.3), 1.2, ['alter', 'refine'], -1.3);
+
+  /* the ceiling on capacity: who set it shows in its color */
+  var gauges = [];
+  function gauge(x, z, tags, h, role, text, level) {
+    var pillar = flat(new T.BoxGeometry(0.07, 1, 0.07).translate(0, 0.5, 0), role, tags); pillar.position.set(x, KT, z); scene.add(pillar);
+    var cap = flat(new T.BoxGeometry(0.62, 0.05, 0.62), role, tags); scene.add(cap);
+    var g = { pillar: pillar, cap: cap, lab: label(text, cap, 0, 0.3, 0, tags, level || 'mid'), h: h, goal: h, x: x, z: z };
+    gauges.push(g);
+    return g;
+  }
+  function setGauge(g, h, role, text) {
+    g.goal = h; g.lab.el.textContent = text;
+    [g.pillar, g.cap].forEach(function (m) { m.userData.it.role = role; m.material.color.copy(palette[role] || m.material.color); });
+    if (reduce) { g.h = h; }
+  }
+  var gCap = gauge(0, -0.4, ['refine', 'alter', 'surface'], 0.45, 'alter', 'max 100');
+
+  /* storage: the target is the only thing that knows where values live */
+  drum(0, 5.9, ['target']);
+  arrow(v(0, 0.32, 2.9), v(0, 1.24, 5.25), 0.9, ['target'], 'values');
+  label('Storage: config and content', scene, 0, 0.1, 7.5, ['target'], 'major', { c: 'ink-2' });
+
+  /* the contract */
+  var RING = 4.6;
+  var gRing = new T.Group(); gRing.position.set(0, RING, 0); scene.add(gRing);
+  var ring = flat(new T.TorusGeometry(2.3, 0.05, 10, 96), 'contract', ['contract']); ring.rotation.x = Math.PI / 2; gRing.add(ring);
+  var ring2 = flat(new T.TorusGeometry(1.75, 0.018, 8, 80), 'contract', ['contract'], 0.8); ring2.rotation.x = Math.PI / 2; gRing.add(ring2);
+  var disc = flat(new T.CircleGeometry(2.3, 64), 'contract', ['contract'], 0.1, null, { side: T.DoubleSide, transparent: true, depthWrite: false });
+  disc.rotation.x = -Math.PI / 2; gRing.add(disc);
+  var cone = [];
+  for (var ci = 0; ci < 8; ci++) {
+    var ca = ci * Math.PI / 4 + Math.PI / 8;
+    cone.push(v(4.2 * Math.max(-1, Math.min(1, Math.cos(ca) * 1.5)), TOP, 2.5 * Math.max(-1, Math.min(1, Math.sin(ca) * 1.5))),
+      v(2.3 * Math.cos(ca), RING, 2.3 * Math.sin(ca)));
+  }
+  scene.add(lines(cone, 'contractLine', ['contract'], 0.55, null, true));
+  label('Contract: the shape as it stands', scene, 0, RING + 0.75, 0, ['contract'], 'major', { c: 'contract' });
+
+  /* commit: validated values go down to the target */
+  var commit = new T.LineCurve3(v(-4.55, 1.3, 0.6), v(-4.55, 0.32, 0.6));
+  scene.add(lines([commit.v1, commit.v2], 'line', ['target', 'surface'], 1));
+  var commitBead = flat(new T.SphereGeometry(0.085, 10, 8), 'values', ['target', 'surface']); scene.add(commitBead);
+
+  /* doors */
+  var doorObj = {}, hits = [], flows = [];
+  var beadGeo = new T.SphereGeometry(0.085, 10, 8), pulseGeo = new T.SphereGeometry(0.2, 14, 10);
+  function flow(a, b, lift, tier, doorId, tags, o) {
+    o = o || {};
+    var c = arc(a, b, lift), pts = c.getPoints(48);
+    if (o.cut) {
+      var n = Math.round(48 * o.cut), dashed = [];
+      scene.add(lines(pts.slice(0, n + 1), 'line', tags, 0.9));
+      for (var j = n + 2; j < 47; j += 3) { dashed.push(pts[j], pts[j + 1]); }
+      scene.add(lines(dashed, 'line', tags, 0.55, null, true));
+      var stop = flat(new T.SphereGeometry(0.13, 12, 10), 'blockBar', tags); stop.position.copy(c.getPoint(o.cut)); scene.add(stop);
+    } else {
+      scene.add(lines(pts, 'line', tags, 0.9));
+    }
+    var f = { c: c, tier: tier, door: doorId, out: [], inn: [], speed: tier === 1 ? 0.11 : 0.16, off: flows.length * 0.37,
+      cut: o.cut || 0, quiet: !!o.quiet };
+    for (var i = 0; i < (tier === 1 ? 3 : 2); i++) { var ob = flat(beadGeo, 'contract', tags); scene.add(ob); f.out.push(ob); }
+    if (!o.cut) { var nb = flat(beadGeo, 'values', tags); scene.add(nb); f.inn.push(nb); }
+    f.pulse = flat(pulseGeo, 'contract', tags, 0); scene.add(f.pulse);
+    flows.push(f);
+    return f;
+  }
+  function buildDoor(id, name, pos, look, tier, tags, o) {
+    o = o || {};
+    var w = tier === 1 ? 1.7 : 1.3, h = tier === 1 ? 2.6 : 2.0, t = 0.13;
+    var g = new T.Group(); g.position.copy(pos); g.lookAt(look.x, 0, look.z); scene.add(g);
+    var frame = [];
+    [[-w / 2, h / 2, t, h], [w / 2, h / 2, t, h]].forEach(function (q) {
+      var b = box(q[2], q[3], t * 2, 'frame', tags); b.position.set(q[0], q[1], 0); g.add(b); frame.push(b.userData.it);
+    });
+    var top = box(w + t, t, t * 2, 'frame', tags); top.position.set(0, h, 0); g.add(top); frame.push(top.userData.it);
+    var sill = box(w + 0.5, 0.06, 0.8, 'frame', tags); sill.position.set(0, 0.03, 0); g.add(sill); frame.push(sill.userData.it);
+    var pane;
+    if (o.shut) {
+      /* a door with nothing behind it: boarded up */
+      pane = box(w - t, h - t / 2, 0.1, 'block', tags); pane.position.set(0, h / 2, 0); g.add(pane);
+      var len = Math.hypot(w, h) - 0.15, tilt = Math.atan2(h, w);
+      [tilt, -tilt].forEach(function (rz) {
+        var bar = box(len, 0.14, 0.08, 'blockBar', tags); bar.position.set(0, h / 2, 0.1); bar.rotation.z = rz; g.add(bar);
+      });
+    } else {
+      pane = flat(new T.PlaneGeometry(w - t, h - t / 2), 'contract', tags, 0.16, null, { side: T.DoubleSide, transparent: true, depthWrite: false });
+      pane.position.set(0, h / 2, 0); g.add(pane);
+    }
+    var L = label(name, g, 0, h + 0.5, 0, tags, 'door', { door: !o.fixed, cls: (tier === 2 ? 't2' : '') + (o.shut ? ' shut' : '') });
+    if (!o.fixed) {
+      var hit = new T.Mesh(new T.BoxGeometry(w + 0.5, h + 0.5, 0.9), new T.MeshBasicMaterial({ visible: false }));
+      hit.position.set(0, h / 2, 0); hit.userData.door = id; g.add(hit); hits.push(hit);
+      L.el.addEventListener('click', function () { selectDoor(id, true); });
+      L.el.setAttribute('aria-label', name + ' door');
+    }
+    doorObj[id] = { g: g, frame: frame, pane: pane.userData.it, label: L, mid: v(pos.x, h / 2, pos.z), flash: -9, shut: !!o.shut };
+  }
+  function door(d) {
+    var r = d.tier === 1 ? 8.5 : 14, a = d.ang * Math.PI / 180;
+    buildDoor(d.id, d.name, v(r * Math.cos(a), 0, -r * Math.sin(a)), v(0, 0, 0), d.tier, ['doors']);
+  }
+  DOORS.forEach(door);
+  DOORS.forEach(function (d) {
+    if (d.tier === 1) { flow(v(0, RING, 0), doorObj[d.id].mid, 2.0, 1, d.id, ['doors']); }
+    else { flow(doorObj[d.via].mid, doorObj[d.id].mid, 2.4, 2, d.id, ['doors']); }
+  });
+  label('With a surface: declared once, altered once', scene, 0, 0.1, 9.1, ['title'], 'title');
+
+  /* ---------- today: written twice, and the two never meet ---------- */
+  var X0 = -30, XF = X0 - 5.6, XT = X0 + 5.6, GZ = 4.3, TD = ['today'];
+  var TODAY_KEYS = [['title', -2, -1.1], ['venue', 0, -1.1], ['room', 2, -1.1], ['open', -2, 0], ['capacity', 0, 0],
+    ['pricing', 2, 0], ['price', -2, 1.1], ['email', 0, 1.1], ['phone', 2, 1.1]];
+  function oldStack(x, o) {
+    var sl = box(6.8, 0.3, 4.4, 'slab', TD); sl.position.set(x, 0.15, 0); scene.add(sl); edges(sl, TD);
+    label(o.save, scene, x + o.saveAt, 0.2, o.saveZ === undefined ? 2.6 : o.saveZ, TD, 'note');
+    var mp = box(6.2, 0.16, 3.8, 'oldDeep', TD); mp.position.set(x, 0.8, 0); scene.add(mp); edges(mp, TD);
+    label(o.mid, scene, x + o.midAt, 0.9, 1.95, TD, 'note');
+    var pl = box(6.2, 0.25, 3.8, 'old', TD); pl.position.set(x, 1.4, 0); scene.add(pl); edges(pl, TD);
+    label(o.name, scene, x + (o.nameAt || -3.1), 1.85, o.nameZ === undefined ? 1.9 : o.nameZ, TD, 'major', { c: 'old' });
+    var pp = [], cl = [];
+    [[-2.9, -1.7], [2.9, -1.7], [-2.9, 1.7], [2.9, 1.7]].forEach(function (c) {
+      pp.push(v(x + c[0], 0.3, c[1]), v(x + c[0], 1.275, c[1]));
+      var a = Math.atan2(c[1], c[0]);
+      cl.push(v(x + c[0] * 1.05, TOP, c[1] * 1.1), v(x + 1.7 * Math.cos(a), 4.4, 1.7 * Math.sin(a)));
+    });
+    scene.add(lines(pp, 'line', TD, 0.9, null, true));
+    scene.add(lines(cl, 'contractLine', TD, 0.55, null, true));
+    TODAY_KEYS.forEach(function (k) { tile(scene, k[0], x + k[1], k[2], TOP, 'oldTile', TD, 1.5); });
+    var rg = flat(new T.TorusGeometry(1.7, 0.045, 10, 72), 'contract', TD); rg.rotation.x = Math.PI / 2; rg.position.set(x, 4.4, 0); scene.add(rg);
+    label(o.contract, scene, x, 5.7, 0, TD, 'major', { c: 'contract' });
+  }
+  function ghostAlter(x, y, z, text) {
+    var gh = new T.LineSegments(new T.EdgesGeometry(new T.BoxGeometry(2.9, 0.2, 1.7)), new T.LineBasicMaterial());
+    gh.userData.it = track(gh, 'alter', TD, 0.85); gh.position.set(x, y, z); scene.add(gh);
+    label(text, scene, x + 1.3, y + 0.7, z, TD, 'note');
+  }
+
+  /* 1. the form: the richer of the two, and the only one the other module's alter reaches */
+  oldStack(XF, { name: 'buildForm(): a form array', mid: 'validateForm()', midAt: -2.9, save: 'submitForm()', saveAt: -1.0,
+    contract: 'Contract 1: a form array' });
+  refine(v(XF, KT, -1.1), v(XF + 1.6, KT, -1.1), 0.75, TD);
+  refine(v(XF + 2, KT, -0.9), v(XF + 0.35, KT, -0.15), 0.7, TD);
+  refine(v(XF + 2, KT, 0.2), v(XF - 1.6, KT, 1.1), 0.95, TD);
+  label('#ajax and #states callbacks', scene, XF - 1.7, KT + 1.0, -1.4, TD, 'note');
+  var fAlter = new T.Group(); fAlter.position.set(XF + 1.6, ALT, 0.9); scene.add(fAlter);
+  var fPlate = box(2.9, 0.2, 1.7, 'alter', TD); fAlter.add(fPlate); edges(fPlate, TD);
+  tile(fAlter, 'licence', -0.65, 0, 0.1, 'alterTile', TD, 1.12);
+  tile(fAlter, 'stewards', 0.65, 0, 0.1, 'alterTile', TD, 1.12);
+  label('hook_form_alter(): another module', fAlter, 0, 1.05, 0, TD, 'major', { c: 'alter' });
+  var fPins = [];
+  [[-1.45, -0.85], [1.45, -0.85], [-1.45, 0.85], [1.45, 0.85]].forEach(function (c) {
+    fPins.push(v(XF + 1.6 + c[0], TOP, 0.9 + c[1]), v(XF + 1.6 + c[0], ALT - 0.1, 0.9 + c[1]));
+  });
+  scene.add(lines(fPins, 'line', TD, 0.9, null, true));
+  refine(v(XF + 0.95, ALT + 0.27, 0.9), v(XF + 0.35, KT, 0.2), 0.5, TD);
+  var gForm = gauge(XF, 0, TD, 0.45, 'alter', 'max 100: the form alter', 'note');
+
+  /* 2. the tool: the inputs again, with no dependencies and no alter */
+  oldStack(XT, { name: 'A tool plugin: the inputs again', mid: 'constraints, written again', midAt: 2.4, save: 'execute()', saveAt: 3.8, saveZ: 0.4, nameAt: 3.3, nameZ: -1.8,
+    contract: "Contract 2: the tool's inputs" });
+  ghostAlter(XT + 1.6, ALT, 0.9, 'the form alter never arrives');
+  gauge(XT, 0, TD, 2.0, 'old', 'max 1000: no room, no licence', 'note');
+
+  buildDoor('t-form', 'Form API', v(XF, 0, -7), v(XF, 0, 0), 1, TD, { fixed: true });
+  buildDoor('t-settings', 'Settings pages', v(XF - 3.2, 0, -11.4), v(XF, 0, 0), 2, TD, { fixed: true });
+  buildDoor('t-plugin', 'Plugin forms', v(XF + 0.4, 0, -12), v(XF, 0, 0), 2, TD, { fixed: true });
+  buildDoor('t-tool', 'Tool API', v(XT, 0, -7), v(XT, 0, 0), 1, TD, { fixed: true });
+  ['Drush', 'MCP', 'AI agents', 'ECA', 'FlowDrop'].forEach(function (n, i) {
+    var dx = (i - 2) * 2.6;
+    buildDoor('t-c' + i, n, v(XT + dx, 0, -12.6 + 0.12 * dx * dx), v(XT, 0, 0), 2, TD, { fixed: true });
+  });
+  /* the door nobody can open: it stands apart, and every line to it stops short */
+  buildDoor('t-headless', 'Headless admin: nothing to draw from', v(X0 + 12.6, 0, 6.6), v(X0 + 5, 0, 20), 1, TD, { fixed: true, shut: true });
+
+  flow(v(XF, 4.4, 0), doorObj['t-form'].mid, 1.6, 1, 't-form', TD);
+  flow(doorObj['t-form'].mid, doorObj['t-settings'].mid, 2.2, 2, 't-settings', TD);
+  flow(doorObj['t-form'].mid, doorObj['t-plugin'].mid, 2.2, 2, 't-plugin', TD);
+  flow(v(XT, 4.4, 0), doorObj['t-tool'].mid, 1.6, 1, 't-tool', TD, { quiet: true });
+  for (var tc = 0; tc < 5; tc++) { flow(doorObj['t-tool'].mid, doorObj['t-c' + tc].mid, 2.2, 2, 't-c' + tc, TD, { quiet: true }); }
+  [[v(XF, 4.4, 0), 3.4, 0.34, 'its rules are PHP callbacks'],
+   [v(XT, 4.4, 0), 1.4, 0.55, 'no dependencies between keys']].forEach(function (q) {
+    var f = flow(q[0], doorObj['t-headless'].mid, q[1], 1, 't-headless', TD, { quiet: true, cut: q[2] });
+    var at = f.c.getPoint(q[2]);
+    label(q[3], scene, at.x, at.y + 0.5, at.z, TD, 'note');
+  });
+
+  /* each saves on its own, into the same storage */
+  drum(X0, GZ + 0.9, TD);
+  arrow(v(XF + 2.6, 0.32, 2.2), v(X0 - 0.9, 1.0, GZ + 0.6), 1.0, TD, 'values');
+  arrow(v(XT - 2.6, 0.32, 2.2), v(X0 + 0.9, 1.0, GZ + 0.6), 1.0, TD, 'values');
+  label('150 from the tool is saved', scene, X0 + 4.3, 0.2, GZ - 0.2, TD, 'note');
+  label('Storage: the same config and content', scene, X0, 0.1, GZ + 2.5, TD, 'major', { c: 'ink-2' });
+  label('Today: written twice, altered once', scene, X0, 0.1, GZ + 4.1, TD, 'title');
+
+  /* ---------- theme ---------- */
+  var palette = {};
+  function paint() {
+    var cs = getComputedStyle(document.documentElement);
+    function tk(n) { return new T.Color(cs.getPropertyValue(n).trim() || '#888888'); }
+    var bg = tk('--bg'), white = new T.Color('#ffffff'), black = new T.Color('#000000');
+    var dark = (bg.r + bg.g + bg.b) / 3 < 0.4;
+    function mix(c, to, k) { return c.clone().lerp(to, k); }
+    var owner = tk('--owner'), partC = tk('--part'), alter = tk('--alter'), contract = tk('--contract');
+    palette = {
+      owner: owner, ownerTile: mix(owner, white, dark ? 0.42 : 0.66),
+      part: partC, partTile: mix(partC, white, dark ? 0.42 : 0.66),
+      alter: alter, alterTile: mix(alter, white, dark ? 0.42 : 0.66),
+      old: tk('--old'), oldTile: mix(tk('--old'), white, dark ? 0.42 : 0.62), oldDeep: mix(tk('--old'), black, 0.28),
+      store: mix(tk('--ink-2'), bg, 0.3), block: mix(tk('--ink-2'), bg, 0.55), blockBar: tk('--ink'),
+      slab: tk('--slab'), slot: mix(owner, black, 0.45), frame: tk('--ink-2'), frameOn: contract,
+      contract: contract, contractLine: mix(contract, bg, 0.35), refine: tk('--refine'),
+      line: mix(tk('--ink-2'), bg, 0.5), edge: mix(tk('--ink'), bg, dark ? 0.55 : 0.3), values: tk('--ink')
+    };
+    items.forEach(function (it) { it.obj.material.color.copy(palette[it.role] || palette.line); });
+    skyLight.intensity = dark ? 0.56 : 0.64;
+    skyLight.groundColor.copy(bg);
+    sun.intensity = dark ? 0.5 : 0.4;
+    ground.material.opacity = dark ? 0.45 : 0.16;
+  }
+  paint();
+  try {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', paint);
+    new MutationObserver(paint).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class', 'style'] });
+  } catch (e) { /* older engines keep the first palette */ }
+
+  /* ---------- camera ---------- */
+  var cam = Object.assign({}, CHAPTERS.all.cam), goal = Object.assign({}, cam);
+  function placeCamera() {
+    var fit = Math.max(1, 1.5 / camera.aspect);
+    var r = cam.r * fit, sp = Math.sin(cam.ph);
+    camera.position.set(cam.tx + r * sp * Math.sin(cam.th), cam.ty + r * Math.cos(cam.ph), cam.tz + r * sp * Math.cos(cam.th));
+    camera.lookAt(cam.tx, cam.ty, cam.tz);
+  }
+  function clampGoal() {
+    goal.ph = Math.max(0.22, Math.min(1.46, goal.ph));
+    goal.r = Math.max(7, Math.min(110, goal.r));
+  }
+  function resize() {
+    var w = stage.clientWidth, h = stage.clientHeight;
+    if (!w || !h) { return; }
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h; camera.updateProjectionMatrix();
+  }
+  if (window.ResizeObserver) { new ResizeObserver(resize).observe(stage); } else { window.addEventListener('resize', resize); }
+  resize();
+
+  var pointers = {}, nPtr = 0, drag = null, pinch = 0, touched = false;
+  var ray = new T.Raycaster(), ndc = new T.Vector2();
+  function pick(e) {
+    var r = canvas.getBoundingClientRect();
+    ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+    var h = ray.intersectObjects(hits, false);
+    return h.length ? h[0].object.userData.door : null;
+  }
+  function firstTouch() {
+    if (!touched) { touched = true; document.getElementById('hint').style.opacity = '0'; }
+  }
+  canvas.addEventListener('pointerdown', function (e) {
+    pointers[e.pointerId] = { x: e.clientX, y: e.clientY }; nPtr = Object.keys(pointers).length;
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* synthetic pointers */ }
+    if (nPtr === 1) { drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: Date.now() }; canvas.classList.add('grabbing'); }
+    else { drag = null; pinch = 0; }
+  });
+  canvas.addEventListener('pointermove', function (e) {
+    if (pointers[e.pointerId]) { pointers[e.pointerId].x = e.clientX; pointers[e.pointerId].y = e.clientY; }
+    if (nPtr === 2) {
+      var k = Object.keys(pointers), d = Math.hypot(pointers[k[0]].x - pointers[k[1]].x, pointers[k[0]].y - pointers[k[1]].y);
+      if (pinch) { goal.r *= pinch / d; clampGoal(); }
+      pinch = d; firstTouch();
+    } else if (drag) {
+      goal.th -= (e.clientX - drag.x) * 0.006; goal.ph -= (e.clientY - drag.y) * 0.005; clampGoal();
+      cam.th = goal.th; cam.ph = goal.ph;
+      drag.x = e.clientX; drag.y = e.clientY;
+      if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 6) { firstTouch(); }
+    } else if (e.pointerType === 'mouse') {
+      var id = pick(e);
+      canvas.classList.toggle('pointing', !!id);
+      hover = id;
+    }
+  });
+  function up(e) {
+    if (drag && nPtr === 1 && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 6 && Date.now() - drag.t < 500) {
+      var id = pick(e);
+      if (id) { selectDoor(id, true); }
+    }
+    delete pointers[e.pointerId]; nPtr = Object.keys(pointers).length; drag = null; pinch = 0;
+    canvas.classList.remove('grabbing');
+  }
+  canvas.addEventListener('pointerup', up);
+  canvas.addEventListener('pointercancel', up);
+  canvas.addEventListener('wheel', function (e) {
+    e.preventDefault(); goal.r *= Math.exp(e.deltaY * 0.0012); clampGoal(); firstTouch();
+  }, { passive: false });
+  canvas.addEventListener('keydown', function (e) {
+    var k = e.key, used = true;
+    if (k === 'ArrowLeft') { goal.th -= 0.14; } else if (k === 'ArrowRight') { goal.th += 0.14; }
+    else if (k === 'ArrowUp') { goal.ph -= 0.1; } else if (k === 'ArrowDown') { goal.ph += 0.1; }
+    else if (k === '+' || k === '=') { goal.r *= 0.9; } else if (k === '-') { goal.r *= 1.1; }
+    else { used = false; }
+    if (used) { e.preventDefault(); clampGoal(); firstTouch(); }
+  });
+  var hover = null;
+
+  /* ---------- state ---------- */
+  var rippleAt = -99;
+  function applyState(s, announce) {
+    var paid = s.pricing === 'paid';
+    gPaid.userData.goal = paid ? DOCKED : PARK; gFree.userData.goal = paid ? PARK : DOCKED;
+    gPaid.userData.fadeGoal = paid ? 1 : 0.4; gFree.userData.fadeGoal = paid ? 0.4 : 1;
+    setGauge(gCap, s.licence ? 1.75 : 0.45, s.licence ? 'owner' : 'alter', s.licence ? 'max 400: the room' : 'max 100: no licence');
+    setGauge(gForm, s.licence ? 1.75 : 0.45, s.licence ? 'old' : 'alter', s.licence ? 'max 400: the form' : 'max 100: the form alter');
+    if (announce) { rippleAt = clock; }
+    if (reduce) {
+      gPaid.position.copy(gPaid.userData.goal); gFree.position.copy(gFree.userData.goal);
+      gPaid.userData.fade = gPaid.userData.fadeGoal; gFree.userData.fade = gFree.userData.fadeGoal;
+    }
+  }
+  var clock = 0;
+  gPaid.userData.goal = PARK; gFree.userData.goal = DOCKED;
+  applyState(state, false);
+
+  function inFocus(tags) {
+    if (!focusSet) { return true; }
+    for (var i = 0; i < tags.length; i++) { if (focusSet.indexOf(tags[i]) >= 0) { return true; } }
+    return false;
+  }
+
+  gl = {
+    focus: function (f, alone) { focusSet = f; solo = !!alone; },
+    fly: function (c) { Object.assign(goal, c); if (reduce) { Object.assign(cam, c); } },
+    state: applyState,
+    select: function (id) {
+      Object.keys(doorObj).forEach(function (k) {
+        var on = k === id, o = doorObj[k];
+        o.frame.forEach(function (it) { it.role = on ? 'frameOn' : 'frame'; it.obj.material.color.copy(palette[it.role]); });
+        o.label.el.classList.toggle('on', on);
+      });
+    }
+  };
+
+  focusSet = CHAPTERS[chapter].focus;
+  items.forEach(function (it) { if (!inFocus(it.tags)) { it.cur = it.tags[0] === 'today' ? 0 : 0.09; } });
+
+  /* ---------- frame ---------- */
+  var tmp = new T.Vector3(), last = 0, raf = 0;
+  function frame(now) {
+    raf = requestAnimationFrame(frame);
+    var dt = Math.min(0.05, (now - last) / 1000 || 0.016); last = now;
+    if (!reduce) { clock += dt; }
+    var k = reduce ? 1 : 1 - Math.exp(-dt * 4.2);
+
+    ['tx', 'ty', 'tz', 'th', 'ph', 'r'].forEach(function (p) { cam[p] += (goal[p] - cam[p]) * k; });
+    placeCamera();
+
+    [gFree, gPaid].forEach(function (g) {
+      g.position.lerp(g.userData.goal, k);
+      g.userData.fade += (g.userData.fadeGoal - g.userData.fade) * k;
+    });
+    gauges.forEach(function (g) {
+      g.h += (g.goal - g.h) * k;
+      g.pillar.scale.y = g.h; g.cap.position.set(g.x, KT + g.h, g.z);
+    });
+
+    gRing.rotation.y = clock * 0.12;
+    ring2.rotation.z = -clock * 0.5;
+    var since = clock - rippleAt;
+    var pop = since >= 0 && since < 1.2 ? 1 + 0.22 * Math.exp(-since * 4) * Math.cos(since * 9) : 1;
+    gRing.scale.set(pop, 1, pop);
+
+    arcs.forEach(function (a) { a.bead.position.copy(a.c.getPoint((clock * 0.45 + a.off) % 1)); });
+    commitBead.position.copy(commit.getPoint((clock * 0.5) % 1));
+
+    flows.forEach(function (f) {
+      var base = clock * f.speed + f.off;
+      if (f.cut) {
+        /* the contract sets out and never arrives */
+        f.out.forEach(function (b, i) {
+          var uu = (base * 1.5 + i / f.out.length) % 1;
+          b.position.copy(f.c.getPoint(f.cut * uu)); b.userData.it.base = 1 - uu * uu;
+        });
+        return;
+      }
+      f.out.forEach(function (b, i) { b.position.copy(f.c.getPoint((base + i / f.out.length) % 1)); });
+      f.inn.forEach(function (b) { b.position.copy(f.c.getPoint(1 - ((base * 0.8 + 0.5) % 1))); });
+      var start = f.tier === 1 ? 0 : 0.75, len = f.tier === 1 ? 0.75 : 0.6, u = (since - start) / len;
+      if (!f.quiet && u >= 0 && u <= 1) {
+        f.pulse.position.copy(f.c.getPoint(u)); f.pulse.userData.it.base = 0.95;
+        if (u > 0.92) { doorObj[f.door].flash = clock; }
+      } else { f.pulse.userData.it.base = 0; }
+    });
+    Object.keys(doorObj).forEach(function (id) {
+      var o = doorObj[id], fl = Math.max(0, 1 - (clock - o.flash) / 0.9);
+      if (o.shut) { return; }
+      o.pane.boost = fl * 0.55 + (id === selected ? 0.3 : id === hover ? 0.14 : 0);
+    });
+
+    items.forEach(function (it) {
+      var want = inFocus(it.tags) ? 1 : (solo || it.tags[0] === 'today' ? 0 : 0.09);
+      it.cur += (want - it.cur) * k;
+      var op = Math.min(1, it.base * it.cur * (it.grp ? it.grp.userData.fade : 1) + it.boost * it.cur);
+      var m = it.obj.material;
+      m.opacity = op;
+      var tr = it.keepT || op < 0.995;
+      if (m.transparent !== tr) { m.transparent = tr; m.needsUpdate = true; }
+      m.depthWrite = !it.keepT && op > 0.6;
+      it.obj.visible = op > 0.004;
+      if (it.cast) { it.obj.castShadow = op > 0.5; }
+    });
+
+    renderer.render(scene, camera);
+
+    var w = stage.clientWidth, h = stage.clientHeight;
+    labels.forEach(function (L) {
+      tmp.copy(L.pos); L.parent.updateWorldMatrix(true, false); tmp.applyMatrix4(L.parent.matrixWorld);
+      var dist = tmp.distanceTo(camera.position);
+      tmp.project(camera);
+      var op = inFocus(L.tags) ? 1 : (L.level === 'minor' || L.level === 'mid' || L.level === 'note' || L.level === 'title' || L.tags[0] === 'today' || solo ? 0 : 0.2);
+      if (L.level === 'minor') { op *= Math.max(0, Math.min(1, (21 - dist) / 4)); }
+      if (L.level === 'mid') { op *= Math.max(0, Math.min(1, (23 - dist) / 4)); }
+      if (L.level === 'note') { op *= Math.max(0, Math.min(1, (48 - dist) / 6)); }
+      if (L.grp) { op *= L.grp.userData.fade < 0.7 ? 0.55 : 1; }
+      if (tmp.z > 1 || tmp.z < -1) { op = 0; }
+      if (op < 0.02) {
+        if (L.shown !== 0) { L.el.style.visibility = 'hidden'; L.shown = 0; }
+        return;
+      }
+      if (L.shown !== 1) { L.el.style.visibility = 'visible'; L.shown = 1; }
+      L.el.style.opacity = op.toFixed(2);
+      L.el.style.transform = 'translate(-50%, -50%) translate(' + ((tmp.x * 0.5 + 0.5) * w).toFixed(1) + 'px,' + ((-tmp.y * 0.5 + 0.5) * h).toFixed(1) + 'px)';
+    });
+  }
+  document.addEventListener('visibilitychange', function () {
+    cancelAnimationFrame(raf);
+    if (!document.hidden) { last = performance.now(); raf = requestAnimationFrame(frame); }
+  });
+  raf = requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

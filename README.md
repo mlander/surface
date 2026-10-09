@@ -233,6 +233,7 @@ Full documentation is under [`docs/`](docs/).
 | Page | What it covers |
 | --- | --- |
 | [Home](docs/index.md) | What a surface is, and where each concept lives in the code. |
+| [One surface, every door](docs/every-door/index.html) | An interactive 3D model: a surface, its subsurfaces and an alter, the doors that read its contract, and the same inputs as they are written today. Open the file in a browser. |
 | [The pattern](docs/pattern.md) | What an author writes, where it goes, and why it is shaped that way. |
 | [How it fits](docs/how-it-fits.md) | One build followed from the caller to a sealed surface. |
 | [Decisions](docs/decisions.md) | The points the pattern left open, and how the module settled them. |
