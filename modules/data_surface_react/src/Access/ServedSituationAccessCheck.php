@@ -11,6 +11,7 @@ use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\data_surface_react\ServedSituations;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 /**
@@ -29,9 +30,12 @@ final class ServedSituationAccessCheck implements AccessInterface {
    *
    * @param \Drupal\data_surface_react\ServedSituations $servedSituations
    *   What reads a situation off a request.
+   * @param \Symfony\Component\HttpFoundation\RequestStack $requestStack
+   *   The request stack, for a check made with no request handed in.
    */
   public function __construct(
     protected readonly ServedSituations $servedSituations,
+    protected readonly RequestStack $requestStack,
   ) {}
 
   /**
@@ -39,10 +43,12 @@ final class ServedSituationAccessCheck implements AccessInterface {
    *
    * @param \Drupal\Core\Routing\RouteMatchInterface $route_match
    *   The route match, carrying the surface and situation ids.
-   * @param \Symfony\Component\HttpFoundation\Request $request
-   *   The request, carrying the situation's parameters.
    * @param \Drupal\Core\Session\AccountInterface $account
    *   The account.
+   * @param \Symfony\Component\HttpFoundation\Request|null $request
+   *   The request, carrying the situation's parameters; NULL when access
+   *   is asked outside a dispatch, in which case the current request
+   *   stands in.
    *
    * @return \Drupal\Core\Access\AccessResultInterface
    *   The situation's answer. A surface, situation or parameter that
@@ -52,7 +58,14 @@ final class ServedSituationAccessCheck implements AccessInterface {
    *   query string alone, and if that is allowed the controller refuses
    *   the body with a 400.
    */
-  public function access(RouteMatchInterface $route_match, Request $request, AccountInterface $account): AccessResultInterface {
+  public function access(RouteMatchInterface $route_match, AccountInterface $account, ?Request $request = NULL): AccessResultInterface {
+    // Access is also asked outside a request's own dispatch: a link, a
+    // breadcrumb, a local task. The argument resolver then hands in no
+    // request, so the current one stands in for it.
+    $request ??= $this->requestStack->getCurrentRequest();
+    if ($request === NULL) {
+      return AccessResult::forbidden('No request to read the situation from.');
+    }
     $surface = (string) $route_match->getRawParameter('surface');
     $situation = (string) $route_match->getRawParameter('situation');
     try {
