@@ -8,7 +8,9 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Surface\SurfaceContext;
 use Drupal\data_surface_demo\Surface\DemoBlockSurface;
+use Drupal\data_surface_examples\Venues;
 use Drupal\data_surface_react\Controller\SurfaceApiController;
+use Drupal\data_surface_surface_test\Surface\Crate\CrateSurface;
 use Drupal\node\Entity\NodeType;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Opis\JsonSchema\Validator;
@@ -141,7 +143,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    */
   protected function variant(array $schema, string $by, string $value, string $slot): array {
     foreach ($schema['allOf'] ?? [] as $condition) {
-      if (($condition['if']['properties'][$by]['const'] ?? NULL) === $value) {
+      if (($condition['if']['properties'][$by]['const'] ?? NULL) === $value && isset($condition['then']['properties'][$slot])) {
         $this->assertSame([$by], $condition['if']['required']);
         return $condition['then']['properties'][$slot];
       }
@@ -482,6 +484,277 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Up to 400 for the Main hall.', $capacity['description']);
     $this->assertWellFormed($licensed['schema']);
     $this->assertTrue($this->validates($licensed['schema'], $licensed['values']));
+  }
+
+  /**
+   * Emits a surface's static contract: described for no values at all.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The surface.
+   * @param string $id
+   *   Its id.
+   *
+   * @return array
+   *   The contract, through JSON and back, and what it depends on.
+   */
+  protected function staticContract(DataSurfaceInterface $surface, string $id): array {
+    $served = $this->container->get('data_surface.contract_emitter')->emit($surface, [], $id);
+    return [json_decode((string) json_encode($served->document), TRUE), $served->getCacheTags()];
+  }
+
+  /**
+   * Builds the surface one situation serves.
+   *
+   * @param string $surface
+   *   The surface id.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The surface, built in its configure situation.
+   */
+  protected function situationSurface(string $surface): DataSurfaceInterface {
+    return $this->container->get('data_surface_react.served_situations')->resolve($surface, 'configure', [])->surface;
+  }
+
+  /**
+   * Collects the conditionals that enumerate one key, in order.
+   *
+   * @param array $schema
+   *   The object schema holding the key.
+   * @param string $key
+   *   The key.
+   *
+   * @return array<int, array{0: array, 1: array}>
+   *   Each conditional's watched values, by key, and what its `then` says
+   *   about the key.
+   */
+  protected function branches(array $schema, string $key): array {
+    $branches = [];
+    foreach ($schema['allOf'] ?? [] as $condition) {
+      if (!isset($condition['then']['properties'][$key])) {
+        continue;
+      }
+      $when = array_map(static fn (array $value): mixed => $value['const'], $condition['if']['properties']);
+      $this->assertSame(array_keys($when), $condition['if']['required']);
+      $branches[] = [$when, $condition['then']['properties'][$key]];
+    }
+    return $branches;
+  }
+
+  /**
+   * Strips `x-surface` from a schema, at every depth.
+   *
+   * @param array $schema
+   *   The schema.
+   *
+   * @return array
+   *   The schema in plain JSON Schema.
+   */
+  protected function plain(array $schema): array {
+    unset($schema['x-surface']);
+    foreach ($schema as $keyword => $value) {
+      if (is_array($value)) {
+        $schema[$keyword] = $this->plain($value);
+      }
+    }
+    return $schema;
+  }
+
+  /**
+   * Applies what a conditional says about a key to its unrefined schema.
+   *
+   * @param array $base
+   *   The unrefined schema.
+   * @param array $narrowed
+   *   What the conditional's `then` says about the key.
+   *
+   * @return array
+   *   The schema a validator holds the key to under the conditional.
+   */
+  protected function applied(array $base, array $narrowed): array {
+    foreach ($narrowed as $keyword => $value) {
+      if ($keyword === 'properties') {
+        foreach ($value as $name => $property) {
+          $base['properties'][$name] = $this->applied($base['properties'][$name] ?? [], $property);
+        }
+        continue;
+      }
+      $base[$keyword] = $value;
+    }
+    return $base;
+  }
+
+  /**
+   * Tests example 2's static contract is exact, with no round trip.
+   *
+   * Nothing chosen, so nothing is refined: the room lists every room and
+   * the capacity allows a thousand, and beside them the schema states, per
+   * venue, its rooms and, per room, how many it seats. A validator holding
+   * values to it alone refuses what the server refuses.
+   */
+  public function testStaticExampleTwoIsExact(): void {
+    [$contract] = $this->staticContract($this->situationSurface('registration.step2'), 'registration.step2');
+    $schema = $contract['schema'];
+    $this->assertWellFormed($schema);
+
+    $room = $schema['properties']['room'];
+    $this->assertFalse($room['x-surface']['refined']);
+    $this->assertTrue($room['x-surface']['enumerated']);
+    $this->assertArrayNotHasKey('dynamic', $room['x-surface']);
+    $this->assertSame(Venues::rooms(), $this->titles($room));
+    $rooms = [];
+    foreach ($this->branches($schema, 'room') as [$when, $then]) {
+      $this->assertSame(['oneOf'], array_keys($then), 'A conditional says only what changed.');
+      $rooms[$when['venue']] = $this->titles($then);
+    }
+    $this->assertSame(array_map(Venues::rooms(...), array_combine(array_keys(Venues::VENUES), array_keys(Venues::VENUES))), $rooms);
+
+    $capacity = $schema['properties']['capacity'];
+    $this->assertSame(1000, $capacity['maximum']);
+    $this->assertTrue($capacity['x-surface']['enumerated']);
+    $capacities = [];
+    foreach ($this->branches($schema, 'capacity') as [$when, $then]) {
+      $capacities[$when['room']] = $then;
+    }
+    $this->assertSame(array_keys(Venues::ROOMS), array_keys($capacities));
+    $this->assertEquals(['description' => 'Up to 400 for the Main hall.', 'maximum' => 400], $capacities['riverside_main']);
+    $this->assertArrayNotHasKey('enumerated', $schema['properties']['venue']['x-surface']);
+
+    $valid = [
+      'title' => 'Spring meetup',
+      'open' => TRUE,
+      'venue' => 'riverside',
+      'room' => 'riverside_main',
+      'capacity' => 400,
+    ];
+    $this->assertTrue($this->validates($schema, $valid));
+    $this->assertFalse($this->validates($schema, ['room' => 'library_reading'] + $valid), 'Another venue\'s room is refused.');
+    $this->assertFalse($this->validates($schema, ['capacity' => 500] + $valid), 'More than the room seats is refused.');
+    foreach (Venues::ROOMS as $name => $info) {
+      $values = ['venue' => $info['venue'], 'room' => $name, 'capacity' => $info['seats']] + $valid;
+      $this->assertTrue($this->validates($schema, $values), $name . ' at its seats is accepted.');
+      $this->assertFalse($this->validates($schema, ['capacity' => $info['seats'] + 1] + $values), $name . ' over its seats is refused.');
+      $elsewhere = $info['venue'] === 'harbour' ? 'riverside' : 'harbour';
+      $this->assertFalse($this->validates($schema, ['venue' => $elsewhere] + $values), $name . ' under another venue is refused.');
+    }
+
+    // With values, as the GET serves it and /refine re-narrows it, the
+    // keys are refined and nothing is enumerated.
+    $refined = $this->contract('registration.step2', 'configure')['schema'];
+    $this->assertArrayNotHasKey('allOf', $refined);
+    foreach ($refined['properties'] as $name => $property) {
+      $this->assertArrayNotHasKey('enumerated', $property['x-surface'], $name);
+      $this->assertArrayNotHasKey('dynamic', $property['x-surface'], $name);
+    }
+  }
+
+  /**
+   * Tests every enumerated conditional is what refinement answers.
+   *
+   * Example 2's against /refine itself, sent the conditional's values;
+   * the demo block's, which no route serves, against the contract emitted
+   * for them. Each conditional applied to the unrefined key is the key
+   * the refined contract describes, keyword for keyword.
+   */
+  public function testEnumeratedConditionalsAreWhatRefineAnswers(): void {
+    [$contract] = $this->staticContract($this->situationSurface('registration.step2'), 'registration.step2');
+    $static = $contract['schema'];
+    $controller = $this->container->get('class_resolver')->getInstanceFromDefinition(SurfaceApiController::class);
+    $compared = 0;
+    foreach (['room', 'capacity'] as $key) {
+      foreach ($this->branches($static, $key) as [$when, $then]) {
+        // A room is sent with its own venue, which /refine needs to admit it.
+        $values = $when + (isset($when['room']) ? ['venue' => Venues::ROOMS[$when['room']]['venue']] : []);
+        $body = (string) json_encode(['values' => $values, 'stale' => []]);
+        $request = Request::create('/surface-api/registration.step2/configure/refine', 'POST', content: $body);
+        $answer = json_decode((string) $controller->refine($request, 'registration.step2', 'configure')->getContent(), TRUE);
+        $refined = $answer['schema']['properties'][$key];
+        $this->assertTrue($refined['x-surface']['refined']);
+        $this->assertEquals($this->plain($refined), $this->applied($this->plain($static['properties'][$key]), $then), $key . ' for ' . json_encode($when));
+        $compared++;
+      }
+    }
+    $this->assertSame(9, $compared, 'Three venues and six rooms.');
+
+    NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
+    $surface = $this->container->get('data_surface.surfaces')->build(DemoBlockSurface::class, new SurfaceContext('configure'));
+    [$contract, $tags] = $this->staticContract($surface, 'block.data_surface_demo');
+    $static = $contract['schema'];
+    $this->assertWellFormed($static);
+    // The bundle lists the conditionals read are what the contract rests on.
+    $this->assertContains('entity_bundles', $tags);
+    $this->assertTrue($static['properties']['bundle']['x-surface']['enumerated']);
+    $this->assertTrue($static['properties']['field']['x-surface']['enumerated']);
+    $pairs = [];
+    foreach (['bundle', 'field'] as $key) {
+      foreach ($this->branches($static, $key) as [$when, $then]) {
+        $document = $this->container->get('data_surface.contract_emitter')->emit($surface, $when, 'block.data_surface_demo')->document;
+        $refined = json_decode((string) json_encode($document['schema']['properties'][$key]), TRUE);
+        $this->assertTrue($refined['x-surface']['refined']);
+        $this->assertEquals($this->plain($refined), $this->applied($this->plain($static['properties'][$key]), $then), $key . ' for ' . json_encode($when));
+        if ($key === 'field') {
+          $this->assertSame(['entity_type', 'bundle'], array_keys($when), 'The field is enumerated over both siblings it watches.');
+          $pairs[] = $when['entity_type'] . '.' . $when['bundle'];
+        }
+      }
+    }
+    $this->assertContains('user.user', $pairs);
+    $this->assertContains('node.article', $pairs);
+  }
+
+  /**
+   * Tests example 4's refiners stay dynamic: their answers are not finite.
+   *
+   * The capacity watches the licence, free text, and the stewards (inside
+   * the mount) watch the capacity, a number; neither can be listed, so
+   * both are marked dynamic, to be asked again, while the room, which
+   * watches only the venue, is still enumerated.
+   */
+  public function testExampleFourStaysDynamic(): void {
+    $this->enableModules(['data_surface_examples_compliance']);
+    [$contract] = $this->staticContract($this->situationSurface('registration.step3'), 'registration.step3');
+    $schema = $contract['schema'];
+    $this->assertWellFormed($schema);
+    $capacity = $schema['properties']['capacity']['x-surface'];
+    $this->assertTrue($capacity['dynamic']);
+    $this->assertArrayNotHasKey('enumerated', $capacity);
+    $this->assertSame(['room', 'third_party_settings.data_surface_examples_compliance.licence'], $capacity['dependsOn']);
+    $this->assertSame([], $this->branches($schema, 'capacity'));
+    $mount = $schema['properties']['third_party_settings']['x-surface'];
+    $this->assertTrue($mount['dynamic']);
+    $this->assertSame(['capacity'], $mount['dependsOn']);
+    $this->assertTrue($schema['properties']['room']['x-surface']['enumerated']);
+    $this->assertCount(3, $this->branches($schema, 'room'));
+  }
+
+  /**
+   * Tests slots keep their conditionals, and a variant enumerates inside.
+   */
+  public function testSlotVariantsEnumerateInsideTheirConditional(): void {
+    [$contract] = $this->staticContract($this->situationSurface('registration.step3'), 'registration.step3');
+    $schema = $contract['schema'];
+    $this->assertSame(['note'], array_keys($this->variant($schema, 'pricing', 'free', 'ticket')['properties']));
+    $this->assertSame(['price', 'currency'], $this->variant($schema, 'pricing', 'paid', 'ticket')['required']);
+    $this->assertCount(3, $this->branches($schema, 'room'));
+    $this->assertCount(6, $this->branches($schema, 'capacity'));
+
+    // The fruit has no default, so the crate's layers are enumerated in
+    // the fruit variant's own schema, under its conditional.
+    $this->enableModules(['data_surface_surface_test']);
+    $surface = $this->container->get('data_surface.surfaces')->build(CrateSurface::class, new SurfaceContext('configure'));
+    [$contract] = $this->staticContract($surface, 'surface_test.crate');
+    $schema = $contract['schema'];
+    $this->assertWellFormed($schema);
+    $fruit = $this->variant($schema, 'contents', 'fruit', 'contents_settings');
+    $this->assertTrue($fruit['properties']['layers']['x-surface']['enumerated']);
+    $layers = [];
+    foreach ($this->branches($fruit, 'layers') as [$when, $then]) {
+      $layers[$when['fruit']] = $then;
+    }
+    $this->assertSame(['apple' => ['maximum' => 4], 'peach' => ['maximum' => 2]], $layers);
+    $crate = ['contents' => 'fruit', 'contents_settings' => ['fruit' => 'apple', 'layers' => 4]];
+    $this->assertTrue($this->validates($schema, $crate));
+    $this->assertFalse($this->validates($schema, ['contents_settings' => ['fruit' => 'peach', 'layers' => 4]] + $crate));
+    $this->assertTrue($this->validates($schema, ['contents_settings' => ['fruit' => 'peach', 'layers' => 2]] + $crate));
   }
 
   /**

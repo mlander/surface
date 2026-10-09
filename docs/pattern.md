@@ -298,7 +298,11 @@ surface has no verb for options.
 **A refiner never calls a service.** A list that depends on a value is
 a constraint with the value as an option. The refiner points; the
 options resolver fetches ([Options and resolvers](options.md)). That is
-what lets a surface stay a class of static methods.
+what lets a surface stay a class of static methods. It is also what lets the
+[served contract](served-contract.md#exact-where-it-can-be) run a
+refiner ahead of time for every value a listed sibling offers, so the
+static JSON Schema is exact without a round trip wherever the answers
+are finite.
 
 A list can be changed in two places. Tightening one key on one surface
 is an alter's `#[RefinesInput]` method. Widening one key on one surface

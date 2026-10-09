@@ -647,7 +647,8 @@ contract, so `x-surface.widget`, the Form API mapping said for a
 renderer, and `multiple`, its qualifier, are written only when a caller
 passes `widgets: TRUE`; `data_surface_react` does, for its app. The rest
 of `x-surface` (locked, dependsOn, refined, stale, emptyOption, a slot's
-by, variants and chosen, a variant's id, checkedOnServer) is the
+by, variants and chosen, a variant's id, checkedOnServer, enumerated,
+dynamic) is the
 surface's own reading of a key, not a widget, and is always written.
 The hints are stripped after the schema is built rather than threaded
 through it, so the widget a key gets is still read in the same pass as
@@ -670,6 +671,28 @@ object. Restating the parent as a `oneOf` of whole objects would make it
 legal and multiply the parent per variant, per slot. The `if`/`then` is
 the JSON Schema statement, and `x-surface.by` names the key for a
 reader that wants it. (`ContractEmitter::slot()`)
+
+### Enumeration is capped
+
+Where a key's refiners have nothing to refine against yet, the emitter
+states what they would answer for every combination of their watched
+siblings' values, as `if`/`then` conditionals, when every such sibling
+offers a list of values and there are at most 64 combinations per key
+(`ContractEmitter::ENUMERATION_CAP`). The cap is per key, over the
+product of the lists, and bounds two costs at once: the document, which
+a person reads in the contract panel and a client downloads on every
+GET, and the emission, which refines the whole surface once per
+combination. 64 holds every finite domain the shipped surfaces have
+(the largest is the demo block's field, entity types times bundles) with
+room for a real site's bundles, and is small enough that a
+country-sized list (some 250) is refused outright rather than written.
+Above it the key is `dynamic`. A key watching free text, a number, a
+boolean or a key an alter mounted stays `dynamic` whatever the count:
+its domain is not a list, so there is nothing to enumerate, and
+inventing one (sampling numbers, guessing at a licence) would state a
+rule the surface never made. Such a key keeps `dependsOn`, and a client
+asks `/refine` when a watched key changes, as before.
+(`ContractEmitter::enumerate()`)
 
 ### A served contract is never stored
 

@@ -44,7 +44,10 @@ JSON Schema cannot say them. This one can.
   flattened to one map, the variant the stored values choose, or every
   variant's keys with none required before anything chooses
   ([surfaces](surfaces.md), "Emission"). The `allOf` of `if`/`then`
-  below is only in this contract.
+  below is only in this contract, for a slot and for
+  [an enumerated key](#exact-where-it-can-be) alike: a Tool API context
+  definition has no conditional, so the tool's schema stays as loose as
+  the unrefined surface.
 
 ## The document
 
@@ -100,6 +103,8 @@ is an object with `properties` in declaration order, `required`, and
 | `variant` | On a slot's variant schema: which value it is for. |
 | `checkedOnServer` | Constraints no keyword states. |
 | `patternMessage` | On a key with a `pattern`: the Regex's own message, which is how a person is told what the pattern allows. The pattern is for machines; a renderer explains the key by this, never by the pattern. |
+| `enumerated` | Only when `true`: the key's refiners have nothing to refine against yet, and what they answer for every value they could be handed is stated as conditionals on the parent ([below](#exact-where-it-can-be)). The schema is exact for this key with no round trip. |
+| `dynamic` | Only when `true`: the key's refiners have nothing to refine against yet, and what they would answer cannot be listed (a watched key with no list of values, or too many combinations). The schema is the unrefined, looser one; refine when a `dependsOn` key changes. |
 
 ### A slot is a conditional
 
@@ -131,6 +136,86 @@ hints):
        "currency": {"title": "Currency", "type": "string", "default": "EUR",
                     "oneOf": [{"const": "EUR", "title": "EUR"}, {"const": "GBP", "title": "GBP"}, {"const": "USD", "title": "USD"}], ...}},
      "required": ["price", "currency"], "additionalProperties": false, ...}}}}
+]
+```
+
+### Exact where it can be
+
+A refiner is a static, pure function of the values it watches, and most
+watched keys offer a short list of values. So where a key's refiners
+have nothing to refine against yet (a watched sibling holds nothing),
+the emitter runs them ahead of time for every value they could be
+handed and writes each answer as a conditional on the parent, beside
+the slots': an `if` naming each watched sibling's value as a `const`,
+and a `then` saying what the key's schema says differently from the
+unrefined one. The property carries `x-surface.enumerated: true`. A
+generic JSON Schema validator then refuses what the server refuses, with
+no `/refine` round trip.
+
+- **Every watched sibling must offer a list.** Its own definition, as
+  refined for the combination so far, resolves to an option set (a
+  `Choice`, a `LabeledChoice`, a list an options resolver reads). A
+  sibling that holds a value is held at it. A sibling that is free text,
+  a number, a boolean, a list of values, a subsurface, or a key an alter
+  mounted (named by its dotted path) cannot be listed.
+- **The combinations are capped**, at 64 per key
+  (`ContractEmitter::ENUMERATION_CAP`): the product of the watched
+  siblings' lists, read in declaration order, each under the values
+  before it, so the demo block's `field` is enumerated per entity type
+  and, under each, per bundle. Above the cap, or with a sibling that
+  cannot be listed, the key is not enumerated and is marked
+  `x-surface.dynamic: true` instead: its schema is the unrefined one and
+  `dependsOn` says what to refine on, as before
+  ([decision](decisions.md#enumeration-is-capped)).
+- **Each conditional is what `/refine` answers.** It is computed by
+  refining the whole surface against the values with the combination
+  over them, the same call `/refine` makes, so chains compose (the room
+  per venue, the capacity per room) and an alter's refiners in the chain
+  are included.
+- **Only what changed.** A `then` names the key and only the keywords
+  that differ from the unrefined schema (the narrowed `oneOf`, a lower
+  `maximum`, the description naming the reason); a map's properties are
+  compared one by one. A combination that changes nothing writes no
+  conditional.
+- **Inside a subsurface too.** Each frame is described the same way, so
+  a slot's variant enumerates its own keys inside the variant's schema,
+  under the slot's conditional. A subsurface's frame starts from the
+  child's defaults, as refinement does, so a child key watching a
+  sibling with a default is shown refined against that default, not
+  enumerated.
+- **With values, nothing changes.** A key whose watched siblings hold
+  values is refined, as the GET and `/refine` serve it, and carries
+  neither keyword.
+- **The lists are dependencies.** Every option list and every refined
+  surface a conditional was read from is merged into the contract's
+  cacheability (the demo block's static contract depends on
+  `entity_bundles`).
+
+In the shipped surfaces, described for no values: example 2's and
+example 3's room (per venue, 3 conditionals) and capacity (per room, 6);
+the demo block's `bundle` (per entity type) and `field` (per entity type
+and bundle); the demo formatter's `variant` (per casing); the demo
+extras' `limit` (per presentation; only the grid writes one). Dynamic:
+example 4's capacity, which also watches the free-text licence, and its
+stewards, inside the mount, which watch the capacity, a number. The
+field instance's `bundle` would be enumerated per entity type, but every
+situation of it knows the entity type, so it is always served refined.
+
+Example 2, nothing chosen, abbreviated:
+
+```json
+"room": {"title": "Room", "type": "string", "oneOf": [...every room...],
+         "x-surface": {"dependsOn": ["venue"], "refined": false, "enumerated": true, ...}},
+"capacity": {"title": "Capacity", "type": ["integer", "null"], "minimum": 1, "maximum": 1000,
+             "x-surface": {"dependsOn": ["room"], "refined": false, "enumerated": true, ...}},
+...
+"allOf": [
+  {"if": {"properties": {"venue": {"const": "riverside"}}, "required": ["venue"]},
+   "then": {"properties": {"room": {"oneOf": [{"const": "riverside_main", "title": "Main hall"}, {"const": "riverside_east", "title": "East room"}]}}}},
+  ...
+  {"if": {"properties": {"room": {"const": "riverside_main"}}, "required": ["room"]},
+   "then": {"properties": {"capacity": {"description": "Up to 400 for the Main hall.", "maximum": 400}}}},
+  ...
 ]
 ```
 
@@ -359,7 +444,8 @@ the commit, a few milliseconds, still wins.
 ### Cacheability
 
 The contract carries what the refined surface and every option list in
-it depend on, the access answer's own, and `url.query_args`, as HTTP
+it depend on, those an [enumerated](#exact-where-it-can-be) conditional
+was read from included, the access answer's own, and `url.query_args`, as HTTP
 cache metadata on a `CacheableJsonResponse`. It is never stored: the
 values in it come from a target, and a target says nothing about how
 long what it loaded holds ([decision](decisions.md#a-served-contract-is-never-stored)).

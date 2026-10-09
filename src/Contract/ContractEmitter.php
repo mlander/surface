@@ -37,7 +37,12 @@ use Drupal\data_surface\SurfaceEntry;
  *   (`x-surface`): whether it is locked, which siblings its refiners
  *   watch, whether it is narrowed right now, whether a select shows its
  *   empty option and under what label, and whether the value it holds
- *   has gone stale.
+ *   has gone stale;
+ * - where a key's refiners have nothing to refine against yet, what they
+ *   would answer for every value their watched siblings could take, as
+ *   conditionals on the parent beside the slots' (enumerate()), so a
+ *   static contract is exact wherever the answers are finite; and where
+ *   they are not, that the key is `dynamic`, to be asked again.
  *
  * Everything is read from the surface: the declared shape for what it
  * advertises, the same surface refined against the values for what it
@@ -72,6 +77,16 @@ final class ContractEmitter {
    * The extension keyword carrying what JSON Schema cannot say.
    */
   public const EXTENSION = 'x-surface';
+
+  /**
+   * The most conditionals one key is enumerated into.
+   *
+   * Counted per key, over the combinations of its watched siblings'
+   * values: above it the key is `dynamic` instead.
+   *
+   * Decision: see docs/decisions.md#enumeration-is-capped.
+   */
+  public const ENUMERATION_CAP = 64;
 
   /**
    * Constraints the schema states in a keyword of its own, or not at all.
@@ -238,6 +253,19 @@ final class ContractEmitter {
           }
           $shown[$name] = NULL;
         }
+        // A key its refiners have not refined, because something it watches
+        // holds nothing yet: what they would answer, for every value they
+        // could be handed, or that it can only be asked.
+        if ($entry->dependencies !== [] && !$entry->locked && $current === $entry) {
+          $branches = $this->enumerate($declared, $refined, $entry, $values, $properties[$name], $prefix . $name, $cacheability);
+          if ($branches === NULL) {
+            $properties[$name][self::EXTENSION]['dynamic'] = TRUE;
+          }
+          else {
+            $properties[$name][self::EXTENSION]['enumerated'] = TRUE;
+            array_push($conditions, ...$branches);
+          }
+        }
       }
       if ($current->definition->isRequired()) {
         $required[] = $name;
@@ -330,6 +358,181 @@ final class ContractEmitter {
       ];
     }
     return [$property, $shown, $branches];
+  }
+
+  /**
+   * States what a key's refiners answer for every value they could see.
+   *
+   * Refiners are pure functions of the values they watch, so where every
+   * watched sibling that holds nothing yet offers a finite list of
+   * values, the refined key can be written down for each combination
+   * ahead of time: one conditional per combination, on the parent, its
+   * `if` naming each watched sibling's value as a `const` and its `then`
+   * what the key's schema says differently from the unrefined one. A
+   * watched sibling that holds a value is held at it.
+   *
+   * Each combination is answered by refining the whole surface against
+   * the values with the combination over them, the very call /refine
+   * makes, so a conditional states exactly what /refine would answer.
+   * Siblings are taken in declaration order, and each one's list is read
+   * from the surface refined for the combination so far, so a chain
+   * composes: a bundle's list is read under each entity type.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $declared
+   *   The surface of this frame, as advertised.
+   * @param \Drupal\data_surface\DataSurfaceInterface $refined
+   *   The same surface refined against the frame's values.
+   * @param \Drupal\data_surface\SurfaceEntry $entry
+   *   The key, unrefined.
+   * @param array $values
+   *   The values of the frame.
+   * @param array $base
+   *   The key's schema as emitted, unrefined.
+   * @param string $path
+   *   The key's dotted path.
+   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
+   *   Collects what every list read and every refinement depends on.
+   *
+   * @return array|null
+   *   The conditionals, none for a combination that changes nothing; NULL
+   *   when the key cannot be enumerated: it watches a key an alter
+   *   mounted, a list, a subsurface or a key with no list of values, or
+   *   it would take more than ENUMERATION_CAP combinations.
+   */
+  protected function enumerate(DataSurfaceInterface $declared, DataSurfaceInterface $refined, SurfaceEntry $entry, array $values, array $base, string $path, CacheableMetadata $cacheability): ?array {
+    $order = array_flip($declared->getDefinitions()->names());
+    $watched = $entry->dependencies;
+    foreach ($watched as $key) {
+      if (!isset($order[$key])) {
+        // A key an alter mounted, by its dotted path: a free value, or one
+        // a conditional on the parent cannot name without restating the
+        // mount around it.
+        return NULL;
+      }
+    }
+    usort($watched, static fn (string $a, string $b): int => $order[$a] <=> $order[$b]);
+    $combinations = [[[], $refined]];
+    foreach ($watched as $key) {
+      $next = [];
+      foreach ($combinations as [$combination, $surface]) {
+        $domain = $this->domain($surface, $key, $values, $cacheability);
+        if ($domain === NULL) {
+          return NULL;
+        }
+        foreach ($domain as $value) {
+          if (count($next) === self::ENUMERATION_CAP) {
+            return NULL;
+          }
+          $next[] = [$combination + [$key => $value], $surface];
+        }
+      }
+      foreach ($next as $i => [$combination]) {
+        $next[$i][1] = $declared->refine(array_replace($values, $combination));
+        $cacheability->addCacheableDependency($next[$i][1]);
+      }
+      $combinations = $next;
+    }
+
+    $branches = [];
+    $ignored = [];
+    foreach ($combinations as [$combination, $surface]) {
+      $definition = $surface->getDefinition($entry->name) ?? $entry->definition;
+      [$schema] = $this->property($definition, NULL, NULL, $path, FALSE, [], $cacheability, $ignored);
+      $narrowed = $this->narrowed($schema, $base);
+      if ($narrowed === []) {
+        continue;
+      }
+      $conditions = [];
+      foreach ($combination as $key => $value) {
+        $conditions[$key] = ['const' => $value];
+      }
+      $branches[] = [
+        'if' => [
+          'properties' => $conditions,
+          'required' => array_keys($combination),
+        ],
+        'then' => [
+          'properties' => [$entry->name => $narrowed],
+        ],
+      ];
+    }
+    return $branches;
+  }
+
+  /**
+   * Lists the values a watched sibling can take, to enumerate over.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The surface, refined for the combination so far.
+   * @param string $key
+   *   The watched sibling.
+   * @param array $values
+   *   The values of the frame.
+   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
+   *   Collects the list's cacheability.
+   *
+   * @return array|null
+   *   The one value it holds, or every value its list offers, each in its
+   *   key's type; NULL when it holds nothing and offers no list: a free
+   *   value, a list of values, a subsurface, or more values than
+   *   ENUMERATION_CAP.
+   */
+  protected function domain(DataSurfaceInterface $surface, string $key, array $values, CacheableMetadata $cacheability): ?array {
+    $entry = $surface->getDefinitions()->entry($key);
+    if ($entry === NULL || $entry->isNested() || $entry->definition instanceof ListDataDefinitionInterface) {
+      return NULL;
+    }
+    $value = $values[$key] ?? NULL;
+    if (ValueState::isConfigured($value)) {
+      return [is_int($value) || is_string($value) ? $this->cast($value, $entry->definition) : $value];
+    }
+    $set = $this->optionSet($entry->definition, $cacheability);
+    if ($set === NULL || count($set->options) > self::ENUMERATION_CAP) {
+      return NULL;
+    }
+    return array_map(fn (int|string $option): int|float|string|bool => $this->cast($option, $entry->definition), array_keys($set->options));
+  }
+
+  /**
+   * Keeps only what a refined schema says differently from the unrefined.
+   *
+   * A conditional applies on top of the unrefined schema, and refinement
+   * only narrows, so what changed is all it needs to say: the narrowed
+   * `oneOf`, the lower `maximum`, the description naming the reason. A
+   * map's properties are compared one by one.
+   *
+   * @param array $schema
+   *   The refined schema.
+   * @param array $base
+   *   The unrefined schema.
+   *
+   * @return array
+   *   The keywords that differ, without `x-surface`; empty when none do.
+   */
+  protected function narrowed(array $schema, array $base): array {
+    $narrowed = [];
+    foreach ($schema as $keyword => $value) {
+      if ($keyword === self::EXTENSION) {
+        continue;
+      }
+      if ($keyword === 'properties' && is_array($value) && is_array($base['properties'] ?? NULL)) {
+        $properties = [];
+        foreach ($value as $name => $property) {
+          $changed = $this->narrowed($property, $base['properties'][$name] ?? []);
+          if ($changed !== []) {
+            $properties[$name] = $changed;
+          }
+        }
+        if ($properties !== []) {
+          $narrowed['properties'] = $properties;
+        }
+        continue;
+      }
+      if (!array_key_exists($keyword, $base) || $base[$keyword] !== $value) {
+        $narrowed[$keyword] = is_array($value) ? $this->withoutExtension($value) : $value;
+      }
+    }
+    return $narrowed;
   }
 
   /**
