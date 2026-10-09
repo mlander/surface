@@ -596,6 +596,12 @@ final class ContractEmitter {
         $schema['required'] = $required;
       }
       $extension = $this->extension('fieldset', $locked, $depends, $refined || $this->anyRefined($schema));
+      if (DefinitionMetadata::isGrouping($definition)) {
+        // Only groups the fieldsets inside it, as on the form: no title
+        // and no description to draw, and `group` says to draw none.
+        unset($schema['title'], $schema['description']);
+        $extension['group'] = TRUE;
+      }
       $shown = $nested;
     }
     else {

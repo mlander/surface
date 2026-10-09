@@ -33,6 +33,8 @@ export interface Extension {
   checkedOnServer?: string[];
   /** A Regex's own message: how a person is told what `pattern` allows. */
   patternMessage?: string;
+  /** On an object that only groups each module's fieldset: draw nothing around them. */
+  group?: boolean;
 }
 
 export interface Choice {

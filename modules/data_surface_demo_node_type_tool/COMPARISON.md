@@ -286,7 +286,7 @@ caller sends that.
                                     "title": "Audience tags"
                                 }
                             },
-                            "title": "Data Surface Demo Extras settings"
+                            "title": "Editorial review"
                         }
                     },
                     "description": "Third party settings: Settings added by other modules.",

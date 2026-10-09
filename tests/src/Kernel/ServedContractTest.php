@@ -243,31 +243,31 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['show' => FALSE, 'label' => '- Select -'], $venue['x-surface']['emptyOption']);
     $this->assertSame([], $venue['x-surface']['dependsOn']);
 
-    // The room depends on the venue and is narrowed to the library's.
+    // The room depends on the venue and is narrowed to the riverside's.
     $room = $schema['properties']['room'];
     $this->assertSame(['venue'], $room['x-surface']['dependsOn']);
     $this->assertTrue($room['x-surface']['refined']);
     $this->assertSame([
-      'library_reading' => 'Reading room',
-      'library_garden' => 'Garden room',
+      'riverside_main' => 'Main hall',
+      'riverside_east' => 'East room',
     ], $this->titles($room));
-    // The capacity depends on the room, and the reading room seats 60.
+    // The capacity depends on the room, and the main hall seats 400.
     $capacity = $schema['properties']['capacity'];
     $this->assertSame(['room'], $capacity['x-surface']['dependsOn']);
     $this->assertTrue($capacity['x-surface']['refined']);
-    $this->assertSame(60, $capacity['maximum']);
+    $this->assertSame(400, $capacity['maximum']);
 
     $this->assertWellFormed($schema);
     $this->assertTrue($this->validates($schema, $contract['values']));
-    $this->assertFalse($this->validates($schema, ['room' => 'riverside_main'] + $contract['values']), 'A room of another venue is refused.');
-    $this->assertFalse($this->validates($schema, ['capacity' => 61] + $contract['values']), 'More people than the room seats are refused.');
+    $this->assertFalse($this->validates($schema, ['room' => 'library_reading'] + $contract['values']), 'A room of another venue is refused.');
+    $this->assertFalse($this->validates($schema, ['capacity' => 401] + $contract['values']), 'More people than the room seats are refused.');
 
     // Another venue: its rooms, and the stored room shown stale.
-    $moved = $this->contract('registration.step2', 'configure', [], ['venue' => 'riverside']);
+    $moved = $this->contract('registration.step2', 'configure', [], ['venue' => 'library']);
     $room = $moved['schema']['properties']['room'];
     $this->assertSame([
-      'riverside_main' => 'Main hall',
-      'riverside_east' => 'East room',
+      'library_reading' => 'Reading room',
+      'library_garden' => 'Garden room',
     ], $this->titles($room));
     $this->assertTrue($room['x-surface']['stale']);
     $this->assertSame(['show' => TRUE, 'label' => '- Select -'], $room['x-surface']['emptyOption']);
@@ -275,7 +275,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['room'], $moved['stale']);
 
     // The garden room seats 30.
-    $garden = $this->contract('registration.step2', 'configure', [], ['room' => 'library_garden']);
+    $garden = $this->contract('registration.step2', 'configure', [], ['venue' => 'library', 'room' => 'library_garden']);
     $this->assertSame(30, $garden['schema']['properties']['capacity']['maximum']);
   }
 
@@ -292,9 +292,9 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $overlay = $this->container->get('data_surface.form_builder')->refinementOverlay(
       $situation->surface,
       $served->current($situation),
-      ['venue' => 'riverside', 'room' => 'library_reading'],
+      ['venue' => 'library', 'room' => 'riverside_main'],
     );
-    $this->assertSame(['room' => 'library_reading'], $overlay[DataSurfaceFormBuilderInterface::STANDING_KEY]);
+    $this->assertSame(['room' => 'riverside_main'], $overlay[DataSurfaceFormBuilderInterface::STANDING_KEY]);
     $contract = $this->contract('registration.step2', 'configure', [], $overlay);
     $this->assertArrayNotHasKey(DataSurfaceFormBuilderInterface::STANDING_KEY, $contract['values']);
     $room = $contract['schema']['properties']['room'];
@@ -474,6 +474,13 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $this->assertSame(100, $capacity['maximum']);
     $this->assertSame('Up to 100 without an event licence.', $capacity['description']);
     $this->assertSame(['capacity'], $contract['schema']['properties']['third_party_settings']['x-surface']['dependsOn']);
+    // The mount only groups each module's fieldset: no title of its own,
+    // and the module's map titled by its alter.
+    $mount = $contract['schema']['properties']['third_party_settings'];
+    $this->assertArrayNotHasKey('title', $mount);
+    $this->assertArrayNotHasKey('description', $mount);
+    $this->assertTrue($mount['x-surface']['group']);
+    $this->assertSame('Compliance', $mount['properties']['data_surface_examples_compliance']['title']);
 
     $licensed = $this->contract('registration.step3', 'configure', [], $room + [
       'capacity' => 150,

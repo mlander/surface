@@ -121,7 +121,8 @@ case.
 For the content type settings, open core's **Add content type** form and
 find the **Editorial review** tab. With `data_surface_demo_node_type`
 installed, the same two settings appear on
-`/admin/structure/types/surface-add` under **Third party settings**.
+`/admin/structure/types/surface-add` under **Editorial review**, the
+title `NodeTypeAlter` gives its mount.
 
 ## What gates it
 

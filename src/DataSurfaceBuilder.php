@@ -25,9 +25,9 @@ use Drupal\data_surface\Target\SettingsShapeInterface;
  *
  * The builder is a value object made with `new DataSurfaceBuilder()`, so
  * there is no constructor to inject the translation service through. The
- * titles of the third-party containers below are built by a static
- * method with the global t(), and translate at render time exactly as an
- * injected `$this->t()` would.
+ * titles of the third-party containers below are built with the global
+ * t(), and translate at render time exactly as an injected `$this->t()`
+ * would.
  *
  * @see \Drupal\data_surface\DataSurfaceBuilderInterface
  *   For the documentation of every method.
@@ -63,6 +63,16 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
    * @var array<string, array<string, \Drupal\Core\TypedData\DataDefinitionInterface>>
    */
   protected array $thirdPartyOutputs = [];
+
+  /**
+   * The map each provider's mounted keys are sealed into.
+   *
+   * Keyed 'settings' or 'outputs', then by provider; made the first time
+   * it is asked for, so an alter can label its own before the seal.
+   *
+   * @var array<string, array<string, \Drupal\Core\TypedData\MapDataDefinition>>
+   */
+  protected array $thirdPartyMounts = ['settings' => [], 'outputs' => []];
 
   /**
    * How each provider's mounted settings are written down, by provider.
@@ -345,6 +355,38 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * {@inheritdoc}
    */
+  public function getThirdPartyMount(string $provider, bool $output = FALSE): ?MapDataDefinition {
+    if (!isset(($output ? $this->thirdPartyOutputs : $this->thirdParty)[$provider])) {
+      return NULL;
+    }
+    $side = $output ? 'outputs' : 'settings';
+    return $this->thirdPartyMounts[$side][$provider] ??= static::providerMap($provider, $output);
+  }
+
+  /**
+   * Makes the map one provider's mounted keys are sealed into.
+   *
+   * Titled with the module's human name: on a form it is that module's
+   * fieldset, and "settings" after the name says nothing a person needs.
+   *
+   * @param string $provider
+   *   The module that mounted the keys.
+   * @param bool $output
+   *   TRUE for the map of its mounted outputs.
+   *
+   * @return \Drupal\Core\TypedData\MapDataDefinition
+   *   The map, with no properties yet.
+   */
+  protected static function providerMap(string $provider, bool $output): MapDataDefinition {
+    return MapDataDefinition::create()
+      ->setLabel($output
+        ? t('@provider outputs', ['@provider' => static::providerLabel($provider)])
+        : static::providerLabel($provider));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function addRefinement(string $target, array $dependencies): static {
     $this->assertMutable();
     $this->refinements[$target] = array_values(array_unique(array_merge($this->refinements[$target] ?? [], $dependencies)));
@@ -401,7 +443,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
       $definitions[$key] = $chosen === NULL ? $slot->placeholder() : $slot->definitionFor($chosen);
     }
     if ($this->thirdParty !== []) {
-      $definitions['third_party_settings'] = static::mountedMap($this->thirdParty, FALSE);
+      $definitions['third_party_settings'] = $this->mountedMap($this->thirdParty, FALSE);
     }
     $outputs = $this->outputs;
     // Asked again over everything, because outputs also arrive whole
@@ -411,7 +453,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
       static::assertOutputDeclarable((string) $name, $definition);
     }
     if ($this->thirdPartyOutputs !== []) {
-      $outputs[self::THIRD_PARTY_OUTPUTS] = static::mountedMap($this->thirdPartyOutputs, TRUE);
+      $outputs[self::THIRD_PARTY_OUTPUTS] = $this->mountedMap($this->thirdPartyOutputs, TRUE);
     }
     return $this->sealed = new DataSurface(
       DefinitionMap::fromArrays(
@@ -438,6 +480,11 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
    * a map of provider maps, so a contributed key is addressed under the
    * name of whoever answers for it and can collide with nobody.
    *
+   * The settings' map only groups: it is marked so, and a form or a
+   * served contract draws each provider's map and nothing around them.
+   * Its own label and description are kept for a reader with the
+   * definition alone, such as the Tool API.
+   *
    * @param array<string, array<string, \Drupal\Core\TypedData\DataDefinitionInterface>> $mounted
    *   The mounted definitions, keyed by provider, then by key.
    * @param bool $emitted
@@ -448,7 +495,29 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The assembled map.
    */
-  protected static function mountedMap(array $mounted, bool $emitted): MapDataDefinition {
+  protected function mountedMap(array $mounted, bool $emitted): MapDataDefinition {
+    $providers = static::groupingMap($emitted);
+    foreach ($mounted as $provider => $keys) {
+      $provider_map = $this->getThirdPartyMount((string) $provider, $emitted);
+      assert($provider_map instanceof MapDataDefinition);
+      foreach ($keys as $key => $definition) {
+        $provider_map->setPropertyDefinition((string) $key, $definition);
+      }
+      $providers->setPropertyDefinition((string) $provider, $provider_map);
+    }
+    return $providers;
+  }
+
+  /**
+   * Makes the map the providers' maps are mounted in, with no providers.
+   *
+   * @param bool $emitted
+   *   TRUE for the outputs' map, FALSE for the settings'.
+   *
+   * @return \Drupal\Core\TypedData\MapDataDefinition
+   *   The map; the settings' marked as only grouping.
+   */
+  protected static function groupingMap(bool $emitted): MapDataDefinition {
     $providers = MapDataDefinition::create()
       ->setLabel($emitted
         ? t('Third party outputs')
@@ -456,16 +525,8 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
       ->setDescription($emitted
         ? t('Values emitted by other modules.')
         : t('Settings added by other modules.'));
-    foreach ($mounted as $provider => $keys) {
-      $name = static::providerLabel((string) $provider);
-      $provider_map = MapDataDefinition::create()
-        ->setLabel($emitted
-          ? t('@provider outputs', ['@provider' => $name])
-          : t('@provider settings', ['@provider' => $name]));
-      foreach ($keys as $key => $definition) {
-        $provider_map->setPropertyDefinition((string) $key, $definition);
-      }
-      $providers->setPropertyDefinition((string) $provider, $provider_map);
+    if (!$emitted) {
+      DefinitionMetadata::setGrouping($providers);
     }
     return $providers;
   }

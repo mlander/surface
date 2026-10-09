@@ -11,6 +11,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Attribute\DataSurfaceWidget;
+use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
 use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -62,12 +63,14 @@ final class MapWidget extends DataSurfaceWidgetBase implements ContainerFactoryP
    */
   public function buildElement(DataDefinitionInterface $definition, mixed $value): array {
     assert($definition instanceof ComplexDataDefinitionInterface);
-    $element = [
+    // A map that only groups the maps inside it, each its own details,
+    // has nothing of its own to title, so nothing is drawn around them.
+    $element = DefinitionMetadata::isGrouping($definition) ? ['#type' => 'container'] : [
       '#type' => 'details',
       '#title' => $definition->getLabel(),
       '#open' => TRUE,
     ];
-    if ($definition->getDescription() !== NULL) {
+    if ($element['#type'] === 'details' && $definition->getDescription() !== NULL) {
       $element['#description'] = $definition->getDescription();
     }
     if ($definition->isRequired()) {

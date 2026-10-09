@@ -41,8 +41,10 @@ and so on.
 - **Renders** one component per `x-surface.widget`, mirroring the Form
   API mapping: select with the empty option rule, checkbox, number with
   its bounds and step, text with its maxlength, textarea, email, a
-  fieldset for a map or an attached part, the chosen variant's fieldset
-  for a slot (nothing while it is unresolved), and a minimal repeatable
+  fieldset for a map or an attached part (none around the modules'
+  third-party settings, `x-surface.group`, each module's map being its
+  own, as on the form), the chosen variant's fieldset for a slot
+  (nothing while it is unresolved), and a minimal repeatable
   for a list with no option list. Radios are in the vocabulary and the
   app, and the emitter never asks for them, because the Form API
   mapping renders none. Locked keys are disabled and say why; a stale

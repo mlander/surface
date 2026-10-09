@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
+use Drupal\Core\Form\FormState;
+use Drupal\Core\Render\Element;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceInterface;
@@ -189,6 +191,38 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Tests the alter's keys sit in one fieldset, which the alter titles.
+   *
+   * The map every module's keys are mounted in only groups them, so the
+   * form draws it as a plain container, and this module's map is the one
+   * details, titled by the alter's describe() of its own mount. The
+   * served contract says the same: no title on the group, and `group`.
+   */
+  public function testTheKeysSitInOneFieldsetTitledCompliance(): void {
+    $surface = $this->surface();
+    $stored = $this->config('data_surface_examples.registration_step3')->getRawData();
+    $form = $this->container->get('data_surface.form_builder')->buildSurfaceForm($surface, $stored, new FormState());
+    $group = $form['third_party_settings'];
+    $this->assertSame('container', $group['#type']);
+    $this->assertArrayNotHasKey('#title', $group);
+    $this->assertArrayNotHasKey('#description', $group);
+    $this->assertSame([self::MODULE], Element::children($group));
+    $this->assertSame('details', $group[self::MODULE]['#type']);
+    $this->assertSame('Compliance', (string) $group[self::MODULE]['#title']);
+    $this->assertSame(['licence', 'stewards'], Element::children($group[self::MODULE]));
+    $this->assertSame('At least 1 steward for 50 attendees.', (string) $group[self::MODULE]['stewards']['#description']);
+    $this->assertSame('Up to 100 without an event licence.', (string) $form['capacity']['#description']);
+
+    $served = $this->container->get('data_surface.contract_emitter')
+      ->emit($surface, $stored, 'registration.step3', 'configure', widgets: TRUE)->document['schema']['properties']['third_party_settings'];
+    $this->assertArrayNotHasKey('title', $served);
+    $this->assertArrayNotHasKey('description', $served);
+    $this->assertSame(['fieldset', TRUE], [$served['x-surface']['widget'], $served['x-surface']['group']]);
+    $this->assertSame('Compliance', $served['properties'][self::MODULE]['title']);
+    $this->assertArrayNotHasKey('group', $served['properties'][self::MODULE]['x-surface']);
+  }
+
+  /**
    * Tests the licence lifts the ceiling back to the room's limit.
    */
   public function testWithoutLicenceTheCapacityStopsAtOneHundred(): void {
@@ -231,7 +265,7 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
 
     $stewards = $this->mounted($surface->refine(['capacity' => 20] + self::EVENT), 'stewards');
     $this->assertSame(['min' => 1], $stewards->getConstraints()['Range']);
-    $this->assertSame('At least 1 stewards for 20 attendees.', (string) $stewards->getDescription());
+    $this->assertSame('At least 1 steward for 20 attendees.', (string) $stewards->getDescription());
 
     $this->assertSame([self::STEWARDS], $this->refusals(['capacity' => 150] + self::compliance('EV-2048', 2)));
   }
@@ -263,8 +297,8 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
    */
   public function testTheLicenceAndTheCapacityReplaceWhatTheyMove(): void {
     $this->actAsAnonymousAdministrator();
-    // A rebuild is built from what is stored, so the room is stored first.
-    $this->config('data_surface_examples.registration_step3')->set('venue', 'riverside')->set('room', 'riverside_main')->save();
+    // A rebuild is built from what is stored: the shipped room, Riverside
+    // Hall's main hall.
     $surface = [
       'title' => 'Spring meetup',
       'capacity' => '150',
@@ -299,7 +333,7 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
       $this->wrapperSelector($stewards),
       $this->wrapperSelector($container[DataSurfaceSituationForm::PANEL_KEY]),
     ], $this->ajaxSelectors($response, 'replaceWith'));
-    $this->assertStringContainsString('At least 1 stewards for 20 attendees.', $this->ajaxMarkup($response, $this->wrapperSelector($stewards)));
+    $this->assertStringContainsString('At least 1 steward for 20 attendees.', $this->ajaxMarkup($response, $this->wrapperSelector($stewards)));
     // The licence triggers a rebuild and is no target, yet has a wrapper
     // of its own, for the one case it is replaced: its value refused.
     // The stewards are a target and trigger nothing.
@@ -371,7 +405,6 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
    */
   public function testAnInvalidLicenceIsSaidUnderItOnce(): void {
     $this->actAsAnonymousAdministrator();
-    $this->config('data_surface_examples.registration_step3')->set('venue', 'riverside')->set('room', 'riverside_main')->save();
     $message = 'An event licence is EV- and four digits, such as EV-2048.';
     $surface = [
       'title' => 'Spring meetup',

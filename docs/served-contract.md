@@ -101,6 +101,7 @@ is an object with `properties` in declaration order, `required`, and
 | `multiple` | With the widget hints, on a list of allowed values: a multiple select. |
 | `by`, `variants`, `chosen` | On a slot: the deciding key, the values that choose a variant, and the one chosen now. |
 | `variant` | On a slot's variant schema: which value it is for. |
+| `group` | Only when `true`, on `third_party_settings`: the object only groups one object per contributing module, each that module's fieldset, so it has no `title` or `description` and a renderer draws nothing around them, as the form does. |
 | `checkedOnServer` | Constraints no keyword states. |
 | `patternMessage` | On a key with a `pattern`: the Regex's own message, which is how a person is told what the pattern allows. The pattern is for machines; a renderer explains the key by this, never by the pattern. |
 | `enumerated` | Only when `true`: the key's refiners have nothing to refine against yet, and what they answer for every value they could be handed is stated as conditionals on the parent ([below](#exact-where-it-can-be)). The schema is exact for this key with no round trip. |
@@ -222,7 +223,7 @@ Example 2, nothing chosen, abbreviated:
 ### Example 2, abbreviated
 
 The venue narrows the room and the room the capacity, for the stored
-library and its reading room, as `/surface-api` serves it:
+Riverside Hall and its main hall, as `/surface-api` serves it:
 
 ```json
 {
@@ -240,16 +241,16 @@ library and its reading room, as `/surface-api` serves it:
                 "oneOf": [{"const": "riverside", "title": "Riverside Hall"}, {"const": "library", "title": "Old Library"}, {"const": "harbour", "title": "Harbour Centre"}],
                 "x-surface": {"widget": "select", "dependsOn": [], "emptyOption": {"show": false, "label": "- Select -"}, ...}},
       "room": {"title": "Room", "type": "string",
-               "oneOf": [{"const": "library_reading", "title": "Reading room"}, {"const": "library_garden", "title": "Garden room"}],
+               "oneOf": [{"const": "riverside_main", "title": "Main hall"}, {"const": "riverside_east", "title": "East room"}],
                "x-surface": {"widget": "select", "dependsOn": ["venue"], "refined": true, "stale": false, ...}},
-      "capacity": {"title": "Capacity", "description": "Up to 60 for the Reading room.", "type": ["integer", "null"],
-                   "minimum": 1, "maximum": 60, "default": 50,
+      "capacity": {"title": "Capacity", "description": "Up to 400 for the Main hall.", "type": ["integer", "null"],
+                   "minimum": 1, "maximum": 400, "default": 50,
                    "x-surface": {"widget": "number", "dependsOn": ["room"], "refined": true, ...}}
     },
     "additionalProperties": false,
     "required": ["title", "venue", "room"]
   },
-  "values": {"title": "Spring meetup", "open": true, "venue": "library", "room": "library_reading", "capacity": 50},
+  "values": {"title": "Spring meetup", "open": true, "venue": "riverside", "room": "riverside_main", "capacity": 50},
   "stale": []
 }
 ```
@@ -266,6 +267,7 @@ What the emitter's `widget`, when asked for, mirrors is
 | a list of such values | `select` `#multiple` | `select`, `multiple: true` | `MultipleSelectField` |
 | — (never emitted) | — | `radios` | `RadiosField` |
 | a map with properties, an attached part | `details` | `fieldset` | `FieldsetField` |
+| `third_party_settings`, which only groups each module's map | `container`, no title | `fieldset`, `group: true` | `FieldsetField`, as a plain `div` |
 | a slot | the chosen variant's `details`; nothing while unresolved | `slot` | `SlotField` |
 | `string` with the `multiline` setting | `textarea`, no maxlength, no placeholder | `textarea` | `TextareaField` |
 | `email` | `email` | `email` | `TextField` (type email) |

@@ -152,8 +152,8 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Spring meetup', $properties['title']->getDefaultValue());
     $this->assertSame(50, $properties['capacity']->getDefaultValue());
     $this->assertTrue($properties['open']->getDefaultValue());
-    $this->assertSame('library', $properties['venue']->getDefaultValue());
-    $this->assertSame('library_reading', $properties['room']->getDefaultValue());
+    $this->assertSame('riverside', $properties['venue']->getDefaultValue());
+    $this->assertSame('riverside_main', $properties['room']->getDefaultValue());
     $this->assertSame('free', $properties['pricing']->getDefaultValue());
     $contact = $properties['contact'];
     $this->assertInstanceOf(MapInputDefinition::class, $contact);
@@ -166,8 +166,8 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
     $tool = $manager->createInstance(ExampleCalls::TOOL);
     $tool->setInputValue(SituationInputs::VALUES, [
       'title' => 'Summer meetup',
-      'venue' => 'library',
-      'room' => 'library_reading',
+      'venue' => 'riverside',
+      'room' => 'riverside_main',
       'pricing' => 'free',
     ]);
     $tool->execute();
@@ -206,8 +206,8 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
     $tool = $this->container->get('plugin.manager.tool')->createInstance(ExampleCalls::TOOL);
     $tool->setInputValue(SituationInputs::VALUES, [
       'title' => 'Spring meetup',
-      'venue' => 'library',
-      'room' => 'library_reading',
+      'venue' => 'riverside',
+      'room' => 'riverside_main',
       'pricing' => 'free',
       'capacity' => 30,
     ]);

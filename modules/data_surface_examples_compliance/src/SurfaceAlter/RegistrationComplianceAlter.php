@@ -18,10 +18,11 @@ use Drupal\data_surface_examples\Surface\RegistrationStep3Surface;
  * Example 4: others get a say.
  *
  * Another module's class, naming example 3's surface. It adds two keys,
- * stored under this module's name, and rewords one of the owner's
- * labels. Without an event licence the owner's capacity stops at a
- * hundred, and the stewards it asks for follow the capacity. Example 3
- * is not changed and does not know this module exists.
+ * stored under this module's name, titles the fieldset they sit in, and
+ * rewords one of the owner's labels. Without an event licence the
+ * owner's capacity stops at a hundred, and the stewards it asks for
+ * follow the capacity. Example 3 is not changed and does not know this
+ * module exists.
  */
 #[AltersSurface(RegistrationStep3Surface::class)]
 final class RegistrationComplianceAlter implements SurfaceAlterInterface {
@@ -49,6 +50,7 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
     DefinitionMetadata::setExamples($licence_key, ['EV-2048']);
     $inputs->add('stewards', 'integer', $this->t('Stewards'), default: 1)->setRequired(TRUE);
     $inputs->describe('title', label: $this->t('Public event title'));
+    $inputs->describe('third_party_settings.data_surface_examples_compliance', label: $this->t('Compliance'));
   }
 
   /**
@@ -68,9 +70,13 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
   #[RefinesInput('stewards')]
   public function stewardsForCapacity(DataDefinition $stewards, int $capacity): DataDefinition {
     $n = max(1, (int) ceil($capacity / 50));
-    $arguments = ['@n' => $n, '@capacity' => $capacity];
     return $stewards->addConstraint('Range', ['min' => $n])
-      ->setDescription($this->t('At least @n stewards for @capacity attendees.', $arguments));
+      ->setDescription($this->formatPlural(
+        $n,
+        'At least 1 steward for @capacity attendees.',
+        'At least @count stewards for @capacity attendees.',
+        ['@capacity' => $capacity],
+      ));
   }
 
 }

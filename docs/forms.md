@@ -126,6 +126,24 @@ Taking those render keys over is how a fieldset became a container and a
 host's own wrapper id disappeared, which is the bug the rule exists to
 prevent.
 
+## Other modules' keys
+
+The keys alters add are mounted under `third_party_settings`, one map
+per module ([Surface alters](surfaces.md#surface-alters)). On a form
+each module's map is one `details`, titled with the module's name, or
+with what its alter calls it
+(`describe('third_party_settings.<module>', label: ...)`; the examples'
+compliance module says "Compliance"). The `third_party_settings` map
+around them only groups, and is marked so
+(`DefinitionMetadata::isGrouping()`): the map widget renders it as a
+plain `container`, with no title and no description, so a person sees
+one fieldset per contributing module and nothing above them. The served
+contract says the same, with no `title` and `x-surface.group`
+([The served contract](served-contract.md#x-surface)). The paths are
+unchanged: the elements are still named
+`surface[third_party_settings][<module>][<key>]`, and the contract panel
+lists every key by its dotted path.
+
 ## Wrapper ids and AJAX
 
 The container carries a private marker, `#data_surface_wrapper`, holding

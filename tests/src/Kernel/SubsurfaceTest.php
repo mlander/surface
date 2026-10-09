@@ -307,6 +307,43 @@ class SubsurfaceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Tests a module's mount is one fieldset, titled by the module.
+   *
+   * The map the mounts sit in only groups them, so it is marked to be
+   * drawn as nothing of its own. Each module's map is titled with the
+   * module's name until its alter names it, by the mount's path, which
+   * only answers once the module has added a key.
+   */
+  public function testDescribeTitlesEachModuleMount(): void {
+    $builder = new DataSurfaceBuilder();
+    $typed_data = $this->container->get('typed_data_manager');
+    $first = new SurfaceShapeAdditions($builder, $typed_data, 'first_module');
+    $second = new SurfaceShapeAdditions($builder, $typed_data, 'data_surface_surface_test');
+    $first->add('badge', 'string', 'Badge');
+    $second->add('ribbon', 'string', 'Ribbon');
+    $first->describe('third_party_settings.first_module', label: 'Badges', description: 'How the title is decorated.');
+    $mount = $builder->seal()->getDefinition('third_party_settings');
+    $this->assertInstanceOf(MapDataDefinition::class, $mount);
+    $this->assertTrue(DefinitionMetadata::isGrouping($mount));
+    // Kept for a reader with the definition alone, such as the Tool API.
+    $this->assertSame('Third party settings', (string) $mount->getLabel());
+    $badges = $mount->getPropertyDefinition('first_module');
+    $this->assertInstanceOf(MapDataDefinition::class, $badges);
+    $this->assertSame('Badges', (string) $badges->getLabel());
+    $this->assertSame('How the title is decorated.', (string) $badges->getDescription());
+    $this->assertFalse(DefinitionMetadata::isGrouping($badges));
+    $this->assertSame(['badge'], array_keys($badges->getPropertyDefinitions()));
+    // Unnamed, a mount is titled with the module's human name, and no
+    // more: no "settings" after it.
+    $this->assertSame('Data Surface Surface Test', (string) $mount->getPropertyDefinition('data_surface_surface_test')->getLabel());
+
+    $third = new SurfaceShapeAdditions(new DataSurfaceBuilder(), $typed_data, 'third_module');
+    $this->expectException(\LogicException::class);
+    $this->expectExceptionMessage('describe() was asked to reword the input "third_party_settings.third_module", which nothing has declared.');
+    $third->describe('third_party_settings.third_module', label: 'Too soon');
+  }
+
+  /**
    * Gets a target that stores nothing, for submissions that must fail.
    *
    * @return \Drupal\data_surface\Pipeline\DataSurfaceTargetInterface

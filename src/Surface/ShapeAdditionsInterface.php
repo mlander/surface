@@ -76,7 +76,10 @@ interface ShapeAdditionsInterface {
    *   The key: an owner's key by its name, this shape's own key by its
    *   name, or another alter's key by its mounted path,
    *   `third_party_settings.<module>.<key>` (for an output,
-   *   `third_party_outputs.<module>.<key>`).
+   *   `third_party_outputs.<module>.<key>`). A module's mount itself,
+   *   the fieldset its keys are drawn in, is
+   *   `third_party_settings.<module>`: titled with the module's name
+   *   until its alter names it, once it has added a key.
    * @param string|\Stringable|null $label
    *   The new label, or NULL to leave it.
    * @param string|\Stringable|null $description

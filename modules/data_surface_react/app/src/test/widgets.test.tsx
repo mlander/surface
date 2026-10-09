@@ -317,6 +317,24 @@ describe('fieldset, slot and list', () => {
     expect(within(group).getByLabelText(/Email/)).toBeRequired();
   });
 
+  it('draws nothing around an object that only groups, and each module\'s fieldset inside it', () => {
+    const compliance: Schema = {
+      title: 'Compliance',
+      type: 'object',
+      properties: { licence: { title: 'Event licence', type: ['string', 'null'], 'x-surface': x('text') } },
+      'x-surface': x('fieldset'),
+    };
+    render(
+      <Form
+        schema={object({ third_party_settings: { type: 'object', properties: { compliance }, 'x-surface': x('fieldset', { group: true }) } })}
+        initial={{ third_party_settings: { compliance: { licence: 'EV-2048' } } }}
+      />,
+    );
+    const groups = screen.getAllByRole('group');
+    expect(groups.map((group) => group.querySelector('legend')?.textContent)).toEqual(['Compliance']);
+    expect(within(groups[0]).getByLabelText('Event licence')).toHaveValue('EV-2048');
+  });
+
   it('renders the variant the deciding key chose, and switches with it', async () => {
     render(<Form schema={object({ pricing, ticket: ticketSlot }, [], branches)} initial={{ pricing: 'free', ticket: { note: 'Donations welcome' } }} />);
     expect(screen.getByRole('group', { name: 'Ticket' })).toBeInTheDocument();

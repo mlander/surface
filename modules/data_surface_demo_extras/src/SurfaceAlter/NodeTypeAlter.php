@@ -112,6 +112,7 @@ final class NodeTypeAlter implements SurfaceAlterInterface, HasStorageShapeInter
       ->setDescription($this->t('Who content of this type is written for, each tag listed once and in lower case, for example "local news" or "sports".'))
       ->setSetting(CommaSeparatedListWidget::SETTING, TRUE)
       ->addConstraint('DataSurfaceDemoExtrasUniqueItems', []), []);
+    $inputs->describe('third_party_settings.data_surface_demo_extras', label: $this->t('Editorial review'));
   }
 
   /**

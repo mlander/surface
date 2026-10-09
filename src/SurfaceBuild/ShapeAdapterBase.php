@@ -123,7 +123,7 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
     $definition = $this->find($key);
     if ($definition === NULL) {
       throw new \LogicException(sprintf(
-        'describe() was asked to reword the %s "%s", which nothing has declared. A key is described by its name when its owner declared it or this shape added it, and by its mounted path, %s.<module>.<key>, when another alter did.',
+        'describe() was asked to reword the %1$s "%2$s", which nothing has declared. A key is described by its name when its owner declared it or this shape added it, and by its mounted path, %3$s.<module>.<key>, when another alter did; a module\'s mount is %3$s.<module>, once the module has added a key.',
         $this->outputs ? 'output' : 'input',
         $key,
         $this->outputs ? DataSurfaceBuilderInterface::THIRD_PARTY_OUTPUTS : 'third_party_settings',
@@ -213,7 +213,7 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
    * Finds a declared definition by the name describe() was given.
    *
    * @param string $key
-   *   The key, or a mounted path.
+   *   The key, a mounted path, or a module's mount.
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
    *   The definition, or NULL when nothing answers to the name.
@@ -225,10 +225,14 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
     }
     $parts = explode('.', $key, 3);
     $mount = $this->outputs ? DataSurfaceBuilderInterface::THIRD_PARTY_OUTPUTS : 'third_party_settings';
-    if (count($parts) === 3 && $parts[0] === $mount) {
-      return $this->builder->getThirdPartyDefinition($parts[1], $parts[2], $this->outputs);
+    if ($parts[0] !== $mount) {
+      return NULL;
     }
-    return NULL;
+    return match (count($parts)) {
+      3 => $this->builder->getThirdPartyDefinition($parts[1], $parts[2], $this->outputs),
+      2 => $this->builder->getThirdPartyMount($parts[1], $this->outputs),
+      default => NULL,
+    };
   }
 
   /**

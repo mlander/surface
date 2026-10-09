@@ -204,11 +204,11 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     $this->serveRoute('data_surface_examples.step2');
     $form = $this->container->get('form_builder')->getForm(DataSurfaceSituationForm::class);
     $container = $form[DataSurfaceSituationForm::SURFACE_KEY];
-    $this->assertSame(['library_reading', 'library_garden'], array_keys(array_diff_key($container['room']['#options'], ['' => TRUE])));
+    $this->assertSame(['riverside_main', 'riverside_east'], array_keys(array_diff_key($container['room']['#options'], ['' => TRUE])));
     $this->assertArrayHasKey('#ajax', $container['venue']);
     $this->assertArrayHasKey('#ajax', $container['room']);
-    $this->assertSame(60, $container['capacity']['#max']);
-    $this->assertSame('Up to 60 for the Reading room.', (string) $container['capacity']['#description']);
+    $this->assertSame(400, $container['capacity']['#max']);
+    $this->assertSame('Up to 400 for the Main hall.', (string) $container['capacity']['#description']);
     // Declaration order is form order: the capacity follows the room it
     // depends on.
     $keys = ['title', 'open', 'venue', 'room', 'capacity'];
@@ -300,8 +300,8 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
       'contact.phone',
     ], array_keys($rows));
     // Key, type, label, required, default, allows, depends on, right now.
-    $this->assertSame(['room', 'string', 'Room', 'yes', '—', 'one of Reading room, Garden room', 'venue', 'narrowed'], $rows['room']);
-    $this->assertSame(['capacity', 'integer', 'Capacity', 'no', '50', 'from 1 to 60', 'room', 'narrowed'], $rows['capacity']);
+    $this->assertSame(['room', 'string', 'Room', 'yes', '—', 'one of Main hall, East room', 'venue', 'narrowed'], $rows['room']);
+    $this->assertSame(['capacity', 'integer', 'Capacity', 'no', '50', 'from 1 to 400', 'room', 'narrowed'], $rows['capacity']);
     $this->assertSame('as declared', $rows['title'][7]);
     $this->assertSame('the free variant', $rows['ticket'][7]);
     $this->assertSame('an email address', $rows['contact.email'][5]);
@@ -366,7 +366,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
         'capacity' => '50',
         'open' => '1',
         'venue' => 'harbour',
-        'room' => 'library_reading',
+        'room' => 'riverside_main',
         'pricing' => 'free',
         'ticket' => ['note' => ''],
         'contact' => ['email' => 'events@example.com', 'phone' => ''],
@@ -383,7 +383,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     // is put back, and refuses it otherwise.
     $this->assertSame(['', 'harbour_auditorium', 'harbour_deck'], array_keys($container['room']['#options']));
     $this->assertSame('', $container['room']['#value']);
-    $this->assertSame('library_reading', $container['room'][DataSurfaceWidgetBase::STALE_KEY]);
+    $this->assertSame('riverside_main', $container['room'][DataSurfaceWidgetBase::STALE_KEY]);
     $this->assertSame('room', $container[DataSurfaceFormBuilderInterface::STALE_MARKER_KEY]['#value']);
 
     $rows = [];

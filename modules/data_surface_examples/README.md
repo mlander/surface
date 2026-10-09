@@ -200,7 +200,9 @@ final class RegistrationStep2Surface implements SurfaceInterface {
 }
 ```
 
-Change the venue on the form: the room list rebuilds over AJAX, and so
+The example ships at Riverside Hall's main hall, so the text under the
+capacity says "Up to 400 for the Main hall." Change the venue to the Old
+Library: the room list rebuilds over AJAX, and so
 does the panel under it, whose room row now lists the new venue's
 rooms, *narrowed* from the six declared. The room saved before is not
 one of them, so the room select comes up on its empty option rather
@@ -412,6 +414,7 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
     DefinitionMetadata::setExamples($licence_key, ['EV-2048']);
     $inputs->add('stewards', 'integer', $this->t('Stewards'), default: 1)->setRequired(TRUE);
     $inputs->describe('title', label: $this->t('Public event title'));
+    $inputs->describe('third_party_settings.data_surface_examples_compliance', label: $this->t('Compliance'));
   }
 
   /**
@@ -431,26 +434,34 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
   #[RefinesInput('stewards')]
   public function stewardsForCapacity(DataDefinition $stewards, int $capacity): DataDefinition {
     $n = max(1, (int) ceil($capacity / 50));
-    $arguments = ['@n' => $n, '@capacity' => $capacity];
     return $stewards->addConstraint('Range', ['min' => $n])
-      ->setDescription($this->t('At least @n stewards for @capacity attendees.', $arguments));
+      ->setDescription($this->formatPlural(
+        $n,
+        'At least 1 steward for @capacity attendees.',
+        'At least @count stewards for @capacity attendees.',
+        ['@capacity' => $capacity],
+      ));
   }
 
 }
 ```
 
-Choose Riverside Hall's main hall, which seats 400. The capacity stops
-at 100, and its help text says why. Type `EV-2048` as the event licence
-and the capacity goes back to 400; type `EV-20` or `ev-2048` and the
-licence is refused, in the alter's words, under the field, and the
-capacity stops at 100 again: a refiner never sees a value its own key
-refuses, so a licence in the wrong format is no licence. The help text
-says the format before anything is typed, and the box shows `EV-2048`
-as its placeholder: a pattern explains nothing to a person, so the
-Regex carries a message, and the panel's "Allows" column says that. Set the capacity to 150 and the stewards
-field asks for at least 3. In the panel, the capacity's row now depends
-on `room` and on the licence's path. An alter can add and tighten. It
-can never take away what the owner declared.
+The two keys sit in one fieldset, titled "Compliance" by the last line
+of `alterInputs()`. Example 3 ships at Riverside Hall's main hall, which
+seats 400. The capacity stops at 100, and its help text says why: "Up to
+100 without an event licence." Type `EV-2048` as the event licence and
+the capacity goes back to "Up to 400 for the Main hall."; type `EV-20`
+or `ev-2048` and the licence is refused, in the alter's words, under the
+field, and the capacity stops at 100 again: a refiner never sees a value
+its own key refuses, so a licence in the wrong format is no licence. The
+help text says the format before anything is typed, and the box shows
+`EV-2048` as its placeholder: a pattern explains nothing to a person, so
+the Regex carries a message, and the panel's "Allows" column says that.
+Under the stewards it says "At least 1 steward for 50 attendees."; set
+the capacity to 150 and it asks for "At least 3 stewards for 150
+attendees." In the panel, the capacity's row now depends on `room` and
+on the licence's path. An alter can add and tighten. It can never take
+away what the owner declared.
 
 ## Example 5: same contract, no form
 
@@ -549,8 +560,10 @@ contract as it stands.
 
 ## Example 6: every door
 
-To be written: the same contract through ECA, a decoupled page, and an
-AI agent.
+The same contract through every door. The decoupled page is the one
+above, [In React](#in-react): the contract served as JSON and drawn by a
+React app. ECA and an AI agent, through the tool of example 5, are yours
+to show on your own site.
 
 ## How this page is kept true
 
@@ -563,12 +576,12 @@ Drush commands are checked against `ExampleCalls`.
 | Test | Covers |
 | --- | --- |
 | `Kernel\ExamplesStepsTest` | Examples 1 to 3: each form builds and saves, example 1 as its classic twin does; the venue narrows the room and the room the capacity; the ticket slot resolves by pricing; the contact validates its email; the panel's rows as the answers move; each example's class stays screen sized. |
-| `Kernel\ExamplesComplianceTest` | Example 4: the alter's keys and label; the capacity capped at a hundred without a licence and the room's limit with one; the licence's pattern; the stewards' minimum following the capacity; what the licence and the capacity replace on the form; example 5's calls unchanged. |
+| `Kernel\ExamplesComplianceTest` | Example 4: the alter's keys and label; its keys in one fieldset titled "Compliance"; the capacity capped at a hundred without a licence and the room's limit with one; the licence's pattern; the stewards' minimum following the capacity; what the licence and the capacity replace on the form; example 5's calls unchanged. |
 | `Kernel\ExamplesToolTest` | Example 5: the three calls and their answers; what the script prints. |
 | `Unit\ExamplesReadmeTest` | This page against the files it quotes, and its Drush commands. |
 | `Functional\ExamplesRoutesTest` | Every route answers an administrator and refuses anonymous; the landing page; a save through example 3. |
 | `FunctionalJavascript\ExamplesAjaxRefreshTest` | In a browser: example 2's venue replaces the room and the capacity and leaves the venue the same node, the orphaned room on its empty option with the stale marker and the capacity back at 1000; a room then narrows the capacity and loses `- Select -`. Example 3's paid pricing swaps the note for a price and a currency. |
-| `FunctionalJavascript\ExamplesComplianceRefreshTest` | Example 4, in a browser: a malformed licence on blur is said once, under the licence, with `aria-invalid` and nothing at the top, and caps the capacity at a hundred; corrected, the error goes and the room's limit comes back. |
+| `FunctionalJavascript\ExamplesComplianceRefreshTest` | Example 4, in a browser: one fieldset titled "Compliance", the ceiling of 100 lifted to the main hall's 400 by `EV-2048`, and the stewards at 1 for 50 and 3 for 150; a malformed licence on blur is said once, under the licence, with `aria-invalid` and nothing at the top, and caps the capacity at a hundred; corrected, the error goes and the room's limit comes back. |
 | `Functional\ServedContractEndpointsTest` | In React: the landing page's links, and example 2's contract, refine and validate over HTTP. |
 | `Functional\ServedSubmitEndpointTest` | In React: example 2 saved over HTTP, refused, and refused after someone else saved. |
 | `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files. |

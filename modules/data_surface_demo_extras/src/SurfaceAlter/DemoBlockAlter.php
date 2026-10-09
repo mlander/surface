@@ -72,6 +72,7 @@ final class DemoBlockAlter implements SurfaceAlterInterface {
         ],
       ]);
     $inputs->describe('headline', description: $this->t('Shown above the featured content, beside its badge.'));
+    $inputs->describe('third_party_settings.data_surface_demo_extras', label: $this->t('Extras'));
   }
 
   /**

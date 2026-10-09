@@ -134,8 +134,8 @@ class ExamplesFullSubmitTest extends BrowserTestBase {
       'surface[title]' => 'Gala',
       'surface[capacity]' => '20',
       'surface[open]' => '1',
-      'surface[venue]' => 'riverside',
-      'surface[room]' => 'riverside_main',
+      'surface[venue]' => 'harbour',
+      'surface[room]' => 'harbour_deck',
       'surface[pricing]' => 'paid',
       'surface[contact][email]' => 'gala@example.com',
       'surface[contact][phone]' => '',
@@ -161,7 +161,7 @@ class ExamplesFullSubmitTest extends BrowserTestBase {
     $assert->pageTextContains('The changes have been saved.');
     $stored = $this->stored('step3');
     $this->assertSame('Gala', $stored['title']);
-    $this->assertSame('riverside_main', $stored['room']);
+    $this->assertSame('harbour_deck', $stored['room']);
     $this->assertSame('paid', $stored['pricing']);
     $this->assertEquals(['price' => 25.0, 'currency' => 'USD'], $stored['ticket']);
   }

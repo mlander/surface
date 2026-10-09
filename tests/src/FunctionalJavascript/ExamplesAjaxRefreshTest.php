@@ -28,8 +28,8 @@ class ExamplesAjaxRefreshTest extends ExamplesWebDriverTestBase {
     $assert = $this->assertSession();
     $page = $this->getSession()->getPage();
     $this->drupalGet('surface-examples/2');
-    $this->assertTrue($assert->optionExists('surface[room]', 'library_reading')->isSelected());
-    $this->assertStringContainsString('Up to 60 for the Reading room.', $this->formItemText('surface[capacity]'));
+    $this->assertTrue($assert->optionExists('surface[room]', 'riverside_main')->isSelected());
+    $this->assertStringContainsString('Up to 400 for the Main hall.', $this->formItemText('surface[capacity]'));
 
     // The venue moves the room and, through the room, the capacity. The
     // stored room is not one of the harbour's, so it is orphaned: the
@@ -41,7 +41,7 @@ class ExamplesAjaxRefreshTest extends ExamplesWebDriverTestBase {
     $this->assertSame(['surface[@stale]', 'surface[capacity]', 'surface[room]'], $this->replacedSinceProbe());
     $this->assertTrue($this->stillProbed('surface[venue]'));
     $assert->optionExists('surface[room]', 'harbour_deck');
-    $assert->optionNotExists('surface[room]', 'library_reading');
+    $assert->optionNotExists('surface[room]', 'riverside_main');
     $this->assertSame('', $page->findField('surface[room]')->getValue());
     $assert->hiddenFieldValueEquals('surface[@stale]', 'room');
     // The orphaned room no longer caps the capacity, nor describes it.

@@ -8,32 +8,13 @@
         "type": "object",
         "properties": {
             "title": {
-                "title": "Event title",
+                "title": "Public event title",
                 "type": "string",
                 "x-surface": {
                     "widget": "text",
                     "locked": false,
                     "dependsOn": [],
                     "refined": false,
-                    "stale": false
-                }
-            },
-            "capacity": {
-                "title": "Capacity",
-                "type": [
-                    "integer",
-                    "null"
-                ],
-                "minimum": 1,
-                "maximum": 60,
-                "default": 50,
-                "x-surface": {
-                    "widget": "number",
-                    "locked": false,
-                    "dependsOn": [
-                        "room"
-                    ],
-                    "refined": true,
                     "stale": false
                 }
             },
@@ -86,12 +67,12 @@
                 "type": "string",
                 "oneOf": [
                     {
-                        "const": "library_reading",
-                        "title": "Reading room"
+                        "const": "riverside_main",
+                        "title": "Main hall"
                     },
                     {
-                        "const": "library_garden",
-                        "title": "Garden room"
+                        "const": "riverside_east",
+                        "title": "East room"
                     }
                 ],
                 "x-surface": {
@@ -106,6 +87,27 @@
                         "show": false,
                         "label": "- Select -"
                     }
+                }
+            },
+            "capacity": {
+                "title": "Capacity",
+                "description": "Up to 100 without an event licence.",
+                "type": [
+                    "integer",
+                    "null"
+                ],
+                "minimum": 1,
+                "maximum": 100,
+                "default": 50,
+                "x-surface": {
+                    "widget": "number",
+                    "locked": false,
+                    "dependsOn": [
+                        "room",
+                        "third_party_settings.data_surface_examples_compliance.licence"
+                    ],
+                    "refined": true,
+                    "stale": false
                 }
             },
             "pricing": {
@@ -197,6 +199,79 @@
                     "dependsOn": [],
                     "refined": false,
                     "stale": false
+                }
+            },
+            "third_party_settings": {
+                "type": [
+                    "object",
+                    "null"
+                ],
+                "properties": {
+                    "data_surface_examples_compliance": {
+                        "title": "Compliance",
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "licence": {
+                                "title": "Event licence",
+                                "description": "Required to host more than 100 people. A licence is EV- and four digits, such as EV-2048.",
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "pattern": "^EV-\\d{4}$",
+                                "examples": [
+                                    "EV-2048"
+                                ],
+                                "x-surface": {
+                                    "widget": "text",
+                                    "locked": false,
+                                    "dependsOn": [],
+                                    "refined": false,
+                                    "stale": false,
+                                    "patternMessage": "An event licence is EV- and four digits, such as EV-2048."
+                                }
+                            },
+                            "stewards": {
+                                "title": "Stewards",
+                                "description": "At least 1 steward for 50 attendees.",
+                                "type": "integer",
+                                "minimum": 1,
+                                "default": 1,
+                                "x-surface": {
+                                    "widget": "number",
+                                    "locked": false,
+                                    "dependsOn": [],
+                                    "refined": true,
+                                    "stale": false
+                                }
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "stewards"
+                        ],
+                        "x-surface": {
+                            "widget": "fieldset",
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": true,
+                            "stale": false
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "x-surface": {
+                    "widget": "fieldset",
+                    "locked": false,
+                    "dependsOn": [
+                        "capacity"
+                    ],
+                    "refined": true,
+                    "stale": false,
+                    "group": true
                 }
             }
         },
@@ -335,10 +410,10 @@
     },
     "values": {
         "title": "Spring meetup",
-        "capacity": 50,
         "open": true,
-        "venue": "library",
-        "room": "library_reading",
+        "venue": "riverside",
+        "room": "riverside_main",
+        "capacity": 50,
         "pricing": "free",
         "ticket": {
             "note": ""
@@ -346,6 +421,12 @@
         "contact": {
             "email": "events@example.com",
             "phone": ""
+        },
+        "third_party_settings": {
+            "data_surface_examples_compliance": {
+                "licence": null,
+                "stewards": 1
+            }
         }
     },
     "stale": []

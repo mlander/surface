@@ -134,7 +134,7 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $this->assertSame('registration.step2', $contract['surface']);
     $this->assertSame('https://json-schema.org/draft/2020-12/schema', $contract['schema']['$schema']);
     $this->assertSame(['venue'], $contract['schema']['properties']['room']['x-surface']['dependsOn']);
-    $this->assertSame('library', $contract['values']['venue']);
+    $this->assertSame('riverside', $contract['values']['venue']);
 
     // A surface or situation that names nothing is refused, and a POST
     // without the session's token is refused before it is read.
@@ -159,14 +159,14 @@ class ServedContractEndpointsTest extends BrowserTestBase {
       'title' => 'Spring meetup',
       'capacity' => 50,
       'open' => TRUE,
-      'venue' => 'riverside',
-      'room' => 'library_reading',
+      'venue' => 'library',
+      'room' => 'riverside_main',
     ];
     $refined = $this->json($this->post('surface-api/registration.step2/configure/refine', ['values' => $values]));
     $room = $refined['schema']['properties']['room'];
-    $this->assertSame(['riverside_main', 'riverside_east'], $this->offered($room));
+    $this->assertSame(['library_reading', 'library_garden'], $this->offered($room));
     $this->assertTrue($room['x-surface']['refined']);
-    // The library's room is orphaned by the new venue: discarded, shown
+    // The riverside's room is orphaned by the new venue: discarded, shown
     // on the empty option, its stored value kept on the server. The
     // capacity was answered under that room, so its input goes with it:
     // the discard cascade's fixed point.
@@ -174,7 +174,7 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $this->assertTrue($room['x-surface']['stale']);
     $this->assertNull($refined['values']['room']);
     $this->assertSame(['room'], $refined['stale']);
-    $this->assertSame('riverside', $refined['values']['venue']);
+    $this->assertSame('library', $refined['values']['venue']);
     $this->assertSame('Spring meetup', $refined['values']['title']);
     // The orphaned room is held unanswered, so the capacity is refined
     // against no room at all: its declared limit, and no room's words
@@ -208,26 +208,26 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $this->assertSame(['room'], array_column($saved['violations'], 'path'));
     $this->assertStringNotContainsString('required', $saved['violations'][0]['message']);
     $this->container->get('config.factory')->reset();
-    $this->assertSame('library', $this->config(self::CONFIG)->get('venue'));
-    $this->assertSame('library_reading', $this->config(self::CONFIG)->get('room'));
+    $this->assertSame('riverside', $this->config(self::CONFIG)->get('venue'));
+    $this->assertSame('riverside_main', $this->config(self::CONFIG)->get('room'));
 
     // A room of the new venue stands, and narrows the capacity.
     $chosen = $this->json($this->post('surface-api/registration.step2/configure/refine', [
-      'values' => ['room' => 'riverside_east'] + $values,
+      'values' => ['room' => 'library_reading'] + $values,
     ]));
     $this->assertSame([], $chosen['discarded']);
-    $this->assertSame('riverside_east', $chosen['values']['room']);
-    $this->assertSame(120, $chosen['schema']['properties']['capacity']['maximum']);
+    $this->assertSame('library_reading', $chosen['values']['room']);
+    $this->assertSame(60, $chosen['schema']['properties']['capacity']['maximum']);
 
-    // Back to the library, the stale path sent back empty: the stored
+    // Back to the riverside, the stale path sent back empty: the stored
     // room is chosen again.
     $back = $this->json($this->post('surface-api/registration.step2/configure/refine', [
-      'values' => ['venue' => 'library', 'room' => NULL] + $values,
+      'values' => ['venue' => 'riverside', 'room' => NULL] + $values,
       'stale' => ['room'],
     ]));
-    $this->assertSame('library_reading', $back['values']['room']);
+    $this->assertSame('riverside_main', $back['values']['room']);
     $this->assertSame([], $back['stale']);
-    $this->assertSame(['library_reading', 'library_garden'], $this->offered($back['schema']['properties']['room']));
+    $this->assertSame(['riverside_main', 'riverside_east'], $this->offered($back['schema']['properties']['room']));
   }
 
   /**
@@ -309,7 +309,7 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $this->container->get('config.factory')->reset();
     $config = $this->config(self::CONFIG);
     $this->assertSame('Spring meetup', $config->get('title'));
-    $this->assertSame('library_reading', $config->get('room'));
+    $this->assertSame('riverside_main', $config->get('room'));
     $this->assertSame(50, $config->get('capacity'));
   }
 

@@ -543,7 +543,14 @@ final class DemoBlockAlter implements SurfaceAlterInterface {
 
 `describe()` takes the owner's key by its name, the alter's own key by
 its name, and another alter's key by its mounted path,
-`third_party_settings.<module>.<key>`.
+`third_party_settings.<module>.<key>`. A module's mount itself,
+`third_party_settings.<module>`, is the fieldset its keys are drawn in:
+titled with the module's name until its alter names it, once it has
+added a key. The examples' compliance alter ends with
+`$inputs->describe('third_party_settings.data_surface_examples_compliance', label: $this->t('Compliance'))`.
+The `third_party_settings` map around the modules' mounts only groups
+them, so a form and the served contract draw nothing for it
+([Generated forms](forms.md#other-modules-keys)).
 
 Nothing an alter does removes: it cannot take a key or a value away
 from the owner. A site policy that hides an owner's key is a later

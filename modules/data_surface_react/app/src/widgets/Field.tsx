@@ -85,10 +85,26 @@ export function Properties({
 
 /**
  * A map, an attached part, or a resolved slot: a fieldset whose legend is
- * its title, holding one field per property.
+ * its title, holding one field per property. An object that only groups
+ * (`x-surface.group`, the modules' third-party settings) is its fields
+ * and nothing around them, as the form draws it.
  */
 export function FieldsetField(props: FieldProps): JSX.Element {
   const id = fieldId(props.path);
+  if (props.schema['x-surface']?.group) {
+    return (
+      <div className="dsr-group" id={id}>
+        <Properties
+          schema={props.schema}
+          values={isObject(props.value) ? props.value : {}}
+          prefix={`${props.path}.`}
+          onChange={props.onChange}
+          errors={props.errors}
+          disabled={isLocked(props)}
+        />
+      </div>
+    );
+  }
   return (
     <fieldset className="dsr-fieldset" id={id}>
       <legend className="dsr-legend">

@@ -66,6 +66,11 @@ final class DefinitionMetadata {
   protected const SLOT_KEY = 'data_surface_slot';
 
   /**
+   * The definition array key marking a map that only groups other maps.
+   */
+  protected const GROUPING_KEY = 'data_surface_grouping';
+
+  /**
    * Declares the value a definition starts from.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
@@ -327,6 +332,38 @@ final class DefinitionMetadata {
     }
     $by = $definition->offsetGet(static::SLOT_KEY);
     return is_string($by) ? $by : NULL;
+  }
+
+  /**
+   * Marks a map as one that only groups other maps.
+   *
+   * The map third-party settings are mounted in holds one map per
+   * contributing module and nothing of its own, so a form draws each
+   * module's map as its own fieldset and nothing around them: a heading
+   * above the modules' headings says nothing a person can act on. Its
+   * label and description stay on the definition for a reader with the
+   * definition alone.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The map.
+   */
+  public static function setGrouping(DataDefinitionInterface $definition): void {
+    static::arrayAccess($definition)->offsetSet(static::GROUPING_KEY, TRUE);
+  }
+
+  /**
+   * Returns whether a map only groups other maps.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to read.
+   *
+   * @return bool
+   *   TRUE when it is drawn as no element of its own.
+   */
+  public static function isGrouping(DataDefinitionInterface $definition): bool {
+    return $definition instanceof \ArrayAccess
+      && $definition->offsetExists(static::GROUPING_KEY)
+      && (bool) $definition->offsetGet(static::GROUPING_KEY);
   }
 
   /**

@@ -40,15 +40,43 @@ class ExamplesComplianceRefreshTest extends ExamplesWebDriverTestBase {
   protected const MESSAGE = 'An event licence is EV- and four digits, such as EV-2048.';
 
   /**
-   * {@inheritdoc}
+   * The stewards element's name.
    */
-  protected function setUp(): void {
-    parent::setUp();
-    // A room seating more than the hundred allowed without a licence.
-    $this->config('data_surface_examples.registration_step3')
-      ->set('venue', 'riverside')
-      ->set('room', 'riverside_main')
-      ->save();
+  protected const STEWARDS = 'surface[third_party_settings][data_surface_examples_compliance][stewards]';
+
+  /**
+   * Tests the alter's keys sit in one fieldset, and the stewards follow.
+   *
+   * The shipped room, Riverside Hall's main hall, seats more than the
+   * hundred allowed without a licence, so the ceiling shows at once.
+   */
+  public function testOneFieldsetTitledComplianceAndTheStewardsFollow(): void {
+    $assert = $this->assertSession();
+    $page = $this->getSession()->getPage();
+    $this->drupalGet('surface-examples/3');
+    // One details around the licence and the stewards, titled by the
+    // alter, and nothing drawn around it.
+    $around = $page->findAll('xpath', sprintf('//details[.//input[@name="%s"]]', self::LICENCE));
+    $this->assertCount(1, $around);
+    $this->assertSame('Compliance', trim($around[0]->find('css', 'summary')->getText()));
+    $this->assertNotNull($around[0]->find('xpath', sprintf('.//input[@name="%s"]', self::STEWARDS)));
+    $assert->pageTextNotContains('Third party settings');
+    $assert->pageTextNotContains('Settings added by other modules.');
+
+    $this->assertStringContainsString('Up to 100 without an event licence.', $this->formItemText('surface[capacity]'));
+    $this->assertStringContainsString('At least 1 steward for 50 attendees.', $this->formItemText(self::STEWARDS));
+    $this->enterLicence('EV-2048');
+    $this->assertStringContainsString('Up to 400 for the Main hall.', $this->formItemText('surface[capacity]'));
+    // The refresh put the focus back on the licence, so leaving it asks
+    // again, and replaces the capacity: settled before the capacity is
+    // typed into, as a person tabbing on would find it.
+    $assert->fieldExists('surface[capacity]')->focus();
+    $assert->assertWaitOnAjaxRequest();
+    $capacity = $assert->fieldExists('surface[capacity]');
+    $capacity->setValue('150');
+    $capacity->blur();
+    $assert->assertWaitOnAjaxRequest();
+    $this->assertStringContainsString('At least 3 stewards for 150 attendees.', $this->formItemText(self::STEWARDS));
   }
 
   /**

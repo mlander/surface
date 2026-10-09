@@ -69,6 +69,8 @@ class ExamplesRoutesTest extends BrowserTestBase {
     $assert = $this->assertSession();
     $assert->pageTextContains('Example 1: declare what you accept');
     $assert->pageTextContains('Example 6: every door');
+    $assert->pageTextContains('Under each example\'s form, collapsed as "Behind the scenes: the contract, as it stands", is the contract the form is built from.');
+    $assert->pageTextContains('The decoupled page is the "In React" links above');
     $assert->pageTextMatches('/The surface: \d+ lines of code\./');
     $assert->pageTextMatches('/The classic twin, a config form: \d+ lines of code\./');
     $assert->linkByHrefExists('/surface-examples/reset');

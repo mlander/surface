@@ -80,7 +80,7 @@ final class ExamplesController extends ControllerBase {
     }
     return [
       'intro' => [
-        '#markup' => '<p>' . $this->t('One surface that grows, one idea per example: the settings of an event registration. Each example with a form shows, beside it, the contract the form is built from.') . '</p>',
+        '#markup' => '<p>' . $this->t('One surface that grows, one idea per example: the settings of an event registration. Under each example\'s form, collapsed as "Behind the scenes: the contract, as it stands", is the contract the form is built from.') . '</p>',
       ],
       'reset' => [
         '#type' => 'container',
@@ -197,12 +197,12 @@ final class ExamplesController extends ControllerBase {
       ],
       5 => [
         'title' => $this->t('same contract, no form'),
-        'sentence' => $this->t('Example 3 is already a tool, @tool, which takes what the form takes and refuses what it refuses.', ['@tool' => ExampleCalls::TOOL]),
+        'sentence' => $this->t('Example 3 is already a tool, @tool, which takes what the form takes and refuses what it refuses. Drush describes it with tool:info and calls it with tool:run.', ['@tool' => ExampleCalls::TOOL]),
         'items' => [$this->route('data_surface_examples.step5'), $this->t('Nothing to write: 0 lines of code.')],
       ],
       6 => [
         'title' => $this->t('every door'),
-        'sentence' => $this->t('The same contract through ECA, a decoupled page and an AI agent. To be written.'),
+        'sentence' => $this->t('The same contract through every door. The decoupled page is the "In React" links above: the contract served as JSON and drawn by a React app. ECA and an AI agent, through the tool of example 5, are yours to show on your own site.'),
         'items' => [],
       ],
     ];

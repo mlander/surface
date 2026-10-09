@@ -6,6 +6,7 @@ namespace Drupal\data_surface;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
 use Drupal\data_surface\Target\SettingsShapeInterface;
 
@@ -327,6 +328,24 @@ interface DataSurfaceBuilderInterface {
    *   The definition, or NULL when the provider mounted no such key.
    */
   public function getThirdPartyDefinition(string $provider, string $key, bool $output = FALSE): ?DataDefinitionInterface;
+
+  /**
+   * Gets the map one provider's mounted keys are sealed into.
+   *
+   * The map is the provider's own fieldset on a form: titled with the
+   * module's human name until someone labels it, which is what an
+   * alter's describe('third_party_settings.<module>') does. Its keys are
+   * put into it when the surface is sealed.
+   *
+   * @param string $provider
+   *   The module that mounted the keys.
+   * @param bool $output
+   *   TRUE for the map of its mounted outputs, FALSE for its settings.
+   *
+   * @return \Drupal\Core\TypedData\MapDataDefinition|null
+   *   The map, or NULL when the provider mounted nothing on that side.
+   */
+  public function getThirdPartyMount(string $provider, bool $output = FALSE): ?MapDataDefinition;
 
   /**
    * Declares that a target refines against sibling values.

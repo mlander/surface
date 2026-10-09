@@ -96,6 +96,12 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
       $this->assertSame($this->shipped($name), $this->stored($name), $name);
     }
     $this->assertArrayNotHasKey('third_party_settings', $this->stored($three));
+    // Riverside Hall's main hall seats 400, more than example 4 allows
+    // without a licence, so its ceiling is what the shipped room shows.
+    foreach ([$two, $three] as $name) {
+      $stored = $this->stored($name);
+      $this->assertSame(['riverside', 'riverside_main', 50], [$stored['venue'], $stored['room'], $stored['capacity']], $name);
+    }
     // Where the object came from is the installer's to say, and a reset
     // does not change it.
     $this->assertSame($hash, $this->config($two)->get('_core'));

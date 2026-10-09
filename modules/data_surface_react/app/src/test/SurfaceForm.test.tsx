@@ -4,7 +4,7 @@ import { pageOf, type Settings } from '../api';
 import type { Contract } from '../contract';
 import { SurfaceForm } from '../SurfaceForm';
 import example2 from './fixtures/example2.json';
-import riverside from './fixtures/example2-riverside.json';
+import library from './fixtures/example2-library.json';
 import example3 from './fixtures/example3.json';
 
 // One integration test over a mocked server: the contracts are what the
@@ -28,10 +28,10 @@ function json(body: unknown): Response {
   return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
 }
 
-/** The server's refine: the riverside contract, over the title as sent. */
+/** The server's refine: the library contract, over the title as sent. */
 function refined({ init }: Call): Contract {
   const sent = JSON.parse(String(init?.body));
-  return { ...(riverside as unknown as Contract), values: { ...riverside.values, title: sent.values.title } };
+  return { ...(library as unknown as Contract), values: { ...library.values, title: sent.values.title } };
 }
 
 function server(routes: Record<string, (call: Call) => unknown>) {
@@ -59,23 +59,23 @@ describe('the React form of example 2', () => {
     render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
 
     const room = await screen.findByLabelText(/Room/);
-    expect(within(room).getAllByRole('option').map((option) => option.textContent)).toEqual(['Reading room', 'Garden room']);
-    expect(room).toHaveDisplayValue('Reading room');
-    expect(screen.getByLabelText(/Capacity/)).toHaveAttribute('max', '60');
+    expect(within(room).getAllByRole('option').map((option) => option.textContent)).toEqual(['Main hall', 'East room']);
+    expect(room).toHaveDisplayValue('Main hall');
+    expect(screen.getByLabelText(/Capacity/)).toHaveAttribute('max', '400');
 
     // The title is not something anything depends on: no refine.
     await userEvent.type(screen.getByLabelText(/Event title/), '!');
     expect(calls.some((call) => call.url.endsWith('/refine'))).toBe(false);
 
-    await userEvent.selectOptions(screen.getByLabelText(/Venue/), 'Riverside Hall');
-    await waitFor(() => expect(within(screen.getByLabelText(/Room/)).getAllByRole('option').map((option) => option.textContent)).toEqual(['- Select -', 'Main hall', 'East room']));
+    await userEvent.selectOptions(screen.getByLabelText(/Venue/), 'Old Library');
+    await waitFor(() => expect(within(screen.getByLabelText(/Room/)).getAllByRole('option').map((option) => option.textContent)).toEqual(['- Select -', 'Reading room', 'Garden room']));
 
     const refine = calls.find((call) => call.url.endsWith('/refine'));
     expect(refine?.init?.method).toBe('POST');
     expect((refine?.init?.headers as Record<string, string>)['X-CSRF-Token']).toBe('the-token');
     const body = JSON.parse(String(refine?.init?.body));
-    expect(body.values.venue).toBe('riverside');
-    expect(body.values.room).toBe('library_reading');
+    expect(body.values.venue).toBe('library');
+    expect(body.values.room).toBe('riverside_main');
     expect(body.values.title).toBe('Spring meetup!');
     expect(body.stale).toEqual([]);
 
@@ -90,12 +90,12 @@ describe('the React form of example 2', () => {
   });
 
   it('sends the orphaned room back by its path, empty, on the next refine and on submit', async () => {
-    // A riverside room chosen stands, as the server answers it: no longer
+    // A library room chosen stands, as the server answers it: no longer
     // stale, nothing discarded.
     const answered = (call: Call): Contract => {
       const sent = JSON.parse(String(call.init?.body));
       const contract = refined(call);
-      if (typeof sent.values.room !== 'string' || !sent.values.room.startsWith('riverside_')) {
+      if (typeof sent.values.room !== 'string' || !sent.values.room.startsWith('library_')) {
         return contract;
       }
       const room = contract.schema.properties!.room;
@@ -121,7 +121,7 @@ describe('the React form of example 2', () => {
       '/surface-api/registration.step2/configure': () => example2,
     });
     render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
-    await userEvent.selectOptions(await screen.findByLabelText(/Venue/), 'Riverside Hall');
+    await userEvent.selectOptions(await screen.findByLabelText(/Venue/), 'Old Library');
     await waitFor(() => expect(screen.getByLabelText(/Room/)).toHaveDisplayValue('- Select -'));
 
     // Another venue: the room is still the stored one's stand-in.
@@ -140,19 +140,19 @@ describe('the React form of example 2', () => {
     expect(submitted.values).toHaveProperty('room', null);
 
     // Choosing a room is an answer: it no longer stands for the stored one.
-    await userEvent.selectOptions(screen.getByLabelText(/Room/), 'East room');
+    await userEvent.selectOptions(screen.getByLabelText(/Room/), 'Garden room');
     await waitFor(() => expect(calls.filter((call) => call.url.endsWith('/refine'))).toHaveLength(3));
-    await waitFor(() => expect(screen.getByLabelText(/Room/)).toHaveDisplayValue('East room'));
+    await waitFor(() => expect(screen.getByLabelText(/Room/)).toHaveDisplayValue('Garden room'));
     await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
     await waitFor(() => expect(calls.filter((call) => call.url.endsWith('/submit'))).toHaveLength(2));
     const chosen = JSON.parse(String(calls.filter((call) => call.url.endsWith('/submit'))[1].init?.body));
     expect(chosen.stale).toEqual([]);
-    expect(chosen.values.room).toBe('riverside_east');
+    expect(chosen.values.room).toBe('library_garden');
   });
 
   it('a refused submit shows what was refused inline and in a summary', async () => {
     const { calls, fetcher } = server({
-      '/surface-api/registration.step2/configure/refine': () => riverside,
+      '/surface-api/registration.step2/configure/refine': () => library,
       '/surface-api/registration.step2/configure/submit': () => ({
         committed: false,
         valid: false,
@@ -165,7 +165,7 @@ describe('the React form of example 2', () => {
       '/surface-api/registration.step2/configure': () => example2,
     });
     render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
-    await userEvent.selectOptions(await screen.findByLabelText(/Venue/), 'Riverside Hall');
+    await userEvent.selectOptions(await screen.findByLabelText(/Venue/), 'Old Library');
     await waitFor(() => expect(screen.getByLabelText(/Room/)).toHaveDisplayValue('- Select -'));
 
     await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
@@ -335,5 +335,15 @@ describe('the React form of example 3', () => {
     expect(await screen.findByRole('group', { name: 'Ticket' })).toBeInTheDocument();
     expect(screen.getByLabelText('Note')).toHaveValue('');
     expect(within(screen.getByRole('group', { name: 'Contact' })).getByLabelText(/Email/)).toHaveValue('events@example.com');
+  });
+
+  it('draws example 4\'s keys in one fieldset, titled by its alter', async () => {
+    const { fetcher } = server({ '/surface-api/registration.step3/configure': () => example3 as unknown as Contract });
+    render(<SurfaceForm settings={{ ...settings, surface: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
+    const compliance = await screen.findByRole('group', { name: 'Compliance' });
+    expect(within(compliance).getByLabelText(/Event licence/)).toHaveValue('');
+    expect(within(compliance).getByLabelText(/Stewards/)).toHaveAccessibleDescription('At least 1 steward for 50 attendees.');
+    expect(screen.queryByRole('group', { name: /third.party/i })).toBeNull();
+    expect(screen.getByLabelText(/Capacity/)).toHaveAccessibleDescription('Up to 100 without an event licence.');
   });
 });
