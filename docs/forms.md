@@ -144,6 +144,40 @@ unchanged: the elements are still named
 `surface[third_party_settings][<module>][<key>]`, and the contract panel
 lists every key by its dotted path.
 
+### A placed fieldset
+
+An alter that places its mount
+(`describe('third_party_settings.<module>', after: 'capacity')`, see
+[Surface alters](surfaces.md#surface-alters)) has its fieldset drawn
+directly after that key. The map widget builds the `details` where its
+values live, inside the grouping container, and marks it with the key it
+follows (`PLACED_AFTER_KEY`). The container's `#pre_render`
+(`preRenderSurfaceContainer()`, after its type's own) moves it when the
+container is rendered: out of the grouping container, to directly after
+the named element of the same frame, at any depth, under a key no
+surface key can take, and with that element's `#weight` when it has
+one, so a frame Form API sorts keeps it there. A grouping container left
+with nothing in it is not drawn.
+
+The move happens at render time and only then, because it is a matter
+of drawing. By then Form API has processed, validated and submitted the
+form, so everything that walks the container by path finds the
+fieldset where the surface put it: extraction, `flagSurfaceErrors()`,
+the trigger's inline error, the stale marker, `settle()`, and the AJAX
+callback's walk to each dependent. What is kept:
+
+- **The value path.** Its elements keep their `#parents` and `#name`
+  (`surface[third_party_settings][<module>][<key>]`), so they post, and
+  save, where they always did.
+- **Dependents-only refresh.** Each key inside it keeps its refresh
+  wrapper and id. Changing the licence replaces the capacity and the
+  stewards it moves, by their wrappers; changing the capacity replaces
+  the stewards. The fieldset itself is never replaced, so it stays
+  where it was drawn. An element the callback replaces is rendered
+  without the container, so a placed fieldset inside it, in an attached
+  part, is placed by the callback the same way.
+- **Its title and its fields**, both inside it.
+
 ## Wrapper ids and AJAX
 
 The container carries a private marker, `#data_surface_wrapper`, holding

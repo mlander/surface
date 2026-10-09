@@ -10,7 +10,15 @@ surface with `#[AltersSurface]`. It adds an event licence and a number
 of stewards, which are stored under this module's name at
 `third_party_settings.data_surface_examples_compliance` and described by
 this module's own config schema, and it rewords example 3's title label
-with `describe()`. Its `#[RefinesInput('capacity')]` method watches the
+with `describe()`. Its last line titles the fieldset its keys sit in and
+places it right after the capacity the licence lifts:
+
+```php
+$inputs->describe('third_party_settings.data_surface_examples_compliance', label: $this->t('Compliance'), after: 'capacity');
+```
+
+The fieldset is drawn there on the form and in React; its keys are
+still stored and posted under this module's name. Its `#[RefinesInput('capacity')]` method watches the
 licence it added itself: without one, example 3's capacity stops at a
 hundred, and with one the room's limit applies again. Its
 `#[RefinesInput('stewards')]` method watches example 3's `capacity`:
@@ -25,7 +33,8 @@ drush pm:install data_surface_examples_compliance
 ```
 
 Then reload `/surface-examples/3`, choose Riverside Hall's main hall,
-and see the capacity stop at 100, its help text naming both ceilings.
+and see the Compliance fieldset right under the capacity, and the
+capacity stop at 100, its help text naming both ceilings.
 The licence asks for the four digits after EV- only. Type `2048` and it
 goes back to 400; type `EV-2048` and the licence is refused under the
 field while the capacity stays at 100, because an invalid licence is no
@@ -37,5 +46,6 @@ the panel explains the Regex by its message, never by the pattern.
 
 | Test | Covers |
 | --- | --- |
-| `Kernel\ExamplesComplianceTest` | The keys appear under the module's name and the label changes; the capacity stops at 100 without a licence and at the room's limit with `2048`; `204` is refused with the alter's message; the stewards' minimum is 3 at 150 and 1 at 20, said under the field; the pipeline refuses 150 without a licence and writes it with one; the licence replaces the capacity, the stewards and the panel, the capacity the stewards and the panel; example 5's calls answer as without the module. |
+| `Kernel\ExamplesComplianceTest` | The keys appear under the module's name and the label changes; the Compliance fieldset is built where its values post and drawn between the capacity and the pricing, the group it is stored in drawing nothing; the capacity stops at 100 without a licence and at the room's limit with `2048`; `204` is refused with the alter's message; the stewards' minimum is 3 at 150 and 1 at 20, said under the field; the pipeline refuses 150 without a licence and writes it with one; the licence replaces the capacity, the stewards and the panel, the capacity the stewards and the panel; example 5's calls answer as without the module. |
 | `Functional\ExamplesFullSubmitTest` | On `/surface-examples/3`, a capacity of 150 is refused at the capacity without a licence and written with `2048` and 3 stewards. |
+| `FunctionalJavascript\ExamplesComplianceRefreshTest` | In a browser: the Compliance fieldset below the capacity and above the pricing, and still there after `2048` and Tab lift the capacity, which, with the stewards, is all the refresh replaced. |

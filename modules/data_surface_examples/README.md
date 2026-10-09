@@ -414,7 +414,7 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
     DefinitionMetadata::setExamples($licence_key, ['2048']);
     $inputs->add('stewards', 'integer', $this->t('Stewards'), default: 1)->setRequired(TRUE);
     $inputs->describe('title', label: $this->t('Public event title'));
-    $inputs->describe('third_party_settings.data_surface_examples_compliance', label: $this->t('Compliance'));
+    $inputs->describe('third_party_settings.data_surface_examples_compliance', label: $this->t('Compliance'), after: 'capacity');
   }
 
   /**
@@ -464,7 +464,12 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
 ```
 
 The two keys sit in one fieldset, titled "Compliance" by the last line
-of `alterInputs()`. Example 3 ships at Riverside Hall's main hall, which
+of `alterInputs()`, which also places it: `after: 'capacity'` draws the
+fieldset right after the capacity its licence lifts, on the form and in
+React, instead of last. Only where it is drawn moves; the keys are still
+stored and posted at
+`third_party_settings.data_surface_examples_compliance`, and the Tool
+API and the config schema see nothing new. Example 3 ships at Riverside Hall's main hall, which
 seats 400. The capacity stops at 100, and its help text names both
 ceilings: "Up to 100 without an event licence. With one, up to 400." The
 licence asks for the four digits after EV- only. Type `2048` and the
@@ -596,12 +601,12 @@ Drush commands are checked against `ExampleCalls`.
 | Test | Covers |
 | --- | --- |
 | `Kernel\ExamplesStepsTest` | Examples 1 to 3: each form builds and saves, example 1 as its classic twin does; the venue narrows the room and the room the capacity; the ticket slot resolves by pricing; the contact validates its email; the panel's rows as the answers move; each example's class stays screen sized. |
-| `Kernel\ExamplesComplianceTest` | Example 4: the alter's keys and label; its keys in one fieldset titled "Compliance"; the capacity capped at a hundred without a licence and the room's limit with one; the licence's pattern; the stewards' minimum following the capacity; what the licence and the capacity replace on the form; example 5's calls unchanged. |
+| `Kernel\ExamplesComplianceTest` | Example 4: the alter's keys and label; its keys in one fieldset titled "Compliance", drawn between the capacity and the pricing; the capacity capped at a hundred without a licence and the room's limit with one; the licence's pattern; the stewards' minimum following the capacity; what the licence and the capacity replace on the form; example 5's calls unchanged. |
 | `Kernel\ExamplesToolTest` | Example 5: the three calls and their answers; what the script prints. |
 | `Unit\ExamplesReadmeTest` | This page against the files it quotes, and its Drush commands. |
 | `Functional\ExamplesRoutesTest` | Every route answers an administrator and refuses anonymous; the landing page; a save through example 3. |
 | `FunctionalJavascript\ExamplesAjaxRefreshTest` | In a browser: example 2's venue replaces the room and the capacity and leaves the venue the same node, the orphaned room on its empty option with the stale marker and the capacity back at 1000; a room then narrows the capacity and loses `- Select -`. Example 3's paid pricing swaps the note for a price and a currency. |
-| `FunctionalJavascript\ExamplesComplianceRefreshTest` | Example 4, in a browser: one fieldset titled "Compliance", the ceiling of 100 lifted to the main hall's 400 by `2048`, and the stewards at 1 for 50 and 3 for 150; a malformed licence on blur is said once, under the licence, with `aria-invalid` and nothing at the top, and caps the capacity at a hundred; corrected, the error goes and the room's limit comes back. A refused capacity left by a click on text keeps no focus, and left by Tab lands on the pricing. |
+| `FunctionalJavascript\ExamplesComplianceRefreshTest` | Example 4, in a browser: one fieldset titled "Compliance", the ceiling of 100 lifted to the main hall's 400 by `2048`, and the stewards at 1 for 50 and 3 for 150; a malformed licence on blur is said once, under the licence, with `aria-invalid` and nothing at the top, and caps the capacity at a hundred; corrected, the error goes and the room's limit comes back. A refused capacity left by a click on text keeps no focus, and left by Tab lands on the Compliance fieldset after it. The fieldset is drawn below the capacity and above the pricing, and stays there when `2048` and Tab lift the capacity, which, with the stewards, is all that is replaced. |
 | `Functional\ServedContractEndpointsTest` | In React: the landing page's links, and example 2's contract, refine and validate over HTTP. |
 | `Functional\ServedSubmitEndpointTest` | In React: example 2 saved over HTTP, refused, and refused after someone else saved. |
 | `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files. |

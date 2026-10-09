@@ -15,6 +15,7 @@ use Drupal\data_surface\Pipeline\PreparedValues;
 use Drupal\data_surface\Pipeline\VariantMismatchException;
 use Drupal\data_surface\Surface\SurfaceContext;
 use Drupal\data_surface\SurfaceAttachment;
+use Drupal\data_surface\SurfaceBuild\SurfaceShape;
 use Drupal\data_surface\SurfaceBuild\SurfaceShapeAdditions;
 use Drupal\data_surface\SurfaceBuild\SurfacesInterface;
 use Drupal\data_surface_surface_test\Surface\Pantry\JarSurface;
@@ -341,6 +342,76 @@ class SubsurfaceTest extends DataSurfaceKernelTestBase {
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('describe() was asked to reword the input "third_party_settings.third_module", which nothing has declared.');
     $third->describe('third_party_settings.third_module', label: 'Too soon');
+  }
+
+  /**
+   * Tests describe() places an alter's own mount, and nothing else.
+   *
+   * Placement says where one module's fieldset is drawn, so only that
+   * module's alter says it, of its own input mount, after a top-level
+   * key of the owner's shape. Every other use is refused, naming why.
+   */
+  public function testDescribePlacesOnlyItsOwnMount(): void {
+    $typed_data = $this->container->get('typed_data_manager');
+    $builder = new DataSurfaceBuilder();
+    $owner = new SurfaceShape($builder, $typed_data);
+    $owner->add('title', 'string', 'Title');
+    $owner->add('capacity', 'integer', 'Capacity');
+    $first = new SurfaceShapeAdditions($builder, $typed_data, 'first_module');
+    $second = new SurfaceShapeAdditions($builder, $typed_data, 'second_module');
+    $outputs = new SurfaceShapeAdditions($builder, $typed_data, 'first_module', TRUE);
+    $first->add('badge', 'string', 'Badge');
+    $second->add('ribbon', 'string', 'Ribbon');
+    $outputs->add('shown', 'string', 'Shown');
+
+    $first->describe('third_party_settings.first_module', label: 'Badges', after: 'capacity');
+    $mounts = $builder->seal()->getDefinition('third_party_settings');
+    $this->assertInstanceOf(MapDataDefinition::class, $mounts);
+    $this->assertSame('capacity', DefinitionMetadata::getPlacedAfter($mounts->getPropertyDefinition('first_module')));
+    $this->assertSame('Badges', (string) $mounts->getPropertyDefinition('first_module')->getLabel());
+    // Where it is drawn, not where it is stored: the values stay under
+    // the mount, and an unplaced mount says nothing.
+    $this->assertSame(['first_module', 'second_module'], array_keys($mounts->getPropertyDefinitions()));
+    $this->assertNull(DefinitionMetadata::getPlacedAfter($mounts->getPropertyDefinition('second_module')));
+    $this->assertNull(DefinitionMetadata::getPlacedAfter($mounts));
+
+    $refusals = [
+      // Another module's mount.
+      [
+        $first, 'third_party_settings.second_module', 'title',
+        'Only an alter places, and only its own input mount, third_party_settings.<module>: this alter\'s is third_party_settings.first_module.',
+      ],
+      // A key, not a mount.
+      [$first, 'badge', 'title', 'describe() was asked to place "badge" after "title".'],
+      [$first, 'title', 'capacity', 'describe() was asked to place "title" after "capacity".'],
+      // The owner orders its own keys.
+      [$owner, 'title', 'capacity', 'an owner orders its own keys by declaring them in order.'],
+      // An output mount is never drawn.
+      [
+        $outputs, 'third_party_outputs.first_module', 'title',
+        'outputs are never drawn, so they have nowhere to be placed.',
+      ],
+      // After nothing the owner declared, after the mounts themselves,
+      // or after another alter's key.
+      [
+        $first, 'third_party_settings.first_module', 'missing',
+        'describe() was asked to place third_party_settings.first_module after "missing", which is no top-level key of the owner\'s shape.',
+      ],
+      [
+        $first, 'third_party_settings.first_module', 'third_party_settings',
+        'after "third_party_settings", which is no top-level key',
+      ],
+      [$first, 'third_party_settings.first_module', 'badge', 'after "badge", which is no top-level key'],
+    ];
+    foreach ($refusals as [$shape, $key, $after, $message]) {
+      try {
+        $shape->describe($key, after: $after);
+        $this->fail(sprintf('Refused: %s', $message));
+      }
+      catch (\LogicException $e) {
+        $this->assertStringContainsString($message, $e->getMessage());
+      }
+    }
   }
 
   /**

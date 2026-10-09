@@ -18,8 +18,9 @@ use Drupal\data_surface_examples\Surface\RegistrationStep3Surface;
  * Example 4: others get a say.
  *
  * Another module's class, naming example 3's surface. It adds two keys,
- * stored under this module's name, titles the fieldset they sit in, and
- * rewords one of the owner's labels. Without an event licence the
+ * stored under this module's name, titles the fieldset they sit in and
+ * draws it right after the capacity its licence lifts, and rewords one
+ * of the owner's labels. Without an event licence the
  * owner's capacity stops at a hundred, and the stewards it asks for
  * follow the capacity. Example 3 is not changed and does not know this
  * module exists.
@@ -50,7 +51,7 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
     DefinitionMetadata::setExamples($licence_key, ['2048']);
     $inputs->add('stewards', 'integer', $this->t('Stewards'), default: 1)->setRequired(TRUE);
     $inputs->describe('title', label: $this->t('Public event title'));
-    $inputs->describe('third_party_settings.data_surface_examples_compliance', label: $this->t('Compliance'));
+    $inputs->describe('third_party_settings.data_surface_examples_compliance', label: $this->t('Compliance'), after: 'capacity');
   }
 
   /**

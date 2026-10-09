@@ -602,6 +602,13 @@ final class ContractEmitter {
         unset($schema['title'], $schema['description']);
         $extension['group'] = TRUE;
       }
+      $after = DefinitionMetadata::getPlacedAfter($definition);
+      if ($after !== NULL) {
+        // A module's fieldset its alter placed: drawn after that key of
+        // the frame its group sits in. Only drawn there; its properties
+        // stay where its values are posted.
+        $extension['after'] = $after;
+      }
       $shown = $nested;
     }
     else {

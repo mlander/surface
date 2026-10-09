@@ -258,7 +258,8 @@
                             "locked": false,
                             "dependsOn": [],
                             "refined": true,
-                            "stale": false
+                            "stale": false,
+                            "after": "capacity"
                         }
                     }
                 },

@@ -35,6 +35,8 @@ export interface Extension {
   patternMessage?: string;
   /** On an object that only groups each module's fieldset: draw nothing around them. */
   group?: boolean;
+  /** On a module's fieldset inside a group: draw it right after this sibling of the group instead. */
+  after?: string;
 }
 
 export interface Choice {

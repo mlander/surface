@@ -17,7 +17,8 @@ use Drupal\Core\TypedData\MapDataDefinition;
  * Neither the owner nor an alter may add a key twice: adding is never
  * replacing, so nothing an owner declared can be changed by adding. The
  * one change to an existing key anyone may make is describe(): its label
- * and description, which change nothing about what is accepted. The one
+ * and description, and for an alter's own mount where it is drawn, none
+ * of which changes what is accepted or where it is stored. The one
  * widening an alter may make is extendChoices(): more values on a list
  * the owner declared, answered for by the alter.
  */
@@ -67,10 +68,19 @@ interface ShapeAdditionsInterface {
    * For an alter rewording a key it does not own. An owner words its own
    * keys with the core setters on what add() and attach() return.
    *
-   * Label and description only: the one change to an existing key an
-   * alter may make, because it changes nothing about what is accepted.
-   * Type, presence and width stay the owner's; tightening is a
-   * #[RefinesInput] method. Not a narrowing, so not checked as one.
+   * Label, description and, for a mount, placement: the one change to
+   * an existing key an alter may make, because it changes nothing about
+   * what is accepted. Type, presence and width stay the owner's;
+   * tightening is a #[RefinesInput] method. Not a narrowing, so not
+   * checked as one.
+   *
+   * Placement is for the alter's own mount only,
+   * `third_party_settings.<module>` of the module calling it. Its keys
+   * are stored and posted under that path whatever is said here; $after
+   * says where the fieldset holding them is drawn: directly after that
+   * key of the owner's shape, on a generated form and in a renderer of
+   * the served contract (`x-surface.after`), rather than last, among the
+   * other modules' fieldsets.
    *
    * @param string $key
    *   The key: an owner's key by its name, this shape's own key by its
@@ -84,13 +94,19 @@ interface ShapeAdditionsInterface {
    *   The new label, or NULL to leave it.
    * @param string|\Stringable|null $description
    *   The new description, or NULL to leave it.
+   * @param string|null $after
+   *   For the calling alter's own input mount only: a top-level key of
+   *   the owner's shape, a plain key or an attached part, to draw the
+   *   mount's fieldset directly after. NULL leaves it where it is.
    *
    * @return $this
    *
    * @throws \LogicException
-   *   When no declared key answers to that name.
+   *   When no declared key answers to that name; and, with $after, when
+   *   the key is not the calling alter's own input mount, or $after names
+   *   no top-level key of the owner's shape.
    */
-  public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL): static;
+  public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL): static;
 
   /**
    * A subsurface at a key, by class.

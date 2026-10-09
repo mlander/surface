@@ -86,8 +86,9 @@ tool; it is a service, so its methods are instance methods.
   language holds them to that: the build step calls them on the class
   and never makes an instance. The owner gets `ShapeInterface`; an alter gets
   `ShapeAdditionsInterface`, which is the same minus `attachBy()`. An
-  alter can add keys, reword a label or description with `describe()`,
-  and offer more values on a fixed choice list with `extendChoices()`.
+  alter can add keys, reword a label or description with `describe()`
+  (and, on its own mount, say where its fieldset is drawn), and offer
+  more values on a fixed choice list with `extendChoices()`.
   It cannot remove a key or change its type. Inputs and outputs use the
   same two interfaces.
 - **A `#[RefinesInput('bundle')]` method takes the key's definition

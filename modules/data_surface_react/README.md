@@ -43,7 +43,9 @@ and so on.
   its bounds and step, text with its maxlength, textarea, email, a
   fieldset for a map or an attached part (none around the modules'
   third-party settings, `x-surface.group`, each module's map being its
-  own, as on the form), the chosen variant's fieldset for a slot
+  own, as on the form; a module's map carrying `x-surface.after` is
+  drawn right after that sibling of the group instead, its values still
+  sent under the group), the chosen variant's fieldset for a slot
   (nothing while it is unresolved), and a minimal repeatable
   for a list with no option list. Radios are in the vocabulary and the
   app, and the emitter never asks for them, because the Form API
@@ -92,5 +94,5 @@ Run them on the host, not inside ddev. The library
 | `Kernel\ServedContractTest` | The main module's emitter over examples 1 to 3, the content type surface and the demo block surface: labels, `oneOf` titles, bounds, the venue to room dependency, the slot's conditional, the locked machine name on edit, the widget hints off by default and on for this submodule's endpoint; every schema checked by opis/json-schema (draft 2020-12) and against the vendored draft-07 meta-schema. |
 | `Functional\ServedContractEndpointsTest` | 200 and 403, the JSON shape, refine narrowing the room by the venue, validate refusing a wrong room and a capacity over the room's and accepting a valid payload, nothing written; the landing page's React links. |
 | `Functional\ServedSubmitEndpointTest` | Submit writing example 2 and answering the fresh contract; a wrong room refused with nothing written; anonymous, token-less and malformed posts; a stale fingerprint refused with nothing written, and no fingerprint meaning the last write wins; a content type added through it answering `created` at `edit` with its `type`, then edited and deleted. |
-| `app/src/test/widgets.test.tsx` | Each widget from a schema fragment, the empty option rule, locked, slot resolution, the list. |
-| `app/src/test/SurfaceForm.test.tsx` | The app against a mocked server serving the emitter's own contracts: refine on a dependency, the stale room, validate's inline and summary messages; submit's success with stale warnings and the re-render, a refusal, the fingerprint sent and its refusal, the toggle off, and the move to a created thing's page. |
+| `app/src/test/widgets.test.tsx` | Each widget from a schema fragment, the empty option rule, locked, slot resolution, the list; a placed fieldset drawn after the sibling it names, its values sent under its group. |
+| `app/src/test/SurfaceForm.test.tsx` | The app against a mocked server serving the emitter's own contracts: refine on a dependency, the stale room, validate's inline and summary messages; submit's success with stale warnings and the re-render, a refusal, the fingerprint sent and its refusal, the toggle off, and the move to a created thing's page; example 3's Compliance fieldset right after the capacity. |

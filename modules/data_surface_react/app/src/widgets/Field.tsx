@@ -46,7 +46,58 @@ export function Field(props: FieldProps): JSX.Element | null {
   }
 }
 
-/** The properties of an object schema, each as its own field. */
+/** A module's fieldset drawn outside the group it sits in, and where its values live. */
+interface Placed {
+  group: string;
+  name: string;
+  schema: Schema;
+}
+
+/**
+ * The fieldsets inside this object's groups that an alter placed after
+ * one of this object's own properties (`x-surface.after`), by that
+ * property. A placement naming no sibling, or the group itself, is left
+ * where it sits.
+ */
+function placements(schema: Schema): Record<string, Placed[]> {
+  const properties = schema.properties ?? {};
+  const placed: Record<string, Placed[]> = {};
+  for (const [group, property] of Object.entries(properties)) {
+    if (!property['x-surface']?.group) {
+      continue;
+    }
+    for (const [name, child] of Object.entries(property.properties ?? {})) {
+      const after = child['x-surface']?.after;
+      if (after !== undefined && after !== group && after in properties) {
+        (placed[after] ??= []).push({ group, name, schema: child });
+      }
+    }
+  }
+  return placed;
+}
+
+/** A group's schema without the fieldsets drawn elsewhere. */
+function withoutPlaced(group: Schema, name: string, placed: Record<string, Placed[]>): Schema {
+  const moved = new Set(
+    Object.values(placed)
+      .flat()
+      .filter((entry) => entry.group === name)
+      .map((entry) => entry.name),
+  );
+  if (moved.size === 0) {
+    return group;
+  }
+  return { ...group, properties: Object.fromEntries(Object.entries(group.properties ?? {}).filter(([child]) => !moved.has(child))) };
+}
+
+/**
+ * The properties of an object schema, each as its own field.
+ *
+ * A module's fieldset its alter placed (`x-surface.after`) is drawn right
+ * after the named property instead of inside its group, and keeps its
+ * path: its values are still posted under the group, where they are
+ * stored. A group left with nothing to draw is drawn as nothing.
+ */
 export function Properties({
   schema,
   values,
@@ -62,23 +113,43 @@ export function Properties({
   errors: FieldProps['errors'];
   disabled?: boolean;
 }): JSX.Element {
+  const placed = placements(schema);
+  const field = (name: string, property: Schema, at: Schema, held: Values, path: string, locked?: boolean) => (
+    <Field
+      key={path}
+      name={name}
+      path={path}
+      schema={property}
+      value={held[name]}
+      required={(at.required ?? []).includes(name)}
+      onChange={onChange}
+      errors={errors}
+      parent={at}
+      parentValues={held}
+      disabled={locked}
+    />
+  );
   return (
     <>
-      {Object.entries(schema.properties ?? {}).map(([name, property]) => (
-        <Field
-          key={name}
-          name={name}
-          path={prefix + name}
-          schema={property}
-          value={values[name]}
-          required={(schema.required ?? []).includes(name)}
-          onChange={onChange}
-          errors={errors}
-          parent={schema}
-          parentValues={values}
-          disabled={disabled}
-        />
-      ))}
+      {Object.entries(schema.properties ?? {}).flatMap(([name, property]) => {
+        const drawn = property['x-surface']?.group ? withoutPlaced(property, name, placed) : property;
+        const empty = drawn !== property && Object.keys(drawn.properties ?? {}).length === 0;
+        return [
+          empty ? null : field(name, drawn, schema, values, prefix + name, disabled),
+          ...(placed[name] ?? []).map((entry) => {
+            const group = schema.properties?.[entry.group] ?? {};
+            const held = values[entry.group];
+            return field(
+              entry.name,
+              entry.schema,
+              group,
+              isObject(held) ? held : {},
+              `${prefix}${entry.group}.${entry.name}`,
+              disabled || Boolean(group['x-surface']?.locked || group.readOnly),
+            );
+          }),
+        ];
+      })}
     </>
   );
 }

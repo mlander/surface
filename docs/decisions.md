@@ -263,6 +263,28 @@ passes an empty string and never sees a map that is absent, so a
 mounted key an alter made required would otherwise never be refused.
 (`DataSurfacePipeline::missingInMap()`)
 
+### Placement is a describe option
+
+Where an alter's fieldset is drawn is said once, by the alter, on its
+own mount: `describe('third_party_settings.<module>', after: '<key>')`,
+naming a top-level key of the owner's shape. It is recorded on the
+mount's definition (`DefinitionMetadata::setPlacedAfter()`), so every
+door reads the same declaration: the generated form draws the details
+there, the served contract says `x-surface.after` and the React app
+draws it there. A form alter would have placed it on one form and
+nowhere else. The value path does not move: the keys are stored,
+posted, validated, advertised to the Tool API and described by the
+config schema at `third_party_settings.<module>.<key>` as before, and
+the contract's properties keep their nesting and order, because the
+mount is what lets the owner's storage hold a contribution without
+knowing it ([Where an alter's keys live](#where-an-alters-keys-live)).
+The form moves the details at render time (`#pre_render`), after Form
+API is done with the array, so no walk by path changes. Only the
+calling alter's own input mount may be placed; an output mount is never
+drawn, and `after:` on it is refused rather than ignored, so a mistake
+shows. (`ShapeAdapterBase::assertPlaceable()`,
+`DataSurfaceFormBuilder::placeMounts()`)
+
 ### Adding a key twice
 
 Declaring a key that is already declared is refused, for owner and

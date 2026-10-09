@@ -12,6 +12,7 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Attribute\DataSurfaceWidget;
 use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
 use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -72,6 +73,12 @@ final class MapWidget extends DataSurfaceWidgetBase implements ContainerFactoryP
     ];
     if ($element['#type'] === 'details' && $definition->getDescription() !== NULL) {
       $element['#description'] = $definition->getDescription();
+    }
+    $after = DefinitionMetadata::getPlacedAfter($definition);
+    if ($after !== NULL) {
+      // A module's fieldset its alter placed. It is built here, where its
+      // values are posted; the container draws it after that key.
+      $element[DataSurfaceFormBuilderInterface::PLACED_AFTER_KEY] = $after;
     }
     if ($definition->isRequired()) {
       // A details holds no value of its own, so this paints the required

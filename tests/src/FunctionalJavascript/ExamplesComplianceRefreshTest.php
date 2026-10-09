@@ -42,6 +42,11 @@ class ExamplesComplianceRefreshTest extends ExamplesWebDriverTestBase {
   protected const MESSAGE = 'A licence number is four digits, such as 2048.';
 
   /**
+   * The Compliance fieldset's data-drupal-selector.
+   */
+  protected const COMPLIANCE = 'edit-surface-third-party-settings-data-surface-examples-compliance';
+
+  /**
    * The stewards element's name.
    */
   protected const STEWARDS = 'surface[third_party_settings][data_surface_examples_compliance][stewards]';
@@ -141,7 +146,8 @@ class ExamplesComplianceRefreshTest extends ExamplesWebDriverTestBase {
    * The trigger's disable-refocus leaves core's refocus-blur doing its
    * job: the field focused when the response arrived is focused again
    * once the rebuild has replaced what it replaces, even when the
-   * capacity itself was refused and redrawn.
+   * capacity itself was refused and redrawn. The next thing after the
+   * capacity is the Compliance fieldset its alter placed there.
    */
   public function testTabbingOnFromTheCapacityLandsOnTheNextField(): void {
     $this->drupalGet('surface-examples/3');
@@ -150,7 +156,65 @@ class ExamplesComplianceRefreshTest extends ExamplesWebDriverTestBase {
     $this->assertSession()->assertWaitOnAjaxRequest();
 
     $this->assertSame('true', $this->assertSession()->fieldExists('surface[capacity]')->getAttribute('aria-invalid'));
-    $this->assertSame('surface[pricing]', $this->getSession()->evaluateScript('return document.activeElement.name'));
+    $this->assertSame(
+      ['SUMMARY', self::COMPLIANCE],
+      $this->getSession()->evaluateScript('return [document.activeElement.tagName, document.activeElement.closest("details")?.dataset.drupalSelector];'),
+    );
+  }
+
+  /**
+   * Tests the Compliance fieldset is drawn after the capacity, and stays.
+   *
+   * The alter places its fieldset after the capacity its licence lifts:
+   * below the capacity and above the pricing, the next key the owner
+   * declared. A licence typed there still lifts the capacity, and the
+   * refresh replaces the capacity and the stewards it moves, never the
+   * fieldset, which is where it was afterwards.
+   */
+  public function testTheComplianceFieldsetIsDrawnAfterTheCapacity(): void {
+    $this->drupalGet('surface-examples/3');
+    $this->assertComplianceAfterTheCapacity();
+    $top = fn (string $selector): float => (float) $this->getSession()->evaluateScript(sprintf(
+      'return document.querySelector(%s).getBoundingClientRect().top;',
+      json_encode($selector),
+    ));
+    $compliance = $top(sprintf('details[data-drupal-selector="%s"]', self::COMPLIANCE));
+    $this->assertGreaterThan($top('[name="surface[capacity]"]'), $compliance);
+    $this->assertLessThan($top('[name="surface[pricing]"]'), $compliance);
+    // Nothing is drawn for the group it is stored in.
+    $this->assertSession()->elementNotExists('css', '[data-drupal-selector="edit-surface-third-party-settings"]');
+
+    $this->probeAll();
+    $this->getSession()->executeScript(sprintf('document.querySelector(%s).dataset.dataSurfaceProbe = "kept";', json_encode(sprintf('details[data-drupal-selector="%s"]', self::COMPLIANCE))));
+    $this->typeInto(self::LICENCE, '2048' . Key::TAB);
+    $this->assertSession()->assertWaitOnAjaxRequest();
+    $this->assertStringContainsString('Up to 400 for the Main hall.', $this->formItemText('surface[capacity]'));
+    $this->assertSame(['surface[capacity]', self::STEWARDS], $this->replacedSinceProbe());
+    $this->assertSame('kept', $this->getSession()->evaluateScript(sprintf('return document.querySelector(%s).dataset.dataSurfaceProbe;', json_encode(sprintf('details[data-drupal-selector="%s"]', self::COMPLIANCE)))));
+    $this->assertComplianceAfterTheCapacity();
+  }
+
+  /**
+   * Asserts the Compliance fieldset sits between the capacity and pricing.
+   *
+   * By the DOM: its previous sibling holds the capacity, its next the
+   * pricing, and both of its fields are inside it.
+   */
+  protected function assertComplianceAfterTheCapacity(): void {
+    $this->assertSame([TRUE, TRUE, 'Compliance', 2], $this->getSession()->evaluateScript(sprintf(
+      'return (function (d) {
+        return [
+          !!d.previousElementSibling.querySelector(%s),
+          !!d.nextElementSibling.querySelector(%s),
+          d.querySelector("summary").innerText.trim(),
+          d.querySelectorAll(%s).length,
+        ];
+      })(document.querySelector(%s));',
+      json_encode('[name="surface[capacity]"]'),
+      json_encode('[name="surface[pricing]"]'),
+      json_encode(sprintf('[name="%s"], [name="%s"]', self::LICENCE, self::STEWARDS)),
+      json_encode(sprintf('details[data-drupal-selector="%s"]', self::COMPLIANCE)),
+    )));
   }
 
   /**

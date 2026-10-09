@@ -335,6 +335,51 @@ describe('fieldset, slot and list', () => {
     expect(within(groups[0]).getByLabelText('Event licence')).toHaveValue('2048');
   });
 
+  it('draws a placed fieldset after the sibling it names, and posts its values under its group', async () => {
+    const compliance: Schema = {
+      title: 'Compliance',
+      type: 'object',
+      properties: { licence: { title: 'Event licence', type: ['string', 'null'], 'x-surface': x('text') } },
+      'x-surface': x('fieldset', { after: 'capacity' }),
+    };
+    const badges: Schema = {
+      title: 'Badges',
+      type: 'object',
+      properties: { badge: { title: 'Badge', type: ['string', 'null'], 'x-surface': x('text') } },
+      'x-surface': x('fieldset'),
+    };
+    const seen: Values[] = [];
+    render(
+      <Form
+        schema={object({
+          title: { title: 'Title', type: 'string', 'x-surface': x('text') },
+          capacity: { title: 'Capacity', type: 'integer', 'x-surface': x('number') },
+          pricing: { title: 'Pricing', type: 'string', 'x-surface': x('text') },
+          third_party_settings: { type: 'object', properties: { compliance, badges }, 'x-surface': x('fieldset', { group: true }) },
+        })}
+        initial={{ title: 'Meetup', capacity: 50, pricing: 'free', third_party_settings: { compliance: { licence: '' }, badges: { badge: 'star' } } }}
+        onValues={(values) => seen.push(values)}
+      />,
+    );
+    const placed = screen.getByRole('group', { name: 'Compliance' });
+    // Right after the capacity, before the pricing; the unplaced module's
+    // fieldset stays in its group, where the group sits.
+    expect(placed.previousElementSibling).toContainElement(screen.getByLabelText('Capacity'));
+    expect(placed.nextElementSibling).toContainElement(screen.getByLabelText('Pricing'));
+    const group = document.querySelector('.dsr-group');
+    expect(group).toContainElement(screen.getByRole('group', { name: 'Badges' }));
+    expect(group).not.toContainElement(placed);
+    // Its id is its path's, as everything inside it is.
+    expect(placed.id).toBe('dsr-third_party_settings-compliance');
+    await userEvent.type(within(placed).getByLabelText('Event licence'), '2048');
+    expect(seen[seen.length - 1]).toEqual({
+      title: 'Meetup',
+      capacity: 50,
+      pricing: 'free',
+      third_party_settings: { compliance: { licence: '2048' }, badges: { badge: 'star' } },
+    });
+  });
+
   it('renders the variant the deciding key chose, and switches with it', async () => {
     render(<Form schema={object({ pricing, ticket: ticketSlot }, [], branches)} initial={{ pricing: 'free', ticket: { note: 'Donations welcome' } }} />);
     expect(screen.getByRole('group', { name: 'Ticket' })).toBeInTheDocument();

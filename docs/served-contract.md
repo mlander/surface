@@ -102,6 +102,7 @@ is an object with `properties` in declaration order, `required`, and
 | `by`, `variants`, `chosen` | On a slot: the deciding key, the values that choose a variant, and the one chosen now. |
 | `variant` | On a slot's variant schema: which value it is for. |
 | `group` | Only when `true`, on `third_party_settings`: the object only groups one object per contributing module, each that module's fieldset, so it has no `title` or `description` and a renderer draws nothing around them, as the form does. |
+| `after` | On a module's object inside a `group`, when its alter placed it (`describe(..., after:)`): draw this fieldset after the named property of the object that contains its group. Only where it is drawn: its properties stay in the group, where its values are sent, and the schema's order and nesting do not move. |
 | `checkedOnServer` | Constraints no keyword states. |
 | `patternMessage` | On a key with a `pattern`: the Regex's own message, which is how a person is told what the pattern allows. The pattern is for machines; a renderer explains the key by this, never by the pattern. |
 | `enumerated` | Only when `true`: the key's refiners have nothing to refine against yet, and what they answer for every value they could be handed is stated as conditionals on the parent ([below](#exact-where-it-can-be)). The schema is exact for this key with no round trip. |
@@ -268,6 +269,7 @@ What the emitter's `widget`, when asked for, mirrors is
 | — (never emitted) | — | `radios` | `RadiosField` |
 | a map with properties, an attached part | `details` | `fieldset` | `FieldsetField` |
 | `third_party_settings`, which only groups each module's map | `container`, no title | `fieldset`, `group: true` | `FieldsetField`, as a plain `div` |
+| a module's map its alter placed | its `details`, drawn after the named key | `fieldset`, `after: "<key>"` | `FieldsetField`, drawn after that sibling of the group |
 | a slot | the chosen variant's `details`; nothing while unresolved | `slot` | `SlotField` |
 | `string` with the `multiline` setting | `textarea`, no maxlength, no placeholder | `textarea` | `TextareaField` |
 | `email` | `email` | `email` | `TextField` (type email) |

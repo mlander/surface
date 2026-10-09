@@ -481,6 +481,14 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $this->assertArrayNotHasKey('description', $mount);
     $this->assertTrue($mount['x-surface']['group']);
     $this->assertSame('Compliance', $mount['properties']['data_surface_examples_compliance']['title']);
+    // Its alter draws it after the capacity: said on the module's
+    // object, and only said. The schema keeps it where its values go,
+    // inside the group, the group last.
+    $this->assertSame('capacity', $mount['properties']['data_surface_examples_compliance']['x-surface']['after']);
+    $this->assertArrayNotHasKey('after', $mount['x-surface']);
+    $this->assertSame([
+      'title', 'open', 'venue', 'room', 'capacity', 'pricing', 'ticket', 'contact', 'third_party_settings',
+    ], array_keys($contract['schema']['properties']));
 
     $licensed = $this->contract('registration.step3', 'configure', [], $room + [
       'capacity' => 150,

@@ -71,6 +71,11 @@ final class DefinitionMetadata {
   protected const GROUPING_KEY = 'data_surface_grouping';
 
   /**
+   * The definition array key holding where a module's mount is drawn.
+   */
+  protected const PLACED_AFTER_KEY = 'data_surface_placed_after';
+
+  /**
    * Declares the value a definition starts from.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
@@ -364,6 +369,44 @@ final class DefinitionMetadata {
     return $definition instanceof \ArrayAccess
       && $definition->offsetExists(static::GROUPING_KEY)
       && (bool) $definition->offsetGet(static::GROUPING_KEY);
+  }
+
+  /**
+   * Places a module's mount after a key of the frame it is mounted in.
+   *
+   * A mount is the map one module's added keys sit in, inside the map
+   * that only groups the mounts (setGrouping()). Its keys are stored and
+   * posted there, and drawn there unless its alter says where else: the
+   * key named here is a top-level key of the same frame, and a form or a
+   * renderer draws the mount's fieldset directly after that key's
+   * element. Nothing about its value moves: placement is where it is
+   * drawn, never where it is stored.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The mount.
+   * @param string $key
+   *   The key of the enclosing frame to draw the mount after.
+   */
+  public static function setPlacedAfter(DataDefinitionInterface $definition, string $key): void {
+    static::arrayAccess($definition)->offsetSet(static::PLACED_AFTER_KEY, $key);
+  }
+
+  /**
+   * Gets the key a module's mount is drawn after, if its alter placed it.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to read.
+   *
+   * @return string|null
+   *   The key of the enclosing frame, or NULL when the mount is drawn
+   *   where it is stored, inside the grouping map.
+   */
+  public static function getPlacedAfter(DataDefinitionInterface $definition): ?string {
+    if (!$definition instanceof \ArrayAccess || !$definition->offsetExists(static::PLACED_AFTER_KEY)) {
+      return NULL;
+    }
+    $key = $definition->offsetGet(static::PLACED_AFTER_KEY);
+    return is_string($key) ? $key : NULL;
   }
 
   /**

@@ -9,6 +9,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Surface\ShapeAdditionsInterface;
 
 /**
@@ -119,7 +120,7 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
   /**
    * {@inheritdoc}
    */
-  public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL): static {
+  public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL): static {
     $definition = $this->find($key);
     if ($definition === NULL) {
       throw new \LogicException(sprintf(
@@ -132,13 +133,70 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
     if (!$definition instanceof DataDefinition) {
       throw new \LogicException(sprintf('The "%s" definition is a %s, which takes no label or description.', $key, get_class($definition)));
     }
+    if ($after !== NULL) {
+      $this->assertPlaceable($key, $after);
+    }
     if ($label !== NULL) {
       $definition->setLabel($label);
     }
     if ($description !== NULL) {
       $definition->setDescription($description);
     }
+    if ($after !== NULL) {
+      DefinitionMetadata::setPlacedAfter($definition, $after);
+    }
     return $this;
+  }
+
+  /**
+   * Refuses a placement describe() cannot honour.
+   *
+   * A placement says where one module's fieldset is drawn, so it is the
+   * module's own to make, of its own input mount, and it names a key the
+   * fieldset can be drawn beside: a top-level key of the owner's shape.
+   * Outputs are never drawn, so they have nowhere to be placed.
+   *
+   * @param string $key
+   *   The key describe() was given.
+   * @param string $after
+   *   The key the mount is to be drawn after.
+   *
+   * @throws \LogicException
+   *   When the key is not this shape's own input mount, or $after is not
+   *   a top-level key of the owner's shape.
+   */
+  protected function assertPlaceable(string $key, string $after): void {
+    $mount = $this->ownMount();
+    if ($this->outputs || $mount === NULL || $key !== $mount) {
+      throw new \LogicException(sprintf(
+        'describe() was asked to place "%s" after "%s". Only an alter places, and only its own input mount, third_party_settings.<module>: %s',
+        $key,
+        $after,
+        match (TRUE) {
+          $this->outputs => 'outputs are never drawn, so they have nowhere to be placed.',
+          $mount === NULL => 'an owner orders its own keys by declaring them in order.',
+          default => sprintf('this alter\'s is %s.', $mount),
+        },
+      ));
+    }
+    if ($after === 'third_party_settings' || $this->builder->getDefinition($after) === NULL) {
+      throw new \LogicException(sprintf(
+        'describe() was asked to place %s after "%s", which is no top-level key of the owner\'s shape. A mount is drawn after a plain key or an attached part the owner declared.',
+        $key,
+        $after,
+      ));
+    }
+  }
+
+  /**
+   * Gets the path of this shape's own input mount, if it has one.
+   *
+   * @return string|null
+   *   `third_party_settings.<module>` for an alter's shape, NULL for the
+   *   owner's, which mounts nothing.
+   */
+  protected function ownMount(): ?string {
+    return NULL;
   }
 
   /**

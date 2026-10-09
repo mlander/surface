@@ -546,11 +546,31 @@ its name, and another alter's key by its mounted path,
 `third_party_settings.<module>.<key>`. A module's mount itself,
 `third_party_settings.<module>`, is the fieldset its keys are drawn in:
 titled with the module's name until its alter names it, once it has
-added a key. The examples' compliance alter ends with
-`$inputs->describe('third_party_settings.data_surface_examples_compliance', label: $this->t('Compliance'))`.
-The `third_party_settings` map around the modules' mounts only groups
-them, so a form and the served contract draw nothing for it
+added a key. The `third_party_settings` map around the modules' mounts
+only groups them, so a form and the served contract draw nothing for it
 ([Generated forms](forms.md#other-modules-keys)).
+
+On its own mount, and only there, an alter may also say where that
+fieldset is drawn, with `after:`, naming a top-level key of the owner's
+shape, a plain key or an attached part. The fieldset is then drawn
+directly after that key instead of last, among the other modules'. The
+examples' compliance alter ends with
+
+```php
+$inputs->describe('third_party_settings.data_surface_examples_compliance', label: $this->t('Compliance'), after: 'capacity');
+```
+
+so the licence sits right under the capacity it lifts. Placement is
+where the fieldset is drawn and nothing else: its values are still
+stored, posted, validated and advertised at
+`third_party_settings.<module>.<key>`, the config schema and the Tool
+API see no change, and the served contract says it with one keyword,
+`x-surface.after`, leaving the schema's nesting and order alone
+([Decisions](decisions.md#placement-is-a-describe-option)). `after:` on
+anything but the calling alter's own input mount (an owner's key,
+another module's mount, an output mount, which is never drawn) is
+refused, as is a key the owner's shape does not declare at its top
+level.
 
 Nothing an alter does removes: it cannot take a key or a value away
 from the owner. A site policy that hides an owner's key is a later

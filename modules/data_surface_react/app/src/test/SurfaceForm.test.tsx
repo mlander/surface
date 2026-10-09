@@ -346,4 +346,17 @@ describe('the React form of example 3', () => {
     expect(screen.queryByRole('group', { name: /third.party/i })).toBeNull();
     expect(screen.getByLabelText(/Capacity/)).toHaveAccessibleDescription('Up to 100 without an event licence. With one, up to 400.');
   });
+
+  it('draws the Compliance fieldset right after the capacity its licence lifts', async () => {
+    const { fetcher } = server({ '/surface-api/registration.step3/configure': () => example3 as unknown as Contract });
+    render(<SurfaceForm settings={{ ...settings, surface: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
+    const compliance = await screen.findByRole('group', { name: 'Compliance' });
+    const legends = Array.from(document.querySelectorAll('form fieldset > legend'), (legend) => legend.textContent);
+    expect(legends).toEqual(['Compliance', 'Ticket', 'Contact']);
+    // Between the capacity and the pricing, and nothing else between.
+    expect(compliance.previousElementSibling).toContainElement(screen.getByLabelText(/Capacity/));
+    expect(compliance.nextElementSibling).toContainElement(screen.getByLabelText(/Pricing/));
+    // The group it was stored in draws nothing of its own.
+    expect(document.querySelector('.dsr-group')).toBeNull();
+  });
 });

@@ -17,6 +17,7 @@ use Drupal\Core\Form\OptGroup;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Render\ElementInfoManagerInterface;
+use Drupal\Core\Security\TrustedCallbackInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
@@ -41,7 +42,7 @@ use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
  * @see \Drupal\data_surface\Form\DataSurfaceFormBuilderInterface
  *   For the documentation of every method.
  */
-class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
+class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, TrustedCallbackInterface {
 
   /**
    * Render key marking the surface container the AJAX path rebuilds.
@@ -162,6 +163,8 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
       '#process' => $this->surfaceProcess('container'),
       self::WRAPPER_KEY => $wrapper_id,
     ];
+    // Drawn after the type's own, which an explicit list replaces.
+    $container['#pre_render'] = $this->surfacePreRender('container');
     $definitions = $surface->getDefinitions();
     foreach ($definitions as $name => $definition) {
       $slot = $definitions->entry($name)?->slot;
@@ -653,6 +656,9 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
     $merged['#process'] = isset($form['#process'])
       ? array_merge($form['#process'], [[static::class, 'processSurfaceContainer']])
       : $this->surfaceProcess($merged['#type'] ?? NULL);
+    $merged['#pre_render'] = isset($form['#pre_render'])
+      ? array_merge($form['#pre_render'], [[static::class, 'preRenderSurfaceContainer']])
+      : $this->surfacePreRender($merged['#type'] ?? NULL);
     return $merged;
   }
 
@@ -719,7 +725,9 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
       // element is rendered on its own; core's own AJAX response builder
       // does the same to the element a callback returns.
       unset($element['#group']);
-      $elements[$element[self::REFRESH_ID_KEY]] = $element;
+      // Rendered without the container, so a fieldset placed inside it
+      // is placed here, as the container's pre-render would have.
+      $elements[$element[self::REFRESH_ID_KEY]] = static::placeMounts($element);
     }
     $response = new AjaxResponse();
     foreach ($elements as $id => $element) {
@@ -831,6 +839,75 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
       if (isset($element[self::STALE_MARKER_KEY]) && !isset($element[self::STALE_MARKER_KEY][self::REFRESH_ID_KEY])) {
         $element[self::STALE_MARKER_KEY] = static::wrapped($element[self::STALE_MARKER_KEY], static::reservedId($wrapper_id, 'stale'));
       }
+    }
+    return $element;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function trustedCallbacks(): array {
+    return ['preRenderSurfaceContainer'];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function preRenderSurfaceContainer(array $element): array {
+    return static::placeMounts($element);
+  }
+
+  /**
+   * Moves each placed fieldset after the key it is placed after.
+   *
+   * A placed fieldset is a module's mount, a child of the grouping
+   * container its frame's third-party settings render as; it moves to
+   * that frame, directly after the named key, and keeps everything it
+   * carries: its #parents and #name, so its inputs post where they
+   * always did, and its refresh wrappers, so the AJAX callback replaces
+   * a key inside it by the same id. A frame is the container or any
+   * element below it, so an attached part's own mounts are placed in
+   * the part's details.
+   *
+   * It moves under a key no surface key can take, so it collides with
+   * nothing; with a #weight, when the key it follows has one, so a
+   * frame Form API sorts keeps it there.
+   *
+   * @param array $element
+   *   The frame.
+   *
+   * @return array
+   *   The frame, its placed fieldsets moved, at any depth.
+   */
+  protected static function placeMounts(array $element): array {
+    foreach (static::elementChildren($element) as $group) {
+      foreach (static::elementChildren($element[$group]) as $mount) {
+        $after = $element[$group][$mount][self::PLACED_AFTER_KEY] ?? NULL;
+        if (!is_string($after) || $after === (string) $group || !isset($element[$after]) || !is_array($element[$after])) {
+          continue;
+        }
+        $placed = $element[$group][$mount];
+        unset($element[$group][$mount]);
+        if (isset($element[$after]['#weight'])) {
+          $placed['#weight'] = $element[$after]['#weight'];
+        }
+        $reordered = [];
+        foreach ($element as $key => $value) {
+          $reordered[$key] = $value;
+          if ((string) $key === $after) {
+            $reordered['@placed.' . $group . '.' . $mount] = $placed;
+          }
+        }
+        $element = $reordered;
+        if (static::elementChildren($element[$group]) === [] && !isset($element[$group][self::REFRESH_ID_KEY])) {
+          // Every fieldset it grouped is drawn elsewhere: a container
+          // with nothing in it is drawn as nothing.
+          $element[$group]['#access'] = FALSE;
+        }
+      }
+    }
+    foreach (static::elementChildren($element) as $key) {
+      $element[$key] = static::placeMounts($element[$key]);
     }
     return $element;
   }
@@ -1447,6 +1524,25 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
   protected function surfaceProcess(?string $type): array {
     $declared = $type === NULL ? [] : ($this->elementInfo->getInfo($type)['#process'] ?? []);
     return array_merge($declared, [[static::class, 'processSurfaceContainer']]);
+  }
+
+  /**
+   * Builds the #pre_render list for the container, keeping the type's own.
+   *
+   * The same rule as surfaceProcess(), for the same reason: an explicit
+   * #pre_render replaces the element type's list, and a container that
+   * lost preRenderGroup would draw no #group inside it.
+   *
+   * @param string|null $type
+   *   The effective element type of the container, or NULL when it has
+   *   none.
+   *
+   * @return array
+   *   The #pre_render list.
+   */
+  protected function surfacePreRender(?string $type): array {
+    $declared = $type === NULL ? [] : ($this->elementInfo->getInfo($type)['#pre_render'] ?? []);
+    return array_merge($declared, [[static::class, 'preRenderSurfaceContainer']]);
   }
 
   /**

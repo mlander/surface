@@ -117,6 +117,13 @@ final class SurfaceShapeAdditions extends ShapeAdapterBase {
   /**
    * {@inheritdoc}
    */
+  protected function ownMount(): ?string {
+    return $this->outputs ? NULL : 'third_party_settings.' . $this->provider;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   protected function declare(string $key, DataDefinitionInterface $definition, mixed $default): void {
     // Decision: see docs/decisions.md#where-an-alters-keys-live.
     if ($this->outputs) {

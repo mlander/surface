@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
+use Drupal\Component\Utility\Html;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Render\Element;
+use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\Form\DataSurfaceFormBuilder;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Form\DataSurfaceSituationForm;
 use Drupal\data_surface\Pipeline\DataSurfaceResult;
@@ -19,6 +22,7 @@ use Drupal\data_surface_examples\Surface\RegistrationStep3Surface;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Tests step 4: the compliance module's alter of step 3.
@@ -220,6 +224,71 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['fieldset', TRUE], [$served['x-surface']['widget'], $served['x-surface']['group']]);
     $this->assertSame('Compliance', $served['properties'][self::MODULE]['title']);
     $this->assertArrayNotHasKey('group', $served['properties'][self::MODULE]['x-surface']);
+    // Placed after the capacity: said on the fieldset, in both, and
+    // nothing moved in the schema, where the values are.
+    $this->assertSame('capacity', $group[self::MODULE][DataSurfaceFormBuilderInterface::PLACED_AFTER_KEY]);
+    $this->assertSame('capacity', $served['properties'][self::MODULE]['x-surface']['after']);
+    $this->assertArrayNotHasKey('after', $served['x-surface']);
+  }
+
+  /**
+   * Tests the Compliance fieldset is drawn right after the capacity.
+   *
+   * The alter places its mount after the capacity its licence lifts. The
+   * form keeps the fieldset where its values are posted, inside the
+   * grouping container, for everything Form API does with it, and the
+   * container draws it after the capacity: between the capacity and the
+   * pricing, the next key the owner declared. The grouping container,
+   * left with nothing to draw, draws nothing.
+   */
+  public function testTheComplianceFieldsetIsDrawnAfterTheCapacity(): void {
+    $route_name = 'data_surface_examples.step3';
+    $route = $this->container->get('router.route_provider')->getRouteByName($route_name);
+    $request = Request::create($route->getPath());
+    $request->setSession($this->container->get('request_stack')->getSession());
+    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, $route_name);
+    $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
+    $this->container->get('request_stack')->push($request);
+    $form = $this->container->get('form_builder')->getForm(DataSurfaceSituationForm::class);
+    $container = $form[DataSurfaceSituationForm::SURFACE_KEY];
+
+    // Built where it is stored: the paths every walk reads are unchanged.
+    $details = $container['third_party_settings'][self::MODULE];
+    $this->assertSame('Compliance', (string) $details['#title']);
+    $this->assertSame(['surface', 'third_party_settings', self::MODULE, 'licence'], $details['licence']['#parents']);
+    $this->assertSame('surface[third_party_settings][' . self::MODULE . '][stewards]', $details['stewards']['#name']);
+
+    // Drawn after the capacity, and before the pricing.
+    $drawn = DataSurfaceFormBuilder::preRenderSurfaceContainer($container);
+    $order = array_values(array_filter(Element::children($drawn), static fn ($key): bool => in_array($key, [
+      'title', 'open', 'venue', 'room', 'capacity', 'pricing', 'ticket', 'contact', '@placed.third_party_settings.' . self::MODULE,
+    ], TRUE)));
+    $this->assertSame([
+      'title', 'open', 'venue', 'room', 'capacity', '@placed.third_party_settings.' . self::MODULE, 'pricing', 'ticket', 'contact',
+    ], $order);
+    $this->assertFalse($drawn['third_party_settings']['#access']);
+
+    $html = (string) $this->container->get('renderer')->renderInIsolation($container);
+    $capacity = strpos($html, 'data-drupal-selector="edit-surface-capacity"');
+    $compliance = strpos($html, 'data-drupal-selector="edit-surface-third-party-settings-data-surface-examples-compliance"');
+    $pricing = strpos($html, 'data-drupal-selector="edit-surface-pricing"');
+    $this->assertNotFalse($capacity);
+    $this->assertNotFalse($compliance);
+    $this->assertNotFalse($pricing);
+    $this->assertLessThan($compliance, $capacity);
+    $this->assertLessThan($pricing, $compliance);
+    // A sibling of the capacity's wrapper and of the pricing: replacing
+    // the capacity by its wrapper leaves the fieldset where it is.
+    $xpath = new \DOMXPath(Html::load($html));
+    $placed = '//details[@data-drupal-selector="edit-surface-third-party-settings-data-surface-examples-compliance"]';
+    $before = $xpath->query($placed . '/preceding-sibling::*[1]')->item(0);
+    $this->assertInstanceOf(\DOMElement::class, $before);
+    $this->assertSame($container['capacity'][DataSurfaceFormBuilderInterface::REFRESH_ID_KEY], $before->getAttribute('id'));
+    $this->assertSame(1, $xpath->query($placed . '/following-sibling::*[1][descendant-or-self::*[@data-drupal-selector="edit-surface-pricing"]]')->length);
+    $this->assertStringContainsString('name="surface[third_party_settings][' . self::MODULE . '][licence]"', substr($html, $compliance, $pricing - $compliance));
+    $this->assertStringContainsString('name="surface[third_party_settings][' . self::MODULE . '][stewards]"', substr($html, $compliance, $pricing - $compliance));
+    // Nothing drawn for the group it was stored in.
+    $this->assertStringNotContainsString('data-drupal-selector="edit-surface-third-party-settings"', $html);
   }
 
   /**
@@ -331,6 +400,9 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
     $capacity = $this->ajaxMarkup($response, $this->wrapperSelector($container['capacity']));
     $this->assertStringContainsString('max="400"', $capacity);
     $this->assertStringContainsString('Up to 400 for the Main hall.', $capacity);
+    // The Compliance fieldset, drawn after the capacity, is not part of
+    // what replaces it: it stays on the page as it was.
+    $this->assertStringNotContainsString('<details', $capacity);
 
     $state = $this->postStep(3, ['capacity' => '20'] + $surface, ['_triggering_element_name' => 'surface[capacity]']);
     $this->assertSame([], array_map('strval', $state->getErrors()));

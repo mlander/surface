@@ -116,6 +116,17 @@ interface DataSurfaceFormBuilderInterface {
   public const INLINE_ERROR_KEY = '#data_surface_inline_error';
 
   /**
+   * Render key on a module's fieldset its alter placed: the key it follows.
+   *
+   * Set by the map widget on the details a placed mount renders as
+   * (DefinitionMetadata::getPlacedAfter()). The element stays where its
+   * values are posted, inside the grouping container, for everything
+   * Form API and this builder do with it; preRenderSurfaceContainer()
+   * draws it after that key when the container is rendered.
+   */
+  public const PLACED_AFTER_KEY = '#data_surface_after';
+
+  /**
    * Builds a container of form elements for a surface.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
@@ -419,5 +430,29 @@ interface DataSurfaceFormBuilderInterface {
    *   The processed container.
    */
   public static function processSurfaceContainer(array &$element, FormStateInterface $form_state, array &$complete_form): array;
+
+  /**
+   * Element #pre_render callback: draws placed fieldsets where they go.
+   *
+   * Attached to the container by buildSurfaceForm(), beside its type's
+   * own. A module's fieldset its alter placed (PLACED_AFTER_KEY) is moved
+   * out of the grouping container it sits in to directly after the named
+   * key of the same frame, at any depth; a grouping container left with
+   * nothing to draw is drawn as nothing.
+   *
+   * At render time, and only then, because the move is a matter of
+   * drawing. By then Form API has processed, validated and submitted the
+   * form: every element has its #parents, so the fieldset's inputs post
+   * where its values are stored, and every walk by path below the
+   * container (extraction, errors, the AJAX callback's) has found the
+   * fieldset where the surface put it.
+   *
+   * @param array $element
+   *   The container element.
+   *
+   * @return array
+   *   The container, its placed fieldsets moved.
+   */
+  public static function preRenderSurfaceContainer(array $element): array;
 
 }
