@@ -62,6 +62,9 @@ h2 { font: 700 19px/1.15 var(--f-display); font-stretch: 112%; margin: 0; text-w
 h3 { font: 500 11px/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); margin: 0; }
 p { margin: 0; max-width: 62ch; }
 .muted { color: var(--ink-2); font-size: 13.5px; }
+.about { color: var(--ink-2); font-size: 13px; line-height: 1.45; margin-top: 11px; padding-left: 10px; border-left: 2px solid var(--line); }
+.about a { color: var(--owner); }
+code { font: 400 0.92em var(--f-mono); }
 
 .tabs { display: flex; flex-wrap: wrap; gap: 6px; }
 .tab { font: 500 13px/1 var(--f-body); color: var(--ink); background: transparent; border: 1px solid var(--line);
@@ -160,6 +163,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
     <header>
       <p class="eyebrow">Data surfaces</p>
       <h1>One surface, every door</h1>
+      <p class="about">This models the event registration example that ships in the <a href="https://github.com/mlander/data_surface/tree/main/modules/data_surface_examples" target="_blank" rel="noopener"><code>data_surface_examples</code></a> module: the settings for one event, with a venue, a room, a capacity, a ticket and a contact. Compliance is a second example module that adds a licence and stewards. It is a drawing of that example, not a live copy of it.</p>
     </header>
 
     <nav class="tabs" aria-label="Layers of the model" id="tabs">
