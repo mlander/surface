@@ -439,6 +439,12 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
     doors:    { focus: ['contract', 'doors', 'surface'], cam: { tx: 0, ty: 1.4, tz: -4.6, th: 0.2, ph: 0.74, r: 31 } }
   };
 
+  /* What a link carries: #today, #side-by-side, #doors.mcp. A bare token, so it survives any host. */
+  var SLUG = { all: '', today: 'today', compare: 'side-by-side', surface: 'surface', parts: 'subsurfaces',
+    refine: 'refinement', alter: 'alters', contract: 'contract', doors: 'doors' };
+  var FROM_SLUG = {};
+  Object.keys(SLUG).forEach(function (k) { FROM_SLUG[SLUG[k] || 'whole-picture'] = k; FROM_SLUG[k] = k; });
+
   var state = { pricing: 'free', licence: '' };
   var chapter = 'all';
   var selected = null;
@@ -455,13 +461,37 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
     el.innerHTML = hl(CODE[el.getAttribute('data-code')]);
   });
 
-  function setChapter(id) {
+  function writeHash() {
+    var h = SLUG[chapter];
+    if (chapter === 'doors' && selected) { h += '.' + selected; }
+    try { history.replaceState(null, '', location.pathname + location.search + (h ? '#' + h : '')); }
+    catch (e) { try { location.hash = h; } catch (e2) { /* a host that pins the address */ } }
+  }
+  function readHash() {
+    var raw = (location.hash || '').replace(/^#/, '');
+    try { raw = decodeURIComponent(raw); } catch (e) { /* use it as it came */ }
+    var bits = raw.toLowerCase().split('.'), ch = FROM_SLUG[bits[0]];
+    if (!bits[0] || !ch) { return null; }
+    return { ch: ch, door: ch === 'doors' && DOOR[bits[1]] ? bits[1] : null };
+  }
+  function applyHash(first) {
+    var to = readHash();
+    if (!to) {
+      if (!first && !location.hash && chapter !== 'all') { setChapter('all', true); }
+      return;
+    }
+    if (to.ch !== chapter) { setChapter(to.ch, true); }
+    if (to.door && to.door !== selected) { selectDoor(to.door, false, true); }
+  }
+
+  function setChapter(id, quiet) {
     chapter = id;
     Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (b) {
       b.setAttribute('aria-pressed', String(b.getAttribute('data-ch') === id));
     });
     Object.keys(CHAPTERS).forEach(function (k) { document.getElementById('ch-' + k).hidden = k !== id; });
     if (gl) { gl.focus(CHAPTERS[id].focus, CHAPTERS[id].solo); gl.fly(CHAPTERS[id].cam); }
+    if (!quiet) { writeHash(); }
   }
   document.getElementById('tabs').addEventListener('click', function (e) {
     var b = e.target.closest('.tab');
@@ -476,7 +506,7 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
     document.getElementById(d.tier === 1 ? 'doors-1' : 'doors-2').appendChild(b);
   });
 
-  function selectDoor(id, fromScene) {
+  function selectDoor(id, fromScene, quiet) {
     selected = id;
     var d = DOOR[id];
     if (fromScene && chapter !== 'doors') { setChapter('doors'); }
@@ -492,6 +522,7 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
       (d.shipped ? '' : ' Not wired in the example modules: it reaches the surface by calling the tool.');
     document.getElementById('dd-sample').innerHTML = hl(d.sample);
     if (gl) { gl.select(id); }
+    if (!quiet) { writeHash(); }
     if (fromScene) {
       var det = document.getElementById('door-detail');
       if (det.scrollIntoView) { det.scrollIntoView({ block: 'nearest' }); }
@@ -521,6 +552,10 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
     });
   });
   readout();
+
+  /* open on the view the link names, and follow the address if it changes */
+  applyHash(true);
+  window.addEventListener('hashchange', function () { applyHash(false); });
 
   /* ---------- scene ---------- */
   var T = window.THREE;
@@ -938,7 +973,7 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
   } catch (e) { /* older engines keep the first palette */ }
 
   /* ---------- camera ---------- */
-  var cam = Object.assign({}, CHAPTERS.all.cam), goal = Object.assign({}, cam);
+  var cam = Object.assign({}, CHAPTERS[chapter].cam), goal = Object.assign({}, cam);
   function placeCamera() {
     var fit = Math.max(1, 1.5 / camera.aspect);
     var r = cam.r * fit, sp = Math.sin(cam.ph);
@@ -1053,8 +1088,9 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
     }
   };
 
-  focusSet = CHAPTERS[chapter].focus;
-  items.forEach(function (it) { if (!inFocus(it.tags)) { it.cur = it.tags[0] === 'today' ? 0 : 0.09; } });
+  focusSet = CHAPTERS[chapter].focus; solo = !!CHAPTERS[chapter].solo;
+  items.forEach(function (it) { if (!inFocus(it.tags)) { it.cur = solo || it.tags[0] === 'today' ? 0 : 0.09; } });
+  if (selected) { gl.select(selected); }
 
   /* ---------- frame ---------- */
   var tmp = new T.Vector3(), last = 0, raf = 0;
