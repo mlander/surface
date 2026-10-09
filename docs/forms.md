@@ -169,6 +169,18 @@ a half-filled map. A map dependency is declared and left unwired; the
 surface still refines when the form is submitted, or when a scalar
 dependency is touched.
 
+A trigger typed into, a number or a text input, changes when it loses
+focus, and its `#ajax` carries `disable-refocus`. Core puts focus back
+on the trigger after every response unless another element with a
+selector holds it; a person who left the field by clicking blank space
+leaves only the body focused, so focus snapped back to the field they
+had left, and a refused value, redrawn with its error, held them there.
+Focus now stays where the person put it, and core's own `refocus-blur`,
+which it sets on these types, still carries it to the field they tabbed
+to. A select or a checkbox changes while focused and keeps core's
+refocus: it is disabled during the request and would otherwise lose
+focus to the body.
+
 ### What a change replaces
 
 **Only what the change moved, and the element that was touched only
@@ -234,8 +246,8 @@ were not there, since [a refiner never sees an invalid
 sibling](decisions.md#a-refiner-never-sees-an-invalid-sibling) — and
 the callback replaces the trigger with the error under it, in the form
 element template's own error slot, with `aria-invalid` and the `error`
-class. Type `ev-2048` as example 3's licence: the licence is redrawn
-with "An event licence is EV- and four digits, such as EV-2048." under
+class. Type `EV-2048` as example 3's licence: the licence is redrawn
+with "A licence number is four digits, such as 2048." under
 it, and the capacity with the no-licence ceiling of 100. The message is
 said there and nowhere else: not at the top of the container, and not
 held over to the next page. An error Form API's own element validation

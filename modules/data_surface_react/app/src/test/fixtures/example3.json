@@ -91,7 +91,7 @@
             },
             "capacity": {
                 "title": "Capacity",
-                "description": "Up to 100 without an event licence.",
+                "description": "Up to 100 without an event licence. With one, up to 400.",
                 "type": [
                     "integer",
                     "null"
@@ -216,14 +216,14 @@
                         "properties": {
                             "licence": {
                                 "title": "Event licence",
-                                "description": "Required to host more than 100 people. A licence is EV- and four digits, such as EV-2048.",
+                                "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
                                 "type": [
                                     "string",
                                     "null"
                                 ],
-                                "pattern": "^EV-\\d{4}$",
+                                "pattern": "^\\d{4}$",
                                 "examples": [
-                                    "EV-2048"
+                                    "2048"
                                 ],
                                 "x-surface": {
                                     "widget": "text",
@@ -231,7 +231,7 @@
                                     "dependsOn": [],
                                     "refined": false,
                                     "stale": false,
-                                    "patternMessage": "An event licence is EV- and four digits, such as EV-2048."
+                                    "patternMessage": "A licence number is four digits, such as 2048."
                                 }
                             },
                             "stewards": {

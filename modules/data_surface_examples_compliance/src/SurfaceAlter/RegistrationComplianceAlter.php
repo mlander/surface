@@ -43,11 +43,11 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
    * {@inheritdoc}
    */
   public function alterInputs(ShapeAdditionsInterface $inputs): void {
-    $licence = ['pattern' => '/^EV-\d{4}$/', 'message' => 'An event licence is EV- and four digits, such as EV-2048.'];
+    $licence = ['pattern' => '/^\d{4}$/', 'message' => 'A licence number is four digits, such as 2048.'];
     $licence_key = $inputs->add('licence', 'string', $this->t('Event licence'))
-      ->setDescription($this->t('Required to host more than 100 people. A licence is EV- and four digits, such as EV-2048.'))
+      ->setDescription($this->t('The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.'))
       ->addConstraint('Regex', $licence);
-    DefinitionMetadata::setExamples($licence_key, ['EV-2048']);
+    DefinitionMetadata::setExamples($licence_key, ['2048']);
     $inputs->add('stewards', 'integer', $this->t('Stewards'), default: 1)->setRequired(TRUE);
     $inputs->describe('title', label: $this->t('Public event title'));
     $inputs->describe('third_party_settings.data_surface_examples_compliance', label: $this->t('Compliance'));
@@ -55,13 +55,30 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
 
   /**
    * Without a licence, no more than a hundred, whatever the room seats.
+   *
+   * The owner's refiner has already capped the capacity at the room's
+   * seats, so the description names both ceilings: the hundred this
+   * module sets, and what the room allows once a licence is given. A
+   * room that seats a hundred or fewer is left as the owner said it,
+   * since a licence changes nothing there.
+   *
+   * Any licence this is handed counts: a refiner never sees an invalid
+   * sibling, so a value the licence's own pattern refuses arrives as
+   * NULL, exactly as no licence does.
+   *
+   * @see docs/decisions.md#a-refiner-never-sees-an-invalid-sibling
    */
   #[RefinesInput('capacity')]
   public function capacityWithoutLicence(DataDefinition $capacity, ?string $licence): DataDefinition {
     $range = $capacity->getConstraints()['Range'] ?? [];
-    return (string) $licence !== '' ? $capacity : $capacity
-      ->addConstraint('Range', array_replace($range, ['max' => min($range['max'] ?? 100, 100)]))
-      ->setDescription($this->t('Up to 100 without an event licence.'));
+    $max = $range['max'] ?? NULL;
+    if ((string) $licence !== '' || ($max !== NULL && $max <= 100)) {
+      return $capacity;
+    }
+    $capacity->addConstraint('Range', array_replace($range, ['max' => 100]));
+    return $capacity->setDescription($max === NULL
+      ? $this->t('Up to 100 without an event licence.')
+      : $this->t('Up to 100 without an event licence. With one, up to @max.', ['@max' => $max]));
   }
 
   /**

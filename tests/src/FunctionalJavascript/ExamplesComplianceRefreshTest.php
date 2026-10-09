@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\FunctionalJavascript;
 
+use Behat\Mink\Driver\Selenium2Driver;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use WebDriver\Key;
 
 /**
  * Tests example 3 with the compliance alter, in a browser.
@@ -37,7 +39,7 @@ class ExamplesComplianceRefreshTest extends ExamplesWebDriverTestBase {
   /**
    * The constraint message a malformed licence earns.
    */
-  protected const MESSAGE = 'An event licence is EV- and four digits, such as EV-2048.';
+  protected const MESSAGE = 'A licence number is four digits, such as 2048.';
 
   /**
    * The stewards element's name.
@@ -63,15 +65,10 @@ class ExamplesComplianceRefreshTest extends ExamplesWebDriverTestBase {
     $assert->pageTextNotContains('Third party settings');
     $assert->pageTextNotContains('Settings added by other modules.');
 
-    $this->assertStringContainsString('Up to 100 without an event licence.', $this->formItemText('surface[capacity]'));
+    $this->assertStringContainsString('Up to 100 without an event licence. With one, up to 400.', $this->formItemText('surface[capacity]'));
     $this->assertStringContainsString('At least 1 steward for 50 attendees.', $this->formItemText(self::STEWARDS));
-    $this->enterLicence('EV-2048');
+    $this->enterLicence('2048');
     $this->assertStringContainsString('Up to 400 for the Main hall.', $this->formItemText('surface[capacity]'));
-    // The refresh put the focus back on the licence, so leaving it asks
-    // again, and replaces the capacity: settled before the capacity is
-    // typed into, as a person tabbing on would find it.
-    $assert->fieldExists('surface[capacity]')->focus();
-    $assert->assertWaitOnAjaxRequest();
     $capacity = $assert->fieldExists('surface[capacity]');
     $capacity->setValue('150');
     $capacity->blur();
@@ -86,9 +83,9 @@ class ExamplesComplianceRefreshTest extends ExamplesWebDriverTestBase {
     $assert = $this->assertSession();
     $this->drupalGet('surface-examples/3');
 
-    $this->enterLicence('ev-2048');
+    $this->enterLicence('EV-2048');
     $licence = $assert->fieldExists(self::LICENCE);
-    $this->assertSame('ev-2048', $licence->getValue());
+    $this->assertSame('EV-2048', $licence->getValue());
     $this->assertSame('true', $licence->getAttribute('aria-invalid'));
     $this->assertSame(1, substr_count($this->formItemText(self::LICENCE), self::MESSAGE));
     $assert->elementsCount('css', '.form-item--error-message', 1);
@@ -98,11 +95,11 @@ class ExamplesComplianceRefreshTest extends ExamplesWebDriverTestBase {
     // And no licence to the capacity.
     $capacity = $assert->fieldExists('surface[capacity]');
     $this->assertSame('100', $capacity->getAttribute('max'));
-    $this->assertStringContainsString('Up to 100 without an event licence.', $this->formItemText('surface[capacity]'));
+    $this->assertStringContainsString('Up to 100 without an event licence. With one, up to 400.', $this->formItemText('surface[capacity]'));
 
     // Corrected, the error goes with the next refresh and the room's own
     // limit comes back.
-    $this->enterLicence('EV-2048');
+    $this->enterLicence('2048');
     $licence = $assert->fieldExists(self::LICENCE);
     $this->assertNull($licence->getAttribute('aria-invalid'));
     $this->assertStringNotContainsString(self::MESSAGE, $this->formItemText(self::LICENCE));
@@ -113,10 +110,75 @@ class ExamplesComplianceRefreshTest extends ExamplesWebDriverTestBase {
   }
 
   /**
+   * Tests leaving a refused capacity for blank space leaves it there.
+   *
+   * Core puts focus back on a trigger after its response unless something
+   * else with a selector holds it. A click on text, here the field's own
+   * help, leaves the body focused, so the capacity took focus back after
+   * every refresh, and a refused value, which is redrawn with its error,
+   * held the person in a loop. The trigger is marked disable-refocus;
+   * focus stays where the person put it.
+   */
+  public function testLeavingTheRefusedCapacityDoesNotTakeFocusBack(): void {
+    $this->drupalGet('surface-examples/3');
+
+    // The capacity's own help text: text, nothing focusable.
+    $help = '#' . $this->assertSession()->fieldExists('surface[capacity]')->getAttribute('aria-describedby');
+    $this->typeInto('surface[capacity]', '150');
+    $this->assertSession()->elementExists('css', $help)->click();
+    $this->assertSession()->assertWaitOnAjaxRequest();
+
+    $capacity = $this->assertSession()->fieldExists('surface[capacity]');
+    $this->assertSame('true', $capacity->getAttribute('aria-invalid'));
+    $this->assertSession()->elementsCount('css', '.form-item--error-message', 1);
+    $this->assertStringContainsString('100', $this->formItemText('surface[capacity]'));
+    $this->assertTrue($this->getSession()->evaluateScript('return document.activeElement === document.body'));
+  }
+
+  /**
+   * Tests tabbing on from the capacity lands on the next field.
+   *
+   * The trigger's disable-refocus leaves core's refocus-blur doing its
+   * job: the field focused when the response arrived is focused again
+   * once the rebuild has replaced what it replaces, even when the
+   * capacity itself was refused and redrawn.
+   */
+  public function testTabbingOnFromTheCapacityLandsOnTheNextField(): void {
+    $this->drupalGet('surface-examples/3');
+
+    $this->typeInto('surface[capacity]', '150' . Key::TAB);
+    $this->assertSession()->assertWaitOnAjaxRequest();
+
+    $this->assertSame('true', $this->assertSession()->fieldExists('surface[capacity]')->getAttribute('aria-invalid'));
+    $this->assertSame('surface[pricing]', $this->getSession()->evaluateScript('return document.activeElement.name'));
+  }
+
+  /**
+   * Clicks into a field, empties it and types keys, as a person would.
+   *
+   * The driver's own setValue() dispatches the change itself and keeps
+   * the focus on the field, which is not what a person does; keys sent
+   * to the element leave the change to the browser, on blur.
+   *
+   * @param string $name
+   *   The field's name.
+   * @param string $keys
+   *   The keys to type, WebDriver key codes included.
+   */
+  protected function typeInto(string $name, string $keys): void {
+    $field = $this->assertSession()->fieldExists($name);
+    $field->click();
+    $this->getSession()->executeScript(sprintf('document.querySelector(%s).value = "";', json_encode('[name="' . $name . '"]')));
+    $driver = $this->getSession()->getDriver();
+    $this->assertInstanceOf(Selenium2Driver::class, $driver);
+    $driver->getWebDriverSession()->element('xpath', $field->getXpath())->postValue(['text' => $keys]);
+  }
+
+  /**
    * Types a licence and leaves the field, which is what asks.
    *
    * The driver's own blur after typing does not reach the field here, so
-   * it is left explicitly; the refresh then puts the focus back on it.
+   * it is left explicitly.
    *
    * @param string $value
    *   The licence.

@@ -149,7 +149,7 @@ definition refuses is passed as if the key held nothing: a whole key is
 then unanswered, so [the gate](#gating-per-key) withholds every refiner
 watching it and the target stays as advertised, and a key an alter
 mounted, which never holds a target back, is handed as `NULL`. So an
-event licence typed as `ev-2048` gives example 3's capacity the
+event licence typed as `EV-2048` gives example 3's capacity the
 no-licence ceiling of 100, exactly as no licence does, and a capacity
 of 250 under that ceiling moves no steward minimum. A refusal upstream
 is settled before anything downstream is judged: withholding a venue

@@ -344,6 +344,6 @@ describe('the React form of example 3', () => {
     expect(within(compliance).getByLabelText(/Event licence/)).toHaveValue('');
     expect(within(compliance).getByLabelText(/Stewards/)).toHaveAccessibleDescription('At least 1 steward for 50 attendees.');
     expect(screen.queryByRole('group', { name: /third.party/i })).toBeNull();
-    expect(screen.getByLabelText(/Capacity/)).toHaveAccessibleDescription('Up to 100 without an event licence.');
+    expect(screen.getByLabelText(/Capacity/)).toHaveAccessibleDescription('Up to 100 without an event licence. With one, up to 400.');
   });
 });

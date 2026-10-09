@@ -196,12 +196,12 @@ class ExamplesFullSubmitTest extends BrowserTestBase {
     $assert->pageTextNotContains('The changes have been saved.');
     $this->assertSame($before, $this->stored('step3'));
 
-    $this->rawPost('surface-examples/3', $fields + [$licence => 'EV-2048']);
+    $this->rawPost('surface-examples/3', $fields + [$licence => '2048']);
     $assert->statusCodeEquals(200);
     $assert->pageTextContains('The changes have been saved.');
     $stored = $this->stored('step3');
     $this->assertSame(150, $stored['capacity']);
-    $this->assertSame(['licence' => 'EV-2048', 'stewards' => 3], $stored['third_party_settings']['data_surface_examples_compliance']);
+    $this->assertSame(['licence' => '2048', 'stewards' => 3], $stored['third_party_settings']['data_surface_examples_compliance']);
   }
 
 }

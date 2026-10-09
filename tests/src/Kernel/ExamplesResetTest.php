@@ -84,7 +84,7 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
     $this->config($two)->set('venue', 'harbour')->set('room', 'harbour_deck')->set('capacity', 120)->save();
     $this->config($three)
       ->set('title', 'Changed')
-      ->set('third_party_settings', ['data_surface_examples_compliance' => ['licence' => 'EV-2048', 'stewards' => 3]])
+      ->set('third_party_settings', ['data_surface_examples_compliance' => ['licence' => '2048', 'stewards' => 3]])
       ->save();
     $this->assertSame('harbour_deck', $this->stored($two)['room']);
 

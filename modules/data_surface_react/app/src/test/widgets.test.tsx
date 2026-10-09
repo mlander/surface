@@ -63,26 +63,26 @@ describe('text, textarea and email', () => {
   });
 
   it('never puts a Regex on the input as a bare pattern: the server says what is wrong, in its message', () => {
-    const message = 'An event licence is EV- and four digits, such as EV-2048.';
+    const message = 'A licence number is four digits, such as 2048.';
     render(
       <Form
         schema={object({
           licence: {
             title: 'Event licence',
             type: 'string',
-            pattern: '^EV-\\d{4}$',
-            examples: ['EV-2048'],
+            pattern: '^\\d{4}$',
+            examples: ['2048'],
             'x-surface': x('text', { patternMessage: message }),
           },
         })}
-        initial={{ licence: 'ev-2048' }}
+        initial={{ licence: 'EV-2048' }}
       />,
     );
     const input = screen.getByLabelText(/Event licence/);
     // A bare pattern makes the browser ask for "the requested format",
     // which is vaguer than the message the server answers with.
     expect(input).not.toHaveAttribute('pattern');
-    expect(input).toHaveAttribute('placeholder', 'EV-2048');
+    expect(input).toHaveAttribute('placeholder', '2048');
   });
 
   it('renders a textarea with neither maxlength nor placeholder', () => {
@@ -327,12 +327,12 @@ describe('fieldset, slot and list', () => {
     render(
       <Form
         schema={object({ third_party_settings: { type: 'object', properties: { compliance }, 'x-surface': x('fieldset', { group: true }) } })}
-        initial={{ third_party_settings: { compliance: { licence: 'EV-2048' } } }}
+        initial={{ third_party_settings: { compliance: { licence: '2048' } } }}
       />,
     );
     const groups = screen.getAllByRole('group');
     expect(groups.map((group) => group.querySelector('legend')?.textContent)).toEqual(['Compliance']);
-    expect(within(groups[0]).getByLabelText('Event licence')).toHaveValue('EV-2048');
+    expect(within(groups[0]).getByLabelText('Event licence')).toHaveValue('2048');
   });
 
   it('renders the variant the deciding key chose, and switches with it', async () => {
@@ -370,7 +370,7 @@ describe('fieldset, slot and list', () => {
 
 describe('the contract panel', () => {
   it('explains a Regex by its message, and only a Regex without one by its pattern, in code', () => {
-    const message = 'An event licence is EV- and four digits, such as EV-2048.';
+    const message = 'A licence number is four digits, such as 2048.';
     render(
       <ContractPanel
         contract={{
@@ -380,7 +380,7 @@ describe('the contract panel', () => {
           stale: [],
           values: {},
           schema: object({
-            licence: { title: 'Event licence', type: 'string', pattern: '^EV-\\d{4}$', 'x-surface': x('text', { patternMessage: message }) },
+            licence: { title: 'Event licence', type: 'string', pattern: '^\\d{4}$', 'x-surface': x('text', { patternMessage: message }) },
             code: { title: 'Code', type: 'string', pattern: '^[a-z]+$', 'x-surface': x('text') },
           }),
         }}
@@ -389,7 +389,7 @@ describe('the contract panel', () => {
     );
     const licence = document.querySelector('tr[data-surface-key="licence"]') as HTMLElement;
     expect(within(licence).getByText(message)).toBeInTheDocument();
-    expect(licence.textContent).not.toContain('^EV-');
+    expect(licence.textContent).not.toContain('\\d{4}');
     const code = document.querySelector('tr[data-surface-key="code"]') as HTMLElement;
     expect(code.textContent).toContain('matches a required format: ^[a-z]+$');
     expect(within(code).getByText('^[a-z]+$').tagName).toBe('CODE');

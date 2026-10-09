@@ -95,6 +95,15 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
   protected const GROUPING_TYPES = ['details', 'fieldset', 'container'];
 
   /**
+   * Element types whose change event fires when they lose focus.
+   *
+   * Core's own list, the types it marks to refocus-blur in
+   * RenderElementBase::preRenderAjaxForm(). A trigger of one of these
+   * also gets disable-refocus: see attachRefinementAjax() for why.
+   */
+  protected const BLUR_CHANGE_TYPES = ['password', 'textfield', 'number', 'tel', 'textarea', 'machine_name'];
+
+  /**
    * Constructs a DataSurfaceFormBuilder.
    *
    * @param \Drupal\data_surface\Widget\DataSurfaceWidgetManager $widgetManager
@@ -1247,6 +1256,18 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
    * is therefore declared and left unwired; the surface still refines
    * when the form is submitted, or when a scalar dependency is touched.
    *
+   * A trigger whose change fires on blur, a number or a text input, is
+   * marked disable-refocus. Its rebuild starts when the person leaves the
+   * field, and core puts focus back on the trigger after the response
+   * unless something else with a selector holds it: a click on blank page
+   * space leaves the body focused, so focus snapped back to the field the
+   * person had just left, and a refused value made that a loop. Focus now
+   * stays where the person put it, and core's refocus-blur, which it sets
+   * on these types, still carries it to the field they tabbed to. A
+   * select or a checkbox changes while focused and keeps core's refocus,
+   * because it is disabled during the request and would otherwise lose
+   * focus to the body.
+   *
    * The wrapper the #ajax names is the container's. The callback answers
    * with commands that name their own targets, so the wrapper is only
    * used when it falls back to returning the container; and the id is
@@ -1275,6 +1296,11 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
       // trigger's name, which it puts there itself.
       'submit' => [self::WRAPPER_INPUT => $wrapper_id],
     ];
+    if (in_array($element['#type'], self::BLUR_CHANGE_TYPES, TRUE)) {
+      // Focus stays where the person put it; core's refocus-blur still
+      // carries it to the field they tabbed to.
+      $element['#ajax']['disable-refocus'] = TRUE;
+    }
     $element[self::TRIGGER_KEY] = ['path' => $path, 'replaces' => $replaces];
     // A wrapper of its own as well: a trigger is replaced when its own
     // value was refused, so the error is printed under it.

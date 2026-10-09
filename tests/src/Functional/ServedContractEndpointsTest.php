@@ -246,22 +246,22 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $this->assertSame(['room', $licence], $capacity['x-surface']['dependsOn']);
     $this->assertSame(100, $capacity['maximum']);
 
-    $values['third_party_settings'] = ['data_surface_examples_compliance' => ['licence' => 'EV-2048', 'stewards' => 3]];
+    $values['third_party_settings'] = ['data_surface_examples_compliance' => ['licence' => '2048', 'stewards' => 3]];
     $refined = $this->json($this->post('surface-api/registration.step3/configure/refine', ['values' => $values]));
     $this->assertSame(400, $refined['schema']['properties']['capacity']['maximum']);
-    $this->assertSame('EV-2048', $refined['values']['third_party_settings']['data_surface_examples_compliance']['licence']);
+    $this->assertSame('2048', $refined['values']['third_party_settings']['data_surface_examples_compliance']['licence']);
 
     // A licence in the wrong format is no licence to the refiner: the
     // ceiling of 100 again, the typed value handed back as it was, and
     // the pattern explained by its message.
-    $values['third_party_settings']['data_surface_examples_compliance']['licence'] = 'ev-2048';
+    $values['third_party_settings']['data_surface_examples_compliance']['licence'] = 'EV-2048';
     $refined = $this->json($this->post('surface-api/registration.step3/configure/refine', ['values' => $values]));
     $this->assertSame(100, $refined['schema']['properties']['capacity']['maximum']);
-    $this->assertSame('Up to 100 without an event licence.', $refined['schema']['properties']['capacity']['description']);
-    $this->assertSame('ev-2048', $refined['values']['third_party_settings']['data_surface_examples_compliance']['licence']);
+    $this->assertSame('Up to 100 without an event licence. With one, up to 400.', $refined['schema']['properties']['capacity']['description']);
+    $this->assertSame('EV-2048', $refined['values']['third_party_settings']['data_surface_examples_compliance']['licence']);
     $schema = $refined['schema']['properties']['third_party_settings']['properties']['data_surface_examples_compliance']['properties']['licence'];
-    $this->assertSame('^EV-\\d{4}$', $schema['pattern']);
-    $this->assertSame('An event licence is EV- and four digits, such as EV-2048.', $schema['x-surface']['patternMessage']);
+    $this->assertSame('^\\d{4}$', $schema['pattern']);
+    $this->assertSame('A licence number is four digits, such as 2048.', $schema['x-surface']['patternMessage']);
   }
 
   /**

@@ -207,6 +207,8 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['riverside_main', 'riverside_east'], array_keys(array_diff_key($container['room']['#options'], ['' => TRUE])));
     $this->assertArrayHasKey('#ajax', $container['venue']);
     $this->assertArrayHasKey('#ajax', $container['room']);
+    // A select changes while focused, and keeps core's refocus.
+    $this->assertArrayNotHasKey('disable-refocus', $container['venue']['#ajax']);
     $this->assertSame(400, $container['capacity']['#max']);
     $this->assertSame('Up to 400 for the Main hall.', (string) $container['capacity']['#description']);
     // Declaration order is form order: the capacity follows the room it

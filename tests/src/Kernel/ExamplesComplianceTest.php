@@ -211,7 +211,7 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Compliance', (string) $group[self::MODULE]['#title']);
     $this->assertSame(['licence', 'stewards'], Element::children($group[self::MODULE]));
     $this->assertSame('At least 1 steward for 50 attendees.', (string) $group[self::MODULE]['stewards']['#description']);
-    $this->assertSame('Up to 100 without an event licence.', (string) $form['capacity']['#description']);
+    $this->assertSame('Up to 100 without an event licence. With one, up to 400.', (string) $form['capacity']['#description']);
 
     $served = $this->container->get('data_surface.contract_emitter')
       ->emit($surface, $stored, 'registration.step3', 'configure', widgets: TRUE)->document['schema']['properties']['third_party_settings'];
@@ -229,29 +229,37 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
     $surface = $this->surface();
     $capacity = $surface->refine(self::EVENT)->getDefinition('capacity');
     $this->assertSame(['min' => 1, 'max' => 100], $capacity->getConstraints()['Range']);
-    $this->assertSame('Up to 100 without an event licence.', (string) $capacity->getDescription());
+    $this->assertSame('Up to 100 without an event licence. With one, up to 400.', (string) $capacity->getDescription());
 
-    $capacity = $surface->refine(self::EVENT + self::compliance('EV-2048'))->getDefinition('capacity');
+    $capacity = $surface->refine(self::EVENT + self::compliance('2048'))->getDefinition('capacity');
     $this->assertSame(['min' => 1, 'max' => 400], $capacity->getConstraints()['Range']);
     $this->assertSame('Up to 400 for the Main hall.', (string) $capacity->getDescription());
 
-    // A room that seats fewer than a hundred keeps its own limit either way.
+    // A room that seats fewer than a hundred keeps its own limit and its
+    // owner's words either way: a licence would change nothing there.
     $small = ['room' => 'library_reading', 'venue' => 'library'] + self::EVENT;
-    $this->assertSame(60, $surface->refine($small)->getDefinition('capacity')->getConstraints()['Range']['max']);
+    $capacity = $surface->refine($small)->getDefinition('capacity');
+    $this->assertSame(60, $capacity->getConstraints()['Range']['max']);
+    $this->assertSame('Up to 60 for the Reading room.', (string) $capacity->getDescription());
+
+    // Elsewhere the text names both ceilings, the room's read off the
+    // owner's refined Range.
+    $deck = ['room' => 'harbour_deck', 'venue' => 'harbour'] + self::EVENT;
+    $this->assertSame('Up to 100 without an event licence. With one, up to 150.', (string) $surface->refine($deck)->getDefinition('capacity')->getDescription());
 
     $this->assertSame([], $this->refusals(['capacity' => 100] + self::compliance(NULL, 2)));
     $this->assertSame(['capacity'], $this->refusals(['capacity' => 150] + self::compliance(NULL, 3)));
-    $this->assertSame([], $this->refusals(['capacity' => 150] + self::compliance('EV-2048', 3)));
+    $this->assertSame([], $this->refusals(['capacity' => 150] + self::compliance('2048', 3)));
   }
 
   /**
    * Tests a licence that is not one is refused, in the alter's words.
    */
   public function testTheLicencePatternIsChecked(): void {
-    $violations = iterator_to_array($this->pipeline()->validate($this->surface(), ['capacity' => 50] + self::compliance('EV-20') + self::EVENT));
+    $violations = iterator_to_array($this->pipeline()->validate($this->surface(), ['capacity' => 50] + self::compliance('204') + self::EVENT));
     $this->assertCount(1, $violations);
     $this->assertSame(self::LICENCE, $violations[0]->fullPath());
-    $this->assertSame('An event licence is EV- and four digits, such as EV-2048.', (string) $violations[0]->message);
+    $this->assertSame('A licence number is four digits, such as 2048.', (string) $violations[0]->message);
   }
 
   /**
@@ -259,7 +267,7 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
    */
   public function testTheStewardsFollowTheCapacity(): void {
     $surface = $this->surface();
-    $stewards = $this->mounted($surface->refine(['capacity' => 150] + self::EVENT + self::compliance('EV-2048')), 'stewards');
+    $stewards = $this->mounted($surface->refine(['capacity' => 150] + self::EVENT + self::compliance('2048')), 'stewards');
     $this->assertSame(['min' => 3], $stewards->getConstraints()['Range']);
     $this->assertSame('At least 3 stewards for 150 attendees.', (string) $stewards->getDescription());
 
@@ -267,7 +275,7 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['min' => 1], $stewards->getConstraints()['Range']);
     $this->assertSame('At least 1 steward for 20 attendees.', (string) $stewards->getDescription());
 
-    $this->assertSame([self::STEWARDS], $this->refusals(['capacity' => 150] + self::compliance('EV-2048', 2)));
+    $this->assertSame([self::STEWARDS], $this->refusals(['capacity' => 150] + self::compliance('2048', 2)));
   }
 
   /**
@@ -279,11 +287,11 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['capacity'], array_map(static fn ($violation): string => $violation->fullPath(), iterator_to_array($result->violations)));
     $this->assertSame(50, $this->config('data_surface_examples.registration_step3')->get('capacity'));
 
-    $result = $this->submit(['capacity' => 150] + self::compliance('EV-2048', 3) + self::EVENT);
+    $result = $this->submit(['capacity' => 150] + self::compliance('2048', 3) + self::EVENT);
     $this->assertTrue($result->isValid(), ViolationSummary::fromViolations($result->violations));
     $stored = $this->config('data_surface_examples.registration_step3');
     $this->assertSame(150, $stored->get('capacity'));
-    $this->assertSame('EV-2048', $stored->get(self::LICENCE));
+    $this->assertSame('2048', $stored->get(self::LICENCE));
     $this->assertSame(3, $stored->get(self::STEWARDS));
   }
 
@@ -308,7 +316,7 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
       'pricing' => 'free',
       'ticket' => ['note' => ''],
       'contact' => ['email' => 'events@example.com', 'phone' => ''],
-      'third_party_settings' => [self::MODULE => ['licence' => 'EV-2048', 'stewards' => '3']],
+      'third_party_settings' => [self::MODULE => ['licence' => '2048', 'stewards' => '3']],
     ];
     $state = $this->postStep(3, $surface, ['_triggering_element_name' => 'surface[third_party_settings][' . self::MODULE . '][licence]']);
     $this->assertSame([], array_map('strval', $state->getErrors()));
@@ -340,6 +348,10 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
     $this->assertArrayHasKey('#ajax', $container['third_party_settings'][self::MODULE]['licence']);
     $this->assertArrayHasKey(DataSurfaceFormBuilderInterface::REFRESH_ID_KEY, $container['third_party_settings'][self::MODULE]['licence']);
     $this->assertArrayNotHasKey('#ajax', $stewards);
+    // Typed into, the licence and the capacity change on blur, so neither
+    // takes focus back after its refresh.
+    $this->assertTrue($container['third_party_settings'][self::MODULE]['licence']['#ajax']['disable-refocus']);
+    $this->assertTrue($container['capacity']['#ajax']['disable-refocus']);
   }
 
   /**
@@ -347,10 +359,10 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
    */
   public function testTheLicenceSaysItsFormat(): void {
     $licence = $this->mounted($this->surface(), 'licence');
-    $this->assertSame('Required to host more than 100 people. A licence is EV- and four digits, such as EV-2048.', (string) $licence->getDescription());
-    $this->assertSame(['EV-2048'], DefinitionMetadata::getExamples($licence));
+    $this->assertSame('The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.', (string) $licence->getDescription());
+    $this->assertSame(['2048'], DefinitionMetadata::getExamples($licence));
     $element = $this->container->get('plugin.manager.data_surface_widget')->getWidgetFor($licence)->buildElement($licence, NULL);
-    $this->assertSame('EV-2048', $element['#placeholder']);
+    $this->assertSame('2048', $element['#placeholder']);
     // The message carries the explanation; the input carries no pattern
     // for Form API or a browser to answer in vaguer words.
     $this->assertArrayNotHasKey('#pattern', $element);
@@ -361,21 +373,22 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
    * Tests a licence in the wrong format is no licence to the refiner.
    *
    * The engine holds a watched value to its own key's refined definition
-   * before handing it over; `ev-2048` fails the Regex, so the alter's
-   * refiner is handed NULL and the ceiling of 100 applies, exactly as
-   * with no licence. The alter itself only asks whether one is there.
+   * before handing it over; `EV-2048`, prefix and all, fails the Regex
+   * that asks for the four digits only, so the alter's refiner is handed
+   * NULL and the ceiling of 100 applies, exactly as with no licence. The
+   * alter itself only asks whether one is there.
    */
   public function testAnInvalidLicenceIsNoLicence(): void {
     $surface = $this->surface();
-    $capacity = $surface->refine(self::EVENT + self::compliance('ev-2048'))->getDefinition('capacity');
+    $capacity = $surface->refine(self::EVENT + self::compliance('EV-2048'))->getDefinition('capacity');
     $this->assertSame(['min' => 1, 'max' => 100], $capacity->getConstraints()['Range']);
-    $this->assertSame('Up to 100 without an event licence.', (string) $capacity->getDescription());
+    $this->assertSame('Up to 100 without an event licence. With one, up to 400.', (string) $capacity->getDescription());
 
     // Downstream of it, a capacity above that ceiling is itself refused,
     // so the stewards' minimum is not refined against it.
-    $stewards = $this->mounted($surface->refine(['capacity' => 250] + self::EVENT + self::compliance('ev-2048')), 'stewards');
-    $this->assertArrayNotHasKey('Range', $stewards->getConstraints());
     $stewards = $this->mounted($surface->refine(['capacity' => 250] + self::EVENT + self::compliance('EV-2048')), 'stewards');
+    $this->assertArrayNotHasKey('Range', $stewards->getConstraints());
+    $stewards = $this->mounted($surface->refine(['capacity' => 250] + self::EVENT + self::compliance('2048')), 'stewards');
     $this->assertSame(['min' => 5], $stewards->getConstraints()['Range']);
   }
 
@@ -383,13 +396,13 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
    * Tests the pipeline refuses the licence and the ceiling, both at once.
    */
   public function testThePipelineRefusesTheInvalidLicenceAndTheCeiling(): void {
-    $violations = iterator_to_array($this->pipeline()->validate($this->surface(), ['capacity' => 150] + self::compliance('ev-2048', 3) + self::EVENT));
+    $violations = iterator_to_array($this->pipeline()->validate($this->surface(), ['capacity' => 150] + self::compliance('EV-2048', 3) + self::EVENT));
     $messages = [];
     foreach ($violations as $violation) {
       $messages[$violation->fullPath()] = (string) $violation->message;
     }
     $this->assertSame(['capacity', self::LICENCE], array_keys($messages));
-    $this->assertSame('An event licence is EV- and four digits, such as EV-2048.', $messages[self::LICENCE]);
+    $this->assertSame('A licence number is four digits, such as 2048.', $messages[self::LICENCE]);
     $this->assertStringContainsString('100', $messages['capacity']);
     $this->assertStringNotContainsString('400', $messages['capacity']);
   }
@@ -405,7 +418,7 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
    */
   public function testAnInvalidLicenceIsSaidUnderItOnce(): void {
     $this->actAsAnonymousAdministrator();
-    $message = 'An event licence is EV- and four digits, such as EV-2048.';
+    $message = 'A licence number is four digits, such as 2048.';
     $surface = [
       'title' => 'Spring meetup',
       'capacity' => '50',
@@ -415,7 +428,7 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
       'pricing' => 'free',
       'ticket' => ['note' => ''],
       'contact' => ['email' => 'events@example.com', 'phone' => ''],
-      'third_party_settings' => [self::MODULE => ['licence' => 'ev-2048', 'stewards' => '1']],
+      'third_party_settings' => [self::MODULE => ['licence' => 'EV-2048', 'stewards' => '1']],
     ];
     $trigger = ['_triggering_element_name' => 'surface[third_party_settings][' . self::MODULE . '][licence]'];
     $state = $this->postStep(3, $surface, $trigger);
@@ -433,13 +446,13 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
 
     $capacity = $this->ajaxMarkup($response, $this->wrapperSelector($container['capacity']));
     $this->assertStringContainsString('max="100"', $capacity);
-    $this->assertStringContainsString('Up to 100 without an event licence.', $capacity);
+    $this->assertStringContainsString('Up to 100 without an event licence. With one, up to 400.', $capacity);
 
     $markup = $this->ajaxMarkup($response, $this->wrapperSelector($licence));
     $this->assertSame(1, substr_count($markup, $message));
     $this->assertStringContainsString('aria-invalid="true"', $markup);
     $this->assertStringContainsString('form-item--error-message', $markup);
-    $this->assertStringContainsString('value="ev-2048"', $markup);
+    $this->assertStringContainsString('value="EV-2048"', $markup);
     // Said under the licence and nowhere else: no messages block, and
     // nothing left in the messenger for the next page.
     $this->assertSame([], $this->ajaxSelectors($response, 'prepend'));
@@ -458,7 +471,7 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
     $this->assertMatchesRegularExpression('#data-surface-key="' . preg_quote(self::LICENCE, '#') . '">(?:(?!</tr>).)*<td>' . preg_quote($message, '#') . '</td>#s', $panel);
 
     // Fixed, and sent with the marker the replaced licence carries.
-    $surface['third_party_settings'][self::MODULE]['licence'] = 'EV-2048';
+    $surface['third_party_settings'][self::MODULE]['licence'] = '2048';
     $state = $this->postStep(3, $surface, $trigger + [DataSurfaceFormBuilderInterface::INVALID_INPUT => '1']);
     $this->assertSame([], array_map('strval', $state->getErrors()));
     $container = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY];
@@ -490,11 +503,11 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
       'pricing' => 'free',
       'ticket' => ['note' => ''],
       'contact' => ['email' => 'events@example.com', 'phone' => ''],
-      'third_party_settings' => [self::MODULE => ['licence' => 'ev-2048', 'stewards' => '3']],
+      'third_party_settings' => [self::MODULE => ['licence' => 'EV-2048', 'stewards' => '3']],
     ];
     $state = $this->postStep(3, $surface, ['op' => 'Save']);
     $errors = array_map('strval', $state->getErrors());
-    $this->assertSame('An event licence is EV- and four digits, such as EV-2048.', $errors['surface][third_party_settings][' . self::MODULE . '][licence'] ?? NULL);
+    $this->assertSame('A licence number is four digits, such as 2048.', $errors['surface][third_party_settings][' . self::MODULE . '][licence'] ?? NULL);
     $this->assertArrayHasKey('surface][capacity', $errors);
     $this->assertStringContainsString('100', $errors['surface][capacity']);
     foreach ($errors as $error) {
@@ -516,12 +529,12 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
       'venue' => 'riverside',
       'room' => 'library_reading',
       'capacity' => 80,
-    ] + self::compliance('EV-2048', 2) + $stored;
+    ] + self::compliance('2048', 2) + $stored;
     $surface = $this->surface();
     $builder = $this->formBuilder();
     $this->assertSame(['room', 'capacity', self::STEWARDS], $builder->discardedRefinementInput($surface, $stored, $input));
     $overlay = $builder->refinementOverlay($surface, $stored, $input);
-    $this->assertSame(['licence' => 'EV-2048'], $overlay['third_party_settings'][self::MODULE]);
+    $this->assertSame(['licence' => '2048'], $overlay['third_party_settings'][self::MODULE]);
     $this->assertSame(50, $overlay['capacity']);
   }
 

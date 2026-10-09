@@ -407,11 +407,11 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
    * {@inheritdoc}
    */
   public function alterInputs(ShapeAdditionsInterface $inputs): void {
-    $licence = ['pattern' => '/^EV-\d{4}$/', 'message' => 'An event licence is EV- and four digits, such as EV-2048.'];
+    $licence = ['pattern' => '/^\d{4}$/', 'message' => 'A licence number is four digits, such as 2048.'];
     $licence_key = $inputs->add('licence', 'string', $this->t('Event licence'))
-      ->setDescription($this->t('Required to host more than 100 people. A licence is EV- and four digits, such as EV-2048.'))
+      ->setDescription($this->t('The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.'))
       ->addConstraint('Regex', $licence);
-    DefinitionMetadata::setExamples($licence_key, ['EV-2048']);
+    DefinitionMetadata::setExamples($licence_key, ['2048']);
     $inputs->add('stewards', 'integer', $this->t('Stewards'), default: 1)->setRequired(TRUE);
     $inputs->describe('title', label: $this->t('Public event title'));
     $inputs->describe('third_party_settings.data_surface_examples_compliance', label: $this->t('Compliance'));
@@ -419,13 +419,30 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
 
   /**
    * Without a licence, no more than a hundred, whatever the room seats.
+   *
+   * The owner's refiner has already capped the capacity at the room's
+   * seats, so the description names both ceilings: the hundred this
+   * module sets, and what the room allows once a licence is given. A
+   * room that seats a hundred or fewer is left as the owner said it,
+   * since a licence changes nothing there.
+   *
+   * Any licence this is handed counts: a refiner never sees an invalid
+   * sibling, so a value the licence's own pattern refuses arrives as
+   * NULL, exactly as no licence does.
+   *
+   * @see docs/decisions.md#a-refiner-never-sees-an-invalid-sibling
    */
   #[RefinesInput('capacity')]
   public function capacityWithoutLicence(DataDefinition $capacity, ?string $licence): DataDefinition {
     $range = $capacity->getConstraints()['Range'] ?? [];
-    return (string) $licence !== '' ? $capacity : $capacity
-      ->addConstraint('Range', array_replace($range, ['max' => min($range['max'] ?? 100, 100)]))
-      ->setDescription($this->t('Up to 100 without an event licence.'));
+    $max = $range['max'] ?? NULL;
+    if ((string) $licence !== '' || ($max !== NULL && $max <= 100)) {
+      return $capacity;
+    }
+    $capacity->addConstraint('Range', array_replace($range, ['max' => 100]));
+    return $capacity->setDescription($max === NULL
+      ? $this->t('Up to 100 without an event licence.')
+      : $this->t('Up to 100 without an event licence. With one, up to @max.', ['@max' => $max]));
   }
 
   /**
@@ -448,14 +465,17 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
 
 The two keys sit in one fieldset, titled "Compliance" by the last line
 of `alterInputs()`. Example 3 ships at Riverside Hall's main hall, which
-seats 400. The capacity stops at 100, and its help text says why: "Up to
-100 without an event licence." Type `EV-2048` as the event licence and
-the capacity goes back to "Up to 400 for the Main hall."; type `EV-20`
-or `ev-2048` and the licence is refused, in the alter's words, under the
-field, and the capacity stops at 100 again: a refiner never sees a value
-its own key refuses, so a licence in the wrong format is no licence. The
-help text says the format before anything is typed, and the box shows
-`EV-2048` as its placeholder: a pattern explains nothing to a person, so
+seats 400. The capacity stops at 100, and its help text names both
+ceilings: "Up to 100 without an event licence. With one, up to 400." The
+licence asks for the four digits after EV- only. Type `2048` and the
+capacity goes back to the owner's "Up to 400 for the Main hall."; type
+`204` or `EV-2048` and the licence is refused, in the alter's words,
+under the field, and the capacity stops at 100 again: a refiner never
+sees a value its own key refuses, so a licence in the wrong format is no
+licence. In a room that seats 100 or fewer the licence changes nothing,
+and the owner's help text stands. The help text says the format before
+anything is typed, and the box shows
+`2048` as its placeholder: a pattern explains nothing to a person, so
 the Regex carries a message, and the panel's "Allows" column says that.
 Under the stewards it says "At least 1 steward for 50 attendees."; set
 the capacity to 150 and it asks for "At least 3 stewards for 150
@@ -581,7 +601,7 @@ Drush commands are checked against `ExampleCalls`.
 | `Unit\ExamplesReadmeTest` | This page against the files it quotes, and its Drush commands. |
 | `Functional\ExamplesRoutesTest` | Every route answers an administrator and refuses anonymous; the landing page; a save through example 3. |
 | `FunctionalJavascript\ExamplesAjaxRefreshTest` | In a browser: example 2's venue replaces the room and the capacity and leaves the venue the same node, the orphaned room on its empty option with the stale marker and the capacity back at 1000; a room then narrows the capacity and loses `- Select -`. Example 3's paid pricing swaps the note for a price and a currency. |
-| `FunctionalJavascript\ExamplesComplianceRefreshTest` | Example 4, in a browser: one fieldset titled "Compliance", the ceiling of 100 lifted to the main hall's 400 by `EV-2048`, and the stewards at 1 for 50 and 3 for 150; a malformed licence on blur is said once, under the licence, with `aria-invalid` and nothing at the top, and caps the capacity at a hundred; corrected, the error goes and the room's limit comes back. |
+| `FunctionalJavascript\ExamplesComplianceRefreshTest` | Example 4, in a browser: one fieldset titled "Compliance", the ceiling of 100 lifted to the main hall's 400 by `2048`, and the stewards at 1 for 50 and 3 for 150; a malformed licence on blur is said once, under the licence, with `aria-invalid` and nothing at the top, and caps the capacity at a hundred; corrected, the error goes and the room's limit comes back. A refused capacity left by a click on text keeps no focus, and left by Tab lands on the pricing. |
 | `Functional\ServedContractEndpointsTest` | In React: the landing page's links, and example 2's contract, refine and validate over HTTP. |
 | `Functional\ServedSubmitEndpointTest` | In React: example 2 saved over HTTP, refused, and refused after someone else saved. |
 | `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files. |

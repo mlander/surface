@@ -472,7 +472,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $capacity = $contract['schema']['properties']['capacity'];
     $this->assertSame(['room', $licence], $capacity['x-surface']['dependsOn']);
     $this->assertSame(100, $capacity['maximum']);
-    $this->assertSame('Up to 100 without an event licence.', $capacity['description']);
+    $this->assertSame('Up to 100 without an event licence. With one, up to 400.', $capacity['description']);
     $this->assertSame(['capacity'], $contract['schema']['properties']['third_party_settings']['x-surface']['dependsOn']);
     // The mount only groups each module's fieldset: no title of its own,
     // and the module's map titled by its alter.
@@ -484,7 +484,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
 
     $licensed = $this->contract('registration.step3', 'configure', [], $room + [
       'capacity' => 150,
-      'third_party_settings' => ['data_surface_examples_compliance' => ['licence' => 'EV-2048', 'stewards' => 3]],
+      'third_party_settings' => ['data_surface_examples_compliance' => ['licence' => '2048', 'stewards' => 3]],
     ]);
     $capacity = $licensed['schema']['properties']['capacity'];
     $this->assertSame(400, $capacity['maximum']);
