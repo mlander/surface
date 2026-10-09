@@ -101,4 +101,4 @@ setting.
 | `Kernel\UsesSurfaceHostsTest` | Every plugin host reading its surface from the attribute. |
 | `Kernel\DemoFormTest` | The standalone form against `StateTarget`. |
 | `Kernel\ClassicParityTest` | That the block and the formatter still match their hand-written twins. |
-| `FunctionalJavascript\DataSurfaceRefinementTest` | The AJAX rebuild in a real browser. |
+| `FunctionalJavascript\DataSurfaceRefinementTest` | The AJAX rebuild in a real browser: the chain, an entity type change replacing the bundle and the field and nothing else, and an orphaned bundle reset silently or, when stored, refused on save. |

@@ -15,29 +15,24 @@ fail() { echo; echo "FAILED: $1"; exit 1; }
 # 1. The suite. Only the container can reach the database, so detect which
 # side of it we are on and wrap accordingly.
 echo "== phpunit =="
-RUN='cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db SIMPLETEST_BASE_URL=http://localhost ../vendor/bin/phpunit -c core modules/custom/data_surface'
+# SIMPLETEST_BASE_URL and MINK_DRIVER_ARGS_WEBDRIVER come from the
+# container's environment, which the ddev-selenium-standalone-chrome add-on
+# sets: the site at http://web, a name the browser container can reach too.
+RUN='cd /var/www/html/web && [ -n "${MINK_DRIVER_ARGS_WEBDRIVER:-}" ] || { echo "MINK_DRIVER_ARGS_WEBDRIVER is not set: install the ddev-selenium-standalone-chrome add-on (CLAUDE.md)"; exit 1; }; SIMPLETEST_DB=mysql://db:db@db/db SIMPLETEST_BASE_URL="${SIMPLETEST_BASE_URL:-http://web}" ../vendor/bin/phpunit -c core modules/custom/data_surface'
 if [ "${IS_DDEV_PROJECT:-}" = "true" ]; then
   bash -c "$RUN" 2>&1 | tee "$WORK/phpunit.txt"
 else
   (cd "$ROOT" && ddev exec bash -c "$RUN") 2>&1 | tee "$WORK/phpunit.txt"
 fi
 
-# The known failures are this checkout's rather than the module's, and no
-# test may error: the FunctionalJavascript tests want a webdriver on port
-# 4444 and ddev has none. Every test in that one class is known for that
-# one reason. CLAUDE.md has the detail.
-KNOWN='DataSurfaceRefinementTest::'
+# A passing run is no error and no failure at all, the browser tests
+# included.
 SUMMARY="$(grep -E '^(Tests:|OK) ' "$WORK/phpunit.txt" | tail -1)"
 [ -n "$SUMMARY" ] || fail "phpunit did not finish; no result line in its output"
-ERRORS="$(printf '%s' "$SUMMARY" | sed -n 's/.*Errors: \([0-9][0-9]*\).*/\1/p')"
-[ -z "$ERRORS" ] || fail "phpunit: $ERRORS errors; an error is a regression ($SUMMARY)"
-UNEXPECTED="$(grep -E '^[0-9]+\) Drupal.Tests.data_surface' "$WORK/phpunit.txt" \
-  | sed -E 's/^[0-9]+\) //' | sort -u | grep -vE "$KNOWN")"
-[ -z "$UNEXPECTED" ] || fail "phpunit, and these are not known failures:
-$UNEXPECTED"
-grep -q 'DriverException: Could not open connection' "$WORK/phpunit.txt" \
-  || fail "phpunit: the webdriver failure is gone, so the baseline has moved.
-Update the known list in this script and the baseline in CLAUDE.md."
+! printf '%s' "$SUMMARY" | grep -qE '(Errors|Failures): [0-9]' \
+  || fail "phpunit: an error or a failure is a regression ($SUMMARY)"
+grep -qE '^(FAILURES|ERRORS)!' "$WORK/phpunit.txt" \
+  && fail "phpunit: an error or a failure is a regression ($SUMMARY)"
 echo "phpunit: $SUMMARY"
 
 # 2. Coding standards. The stored installed_paths point inside the container.
@@ -73,6 +68,4 @@ php "$WORK/merge.php" "$WEB/core" "$MODULE" "$WORK/cspell.json" || fail "cspell 
   || fail "cspell"
 
 echo
-echo "PASS: phpunit, phpcs, phpstan, cspell. PASS means no errors at all and"
-echo "no failure outside DataSurfaceRefinementTest, whose every test wants a"
-echo "webdriver this checkout has not got. Anything else is a real regression."
+echo "PASS: phpunit, phpcs, phpstan, cspell, with no error and no failure."

@@ -35,19 +35,14 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * that would not validate, and no error is raised over either — the
  * surface's AJAX is scoped to the one element that was touched.
  *
- * This checkout cannot run this test locally, for two independent
- * reasons: the node module cannot be installed inside a functional test
- * here — core's own node functional tests fail identically with a
- * PluginNotFoundException for node_make_sticky_action — and the ddev
- * environment has no webdriver service for WebDriverTestBase to drive.
- * Neither is anything about this module. It is written for CI.
- *
  * @see \Drupal\Tests\data_surface\Functional\DataSurfaceBlockPlacementTest
  *   For the same form without JavaScript.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
 class DataSurfaceRefinementTest extends WebDriverTestBase {
+
+  use ReplacedElementsTrait;
 
   /**
    * {@inheritdoc}
@@ -85,7 +80,6 @@ class DataSurfaceRefinementTest extends WebDriverTestBase {
     $assert_session = $this->assertSession();
     $page = $this->getSession()->getPage();
     $this->drupalGet('admin/structure/block/add/data_surface_demo/' . $this->defaultTheme);
-    $assert_session->statusCodeEquals(200);
 
     // Leave the region unchosen. It is required, and the host form is
     // what must not be validated while a dependency is touched.
@@ -140,15 +134,17 @@ class DataSurfaceRefinementTest extends WebDriverTestBase {
     // validated: the region is still unchosen and unremarked.
     $assert_session->pageTextNotContains('Region field is required.');
 
-    // Now finish the form the way a person would.
+    // Now finish the form the way a person would. Nothing refines
+    // against the field, so it is no trigger and choosing it asks nothing.
+    $this->assertNull($this->getSession()->evaluateScript('return Drupal.ajax.instances.find((i) => i && i.element && i.element.name === "settings[field]") || null;'));
     $assert_session->selectExists('settings[field]')->selectOption('title');
-    $assert_session->assertWaitOnAjaxRequest();
     $page->fillField('settings[headline]', 'Latest articles');
     $page->fillField('settings[limit]', '5');
     $id = $assert_session->fieldExists('id')->getValue();
     $page->selectFieldOption('region', 'content');
     $page->pressButton('Save block');
-    $assert_session->pageTextContains('The block configuration has been saved.');
+    // The click returns before the next page has loaded.
+    $this->assertTrue($assert_session->waitForText('The block configuration has been saved.'));
 
     $block = Block::load($id);
     $this->assertInstanceOf(Block::class, $block);
@@ -160,6 +156,28 @@ class DataSurfaceRefinementTest extends WebDriverTestBase {
     $this->assertSame('article', $settings['bundle']);
     $this->assertSame('title', $settings['field']);
     $this->assertSame(5, $settings['limit']);
+  }
+
+  /**
+   * Tests the entity type replaces the bundle and the field, and only them.
+   *
+   * Every named element on the placement form is marked first, the
+   * block's own and the surface's: the headline, the limit, the
+   * presentation and its slot, the region, the machine name. Afterwards
+   * the two the entity type moves are new nodes and every other one is
+   * the node it was.
+   */
+  public function testTheEntityTypeReplacesTheBundleAndTheFieldOnly(): void {
+    $assert_session = $this->assertSession();
+    $this->drupalGet('admin/structure/block/add/data_surface_demo/' . $this->defaultTheme);
+
+    $this->probeAll();
+    $assert_session->selectExists('settings[entity_type]')->selectOption('node');
+    $assert_session->assertWaitOnAjaxRequest();
+    $this->assertSame(['settings[bundle]', 'settings[field]'], $this->replacedSinceProbe());
+    $assert_session->optionExists('settings[bundle]', 'article');
+    $assert_session->elementNotExists('css', '.messages');
+    $assert_session->elementNotExists('css', '.error');
   }
 
   /**
@@ -182,7 +200,6 @@ class DataSurfaceRefinementTest extends WebDriverTestBase {
   public function testChangingTheParentResetsItsDependentSilently(): void {
     $assert_session = $this->assertSession();
     $this->drupalGet('admin/structure/block/add/data_surface_demo/' . $this->defaultTheme);
-    $assert_session->statusCodeEquals(200);
 
     // The declared entity type is user, whose one bundle is itself.
     // Choosing it is an ordinary, valid answer at the moment it is made.
@@ -265,43 +282,10 @@ class DataSurfaceRefinementTest extends WebDriverTestBase {
     $assert_session->selectExists('settings[entity_type]')->selectOption('user');
     $assert_session->assertWaitOnAjaxRequest();
     $this->getSession()->getPage()->pressButton('Save block');
+    // The click returns before the next page has loaded.
+    $this->assertNotNull($assert_session->waitForElement('css', 'select[name="settings[bundle]"].error'));
     $assert_session->pageTextNotContains('The block configuration has been saved.');
-    $assert_session->elementExists('css', 'select[name="settings[bundle]"].error');
     $this->assertSame('article', Block::load('orphaned')->get('settings')['bundle']);
-  }
-
-  /**
-   * Marks form elements in the page, so a replaced one can be told apart.
-   *
-   * A replaced element is a new DOM node, which does not carry what was
-   * set on the old one.
-   *
-   * @param string[] $names
-   *   The elements' names.
-   */
-  protected function probe(array $names): void {
-    foreach ($names as $name) {
-      $this->getSession()->executeScript(sprintf(
-        'document.querySelector(%s).dataset.dataSurfaceProbe = "kept";',
-        json_encode('[name="' . $name . '"]'),
-      ));
-    }
-  }
-
-  /**
-   * Answers whether an element is still the node probe() marked.
-   *
-   * @param string $name
-   *   The element's name.
-   *
-   * @return bool
-   *   TRUE when it was not replaced since it was marked.
-   */
-  protected function stillProbed(string $name): bool {
-    return $this->getSession()->evaluateScript(sprintf(
-      'return (document.querySelector(%s) || {dataset: {}}).dataset.dataSurfaceProbe === "kept";',
-      json_encode('[name="' . $name . '"]'),
-    ));
   }
 
 }

@@ -83,25 +83,30 @@ name a key inside its child. `docs/surfaces.md` has the rules.
 ## Running the suite
 
 The suite runs from `web/` inside the ddev container, which is the only
-place that can reach the test database:
+place that can reach the test database. The browser tests
+(`tests/src/FunctionalJavascript`) drive Chrome through the ddev add-on
+`ddev/ddev-selenium-standalone-chrome` (`ddev add-on get
+ddev/ddev-selenium-standalone-chrome`, then `ddev restart`): a
+`selenium-chrome` service with a webdriver on port 4444, and, in the web
+container's environment (`.ddev/config.selenium-standalone-chrome.yaml`),
+`MINK_DRIVER_ARGS_WEBDRIVER` pointing at it and `SIMPLETEST_BASE_URL=http://web`,
+the site under a name both containers reach. The command takes those from
+the environment:
 
 ```
 ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
-  SIMPLETEST_BASE_URL=http://localhost ../vendor/bin/phpunit -c core \
-  modules/custom/data_surface'
+  ../vendor/bin/phpunit -c core modules/custom/data_surface'
 ```
 
-The baseline as of this writing: **736 tests, 7383 assertions, 0 errors,
-3 failures** — the three tests of the one class below. The test and
-assertion counts drift upward as work lands and are not the thing to
-check. **No test may error,
-and the only tests that may fail are the ones in
-`DataSurfaceRefinementTest`**, for a reason that is not this module's:
+`http://localhost` still serves kernel and functional tests, but the
+browser would look for the site in its own container; leave the base URL
+to the environment.
 
-1. `DataSurfaceRefinementTest` — environmental, every test in it.
-   `DriverException: Could not open connection` on port 4444; ddev runs
-   no webdriver. That class is the invariant; a failure anywhere else is
-   a real regression.
+The baseline as of this writing: **751 tests, 7745 assertions, 0 errors,
+0 failures**. The test and assertion counts drift upward as work lands
+and are not the thing to check. **No test may error and no test may
+fail**, the browser tests included; any error or failure is a real
+regression.
 
 There are no open findings. The two that stood here —
 `NodeTypeSurfaceFormTest::testAddStoresTheTypeAndItsOverrides` and
@@ -114,7 +119,7 @@ only once node could be installed inside functional tests at all, which
 the project-level `web/core/phpunit.xml` and its bootstrap at the site
 root (`phpunit-bootstrap.php`) made possible; delete those two files and
 the old `node_make_sticky_action` install failure comes back, hiding
-these tests again. Any error, or any other failure, is a real regression.
+these tests again.
 
 `scripts/check.sh` runs the suite and all three gates below in order,
 enforces that rule, and stops at the first failure.
