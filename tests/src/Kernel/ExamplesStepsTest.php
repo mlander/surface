@@ -390,7 +390,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     foreach ($container[DataSurfaceSituationForm::PANEL_KEY]['keys']['#rows'] as $row) {
       $rows[$row['data-surface-key']] = $row['data'];
     }
-    $this->assertSame('one of Auditorium, Upper deck', $rows['room'][5]);
+    $this->assertSame('one of Auditorium, Upper deck', (string) $rows['room'][5]['data']['#markup']);
     $this->assertSame('narrowed', (string) $rows['room'][7]);
   }
 
@@ -475,7 +475,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     foreach ($container[DataSurfaceSituationForm::PANEL_KEY]['keys']['#rows'] as $row) {
       $rows[$row['data-surface-key']] = $row['data'];
     }
-    $this->assertSame('from 1 to 1000', $rows['capacity'][5]);
+    $this->assertSame('from 1 to 1000', (string) $rows['capacity'][5]['data']['#markup']);
 
     // The room stays stored: a rebuild is not a submit.
     $this->assertSame('riverside_east', $this->config('data_surface_examples.registration_step2')->get('room'));

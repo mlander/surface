@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface_tool;
 
 use Drupal\Component\Serialization\Json;
+use Drupal\Component\Utility\Html;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
@@ -276,7 +277,7 @@ final class SurfaceContractPanel implements DataSurfaceFormPanelInterface {
    * @param mixed $default
    *   Its default, or NULL for none.
    * @param string|\Stringable $allows
-   *   What it allows, in words.
+   *   What it allows, in words, as safe HTML: the cell prints it as markup.
    * @param string[] $depends
    *   The keys it depends on.
    * @param string|\Stringable $status
@@ -293,7 +294,8 @@ final class SurfaceContractPanel implements DataSurfaceFormPanelInterface {
         (string) ($definition->getLabel() ?? ''),
         $definition->isRequired() ? $this->t('yes') : $this->t('no'),
         $default === NULL || $default === [] ? '—' : (string) json_encode($default, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-        (string) $allows,
+        // Safe HTML: every phrase escaped, a pattern set in code.
+        ['data' => ['#markup' => $allows]],
         $depends === [] ? '—' : implode(', ', $depends),
         (string) $status,
       ],
@@ -326,12 +328,35 @@ final class SurfaceContractPanel implements DataSurfaceFormPanelInterface {
       $phrases[] = (string) match ($name) {
         'Range', 'Length' => $this->bounds((string) $name, $options),
         'Email' => $this->t('an email address'),
-        'Regex' => $this->t('matching @pattern', ['@pattern' => $options['pattern'] ?? '']),
+        'Regex' => $this->regex($options),
         'NotBlank' => $this->t('not blank'),
-        default => $name . ' ' . Json::encode($options),
+        default => Html::escape($name . ' ' . Json::encode($options)),
       };
     }
     return $phrases === [] ? (string) $this->t('anything of its type') : implode('; ', $phrases);
+  }
+
+  /**
+   * Says what a Regex allows, in the words its message gives.
+   *
+   * A pattern explains nothing to a person, so the constraint's own
+   * message — the sentence a refusal is reported in — is what the panel
+   * says. A Regex with no message is said as a required format with the
+   * pattern beside it, in code, which is the best a pattern can do and
+   * the reason docs/pattern.md asks every Regex to carry a message.
+   *
+   * @param array $options
+   *   The Regex constraint's options.
+   *
+   * @return string
+   *   The phrase, as safe HTML.
+   */
+  protected function regex(array $options): string {
+    $message = $options['message'] ?? NULL;
+    if (is_string($message) && $message !== '') {
+      return Html::escape($message);
+    }
+    return (string) $this->t('matches a required format: <code>@pattern</code>', ['@pattern' => $options['pattern'] ?? '']);
   }
 
   /**

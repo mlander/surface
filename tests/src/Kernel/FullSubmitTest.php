@@ -525,9 +525,10 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
       $this->wrapperSelector($container['capacity']),
       $this->wrapperSelector($container[DataSurfaceSituationForm::PANEL_KEY]),
     ], $this->ajaxSelectors($response, 'replaceWith'));
-    // The venue is no target, so it has no wrapper to be replaced by,
-    // and neither it nor the container is replaced.
-    $this->assertArrayNotHasKey(DataSurfaceFormBuilderInterface::REFRESH_ID_KEY, $container['venue']);
+    // The venue has a wrapper, as every trigger does, but its value was
+    // accepted and its options did not move, so neither it nor the
+    // container is replaced.
+    $this->assertNotContains($this->wrapperSelector($container['venue']), $this->ajaxSelectors($response, 'replaceWith'));
     $this->assertNotContains('#' . $container['#attributes']['id'], $this->ajaxSelectors($response, 'replaceWith'));
     // The rebuilt room is the riverside's, on its empty option.
     $room = $this->ajaxMarkup($response, $this->wrapperSelector($container['room']));
@@ -639,7 +640,7 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
       $this->wrapperSelector($container['ticket']),
       $this->wrapperSelector($container[DataSurfaceSituationForm::PANEL_KEY]),
     ], $this->ajaxSelectors($response, 'replaceWith'));
-    $this->assertArrayNotHasKey(DataSurfaceFormBuilderInterface::REFRESH_ID_KEY, $container['pricing']);
+    $this->assertNotContains($this->wrapperSelector($container['pricing']), $this->ajaxSelectors($response, 'replaceWith'));
     // The paid variant's keys, and not the free one's.
     $ticket = $this->ajaxMarkup($response, $this->wrapperSelector($container['ticket']));
     $this->assertStringContainsString('name="surface[ticket][price]"', $ticket);
@@ -666,16 +667,15 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests an error on the trigger itself is printed inside the container.
+   * Tests an error on the trigger itself is printed under the trigger.
    *
    * The one value a refinement request judges is the trigger's own, and
-   * a value its select never offered is refused before anything is
-   * rebuilt. The render-array path printed that inside the container it
-   * replaced; the commands print it in the same place, after taking the
-   * previous request's messages away, and replace nothing else's markup
-   * with anything new.
+   * a value its select never offered is refused by Form API before
+   * anything is rebuilt. It is printed under the trigger, whose wrapper
+   * is replaced for it, and taken off the messages at the top: no
+   * messages block, nothing left over for the next page.
    */
-  public function testAnErrorOnTheTriggerIsPrintedInsideTheContainer(): void {
+  public function testAnErrorOnTheTriggerIsPrintedUnderTheTrigger(): void {
     $this->actAsAnonymousAdministrator();
     $state = $this->postStepTwo(
       ['venue' => 'harbour', 'room' => 'library_garden'],
@@ -687,11 +687,13 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
     $response = $this->ajaxResponse($state);
     $wrapper = '#' . $container['#attributes']['id'];
     $this->assertSame([$wrapper . '__stale', $wrapper . '__messages'], $this->ajaxSelectors($response, 'remove'));
-    $this->assertSame([$wrapper], $this->ajaxSelectors($response, 'prepend'));
-    $messages = $this->ajaxMarkup($response, $wrapper);
-    $this->assertStringContainsString('id="' . substr($wrapper, 1) . '__messages"', $messages);
-    $this->assertStringContainsString('is not allowed', $messages);
-    // Printed once, and gone from the messenger with it.
+    $this->assertSame([], $this->ajaxSelectors($response, 'prepend'));
+    $this->assertContains($this->wrapperSelector($container['room']), $this->ajaxSelectors($response, 'replaceWith'));
+    $room = $this->ajaxMarkup($response, $this->wrapperSelector($container['room']));
+    $this->assertStringContainsString('form-item--error-message', $room);
+    $this->assertStringContainsString('aria-invalid="true"', $room);
+    // Said once, and gone from the messenger with it.
+    $this->assertSame(1, substr_count($room, 'form-item--error-message'));
     $this->assertSame([], $this->container->get('messenger')->all());
   }
 

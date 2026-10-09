@@ -97,6 +97,25 @@ interface DataSurfaceFormBuilderInterface {
   public const WRAPPER_INPUT = '_data_surface_wrapper';
 
   /**
+   * The request key a trigger showing its own error inline posts.
+   *
+   * Set on a trigger the AJAX callback rendered with an error under it,
+   * so the next request it makes replaces it again, and an error the
+   * person has since fixed is taken away with it.
+   */
+  public const INVALID_INPUT = '_data_surface_invalid';
+
+  /**
+   * Render key on an element whose #errors are printed under it.
+   *
+   * Core prints an element's errors in the messages at the top of the
+   * page, unless Inline Form Errors is on; an error on a refinement
+   * trigger is printed where it was made instead, by the module's form
+   * element preprocess, whichever of the two is the case.
+   */
+  public const INLINE_ERROR_KEY = '#data_surface_inline_error';
+
+  /**
    * Builds a container of form elements for a surface.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
@@ -272,6 +291,13 @@ interface DataSurfaceFormBuilderInterface {
    * validation is rebuilt from scratch and anything written onto an
    * element here would not survive to be rendered.
    *
+   * On a refinement request, a violation on the triggering element is
+   * not a Form API error: Form API skips the rebuild once anything has
+   * errored, so its dependents would come back refined against the
+   * answer before this one. It is held for the request instead, the
+   * rebuild goes ahead — refining as though the refused value were not
+   * there — and refreshSurface() prints it under the trigger.
+   *
    * @param \Drupal\data_surface\Pipeline\ViolationSet $errors
    *   The violations, as the pipeline reports them.
    * @param array $container
@@ -312,9 +338,12 @@ interface DataSurfaceFormBuilderInterface {
    * was rendered with — plus every element placed with
    * placeRefreshed(), the stale marker removed and put back as the
    * rebuild left it, and the messages the request produced. The
-   * triggering element itself is never among them: what the person just
-   * touched stays where it is, focused, and only what it changed is
-   * redrawn. A slot whose deciding key moved is replaced whole, by its
+   * triggering element itself is not among them — what the person just
+   * touched stays where it is, and only what it changed is redrawn —
+   * with one exception: a trigger whose own value was refused is
+   * replaced by its own wrapper, rendered with the error under it, and
+   * replaced once more on its next request, which takes a fixed error
+   * away. A slot whose deciding key moved is replaced whole, by its
    * wrapper.
    *
    * When a dependent cannot be found in the rebuilt container — a host

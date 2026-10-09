@@ -532,7 +532,9 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
       $this->wrapperSelector($container['bundle']),
       $this->wrapperSelector($container['field']),
     ], $this->ajaxSelectors($response, 'replaceWith'));
-    $this->assertArrayNotHasKey(DataSurfaceFormBuilderInterface::REFRESH_ID_KEY, $container['entity_type']);
+    // The entity type has a wrapper, as every trigger does, and is not
+    // replaced by it: its value stands and its options did not move.
+    $this->assertNotContains($this->wrapperSelector($container['entity_type']), $this->ajaxSelectors($response, 'replaceWith'));
     $this->assertStringContainsString('value="article"', $this->ajaxMarkup($response, $this->wrapperSelector($container['bundle'])));
 
     // The next request is processed against the form this one rebuilt,
@@ -663,7 +665,7 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
     );
     $this->assertSame('#' . $container['#attributes']['id'] . '--shelf--height', $this->wrapperSelector($container['shelf']['height']));
     $this->assertArrayNotHasKey(DataSurfaceFormBuilderInterface::REFRESH_ID_KEY, $container['shelf']);
-    $this->assertArrayNotHasKey(DataSurfaceFormBuilderInterface::REFRESH_ID_KEY, $container['shelf']['unit']);
+    $this->assertNotContains($this->wrapperSelector($container['shelf']['unit']), $this->ajaxSelectors($response, 'replaceWith'));
     $this->assertStringContainsString('max="80"', $this->ajaxMarkup($response, $this->wrapperSelector($container['shelf']['height'])));
 
     // The kind decides a slot of the parent's: the slot goes whole, as

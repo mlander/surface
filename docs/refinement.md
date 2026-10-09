@@ -115,7 +115,10 @@ methods, each named for its rule and each attributed with the one key it
 refines: `DemoBlockSurface::bundleOfEntityType()` and
 `::fieldOfBundle()`. Nothing dispatches on a key's name. The method
 takes the key's definition first and one parameter per sibling it
-watches, and runs once every watched sibling has a value.
+watches, and runs once every watched sibling has a value. A watched
+value its own key's refined definition refuses counts as no value: a
+refiner never sees an invalid sibling, so a licence in the wrong format
+is no licence ([decision](decisions.md#a-refiner-never-sees-an-invalid-sibling)).
 
 A refiner is handed a deep clone, so it may mutate what it is given and
 hand it back, or answer with a fresh definition. A fresh definition does

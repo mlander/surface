@@ -26,8 +26,11 @@ drush pm:install data_surface_examples_compliance
 
 Then reload `/surface-examples/3`, choose Riverside Hall's main hall,
 and see the capacity stop at 100. Type `EV-2048` as the licence and it
-goes back to 400; set the capacity to 150 and the stewards field asks
-for 3.
+goes back to 400; type `ev-2048` and the licence is refused under the
+field while the capacity stays at 100, because an invalid licence is no
+licence to the refiner. Set the capacity to 150 and the stewards field
+asks for 3. The licence's help text and placeholder say its format, and
+the panel explains the Regex by its message, never by the pattern.
 
 ## What gates it
 

@@ -16,6 +16,7 @@ use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\DataSurfaceTargetInterface;
 use Drupal\data_surface\Refinement\Narrowing;
+use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
 use Drupal\data_surface\Surface\AltersOutputsInterface;
 use Drupal\data_surface\Surface\HasOutputsInterface;
 use Drupal\data_surface\Surface\HasStorageShapeInterface;
@@ -84,6 +85,9 @@ final class Surfaces implements SurfacesInterface {
    *   arguments, an entity's id into the entity among them.
    * @param \Drupal\data_surface\SurfaceBuild\DerivedVariants $derivedVariants
    *   What fills an open slot for the values no declared variant fills.
+   * @param \Drupal\data_surface\Refinement\WatchedValueCheckInterface $watchedValueCheck
+   *   What a watched value passes before a refiner is handed it, sealed
+   *   into every surface and every child this step builds.
    */
   public function __construct(
     protected readonly SurfaceRegistry $registry,
@@ -92,6 +96,7 @@ final class Surfaces implements SurfacesInterface {
     protected readonly AccountInterface $currentUser,
     protected readonly SituationArguments $situationArguments,
     protected readonly DerivedVariants $derivedVariants,
+    protected readonly WatchedValueCheckInterface $watchedValueCheck,
   ) {
   }
 
@@ -122,7 +127,7 @@ final class Surfaces implements SurfacesInterface {
     // Refuses two providers of one situation id, whichever is asked for.
     $this->registry->getSituations($definition->class);
 
-    $builder = new DataSurfaceBuilder();
+    $builder = (new DataSurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
     // Decision: see docs/decisions.md#a-surface-is-static.
     $owner = static::surfaceClass($definition);
     $inputs = new SurfaceShape($builder, $this->typedDataManager);
@@ -205,7 +210,7 @@ final class Surfaces implements SurfacesInterface {
       $deriver = $this->derivedVariants->for($definition->class, $key);
       if ($deriver !== NULL) {
         foreach ($deriver->variants(array_keys($variants)) as $value => $definitions) {
-          $variants[(string) $value] ??= new SurfaceAttachment((new DataSurfaceBuilder($definitions))->seal());
+          $variants[(string) $value] ??= new SurfaceAttachment((new DataSurfaceBuilder($definitions))->setWatchedValueCheck($this->watchedValueCheck)->seal());
         }
       }
       $builder->attachBy($key, $by, $variants);

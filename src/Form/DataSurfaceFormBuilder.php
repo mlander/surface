@@ -13,6 +13,7 @@ use Drupal\Core\Ajax\RemoveCommand;
 use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Form\OptGroup;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Render\ElementInfoManagerInterface;
@@ -66,6 +67,24 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
    * Render key marking a slot rendered as nothing but its wrapper.
    */
   protected const PLACEHOLDER_KEY = '#data_surface_placeholder';
+
+  /**
+   * Where a refinement request holds the violations on its trigger.
+   *
+   * Temporary form state, so it lives for the one request: written by
+   * flagSurfaceErrors(), read by refreshSurface(), keyed by the
+   * container's place in the form and the trigger's dotted path.
+   */
+  protected const TRIGGER_ERRORS = 'data_surface_trigger_errors';
+
+  /**
+   * Where a request keeps the options its triggers were rendered with.
+   *
+   * Temporary form state: read off the form the request arrived with,
+   * which is the page the person sees, before any rebuild, so the AJAX
+   * callback can tell a trigger whose options the rebuild changed.
+   */
+  protected const RENDERED_OPTIONS = 'data_surface_rendered_options';
 
   /**
    * Element types that hold children rather than a value of their own.
@@ -656,12 +675,27 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
       return $container ?? $form;
     }
     $own = implode('.', $trigger[self::TRIGGER_KEY]['path'] ?? []);
+    $wrapper_id = (string) $container[self::WRAPPER_KEY];
+    $own_parents = explode('.', $own);
+    $touched = NestedArray::getValue($container, $own_parents);
+    $replace_own = FALSE;
+    if (is_array($touched)) {
+      $touched = static::withTriggerErrors($touched, $form_state, static::containerKey($container), $own);
+      NestedArray::setValue($container, $own_parents, $touched);
+      // Decision: see docs/decisions.md#an-error-on-the-trigger-renders-inline.
+      $state = $form_state instanceof SubformStateInterface ? $form_state->getCompleteFormState() : $form_state;
+      $rendered = $state->getTemporaryValue([self::RENDERED_OPTIONS, static::containerKey($container), $own]);
+      $replace_own = !empty($touched[self::INLINE_ERROR_KEY])
+        || ($state->getUserInput()[self::INVALID_INPUT] ?? NULL) === '1'
+        || ($rendered !== NULL && $rendered !== static::optionsSignature($touched));
+    }
     $elements = [];
-    foreach ([...$replaces, ...($container[self::REFRESHED_KEY] ?? [])] as $dotted) {
-      if ($dotted === $own) {
-        // Never the element that was touched: it already shows what the
-        // person chose, and redrawing it is what made the change look
-        // like a reload of the field rather than of what it changed.
+    foreach ([...$replaces, ...($container[self::REFRESHED_KEY] ?? []), ...($replace_own ? [$own] : [])] as $dotted) {
+      if ($dotted === $own && !$replace_own) {
+        // Not the element that was touched, unless its own value was
+        // refused: it already shows what the person chose, and redrawing
+        // it is what made the change look like a reload of the field
+        // rather than of what it changed.
         continue;
       }
       $exists = FALSE;
@@ -682,7 +716,6 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
     foreach ($elements as $id => $element) {
       $response->addCommand(new ReplaceCommand('#' . $id, $element));
     }
-    $wrapper_id = (string) $container[self::WRAPPER_KEY];
     // The stale marker names stale selects across the whole container,
     // and whether it exists at all depends on the rebuild, so it is not
     // replaced but taken out and put back as the rebuild left it. A
@@ -693,10 +726,11 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
       $response->addCommand(new AppendCommand('#' . $wrapper_id, $container[self::STALE_MARKER_KEY]));
     }
     // What the render-array path printed into the replaced container,
-    // printed in the same place: an error on the trigger itself — the
-    // one value a refinement request judges — would otherwise be held
-    // over to the next page. The previous request's are taken away
-    // first, as replacing the container used to.
+    // printed in the same place, so nothing the request said is held
+    // over to the next page: a stale value kept, say. An error on the
+    // trigger is not among them; it is printed under the trigger. The
+    // previous request's are taken away first, as replacing the
+    // container used to.
     $messages = static::reservedId($wrapper_id, 'messages');
     $response->addCommand(new RemoveCommand('#' . $messages));
     // @phpstan-ignore globalDrupalDependencyInjection.useDependencyInjection
@@ -778,6 +812,12 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
     // from it.
     $wrapper_id = $element[self::WRAPPER_KEY] ?? NULL;
     if (is_string($wrapper_id)) {
+      $state = $form_state instanceof SubformStateInterface ? $form_state->getCompleteFormState() : $form_state;
+      if ($state->getTemporaryValue([self::RENDERED_OPTIONS, static::containerKey($element)]) === NULL) {
+        // The first build of a request is the form the page was rendered
+        // from; a rebuild later in the same request is not.
+        $state->setTemporaryValue([self::RENDERED_OPTIONS, static::containerKey($element)], static::triggerOptions($element));
+      }
       static::wrapRefreshed($element, $wrapper_id);
       if (isset($element[self::STALE_MARKER_KEY]) && !isset($element[self::STALE_MARKER_KEY][self::REFRESH_ID_KEY])) {
         $element[self::STALE_MARKER_KEY] = static::wrapped($element[self::STALE_MARKER_KEY], static::reservedId($wrapper_id, 'stale'));
@@ -1007,8 +1047,18 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
    */
   public function flagSurfaceErrors(ViolationSet $errors, array $container, FormStateInterface $form_state): void {
     $container = static::findSurfaceContainer($container);
+    $trigger = static::triggerPath($container, $form_state);
+    $state = $form_state instanceof SubformStateInterface ? $form_state->getCompleteFormState() : $form_state;
     foreach ($errors as $violation) {
       $segments = $violation->path === '' ? [] : explode('.', $violation->path);
+      $dotted = implode('.', [$violation->key, ...$segments]);
+      // Decision: see docs/decisions.md#an-error-on-the-trigger-renders-inline.
+      if ($trigger !== NULL && ($dotted === $trigger || str_starts_with($dotted, $trigger . '.'))) {
+        $held = $state->getTemporaryValue(self::TRIGGER_ERRORS) ?? [];
+        $held[static::containerKey($container)][$trigger][] = $violation->message;
+        $state->setTemporaryValue(self::TRIGGER_ERRORS, $held);
+        continue;
+      }
       $element = $container[$violation->key] ?? NULL;
       foreach ($segments as $segment) {
         if (!isset($element[$segment])) {
@@ -1031,6 +1081,156 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
       // working again on its own.
       $this->messenger->addWarning($reference->message);
     }
+  }
+
+  /**
+   * Reads which element of this container triggered a refinement request.
+   *
+   * @param array $container
+   *   The surface container, processed.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   *
+   * @return string|null
+   *   The trigger's dotted path below the container, or NULL when the
+   *   request is not a refinement of this container: a submission, or a
+   *   trigger in another container on the same form.
+   */
+  protected static function triggerPath(array $container, FormStateInterface $form_state): ?string {
+    $state = $form_state instanceof SubformStateInterface ? $form_state->getCompleteFormState() : $form_state;
+    $triggering = $state->getTriggeringElement() ?? [];
+    $path = $triggering[self::TRIGGER_KEY]['path'] ?? NULL;
+    if (!is_array($path) || $path === []) {
+      return NULL;
+    }
+    $element = NestedArray::getValue($container, $path);
+    return is_array($element) && isset($element['#array_parents']) && $element['#array_parents'] === ($triggering['#array_parents'] ?? NULL)
+      ? implode('.', $path)
+      : NULL;
+  }
+
+  /**
+   * Names a container by its place in the form.
+   *
+   * What a request holds for a container is keyed by this rather than
+   * by its id: a rebuild that posted no id generates a new one, and the
+   * place is the same in every build.
+   *
+   * @param array $container
+   *   The container, processed far enough to know its #array_parents.
+   *
+   * @return string
+   *   The key.
+   */
+  protected static function containerKey(array $container): string {
+    return implode('][', $container['#array_parents'] ?? []);
+  }
+
+  /**
+   * Lists what every trigger with options below an element offers.
+   *
+   * @param array $element
+   *   The container, or an element inside it.
+   *
+   * @return array<string, string>
+   *   Each trigger's options signature, keyed by its dotted path.
+   */
+  protected static function triggerOptions(array $element): array {
+    $found = [];
+    foreach (static::elementChildren($element) as $key) {
+      $child = $element[$key];
+      $path = $child[self::TRIGGER_KEY]['path'] ?? NULL;
+      $signature = is_array($path) ? static::optionsSignature($child) : NULL;
+      if ($signature !== NULL) {
+        $found[implode('.', $path)] = $signature;
+      }
+      $found += static::triggerOptions($child);
+    }
+    return $found;
+  }
+
+  /**
+   * Says which options an element offers, the empty one included.
+   *
+   * The same before and after Form API processes a select, which turns
+   * its #empty_option into an option keyed by the empty string.
+   *
+   * @param array $element
+   *   The element.
+   *
+   * @return string|null
+   *   The signature, or NULL for an element with no options.
+   */
+  protected static function optionsSignature(array $element): ?string {
+    if (!isset($element['#options']) || !is_array($element['#options'])) {
+      return NULL;
+    }
+    $keys = array_map('strval', array_keys(OptGroup::flattenOptions($element['#options'])));
+    $empty = isset($element['#empty_option']) || in_array('', $keys, TRUE);
+    return serialize([array_values(array_diff($keys, [''])), $empty]);
+  }
+
+  /**
+   * Puts the trigger's own errors under it, and takes them off the top.
+   *
+   * Two sources, one rendering. What flagSurfaceErrors() held for the
+   * trigger; and what Form API's own element validation said about it,
+   * a maximum length, which stops the rebuild, and which Form API has
+   * also put in the messages at the top of the page: it is taken back
+   * out of them, so the message is said once.
+   *
+   * @param array $element
+   *   The trigger, as the callback is about to render it.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state of the request.
+   * @param string $container_key
+   *   The container's place in the form, from containerKey().
+   * @param string $dotted
+   *   The trigger's dotted path below the container.
+   *
+   * @return array
+   *   The trigger, carrying its errors when it has any.
+   */
+  protected static function withTriggerErrors(array $element, FormStateInterface $form_state, string $container_key, string $dotted): array {
+    $state = $form_state instanceof SubformStateInterface ? $form_state->getCompleteFormState() : $form_state;
+    $messages = $state->getTemporaryValue([self::TRIGGER_ERRORS, $container_key, $dotted]) ?? [];
+    $own = $element['#errors'] ?? NULL;
+    if ($own !== NULL && $own !== '') {
+      // One answer per element, as Form API keeps one: the surface's own
+      // when it has one, a constraint's message being the most exact
+      // thing anyone can say about the value; Form API's otherwise.
+      $messages = $messages === [] ? [$own] : $messages;
+      // @phpstan-ignore globalDrupalDependencyInjection.useDependencyInjection
+      $messenger = \Drupal::messenger();
+      foreach ($messenger->deleteByType(MessengerInterface::TYPE_ERROR) as $message) {
+        if ((string) $message !== (string) $own) {
+          $messenger->addError($message);
+        }
+      }
+    }
+    if ($messages === []) {
+      return $element;
+    }
+    $element['#errors'] = count($messages) === 1 ? reset($messages) : [
+      '#theme' => 'item_list',
+      '#items' => $messages,
+    ];
+    $element[self::INLINE_ERROR_KEY] = TRUE;
+    // What core sets on an element that failed validation, said here for
+    // a trigger that was rebuilt rather than failed: the request held its
+    // error back so the rebuild could go ahead.
+    $element['#attributes']['aria-invalid'] = 'true';
+    $classes = $element['#attributes']['class'] ?? [];
+    if (!in_array('error', $classes, TRUE)) {
+      $element['#attributes']['class'][] = 'error';
+    }
+    // The trigger's #ajax was processed when the form was built, so its
+    // settings are amended where they are attached: its next request
+    // says it showed an error, and is answered by replacing it again.
+    if (isset($element['#id'], $element['#attached']['drupalSettings']['ajax'][$element['#id']])) {
+      $element['#attached']['drupalSettings']['ajax'][$element['#id']]['submit'][self::INVALID_INPUT] = '1';
+    }
+    return $element;
   }
 
   /**
@@ -1076,6 +1276,9 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface {
       'submit' => [self::WRAPPER_INPUT => $wrapper_id],
     ];
     $element[self::TRIGGER_KEY] = ['path' => $path, 'replaces' => $replaces];
+    // A wrapper of its own as well: a trigger is replaced when its own
+    // value was refused, so the error is printed under it.
+    $element[self::REFRESH_KEY] ??= implode('.', $path);
     return $element;
   }
 

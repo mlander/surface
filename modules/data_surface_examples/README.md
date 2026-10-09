@@ -406,9 +406,10 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
    */
   public function alterInputs(ShapeAdditionsInterface $inputs): void {
     $licence = ['pattern' => '/^EV-\d{4}$/', 'message' => 'An event licence is EV- and four digits, such as EV-2048.'];
-    $inputs->add('licence', 'string', $this->t('Event licence'))
-      ->setDescription($this->t('Required to host more than 100 people.'))
+    $licence_key = $inputs->add('licence', 'string', $this->t('Event licence'))
+      ->setDescription($this->t('Required to host more than 100 people. A licence is EV- and four digits, such as EV-2048.'))
       ->addConstraint('Regex', $licence);
+    DefinitionMetadata::setExamples($licence_key, ['EV-2048']);
     $inputs->add('stewards', 'integer', $this->t('Stewards'), default: 1)->setRequired(TRUE);
     $inputs->describe('title', label: $this->t('Public event title'));
   }
@@ -440,8 +441,13 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
 
 Choose Riverside Hall's main hall, which seats 400. The capacity stops
 at 100, and its help text says why. Type `EV-2048` as the event licence
-and the capacity goes back to 400; type `EV-20` and the licence is
-refused, in the alter's words. Set the capacity to 150 and the stewards
+and the capacity goes back to 400; type `EV-20` or `ev-2048` and the
+licence is refused, in the alter's words, under the field, and the
+capacity stops at 100 again: a refiner never sees a value its own key
+refuses, so a licence in the wrong format is no licence. The help text
+says the format before anything is typed, and the box shows `EV-2048`
+as its placeholder: a pattern explains nothing to a person, so the
+Regex carries a message, and the panel's "Allows" column says that. Set the capacity to 150 and the stewards
 field asks for at least 3. In the panel, the capacity's row now depends
 on `room` and on the licence's path. An alter can add and tighten. It
 can never take away what the owner declared.

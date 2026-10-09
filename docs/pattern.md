@@ -171,6 +171,16 @@ and `Length`, and three situations, below.)
 - **One refiner, one rule, one name.** `bundleOfEntityType()`,
   `fieldOfBundle()`, `shortInGrid()`. The docblock states the rule; the
   signature states what it reads.
+- **A refiner trusts what it is handed.** A sibling value its own key
+  refuses is never passed in: the engine treats it as unanswered
+  ([decision](decisions.md#a-refiner-never-sees-an-invalid-sibling)).
+  So a refiner asks whether a licence is there, not whether it is well
+  formed.
+- **A Regex carries a message.** The pattern cannot be read by the
+  person it refuses, so its `message` is what they are told, in the
+  error and wherever the key's allowed values are explained
+  ([decision](decisions.md#a-regex-is-explained-by-its-message)). A
+  Regex without one is a smell: the panel can only show the pattern.
 - **Everything named by class.** Children, variants, targets, access,
   the surface an alter or situation belongs to: always `X::class`,
   never an instance or a string, so it is one click away.

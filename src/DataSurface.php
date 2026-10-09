@@ -7,12 +7,14 @@ namespace Drupal\data_surface;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Cache\CacheableMetadata;
+use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\data_surface\Refinement\ChoiceSet;
 use Drupal\data_surface\Refinement\Narrowing;
+use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
 use Drupal\data_surface\Target\SettingsShapeInterface;
 
 /**
@@ -22,7 +24,10 @@ use Drupal\data_surface\Target\SettingsShapeInterface;
  * but read its own definitions and apply the refiners it was sealed
  * with. That is what lets a surface ride along in a cached form and be
  * read by a caller that has no container at all. Validation, which needs
- * the typed data manager, is the pipeline's.
+ * the typed data manager, is the pipeline's. The one question refinement
+ * asks of a value — may a refiner see it? — goes to the watched value
+ * check the surface was sealed with, which serializes as a service id
+ * the way an alter's refiner link does.
  *
  * Everything the surface knows about one key lives on that key's
  * SurfaceEntry inside the DefinitionMap, so there are no parallel arrays
@@ -64,6 +69,10 @@ final class DataSurface implements DataSurfaceInterface {
    * @param array<string, \Drupal\data_surface\Target\SettingsShapeInterface> $thirdPartyShapes
    *   How each provider's mounted third-party settings are stored, by
    *   provider; a provider not listed stores them as described.
+   * @param \Drupal\data_surface\Refinement\WatchedValueCheckInterface|null $watchedValueCheck
+   *   What a watched value passes before a refiner is handed it; NULL
+   *   for a surface no build step made, which hands every configured
+   *   value over.
    *
    * @internal
    *   A surface is built by the build step, which seals a
@@ -77,6 +86,7 @@ final class DataSurface implements DataSurfaceInterface {
     protected readonly CacheableMetadata $cacheability = new CacheableMetadata(),
     protected readonly DefinitionMap $outputs = new DefinitionMap([]),
     protected readonly array $thirdPartyShapes = [],
+    protected readonly ?WatchedValueCheckInterface $watchedValueCheck = NULL,
   ) {
   }
 
@@ -185,10 +195,47 @@ final class DataSurface implements DataSurfaceInterface {
    */
   public function refine(array $values): static {
     $refines = $this->refines();
-    $nested = $this->definitions->hasNested();
-    if (!$refines && !$nested) {
+    if (!$refines && !$this->definitions->hasNested()) {
       return $this;
     }
+    if (!$refines || $this->watchedValueCheck === NULL) {
+      return $this->refineAgainst($values, $values);
+    }
+    // Decision: see docs/decisions.md#a-refiner-never-sees-an-invalid-sibling.
+    $admitted = $values;
+    $graph = $this->definitions->refinementPaths();
+    do {
+      $refined = $this->refineAgainst($values, $admitted);
+      $refused = $this->refusedWatchedValues($refined, $admitted);
+      // Only the refusals nothing refused stands upstream of are final:
+      // withholding a venue moves the room's definition, and the room is
+      // judged again against that, not against what the venue made it.
+      $withheld = array_filter(
+        $refused,
+        static fn (string $path): bool => array_intersect(static::upstreamOf($path, $graph), $refused) === [],
+      );
+      foreach ($withheld as $path) {
+        NestedArray::setValue($admitted, explode('.', $path), NULL, TRUE);
+      }
+    } while ($withheld !== []);
+    return $refined;
+  }
+
+  /**
+   * Refines every key once, against the values each refiner may see.
+   *
+   * @param array $values
+   *   The values as they stand, which a subsurface is refined against in
+   *   its own frame, and which choose a slot's variant.
+   * @param array $admitted
+   *   The same values with every refused watched value withheld, which
+   *   are what a refiner is handed.
+   *
+   * @return static
+   *   A refined surface, or this one when nothing refines.
+   */
+  protected function refineAgainst(array $values, array $admitted): static {
+    $refines = $this->refines();
     $definitions = $this->definitions;
     $cacheability = CacheableMetadata::createFromObject($this);
     $changed = FALSE;
@@ -206,7 +253,7 @@ final class DataSurface implements DataSurfaceInterface {
       if (!$refines || $entry->dependencies === []) {
         continue;
       }
-      $dependency_values = $this->dependencyValues($entry->dependencies, $values);
+      $dependency_values = $this->dependencyValues($entry->dependencies, $admitted);
       if ($dependency_values === NULL) {
         continue;
       }
@@ -220,8 +267,70 @@ final class DataSurface implements DataSurfaceInterface {
       $changed = TRUE;
     }
     return $changed
-      ? new self($definitions, $cacheability, $this->outputs, $this->thirdPartyShapes)
+      ? new self($definitions, $cacheability, $this->outputs, $this->thirdPartyShapes, $this->watchedValueCheck)
       : $this;
+  }
+
+  /**
+   * Lists the watched values their own refined definitions refuse.
+   *
+   * A watched key is judged by its definition as refined against the
+   * same admitted values, because that is the definition it is held to
+   * once the surface is refined: a capacity of 250 is refused under the
+   * hundred an unlicensed event allows, and nothing watching it sees it.
+   * A key that holds nothing is withheld already, and a subsurface is
+   * judged by its own child, so neither is asked here.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $refined
+   *   The surface refined against the admitted values.
+   * @param array $admitted
+   *   The values a refiner is handed so far.
+   *
+   * @return string[]
+   *   The keys, or a mounted key's dotted path, whose value is refused.
+   */
+  protected function refusedWatchedValues(DataSurfaceInterface $refined, array $admitted): array {
+    $refused = [];
+    foreach ($this->definitions->refinementDependencies() as $path) {
+      $parents = explode('.', $path);
+      $value = NestedArray::getValue($admitted, $parents);
+      if (!ValueState::isConfigured($value) || $this->definitions->entry($parents[0])?->isNested() !== FALSE) {
+        continue;
+      }
+      $definition = $refined->getDefinition((string) array_shift($parents));
+      foreach ($parents as $property) {
+        $definition = $definition instanceof ComplexDataDefinitionInterface ? $definition->getPropertyDefinition($property) : NULL;
+      }
+      if ($definition !== NULL && $this->watchedValueCheck !== NULL && !$this->watchedValueCheck->admits($definition, $value)) {
+        $refused[] = $path;
+      }
+    }
+    return $refused;
+  }
+
+  /**
+   * Lists every key a key refines against, directly or through others.
+   *
+   * @param string $path
+   *   A key, or a mounted key's dotted path.
+   * @param array<string, string[]> $graph
+   *   The refinement map, one mounted key at a time.
+   *
+   * @return string[]
+   *   The keys upstream of it, never the key itself.
+   */
+  protected static function upstreamOf(string $path, array $graph): array {
+    $reached = [];
+    $queue = $graph[$path] ?? [];
+    while ($queue !== []) {
+      $dependency = (string) array_shift($queue);
+      if ($dependency === $path || isset($reached[$dependency])) {
+        continue;
+      }
+      $reached[$dependency] = $dependency;
+      array_push($queue, ...($graph[$dependency] ?? []));
+    }
+    return array_values($reached);
   }
 
   /**

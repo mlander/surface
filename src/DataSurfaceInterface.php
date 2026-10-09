@@ -189,6 +189,14 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
    * checkbox that is off and a list with no items are answers a refiner
    * can narrow against.
    *
+   * A refiner never sees an invalid sibling value. Each watched value is
+   * first held to its own key's refined definition, and a value that
+   * definition refuses is passed as if the key held nothing: a whole key
+   * withholds the refiners watching it, a key an alter mounted is handed
+   * as NULL. The values themselves are not changed, so a form still
+   * shows what was typed and the pipeline still refuses it, under its own
+   * key; only refinement treats it as absent.
+   *
    * What refinement does with those values, in four lines:
    * 1. Deep-clone the advertised definition and divide its list of
    *    allowed values into the owner's — everything nobody contributed —

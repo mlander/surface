@@ -7,6 +7,7 @@ namespace Drupal\data_surface_examples_compliance\SurfaceAlter;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\DataDefinition;
+use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Surface\Attribute\AltersSurface;
 use Drupal\data_surface\Surface\Attribute\RefinesInput;
 use Drupal\data_surface\Surface\ShapeAdditionsInterface;
@@ -42,9 +43,10 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
    */
   public function alterInputs(ShapeAdditionsInterface $inputs): void {
     $licence = ['pattern' => '/^EV-\d{4}$/', 'message' => 'An event licence is EV- and four digits, such as EV-2048.'];
-    $inputs->add('licence', 'string', $this->t('Event licence'))
-      ->setDescription($this->t('Required to host more than 100 people.'))
+    $licence_key = $inputs->add('licence', 'string', $this->t('Event licence'))
+      ->setDescription($this->t('Required to host more than 100 people. A licence is EV- and four digits, such as EV-2048.'))
       ->addConstraint('Regex', $licence);
+    DefinitionMetadata::setExamples($licence_key, ['EV-2048']);
     $inputs->add('stewards', 'integer', $this->t('Stewards'), default: 1)->setRequired(TRUE);
     $inputs->describe('title', label: $this->t('Public event title'));
   }

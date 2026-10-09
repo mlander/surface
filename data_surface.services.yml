@@ -30,8 +30,13 @@ services:
     arguments: ['%data_surface.surface_classes%', '@cache.discovery', '@data_surface.surface_plugins']
   data_surface.surfaces:
     class: Drupal\data_surface\SurfaceBuild\Surfaces
-    arguments: ['@data_surface.surface_registry', '@typed_data_manager', '@class_resolver', '@current_user', '@data_surface.situation_arguments', '@data_surface.derived_variants']
+    arguments: ['@data_surface.surface_registry', '@typed_data_manager', '@class_resolver', '@current_user', '@data_surface.situation_arguments', '@data_surface.derived_variants', '@data_surface.watched_value_check']
   Drupal\data_surface\SurfaceBuild\SurfacesInterface: '@data_surface.surfaces'
+  # Sealed into every surface the build step makes: a watched value its
+  # own definition refuses is handed to no refiner.
+  data_surface.watched_value_check:
+    class: Drupal\data_surface\Refinement\WatchedValueCheck
+    arguments: ['@typed_data_manager']
   # What fills an open slot for the values no #[SurfaceVariant] fills:
   # every service tagged data_surface.derived_variants.
   data_surface.derived_variants:

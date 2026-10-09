@@ -102,7 +102,9 @@ class DataSurfaceRefinementTest extends WebDriverTestBase {
     // definition the refiner replaced rather than from a second list
     // kept somewhere beside it. Only what the entity type moves is
     // replaced: the bundle and the field, and not the entity type select
-    // itself or the headline beside it.
+    // itself or the headline beside it. A trigger is redrawn only when
+    // its own value is refused or the rebuild moved its options, and
+    // neither is the case for a required select already on a choice.
     $this->probe(['settings[entity_type]', 'settings[headline]', 'settings[bundle]', 'settings[field]']);
     $assert_session->selectExists('settings[entity_type]')->selectOption('node');
     $assert_session->assertWaitOnAjaxRequest();
@@ -124,7 +126,8 @@ class DataSurfaceRefinementTest extends WebDriverTestBase {
     $this->probe(['settings[entity_type]', 'settings[bundle]', 'settings[field]']);
     $assert_session->selectExists('settings[bundle]')->selectOption('article');
     $assert_session->assertWaitOnAjaxRequest();
-    // The bundle moves the field and nothing above it.
+    // The bundle moves the field and nothing above it. The bundle is
+    // optional, so its - None - option stays and it is not redrawn.
     $this->assertTrue($this->stillProbed('settings[entity_type]'));
     $this->assertTrue($this->stillProbed('settings[bundle]'));
     $this->assertFalse($this->stillProbed('settings[field]'));

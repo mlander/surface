@@ -153,8 +153,9 @@ dependency is touched.
 
 ### What a change replaces
 
-**Only what the change moved, and never the element that was touched.**
-Changing a key replaces the keys that refine against it, then the keys
+**Only what the change moved, and the element that was touched only
+when what it shows is wrong.** Changing a key replaces the keys that
+refine against it, then the keys
 that refine against those, until nothing new is reached: the same
 closure the [discard cascade](#the-in-form-half-discarding-orphaned-input)
 walks. In the registration example, the venue replaces the room and the
@@ -172,10 +173,11 @@ The callback answers with an `AjaxResponse`:
 | `ReplaceCommand` | Each dependent, by its own wrapper. A slot whose deciding key moved is replaced whole, by the slot's wrapper. |
 | `ReplaceCommand` | Each element placed with `placeRefreshed()` — the situation form's panel — on every rebuild. |
 | `RemoveCommand`, then `AppendCommand` | The [stale marker](#stale-values-on-a-form): removed, and appended to the container again when the rebuild left one. It names stale selects across the whole container and may appear or disappear with the rebuild, so it is never replaced in place. |
-| `RemoveCommand`, then `PrependCommand` | The messages the request produced — an error on the trigger itself, the one value a refinement request judges — printed inside the container where the render-array path printed them, after the previous request's are taken away. |
+| `ReplaceCommand` | The trigger itself, by its own wrapper, in three cases only: its own value was refused (the error is printed under it), its previous request printed an error under it (so a fixed error goes away), or the rebuild changed the options it offers (a required select loses `- Select -` once something is chosen). |
+| `RemoveCommand`, then `PrependCommand` | Whatever else the request put in the messenger, a stale value kept, printed inside the container where the render-array path printed it, after the previous request's are taken away. An error on the trigger is never among them: it is printed under the trigger. |
 
-Each refinement target, each slot and each placed element gets a
-wrapper of its own, a `div` in its `#prefix` and `#suffix`, with its id
+Each refinement target, each trigger, each slot and each placed
+element gets a wrapper of its own, a `div` in its `#prefix` and `#suffix`, with its id
 on the element under `REFRESH_ID_KEY`. The ids are derived from the
 container's id and the element's path below it
 (`<container>--shelf--height`), so they are unique wherever the
@@ -203,13 +205,37 @@ the request (core's `#ajax['submit']`, under `WRAPPER_INPUT`), and
 have generated. The container keeps the id it was first rendered with
 for as long as the page lives.
 
-One consequence of not replacing the trigger: it keeps the options it
-was rendered with. A required select first offered on `- Select -`
-keeps that option in the page after a choice, while the rebuilt form no
-longer has it, so choosing it again is refused as a value the select
-does not offer, and printed inside the container. The trigger's own
-answer is the one value a refinement request judges, so this is the
-error that request can produce, and nothing else is affected.
+**An error on the trigger is printed under it, once.** The trigger's
+own answer is the one value a refinement request judges, so it is the
+one error that request can produce. A violation the surface reports on
+it is not made a Form API error, because Form API skips the rebuild
+once anything has errored and every dependent would come back refined
+against the answer before this one: the builder holds it for the
+request, the rebuild goes ahead — refining as though the refused value
+were not there, since [a refiner never sees an invalid
+sibling](decisions.md#a-refiner-never-sees-an-invalid-sibling) — and
+the callback replaces the trigger with the error under it, in the form
+element template's own error slot, with `aria-invalid` and the `error`
+class. Type `ev-2048` as example 3's licence: the licence is redrawn
+with "An event licence is EV- and four digits, such as EV-2048." under
+it, and the capacity with the no-licence ceiling of 100. The message is
+said there and nowhere else: not at the top of the container, and not
+held over to the next page. An error Form API's own element validation
+sets on the trigger, a maximum length, still stops the rebuild, and is
+printed the same way and taken off the top. The trigger's next request
+replaces it again, so an error the person fixed goes away with it
+([decision](decisions.md#an-error-on-the-trigger-renders-inline)).
+
+The same exception covers the case that used to be this section's
+trade-off. A trigger keeps the options it was rendered with, and a
+required select first offered on `- Select -` lost that option in the
+rebuilt form after a choice, so choosing it again was refused as a
+value the select did not offer. The callback now compares the options
+the trigger was rendered with (read off the form the request arrived
+with) to the rebuilt ones, and replaces a trigger whose options moved:
+the select is redrawn without `- Select -` the moment something is
+chosen, and the page and the form agree again. It is redrawn only
+then; a trigger whose options did not move is never touched.
 
 ### `#limit_validation_errors`
 

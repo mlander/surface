@@ -7,6 +7,7 @@ namespace Drupal\Tests\data_surface\Kernel;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceInterface;
+use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Form\DataSurfaceSituationForm;
 use Drupal\data_surface\Pipeline\DataSurfaceResult;
@@ -299,11 +300,174 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
       $this->wrapperSelector($container[DataSurfaceSituationForm::PANEL_KEY]),
     ], $this->ajaxSelectors($response, 'replaceWith'));
     $this->assertStringContainsString('At least 1 stewards for 20 attendees.', $this->ajaxMarkup($response, $this->wrapperSelector($stewards)));
-    // The licence triggers a rebuild and is no target, so it has no
-    // wrapper; the stewards are a target and trigger nothing.
+    // The licence triggers a rebuild and is no target, yet has a wrapper
+    // of its own, for the one case it is replaced: its value refused.
+    // The stewards are a target and trigger nothing.
     $this->assertArrayHasKey('#ajax', $container['third_party_settings'][self::MODULE]['licence']);
-    $this->assertArrayNotHasKey(DataSurfaceFormBuilderInterface::REFRESH_ID_KEY, $container['third_party_settings'][self::MODULE]['licence']);
+    $this->assertArrayHasKey(DataSurfaceFormBuilderInterface::REFRESH_ID_KEY, $container['third_party_settings'][self::MODULE]['licence']);
     $this->assertArrayNotHasKey('#ajax', $stewards);
+  }
+
+  /**
+   * Tests the licence says its format before anything is typed.
+   */
+  public function testTheLicenceSaysItsFormat(): void {
+    $licence = $this->mounted($this->surface(), 'licence');
+    $this->assertSame('Required to host more than 100 people. A licence is EV- and four digits, such as EV-2048.', (string) $licence->getDescription());
+    $this->assertSame(['EV-2048'], DefinitionMetadata::getExamples($licence));
+    $element = $this->container->get('plugin.manager.data_surface_widget')->getWidgetFor($licence)->buildElement($licence, NULL);
+    $this->assertSame('EV-2048', $element['#placeholder']);
+    // The message carries the explanation; the input carries no pattern
+    // for Form API or a browser to answer in vaguer words.
+    $this->assertArrayNotHasKey('#pattern', $element);
+    $this->assertArrayNotHasKey('pattern', $element['#attributes'] ?? []);
+  }
+
+  /**
+   * Tests a licence in the wrong format is no licence to the refiner.
+   *
+   * The engine holds a watched value to its own key's refined definition
+   * before handing it over; `ev-2048` fails the Regex, so the alter's
+   * refiner is handed NULL and the ceiling of 100 applies, exactly as
+   * with no licence. The alter itself only asks whether one is there.
+   */
+  public function testAnInvalidLicenceIsNoLicence(): void {
+    $surface = $this->surface();
+    $capacity = $surface->refine(self::EVENT + self::compliance('ev-2048'))->getDefinition('capacity');
+    $this->assertSame(['min' => 1, 'max' => 100], $capacity->getConstraints()['Range']);
+    $this->assertSame('Up to 100 without an event licence.', (string) $capacity->getDescription());
+
+    // Downstream of it, a capacity above that ceiling is itself refused,
+    // so the stewards' minimum is not refined against it.
+    $stewards = $this->mounted($surface->refine(['capacity' => 250] + self::EVENT + self::compliance('ev-2048')), 'stewards');
+    $this->assertArrayNotHasKey('Range', $stewards->getConstraints());
+    $stewards = $this->mounted($surface->refine(['capacity' => 250] + self::EVENT + self::compliance('EV-2048')), 'stewards');
+    $this->assertSame(['min' => 5], $stewards->getConstraints()['Range']);
+  }
+
+  /**
+   * Tests the pipeline refuses the licence and the ceiling, both at once.
+   */
+  public function testThePipelineRefusesTheInvalidLicenceAndTheCeiling(): void {
+    $violations = iterator_to_array($this->pipeline()->validate($this->surface(), ['capacity' => 150] + self::compliance('ev-2048', 3) + self::EVENT));
+    $messages = [];
+    foreach ($violations as $violation) {
+      $messages[$violation->fullPath()] = (string) $violation->message;
+    }
+    $this->assertSame(['capacity', self::LICENCE], array_keys($messages));
+    $this->assertSame('An event licence is EV- and four digits, such as EV-2048.', $messages[self::LICENCE]);
+    $this->assertStringContainsString('100', $messages['capacity']);
+    $this->assertStringNotContainsString('400', $messages['capacity']);
+  }
+
+  /**
+   * Tests an invalid licence is said under the licence, once.
+   *
+   * The refinement request holds the licence's own violation back, so
+   * the rebuild goes ahead and the capacity comes back with the
+   * no-licence ceiling; the response replaces the licence too, with the
+   * error under it, and prints it nowhere else. Its next request, the
+   * licence fixed, replaces it again without the error.
+   */
+  public function testAnInvalidLicenceIsSaidUnderItOnce(): void {
+    $this->actAsAnonymousAdministrator();
+    $this->config('data_surface_examples.registration_step3')->set('venue', 'riverside')->set('room', 'riverside_main')->save();
+    $message = 'An event licence is EV- and four digits, such as EV-2048.';
+    $surface = [
+      'title' => 'Spring meetup',
+      'capacity' => '50',
+      'open' => '1',
+      'venue' => 'riverside',
+      'room' => 'riverside_main',
+      'pricing' => 'free',
+      'ticket' => ['note' => ''],
+      'contact' => ['email' => 'events@example.com', 'phone' => ''],
+      'third_party_settings' => [self::MODULE => ['licence' => 'ev-2048', 'stewards' => '1']],
+    ];
+    $trigger = ['_triggering_element_name' => 'surface[third_party_settings][' . self::MODULE . '][licence]'];
+    $state = $this->postStep(3, $surface, $trigger);
+    // No Form API error, or Form API would have skipped the rebuild.
+    $this->assertSame([], array_map('strval', $state->getErrors()));
+    $container = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY];
+    $licence = $container['third_party_settings'][self::MODULE]['licence'];
+    $response = $this->ajaxResponse($state);
+    $this->assertSame([
+      $this->wrapperSelector($container['capacity']),
+      $this->wrapperSelector($container['third_party_settings'][self::MODULE]['stewards']),
+      $this->wrapperSelector($container[DataSurfaceSituationForm::PANEL_KEY]),
+      $this->wrapperSelector($licence),
+    ], $this->ajaxSelectors($response, 'replaceWith'));
+
+    $capacity = $this->ajaxMarkup($response, $this->wrapperSelector($container['capacity']));
+    $this->assertStringContainsString('max="100"', $capacity);
+    $this->assertStringContainsString('Up to 100 without an event licence.', $capacity);
+
+    $markup = $this->ajaxMarkup($response, $this->wrapperSelector($licence));
+    $this->assertSame(1, substr_count($markup, $message));
+    $this->assertStringContainsString('aria-invalid="true"', $markup);
+    $this->assertStringContainsString('form-item--error-message', $markup);
+    $this->assertStringContainsString('value="ev-2048"', $markup);
+    // Said under the licence and nowhere else: no messages block, and
+    // nothing left in the messenger for the next page.
+    $this->assertSame([], $this->ajaxSelectors($response, 'prepend'));
+    $this->assertSame([], $this->container->get('messenger')->all());
+    $said = 0;
+    foreach ($response->getCommands() as $command) {
+      if (($command['selector'] ?? NULL) !== $this->wrapperSelector($container[DataSurfaceSituationForm::PANEL_KEY])) {
+        $said += substr_count((string) ($command['data'] ?? ''), $message);
+        $this->assertStringNotContainsString('is not in the right format', (string) ($command['data'] ?? ''));
+      }
+    }
+    $this->assertSame(1, $said);
+    // The panel explains the licence by the same sentence, never by its
+    // pattern.
+    $panel = $this->ajaxMarkup($response, $this->wrapperSelector($container[DataSurfaceSituationForm::PANEL_KEY]));
+    $this->assertMatchesRegularExpression('#data-surface-key="' . preg_quote(self::LICENCE, '#') . '">(?:(?!</tr>).)*<td>' . preg_quote($message, '#') . '</td>#s', $panel);
+
+    // Fixed, and sent with the marker the replaced licence carries.
+    $surface['third_party_settings'][self::MODULE]['licence'] = 'EV-2048';
+    $state = $this->postStep(3, $surface, $trigger + [DataSurfaceFormBuilderInterface::INVALID_INPUT => '1']);
+    $this->assertSame([], array_map('strval', $state->getErrors()));
+    $container = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY];
+    $licence = $container['third_party_settings'][self::MODULE]['licence'];
+    $response = $this->ajaxResponse($state);
+    $this->assertContains($this->wrapperSelector($licence), $this->ajaxSelectors($response, 'replaceWith'));
+    $markup = $this->ajaxMarkup($response, $this->wrapperSelector($licence));
+    $this->assertStringNotContainsString($message, $markup);
+    $this->assertStringNotContainsString('aria-invalid', $markup);
+    $this->assertStringContainsString('max="400"', $this->ajaxMarkup($response, $this->wrapperSelector($container['capacity'])));
+
+    // Valid and unmarked: the licence is left where it is.
+    $state = $this->postStep(3, $surface, $trigger);
+    $container = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY];
+    $this->assertNotContains($this->wrapperSelector($container['third_party_settings'][self::MODULE]['licence']), $this->ajaxSelectors($this->ajaxResponse($state), 'replaceWith'));
+  }
+
+  /**
+   * Tests a full submission refuses both, each in the surface's words.
+   */
+  public function testFullSubmissionRefusesBothInTheSurfaceWords(): void {
+    $this->actAsAnonymousAdministrator();
+    $surface = [
+      'title' => 'Spring meetup',
+      'capacity' => '150',
+      'open' => '1',
+      'venue' => 'riverside',
+      'room' => 'riverside_main',
+      'pricing' => 'free',
+      'ticket' => ['note' => ''],
+      'contact' => ['email' => 'events@example.com', 'phone' => ''],
+      'third_party_settings' => [self::MODULE => ['licence' => 'ev-2048', 'stewards' => '3']],
+    ];
+    $state = $this->postStep(3, $surface, ['op' => 'Save']);
+    $errors = array_map('strval', $state->getErrors());
+    $this->assertSame('An event licence is EV- and four digits, such as EV-2048.', $errors['surface][third_party_settings][' . self::MODULE . '][licence'] ?? NULL);
+    $this->assertArrayHasKey('surface][capacity', $errors);
+    $this->assertStringContainsString('100', $errors['surface][capacity']);
+    foreach ($errors as $error) {
+      $this->assertStringNotContainsString('is not in the right format', $error);
+    }
+    $this->assertSame(50, $this->config('data_surface_examples.registration_step3')->get('capacity'));
   }
 
   /**

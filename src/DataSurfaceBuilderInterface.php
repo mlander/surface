@@ -6,6 +6,7 @@ namespace Drupal\data_surface;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
 use Drupal\data_surface\Target\SettingsShapeInterface;
 
 /**
@@ -218,6 +219,27 @@ interface DataSurfaceBuilderInterface {
    * @see \Drupal\data_surface\Target\ConfigEntityTarget
    */
   public function setThirdPartyShape(string $provider, SettingsShapeInterface $shape): static;
+
+  /**
+   * Gives the sealed surface the check its watched values pass.
+   *
+   * Refinement hands a refiner a sibling's value only when that value
+   * satisfies the sibling's own refined definition; a refused value is
+   * passed as if the sibling held nothing. A surface sealed without a
+   * check — the engine's own tests build those — hands every configured
+   * value over.
+   *
+   * @param \Drupal\data_surface\Refinement\WatchedValueCheckInterface $check
+   *   The check, which rides inside the sealed surface.
+   *
+   * @return $this
+   *
+   * @throws \LogicException
+   *   When the builder is already sealed.
+   *
+   * @see docs/decisions.md#a-refiner-never-sees-an-invalid-sibling
+   */
+  public function setWatchedValueCheck(WatchedValueCheckInterface $check): static;
 
   /**
    * Gets an output definition, so alters can inspect or modify it.

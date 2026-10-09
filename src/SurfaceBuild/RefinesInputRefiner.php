@@ -25,7 +25,10 @@ use Drupal\data_surface\DataSurfaceRefinerInterface;
  * and with the sibling values each one watches, by parameter order. The
  * engine calls it only once every key the key refines against holds a
  * value; for a key two methods refine, that is the union of what both
- * watch, because the engine gates per key rather than per method.
+ * watch, because the engine gates per key rather than per method. A
+ * watched value its own key's definition refuses is never handed over:
+ * the engine treats it as unanswered, so a method on a mounted key gets
+ * NULL for it and a method gated on a whole key does not run.
  *
  * The call is made through reflection, which is what coerces a sibling
  * value the way PHP coerces a scalar argument outside strict mode. A

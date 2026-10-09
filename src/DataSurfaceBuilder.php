@@ -12,6 +12,7 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Refinement\ChoiceSet;
 use Drupal\data_surface\Refinement\Narrowing;
+use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
 use Drupal\data_surface\Target\SettingsShapeInterface;
 
 /**
@@ -95,6 +96,11 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
    * What the surface being built depends on.
    */
   protected CacheableMetadata $cacheability;
+
+  /**
+   * What a watched value passes before a refiner is handed it, if set.
+   */
+  protected ?WatchedValueCheckInterface $watchedValueCheck = NULL;
 
   /**
    * The sealed surface, once seal() has produced it.
@@ -207,6 +213,15 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   public function setThirdPartyShape(string $provider, SettingsShapeInterface $shape): static {
     $this->assertMutable();
     $this->thirdPartyShapes[$provider] = $shape;
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function setWatchedValueCheck(WatchedValueCheckInterface $check): static {
+    $this->assertMutable();
+    $this->watchedValueCheck = $check;
     return $this;
   }
 
@@ -411,6 +426,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
       $this->cacheability,
       DefinitionMap::fromArrays(definitions: $outputs),
       $this->thirdPartyShapes,
+      $this->watchedValueCheck,
     );
   }
 

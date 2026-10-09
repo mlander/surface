@@ -446,6 +446,10 @@ final class ContractEmitter {
       $extension['checkedOnServer'] = $schema[self::EXTENSION . '-checked'];
       unset($schema[self::EXTENSION . '-checked']);
     }
+    if (isset($schema[self::EXTENSION . '-pattern-message'])) {
+      $extension['patternMessage'] = $schema[self::EXTENSION . '-pattern-message'];
+      unset($schema[self::EXTENSION . '-pattern-message']);
+    }
     $schema[self::EXTENSION] = $extension;
     return [$schema, $shown];
   }
@@ -603,7 +607,9 @@ final class ContractEmitter {
    *   The JSON type it was given.
    *
    * @return array
-   *   The keywords, and under `x-surface-checked` the names of the
+   *   The keywords; under `x-surface-pattern-message` a Regex's own
+   *   message, which property() moves into `x-surface.patternMessage`;
+   *   and under `x-surface-checked` the names of the
    *   constraints no keyword states, which property() moves into
    *   `x-surface.checkedOnServer`.
    */
@@ -659,6 +665,10 @@ final class ContractEmitter {
           }
           else {
             $keywords['pattern'] = $pattern;
+          }
+          // A pattern is for machines; a person is told the message.
+          if (is_string($options['message'] ?? NULL) && $options['message'] !== '') {
+            $keywords[self::EXTENSION . '-pattern-message'] = $options['message'];
           }
           break;
 
@@ -858,7 +868,7 @@ final class ContractEmitter {
    *   The schema in plain JSON Schema.
    */
   protected function withoutExtension(array $schema): array {
-    unset($schema[self::EXTENSION], $schema[self::EXTENSION . '-checked']);
+    unset($schema[self::EXTENSION], $schema[self::EXTENSION . '-checked'], $schema[self::EXTENSION . '-pattern-message']);
     foreach ($schema as $key => $value) {
       if (is_array($value)) {
         $schema[$key] = $this->withoutExtension($value);

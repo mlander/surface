@@ -6,14 +6,23 @@ interface Row {
   type: string;
   label: string;
   required: boolean;
-  allows: string;
+  allows: Phrase[];
   dependsOn: string[];
   now: string;
 }
 
-/** Says what a property allows, in words, as the PHP panel does. */
-function allows(schema: Schema): string {
-  const phrases: string[] = [];
+/** One phrase of what a key allows: words, or words and a pattern in code. */
+type Phrase = string | { words: string; code: string };
+
+/**
+ * Says what a property allows, in words, as the PHP panel does.
+ *
+ * A pattern is explained by its Regex's message, never shown to a person
+ * as the explanation; only a Regex with no message falls back to the
+ * pattern itself, in code.
+ */
+function allows(schema: Schema): Phrase[] {
+  const phrases: Phrase[] = [];
   const offered = choices(schema);
   if (offered.length > 0) {
     phrases.push(`one of ${offered.map((choice) => choice.title ?? String(choice.const)).join(', ')}`);
@@ -34,12 +43,32 @@ function allows(schema: Schema): string {
     phrases.push('an email address');
   }
   if (schema.pattern !== undefined) {
-    phrases.push(`matching ${schema.pattern}`);
+    const message = schema['x-surface']?.patternMessage;
+    phrases.push(message ?? { words: 'matches a required format: ', code: schema.pattern });
   }
   for (const name of schema['x-surface']?.checkedOnServer ?? []) {
     phrases.push(`${name}, checked on the server`);
   }
-  return phrases.length === 0 ? 'anything of its type' : phrases.join('; ');
+  return phrases.length === 0 ? ['anything of its type'] : phrases;
+}
+
+/** Prints the phrases, semicolon separated, a pattern in code. */
+function Allows({ phrases }: { phrases: Phrase[] }): JSX.Element {
+  return (
+    <>
+      {phrases.map((phrase, index) => (
+        <span key={index}>
+          {index > 0 ? '; ' : ''}
+          {typeof phrase === 'string' ? phrase : (
+            <>
+              {phrase.words}
+              <code>{phrase.code}</code>
+            </>
+          )}
+        </span>
+      ))}
+    </>
+  );
 }
 
 /** One row per key, parts and the chosen variant's keys included. */
@@ -56,8 +85,8 @@ function rows(schema: Schema, values: Values, prefix = ''): Row[] {
       label: property.title ?? name,
       required: (schema.required ?? []).includes(name),
       allows: widget === 'slot'
-        ? `a part chosen by ${extension?.by}: ${(extension?.variants ?? []).join(', ')}`
-        : widget === 'fieldset' ? 'its own keys' : allows(property),
+        ? [`a part chosen by ${extension?.by}: ${(extension?.variants ?? []).join(', ')}`]
+        : widget === 'fieldset' ? ['its own keys'] : allows(property),
       dependsOn: extension?.dependsOn ?? [],
       now: extension?.locked
         ? 'locked'
@@ -110,7 +139,9 @@ export function ContractPanel({ contract, values }: { contract: Contract; values
                 <td>{row.type}</td>
                 <td>{row.label}</td>
                 <td>{row.required ? 'yes' : 'no'}</td>
-                <td>{row.allows}</td>
+                <td>
+                  <Allows phrases={row.allows} />
+                </td>
                 <td>{row.dependsOn.length === 0 ? '—' : row.dependsOn.join(', ')}</td>
                 <td>{row.now}</td>
               </tr>

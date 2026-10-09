@@ -7,9 +7,11 @@ namespace Drupal\Tests\data_surface\Kernel;
 use Drupal\Core\Form\EnforcedResponseException;
 use Drupal\Core\Form\FormState;
 use Drupal\block\Entity\Block;
+use Drupal\data_surface\Surface\SurfaceContext;
 use Drupal\data_surface\Target\PluginConfigurationTarget;
 use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
 use Drupal\data_surface_demo\Plugin\Block\DataSurfaceDemoBlock;
+use Drupal\data_surface_demo\Surface\DemoBlockSurface;
 use Drupal\node\Entity\NodeType;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
@@ -158,6 +160,28 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     $form = $this->createBlock(['entity_type' => 'user'])
       ->buildConfigurationForm([], new FormState());
     $this->assertSame(['user' => 'User'], array_map('strval', $form['bundle']['#options']));
+  }
+
+  /**
+   * Tests an entity type the surface refuses refines nothing.
+   *
+   * A refiner never sees an invalid sibling: the bundle stays as it is
+   * advertised, with no list and the declared description, rather than
+   * being refined against an entity type that does not exist.
+   */
+  public function testAnInvalidEntityTypeLeavesTheBundleUnrefined(): void {
+    $surface = $this->container->get('data_surface.surfaces')->build(DemoBlockSurface::class, new SurfaceContext('configure'));
+    $advertised = $surface->getDefinition('bundle');
+    $bundle = $surface->refine(['entity_type' => 'no_such_type'])->getDefinition('bundle');
+    $this->assertArrayNotHasKey('EntityBundleExists', $bundle->getConstraints());
+    $this->assertSame($advertised->getConstraints(), $bundle->getConstraints());
+    $this->assertSame('Choose an entity type to see its bundles.', (string) $bundle->getDescription());
+    // The field watches the entity type too, and is held back with it.
+    $field = $surface->refine(['entity_type' => 'no_such_type', 'bundle' => 'article'])->getDefinition('field');
+    $this->assertArrayNotHasKey('DataSurfaceDemoBundleField', $field->getConstraints());
+
+    $bundle = $surface->refine(['entity_type' => 'node'])->getDefinition('bundle');
+    $this->assertSame(['entityTypeId' => 'node'], $bundle->getConstraints()['EntityBundleExists']);
   }
 
   /**

@@ -250,6 +250,18 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $refined = $this->json($this->post('surface-api/registration.step3/configure/refine', ['values' => $values]));
     $this->assertSame(400, $refined['schema']['properties']['capacity']['maximum']);
     $this->assertSame('EV-2048', $refined['values']['third_party_settings']['data_surface_examples_compliance']['licence']);
+
+    // A licence in the wrong format is no licence to the refiner: the
+    // ceiling of 100 again, the typed value handed back as it was, and
+    // the pattern explained by its message.
+    $values['third_party_settings']['data_surface_examples_compliance']['licence'] = 'ev-2048';
+    $refined = $this->json($this->post('surface-api/registration.step3/configure/refine', ['values' => $values]));
+    $this->assertSame(100, $refined['schema']['properties']['capacity']['maximum']);
+    $this->assertSame('Up to 100 without an event licence.', $refined['schema']['properties']['capacity']['description']);
+    $this->assertSame('ev-2048', $refined['values']['third_party_settings']['data_surface_examples_compliance']['licence']);
+    $schema = $refined['schema']['properties']['third_party_settings']['properties']['data_surface_examples_compliance']['properties']['licence'];
+    $this->assertSame('^EV-\\d{4}$', $schema['pattern']);
+    $this->assertSame('An event licence is EV- and four digits, such as EV-2048.', $schema['x-surface']['patternMessage']);
   }
 
   /**

@@ -99,6 +99,7 @@ is an object with `properties` in declaration order, `required`, and
 | `by`, `variants`, `chosen` | On a slot: the deciding key, the values that choose a variant, and the one chosen now. |
 | `variant` | On a slot's variant schema: which value it is for. |
 | `checkedOnServer` | Constraints no keyword states. |
+| `patternMessage` | On a key with a `pattern`: the Regex's own message, which is how a person is told what the pattern allows. The pattern is for machines; a renderer explains the key by this, never by the pattern. |
 
 ### A slot is a conditional
 

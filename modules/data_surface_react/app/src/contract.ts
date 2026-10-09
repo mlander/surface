@@ -31,6 +31,8 @@ export interface Extension {
   chosen?: string | null;
   variant?: string;
   checkedOnServer?: string[];
+  /** A Regex's own message: how a person is told what `pattern` allows. */
+  patternMessage?: string;
 }
 
 export interface Choice {

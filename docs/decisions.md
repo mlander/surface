@@ -141,6 +141,35 @@ parameter as `TRUE`. Forms hand refinement raw input, and a typed
 parameter that threw on it would make every checkbox a TypeError.
 (`RefinesInputRefiner`)
 
+### A refiner never sees an invalid sibling
+
+Before a key's refiners run, each value they watch is held to its own
+key's definition, as refined against the same values, and a value that
+definition refuses is passed as if the key held nothing: a whole key is
+then unanswered, so [the gate](#gating-per-key) withholds every refiner
+watching it and the target stays as advertised, and a key an alter
+mounted, which never holds a target back, is handed as `NULL`. So an
+event licence typed as `ev-2048` gives example 3's capacity the
+no-licence ceiling of 100, exactly as no licence does, and a capacity
+of 250 under that ceiling moves no steward minimum. A refusal upstream
+is settled before anything downstream is judged: withholding a venue
+widens the room, and the room is judged again against that. The values
+themselves are not touched, so a form keeps showing what was typed and
+the pipeline refuses it under its own key; only refinement treats it as
+absent. It is the Tool API's rule, which validates the simulated
+dependency values and keeps the unrefined definition on a violation,
+and it lives in `DataSurface::refine()` itself, so the form, the AJAX
+rebuild, the pipeline's validate, the served contract and the React
+refine all get it from one place. The check is
+`Refinement\WatchedValueCheck`, typed data's own validation, sealed
+into every surface the build step makes and serialized by its service
+id; a surface sealed without one, which only the engine's tests build,
+hands every configured value over. A refiner may therefore assume what
+it is handed satisfies its sibling's constraints, and
+`RegistrationComplianceAlter` tests only that a licence is there.
+(`DataSurface::refine()`, `DataSurface::refusedWatchedValues()`,
+`Surfaces::buildSurface()`)
+
 ### Alters' refiners in the owner's chain
 
 An alter's `#[RefinesInput]` method on an owner's key runs in the
@@ -395,6 +424,47 @@ surface as it stands has to follow every change; it is handed the values the ele
 not a refined surface, so it can tell which variant a slot shows. The
 contract panel lives in `data_surface_tool`, since half of it is the
 derived tool's JSON Schema. (`DataSurfaceSituationForm::surfacePanel()`)
+
+### An error on the trigger renders inline
+
+A refinement request validates one value, the trigger's, and what is
+wrong with it is said under the trigger, once. A violation the surface
+reports on the trigger is not made a Form API error on that request:
+Form API skips the rebuild once anything has errored, and the
+dependents would come back refined against the answer before this one.
+`flagSurfaceErrors()` holds it in temporary form state instead, the
+rebuild goes ahead (refining as though the refused value were absent,
+by [the rule above](#a-refiner-never-sees-an-invalid-sibling)), and
+`refreshSurface()` gives the trigger the error: `#errors`,
+`aria-invalid` and the `error` class, printed in the form element
+template's own error slot by the module's preprocess, which is where
+Inline Form Errors would print it, so the two never print it twice.
+The response then replaces the trigger's own wrapper — the one
+exception to never redrawing the element that was touched — and the
+trigger's next request says it showed an error (`INVALID_INPUT`), so
+it is replaced once more and an error the person fixed is taken away.
+An error Form API's own element validation sets on the trigger, a
+maximum length, does stop the rebuild; it is printed the same way and
+taken back out of the messages at the top, so it is not said twice
+either. The surface's message wins when both have one. On a full
+submission nothing changes: core prints every error at the top and
+marks the elements. (`DataSurfaceFormBuilder::flagSurfaceErrors()`,
+`DataSurfaceFormBuilder::refreshSurface()`, `Hook\InlineErrorHooks`)
+
+### A Regex is explained by its message
+
+A pattern is for machines. Wherever the module explains what a key
+allows — the contract panel's "Allows" column, the React app's twin of
+it — a Regex is said in its own `message`, the sentence a refusal is
+reported in, and the pattern stays in the machine schema (`pattern`,
+with the message beside it as `x-surface.patternMessage`). Only a Regex
+with no message falls back to "matches a required format" and the
+pattern in code. Neither the string widget nor the React text input
+puts the pattern on the input: an HTML `pattern` makes the browser ask
+for "the requested format", and Form API's `#pattern` says
+"is not in the right format", both vaguer than the message the surface
+answers with. (`SurfaceContractPanel::regex()`,
+`ContractEmitter::keywords()`, `ContractPanel.tsx`)
 
 ### The empty option rule
 

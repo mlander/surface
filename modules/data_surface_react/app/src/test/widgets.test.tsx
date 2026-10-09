@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import type { Extension, Schema, Values } from '../contract';
 import { setAt } from '../contract';
+import { ContractPanel } from '../ContractPanel';
 import { Properties } from '../widgets/Field';
 
 // Each widget from a schema fragment the way the emitter writes one.
@@ -59,6 +60,29 @@ describe('text, textarea and email', () => {
     expect(input).toHaveValue('Featured');
     expect(input).toHaveAccessibleDescription('Shown above.');
     expect(screen.getByText('*')).toBeInTheDocument();
+  });
+
+  it('never puts a Regex on the input as a bare pattern: the server says what is wrong, in its message', () => {
+    const message = 'An event licence is EV- and four digits, such as EV-2048.';
+    render(
+      <Form
+        schema={object({
+          licence: {
+            title: 'Event licence',
+            type: 'string',
+            pattern: '^EV-\\d{4}$',
+            examples: ['EV-2048'],
+            'x-surface': x('text', { patternMessage: message }),
+          },
+        })}
+        initial={{ licence: 'ev-2048' }}
+      />,
+    );
+    const input = screen.getByLabelText(/Event licence/);
+    // A bare pattern makes the browser ask for "the requested format",
+    // which is vaguer than the message the server answers with.
+    expect(input).not.toHaveAttribute('pattern');
+    expect(input).toHaveAttribute('placeholder', 'EV-2048');
   });
 
   it('renders a textarea with neither maxlength nor placeholder', () => {
@@ -323,5 +347,33 @@ describe('fieldset, slot and list', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Remove 1' }));
     expect(seen.tags).toEqual(['two']);
     expect(screen.getByLabelText('Tag 1')).toHaveValue('two');
+  });
+});
+
+describe('the contract panel', () => {
+  it('explains a Regex by its message, and only a Regex without one by its pattern, in code', () => {
+    const message = 'An event licence is EV- and four digits, such as EV-2048.';
+    render(
+      <ContractPanel
+        contract={{
+          surface: 'example',
+          situation: 'configure',
+          label: null,
+          stale: [],
+          values: {},
+          schema: object({
+            licence: { title: 'Event licence', type: 'string', pattern: '^EV-\\d{4}$', 'x-surface': x('text', { patternMessage: message }) },
+            code: { title: 'Code', type: 'string', pattern: '^[a-z]+$', 'x-surface': x('text') },
+          }),
+        }}
+        values={{}}
+      />,
+    );
+    const licence = document.querySelector('tr[data-surface-key="licence"]') as HTMLElement;
+    expect(within(licence).getByText(message)).toBeInTheDocument();
+    expect(licence.textContent).not.toContain('^EV-');
+    const code = document.querySelector('tr[data-surface-key="code"]') as HTMLElement;
+    expect(code.textContent).toContain('matches a required format: ^[a-z]+$');
+    expect(within(code).getByText('^[a-z]+$').tagName).toBe('CODE');
   });
 });
