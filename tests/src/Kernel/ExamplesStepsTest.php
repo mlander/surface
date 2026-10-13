@@ -16,6 +16,7 @@ use Drupal\data_surface\Form\DataSurfaceSituationForm;
 use Drupal\data_surface\SurfaceBuild\SituationRoute;
 use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
 use Drupal\data_surface_examples\CodeLines;
+use Drupal\data_surface_examples\ExamplePanels;
 use Drupal\data_surface_examples\Form\RegistrationStep1ClassicForm;
 use Drupal\data_surface_examples\Surface\RegistrationStep1Surface;
 use Drupal\data_surface_examples\Surface\RegistrationStep2Surface;
@@ -319,7 +320,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     // per variant, keyed on the pricing beside it, and no widget hints.
     $this->serveRoute('data_surface_examples.step3');
     $form = $this->container->get('form_builder')->getForm(DataSurfaceSituationForm::class);
-    $panel = $form[DataSurfaceSituationForm::SURFACE_KEY][DataSurfaceSituationForm::PANEL_KEY];
+    $panel = $form[DataSurfaceSituationForm::SURFACE_KEY][DataSurfaceSituationForm::PANEL_KEY][ExamplePanels::CONTRACT];
     $this->assertSame('The contract, as JSON Schema', (string) $panel['contract']['#title']);
     $contract = json_decode(htmlspecialchars_decode((string) $panel['contract']['json']['#value']), TRUE);
     $this->assertSame('https://json-schema.org/draft/2020-12/schema', $contract['$schema']);
@@ -389,7 +390,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     $this->assertSame('room', $container[DataSurfaceFormBuilderInterface::STALE_MARKER_KEY]['#value']);
 
     $rows = [];
-    foreach ($container[DataSurfaceSituationForm::PANEL_KEY]['keys']['#rows'] as $row) {
+    foreach ($container[DataSurfaceSituationForm::PANEL_KEY][ExamplePanels::CONTRACT]['keys']['#rows'] as $row) {
       $rows[$row['data-surface-key']] = $row['data'];
     }
     $this->assertSame('one of Auditorium, Upper deck', (string) $rows['room'][5]['data']['#markup']);
@@ -474,7 +475,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     $this->assertStringNotContainsString('Up to', $markup);
     // The panel beside it says the same thing.
     $rows = [];
-    foreach ($container[DataSurfaceSituationForm::PANEL_KEY]['keys']['#rows'] as $row) {
+    foreach ($container[DataSurfaceSituationForm::PANEL_KEY][ExamplePanels::CONTRACT]['keys']['#rows'] as $row) {
       $rows[$row['data-surface-key']] = $row['data'];
     }
     $this->assertSame('from 1 to 1000', (string) $rows['capacity'][5]['data']['#markup']);

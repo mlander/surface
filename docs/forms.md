@@ -726,8 +726,14 @@ default, what it allows in words, what it depends on and whether it is
 narrowed right now, children and mounted keys included; and, collapsed,
 the contract as JSON Schema from `data_surface.contract_emitter`
 ([The served contract](served-contract.md)), then what the derived tool
-for the same situation can advertise through the Tool API. The
-examples' routes name it.
+for the same situation can advertise through the Tool API.
+
+A route names one panel. Two are one panel that composes them: the
+examples' routes name `data_surface_examples.panels` (`ExamplePanels`),
+which returns the contract panel and, below it, what config schema alone
+can say about the same settings
+(`modules/data_surface_examples/README.md`).
+Both sit under the one key, so one rebuild replaces both.
 
 ### Access, twice
 

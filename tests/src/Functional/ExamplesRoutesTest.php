@@ -61,7 +61,7 @@ class ExamplesRoutesTest extends BrowserTestBase {
   }
 
   /**
-   * Tests the landing page and a step's form with its panel.
+   * Tests the landing page and an example's form with its two panels.
    */
   public function testTheLandingPageAndOneStep(): void {
     $this->drupalLogin($this->drupalCreateUser(['administer site configuration']));
@@ -70,6 +70,7 @@ class ExamplesRoutesTest extends BrowserTestBase {
     $assert->pageTextContains('Example 1: declare what you accept');
     $assert->pageTextContains('Example 6: every door');
     $assert->pageTextContains('Under each example\'s form, collapsed as "Behind the scenes: the contract, as it stands", is the contract the form is built from.');
+    $assert->pageTextContains('Below it, collapsed as "Without a surface: what config schema can say", is what a client could be told about the same settings today, from config schema alone.');
     $assert->pageTextContains('The decoupled page is the "In React" links above');
     $assert->pageTextMatches('/The surface: \d+ lines of code\./');
     $assert->pageTextMatches('/The classic twin, a config form: \d+ lines of code\./');
@@ -81,6 +82,20 @@ class ExamplesRoutesTest extends BrowserTestBase {
     $assert->pageTextContains('The contract, as it stands');
     $assert->pageTextContains('The contract, as JSON Schema');
     $assert->pageTextContains('What the Tool API can advertise: data_surface:registration.step3:configure');
+    // Below the contract, what config schema alone can say: core's
+    // answer, the plain mapping, and the two set side by side.
+    $assert->elementsCount('css', 'details.data-surface-contract-panel', 2);
+    $today = $assert->elementExists('css', 'details.data-surface-today-panel');
+    $this->assertNull($today->getAttribute('open'));
+    $assert->elementTextContains('css', 'details.data-surface-today-panel > summary', 'Without a surface: what config schema can say');
+    $blocks = $today->findAll('css', 'pre');
+    $this->assertCount(2, $blocks);
+    $this->assertStringContainsString('No schema is defined for property of type', $blocks[0]->getText());
+    $this->assertStringContainsString('data_surface_examples.ticket.[%parent.pricing], which can only be resolved against a stored value.', $blocks[1]->getText());
+    $this->assertStringNotContainsString('oneOf', $blocks[1]->getText());
+    $venue = $today->findAll('css', 'table.data-surface-today-comparison tr[data-today-key="venue"] td');
+    $this->assertSame(['venue', 'title, type', 'title, type, oneOf (3)'], array_map(static fn ($cell): string => $cell->getText(), $venue));
+    $assert->elementTextContains('css', 'table.data-surface-today-comparison tr[data-today-keyword="required"]', 'not stated');
     $this->submitForm(['surface[title]' => 'Harvest fair'], 'Save');
     $assert->pageTextContains('The changes have been saved.');
     $this->assertSame('Harvest fair', $this->config('data_surface_examples.registration_step3')->get('title'));
@@ -93,6 +108,18 @@ class ExamplesRoutesTest extends BrowserTestBase {
     $assert->pageTextContains('The examples are back to the settings the module ships with.');
     $this->container->get('config.factory')->reset();
     $this->assertSame('Spring meetup', $this->config('data_surface_examples.registration_step3')->get('title'));
+
+    // The classic twin: the same two documents under the form, no
+    // table, and the rules only the form holds, named.
+    $this->drupalGet('surface-examples/1/classic');
+    $assert->fieldValueEquals('title', 'Spring meetup');
+    $assert->elementsCount('css', 'details.data-surface-today-panel pre', 2);
+    $assert->elementNotExists('css', 'table.data-surface-today-comparison');
+    $assert->pageTextContains('This form requires the event title and holds the capacity between 1 and 1000. Neither rule is in the config schema, so neither is in either document below: only the form knows them.');
+    $assert->elementTextContains('css', 'details.data-surface-today-panel', 'Registration settings, example 1');
+    $this->submitForm(['title' => 'Classic meetup'], 'Save configuration');
+    $assert->pageTextContains('The configuration options have been saved.');
+    $this->assertSame('Classic meetup', $this->config('data_surface_examples.registration_step1')->get('title'));
 
     $this->drupalGet('surface-examples/5');
     $assert->pageTextContains('drush tool:info data_surface:registration.step3:configure');

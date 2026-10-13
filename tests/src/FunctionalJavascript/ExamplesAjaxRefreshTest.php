@@ -75,6 +75,17 @@ class ExamplesAjaxRefreshTest extends ExamplesWebDriverTestBase {
     $this->drupalGet('surface-examples/3');
     $this->assertTrue($assert->fieldExists('surface[ticket][note]')->isVisible());
     $assert->fieldNotExists('surface[ticket][price]');
+    // Under the contract, what config schema says, with the ticket's
+    // row of its table: free, the surface's side names the note.
+    $documents = $this->todayDocuments();
+    $this->assertCount(2, $documents);
+    $this->assertStringContainsString('No schema is defined for property of type', $documents[0]);
+    $this->assertStringContainsString('"title": "Ticket"', $documents[1]);
+    $this->assertSame([
+      'ticket',
+      'title, $comment',
+      'title, type, if/then on pricing (2 shapes; free now: note)',
+    ], $this->todayRow('ticket'));
 
     $this->probe(['surface[pricing]', 'surface[contact][email]']);
     $page->selectFieldOption('surface[pricing]', 'paid');
@@ -89,6 +100,44 @@ class ExamplesAjaxRefreshTest extends ExamplesWebDriverTestBase {
     $this->assertTrue($this->stillProbed('surface[pricing]'));
     $this->assertTrue($this->stillProbed('surface[contact][email]'));
     $assert->elementNotExists('css', '.messages');
+    // The table follows the answer, on the surface's side only: the
+    // paid shape and its keys. The two documents are what they were.
+    $this->assertSame([
+      'ticket',
+      'title, $comment',
+      'title, type, if/then on pricing (2 shapes; paid now: price, currency)',
+    ], $this->todayRow('ticket'));
+    $this->assertSame($documents, $this->todayDocuments());
+    $assert->elementsCount('css', 'details.data-surface-today-panel', 1);
+  }
+
+  /**
+   * Reads the two JSON documents of the panel of what config schema says.
+   *
+   * Read as text content: the panel is collapsed, and a browser gives a
+   * collapsed element no visible text.
+   *
+   * @return string[]
+   *   What core answers, then the plain mapping.
+   */
+  protected function todayDocuments(): array {
+    return $this->getSession()->evaluateScript('return Array.from(document.querySelectorAll("details.data-surface-today-panel pre")).map((e) => e.textContent);');
+  }
+
+  /**
+   * Reads one row of the comparison table.
+   *
+   * @param string $key
+   *   The key the row is for.
+   *
+   * @return string[]
+   *   The row's cells.
+   */
+  protected function todayRow(string $key): array {
+    return $this->getSession()->evaluateScript(sprintf(
+      'return Array.from(document.querySelectorAll(%s)).map((e) => e.textContent.trim());',
+      json_encode('table.data-surface-today-comparison tr[data-today-key="' . $key . '"] td'),
+    ));
   }
 
 }

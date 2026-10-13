@@ -26,8 +26,11 @@ abstract class RegistrationTarget implements SurfaceTargetInterface {
 
   /**
    * The config object this example's values live in.
+   *
+   * Public, so the panel under an example can name the object whose
+   * config schema it shows.
    */
-  protected const CONFIG = '';
+  public const CONFIG = '';
 
   /**
    * Constructs a registration target.

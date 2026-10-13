@@ -32,10 +32,14 @@ JSON Schema cannot say them. This one can.
 ## Where to see it
 
 - **Under a situation form.** `data_surface_tool`'s contract panel,
-  which the examples' routes name, shows it collapsed as "The contract,
-  as JSON Schema", emitted for the situation and the form's values as
-  they stand, so it rebuilds with the form. Below it, "What the Tool
-  API can advertise" shows the derived tool's schema for comparison.
+  which the examples show under each form, shows it collapsed as "The
+  contract, as JSON Schema", emitted for the situation and the form's
+  values as they stand, so it rebuilds with the form. Below it, "What
+  the Tool API can advertise" shows the derived tool's schema for
+  comparison. The examples add a second panel under that one, "Without
+  a surface: what config schema can say": the same settings described
+  from config schema alone, set beside this contract key by key
+  (`modules/data_surface_examples/README.md`).
 - **Over HTTP.** `GET /surface-api/{surface}/{situation}` with
   `data_surface_react` enabled: the whole document, widget hints
   included.

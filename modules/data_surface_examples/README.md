@@ -5,7 +5,9 @@ the settings of an event registration: a title, how many people, where,
 what it costs, who to contact. Each example adds one idea, each example with a
 form is a page of its own, and under each form, collapsed, is the contract the
 form was built from: every key, what it allows right now, and the JSON
-Schema a caller with no form is handed.
+Schema a caller with no form is handed. Below that, collapsed too, is
+the before picture: what the same caller could be told today, from
+config schema alone.
 
 ```bash
 drush pm:install data_surface_examples
@@ -32,6 +34,79 @@ forms. The form is generated from it, the validation is its, and the
 same class is a tool an agent can call. The rule that makes this work is
 that a surface may only ever *narrow* what it said: once a caller has
 read it, nothing it accepts later contradicts what it advertised.
+
+## Without a surface: what config schema can say
+
+Under the contract panel of examples 1 to 3 is a second one, collapsed
+as "Without a surface: what config schema can say". It is what a client
+could be told about the same settings today, when the options, the
+limits and what depends on what are written in Form API code and the
+only declarative description is the config schema. It holds two
+documents that read no surface, and a table that sets the second beside
+the surface's contract:
+
+- **What core answers when asked for a JSON Schema.** The example's
+  typed config, normalized by core's serializer in the `json_schema`
+  format. It is asked each time, not written down. The answer is one
+  `$comment`, saying no schema is defined for a mapping.
+- **The most a plain mapping of config schema could say.**
+  `ConfigSchemaContract` reads the schema definition and translates it
+  one to one: a label is a `title`, a type a `type`, a mapping an
+  object, and a constraint the schema declares the keyword JSON Schema
+  has for it. The examples' schema declares types and labels, so types
+  and titles are what come out. Example 1:
+
+<!-- json: data_surface_examples.registration_step1 -->
+
+```json
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Registration settings, example 1",
+    "type": "object",
+    "properties": {
+        "title": {
+            "title": "Event title",
+            "type": "string"
+        },
+        "capacity": {
+            "title": "Capacity",
+            "type": "integer"
+        },
+        "open": {
+            "title": "Registration open",
+            "type": "boolean"
+        }
+    },
+    "additionalProperties": false
+}
+```
+
+No bounds on the capacity, and nothing required. The one rule in it is
+`additionalProperties: false`, because a mapping in config schema
+refuses a key it does not list. In example 3 the
+venue, the room and the pricing are strings with no list of values, and
+the ticket has a title and a `$comment`: its type is
+`data_surface_examples.ticket.[%parent.pricing]`, which only a stored
+value resolves, and this reads none.
+
+- **Key by key.** A table counted from the two documents, one row per
+  key the surface declares: the JSON Schema keywords the mapping states,
+  beside those the surface's contract states. The venue reads
+  `title, type` beside `title, type, oneOf (3)`, the ticket
+  `title, $comment` beside
+  `title, type, if/then on pricing (2 shapes; free now: note)`, and the
+  last row lists what is required: "not stated" beside
+  `title, venue, room, pricing`.
+
+Neither document reads a value, so nothing in them moves while the form
+is filled in. The table's surface column does, because the contract
+does: switch example 3's pricing to paid and the ticket's row names the
+paid shape's keys, `price, currency`.
+
+The classic twin of example 1 carries the same two documents under its
+form, and no table, having no surface to compare with. Its form requires
+the title and holds the capacity between 1 and 1000. Neither rule is in
+the config schema, so neither is in either document.
 
 ## Example 1: declare what you accept
 
@@ -81,7 +156,8 @@ today: `#config_target` reads and writes each setting with no submit
 handler, and the elements' own `#required`, `#min` and `#max` are its
 validation. It edits the same config object. The landing page counts
 both. What the classic form cannot do is be *asked*: nothing outside it
-knows what its three settings accept.
+knows what its three settings accept, which is what the panel under it
+shows ([above](#without-a-surface-what-config-schema-can-say)).
 
 <!-- code: src/Form/RegistrationStep1ClassicForm.php -->
 
@@ -594,7 +670,8 @@ to show on your own site.
 
 Every code block above is the file it names, from its first attribute
 or its class line to its closing brace, and `ExamplesReadmeTest` fails
-when one drifts. The tool's three answers are asserted by
+when one drifts. The JSON of example 1's config schema is asserted by
+`ConfigSchemaContractTest`, which also checks this page quotes it. The tool's three answers are asserted by
 `ExamplesToolTest`, which also checks this page quotes them, and the
 Drush commands are checked against `ExampleCalls`.
 
@@ -603,9 +680,11 @@ Drush commands are checked against `ExampleCalls`.
 | `Kernel\ExamplesStepsTest` | Examples 1 to 3: each form builds and saves, example 1 as its classic twin does; the venue narrows the room and the room the capacity; the ticket slot resolves by pricing; the contact validates its email; the panel's rows as the answers move; each example's class stays screen sized. |
 | `Kernel\ExamplesComplianceTest` | Example 4: the alter's keys and label; its keys in one fieldset titled "Compliance", drawn between the capacity and the pricing; the capacity capped at a hundred without a licence and the room's limit with one; the licence's pattern; the stewards' minimum following the capacity; what the licence and the capacity replace on the form; example 5's calls unchanged. |
 | `Kernel\ExamplesToolTest` | Example 5: the three calls and their answers; what the script prints. |
+| `Kernel\ConfigSchemaContractTest` | What config schema can say: the plain mapping of examples 1 and 3, whole, with no list, no bound, nothing required and no shape for the ticket, the same whatever is stored or mounted; core's answer, a comment and no property; a constraint a schema does declare is said; the JSON this page quotes. |
+| `Kernel\ExamplesTodayPanelTest` | The second panel under examples 1 to 3: its two documents and its table, row by row; the ticket's row following the pricing and the capacity's the venue while both documents stay as they were; example 4's keys on the surface's side only; the classic twin's page. |
 | `Unit\ExamplesReadmeTest` | This page against the files it quotes, and its Drush commands. |
-| `Functional\ExamplesRoutesTest` | Every route answers an administrator and refuses anonymous; the landing page; a save through example 3. |
-| `FunctionalJavascript\ExamplesAjaxRefreshTest` | In a browser: example 2's venue replaces the room and the capacity and leaves the venue the same node, the orphaned room on its empty option with the stale marker and the capacity back at 1000; a room then narrows the capacity and loses `- Select -`. Example 3's paid pricing swaps the note for a price and a currency. |
+| `Functional\ExamplesRoutesTest` | Every route answers an administrator and refuses anonymous; the landing page; both panels under example 3, and a save through it; the classic twin's page with its two documents, and a save through it. |
+| `FunctionalJavascript\ExamplesAjaxRefreshTest` | In a browser: example 2's venue replaces the room and the capacity and leaves the venue the same node, the orphaned room on its empty option with the stale marker and the capacity back at 1000; a room then narrows the capacity and loses `- Select -`. Example 3's paid pricing swaps the note for a price and a currency, and moves the ticket's row of the second panel's table while its two documents stay the same. |
 | `FunctionalJavascript\ExamplesComplianceRefreshTest` | Example 4, in a browser: one fieldset titled "Compliance", the ceiling of 100 lifted to the main hall's 400 by `2048`, and the stewards at 1 for 50 and 3 for 150; a malformed licence on blur is said once, under the licence, with `aria-invalid` and nothing at the top, and caps the capacity at a hundred; corrected, the error goes and the room's limit comes back. A refused capacity left by a click on text keeps no focus, and left by Tab lands on the Compliance fieldset after it. The fieldset is drawn below the capacity and above the pricing, and stays there when `2048` and Tab lift the capacity, which, with the stewards, is all that is replaced. |
 | `Functional\ServedContractEndpointsTest` | In React: the landing page's links, and example 2's contract, refine and validate over HTTP. |
 | `Functional\ServedSubmitEndpointTest` | In React: example 2 saved over HTTP, refused, and refused after someone else saved. |

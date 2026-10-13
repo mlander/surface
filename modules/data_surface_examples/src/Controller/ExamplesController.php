@@ -10,15 +10,20 @@ use Drupal\Core\Link;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Url;
 use Drupal\data_surface_examples\CodeLines;
+use Drupal\data_surface_examples\ConfigSchemaPanel;
 use Drupal\data_surface_examples\ExampleCalls;
 use Drupal\data_surface_examples\Form\RegistrationStep1ClassicForm;
 use Drupal\data_surface_examples\Surface\RegistrationStep1Surface;
 use Drupal\data_surface_examples\Surface\RegistrationStep2Surface;
 use Drupal\data_surface_examples\Surface\RegistrationStep3Surface;
+use Drupal\data_surface_examples\Target\RegistrationStep1Target;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * The examples' landing page, and the pages of the two examples with no form.
+ * The examples' landing page, and the pages no situation form serves.
+ *
+ * Those are the two examples with no form, and example 1's classic twin
+ * with what config schema says under it.
  *
  * Plain on purpose: one sentence per example, where it is, and how many
  * lines of code it took, counted from the files by CodeLines rather than
@@ -47,14 +52,22 @@ final class ExamplesController extends ControllerBase {
    * @param \Drupal\Core\Extension\ModuleExtensionList $moduleList
    *   The module list, which knows where a module is whether or not it is
    *   enabled.
+   * @param \Drupal\data_surface_examples\ConfigSchemaPanel $configSchemaPanel
+   *   The panel of what config schema can say, for the classic twin.
    */
-  public function __construct(protected readonly ModuleExtensionList $moduleList) {}
+  public function __construct(
+    protected readonly ModuleExtensionList $moduleList,
+    protected readonly ConfigSchemaPanel $configSchemaPanel,
+  ) {}
 
   /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
-    return new static($container->get('extension.list.module'));
+    return new static(
+      $container->get('extension.list.module'),
+      $container->get('data_surface_examples.config_schema_panel'),
+    );
   }
 
   /**
@@ -80,7 +93,7 @@ final class ExamplesController extends ControllerBase {
     }
     return [
       'intro' => [
-        '#markup' => '<p>' . $this->t('One surface that grows, one idea per example: the settings of an event registration. Under each example\'s form, collapsed as "Behind the scenes: the contract, as it stands", is the contract the form is built from.') . '</p>',
+        '#markup' => '<p>' . $this->t('One surface that grows, one idea per example: the settings of an event registration. Under each example\'s form, collapsed as "Behind the scenes: the contract, as it stands", is the contract the form is built from. Below it, collapsed as "Without a surface: what config schema can say", is what a client could be told about the same settings today, from config schema alone.') . '</p>',
       ],
       'reset' => [
         '#type' => 'container',
@@ -88,6 +101,25 @@ final class ExamplesController extends ControllerBase {
         'why' => ['#markup' => ' ' . $this->t('puts every example back to the settings the module ships with, for a retake.')],
       ],
     ] + $steps;
+  }
+
+  /**
+   * Shows example 1's classic twin, and what can be said of it from outside.
+   *
+   * The form class is the twin as the README quotes it and the landing
+   * page counts it, so the panel is put under it here and not in it.
+   *
+   * @return array
+   *   A render array.
+   */
+  public function step1Classic(): array {
+    return [
+      'form' => $this->formBuilder()->getForm(RegistrationStep1ClassicForm::class),
+      'today' => $this->configSchemaPanel->build(
+        RegistrationStep1Target::CONFIG,
+        note: $this->t('This form requires the event title and holds the capacity between 1 and 1000. Neither rule is in the config schema, so neither is in either document below: only the form knows them.'),
+      ),
+    ];
   }
 
   /**

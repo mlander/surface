@@ -12,6 +12,6 @@ final class RegistrationStep3Target extends RegistrationTarget {
   /**
    * {@inheritdoc}
    */
-  protected const CONFIG = 'data_surface_examples.registration_step3';
+  public const CONFIG = 'data_surface_examples.registration_step3';
 
 }
