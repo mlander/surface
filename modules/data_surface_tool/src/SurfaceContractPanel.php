@@ -34,11 +34,15 @@ use Drupal\tool\Tool\ToolManager;
  * inside the surface container, so the AJAX rebuild a refinement
  * triggers rebuilds the panel too.
  *
- * Below the table, collapsed, are two JSON Schema documents. First the
+ * Below the table, collapsed, are three JSON Schema documents. First the
  * contract itself, from the main module's emitter for the situation and
  * the values as they stand: a slot as an `if`/`then` per variant keyed
  * on its deciding sibling, allowed values as titled `oneOf`, and what
- * each key depends on and whether it is locked under `x-surface`. Then
+ * each key depends on and whether it is locked under `x-surface`. Beside
+ * it the full schema from the same emitter, which reads no value: every
+ * key as declared, and every dependency that can be listed stated as one
+ * `if`/`then` per value, so it holds for any answers and does not move
+ * when one changes. Then
  * what the derived tool for the same situation advertises, normalized by
  * the Tool API's own serializer: the rendering `tool:info` prints, which
  * cannot say a shape keyed by a sibling and so shows a slot as one map,
@@ -129,11 +133,21 @@ final class SurfaceContractPanel implements DataSurfaceFormPanelInterface {
     $panel['contract'] = [
       '#type' => 'details',
       '#open' => FALSE,
-      '#title' => $this->t('The contract, as JSON Schema'),
+      '#title' => $this->t('The schema for these answers'),
       'note' => [
-        '#markup' => '<p>' . $this->t('What the surface states for the answers as they stand: each slot as one conditional per variant on the key that chooses it, allowed values with their labels, and under <code>x-surface</code> what each key depends on and whether it is locked. It is the document data_surface_react serves at <code>/surface-api</code>, less the widget hints that renderer asks for.') . '</p>',
+        '#markup' => '<p>' . $this->t('What the surface states for the answers as they stand, as JSON Schema: each slot as one conditional per variant on the key that chooses it, allowed values with their labels, and under <code>x-surface</code> what each key depends on and whether it is locked. A key another answer narrows is shown as narrowed, so this describes these answers and no others. It is the document data_surface_react serves at <code>/surface-api</code>, less the widget hints that renderer asks for.') . '</p>',
       ],
       'json' => $this->json($contract->document['schema']),
+    ];
+    $full = $this->emitter->emitFull($declared, $surface_id, $served->situation->id, $served->situation->label);
+    $panel['full'] = [
+      '#type' => 'details',
+      '#open' => FALSE,
+      '#title' => $this->t('The full schema, for any answers'),
+      'note' => [
+        '#markup' => '<p>' . $this->t('What the surface states whatever the answers are, as JSON Schema: every key as it is declared, and for each key another key narrows, one conditional per value that other key could take. It reads no value, so it does not change when an answer changes. A key marked <code>dynamic</code> depends on something that cannot be listed: it is shown as declared, and the form still holds it to more.') . '</p>',
+      ],
+      'json' => $this->json($full->document['schema']),
     ];
     if ($this->toolManager->hasDefinition($tool_id)) {
       $tool = $this->toolManager->createInstance($tool_id);

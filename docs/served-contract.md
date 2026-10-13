@@ -33,12 +33,14 @@ JSON Schema cannot say them. This one can.
 
 - **Under a situation form.** `data_surface_tool`'s contract panel,
   which the examples show under each form, shows it collapsed as "The
-  contract, as JSON Schema", emitted for the situation and the form's
-  values as they stand, so it rebuilds with the form. Below it, "What
-  the Tool API can advertise" shows the derived tool's schema for
-  comparison. The examples add a second panel under that one, "Without
-  a surface: what config schema can say": the same settings described
-  from config schema alone, set beside this contract key by key
+  schema for these answers", emitted for the situation and the form's
+  values as they stand, so it rebuilds with the form. Beside it, "The
+  full schema, for any answers" is [the second document](#two-documents),
+  which does not. Below them, "What the Tool API can advertise" shows
+  the derived tool's schema for comparison. The examples add a second
+  panel under that one, "Without a surface: what config schema can
+  say": the same settings described from config schema alone, set
+  beside the full schema key by key
   (`modules/data_surface_examples/README.md`).
 - **Over HTTP.** `GET /surface-api/{surface}/{situation}` with
   `data_surface_react` enabled: the whole document, widget hints
@@ -52,6 +54,57 @@ JSON Schema cannot say them. This one can.
   [an enumerated key](#exact-where-it-can-be) alike: a Tool API context
   definition has no conditional, so the tool's schema stays as loose as
   the unrefined surface.
+
+## Two documents
+
+The emitter writes two documents from one surface, by one code path.
+
+- **The schema as it stands**, `emit()`, is everything below: built for
+  one set of values, with `values` and `stale` beside it. A key whose
+  watched siblings hold values is refined for them, so with Riverside
+  Hall stored the room offers Riverside's two rooms. It is what a form
+  is drawn from, and what `/surface-api` and `/refine` serve. It
+  describes those values and no others: do not validate an arbitrary
+  submission against it.
+- **The full schema**, `emitFull()`, reads no value, so it is the same
+  whatever is stored or typed. Every key is the one the surface declares
+  (every room; a capacity from 1 to 1000), every dependency that can be
+  listed is written as conditionals on the parent, always, under
+  [the same rules and cap](#exact-where-it-can-be), and a key whose
+  dependency cannot be listed keeps its declared schema with
+  `x-surface.dynamic: true`. Its `x-surface` carries only what holds for
+  any values (`locked`, `dependsOn`, `enumerated`, `dynamic`, a slot's
+  `by` and `variants`, `group`, `after`, `patternMessage`,
+  `checkedOnServer`); there is no `refined`, `stale`, `emptyOption` or
+  `chosen`, and no `values` or `stale` beside the schema. A subsurface's
+  frame is described from nothing, not from the child's defaults. Only
+  the locked keys a situation knows are read, since no value changes
+  them. It is what a validator, or an agent planning its values, or
+  anything that takes the schema once, wants. No route serves it yet;
+  the contract panel shows it.
+
+Neither is ever stricter than the pipeline
+([decision](decisions.md#two-documents-never-stricter-than-the-runtime)).
+Where a rule has no JSON Schema keyword, or a dependency is free text or
+too large to list, the schema stays at the declared width and says so
+(`checkedOnServer`, `dynamic`); the pipeline's refinement is the guard
+with the last word. Example 2's full schema, abbreviated:
+
+```json
+"room": {"title": "Room", "type": "string", "oneOf": [...all six rooms...],
+         "x-surface": {"locked": false, "dependsOn": ["venue"], "enumerated": true}},
+"capacity": {"title": "Capacity", "type": ["integer", "null"], "minimum": 1, "maximum": 1000, "default": 50,
+             "x-surface": {"locked": false, "dependsOn": ["room"], "enumerated": true}},
+...
+"allOf": [
+  {"if": {"properties": {"venue": {"const": "riverside"}}, "required": ["venue"]},
+   "then": {"properties": {"room": {"oneOf": [{"const": "riverside_main", "title": "Main hall"}, {"const": "riverside_east", "title": "East room"}]}}}},
+  ...two more venues...
+  {"if": {"properties": {"room": {"const": "riverside_main"}}, "required": ["room"]},
+   "then": {"properties": {"capacity": {"description": "Up to 400 for the Main hall.", "maximum": 400}}}},
+  ...five more rooms...
+]
+```
 
 ## The document
 
@@ -110,7 +163,7 @@ is an object with `properties` in declaration order, `required`, and
 | `checkedOnServer` | Constraints no keyword states. |
 | `patternMessage` | On a key with a `pattern`: the Regex's own message, which is how a person is told what the pattern allows. The pattern is for machines; a renderer explains the key by this, never by the pattern. |
 | `enumerated` | Only when `true`: the key's refiners have nothing to refine against yet, and what they answer for every value they could be handed is stated as conditionals on the parent ([below](#exact-where-it-can-be)). The schema is exact for this key with no round trip. |
-| `dynamic` | Only when `true`: the key's refiners have nothing to refine against yet, and what they would answer cannot be listed (a watched key with no list of values, or too many combinations). The schema is the unrefined, looser one; refine when a `dependsOn` key changes. |
+| `dynamic` | Only when `true`: the key's refiners have nothing to refine against yet, and what they would answer cannot be listed (a watched key with no list of values, or too many combinations). The schema is the unrefined, looser one, wider than the pipeline and never narrower ([decision](decisions.md#two-documents-never-stricter-than-the-runtime)); refine when a `dependsOn` key changes. In [the full schema](#two-documents) every key that cannot be listed carries it. |
 
 ### A slot is a conditional
 
@@ -191,7 +244,9 @@ no `/refine` round trip.
   enumerated.
 - **With values, nothing changes.** A key whose watched siblings hold
   values is refined, as the GET and `/refine` serve it, and carries
-  neither keyword.
+  neither keyword. That is the schema as it stands;
+  [the full schema](#two-documents) is handed no values, so there every
+  listable key is enumerated, always.
 - **The lists are dependencies.** Every option list and every refined
   surface a conditional was read from is merged into the contract's
   cacheability (the demo block's static contract depends on

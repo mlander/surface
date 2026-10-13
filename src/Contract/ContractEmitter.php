@@ -11,6 +11,7 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceInterface;
+use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Options\DataSurfaceOptions;
@@ -48,6 +49,26 @@ use Drupal\data_surface\SurfaceEntry;
  * advertises, the same surface refined against the values for what it
  * allows now, each subsurface in its own frame. Nothing names a surface
  * or a key, and nothing here reaches storage: the values are handed in.
+ *
+ * There are two documents, written by the one code path below so they
+ * cannot drift apart:
+ *
+ * - emit(): the schema as it stands, for one set of values. A key whose
+ *   watched siblings hold values is refined for them, `x-surface` says
+ *   what is true right now, and `values` and `stale` sit beside the
+ *   schema. It is what a form is drawn from, and it describes those
+ *   values only.
+ * - emitFull(): the full schema, for any values. It reads no value at
+ *   all: every key is the one the surface declares, every dependency
+ *   that can be listed is stated for every value it could be handed, and
+ *   one that cannot is marked `dynamic`. It is what a validator, or
+ *   anything that takes the schema once, holds values to.
+ *
+ * Neither is ever stricter than the pipeline: a rule JSON Schema cannot
+ * state, or a dependency too large to list, is left out and named, never
+ * approximated by something narrower.
+ * Decision: see
+ * docs/decisions.md#two-documents-never-stricter-than-the-runtime.
  *
  * The contract carries no widget vocabulary unless a renderer asks for
  * it (emit()'s $widgets). Then `x-surface.widget` mirrors
@@ -183,6 +204,117 @@ final class ContractEmitter {
   }
 
   /**
+   * Emits the full schema a surface states, for any values.
+   *
+   * The second document. It is handed no values and reads none, so it is
+   * the same whatever is stored and whatever is being typed:
+   *
+   * - every key is described as the surface declares it, with its
+   *   declared default; nothing is refined, except against the locked
+   *   keys the situation itself knows, which no value can change;
+   * - a key whose refiners watch siblings that each offer a list of
+   *   values is `enumerated`: one conditional per combination of those
+   *   values on the parent, always, because no sibling holds anything
+   *   here to be held at;
+   * - a key whose answers cannot be listed keeps its declared schema and
+   *   is `dynamic`: wider than what the pipeline will allow for some
+   *   values, never narrower, and to be asked about with values;
+   * - a slot is its conditionals, and every subsurface frame is described
+   *   by the same rule, from nothing, not from the child's defaults;
+   * - `x-surface` carries only what holds for any values: `locked`,
+   *   `dependsOn`, `enumerated`, `dynamic`, a slot's `by` and `variants`,
+   *   a variant's id, `group`, `after`, `patternMessage`,
+   *   `checkedOnServer`, and the widget hints when asked for. What is
+   *   only true of a moment (`refined`, `stale`, `emptyOption`, a slot's
+   *   `chosen`) is not written, and there is no `values` and no `stale`
+   *   beside the schema.
+   *
+   * Decision: see
+   * docs/decisions.md#two-documents-never-stricter-than-the-runtime.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The surface as built in its context, not refined.
+   * @param string $surface_id
+   *   The surface's `#[Surface]` id.
+   * @param string|null $situation_id
+   *   The situation id, or NULL for a surface asked for in no situation.
+   * @param string|\Stringable|null $label
+   *   The situation's label, which titles the schema.
+   * @param bool $widgets
+   *   Whether to add the renderer's widget hints, as for emit().
+   *
+   * @return \Drupal\data_surface\Contract\ServedContract
+   *   The document (`surface`, `situation`, `label`, `schema` and, when
+   *   the surface declares outputs, `outputs`), and what it depends on:
+   *   the surface and every option list read, never a stored value.
+   */
+  public function emitFull(DataSurfaceInterface $surface, string $surface_id, ?string $situation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE): ServedContract {
+    $cacheability = new CacheableMetadata();
+    $ignored = [];
+    [$schema] = $this->frame($surface, $this->known($surface), '', $cacheability, $ignored, [], TRUE);
+    $schema = $this->withoutPresent($schema);
+    if (!$widgets) {
+      $schema = $this->withoutWidgets($schema);
+    }
+    $title = $label === NULL ? [] : ['title' => (string) $label];
+    $document = [
+      'surface' => $surface_id,
+      'situation' => $situation_id,
+      'label' => $label === NULL ? NULL : (string) $label,
+      'schema' => ['$schema' => self::DIALECT] + $title + $schema,
+    ];
+    $outputs = $this->outputs($surface, $cacheability);
+    if ($outputs !== NULL) {
+      $document['outputs'] = $outputs;
+    }
+    return new ServedContract($document, $cacheability);
+  }
+
+  /**
+   * Reads the values a situation knows and nothing can change.
+   *
+   * The only values the full schema is described for: a locked key holds
+   * its identity whatever is stored or typed, so a key that watches only
+   * locked siblings has one answer.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   A surface frame, as advertised.
+   *
+   * @return array
+   *   The value of each locked key, by key.
+   */
+  protected function known(DataSurfaceInterface $surface): array {
+    $known = [];
+    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+      if ($entry->locked) {
+        $known[(string) $name] = $surface->getDefault((string) $name);
+      }
+    }
+    return $known;
+  }
+
+  /**
+   * Answers whether a key watches anything that could hold another value.
+   *
+   * @param \Drupal\data_surface\DefinitionMap $advertised
+   *   The frame's definitions, as advertised.
+   * @param \Drupal\data_surface\SurfaceEntry $entry
+   *   The key.
+   *
+   * @return bool
+   *   TRUE when one of its dependencies is not a locked key of the frame:
+   *   a sibling a value can be given for, or a key an alter mounted.
+   */
+  protected function watchesFree(DefinitionMap $advertised, SurfaceEntry $entry): bool {
+    foreach ($entry->dependencies as $key) {
+      if (!$advertised->isLocked($key)) {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
+
+  /**
    * Describes one surface frame: the top level, or one subsurface.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $declared
@@ -199,11 +331,17 @@ final class ContractEmitter {
    *   The orphans of a refinement, by dotted path from the top, each
    *   mapped to the stored value it stands for; held unanswered in
    *   $values.
+   * @param bool $full
+   *   Whether this is the full schema (emitFull()): $values are then the
+   *   locked keys the frame knows and nothing else, every frame inside is
+   *   described from its own locked keys instead of its defaults, and a
+   *   key that watches anything a value could change is described as
+   *   declared.
    *
    * @return array{0: array, 1: array|\stdClass}
    *   The object schema of the frame, and its values as shown.
    */
-  protected function frame(DataSurfaceInterface $declared, array $values, string $prefix, CacheableMetadata $cacheability, array &$stale, array $standing = []): array {
+  protected function frame(DataSurfaceInterface $declared, array $values, string $prefix, CacheableMetadata $cacheability, array &$stale, array $standing = [], bool $full = FALSE): array {
     $refined = $declared->refine($values);
     $cacheability->addCacheableDependency($refined);
     $advertised = $declared->getDefinitions();
@@ -215,15 +353,22 @@ final class ContractEmitter {
     foreach ($advertised->entries() as $name => $entry) {
       $name = (string) $name;
       $current = $now->entry($name) ?? $entry;
+      if ($full && !$entry->isNested() && $this->watchesFree($advertised, $entry)) {
+        // A refiner that watches only a key an alter mounted is run even
+        // while that key holds nothing. For any values, the key is the
+        // one declared: what such a refiner answers is one moment's.
+        $current = $entry;
+      }
       $depends = $advertised->dependencies($name);
       if ($entry->slot !== NULL) {
-        [$properties[$name], $shown[$name], $branches] = $this->slot($declared, $entry, $values, $prefix . $name, $cacheability, $stale, $standing);
+        [$properties[$name], $shown[$name], $branches] = $this->slot($declared, $entry, $values, $prefix . $name, $cacheability, $stale, $standing, $full);
         array_push($conditions, ...$branches);
       }
       elseif ($entry->attachment !== NULL) {
         $child = $entry->attachment->child;
         $held = $values[$name] ?? NULL;
-        [$schema, $shown[$name]] = $this->frame($child, array_replace($child->getDefaultValues(), is_array($held) ? $held : []), $prefix . $name . '.', $cacheability, $stale, $standing);
+        $inside = $full ? $this->known($child) : array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
+        [$schema, $shown[$name]] = $this->frame($child, $inside, $prefix . $name . '.', $cacheability, $stale, $standing, $full);
         $properties[$name] = $this->describe($current->definition) + $schema;
         $properties[$name][self::EXTENSION] = $this->extension('fieldset', $entry->locked, $depends, $this->anyRefined($schema));
       }
@@ -311,12 +456,15 @@ final class ContractEmitter {
    * @param array<string, mixed> $standing
    *   The orphans of a refinement, by dotted path from the top; only the
    *   chosen variant's are its own.
+   * @param bool $full
+   *   Whether this is the full schema: every variant is then described
+   *   from its own locked keys, none as the chosen one.
    *
    * @return array{0: array, 1: mixed, 2: array}
    *   The slot's property schema, its value as shown, and the
    *   conditionals for the parent's `allOf`.
    */
-  protected function slot(DataSurfaceInterface $declared, SurfaceEntry $entry, array $values, string $path, CacheableMetadata $cacheability, array &$stale, array $standing = []): array {
+  protected function slot(DataSurfaceInterface $declared, SurfaceEntry $entry, array $values, string $path, CacheableMetadata $cacheability, array &$stale, array $standing = [], bool $full = FALSE): array {
     $slot = $entry->slot;
     assert($slot !== NULL);
     $by = $declared->getDefinitions()->get($slot->by);
@@ -337,10 +485,11 @@ final class ContractEmitter {
     foreach ($slot->variants as $id => $variant) {
       $id = (string) $id;
       $child = $variant->child;
-      $is_chosen = $id === $chosen;
+      $is_chosen = !$full && $id === $chosen;
       $own = $is_chosen && $slot->fits($id, $held) ? $held : [];
       $variant_stale = [];
-      [$schema, $variant_values] = $this->frame($child, array_replace($child->getDefaultValues(), $own), $path . '.', $cacheability, $variant_stale, $is_chosen ? $standing : []);
+      $inside = $full ? $this->known($child) : array_replace($child->getDefaultValues(), $own);
+      [$schema, $variant_values] = $this->frame($child, $inside, $path . '.', $cacheability, $variant_stale, $is_chosen ? $standing : [], $full);
       if ($is_chosen) {
         $shown = $variant_values;
         array_push($stale, ...$variant_stale);
@@ -1042,6 +1191,37 @@ final class ContractEmitter {
       }
     }
     return FALSE;
+  }
+
+  /**
+   * Strips what is only true of one moment from a schema, at every depth.
+   *
+   * The full schema is written by the same pass as the schema for a set
+   * of values, and so carries that pass's reading of each key for the
+   * values it was run with, here none. Taken out afterwards, as the
+   * widget hints are, that pass stays the one place a key is described.
+   *
+   * @param array $schema
+   *   A schema this emitter wrote.
+   *
+   * @return array
+   *   The schema, its `x-surface` keywords without `refined`, `stale`,
+   *   `emptyOption` and a slot's `chosen`.
+   */
+  protected function withoutPresent(array $schema): array {
+    foreach ($schema as $key => $value) {
+      if (!is_array($value)) {
+        continue;
+      }
+      if ($key === self::EXTENSION) {
+        unset($value['refined'], $value['stale'], $value['emptyOption'], $value['chosen']);
+        $schema[$key] = $value;
+      }
+      else {
+        $schema[$key] = $this->withoutPresent($value);
+      }
+    }
+    return $schema;
   }
 
   /**

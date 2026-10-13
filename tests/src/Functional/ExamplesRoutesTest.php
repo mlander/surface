@@ -80,7 +80,8 @@ class ExamplesRoutesTest extends BrowserTestBase {
 
     $this->drupalGet('surface-examples/3');
     $assert->pageTextContains('The contract, as it stands');
-    $assert->pageTextContains('The contract, as JSON Schema');
+    $assert->pageTextContains('The schema for these answers');
+    $assert->pageTextContains('The full schema, for any answers');
     $assert->pageTextContains('What the Tool API can advertise: data_surface:registration.step3:configure');
     // Below the contract, what config schema alone can say: core's
     // answer, the plain mapping, and the two set side by side.

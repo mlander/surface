@@ -18,9 +18,9 @@ use Drupal\data_surface_examples\Target\RegistrationTarget;
  * `data_surface_examples.panels`. A situation form takes one panel, so
  * this is one: the contract panel it is handed, unchanged, and below it
  * what config schema alone can say about the same settings, compared
- * key by key with the contract the surface emits for the answers as
- * they stand. The form replaces both on every rebuild; only the
- * comparison's surface column has anything new to say then.
+ * key by key with the full schema the surface emits, the one that reads
+ * no value. The form replaces both on every rebuild; only the contract
+ * panel has anything new to say then.
  *
  * @see \Drupal\data_surface_tool\SurfaceContractPanel
  * @see \Drupal\data_surface_examples\ConfigSchemaPanel
@@ -70,10 +70,10 @@ final class ExamplePanels implements DataSurfaceFormPanelInterface {
     $definition = $this->registry->getDefinition($served->surface);
     $target = (string) $definition->target;
     if (is_a($target, RegistrationTarget::class, TRUE)) {
-      // The same document the contract panel shows, asked for again
-      // rather than read back out of its render array.
-      $contract = $this->emitter->emit($declared, $values, $definition->id, $served->situation->id, $served->situation->label);
-      $panels[self::TODAY] = ['#weight' => 1] + $this->configSchemaPanel->build($target::CONFIG, $contract->document['schema'], (array) $contract->document['values']);
+      // The full schema the contract panel shows, asked for again rather
+      // than read back out of its render array: static against static.
+      $full = $this->emitter->emitFull($declared, $definition->id, $served->situation->id, $served->situation->label);
+      $panels[self::TODAY] = ['#weight' => 1] + $this->configSchemaPanel->build($target::CONFIG, $full->document['schema']);
     }
     return $panels;
   }

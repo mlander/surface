@@ -89,19 +89,20 @@ the ticket has a title and a `$comment`: its type is
 `data_surface_examples.ticket.[%parent.pricing]`, which only a stored
 value resolves, and this reads none.
 
-- **Key by key.** A table counted from the two documents, one row per
-  key the surface declares: the JSON Schema keywords the mapping states,
-  beside those the surface's contract states. The venue reads
-  `title, type` beside `title, type, oneOf (3)`, the ticket
-  `title, $comment` beside
-  `title, type, if/then on pricing (2 shapes; free now: note)`, and the
-  last row lists what is required: "not stated" beside
+- **Key by key.** A table counted from two documents, one row per key
+  the surface declares: the JSON Schema keywords the mapping states,
+  beside those the surface's full schema states, the one the contract
+  panel shows as "The full schema, for any answers". The venue reads
+  `title, type` beside `title, type, oneOf (3)`, the room `title, type`
+  beside `title, type, oneOf (6), if/then on venue (3 cases)`, the
+  ticket `title, $comment` beside
+  `title, type, if/then on pricing (2 shapes: free has note; paid has price, currency)`,
+  and the last row lists what is required: "not stated" beside
   `title, venue, room, pricing`.
 
-Neither document reads a value, so nothing in them moves while the form
-is filled in. The table's surface column does, because the contract
-does: switch example 3's pricing to paid and the ticket's row names the
-paid shape's keys, `price, currency`.
+None of them reads a value, so nothing in this panel moves while the
+form is filled in. What follows the answers is the contract panel above
+it: its table, and "The schema for these answers".
 
 The classic twin of example 1 carries the same two documents under its
 form, and no table, having no surface to compare with. Its form requires
@@ -681,10 +682,10 @@ Drush commands are checked against `ExampleCalls`.
 | `Kernel\ExamplesComplianceTest` | Example 4: the alter's keys and label; its keys in one fieldset titled "Compliance", drawn between the capacity and the pricing; the capacity capped at a hundred without a licence and the room's limit with one; the licence's pattern; the stewards' minimum following the capacity; what the licence and the capacity replace on the form; example 5's calls unchanged. |
 | `Kernel\ExamplesToolTest` | Example 5: the three calls and their answers; what the script prints. |
 | `Kernel\ConfigSchemaContractTest` | What config schema can say: the plain mapping of examples 1 and 3, whole, with no list, no bound, nothing required and no shape for the ticket, the same whatever is stored or mounted; core's answer, a comment and no property; a constraint a schema does declare is said; the JSON this page quotes. |
-| `Kernel\ExamplesTodayPanelTest` | The second panel under examples 1 to 3: its two documents and its table, row by row; the ticket's row following the pricing and the capacity's the venue while both documents stay as they were; example 4's keys on the surface's side only; the classic twin's page. |
+| `Kernel\ExamplesTodayPanelTest` | The second panel under examples 1 to 3: its two documents and its table, row by row; its rows read from the surface's full schema, so the pricing, the venue and what is stored leave every row and both documents as they were; example 4's keys on the surface's side only; the classic twin's page. |
 | `Unit\ExamplesReadmeTest` | This page against the files it quotes, and its Drush commands. |
 | `Functional\ExamplesRoutesTest` | Every route answers an administrator and refuses anonymous; the landing page; both panels under example 3, and a save through it; the classic twin's page with its two documents, and a save through it. |
-| `FunctionalJavascript\ExamplesAjaxRefreshTest` | In a browser: example 2's venue replaces the room and the capacity and leaves the venue the same node, the orphaned room on its empty option with the stale marker and the capacity back at 1000; a room then narrows the capacity and loses `- Select -`. Example 3's paid pricing swaps the note for a price and a currency, and moves the ticket's row of the second panel's table while its two documents stay the same. |
+| `FunctionalJavascript\ExamplesAjaxRefreshTest` | In a browser: example 2's venue replaces the room and the capacity and leaves the venue the same node, the orphaned room on its empty option with the stale marker and the capacity back at 1000; a room then narrows the capacity and loses `- Select -`. Example 3's paid pricing swaps the note for a price and a currency, and leaves the second panel's table and its two documents as they were. |
 | `FunctionalJavascript\ExamplesComplianceRefreshTest` | Example 4, in a browser: one fieldset titled "Compliance", the ceiling of 100 lifted to the main hall's 400 by `2048`, and the stewards at 1 for 50 and 3 for 150; a malformed licence on blur is said once, under the licence, with `aria-invalid` and nothing at the top, and caps the capacity at a hundred; corrected, the error goes and the room's limit comes back. A refused capacity left by a click on text keeps no focus, and left by Tab lands on the Compliance fieldset after it. The fieldset is drawn below the capacity and above the pricing, and stays there when `2048` and Tab lift the capacity, which, with the stewards, is all that is replaced. |
 | `Functional\ServedContractEndpointsTest` | In React: the landing page's links, and example 2's contract, refine and validate over HTTP. |
 | `Functional\ServedSubmitEndpointTest` | In React: example 2 saved over HTTP, refused, and refused after someone else saved. |

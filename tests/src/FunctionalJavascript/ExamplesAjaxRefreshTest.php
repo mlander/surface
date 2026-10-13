@@ -76,7 +76,8 @@ class ExamplesAjaxRefreshTest extends ExamplesWebDriverTestBase {
     $this->assertTrue($assert->fieldExists('surface[ticket][note]')->isVisible());
     $assert->fieldNotExists('surface[ticket][price]');
     // Under the contract, what config schema says, with the ticket's
-    // row of its table: free, the surface's side names the note.
+    // row of its table: the surface's side is its full schema, which
+    // names both shapes whatever the pricing is.
     $documents = $this->todayDocuments();
     $this->assertCount(2, $documents);
     $this->assertStringContainsString('No schema is defined for property of type', $documents[0]);
@@ -84,8 +85,13 @@ class ExamplesAjaxRefreshTest extends ExamplesWebDriverTestBase {
     $this->assertSame([
       'ticket',
       'title, $comment',
-      'title, type, if/then on pricing (2 shapes; free now: note)',
+      'title, type, if/then on pricing (2 shapes: free has note; paid has price, currency)',
     ], $this->todayRow('ticket'));
+    $this->assertSame([
+      'room',
+      'title, type',
+      'title, type, oneOf (6), if/then on venue (3 cases)',
+    ], $this->todayRow('room'));
 
     $this->probe(['surface[pricing]', 'surface[contact][email]']);
     $page->selectFieldOption('surface[pricing]', 'paid');
@@ -100,12 +106,13 @@ class ExamplesAjaxRefreshTest extends ExamplesWebDriverTestBase {
     $this->assertTrue($this->stillProbed('surface[pricing]'));
     $this->assertTrue($this->stillProbed('surface[contact][email]'));
     $assert->elementNotExists('css', '.messages');
-    // The table follows the answer, on the surface's side only: the
-    // paid shape and its keys. The two documents are what they were.
+    // The table compares two documents that read no value, so the row
+    // is the one it was, as the two documents are: only the contract
+    // panel above it follows the answer.
     $this->assertSame([
       'ticket',
       'title, $comment',
-      'title, type, if/then on pricing (2 shapes; paid now: price, currency)',
+      'title, type, if/then on pricing (2 shapes: free has note; paid has price, currency)',
     ], $this->todayRow('ticket'));
     $this->assertSame($documents, $this->todayDocuments());
     $assert->elementsCount('css', 'details.data-surface-today-panel', 1);

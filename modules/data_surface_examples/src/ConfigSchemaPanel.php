@@ -17,11 +17,12 @@ use Drupal\data_surface\Contract\ContractEmitter;
  * ConfigSchemaContract. Neither reads a value, so neither changes while
  * the form is filled in.
  *
- * Handed the schema the surface emits for the same settings, it adds a
- * table that sets the two side by side, key by key: the JSON Schema
- * keywords each one states. That table is counted from the two
- * documents, never written down, and its surface column follows the
- * answers in the form, because the surface's contract does.
+ * Handed the full schema the surface emits for the same settings, the
+ * one that holds for any values, it adds a table that sets the two side
+ * by side, key by key: the JSON Schema keywords each one states. That
+ * table is counted from the two documents, never written down, and it is
+ * static against static: neither side reads a value, so nothing in the
+ * panel moves while the form is filled in.
  *
  * @see \Drupal\data_surface_examples\ConfigSchemaContract
  * @see \Drupal\data_surface_examples\ExamplePanels
@@ -56,18 +57,16 @@ final class ConfigSchemaPanel {
    * @param string $config
    *   The config object's name.
    * @param array|null $surface
-   *   The JSON Schema the surface emits for the same settings as the
-   *   answers stand, to compare with; NULL for a page with no surface.
-   * @param array $values
-   *   The values that schema describes, which say which of its
-   *   conditionals applies now.
+   *   The full JSON Schema the surface emits for the same settings
+   *   (ContractEmitter::emitFull()), to compare with; NULL for a page
+   *   with no surface.
    * @param string|\Stringable|null $note
    *   A sentence to add under the first, as safe HTML; NULL for none.
    *
    * @return array
    *   A render array: a collapsed details element.
    */
-  public function build(string $config, ?array $surface = NULL, array $values = [], string|\Stringable|null $note = NULL): array {
+  public function build(string $config, ?array $surface = NULL, string|\Stringable|null $note = NULL): array {
     $today = $this->contract->describe($config);
     $panel = [
       '#type' => 'details',
@@ -97,7 +96,7 @@ final class ConfigSchemaPanel {
     ];
     if ($surface !== NULL) {
       $panel['comparison_note'] = [
-        '#markup' => '<p>' . $this->t('Key by key, the JSON Schema keywords each one states: the mapping above, and the contract the surface emits for the answers as they stand.') . '</p>',
+        '#markup' => '<p>' . $this->t('Key by key, the JSON Schema keywords each one states: the mapping above, and the full schema the surface emits, the one that holds for any answers. Neither reads a value, so this table does not change either.') . '</p>',
       ];
       $panel['comparison'] = [
         '#type' => 'table',
@@ -106,7 +105,7 @@ final class ConfigSchemaPanel {
           $this->t('From config schema'),
           $this->t('From the surface'),
         ],
-        '#rows' => $this->comparison($today['derived'], $surface, $values),
+        '#rows' => $this->comparison($today['derived'], $surface),
         '#attributes' => ['class' => ['data-surface-today-comparison']],
       ];
     }
@@ -136,14 +135,12 @@ final class ConfigSchemaPanel {
    * @param array $derived
    *   The schema mapped from config schema.
    * @param array $surface
-   *   The schema the surface emits.
-   * @param array $values
-   *   The values the surface's schema describes.
+   *   The full schema the surface emits.
    *
    * @return array
    *   The table rows, and a last one for `required`.
    */
-  protected function comparison(array $derived, array $surface, array $values): array {
+  protected function comparison(array $derived, array $surface): array {
     $rows = [];
     foreach ($surface['properties'] ?? [] as $key => $property) {
       $key = (string) $key;
@@ -152,7 +149,7 @@ final class ConfigSchemaPanel {
         'data' => [
           ['data' => ['#markup' => '<code>' . htmlspecialchars($key) . '</code>']],
           is_array($from_schema) ? $this->keywords($from_schema) : (string) $this->t('not declared'),
-          implode(', ', array_filter([$this->keywords($property, ''), $this->conditionals($surface, $values, $key)])),
+          implode(', ', array_filter([$this->keywords($property, ''), $this->conditionals($surface, $key)])),
         ],
         'data-today-key' => $key,
       ];
@@ -198,26 +195,24 @@ final class ConfigSchemaPanel {
    *
    * A slot's shapes, one per value of the key that chooses it, and what
    * a refiner answers for each value it could be handed, are written on
-   * the parent object as `allOf` of `if`/`then`, not on the key. The one
-   * whose `if` the values meet is named, with the keys of the shape it
-   * gives, or the keywords it states when it gives no shape.
+   * the parent object as `allOf` of `if`/`then`, not on the key. A shape
+   * is named by the value that chooses it and the keys it has; a case
+   * that only narrows the key is counted.
    *
    * @param array $surface
-   *   The schema the surface emits.
-   * @param array $values
-   *   The values the schema describes.
+   *   The full schema the surface emits.
    * @param string $key
    *   The key.
    *
    * @return string
-   *   The phrase, such as "if/then on pricing (2 shapes; free now:
-   *   note)", or the empty string when no conditional names the key.
+   *   The phrase, such as "if/then on pricing (2 shapes: free has note;
+   *   paid has price, currency)" or "if/then on venue (3 cases)", or the
+   *   empty string when no conditional names the key.
    */
-  protected function conditionals(array $surface, array $values, string $key): string {
+  protected function conditionals(array $surface, string $key): string {
     $count = 0;
     $on = [];
-    $shapes = FALSE;
-    $now = '';
+    $shapes = [];
     foreach ($surface['allOf'] ?? [] as $branch) {
       $then = $branch['then']['properties'][$key] ?? NULL;
       if (!is_array($then)) {
@@ -226,41 +221,20 @@ final class ConfigSchemaPanel {
       $count++;
       $if = is_array($branch['if']['properties'] ?? NULL) ? $branch['if']['properties'] : [];
       $on += array_fill_keys(array_map('strval', array_keys($if)), TRUE);
-      $shapes = $shapes || isset($then['properties']);
-      if ($this->applies($if, $values)) {
-        $now = '; ' . $this->t('@value now: @states', [
+      if (isset($then['properties'])) {
+        $shapes[] = $this->t('@value has @keys', [
           '@value' => implode(', ', array_map('strval', array_column($if, 'const'))),
-          '@states' => isset($then['properties']) ? implode(', ', array_keys($then['properties'])) : $this->keywords($then),
+          '@keys' => implode(', ', array_keys($then['properties'])),
         ]);
       }
     }
     if ($count === 0) {
       return '';
     }
-    $arguments = ['@keys' => implode(', ', array_keys($on)), '@now' => $now];
-    return (string) ($shapes
-      ? $this->formatPlural($count, 'if/then on @keys (1 shape@now)', 'if/then on @keys (@count shapes@now)', $arguments)
-      : $this->formatPlural($count, 'if/then on @keys (1 case@now)', 'if/then on @keys (@count cases@now)', $arguments));
-  }
-
-  /**
-   * Answers whether the values meet a conditional's `if`.
-   *
-   * @param array $if
-   *   The `if`'s properties, each naming a value as a `const`.
-   * @param array $values
-   *   The values.
-   *
-   * @return bool
-   *   TRUE when every named key holds the value named for it.
-   */
-  protected function applies(array $if, array $values): bool {
-    foreach ($if as $name => $condition) {
-      if (!is_array($condition) || !array_key_exists('const', $condition) || ($values[$name] ?? NULL) !== $condition['const']) {
-        return FALSE;
-      }
-    }
-    return $if !== [];
+    $arguments = ['@keys' => implode(', ', array_keys($on)), '@shapes' => implode('; ', $shapes)];
+    return (string) ($shapes !== []
+      ? $this->formatPlural($count, 'if/then on @keys (1 shape: @shapes)', 'if/then on @keys (@count shapes: @shapes)', $arguments)
+      : $this->formatPlural($count, 'if/then on @keys (1 case)', 'if/then on @keys (@count cases)', $arguments));
   }
 
 }

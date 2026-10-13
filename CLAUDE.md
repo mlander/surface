@@ -160,7 +160,12 @@ The served contract's emitter is the main module's:
 `Contract\ContractEmitter` (`data_surface.contract_emitter`) turns a
 sealed surface and its values into JSON Schema 2020-12 with an
 `x-surface` keyword per property, each slot an `allOf` of `if`/`then`
-on its deciding sibling. It names no widget unless asked
+on its deciding sibling. That is the schema as it stands, for one set
+of values; `emitFull()` is the second document, the full schema, which
+reads no value: every key as declared, every listable dependency as
+conditionals, the rest `dynamic`, and never stricter than the pipeline
+(`docs/decisions.md#two-documents-never-stricter-than-the-runtime`).
+It names no widget unless asked
 (`emit(..., widgets: TRUE)`); `data_surface_tool`'s contract panel shows
 it without, beside what the Tool API can advertise (which flattens a
 slot, and is what `tool:info` prints). `modules/data_surface_react`

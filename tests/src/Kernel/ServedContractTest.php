@@ -11,6 +11,7 @@ use Drupal\data_surface_demo\Surface\DemoBlockSurface;
 use Drupal\data_surface_examples\Venues;
 use Drupal\data_surface_react\Controller\SurfaceApiController;
 use Drupal\data_surface_surface_test\Surface\Crate\CrateSurface;
+use Drupal\data_surface_surface_test\Surface\Pantry\PantrySurface;
 use Drupal\node\Entity\NodeType;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Opis\JsonSchema\Validator;
@@ -770,6 +771,166 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($this->validates($schema, $crate));
     $this->assertFalse($this->validates($schema, ['contents_settings' => ['fruit' => 'peach', 'layers' => 4]] + $crate));
     $this->assertTrue($this->validates($schema, ['contents_settings' => ['fruit' => 'peach', 'layers' => 2]] + $crate));
+  }
+
+  /**
+   * Emits the full schema of one situation, as a client decodes it.
+   *
+   * @param string $surface
+   *   The surface id.
+   *
+   * @return array
+   *   The document, through JSON and back.
+   */
+  protected function full(string $surface): array {
+    $situation = $this->container->get('data_surface_react.served_situations')->resolve($surface, 'configure', []);
+    $served = $this->container->get('data_surface.contract_emitter')->emitFull(
+      $situation->surface,
+      $situation->definition->id,
+      $situation->situation->id,
+      $situation->situation->label,
+    );
+    return json_decode((string) json_encode($served->document), TRUE);
+  }
+
+  /**
+   * Tests the full schema of example 2 holds for any values.
+   *
+   * The second document reads no value. With Riverside's main hall
+   * stored it lists every room and a capacity up to a thousand, and
+   * states beside them, per venue, its rooms and, per room, its seats; it
+   * says nothing that is only true right now; and it is the same
+   * document, byte for byte, with the harbour stored. So a validator
+   * holding it accepts the library with a library room, which the schema
+   * for the stored answers cannot.
+   */
+  public function testFullSchemaReadsNoValue(): void {
+    $document = $this->full('registration.step2');
+    $this->assertSame(['surface', 'situation', 'label', 'schema'], array_keys($document), 'No values and no stale beside the schema.');
+    $schema = $document['schema'];
+    $this->assertWellFormed($schema);
+    $this->assertSame(['title', 'venue', 'room'], $schema['required']);
+
+    $room = $schema['properties']['room'];
+    $this->assertSame(Venues::rooms(), $this->titles($room));
+    $this->assertSame(['locked' => FALSE, 'dependsOn' => ['venue'], 'enumerated' => TRUE], $room['x-surface']);
+    $rooms = [];
+    foreach ($this->branches($schema, 'room') as [$when, $then]) {
+      $rooms[$when['venue']] = array_keys($this->titles($then));
+    }
+    $this->assertSame([
+      'riverside' => ['riverside_main', 'riverside_east'],
+      'library' => ['library_reading', 'library_garden'],
+      'harbour' => ['harbour_auditorium', 'harbour_deck'],
+    ], $rooms);
+
+    $capacity = $schema['properties']['capacity'];
+    $this->assertSame([1, 1000, 50], [$capacity['minimum'], $capacity['maximum'], $capacity['default']]);
+    $this->assertArrayNotHasKey('description', $capacity);
+    $this->assertSame(['locked' => FALSE, 'dependsOn' => ['room'], 'enumerated' => TRUE], $capacity['x-surface']);
+    $seats = [];
+    foreach ($this->branches($schema, 'capacity') as [$when, $then]) {
+      $seats[$when['room']] = $then['maximum'];
+    }
+    $this->assertSame(array_map(static fn (array $info): int => $info['seats'], Venues::ROOMS), $seats);
+    // Nothing that is only true of a moment, anywhere.
+    foreach ($this->extensions($schema) as $at => $extension) {
+      $this->assertSame([], array_intersect(['refined', 'stale', 'emptyOption', 'chosen', 'widget'], array_keys($extension)), $at);
+    }
+
+    // A validator holding it: any venue with one of its own rooms, up to
+    // that room's seats, and nothing else.
+    $stored = $this->contract('registration.step2', 'configure');
+    $this->assertSame(['riverside', 'riverside_main'], [$stored['values']['venue'], $stored['values']['room']]);
+    $this->assertTrue($this->validates($schema, $stored['values']));
+    $library = ['venue' => 'library', 'room' => 'library_garden', 'capacity' => 30] + $stored['values'];
+    $this->assertTrue($this->validates($schema, $library), 'The library with one of its rooms is accepted.');
+    $this->assertFalse($this->validates($schema, ['room' => 'riverside_main'] + $library), 'The library with the main hall is refused.');
+    foreach (Venues::ROOMS as $name => $info) {
+      $values = ['venue' => $info['venue'], 'room' => $name, 'capacity' => $info['seats']] + $stored['values'];
+      $this->assertTrue($this->validates($schema, $values), $name . ' at its seats is accepted.');
+      $this->assertFalse($this->validates($schema, ['capacity' => $info['seats'] + 1] + $values), $name . ' over its seats is refused.');
+    }
+    // The schema for the stored answers is for those answers: it offers
+    // the riverside's rooms and so refuses the library's.
+    $this->assertCount(2, $this->titles($stored['schema']['properties']['room']));
+    $this->assertFalse($this->validates($stored['schema'], $library));
+
+    // Stored elsewhere, the full schema is the same document; the other
+    // one is not.
+    $before = (string) json_encode($this->full('registration.step2'));
+    $this->config('data_surface_examples.registration_step2')
+      ->set('venue', 'harbour')
+      ->set('room', 'harbour_deck')
+      ->set('capacity', 90)
+      ->save();
+    $moved = $this->contract('registration.step2', 'configure');
+    $this->assertSame('harbour_deck', $moved['values']['room']);
+    $this->assertNotSame($stored['schema'], $moved['schema']);
+    $this->assertSame($before, (string) json_encode($this->full('registration.step2')));
+  }
+
+  /**
+   * Tests the full schema leaves what cannot be listed as declared.
+   *
+   * With example 4's module on, the capacity also watches a free-text
+   * licence, so its answers cannot be listed: the full schema keeps the
+   * declared thousand and marks it dynamic, wider than the pipeline will
+   * allow and never narrower, while the schema for the stored answers
+   * serves it as it stands, a hundred without a licence. The room beside
+   * it is listed, the ticket is its two conditionals with none chosen,
+   * and a subsurface is described from nothing, not from its defaults.
+   */
+  public function testFullSchemaLeavesWhatCannotBeListedAsDeclared(): void {
+    $this->enableModules(['data_surface_examples_compliance']);
+    $schema = $this->full('registration.step3')['schema'];
+    $this->assertWellFormed($schema);
+    $capacity = $schema['properties']['capacity'];
+    $this->assertSame(1000, $capacity['maximum']);
+    $this->assertArrayNotHasKey('description', $capacity);
+    $this->assertSame([
+      'locked' => FALSE,
+      'dependsOn' => ['room', 'third_party_settings.data_surface_examples_compliance.licence'],
+      'dynamic' => TRUE,
+    ], $capacity['x-surface']);
+    $this->assertSame([], $this->branches($schema, 'capacity'));
+    $this->assertTrue($schema['properties']['third_party_settings']['x-surface']['dynamic']);
+    $this->assertTrue($schema['properties']['room']['x-surface']['enumerated']);
+    $this->assertSame(Venues::rooms(), $this->titles($schema['properties']['room']));
+    $this->assertCount(3, $this->branches($schema, 'room'));
+    $ticket = $schema['properties']['ticket']['x-surface'];
+    $this->assertSame(['pricing', ['free', 'paid']], [$ticket['by'], $ticket['variants']]);
+    $this->assertArrayNotHasKey('chosen', $ticket);
+    $this->assertSame(['price', 'currency'], $this->variant($schema, 'pricing', 'paid', 'ticket')['required']);
+
+    // The other document, for the stored answers: as it stands.
+    $stored = $this->contract('registration.step3', 'configure');
+    $this->assertSame(100, $stored['schema']['properties']['capacity']['maximum']);
+    $this->assertSame('Up to 100 without an event licence. With one, up to 400.', $stored['schema']['properties']['capacity']['description']);
+    // Wider where it cannot be exact: 150 people and no licence fit the
+    // full schema, and the schema for these answers refuses them.
+    $crowd = ['capacity' => 150] + $stored['values'];
+    $this->assertTrue($this->validates($schema, $crowd));
+    $this->assertFalse($this->validates($stored['schema'], $crowd));
+    $this->assertFalse($this->validates($schema, ['venue' => 'library'] + $stored['values']), 'What can be listed is still held: the main hall is not the library\'s.');
+
+    // A child whose unit defaults to `cm` is not described for `cm`.
+    $this->enableModules(['data_surface_surface_test']);
+    $pantry = $this->container->get('data_surface.surfaces')->build(PantrySurface::class, PantrySurface::add());
+    $emitter = $this->container->get('data_surface.contract_emitter');
+    $shelf = json_decode((string) json_encode($emitter->emitFull($pantry, 'surface_test.pantry')->document['schema']['properties']['shelf']), TRUE);
+    $this->assertSame(['locked' => FALSE, 'dependsOn' => ['unit'], 'enumerated' => TRUE], $shelf['properties']['height']['x-surface']);
+    $this->assertArrayNotHasKey('maximum', $shelf['properties']['height']);
+    $ceilings = [];
+    foreach ($this->branches($shelf, 'height') as [$when, $then]) {
+      $ceilings[$when['unit']] = $then;
+    }
+    $this->assertSame(['cm' => ['maximum' => 200], 'in' => ['maximum' => 80]], $ceilings);
+    // The schema for its default answers has the default's ceiling, and
+    // no conditional: with values, nothing changes.
+    $now = json_decode((string) json_encode($emitter->emit($pantry, $pantry->getDefaultValues(), 'surface_test.pantry')->document['schema']['properties']['shelf']), TRUE);
+    $this->assertSame(200, $now['properties']['height']['maximum']);
+    $this->assertArrayNotHasKey('allOf', $now);
   }
 
   /**

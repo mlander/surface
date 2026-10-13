@@ -19,10 +19,9 @@ use Symfony\Component\HttpFoundation\Request;
  *
  * Below the contract panel, collapsed: what core answers, the plain
  * mapping of the config schema, and a table setting that mapping beside
- * the surface's contract key by key. The two documents read no value;
- * the table's surface column follows the answers, so the whole panel is
- * replaced with the contract panel on every rebuild and only that
- * column has moved.
+ * the surface's full schema key by key. None of the three reads a
+ * value, so the panel is replaced with the contract panel on every
+ * rebuild and says what it said.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -150,10 +149,15 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
       'title' => ['title, type', 'title, type'],
       'open' => ['title, type', 'title, type, default'],
       'venue' => ['title, type', 'title, type, oneOf (3)'],
-      'room' => ['title, type', 'title, type, oneOf (2)'],
-      'capacity' => ['title, type', 'title, description, type, minimum, maximum, default'],
+      // The full schema: every room and a case per venue, a thousand and
+      // a case per room, both ticket shapes, whatever is stored.
+      'room' => ['title, type', 'title, type, oneOf (6), if/then on venue (3 cases)'],
+      'capacity' => ['title, type', 'title, type, minimum, maximum, default, if/then on room (6 cases)'],
       'pricing' => ['title, type', 'title, type, oneOf (2), default'],
-      'ticket' => ['title, $comment', 'title, type, if/then on pricing (2 shapes; free now: note)'],
+      'ticket' => [
+        'title, $comment',
+        'title, type, if/then on pricing (2 shapes: free has note; paid has price, currency)',
+      ],
       'contact' => [
         'title, type, properties, additionalProperties',
         'title, type, properties, additionalProperties, required',
@@ -162,7 +166,7 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
     ], $this->comparison($today));
     // Counted from the two documents: the venue's row is longer on the
     // surface's side by the list config schema has no way to give.
-    $surface = $this->document($panels[ExamplePanels::CONTRACT]['contract'])['properties']['venue'];
+    $surface = $this->document($panels[ExamplePanels::CONTRACT]['full'])['properties']['venue'];
     unset($surface['x-surface']);
     $this->assertSame(['title', 'type', 'oneOf'], array_keys($surface));
     $this->assertCount(3, $surface['oneOf']);
@@ -186,15 +190,15 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests the comparison follows an answer, and the two documents do not.
+   * Tests nothing in the panel follows an answer.
    *
-   * The pricing moves the ticket: the surface's contract says which of
-   * the two shapes applies and what keys it has. The venue orphans the
-   * room, so the capacity, with no room to refine against, is stated as
-   * one conditional per room it could be given. Config schema's side
-   * of every row, and both documents above the table, are as they were.
+   * The comparison is of two documents that read no value: the mapping of
+   * config schema, and the surface's full schema. So a pricing that moves
+   * the ticket, and a venue that orphans the room, leave every row and
+   * both documents as they were, and so does what is stored. What follows
+   * the answers is the contract panel above it.
    */
-  public function testTheComparisonFollowsTheAnswers(): void {
+  public function testNothingInThePanelFollowsTheAnswers(): void {
     $before = $this->panelsOf(3)[ExamplePanels::TODAY];
     $this->actAsAnonymousAdministrator();
 
@@ -206,27 +210,34 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
     $panels = $this->wrapperSelector($container[DataSurfaceSituationForm::PANEL_KEY]);
     $this->assertSame([$this->wrapperSelector($container['ticket']), $panels], $this->ajaxSelectors($response, 'replaceWith'));
     $after = $container[DataSurfaceSituationForm::PANEL_KEY][ExamplePanels::TODAY];
-    $this->assertSame(
-      ['title, $comment', 'title, type, if/then on pricing (2 shapes; paid now: price, currency)'],
-      $this->comparison($after)['ticket'],
-    );
-    $this->assertSame(array_diff_key($this->comparison($before), ['ticket' => TRUE]), array_diff_key($this->comparison($after), ['ticket' => TRUE]));
+    $this->assertSame([
+      'title, $comment',
+      'title, type, if/then on pricing (2 shapes: free has note; paid has price, currency)',
+    ], $this->comparison($after)['ticket']);
+    $this->assertSame($this->comparison($before), $this->comparison($after));
     $this->assertSame($before['core']['json']['#value'], $after['core']['json']['#value']);
     $this->assertSame($before['derived']['json']['#value'], $after['derived']['json']['#value']);
     // And as the browser is sent it.
     $markup = $this->ajaxMarkup($response, $panels);
     $this->assertStringContainsString('Behind the scenes: the contract, as it stands', $markup);
     $this->assertStringContainsString('Without a surface: what config schema can say', $markup);
-    $this->assertMatchesRegularExpression('#<tr data-today-key="ticket">(?:(?!</tr>).)*<td>title, \$comment</td>\s*<td>title, type, if/then on pricing \(2 shapes; paid now: price, currency\)</td>#s', $markup);
+    $this->assertMatchesRegularExpression('#<tr data-today-key="ticket">(?:(?!</tr>).)*<td>title, \$comment</td>\s*<td>title, type, if/then on pricing \(2 shapes: free has note; paid has price, currency\)</td>#s', $markup);
     $this->assertStringContainsString('No schema is defined for property of type', $markup);
 
     $state = $this->postStep(3, ['venue' => 'harbour'] + self::SHIPPED, ['_triggering_element_name' => 'surface[venue]']);
-    $after = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY][DataSurfaceSituationForm::PANEL_KEY][ExamplePanels::TODAY];
-    $this->assertSame(
-      ['title, type', 'title, type, minimum, maximum, default, if/then on room (2 cases)'],
-      $this->comparison($after)['capacity'],
-    );
+    $panels = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY][DataSurfaceSituationForm::PANEL_KEY];
+    $after = $panels[ExamplePanels::TODAY];
+    $this->assertSame($this->comparison($before), $this->comparison($after));
     $this->assertSame($before['derived']['json']['#value'], $after['derived']['json']['#value']);
+    // The contract panel beside it did follow: the schema for these
+    // answers offers the harbour's two rooms, the full schema all six.
+    $contract = $panels[ExamplePanels::CONTRACT];
+    $this->assertCount(2, array_filter($this->document($contract['contract'])['properties']['room']['oneOf'], static fn (array $choice): bool => isset($choice['title'])));
+    $this->assertCount(6, $this->document($contract['full'])['properties']['room']['oneOf']);
+
+    // Stored somewhere else, the same rows.
+    $this->config('data_surface_examples.registration_step3')->set('venue', 'harbour')->set('room', 'harbour_deck')->save();
+    $this->assertSame($this->comparison($before), $this->comparison($this->panelsOf(3)[ExamplePanels::TODAY]));
   }
 
   /**

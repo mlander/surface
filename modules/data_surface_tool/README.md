@@ -164,11 +164,14 @@ is a read-only panel any situation route can name in
 `_data_surface_panel`. The generic situation form places it inside the
 surface, so it rebuilds with the form: every key with its type, label,
 requiredness, default, what it allows in words, what it depends on, and
-whether it is narrowed right now. Below the table, collapsed, are two
-JSON Schema documents: "The contract, as JSON Schema", which
+whether it is narrowed right now. Below the table, collapsed, are three
+JSON Schema documents: "The schema for these answers", which
 `data_surface.contract_emitter` emits for the situation and the form's
 values as they stand (slots as `allOf` of `if`/`then`, titled `oneOf`,
-`x-surface` with dependsOn and locked, no widget hints); and "What the
+`x-surface` with dependsOn and locked, no widget hints); "The full
+schema, for any answers", the same emitter's `emitFull()`, which reads
+no value and so does not change with the form (every key as declared,
+every listable dependency as conditionals); and "What the
 Tool API can advertise", the derived tool's input schema as `tool:info`
 prints it, with a sentence on what it cannot say. It stays in this
 submodule because that second block needs the Tool API's serializer.

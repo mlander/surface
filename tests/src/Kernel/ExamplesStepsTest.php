@@ -321,7 +321,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     $this->serveRoute('data_surface_examples.step3');
     $form = $this->container->get('form_builder')->getForm(DataSurfaceSituationForm::class);
     $panel = $form[DataSurfaceSituationForm::SURFACE_KEY][DataSurfaceSituationForm::PANEL_KEY][ExamplePanels::CONTRACT];
-    $this->assertSame('The contract, as JSON Schema', (string) $panel['contract']['#title']);
+    $this->assertSame('The schema for these answers', (string) $panel['contract']['#title']);
     $contract = json_decode(htmlspecialchars_decode((string) $panel['contract']['json']['#value']), TRUE);
     $this->assertSame('https://json-schema.org/draft/2020-12/schema', $contract['$schema']);
     $branches = [];
@@ -338,8 +338,30 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     $this->assertArrayNotHasKey('widget', $ticket);
     $this->assertSame(['venue'], $contract['properties']['room']['x-surface']['dependsOn']);
 
-    // Below it, labelled, what the derived tool can advertise.
-    $this->assertSame(['contract', 'tool'], array_values(array_intersect(Element::children($panel), ['contract', 'tool'])));
+    // Beside it, the full schema: the same keys as declared, with every
+    // dependency that can be listed stated for every value, so the room
+    // the table says is "one of Main hall, East room" lists all six here.
+    $this->assertSame('The full schema, for any answers', (string) $panel['full']['#title']);
+    $this->assertStringContainsString('does not change when an answer changes', (string) $panel['full']['note']['#markup']);
+    $full = json_decode(htmlspecialchars_decode((string) $panel['full']['json']['#value']), TRUE);
+    $this->assertCount(2, $contract['properties']['room']['oneOf']);
+    $this->assertCount(6, $full['properties']['room']['oneOf']);
+    $this->assertSame(1000, $full['properties']['capacity']['maximum']);
+    $this->assertSame(['locked', 'dependsOn', 'enumerated'], array_keys($full['properties']['room']['x-surface']));
+    $narrows = [];
+    foreach ($full['allOf'] as $branch) {
+      $on = implode(',', array_keys($branch['if']['properties']));
+      $narrows[$on][] = implode(',', array_keys($branch['then']['properties']));
+    }
+    $this->assertSame([
+      'venue' => ['room', 'room', 'room'],
+      'room' => ['capacity', 'capacity', 'capacity', 'capacity', 'capacity', 'capacity'],
+      'pricing' => ['ticket', 'ticket'],
+    ], $narrows);
+
+    // Below them, labelled, what the derived tool can advertise.
+    $blocks = ['contract', 'full', 'tool'];
+    $this->assertSame($blocks, array_values(array_intersect(Element::children($panel), $blocks)));
     $this->assertStringContainsString('What the Tool API can advertise', (string) $panel['tool']['#title']);
     $this->assertStringContainsString('data_surface:registration.step3:configure', (string) $panel['tool']['#title']);
     $this->assertStringContainsString('cannot say a shape chosen by a sibling key', (string) $panel['tool']['note']['#markup']);

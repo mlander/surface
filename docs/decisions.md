@@ -694,6 +694,38 @@ legal and multiply the parent per variant, per slot. The `if`/`then` is
 the JSON Schema statement, and `x-surface.by` names the key for a
 reader that wants it. (`ContractEmitter::slot()`)
 
+### Two documents, never stricter than the runtime
+
+The emitter writes two documents and does not merge them. The schema as
+it stands (`emit()`) is for the present moment: refined for the values
+it was built for, with what is true right now under `x-surface` and
+`values` and `stale` beside it. The full schema (`emitFull()`) is for
+every moment: it reads no value, describes each key as declared, and
+states every dependency that can be listed as conditionals, always.
+Merged, the first would make a drawing client evaluate JSON Schema
+conditionals to learn what a select offers, which it should not need an
+evaluator for; kept alone, it is valid only for the current values, and
+a schema that is only true of one set of values is not a contract. Both
+come from one code path, a frame described for the values it is handed,
+which for the full schema are the locked keys the situation knows and
+nothing else.
+
+One rule holds for both: the schema is never stricter than the runtime.
+What the pipeline accepts, the schema accepts; refinement is a runtime
+guard and has the last word. Where a rule cannot be stated (a constraint
+with no keyword, named in `checkedOnServer`) or a dependency cannot be
+listed or would be too large (free text, a number, a key an alter
+mounted, more than the cap), the schema stays at the declared width and
+marks the key `dynamic`, never an approximation that is narrower.
+Exactness is pursued wherever it is possible, which is what enumeration
+is for, and is the goal there, not the guarantee. For the schema as it
+stands the rule is about the values it was built for and no others.
+*Open:* the rule has not been audited against the pipeline's casting,
+its handling of unknown keys and of an untouched stale stored value, or
+the Regex translation; nor is there a test holding every accepted value
+set to the full schema across the surfaces.
+(`ContractEmitter::emitFull()`, `ContractEmitter::frame()`)
+
 ### Enumeration is capped
 
 Where a key's refiners have nothing to refine against yet, the emitter
