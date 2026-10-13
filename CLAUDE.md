@@ -108,6 +108,14 @@ and are not the thing to check. **No test may error and no test may
 fail**, the browser tests included; any error or failure is a real
 regression.
 
+The suite needs two packages a site may not have, both listed under
+`require-dev` in `composer.json`: the Tool Belt module
+(`drupal/tool_belt`), which the two tool comparison tests install, and
+`opis/json-schema`, which `ServedContractTest` validates the emitted
+schemas with. On a site where this module is a checkout and not a
+Composer package, require both at the site root. Without them those
+tests error; they do not skip.
+
 There are no open findings. The two that stood here —
 `NodeTypeSurfaceFormTest::testAddStoresTheTypeAndItsOverrides` and
 `NodeTypeSurfaceFormTest::testDuplicateMachineNameIsRefusedOnTheTypeElement`

@@ -14,7 +14,9 @@
     },
     "require-dev": {
         "drupal/address": "^2.0",
-        "drupal/tool": "^1.0@alpha"
+        "drupal/tool": "^1.0@alpha",
+        "drupal/tool_belt": "^1.0@alpha",
+        "opis/json-schema": "^2.4"
     },
     "suggest": {
         "drupal/address": "Enables the data_surface_address submodule, which describes the address field type's instance settings as a surface.",
