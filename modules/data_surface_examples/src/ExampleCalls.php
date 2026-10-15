@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace Drupal\data_surface_examples;
 
 /**
- * Example 5's three calls to the example 3 tool, written down once.
+ * Example 5's calls to the example 3 tools, written down once.
+ *
+ * Three calls to the write tool, and one to the read tool beside it,
+ * which answers with what is stored and changes nothing.
  *
  * The kernel test makes them, scripts/examples-dry-run.php prints what
  * they answer, and the example 5 page and the README show them as Drush
@@ -20,6 +23,11 @@ final class ExampleCalls {
    * The tool every call is made to.
    */
   public const TOOL = 'data_surface:registration.step3:configure';
+
+  /**
+   * The read tool beside it, which answers with what is stored.
+   */
+  public const READ_TOOL = 'data_surface:registration.step3:configure:read';
 
   /**
    * The calls: what each sends, and whether it is a dry run.
@@ -84,6 +92,19 @@ final class ExampleCalls {
       str_replace("'", "'\\''", (string) $input),
       self::CALLS[$call]['dry_run'] ? ' --input=dry_run=true' : '',
     );
+  }
+
+  /**
+   * Spells the read call as the Tool API's Drush command.
+   *
+   * Run as user 1 for the same reason: reading asks what writing asks.
+   * The situation needs nothing, so the read takes no input.
+   *
+   * @return string
+   *   The command.
+   */
+  public static function drushRead(): string {
+    return sprintf('drush tool:run %s --uid=1', self::READ_TOOL);
   }
 
 }

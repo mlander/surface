@@ -60,7 +60,11 @@ parameters onto the situation's by name (`SituationRoute`), gated by
 `data_surface_tool` derives one tool per situation that can be asked
 on its own, `data_surface:<surface>:<situation>`: its surface names a
 target, no plugin uses it, and every `%key` in its permission can be
-supplied by a parameter (`SurfaceCatalogue::standalone()`). The field
+supplied by a parameter (`SurfaceCatalogue::standalone()`), and beside
+each that changes a thing that exists a read tool,
+`data_surface:<surface>:<situation>:read`, taking the parameters and
+answering with the stored values less secrets (`SurfaceCatalogue::reads()`,
+`SurfaceSituationReadTool`). The field
 tools are `data_surface:field.instance:add` / `:reuse` / `:edit`; the
 hand-written `field_add` / `field_update` are gone.
 `data_surface.surface_catalogue` lists the static layer; `docs/catalogue.md`

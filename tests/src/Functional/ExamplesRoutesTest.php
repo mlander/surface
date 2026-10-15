@@ -124,6 +124,7 @@ class ExamplesRoutesTest extends BrowserTestBase {
 
     $this->drupalGet('surface-examples/5');
     $assert->pageTextContains('drush tool:info data_surface:registration.step3:configure');
+    $assert->pageTextContains('drush tool:run data_surface:registration.step3:configure:read --uid=1');
     $assert->pageTextContains('--input=dry_run=true');
   }
 

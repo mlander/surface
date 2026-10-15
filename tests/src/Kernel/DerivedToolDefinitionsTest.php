@@ -83,12 +83,13 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
    * Lists the derived tools' ids.
    *
    * @return list<string>
-   *   Every `data_surface:<surface>:<situation>` tool, sorted.
+   *   Every `data_surface:<surface>:<situation>` tool and every read tool
+   *   beside one, `data_surface:<surface>:<situation>:read`, sorted.
    */
   protected function derivedIds(): array {
     $ids = array_values(array_filter(
       array_keys($this->toolManager()->getDefinitions()),
-      static fn (string $id): bool => str_starts_with($id, 'data_surface:') && substr_count($id, ':') === 2,
+      static fn (string $id): bool => str_starts_with($id, 'data_surface:') && (substr_count($id, ':') === 2 || str_ends_with($id, ':read')),
     ));
     sort($ids);
     return $ids;
@@ -140,13 +141,17 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
     $this->assertContains('data_surface:node.type:edit', $ids);
     $this->assertContains('data_surface:registration.step3:configure', $ids);
     $this->assertContains('data_surface:field.instance:edit', $ids);
+    $this->assertContains('data_surface:registration.step3:configure:read', $ids);
+    $this->assertContains('data_surface:field.instance:edit:read', $ids);
 
     $explorer = $this->explorer();
     foreach ($ids as $id) {
       $definition = $this->toolManager()->getDefinition($id);
       assert($definition instanceof ToolDefinition);
       $build = $explorer->viewTool($id);
-      $this->assertArrayHasKey('config_schema', $build, $id);
+      // Explorer suggests a config schema for a tool that takes inputs,
+      // which a read tool for a situation that needs nothing does not.
+      $this->assertSame($definition->getInputDefinitions() !== [], isset($build['config_schema']), $id);
       $schema = $this->suggestedSchema($explorer, $definition->getInputDefinitions());
       $this->assertIsString(Yaml::encode(['tool.plugin.' . $id => $schema]), $id);
       foreach ($definition->getInputDefinitions() as $name => $input) {
@@ -184,8 +189,11 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
     $after = $this->derivedIds();
     $this->assertSame([
       'data_surface:registration.step1:configure',
+      'data_surface:registration.step1:configure:read',
       'data_surface:registration.step2:configure',
+      'data_surface:registration.step2:configure:read',
       'data_surface:registration.step3:configure',
+      'data_surface:registration.step3:configure:read',
     ], array_values(array_diff($after, $before)));
     $this->assertSame([], array_diff($before, $after));
 

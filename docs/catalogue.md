@@ -20,7 +20,12 @@ A situation that can be asked "on its own" is also a tool,
 enabled: its surface names a target, no plugin's configuration is the
 surface, and every `%key` placeholder in its permission can be supplied
 by one of its parameters. A surface a plugin uses is configured through
-the plugin's host. `docs/surfaces.md` says how each part works.
+the plugin's host. One that can be asked on its own and changes a thing
+that exists is "read on its own" too, a read tool,
+`data_surface:<surface>:<situation>:read`: a situation that needs
+nothing says so by not creating, and one that needs a subject by naming
+one thing whole, with a single entity or with every identity key.
+`docs/surfaces.md` says how each part works.
 
 | Surface | Class | Identity | Situations |
 | --- | --- | --- | --- |
@@ -76,11 +81,11 @@ the plugin's host. `docs/surfaces.md` says how each part works.
 - Target: `Drupal\data_surface_tool\Target\FieldInstanceTarget`
 - Access: `Drupal\data_surface_tool\Access\FieldInstanceAccess`
 
-| Situation | Label | Needs | Creates | Permission | On its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- |
-| `add` | Add a field to a bundle | `string $entity_type_id`, `string $bundle` | once given what it needs | `administer %entity_type_id fields` | yes | `FieldInstanceSurface::add()` (`data_surface_tool`) |
-| `reuse` | Add an existing field to another bundle | `FieldStorageConfigInterface $storage`, `string $bundle` | once given what it needs | `administer %entity_type_id fields` | yes | `FieldInstanceSurface::reuse()` (`data_surface_tool`) |
-| `edit` | Edit a field | `FieldConfigInterface $field` | once given what it needs | `administer %entity_type_id fields` | yes | `FieldInstanceSurface::edit()` (`data_surface_tool`) |
+| Situation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `add` | Add a field to a bundle | `string $entity_type_id`, `string $bundle` | once given what it needs | `administer %entity_type_id fields` | yes | no: what it needs leaves room for a new one | `FieldInstanceSurface::add()` (`data_surface_tool`) |
+| `reuse` | Add an existing field to another bundle | `FieldStorageConfigInterface $storage`, `string $bundle` | once given what it needs | `administer %entity_type_id fields` | yes | no: what it needs leaves room for a new one | `FieldInstanceSurface::reuse()` (`data_surface_tool`) |
+| `edit` | Edit a field | `FieldConfigInterface $field` | once given what it needs | `administer %entity_type_id fields` | yes | yes | `FieldInstanceSurface::edit()` (`data_surface_tool`) |
 
 - Slot `settings` is filled by: `address` → `Drupal\data_surface_address\Surface\AddressFieldSettingsSurface`.
 
@@ -103,10 +108,10 @@ the plugin's host. `docs/surfaces.md` says how each part works.
 - Target: `Drupal\data_surface_tool\Target\FieldStorageTarget`
 - Access: the situation's permission alone
 
-| Situation | Label | Needs | Creates | Permission | On its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- |
-| `add` | New field storage | nothing | yes | `administer %entity_type_id fields` | no: nothing supplies `%entity_type_id` | `FieldStorageSurface::add()` (`data_surface_tool`) |
-| `edit` | Edit a field storage | `FieldStorageConfigInterface $storage` | once given what it needs | `administer %entity_type_id fields` | yes | `FieldStorageSurface::edit()` (`data_surface_tool`) |
+| Situation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `add` | New field storage | nothing | yes | `administer %entity_type_id fields` | no: nothing supplies `%entity_type_id` | no: not on its own | `FieldStorageSurface::add()` (`data_surface_tool`) |
+| `edit` | Edit a field storage | `FieldStorageConfigInterface $storage` | once given what it needs | `administer %entity_type_id fields` | yes | yes | `FieldStorageSurface::edit()` (`data_surface_tool`) |
 
 - Slot `settings` is filled, for every other value, by variants derived from the config schema `field.storage_settings.<field type>`, for every field type offered in the UI.
 
@@ -129,10 +134,10 @@ the plugin's host. `docs/surfaces.md` says how each part works.
 - Target: `Drupal\data_surface_demo_node_type\Target\NodeTypeTarget`
 - Access: `Drupal\data_surface_demo_node_type\Access\NodeTypeAccess`
 
-| Situation | Label | Needs | Creates | Permission | On its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- |
-| `add` | Add a content type | nothing | yes | `administer data surface node type demo` | yes | `NodeTypeSurface::add()` (`data_surface_demo_node_type`) |
-| `edit` | Edit a content type | `NodeTypeInterface $type` | once given what it needs | `administer data surface node type demo` | yes | `NodeTypeSurface::edit()` (`data_surface_demo_node_type`) |
+| Situation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `add` | Add a content type | nothing | yes | `administer data surface node type demo` | yes | no: it creates | `NodeTypeSurface::add()` (`data_surface_demo_node_type`) |
+| `edit` | Edit a content type | `NodeTypeInterface $type` | once given what it needs | `administer data surface node type demo` | yes | yes | `NodeTypeSurface::edit()` (`data_surface_demo_node_type`) |
 
 - Altered by `Drupal\data_surface_demo_extras\SurfaceAlter\NodeTypeAlter` (`data_surface_demo_extras`), in every situation.
 
@@ -152,9 +157,9 @@ the plugin's host. `docs/surfaces.md` says how each part works.
 - Target: `Drupal\data_surface_examples\Target\RegistrationStep1Target`
 - Access: the situation's permission alone
 
-| Situation | Label | Needs | Creates | Permission | On its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure registration | nothing | no | `administer site configuration` | yes | `RegistrationStep1Surface::configure()` (`data_surface_examples`) |
+| Situation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure registration | nothing | no | `administer site configuration` | yes | yes | `RegistrationStep1Surface::configure()` (`data_surface_examples`) |
 
 ## registration.step2
 
@@ -164,9 +169,9 @@ the plugin's host. `docs/surfaces.md` says how each part works.
 - Target: `Drupal\data_surface_examples\Target\RegistrationStep2Target`
 - Access: the situation's permission alone
 
-| Situation | Label | Needs | Creates | Permission | On its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure registration | nothing | no | `administer site configuration` | yes | `RegistrationStep2Surface::configure()` (`data_surface_examples`) |
+| Situation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure registration | nothing | no | `administer site configuration` | yes | yes | `RegistrationStep2Surface::configure()` (`data_surface_examples`) |
 
 ## registration.step3
 
@@ -176,9 +181,9 @@ the plugin's host. `docs/surfaces.md` says how each part works.
 - Target: `Drupal\data_surface_examples\Target\RegistrationStep3Target`
 - Access: the situation's permission alone
 
-| Situation | Label | Needs | Creates | Permission | On its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure registration | nothing | no | `administer site configuration` | yes | `RegistrationStep3Surface::configure()` (`data_surface_examples`) |
+| Situation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure registration | nothing | no | `administer site configuration` | yes | yes | `RegistrationStep3Surface::configure()` (`data_surface_examples`) |
 
 - Altered by `Drupal\data_surface_examples_compliance\SurfaceAlter\RegistrationComplianceAlter` (`data_surface_examples_compliance`), in every situation; it refines `capacity` (watching `licence`), `stewards` (watching `capacity`).
 

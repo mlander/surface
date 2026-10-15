@@ -63,16 +63,17 @@ final class DataSurfaceCatalogueDocument {
         $document .= '- Used by: ' . self::codes($surface['plugins']) . "; configured through the plugin's host, never on its own.\n";
       }
       if ($surface['situations'] !== []) {
-        $document .= "\n| Situation | Label | Needs | Creates | Permission | On its own | Provided by |\n| --- | --- | --- | --- | --- | --- | --- |\n";
+        $document .= "\n| Situation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n";
         foreach ($surface['situations'] as $situation) {
           $document .= sprintf(
-            "| `%s` | %s | %s | %s | %s | %s | `%s` (`%s`) |\n",
+            "| `%s` | %s | %s | %s | %s | %s | %s | `%s` (`%s`) |\n",
             $situation['id'],
             $situation['label'],
             $situation['parameters'] === [] ? 'nothing' : self::codes($situation['parameters']),
             $situation['creates'] === NULL ? 'once given what it needs' : ($situation['creates'] ? 'yes' : 'no'),
             $situation['permission'] === NULL ? 'none' : '`' . $situation['permission'] . '`',
             self::standalone($surface, $situation),
+            self::reads($situation),
             self::short($situation['provider']),
             $situation['module'],
           );
@@ -132,7 +133,12 @@ A situation that can be asked "on its own" is also a tool,
 enabled: its surface names a target, no plugin's configuration is the
 surface, and every `%key` placeholder in its permission can be supplied
 by one of its parameters. A surface a plugin uses is configured through
-the plugin's host. `docs/surfaces.md` says how each part works.
+the plugin's host. One that can be asked on its own and changes a thing
+that exists is "read on its own" too, a read tool,
+`data_surface:<surface>:<situation>:read`: a situation that needs
+nothing says so by not creating, and one that needs a subject by naming
+one thing whole, with a single entity or with every identity key.
+`docs/surfaces.md` says how each part works.
 
 
 MARKDOWN;
@@ -155,6 +161,24 @@ MARKDOWN;
       $surface['target'] === NULL => 'no: no target',
       $surface['plugins'] !== [] => 'no: a plugin\'s',
       default => 'no: nothing supplies ' . self::codes(array_map(static fn (string $key): string => '%' . $key, $situation['unresolvable'])),
+    };
+  }
+
+  /**
+   * Says whether what a situation changes can be read on its own, and why not.
+   *
+   * @param array $situation
+   *   The situation, as the catalogue describes it.
+   *
+   * @return string
+   *   "yes", or "no" and the first reason.
+   */
+  private static function reads(array $situation): string {
+    return match (TRUE) {
+      $situation['reads'] => 'yes',
+      !$situation['standalone'] => 'no: not on its own',
+      $situation['creates'] === TRUE => 'no: it creates',
+      default => 'no: what it needs leaves room for a new one',
     };
   }
 

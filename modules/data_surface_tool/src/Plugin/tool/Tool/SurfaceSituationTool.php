@@ -5,23 +5,14 @@ declare(strict_types=1);
 namespace Drupal\data_surface_tool\Plugin\tool\Tool;
 
 use Drupal\Component\Plugin\Discovery\CachedDiscoveryInterface;
-use Drupal\Core\Access\AccessResult;
-use Drupal\Core\Access\AccessResultInterface;
-use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\data_surface\DataSurfaceAccess;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
-use Drupal\data_surface\Surface\SurfaceContext;
-use Drupal\data_surface\SurfaceBuild\SurfaceDefinition;
-use Drupal\data_surface\SurfaceBuild\SurfaceRegistry;
 use Drupal\data_surface\SurfaceBuild\SurfaceTargetAdapter;
-use Drupal\data_surface\SurfaceBuild\SurfacesInterface;
 use Drupal\data_surface_tool\Plugin\Derivative\SurfaceSituationToolDeriver;
 use Drupal\data_surface_tool\SituationInputs;
 use Drupal\data_surface_tool\SurfaceResultReportingTrait;
 use Drupal\tool\Attribute\Tool;
 use Drupal\tool\ExecutableResult;
-use Drupal\tool\Tool\ToolBase;
 use Drupal\tool\Tool\ToolOperation;
 use Drupal\tool\TypedData\InputDefinitionInterface;
 use Drupal\tool\TypedData\InputDefinitionRefinerInterface;
@@ -55,6 +46,10 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   surface's own outputs as its target reads them back; for a dry run,
  *   instead of outputs, what prepare rehearsed.
  *
+ * The same deriver gives a situation that changes a thing that exists a
+ * read tool beside this one, SurfaceSituationReadTool, under this base
+ * plugin id.
+ *
  * @see \Drupal\data_surface_tool\Plugin\Derivative\SurfaceSituationToolDeriver
  * @see \Drupal\data_surface_tool\SituationInputs
  */
@@ -65,24 +60,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
   operation: ToolOperation::Write,
   deriver: SurfaceSituationToolDeriver::class,
 )]
-final class SurfaceSituationTool extends ToolBase implements InputDefinitionRefinerInterface {
+final class SurfaceSituationTool extends SurfaceSituationToolBase implements InputDefinitionRefinerInterface {
 
   use SurfaceResultReportingTrait;
-
-  /**
-   * The build step.
-   */
-  protected SurfacesInterface $surfaces;
-
-  /**
-   * What discovery found.
-   */
-  protected SurfaceRegistry $surfaceRegistry;
-
-  /**
-   * What the tool takes and answers with.
-   */
-  protected SituationInputs $situationInputs;
 
   /**
    * The pipeline that accepts, validates, prepares and commits values.
@@ -99,9 +79,6 @@ final class SurfaceSituationTool extends ToolBase implements InputDefinitionRefi
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
     $instance = parent::create($container, $configuration, $plugin_id, $plugin_definition);
-    $instance->surfaces = $container->get('data_surface.surfaces');
-    $instance->surfaceRegistry = $container->get('data_surface.surface_registry');
-    $instance->situationInputs = $container->get('data_surface_tool.situation_inputs');
     $instance->pipeline = $container->get('data_surface.pipeline');
     $instance->toolManager = $container->get('plugin.manager.tool');
     return $instance;
@@ -129,20 +106,6 @@ final class SurfaceSituationTool extends ToolBase implements InputDefinitionRefi
     catch (\InvalidArgumentException) {
       return $definition;
     }
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  protected function checkAccess(array $values, AccountInterface $account, $return_as_object = FALSE): bool|AccessResultInterface {
-    try {
-      [$surface, , $context] = $this->situation($values);
-      $result = $this->situationAccess($surface, $context, $account);
-    }
-    catch (\InvalidArgumentException $e) {
-      $result = AccessResult::forbidden($e->getMessage());
-    }
-    return $return_as_object ? $result : $result->isAllowed();
   }
 
   /**
@@ -195,56 +158,6 @@ final class SurfaceSituationTool extends ToolBase implements InputDefinitionRefi
         SituationInputs::VALUES => $result->values,
         SituationInputs::COMMITTED => $result->committed,
       ] + $outputs + ($stale === [] ? [] : ['stale' => $stale]),
-    );
-  }
-
-  /**
-   * Builds the situation this tool is for, from its parameters' values.
-   *
-   * @param array $values
-   *   The tool's input values; the parameters are read by name.
-   *
-   * @return array{0: \Drupal\data_surface\SurfaceBuild\SurfaceDefinition, 1: \Drupal\data_surface\SurfaceBuild\SituationDefinition, 2: \Drupal\data_surface\Surface\SurfaceContext}
-   *   The surface, the situation and the context it built.
-   *
-   * @throws \InvalidArgumentException
-   *   When a parameter is missing or names nothing, which the Tool API
-   *   reports as the caller's input to correct.
-   */
-  protected function situation(array $values): array {
-    $derivative = (string) $this->getDerivativeId();
-    $separator = strrpos($derivative, ':');
-    if ($separator === FALSE) {
-      throw new \LogicException(sprintf('The %s tool is not one of the derived surface tools.', $this->getPluginId()));
-    }
-    $surface = $this->surfaceRegistry->getDefinition(substr($derivative, 0, $separator));
-    $situation = $this->surfaceRegistry->getSituation($surface->class, substr($derivative, $separator + 1));
-    $arguments = [];
-    foreach ($situation->parameters as $parameter) {
-      if (($values[$parameter->name] ?? NULL) !== NULL) {
-        $arguments[$parameter->name] = $values[$parameter->name];
-      }
-    }
-    return [$surface, $situation, $this->surfaces->situation($surface->class, $situation->id, $arguments)];
-  }
-
-  /**
-   * Answers access for a situation's context, decisively.
-   *
-   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $surface
-   *   The surface.
-   * @param \Drupal\data_surface\Surface\SurfaceContext $context
-   *   The context.
-   * @param \Drupal\Core\Session\AccountInterface $account
-   *   The account.
-   *
-   * @return \Drupal\Core\Access\AccessResultInterface
-   *   Allowed or forbidden, never neutral.
-   */
-  protected function situationAccess(SurfaceDefinition $surface, SurfaceContext $context, AccountInterface $account): AccessResultInterface {
-    return DataSurfaceAccess::decisive(
-      $this->surfaces->access($surface->class, $context, $account),
-      'The situation\'s permission and the surface\'s own access both have to allow this.',
     );
   }
 

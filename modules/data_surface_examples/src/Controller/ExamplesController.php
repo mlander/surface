@@ -155,7 +155,7 @@ final class ExamplesController extends ControllerBase {
    *   A render array.
    */
   public function step5(): array {
-    $commands = ['drush tool:info ' . ExampleCalls::TOOL];
+    $commands = ['drush tool:info ' . ExampleCalls::TOOL, ExampleCalls::drushRead()];
     foreach (array_keys(ExampleCalls::CALLS) as $call) {
       $commands[] = ExampleCalls::drush($call);
     }
@@ -172,7 +172,7 @@ final class ExamplesController extends ControllerBase {
         '#value' => 'ddev exec php web/modules/custom/data_surface/scripts/examples-dry-run.php',
       ],
       'drush' => [
-        '#markup' => '<p>' . $this->t('The same tool, the same three calls, from Drush:') . '</p>',
+        '#markup' => '<p>' . $this->t('The same tool, the same three calls, from Drush, after the read tool beside it, <code>@read</code>, which answers with what is stored and writes nothing:', ['@read' => ExampleCalls::READ_TOOL]) . '</p>',
       ],
       'commands' => [
         '#type' => 'html_tag',
@@ -229,7 +229,10 @@ final class ExamplesController extends ControllerBase {
       ],
       5 => [
         'title' => $this->t('same contract, no form'),
-        'sentence' => $this->t('Example 3 is already a tool, @tool, which takes what the form takes and refuses what it refuses. Drush describes it with tool:info and calls it with tool:run.', ['@tool' => ExampleCalls::TOOL]),
+        'sentence' => $this->t('Example 3 is already a tool, @tool, which takes what the form takes and refuses what it refuses, with a read tool beside it, @read, which answers with what is stored. Drush describes them with tool:info and calls them with tool:run.', [
+          '@tool' => ExampleCalls::TOOL,
+          '@read' => ExampleCalls::READ_TOOL,
+        ]),
         'items' => [$this->route('data_surface_examples.step5'), $this->t('Nothing to write: 0 lines of code.')],
       ],
       6 => [

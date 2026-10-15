@@ -38,6 +38,11 @@ use Drupal\tool\TypedData\OutputDefinition;
  * - Outputs: the accepted `values`, whether anything was `committed`,
  *   and the surface's own outputs, from defineOutputs().
  *
+ * And the read tool beside it, for a situation that changes a thing that
+ * exists: the same parameters, nothing else, and one output, `values`,
+ * the same map as the write tool's input, holding what is stored now,
+ * less every secret.
+ *
  * The static definition has to be written before any caller has said
  * anything, so for a situation that needs a subject, which identity keys
  * it knows is read off its signature: a scalar parameter supplies the
@@ -128,22 +133,9 @@ final class SituationInputs {
    *   inputs — or the surface cannot be built.
    */
   public function inputs(SurfaceDefinition $surface, SituationDefinition $situation): array {
-    $inputs = [];
-    $neutral = $situation->parameters === [] ? NULL : $this->surfaces->build($surface->class, new SurfaceContext($situation->id));
-    foreach ($situation->parameters as $parameter) {
-      if (in_array($parameter->name, [self::VALUES, self::DRY_RUN], TRUE)) {
-        throw new \LogicException(sprintf('The "%s" situation of the %s surface takes $%s, which is the name of an input every surface tool has.', $situation->id, $surface->id, $parameter->name));
-      }
-      $inputs[$parameter->name] = $this->parameterInput($parameter, $surface, $situation, $neutral);
-    }
-    if ($situation->needsNothing()) {
-      $context = $this->surfaces->situation($surface->class, $situation->id);
-      $inputs[self::VALUES] = $this->values($surface, $this->surfaces->build($surface->class, $context), $context);
-    }
-    else {
-      // Decision: see docs/decisions.md#identity-before-the-parameters.
-      $inputs[self::VALUES] = $this->map($surface, $neutral ?? $this->surfaces->build($surface->class, new SurfaceContext($situation->id)), $this->suppliedIdentity($surface, $situation));
-    }
+    $neutral = $this->neutral($surface, $situation);
+    $inputs = $this->parameterInputs($surface, $situation, $neutral);
+    $inputs[self::VALUES] = $this->declaredValues($surface, $situation, $neutral, TRUE);
     $inputs[self::DRY_RUN] = new InputDefinition(
       data_type: 'boolean',
       label: $this->t('Dry run'),
@@ -152,6 +144,85 @@ final class SituationInputs {
       default_value: FALSE,
     );
     return $inputs;
+  }
+
+  /**
+   * Gets the inputs of the read tool for one situation: its parameters.
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $surface
+   *   The surface.
+   * @param \Drupal\data_surface\SurfaceBuild\SituationDefinition $situation
+   *   The situation.
+   *
+   * @return array<string, \Drupal\tool\TypedData\InputDefinitionInterface>
+   *   One input per parameter, exactly as the write tool declares it.
+   *
+   * @throws \LogicException
+   *   When a parameter cannot be an input, as inputs() says.
+   */
+  public function parameters(SurfaceDefinition $surface, SituationDefinition $situation): array {
+    return $this->parameterInputs($surface, $situation, $this->neutral($surface, $situation));
+  }
+
+  /**
+   * Gets the outputs of the read tool for one situation.
+   *
+   * One output, `values`: the map the write tool takes as its `values`
+   * input, built the same way, said as an output. What it promises is the
+   * shape and nothing more: every property is optional, because a key
+   * storage holds nothing for is absent, and none carries a constraint,
+   * because a stored value may have gone stale, and a read reports
+   * storage as it is (docs/semantics.md, Stale values). A key the surface
+   * marks secret is not there at all.
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $surface
+   *   The surface.
+   * @param \Drupal\data_surface\SurfaceBuild\SituationDefinition $situation
+   *   The situation.
+   *
+   * @return array<string, \Drupal\tool\TypedData\OutputDefinitionInterface>
+   *   The `values` output.
+   *
+   * @throws \LogicException
+   *   When the surface cannot be built.
+   */
+  public function readOutputs(SurfaceDefinition $surface, SituationDefinition $situation): array {
+    $neutral = $this->neutral($surface, $situation);
+    // Where the secrets are: the neutral build, or, for a situation that
+    // takes nothing, its own.
+    $built = $neutral ?? $this->surfaces->build($surface->class, $this->surfaces->situation($surface->class, $situation->id));
+    return [
+      self::VALUES => $this->inputDefinitions->outputFromInput(
+        $this->declaredValues($surface, $situation, $neutral, FALSE),
+        $this->inputDefinitions->secrets($built),
+        $this->t('Stored values'),
+        $this->t('What is stored now, as the @surface surface describes it: every key the situation does not already know, including those other modules add, in the shape the write tool takes. A key storage holds nothing for is absent, and a secret is never returned.', ['@surface' => $surface->id]),
+      ),
+    ];
+  }
+
+  /**
+   * Gets what the read tool answers: what is stored now, less secrets.
+   *
+   * What the surface's composed target loads, less the identity keys the
+   * context knows, which are the tool's inputs and not its values, and
+   * less every key the surface marks secret, at any depth, which is
+   * never read back to a caller (docs/semantics.md, Secrets).
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $surface
+   *   The surface.
+   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   *   The surface, built in the context.
+   * @param \Drupal\data_surface\Surface\SurfaceContext $context
+   *   The context, which changes a thing that exists.
+   *
+   * @return array
+   *   The stored values, keyed by surface key.
+   */
+  public function stored(SurfaceDefinition $surface, DataSurfaceInterface $built, SurfaceContext $context): array {
+    $stored = $this->surfaces->target($surface->class, $context, $built)->load($built);
+    $stored = array_diff_key($stored, array_flip($this->knownIdentity($surface, $context)));
+    return $this->inputDefinitions->withoutSecrets($stored, $this->inputDefinitions->secrets($built));
   }
 
   /**
@@ -173,12 +244,98 @@ final class SituationInputs {
    *   knows, each required as the surface says.
    */
   public function values(SurfaceDefinition $surface, DataSurfaceInterface $built, SurfaceContext $context): MapInputDefinition {
-    $map = $this->map($surface, $built, array_keys(array_intersect_key($context->known, array_flip($surface->identity))));
+    $map = $this->map($surface, $built, $this->knownIdentity($surface, $context));
     if (!$context->creates) {
       // Decision: see docs/decisions.md#required-is-the-surfaces-and-defaults-are-what-is-stored.
       $this->inputDefinitions->withStored($map, $built, $this->surfaces->target($surface->class, $context, $built)->load($built));
     }
     return $map;
+  }
+
+  /**
+   * Gets the `values` map a tool's static definition declares.
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $surface
+   *   The surface.
+   * @param \Drupal\data_surface\SurfaceBuild\SituationDefinition $situation
+   *   The situation.
+   * @param \Drupal\data_surface\DataSurfaceInterface|null $neutral
+   *   The surface built in a context that knows nothing, for a situation
+   *   that needs a subject.
+   * @param bool $stored
+   *   Whether a situation that needs nothing and changes a thing that
+   *   exists defaults each property to what is stored; an output carries
+   *   no default, so the read tool does not load.
+   *
+   * @return \Drupal\tool\TypedData\MapInputDefinition
+   *   The map.
+   */
+  protected function declaredValues(SurfaceDefinition $surface, SituationDefinition $situation, ?DataSurfaceInterface $neutral, bool $stored): MapInputDefinition {
+    if ($situation->needsNothing()) {
+      $context = $this->surfaces->situation($surface->class, $situation->id);
+      $built = $this->surfaces->build($surface->class, $context);
+      return $stored ? $this->values($surface, $built, $context) : $this->map($surface, $built, $this->knownIdentity($surface, $context));
+    }
+    // Decision: see docs/decisions.md#identity-before-the-parameters.
+    return $this->map($surface, $neutral ?? $this->surfaces->build($surface->class, new SurfaceContext($situation->id)), $this->suppliedIdentity($surface, $situation));
+  }
+
+  /**
+   * Builds the surface in a context that knows nothing, when it is needed.
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $surface
+   *   The surface.
+   * @param \Drupal\data_surface\SurfaceBuild\SituationDefinition $situation
+   *   The situation.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface|null
+   *   The surface, built in the situation's operation and nothing else, or
+   *   NULL for a situation that takes no parameters.
+   */
+  protected function neutral(SurfaceDefinition $surface, SituationDefinition $situation): ?DataSurfaceInterface {
+    return $situation->parameters === [] ? NULL : $this->surfaces->build($surface->class, new SurfaceContext($situation->id));
+  }
+
+  /**
+   * Converts the situation's parameters into tool inputs.
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $surface
+   *   The surface.
+   * @param \Drupal\data_surface\SurfaceBuild\SituationDefinition $situation
+   *   The situation.
+   * @param \Drupal\data_surface\DataSurfaceInterface|null $neutral
+   *   The surface built in a context that knows nothing.
+   *
+   * @return array<string, \Drupal\tool\TypedData\InputDefinitionInterface>
+   *   One input per parameter, by name.
+   *
+   * @throws \LogicException
+   *   When a parameter cannot be an input.
+   */
+  protected function parameterInputs(SurfaceDefinition $surface, SituationDefinition $situation, ?DataSurfaceInterface $neutral): array {
+    $inputs = [];
+    foreach ($situation->parameters as $parameter) {
+      if (in_array($parameter->name, [self::VALUES, self::DRY_RUN], TRUE)) {
+        throw new \LogicException(sprintf('The "%s" situation of the %s surface takes $%s, which is the name of an input every surface tool has.', $situation->id, $surface->id, $parameter->name));
+      }
+      $inputs[$parameter->name] = $this->parameterInput($parameter, $surface, $situation, $neutral);
+    }
+    return $inputs;
+  }
+
+  /**
+   * Lists the identity keys a context knows.
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $surface
+   *   The surface.
+   * @param \Drupal\data_surface\Surface\SurfaceContext $context
+   *   The context.
+   *
+   * @return string[]
+   *   The identity keys it knows, which are no values.
+   */
+  protected function knownIdentity(SurfaceDefinition $surface, SurfaceContext $context): array {
+    return array_keys(array_intersect_key($context->known, array_flip($surface->identity)));
   }
 
   /**
@@ -260,12 +417,45 @@ final class SituationInputs {
       '@label' => (string) $situation->label,
       '@situation' => $situation->id,
       '@surface' => $surface->id,
-      '@needs' => $situation->parameters === []
-        ? $this->t('It needs nothing to start from.')
-        : $this->t('It starts from @parameters.', [
-          '@parameters' => implode(', ', array_map(static fn (SituationParameter $parameter): string => $parameter->name, $situation->parameters)),
-        ]),
+      '@needs' => $this->needs($situation),
     ]);
+  }
+
+  /**
+   * Describes the read tool for one situation.
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $surface
+   *   The surface.
+   * @param \Drupal\data_surface\SurfaceBuild\SituationDefinition $situation
+   *   The situation.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   The description.
+   */
+  public function readDescription(SurfaceDefinition $surface, SituationDefinition $situation): TranslatableMarkup {
+    return $this->t('Reads what is stored for @label: the "@situation" situation of the @surface surface, and writes nothing. @needs The values output is the surface itself, less what the situation already knows, in the shape the write tool takes, so a caller can read what is there before changing it. A secret is never returned.', [
+      '@label' => (string) $situation->label,
+      '@situation' => $situation->id,
+      '@surface' => $surface->id,
+      '@needs' => $this->needs($situation),
+    ]);
+  }
+
+  /**
+   * Says what a situation needs to start from, for a description.
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SituationDefinition $situation
+   *   The situation.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   The sentence.
+   */
+  protected function needs(SituationDefinition $situation): TranslatableMarkup {
+    return $situation->parameters === []
+      ? $this->t('It needs nothing to start from.')
+      : $this->t('It starts from @parameters.', [
+        '@parameters' => implode(', ', array_map(static fn (SituationParameter $parameter): string => $parameter->name, $situation->parameters)),
+      ]);
   }
 
   /**

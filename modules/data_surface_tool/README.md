@@ -1,7 +1,9 @@
 # Data Surface - Tool API bridge
 
 Tools generated from surfaces: one per situation of every surface that
-can be asked on its own, `data_surface:<surface>:<situation>`. For a
+can be asked on its own, `data_surface:<surface>:<situation>`, and a
+read tool beside each that changes a thing that exists,
+`data_surface:<surface>:<situation>:read`. For a
 field that is `data_surface:field.instance:add`, `:reuse` and `:edit`,
 whose `settings` are the field type's own settings surface where it has
 one, so the A/B against the free-form Tool Belt tools is a fair one: the
@@ -92,7 +94,9 @@ Five pieces:
   out: `field.storage`'s `add` asks `administer %entity_type_id fields`
   and no parameter supplies the entity type, so it could never be
   allowed and is only ever a field's; and a surface a plugin names with
-  `#[UsesSurface]` is configured through the plugin's host.
+  `#[UsesSurface]` is configured through the plugin's host. Beside the
+  edit tools is a read tool, `Plugin\tool\Tool\SurfaceSituationReadTool`
+  (below).
 - `FieldSettingsSchemaVariants` — a service tagged
   `data_surface.derived_variants` that fills the field instance
   surface's `settings` slot for every field type offered in the UI that
@@ -157,6 +161,63 @@ see it in the contract panel below, or, with `data_surface_react`
 enabled, at `/surface-api/{surface}/{situation}`
 ([`docs/served-contract.md`](../../docs/served-contract.md)).
 
+## The read tool
+
+A caller that wants to change a thing usually wants to see it first,
+and a write tool's `values` defaults are not a read. So every situation
+that can be asked on its own and changes a thing that exists has a read
+tool beside its write tool, derived by the same deriver under the same
+base plugin id:
+
+| Read tool | Inputs |
+| --- | --- |
+| `data_surface:node.type:edit:read` | `type` |
+| `data_surface:field.instance:edit:read` | `field` |
+| `data_surface:field.storage:edit:read` | `storage` |
+| `data_surface:registration.step1:configure:read`, `step2`, `step3` | nothing |
+
+- **Which situations.** One that needs nothing and whose context does
+  not create, and one that needs a subject and whose parameters name one
+  thing whole: a single entity, or a scalar for every identity key.
+  `node.type:add`, `field.instance:add` and `field.instance:reuse`
+  create, and have none. `SurfaceCatalogue::reads()` decides, and the
+  catalogue lists it ("Read on its own"); a context that turns out to
+  create is refused when the read runs.
+- **Inputs.** The situation's parameters, exactly as the write tool
+  declares them, and nothing else: no `values`, no `dry_run`.
+- **Output.** `values`: what the surface's composed target loads, in the
+  shape the write tool's `values` input takes (the surface's keys less
+  the identity keys the situation knows, keys other modules mount under
+  `third_party_settings` included, subsurfaces and slots as nested
+  maps). Its definition is the write tool's `values` map said as an
+  output, `SurfaceInputDefinitions::outputFromInput()`: the same data
+  types, labels, descriptions and nesting, so `tools/list` over MCP shows
+  the same keys as the input schema, with no constraint and no property
+  required. A read reports storage as it is, and a stale value
+  ([`docs/semantics.md`](../../docs/semantics.md)) must not fail the
+  output validation the Tool API runs on every result; a key storage
+  holds nothing for is absent.
+- **Secrets.** A key the surface marks secret is never returned, at any
+  depth, and is not in the output definition: left out, as the write
+  tool's defaults leave it out, not sent as a placeholder.
+  `SurfaceInputDefinitions::secrets()` finds every one, under a slot in
+  any of its variants, and cuts both the definition and the values.
+- **Access.** The write tool's, deliberately, for now: the situation's
+  permission, then the surface's access class, for the context the
+  parameters build. A caller who may not change a thing may not read it
+  either. A parameter that names nothing fails as it does for the write
+  tool.
+
+```bash
+drush tool:info data_surface:registration.step3:configure:read
+drush tool:run data_surface:registration.step3:configure:read --uid=1
+drush tool:run data_surface:node.type:edit:read --uid=1 --input=type=page
+```
+
+`tool:info` lists the `values` output without its properties; Drush
+prints outputs one level deep. The nested schema is what the Tool API's
+serializer emits, and what an MCP client sees as `outputSchema`.
+
 ## The contract panel
 
 `SurfaceContractPanel`, the service `data_surface_tool.contract_panel`,
@@ -189,11 +250,13 @@ The routes of `data_surface_examples` name it.
 | `Kernel\SurfaceCatalogueTest` | The catalogue read from the static layer, and `docs/catalogue.md` against it, where each derived slot is listed. |
 | `Kernel\ExamplesStepsTest` | The contract panel: its rows as the answers narrow them, the contract's slot conditionals, and the tool's schema below them. |
 | `Kernel\ExamplesToolTest` | `data_surface:registration.step3:configure`: the example calls, its definition (required as the surface says, defaulting to what is stored, and current again after a write), and a partial update the Tool API refuses. |
+| `Kernel\ReadToolTest` | The read tools: one per situation that changes a thing that exists and none for one that creates, a read operation taking exactly the parameters, an output map of the write tool's keys, step 3's stored values with the compliance module's mounted keys before and after a write, the content type read by its type, an unknown parameter failing as for the write tool, access as the write tool's, and a secret never returned. |
+| `Kernel\DerivedToolDefinitionsTest` | Tool Explorer showing every derived tool, read tools included, and installing a module deriving its tools. |
 
 ## Who may run them
 
-The tools are `ToolOperation::Write`, so the access answer has to be the
-real one. It is the situation's permission, `administer %entity_type_id
+The write tools are `ToolOperation::Write`, so the access answer has to
+be the real one, and a read tool asks the same question. It is the situation's permission, `administer %entity_type_id
 fields`, named from the identity the situation's context knows — the
 entity type the add tool is given, or the one the storage or field it
 names is on — then `FieldInstanceAccess`, which refuses a locked

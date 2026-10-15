@@ -213,8 +213,12 @@ situation's parameters into inputs and builds the surface in a context
 read off the signature for `values`; `SurfaceSituationTool` refines
 `values` to the real context once the parameters arrive, asks
 `Surfaces::access()` decisively, and submits through the pipeline to
-the composed target, stopping after prepare for a dry run. Nothing in
-either class names a surface or a key.
+the composed target, stopping after prepare for a dry run. Beside each
+that changes a thing that exists (`SurfaceCatalogue::reads()`) the same
+deriver writes a read tool, `SurfaceSituationReadTool`, which takes the
+parameters, asks the same access, and answers with what the target
+loads, less every secret. Nothing in any of these classes names a
+surface or a key.
 
 ## So, the context is
 

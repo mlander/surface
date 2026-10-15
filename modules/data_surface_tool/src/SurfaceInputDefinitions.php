@@ -45,7 +45,9 @@ use Drupal\tool\TypedData\OutputDefinitionInterface;
  * A key the surface declared secret converts with no default value and
  * with a write-only note appended to its description; secretNote() says
  * why the note is prose rather than the JSON Schema keyword it will
- * become.
+ * become. A read leaves it out altogether: secrets() finds every one,
+ * at any depth, and both the read's output definition and the values it
+ * answers with are cut by that one answer.
  *
  * Two things a surface knows survive the conversion only in part, and
  * both are Tool API gaps rather than choices made here:
@@ -474,6 +476,179 @@ final class SurfaceInputDefinitions {
       }
     }
     return $map;
+  }
+
+  /**
+   * Finds every key a surface marks secret, at any depth.
+   *
+   * A secret is a scalar key of its own (DefinitionMetadata::setSecret()
+   * refuses anything else), but it can sit anywhere: on the surface, in
+   * a plain map such as a module's mounted settings, in an attached
+   * child, or in any variant of a slot. A slot's secrets are every
+   * variant's, whichever variant the values choose, so a key one variant
+   * keeps secret is never returned under that slot, even when another
+   * variant names a plain key the same.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The surface.
+   *
+   * @return array<string, true|array>
+   *   A tree keyed like the values: TRUE where a key is secret, an array
+   *   where one below it is. Empty when nothing is.
+   */
+  public function secrets(DataSurfaceInterface $surface): array {
+    $secrets = [];
+    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+      $found = $this->secretsOf($entry->definition);
+      $children = $entry->slot === NULL ? [] : array_map(static fn ($variant): DataSurfaceInterface => $variant->child, $entry->slot->variants);
+      if ($entry->attachment !== NULL) {
+        $children[] = $entry->attachment->child;
+      }
+      foreach ($children as $child) {
+        $found = $this->mergeSecrets($found, $this->secrets($child));
+      }
+      if ($found !== []) {
+        $secrets[(string) $name] = $found;
+      }
+    }
+    return $secrets;
+  }
+
+  /**
+   * Leaves every secret out of a set of values.
+   *
+   * @param array $values
+   *   The values, keyed like the surface.
+   * @param array<string, true|array> $secrets
+   *   What secrets() found.
+   *
+   * @return array
+   *   The values, with no secret in them.
+   */
+  public function withoutSecrets(array $values, array $secrets): array {
+    foreach ($secrets as $name => $secret) {
+      if (!array_key_exists($name, $values)) {
+        continue;
+      }
+      if ($secret === TRUE) {
+        unset($values[$name]);
+      }
+      elseif (is_array($values[$name])) {
+        $values[$name] = $this->withoutSecrets($values[$name], $secret);
+      }
+    }
+    return $values;
+  }
+
+  /**
+   * Says a converted input as an output: the same shape, no promises.
+   *
+   * For an answer that reports what is stored, in the shape a caller
+   * sends it: each map, list and scalar keeps its data type, label and
+   * description, and nests as it did. Nothing else crosses. A default is
+   * an input's idea. A constraint would be a promise a stored value
+   * cannot keep once it goes stale, and the Tool API holds a tool's
+   * outputs to their definitions, so a stale value would fail the read
+   * that reports it. And no property is required, because a key storage
+   * holds nothing for is absent.
+   *
+   * @param \Drupal\tool\TypedData\InputDefinitionInterface $input
+   *   The converted input.
+   * @param array<string, true|array> $leave_out
+   *   The properties to leave out, as secrets() finds them.
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup|string|null $label
+   *   The output's label, or NULL for the input's.
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup|string|null $description
+   *   The output's description, or NULL for the input's. Given with a
+   *   label, the output is required: it is the answer itself.
+   *
+   * @return \Drupal\tool\TypedData\OutputDefinitionInterface
+   *   The output definition.
+   */
+  public function outputFromInput(InputDefinitionInterface $input, array $leave_out = [], TranslatableMarkup|string|null $label = NULL, TranslatableMarkup|string|null $description = NULL): OutputDefinitionInterface {
+    $required = $label !== NULL;
+    $label ??= $input->getLabel() ?? '';
+    $description ??= $input->getDescription() ?? '';
+    if ($input instanceof MapInputDefinition) {
+      $properties = [];
+      foreach ($input->getPropertyDefinitions() as $name => $property) {
+        $secret = $leave_out[$name] ?? [];
+        if ($secret !== TRUE && $property instanceof InputDefinitionInterface) {
+          $properties[$name] = $this->outputFromInput($property, $secret);
+        }
+      }
+      return new MapOutputDefinition(
+        label: $label,
+        description: $description,
+        required: $required,
+        property_definitions: $properties,
+      );
+    }
+    if ($input instanceof ListInputDefinition) {
+      return new ListOutputDefinition(
+        label: $label,
+        description: $description,
+        required: $required,
+        item_definition: $this->outputFromInput($input->getItemDefinition()),
+      );
+    }
+    return new OutputDefinition(
+      data_type: $input->getDataType(),
+      label: $label,
+      description: $description,
+      required: $required,
+      multiple: $input->isMultiple(),
+    );
+  }
+
+  /**
+   * Finds the secrets inside one core data definition.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition.
+   *
+   * @return true|array
+   *   TRUE when it is secret, or a list whose items are; the secrets
+   *   among a map's properties, keyed like them; empty when none.
+   */
+  protected function secretsOf(DataDefinitionInterface $definition): true|array {
+    if (DefinitionMetadata::isSecret($definition)) {
+      return TRUE;
+    }
+    if ($definition instanceof ListDataDefinitionInterface) {
+      return $this->secretsOf($definition->getItemDefinition()) === [] ? [] : TRUE;
+    }
+    $secrets = [];
+    if ($definition instanceof ComplexDataDefinitionInterface) {
+      foreach ($definition->getPropertyDefinitions() as $name => $property) {
+        $found = $this->secretsOf($property);
+        if ($found !== []) {
+          $secrets[(string) $name] = $found;
+        }
+      }
+    }
+    return $secrets;
+  }
+
+  /**
+   * Merges two trees secrets() builds; a secret anywhere wins.
+   *
+   * @param true|array $one
+   *   One tree, or TRUE.
+   * @param true|array $other
+   *   The other.
+   *
+   * @return true|array
+   *   Both.
+   */
+  protected function mergeSecrets(true|array $one, true|array $other): true|array {
+    if ($one === TRUE || $other === TRUE) {
+      return TRUE;
+    }
+    foreach ($other as $name => $secret) {
+      $one[$name] = isset($one[$name]) ? $this->mergeSecrets($one[$name], $secret) : $secret;
+    }
+    return $one;
   }
 
   /**

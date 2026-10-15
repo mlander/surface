@@ -433,6 +433,48 @@ clears it, a write by any other path shows at the next cache rebuild.
 (`SituationInputs::values()`, `SurfaceInputDefinitions::withStored()`,
 `SurfaceSituationTool::doExecute()`)
 
+### Which situations read
+
+A situation that can be asked on its own has a read tool when it changes
+a thing that exists: one that needs nothing, by its context not
+creating; one that needs a subject, by its parameters naming one thing
+whole, a single entity with no scalar identity key beside it, or a
+scalar for every identity key. The context is the truth and cannot be
+asked before the subject is named, and `creates` is not on
+`#[Situation]` ([Whether a situation creates](#whether-a-situation-creates)), so the signature is
+read, as identity is. A context that turns out to create is refused when
+the read runs. *Open:* whether `#[Situation]` should say `creates`
+itself, checked against the context the way its id is, which would
+replace the reading. (`SituationDefinition::namesOneThing()`,
+`SurfaceCatalogue::reads()`)
+
+### A read promises shape, not membership
+
+A read tool's `values` output is the write tool's `values` map said as
+an output: data types, labels, descriptions and nesting, with no
+constraint and no property required. The Tool API holds a tool's outputs
+to their definitions, and a stored value may have gone stale, which a
+read reports and must not fail on; a key storage holds nothing for is
+absent. The vocabulary is on the write tool's input.
+(`SurfaceInputDefinitions::outputFromInput()`)
+
+### A read leaves a secret out
+
+A secret is never returned by a read, and is not in its output
+definition either: left out, as the write tool's defaults leave it out,
+rather than sent as an empty placeholder a caller could mistake for the
+value. Under a slot, a key any variant keeps secret is left out
+whichever variant holds. (`SurfaceInputDefinitions::secrets()`,
+`SituationInputs::stored()`)
+
+### Reading asks what writing asks
+
+A read tool's access is its write tool's: the situation's permission,
+then the surface's access class, for the context its parameters build.
+A caller who may not change a thing may not read it through the tool
+either. *Open:* a read permission of its own.
+(`SurfaceSituationToolBase::checkAccess()`)
+
 ## Forms
 
 ### A panel inside the situation form

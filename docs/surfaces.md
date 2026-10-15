@@ -371,6 +371,23 @@ two (`SurfaceCatalogue::standalone()`):
 
 A surface or situation that cannot be described is left out and logged.
 
+Beside the write tool of a situation that changes a thing that exists
+is a read tool, `data_surface:<surface id>:<situation id>:read`
+(`SurfaceSituationReadTool`, derived by the same deriver): a
+`ToolOperation::Read` whose inputs are the situation's parameters,
+exactly as the write tool declares them, and whose one output, `values`,
+is what the composed target loads, in the shape the write tool's
+`values` takes, less the identity keys the situation knows and less
+every secret, at any depth. Its access is the write tool's. Which
+situations those are is `SurfaceCatalogue::reads()`: one that needs
+nothing and whose context does not create, or one that needs a subject
+and whose parameters name one thing whole, a single entity or every
+identity key, since its context cannot be asked before a caller names
+the subject. So `node.type:edit`, `field.instance:edit` and
+`field.storage:edit` read, and `node.type:add`, `field.instance:add` and
+`field.instance:reuse` do not; a context that turns out to create is
+refused when the read runs.
+
 ## Catalogue
 
 `data_surface.surface_catalogue` (`SurfaceCatalogue::describe()`) lists
@@ -378,7 +395,8 @@ every discovered surface with its id, class, identity, target, access
 class, the plugins whose configuration it is (`<host type>:<plugin id>`,
 from the plugin definitions, through `data_surface.surface_plugins`),
 situations (id, label, parameters, whether it creates, permission, the
-placeholders nothing supplies, whether it can be asked on its own),
+placeholders nothing supplies, whether it can be asked on its own, and
+whether what it changes can be read on its own),
 alters, declared variants and, per slot, where derived variants come
 from, without building anything. Whether a situation
 creates is on the context it returns, so it is known only for a

@@ -61,6 +61,43 @@ final class SituationDefinition {
   }
 
   /**
+   * Answers whether its parameters name one whole thing, read off them.
+   *
+   * Whether a situation creates is on the context it returns, which a
+   * situation that needs a subject cannot return before it is given one,
+   * so this reads the signature instead, the way a tool's static
+   * definition reads the identity a situation knows: one entity
+   * parameter, with no scalar beside it named for an identity key, is the
+   * thing itself, loaded; scalar parameters named for every identity key
+   * name it whole. An entity beside a scalar identity key is what a new
+   * thing is made from (a storage reused on another bundle), and
+   * parameters that leave an identity key unnamed leave room for the
+   * thing to be new.
+   *
+   * @param string[] $identity
+   *   The surface's identity keys.
+   *
+   * @return bool
+   *   TRUE when the parameters name one thing whole.
+   */
+  public function namesOneThing(array $identity): bool {
+    $entities = 0;
+    $named = [];
+    foreach ($this->parameters as $parameter) {
+      if ($parameter->takesObject()) {
+        $entities++;
+      }
+      elseif (in_array($parameter->name, $identity, TRUE)) {
+        $named[] = $parameter->name;
+      }
+    }
+    if ($entities > 0) {
+      return $entities === 1 && $named === [];
+    }
+    return $identity !== [] && array_diff($identity, $named) === [];
+  }
+
+  /**
    * Lists the permission's placeholders no parameter can supply.
    *
    * A `%key` placeholder is filled from the identity the situation's

@@ -7,12 +7,17 @@ namespace Drupal\data_surface_tool\Plugin\Derivative;
 use Drupal\Component\Plugin\Derivative\DeriverBase;
 use Drupal\Core\Plugin\Discovery\ContainerDeriverInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
+use Drupal\data_surface\SurfaceBuild\SituationDefinition;
 use Drupal\data_surface\SurfaceBuild\SurfaceCatalogue;
+use Drupal\data_surface\SurfaceBuild\SurfaceDefinition;
 use Drupal\data_surface\SurfaceBuild\SurfacePlugins;
 use Drupal\data_surface\SurfaceBuild\SurfaceRegistry;
+use Drupal\data_surface_tool\Plugin\tool\Tool\SurfaceSituationReadTool;
 use Drupal\data_surface_tool\SituationInputs;
 use Drupal\tool\Tool\ToolDefinition;
+use Drupal\tool\Tool\ToolOperation;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -46,6 +51,12 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * when the definitions are derived; they are cached, so the tool clears
  * them after it writes.
  *
+ * A situation that changes a thing that exists has a read tool beside
+ * its write tool, `<surface id>:<situation id>:read`, of the class
+ * SurfaceSituationReadTool: its parameters as inputs, the stored values
+ * as its output. Which situations those are is the catalogue's to say
+ * (SurfaceCatalogue::reads()), as which can be asked at all is.
+ *
  * @see \Drupal\data_surface_tool\SituationInputs
  * @see \Drupal\data_surface_tool\Plugin\tool\Tool\SurfaceSituationTool
  */
@@ -66,6 +77,8 @@ final class SurfaceSituationToolDeriver extends DeriverBase implements Container
    *   Which plugins name which surface with #[UsesSurface].
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceCatalogue $catalogue
+   *   Which situations change a thing that exists, and so can be read.
    */
   public function __construct(
     protected readonly SurfaceRegistry $registry,
@@ -73,6 +86,7 @@ final class SurfaceSituationToolDeriver extends DeriverBase implements Container
     protected readonly LoggerInterface $logger,
     protected readonly SurfacePlugins $plugins,
     TranslationInterface $string_translation,
+    protected readonly SurfaceCatalogue $catalogue,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -87,6 +101,7 @@ final class SurfaceSituationToolDeriver extends DeriverBase implements Container
       $container->get('logger.channel.data_surface'),
       $container->get('data_surface.surface_plugins'),
       $container->get('string_translation'),
+      $container->get('data_surface.surface_catalogue'),
     );
   }
 
@@ -118,21 +133,13 @@ final class SurfaceSituationToolDeriver extends DeriverBase implements Container
         }
         $id = $surface->id . ':' . $situation->id;
         try {
-          $definition = (clone $base_plugin_definition)
-            ->setLabel($this->t('@label', ['@label' => (string) $situation->label]))
-            ->setDescription($this->situationInputs->description($surface, $situation));
-          foreach (array_keys($definition->getInputDefinitions(TRUE)) as $name) {
-            $definition->removeInputDefinition($name);
-          }
-          foreach ($this->situationInputs->inputs($surface, $situation) as $name => $input) {
-            $definition->addInputDefinition($name, $input);
-          }
-          foreach (array_keys($definition->getOutputDefinitions()) as $name) {
-            $definition->removeOutputDefinition($name);
-          }
-          foreach ($this->situationInputs->outputs($surface, $situation) as $name => $output) {
-            $definition->addOutputDefinition($name, $output);
-          }
+          $definition = $this->definition(
+            $base_plugin_definition,
+            $this->t('@label', ['@label' => (string) $situation->label]),
+            $this->situationInputs->description($surface, $situation),
+            $this->situationInputs->inputs($surface, $situation),
+            $this->situationInputs->outputs($surface, $situation),
+          );
           // Once the situation's parameters arrive, the values input is
           // the surface built in the situation's real context.
           $parameters = array_map(static fn ($parameter): string => $parameter->name, $situation->parameters);
@@ -143,9 +150,80 @@ final class SurfaceSituationToolDeriver extends DeriverBase implements Container
           continue;
         }
         $this->derivatives[$id] = $definition;
+        if ($this->catalogue->reads($surface, $situation, $plugins)) {
+          $this->read($base_plugin_definition, $surface, $situation);
+        }
       }
     }
     return $this->derivatives;
+  }
+
+  /**
+   * Derives the read tool beside a situation's write tool.
+   *
+   * @param \Drupal\tool\Tool\ToolDefinition $base_plugin_definition
+   *   The write tool's base definition.
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $surface
+   *   The surface.
+   * @param \Drupal\data_surface\SurfaceBuild\SituationDefinition $situation
+   *   A situation that changes a thing that exists.
+   */
+  protected function read(ToolDefinition $base_plugin_definition, SurfaceDefinition $surface, SituationDefinition $situation): void {
+    $id = $surface->id . ':' . $situation->id . SurfaceSituationReadTool::SUFFIX;
+    try {
+      $definition = $this->definition(
+        $base_plugin_definition,
+        $this->t('@label, read only', ['@label' => (string) $situation->label]),
+        $this->situationInputs->readDescription($surface, $situation),
+        $this->situationInputs->parameters($surface, $situation),
+        $this->situationInputs->readOutputs($surface, $situation),
+      )
+        ->setOperation(ToolOperation::Read)
+        ->setDestructive(FALSE)
+        ->setInputDefinitionRefiners([]);
+      $definition->setClass(SurfaceSituationReadTool::class);
+    }
+    catch (\LogicException | \InvalidArgumentException $e) {
+      $this->skip($id, $e);
+      return;
+    }
+    $this->derivatives[$id] = $definition;
+  }
+
+  /**
+   * Writes one derived tool's definition over a copy of the base one.
+   *
+   * @param \Drupal\tool\Tool\ToolDefinition $base_plugin_definition
+   *   The base definition.
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup $label
+   *   The tool's label.
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup $description
+   *   The tool's description.
+   * @param array<string, \Drupal\tool\TypedData\InputDefinitionInterface> $inputs
+   *   Its inputs, which replace the base definition's.
+   * @param array<string, \Drupal\tool\TypedData\OutputDefinitionInterface> $outputs
+   *   Its outputs, which replace the base definition's.
+   *
+   * @return \Drupal\tool\Tool\ToolDefinition
+   *   The definition.
+   */
+  protected function definition(ToolDefinition $base_plugin_definition, TranslatableMarkup $label, TranslatableMarkup $description, array $inputs, array $outputs): ToolDefinition {
+    $definition = (clone $base_plugin_definition)
+      ->setLabel($label)
+      ->setDescription($description);
+    foreach (array_keys($definition->getInputDefinitions(TRUE)) as $name) {
+      $definition->removeInputDefinition($name);
+    }
+    foreach ($inputs as $name => $input) {
+      $definition->addInputDefinition($name, $input);
+    }
+    foreach (array_keys($definition->getOutputDefinitions()) as $name) {
+      $definition->removeOutputDefinition($name);
+    }
+    foreach ($outputs as $name => $output) {
+      $definition->addOutputDefinition($name, $output);
+    }
+    return $definition;
   }
 
   /**

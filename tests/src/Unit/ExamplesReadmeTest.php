@@ -79,6 +79,7 @@ class ExamplesReadmeTest extends UnitTestCase {
   public function testTheDrushCommandsAreTheCalls(): void {
     $readme = self::readme();
     $this->assertStringContainsString('drush tool:info ' . ExampleCalls::TOOL, $readme);
+    $this->assertStringContainsString(ExampleCalls::drushRead(), $readme);
     foreach (array_keys(ExampleCalls::CALLS) as $call) {
       $this->assertStringContainsString(ExampleCalls::drush($call), $readme);
     }

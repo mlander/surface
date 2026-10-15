@@ -109,6 +109,7 @@ class SurfaceCatalogueTest extends DataSurfaceKernelTestBase {
         'permission' => NodeTypeSurface::PERMISSION,
         'unresolvable' => [],
         'standalone' => TRUE,
+        'reads' => FALSE,
       ],
       [
         'id' => 'edit',
@@ -120,6 +121,7 @@ class SurfaceCatalogueTest extends DataSurfaceKernelTestBase {
         'permission' => NodeTypeSurface::PERMISSION,
         'unresolvable' => [],
         'standalone' => TRUE,
+        'reads' => TRUE,
       ],
     ], $node_type['situations']);
     $this->assertSame([
@@ -160,6 +162,27 @@ class SurfaceCatalogueTest extends DataSurfaceKernelTestBase {
     $this->assertSame(DataSurfaceDemoFormatter::class, $catalogue['field_formatter:data_surface_demo_string']['class']);
     $this->assertSame(['field_type:address'], $catalogue['field.settings.address']['plugins']);
     $this->assertSame([], $catalogue['block.data_surface_demo.presentation.list']['plugins']);
+  }
+
+  /**
+   * Tests which situations change a thing that exists, and so read.
+   *
+   * A situation that needs nothing says so by its context; one that
+   * needs a subject by its signature: a single entity is the thing, every
+   * identity key named is the thing, and an entity beside an identity key
+   * (the field's reuse) or an identity key left out (the field's add) is
+   * room for a new one. A situation that cannot be asked on its own has
+   * no read either.
+   */
+  public function testTheCatalogueSaysWhatCanBeRead(): void {
+    $catalogue = $this->catalogue();
+    $reads = static fn (string $surface): array => array_column($catalogue[$surface]['situations'], 'reads', 'id');
+    $this->assertSame(['add' => FALSE, 'edit' => TRUE], $reads('node.type'));
+    $this->assertSame(['add' => FALSE, 'reuse' => FALSE, 'edit' => TRUE], $reads('field.instance'));
+    $this->assertSame(['add' => FALSE, 'edit' => TRUE], $reads('field.storage'));
+    foreach (['registration.step1', 'registration.step2', 'registration.step3'] as $surface) {
+      $this->assertSame(['configure' => TRUE], $reads($surface), $surface);
+    }
   }
 
   /**

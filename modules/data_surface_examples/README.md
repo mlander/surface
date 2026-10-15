@@ -573,7 +573,10 @@ Nothing to write. Example 3 names a target and has a situation that needs
 nothing, so the Tool API bridge (`data_surface_tool`) derives a tool
 from it, `data_surface:registration.step3:configure`. It takes what
 example 3's form takes, refuses what it refuses, with the same messages,
-and can rehearse a write without making it.
+and can rehearse a write without making it. Beside it is a read tool,
+`data_surface:registration.step3:configure:read`, which takes nothing
+and answers with what is stored, in the shape the write tool takes, so
+a caller can see what is there before it changes it.
 
 The script makes three calls to the tool and prints what each answered:
 
@@ -597,10 +600,13 @@ Success: Dry run of Configure registration: the values were accepted and prepare
   prepared: {"title":"Winter social","open":true,"venue":"riverside","room":"riverside_east","capacity":40,"pricing":"free","ticket":{"note":"Donations welcome"},"contact":{"email":"events@example.com","phone":""}}
 ```
 
-The same tool and the same three calls, from Drush:
+The same tool and the same three calls, from Drush, after a read of
+what is stored:
 
 ```bash
 drush tool:info data_surface:registration.step3:configure
+
+drush tool:run data_surface:registration.step3:configure:read --uid=1
 
 drush tool:run data_surface:registration.step3:configure --uid=1 --input='{"values":{"title":"Autumn meetup","capacity":50,"venue":"harbour","room":"harbour_deck","pricing":"paid","ticket":{"price":12.5,"currency":"EUR"}}}'
 
@@ -610,7 +616,8 @@ drush tool:run data_surface:registration.step3:configure --uid=1 --input='{"valu
 ```
 
 `--uid=1` because `tool:run` runs as anonymous unless told otherwise,
-and the situation asks for "administer site configuration". The dry run
+and the situation asks for "administer site configuration", for a read
+as for a write. The dry run
 is a second input, which `tool:run` reads as `name=value` and decodes as
 JSON, so `true` is a boolean.
 

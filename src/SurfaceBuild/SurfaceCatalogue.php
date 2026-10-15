@@ -10,9 +10,9 @@ namespace Drupal\data_surface\SurfaceBuild;
  * The pattern's discovery document, kept small: for each surface its id,
  * class, identity keys, target and access class, the plugins whose
  * configuration it is, its situations with what each needs, whether it
- * creates, the permission it asks for and whether it can be asked on its
- * own, the alters that apply to it, and the variants that fill its
- * slots.
+ * creates, the permission it asks for, whether it can be asked on its
+ * own and whether what it changes can be read on its own, the alters
+ * that apply to it, and the variants that fill its slots.
  * Nothing here builds a surface; everything is read from what discovery
  * found, which is the point of the attributes being static.
  *
@@ -46,13 +46,14 @@ final class SurfaceCatalogue {
   /**
    * Describes every discovered surface.
    *
-   * @return array<string, array{id: string, class: class-string, module: string, identity: string[], target: class-string|null, access: class-string|null, plugins: list<string>, situations: list<array{id: string, label: string, provider: string, module: string, parameters: string[], creates: bool|null, permission: string|null, unresolvable: string[], standalone: bool}>, alters: list<array{class: class-string, module: string, situations: string[], refines: list<array{key: string, watches: string[]}>}>, variants: array<string, array<string, class-string>>, derived: array<string, string>}>
+   * @return array<string, array{id: string, class: class-string, module: string, identity: string[], target: class-string|null, access: class-string|null, plugins: list<string>, situations: list<array{id: string, label: string, provider: string, module: string, parameters: string[], creates: bool|null, permission: string|null, unresolvable: string[], standalone: bool, reads: bool}>, alters: list<array{class: class-string, module: string, situations: string[], refines: list<array{key: string, watches: string[]}>}>, variants: array<string, array<string, class-string>>, derived: array<string, string>}>
    *   The surfaces, keyed and sorted by id. `plugins` lists the plugins
    *   whose configuration the surface is, as `<host type>:<plugin id>`.
    *   A situation's `creates` is NULL when it needs a subject to say;
    *   `unresolvable` lists its permission's placeholders no parameter can
    *   supply; `standalone` says whether it can be asked on its own, as a
-   *   route or a tool. Situations are a list in discovery order, so two
+   *   route or a tool; `reads` whether what it changes can be read on its
+   *   own, as a read tool. Situations are a list in discovery order, so two
    *   providers of one id are both listed, as they are both refused when
    *   the surface is built. `variants` are the declared ones, each
    *   value's #[SurfaceVariant] class keyed by slot; `derived` says, per
@@ -83,6 +84,7 @@ final class SurfaceCatalogue {
           'permission' => $situation->permission,
           'unresolvable' => $situation->unresolvablePlaceholders(),
           'standalone' => static::standalone($definition, $situation, $plugins),
+          'reads' => $this->reads($definition, $situation, $plugins),
         ], $definition->situations),
         'alters' => array_map(static fn (AlterDefinition $alter): array => [
           'class' => $alter->class,
@@ -123,6 +125,36 @@ final class SurfaceCatalogue {
    */
   public static function standalone(SurfaceDefinition $surface, SituationDefinition $situation, array $plugins): bool {
     return $surface->target !== NULL && $plugins === [] && $situation->unresolvablePlaceholders() === [];
+  }
+
+  /**
+   * Answers whether what a situation changes can be read on its own.
+   *
+   * The rule a generated read tool follows: the situation can be asked
+   * on its own, and it changes a thing that exists. For a situation that
+   * needs nothing that is its context, which does not create; for one
+   * that needs a subject it is its signature, which names one thing
+   * whole (SituationDefinition::namesOneThing()), because the context is
+   * not there to ask until a caller names the subject.
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $surface
+   *   The surface.
+   * @param \Drupal\data_surface\SurfaceBuild\SituationDefinition $situation
+   *   The situation.
+   * @param list<string> $plugins
+   *   The plugins whose configuration the surface is.
+   *
+   * @return bool
+   *   TRUE when what it changes can be read on its own.
+   */
+  public function reads(SurfaceDefinition $surface, SituationDefinition $situation, array $plugins): bool {
+    if (!static::standalone($surface, $situation, $plugins)) {
+      return FALSE;
+    }
+    if (!$situation->needsNothing()) {
+      return $situation->namesOneThing($surface->identity);
+    }
+    return $this->creates($surface, $situation) === FALSE;
   }
 
   /**
