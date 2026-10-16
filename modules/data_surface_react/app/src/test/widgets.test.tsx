@@ -274,6 +274,37 @@ describe('locked', () => {
     expect(input).toHaveValue('article');
     expect(input).toHaveAccessibleDescription('Unique. Fixed for this operation.');
   });
+
+  it('renders a child its access locked as a fieldset of disabled keys, holding what is stored', () => {
+    // As the emitter writes a locked child: the fieldset and every key in
+    // it readOnly and locked, each holding its stored value.
+    const locked = (title: string, value: unknown, widget: Extension['widget']): Schema => ({
+      title,
+      type: widget === 'number' ? 'integer' : 'string',
+      readOnly: true,
+      const: value,
+      'x-surface': x(widget, { locked: true }),
+    });
+    render(
+      <Form
+        schema={object({
+          rack: {
+            title: 'Spice rack',
+            type: 'object',
+            readOnly: true,
+            properties: { spices: locked('Spices', 7, 'number'), label: locked('Label', 'Everyday', 'text') },
+            'x-surface': x('fieldset', { locked: true }),
+          },
+        })}
+        initial={{ rack: { spices: 7, label: 'Everyday' } }}
+      />,
+    );
+    const rack = screen.getByRole('group', { name: 'Spice rack' });
+    expect(within(rack).getByLabelText(/Spices/)).toBeDisabled();
+    expect(within(rack).getByLabelText(/Spices/)).toHaveValue(7);
+    expect(within(rack).getByLabelText(/Label/)).toBeDisabled();
+    expect(within(rack).getByLabelText(/Label/)).toHaveValue('Everyday');
+  });
 });
 
 describe('fieldset, slot and list', () => {

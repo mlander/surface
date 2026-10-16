@@ -75,9 +75,15 @@ build(FieldInstanceSurface::class, $context):
          an alter's holds the alter service and calls instance methods
        a method watching nothing runs now, checked narrower
 
-  6. the children, each through this same build step in its own frame:
+  6. the children, each through this same build step in its own frame,
+     invoked the way a surface asked on its own is (invokeChild): the
+     child situation the parent's context names, else the one for the
+     parent's operation, else the child's default, else the parent's
+     operation and identity (childContext); a situation's permission and
+     the child's access class then make it open, locked (the parent's
+     key locked) or omitted (the key left out):
        attach('storage', FieldStorageSurface::class)
-         -> build(FieldStorageSurface::class, childContext($context, 'storage'))
+         -> build(FieldStorageSurface::class, <its add situation, by operation>)
        attachBy('settings', by: 'field_type')
          -> one child per #[SurfaceVariant] for (FieldInstanceSurface, settings)
          -> one derived child per value a DerivedVariantsInterface service
@@ -96,14 +102,16 @@ The rest of the framework, beside the build:
 access($surface, $context, $account)           Surfaces::access()
   the situation's permission, %keys filled from the known identity,
   then the surface's access class if it has one,
-  then each child the context resolves, through its own access class,
-  which may refuse and never allow
+  then each child the context resolves that invokes no situation of its
+  own, through its own access class, which may refuse and never allow
+  (a child invoked through a situation was answered for at build)
 
 target($surface, $context, $built)              Surfaces::target()
   the surface's SurfaceTargetInterface, wrapped in a SurfaceTargetAdapter
   bound to the context, with a route per child whose class names a
-  target, each in the context its parent hands it; a child without one
-  is stored by the parent under its key
+  target, each in the context it is invoked in; a child without one
+  is stored by the parent under its key, and one its access omitted
+  keeps what is stored under its key
 
 refine($values)                                  DataSurface::refine()
   for each key whose watched siblings all hold values (a key an alter

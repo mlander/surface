@@ -168,6 +168,7 @@ each written once, as a def under `$defs`, and referred to
 | an attached part | a reference to its def under `$defs`, beside its label ([reusable subschemas](#reusable-subschemas)) |
 | a list | `type: array`, `items` |
 | a locked key | `readOnly: true` and `const` of the value the situation knows |
+| a child its access locked | `readOnly: true` on the part, and on every key inside it with `const` of what is stored (none in the full schema); an omitted child is not there at all ([Three answers](surfaces.md#three-answers)) |
 | a secret | `writeOnly: true`, no default, no value |
 | any other constraint | named in `x-surface.checkedOnServer`: the schema is not the whole story, ask `/validate` |
 
@@ -176,7 +177,7 @@ each written once, as a def under `$defs`, and referred to
 | Keyword | Holds |
 | --- | --- |
 | `widget` | Only when the caller asks for widget hints (`data_surface_react` does). The Form API-equivalent hint: `select`, `radios`, `checkbox`, `number`, `text`, `textarea`, `email`, `fieldset`, `slot`, `list`; `null` when no widget would claim the key. |
-| `locked` | Identity the situation knows: shown, never changed. |
+| `locked` | Identity the situation knows, or a key of a child whose access answered locked: shown, never changed. |
 | `dependsOn` | The sibling keys this key's refiners watch, in its own frame; a key an alter mounted, which only that alter may watch, by its dotted path in that frame (`third_party_settings.<module>.<key>`). A client refines when one of them changes. |
 | `refined` | Whether the key is narrowed right now, compared with what the surface advertises in this situation. |
 | `stale` | The stored value is no longer offered; the key is shown on its empty option, standing for it. |
@@ -498,6 +499,7 @@ What the emitter's `widget`, when asked for, mirrors is
 | `boolean` | `checkbox`, never `#required` | `checkbox` | `CheckboxField` |
 | a list with no allowed values | no stock widget | `list` | `ListField` (add and remove rows) |
 | a locked key | `#disabled`, "Fixed for this operation." | `locked: true` | disabled, the same note |
+| a locked child | its fieldset `#disabled`, every element inside with it | `locked: true` on the fieldset and on every key inside | a fieldset of disabled keys |
 
 ## The endpoints
 

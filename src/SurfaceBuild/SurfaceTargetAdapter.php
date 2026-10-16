@@ -75,12 +75,17 @@ final class SurfaceTargetAdapter implements DataSurfaceTargetInterface {
    * @param string[] $identity
    *   The surface's identity keys, which a routed child learns from the
    *   accepted values when it is committed.
+   * @param string[] $omitted
+   *   The keys whose child the build left out for this caller, which the
+   *   surface stores: what is stored under each is handed back to the
+   *   target untouched, because the caller could not see it.
    */
   public function __construct(
     protected SurfaceTargetInterface $target,
     protected SurfaceContext $context,
     protected array $routes = [],
     protected array $identity = [],
+    protected array $omitted = [],
   ) {
   }
 
@@ -111,7 +116,8 @@ final class SurfaceTargetAdapter implements DataSurfaceTargetInterface {
    * {@inheritdoc}
    *
    * The target's own prepare(), over this surface's own values in the
-   * shape they are stored in, then each routed child's, in the child's
+   * shape they are stored in, plus what it holds under a child the
+   * caller could not see, then each routed child's, in the child's
    * context plus this level's identity, so a child of something being
    * created can rehearse against what it will belong to. Everything
    * storage refuses, at any level, is collected before anything is
@@ -120,6 +126,15 @@ final class SurfaceTargetAdapter implements DataSurfaceTargetInterface {
    */
   public function prepare(DataSurfaceInterface $surface, array $values): PreparedValues {
     $own = self::shapeThirdParty($surface, $values, TRUE);
+    if ($this->omitted !== []) {
+      // Decision: see docs/decisions.md#omitted-is-omitted-both-ways.
+      $stored = $this->target->load($this->context);
+      foreach ($this->omitted as $key) {
+        if (array_key_exists($key, $stored)) {
+          $own[$key] = $stored[$key];
+        }
+      }
+    }
     $known = $this->knownWith($values);
     $children = [];
     $refused = [];

@@ -160,14 +160,18 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       // here.
       $fallback = $entry->slot->defaultsOf($chosen);
     }
+    $child = $entry->childFor($values);
     if ($entry->locked) {
       // A locked key's value space is narrowed to exactly one value,
       // so input cannot move it. That one value is whatever storage
       // holds; the declared default is only the starting point for a
-      // key storage has never held.
-      return $fallback;
+      // key storage has never held. A locked child (its access answered
+      // locked) is read the way an unanswered one is, so a stored value
+      // missing a key the child added since still holds the whole shape.
+      return $child !== NULL && is_array($fallback)
+        ? $this->acceptLevel($child, [], $fallback, $path)
+        : $fallback;
     }
-    $child = $entry->childFor($values);
     if (!array_key_exists($name, $input)) {
       // A subsurface the input says nothing about still holds a whole
       // value of the child's shape, the child's defaults beneath what

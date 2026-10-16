@@ -197,6 +197,20 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * {@inheritdoc}
    */
+  public function omit(string $name): static {
+    $this->assertMutable();
+    $shell = $this->definitions[$name] ?? NULL;
+    if (!$shell instanceof MapDataDefinition || $shell->getPropertyDefinitions() !== []) {
+      throw new \LogicException(sprintf('The "%s" key cannot be omitted: only a key reserved for a subsurface can be, and only before its child is attached.', $name));
+    }
+    unset($this->definitions[$name], $this->attachments[$name], $this->slots[$name], $this->refinements[$name]);
+    $this->locked = array_values(array_diff($this->locked, [$name]));
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function extendChoices(string $name, array $choices, string $contributor): static {
     $this->assertMutable();
     $definition = $this->named($name);

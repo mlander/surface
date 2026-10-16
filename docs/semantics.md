@@ -304,6 +304,31 @@ for a locked key is ignored — it is not an error, just not a way to move
 the value. This is why editing an entity whose id is locked no longer
 resets it to the default.
 
+### Locked and omitted children
+
+A child's access ([Surfaces](surfaces.md#child-situations)) may answer
+that its keys are shown and fixed, or not there at all.
+
+- **A locked child** is a locked key whose value is a map: the parent's
+  key is locked, so `accept()` keeps what storage holds for the whole
+  child, read through the child the way an unanswered child is (a key
+  the child added since starts from its default), and ignores what was
+  posted for it. It is still validated, like any locked key. The form
+  draws its fieldset disabled, every element inside with it, showing
+  what is stored; the contract marks the fieldset and every key inside
+  it `readOnly` and `x-surface.locked`, each holding its stored value
+  as `const` (the full schema, which reads no stored value, holds none);
+  the tool's `values` input marks the map and every property in it
+  locked.
+- **An omitted child** is not in the built surface: no definition, no
+  element, no property in either contract or in the tool's `values`
+  input. A value posted for it is an undeclared key, which `accept()`
+  refuses with `UnknownKeysException`, exactly as for a key the surface
+  never had. It is omitted in both directions: the read tool does not
+  return it, and a write leaves what storage holds under it as it was
+  (the target adapter hands that back to the parent's target, since
+  the caller could not have seen it).
+
 ## What each stage decides
 
 | Stage | Decides |

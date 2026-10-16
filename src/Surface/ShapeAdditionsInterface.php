@@ -111,12 +111,14 @@ interface ShapeAdditionsInterface {
   /**
    * A subsurface at a key, by class.
    *
-   * It keeps its own refinement and its own alters, and sees the context
-   * the situation gave it: its own, when the context hands it one with
-   * SurfaceContext::withChild(), and otherwise its parent's operation and
-   * known identity. Its values are a map at the key, refined, accepted
-   * and validated by the child in its own frame; a parent cannot refine
-   * into it and it cannot watch a parent key.
+   * It keeps its own refinement and its own alters, and is invoked
+   * through one of its own situations when one applies: the one the
+   * context names with SurfaceContext::withChild(), else the one for the
+   * parent's operation, else its default; otherwise it sees the context
+   * handed to it, or its parent's operation and known identity. Its
+   * values are a map at the key, refined, accepted and validated by the
+   * child in its own frame; a parent cannot refine into it and it cannot
+   * watch a parent key.
    *
    * Returns the map definition at the key, as add() returns its
    * definition, so the owner labels and describes it with the core

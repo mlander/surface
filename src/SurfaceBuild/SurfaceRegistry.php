@@ -137,12 +137,27 @@ final class SurfaceRegistry {
    *   The situations, keyed by id.
    *
    * @throws \LogicException
-   *   When two providers declare one situation id.
+   *   When two providers declare one situation id, or two situations are
+   *   marked the default.
    */
   public function getSituations(string $surface): array {
     $definition = $this->getDefinition($surface);
     $situations = [];
+    $default = NULL;
     foreach ($definition->situations as $situation) {
+      if ($situation->default) {
+        if ($default !== NULL) {
+          throw new \LogicException(sprintf(
+            'The %s surface marks two situations the default, "%s" from %s and "%s" from %s. The default is the one situation a parent invokes when nothing else picks one, so there is at most one.',
+            $definition->id,
+            $default->id,
+            $default->describe(),
+            $situation->id,
+            $situation->describe(),
+          ));
+        }
+        $default = $situation;
+      }
       if (isset($situations[$situation->id])) {
         throw new \LogicException(sprintf(
           'The %s surface has two situations with the id "%s", from %s and from %s. A situation id is unique within its surface, because it is the operation a context is addressed by.',
@@ -316,6 +331,7 @@ final class SurfaceRegistry {
             permission: $situation->permission,
             module: $module,
             parameters: array_map(SituationParameter::fromReflection(...), $method->getParameters()),
+            default: $situation->default,
           );
         }
       }

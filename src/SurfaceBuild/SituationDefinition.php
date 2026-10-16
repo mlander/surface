@@ -31,6 +31,9 @@ final class SituationDefinition {
    * @param \Drupal\data_surface\SurfaceBuild\SituationParameter[] $parameters
    *   The method's parameters, in order: what a route or a tool has to
    *   supply, by name.
+   * @param bool $default
+   *   Whether it is the situation the surface is invoked through as a
+   *   child when nothing else picks one.
    */
   public function __construct(
     public readonly string $id,
@@ -41,6 +44,7 @@ final class SituationDefinition {
     public readonly ?string $permission,
     public readonly string $module,
     public readonly array $parameters = [],
+    public readonly bool $default = FALSE,
   ) {}
 
   /**

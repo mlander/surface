@@ -1,0 +1,12 @@
+keep a larder:
+  title: 'Keep a larder'
+  description: 'The larder fixture''s own situations.'
+stock spice rack:
+  title: 'Stock the spice rack'
+  description: 'The spice rack fixture is open: its keys may be changed.'
+inspect spice rack:
+  title: 'Inspect the spice rack'
+  description: 'The spice rack fixture is locked: its keys are shown and fixed.'
+hide spice rack:
+  title: 'Hide the spice rack'
+  description: 'The spice rack fixture is omitted: its keys are not there.'

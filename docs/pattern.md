@@ -205,6 +205,13 @@ Both return the map definition at the key, as `add()` returns its
 definition, so the owner labels and describes its own subsurface key
 with the core setters.
 
+A child is invoked the way a surface asked on its own is: through one
+of its own situations, the one its parent's situation names, else the
+one for its parent's operation, else its default, and otherwise in its
+parent's operation and identity, as before. That situation's permission
+and the child's access class then decide whether the child is open,
+locked or left out for the account ([Surfaces](surfaces.md#child-situations)).
+
 A slot is always **open**. The parent never names its children. Each
 child marks itself with `#[SurfaceVariant]`, naming the surface, the
 slot and the value it is for, so a new field type brings its settings
@@ -278,8 +285,10 @@ open keys.
 | Field settings | chosen by field type | fixed by the known type | fixed by the known type |
 | Storage settings | chosen by the storage's field type | fixed by the known type | fixed by the known type |
 
-A situation can hand a subsurface its own context (`withChild()`):
-reusing a storage is an add for the field and an edit for its storage.
+A situation can hand a subsurface its own context (`withChild()`), or
+name one of the child's situations for it (`withChild('storage',
+situation: 'edit', known: [...])`): reusing a storage is an add for
+the field and an edit for its storage.
 A situation can also narrow (`withConstraint()`): the storage's edit
 situation, when the field has data, constrains cardinality not to
 shrink. The rule: **what depends on where you are is the situation's;
@@ -390,8 +399,15 @@ Two tiers, and alters touch neither.
 - **Run time**: `#[Surface(access:)]`, a `SurfaceAccessInterface` that
   may hold services, asked once the permission allows.
   `FieldInstanceAccess` refuses a locked storage; `NodeTypeAccess` asks
-  the node type entity. A child the context resolves may refuse through
-  its own access class, never allow.
+  the node type entity.
+
+An answer is open, locked or omitted (`SurfaceAccess`); core's allowed
+is open and its forbidden omitted. At the top, open lets the caller in
+and anything else keeps them out. At a child invoked through a
+situation of its own, the answer is about the child's keys: changeable,
+shown and fixed, or not there at all, the way field access treats a
+field. A child that invokes no situation of its own may refuse the
+whole surface through its access class, never allow.
 
 ## Outputs
 

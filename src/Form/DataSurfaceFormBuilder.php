@@ -200,7 +200,9 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         // above the widget that would place it, rather than only in the
         // widget that knows better than to.
         DefinitionMetadata::isSecret($definition) => NULL,
-        $definitions->isLocked($name) => $surface->getDefault($name),
+        // A locked identity key holds what the situation knows, its
+        // default; a locked child, what is stored, as given.
+        $definitions->isLocked($name) && !$definitions->entry($name)?->isNested() => $surface->getDefault($name),
         default => $shown[$name] ?? $surface->getDefault($name),
       };
       if ($slot !== NULL) {
@@ -213,6 +215,8 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       if ($definitions->isLocked($name)) {
         // Visible but fixed: the consumer sees the key and its value and
         // cannot change it — the form-side spelling of const + readOnly.
+        // A locked child's fieldset passes #disabled on to every element
+        // inside it, as the form API does for any parent.
         $element['#disabled'] = TRUE;
         $element = static::describeLocked($element);
       }

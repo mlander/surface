@@ -143,8 +143,10 @@ final class SurfaceInputDefinitions {
         // API has the same idea for a whole input. It has no effect on a
         // map's property today, because only top level inputs are
         // filtered by it; carrying it anyway keeps the statement in the
-        // definition for the day the normalizer reads it.
-        $property->setLocked();
+        // definition for the day the normalizer reads it. A child its
+        // access locked is a locked map, and every key inside it is
+        // locked with it.
+        static::lock($property);
       }
       $properties[$name] = $property;
     }
@@ -155,6 +157,23 @@ final class SurfaceInputDefinitions {
       default_value: $default_value,
       property_definitions: $properties,
     );
+  }
+
+  /**
+   * Marks an input locked, and every property inside it.
+   *
+   * @param \Drupal\tool\TypedData\InputDefinitionInterface $input
+   *   The input.
+   */
+  protected static function lock(InputDefinitionInterface $input): void {
+    $input->setLocked();
+    if ($input instanceof MapInputDefinition) {
+      foreach ($input->getPropertyDefinitions() as $property) {
+        if ($property instanceof InputDefinitionInterface) {
+          static::lock($property);
+        }
+      }
+    }
   }
 
   /**

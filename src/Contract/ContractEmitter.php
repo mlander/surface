@@ -414,11 +414,15 @@ final class ContractEmitter {
    *   key it is before a context fixes it (no `readOnly`, no `const`, and
    *   no default, which is the context's), and every subsurface inside is
    *   a bare reference to its own def.
+   * @param bool $frozen
+   *   Whether the frame is a child its access locked, or is inside one:
+   *   every key is then described locked (`readOnly`, `x-surface.locked`)
+   *   and holds what it was given, which is what is stored.
    *
    * @return array{0: array, 1: array|\stdClass}
    *   The object schema of the frame, and its values as shown.
    */
-  protected function frame(DataSurfaceInterface $declared, array $values, string $prefix, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing = [], bool $declaring = FALSE): array {
+  protected function frame(DataSurfaceInterface $declared, array $values, string $prefix, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing = [], bool $declaring = FALSE, bool $frozen = FALSE): array {
     $full = $subschemas->full;
     // Decision: see docs/decisions.md#static-by-default-runtime-by-declaration.
     // The present moment is refined by every refiner; the full schema and
@@ -441,7 +445,7 @@ final class ContractEmitter {
       $current = $now->entry($name) ?? $entry;
       $stated = $ahead->entry($name) ?? $entry;
       // A def is the declaration, which no context has locked.
-      $locked = $entry->locked && !$declaring;
+      $locked = ($entry->locked || $frozen) && !$declaring;
       if ($full && !$entry->isNested() && $this->watchesFree($advertised, $entry, $declaring)) {
         // A refiner that watches only a key an alter mounted is run even
         // while that key holds nothing. For any values, the key is the
@@ -451,7 +455,7 @@ final class ContractEmitter {
       }
       $depends = $advertised->dependencies($name);
       if ($entry->slot !== NULL) {
-        [$properties[$name], $shown[$name], $branches] = $this->slot($declared, $entry, $values, $prefix . $name, $owner, $cacheability, $stale, $subschemas, $standing, $declaring);
+        [$properties[$name], $shown[$name], $branches] = $this->slot($declared, $entry, $values, $prefix . $name, $owner, $cacheability, $stale, $subschemas, $standing, $declaring, $locked);
         array_push($conditions, ...$branches);
       }
       elseif ($entry->attachment !== NULL) {
@@ -467,10 +471,15 @@ final class ContractEmitter {
           $child = $attachment->child;
           $held = $values[$name] ?? NULL;
           $inside = $full ? $this->known($child) : array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
-          [$instance, $shown[$name]] = $this->instance($child, $key, $inside, $prefix . $name . '.', $attachment->id ?? $fallback, $cacheability, $stale, $subschemas, $standing);
+          // A child its access locked is described locked through and
+          // through: every key inside it fixed to what it holds.
+          [$instance, $shown[$name]] = $this->instance($child, $key, $inside, $prefix . $name . '.', $attachment->id ?? $fallback, $cacheability, $stale, $subschemas, $standing, $locked);
           $reference = $this->reference($key, $instance, $subschemas);
         }
         $properties[$name] = $this->describe($current->definition) + $reference;
+        if ($locked) {
+          $properties[$name]['readOnly'] = TRUE;
+        }
         $properties[$name][self::EXTENSION] = $this->extension('fieldset', $locked, $depends, $this->anyRefined($instance));
       }
       else {
@@ -480,10 +489,13 @@ final class ContractEmitter {
         // for, and anything else what it was given or failing that its
         // default.
         $secret = DefinitionMetadata::isSecret($current->definition);
-        $orphan = !$secret && !$entry->locked && array_key_exists($prefix . $name, $standing);
+        $orphan = !$secret && !$locked && array_key_exists($prefix . $name, $standing);
         $value = match (TRUE) {
           $secret, $declaring && $entry->locked => NULL,
           $entry->locked => $declared->getDefault($name),
+          // Inside a locked child, what it holds: nothing, in the full
+          // schema, which reads no stored value.
+          $frozen && $full => NULL,
           $orphan => $standing[$prefix . $name],
           default => $values[$name] ?? $declared->getDefault($name),
         };
@@ -612,16 +624,18 @@ final class ContractEmitter {
    *   The document's defs.
    * @param array<string, mixed> $standing
    *   The orphans of a refinement, by dotted path from the top.
+   * @param bool $frozen
+   *   Whether the child is locked whole, by its access or its parent's.
    *
    * @return array{0: array, 1: array|\stdClass}
    *   The child's object schema here, and its values as shown.
    */
-  protected function instance(DataSurfaceInterface $child, string $key, array $values, string $prefix, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing): array {
+  protected function instance(DataSurfaceInterface $child, string $key, array $values, string $prefix, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing, bool $frozen = FALSE): array {
     $def = $subschemas->get($key);
-    if ($subschemas->full && $def !== NULL && !$this->locks($child)) {
+    if ($subschemas->full && $def !== NULL && !$frozen && !$this->locks($child)) {
       return [$def, new \stdClass()];
     }
-    return $this->frame($child, $values, $prefix, $owner, $cacheability, $stale, $subschemas, $standing);
+    return $this->frame($child, $values, $prefix, $owner, $cacheability, $stale, $subschemas, $standing, FALSE, $frozen);
   }
 
   /**
@@ -799,12 +813,15 @@ final class ContractEmitter {
    * @param bool $declaring
    *   Whether the slot is part of a def: every variant is then a bare
    *   reference, and a locked deciding key chooses nothing.
+   * @param bool $frozen
+   *   Whether the slot is inside a child locked whole: every variant is
+   *   then described locked.
    *
    * @return array{0: array, 1: mixed, 2: array}
    *   The slot's property schema, its value as shown, and the
    *   conditionals for the parent's `allOf`.
    */
-  protected function slot(DataSurfaceInterface $declared, SurfaceEntry $entry, array $values, string $path, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing = [], bool $declaring = FALSE): array {
+  protected function slot(DataSurfaceInterface $declared, SurfaceEntry $entry, array $values, string $path, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing = [], bool $declaring = FALSE, bool $frozen = FALSE): array {
     $full = $subschemas->full;
     $slot = $entry->slot;
     assert($slot !== NULL);
@@ -815,7 +832,10 @@ final class ContractEmitter {
     $shell = $this->describe($slot->shell);
     $property = $shell + ['type' => $slot->shell->isRequired() ? 'object' : ['object', 'null']];
     $depends = array_values(array_unique([$slot->by, ...$entry->dependencies]));
-    $property[self::EXTENSION] = $this->extension('slot', FALSE, $depends, $chosen !== NULL) + [
+    if ($frozen) {
+      $property['readOnly'] = TRUE;
+    }
+    $property[self::EXTENSION] = $this->extension('slot', $frozen, $depends, $chosen !== NULL) + [
       'by' => $slot->by,
       'variants' => $slot->variantIds(),
       'chosen' => $chosen,
@@ -838,7 +858,7 @@ final class ContractEmitter {
         $own = $is_chosen && $slot->fits($id, $held) ? $held : [];
         $variant_stale = [];
         $inside = $full ? $this->known($child) : array_replace($child->getDefaultValues(), $own);
-        [$instance, $variant_values] = $this->instance($child, $key, $inside, $path . '.', $variant->id ?? $fallback, $cacheability, $variant_stale, $subschemas, $is_chosen ? $standing : []);
+        [$instance, $variant_values] = $this->instance($child, $key, $inside, $path . '.', $variant->id ?? $fallback, $cacheability, $variant_stale, $subschemas, $is_chosen ? $standing : [], $frozen);
         if ($is_chosen) {
           $shown = $variant_values;
           array_push($stale, ...$variant_stale);

@@ -119,6 +119,26 @@ interface DataSurfaceBuilderInterface {
   public function lock(string $name): static;
 
   /**
+   * Leaves a subsurface key out of what the surface advertises.
+   *
+   * What a child's access answers when the account may not see it: the
+   * key is not in the sealed surface at all, so nothing generated from it
+   * draws, advertises or accepts it, and a value posted for it is an
+   * unknown key. The one removal the build step makes, and only of a key
+   * that holds a child, which no sibling may watch.
+   *
+   * @param string $name
+   *   The subsurface key.
+   *
+   * @return $this
+   *
+   * @throws \LogicException
+   *   When the builder is already sealed, or the key is not a subsurface
+   *   reserved by the shape.
+   */
+  public function omit(string $name): static;
+
+  /**
    * Extends an existing definition's declared choices with more values.
    *
    * The contribution API for widening at build time (decision D2): the

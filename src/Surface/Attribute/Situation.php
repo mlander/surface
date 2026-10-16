@@ -43,12 +43,19 @@ final class Situation {
    *   subject. A `%key` placeholder is filled from the identity the
    *   context knows. Access that depends on the subject is answered at
    *   run time by the surface's access class, not declared here.
+   * @param bool $default
+   *   Whether this is the situation the surface is invoked through when it
+   *   is attached as a child and neither its parent's context names one
+   *   of its situations nor one of them matches the parent's operation.
+   *   At most one situation of a surface says so; two are refused when the
+   *   surface is built. Meaningless for a surface asked on its own.
    */
   public function __construct(
     public readonly string $id,
     public readonly string|\Stringable $label,
     public readonly ?string $of = NULL,
     public readonly ?string $permission = NULL,
+    public readonly bool $default = FALSE,
   ) {}
 
 }

@@ -21,6 +21,7 @@ use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
 use Drupal\data_surface\Surface\AltersOutputsInterface;
 use Drupal\data_surface\Surface\HasOutputsInterface;
 use Drupal\data_surface\Surface\HasStorageShapeInterface;
+use Drupal\data_surface\Surface\SurfaceAccess;
 use Drupal\data_surface\Surface\SurfaceAccessInterface;
 use Drupal\data_surface\Surface\SurfaceAlterInterface;
 use Drupal\data_surface\Surface\SurfaceContext;
@@ -63,7 +64,11 @@ use Drupal\data_surface\SurfaceAttachment;
  *    in a link of its own, wrapped in Refinement\RuntimeRefiner, after
  *    its class's static link; one that watches nothing is not run here
  *    but bound ungated, to run on every refinement.
- * 6. The children, each through this same build step in its own frame.
+ * 6. The children, each through this same build step in its own frame,
+ *    each invoked the way a surface asked on its own is: through one of
+ *    its own situations when one applies (invokeChild()), whose access
+ *    then decides whether the child is open, locked or left out for the
+ *    current account (childAccess()); otherwise in its parent's context.
  * 7. The seal.
  *
  * The engine's builder is the whole state of a build. Nothing is cached
@@ -201,19 +206,48 @@ final class Surfaces implements SurfacesInterface {
 
     // The children, each through this same build step in its own frame:
     // its own shape, its own alters, its own refiners, and the context
-    // the parent's context hands it.
+    // it is invoked in, which its own situation's access may then narrow
+    // to locked or to nothing at all.
     $frame = ['class' => $definition->class, 'id' => $definition->id, 'key' => '', 'inputs' => $input_keys];
+    $permission = $this->registry->getSituations($definition->class)[$context->operation]->permission ?? NULL;
+    $frame['permission'] = $permission === NULL ? NULL : static::resolvePermission($permission, $context);
     foreach ($inputs->attachments() as $key => $child) {
-      $builder->attach($key, $this->buildChild($child, $context, $key, $frame, $ancestry));
+      [$attachment, $access] = $this->buildChild($child, $context, $key, $frame, $ancestry);
+      if ($access !== NULL) {
+        // What the child's access answer read is what this surface, and
+        // everything emitted from it, varies by.
+        $builder->addCacheableDependency($access);
+      }
+      if ($attachment === NULL) {
+        // Decision: see docs/decisions.md#omitted-is-omitted-both-ways.
+        $builder->omit($key);
+        continue;
+      }
+      $builder->attach($key, $attachment);
+      if ($access !== NULL && $access->isLocked()) {
+        $builder->lock($key);
+      }
     }
     foreach ($slots as $key => ['by' => $by, 'children' => $children]) {
       $variants = [];
+      $withheld = [];
       foreach ($children as $value => $child) {
-        $variants[(string) $value] = $this->buildChild($child, $context, $key, $frame, $ancestry);
+        [$attachment, $access] = $this->buildChild($child, $context, $key, $frame, $ancestry);
+        if ($access !== NULL) {
+          $builder->addCacheableDependency($access);
+        }
+        // Decision: see docs/decisions.md#a-variant-is-open-or-not-offered.
+        if ($attachment === NULL || ($access !== NULL && !$access->isOpen())) {
+          $withheld[] = (string) $value;
+          continue;
+        }
+        $variants[(string) $value] = $attachment;
       }
       $deriver = $this->derivedVariants->for($definition->class, $key);
       if ($deriver !== NULL) {
-        foreach ($deriver->variants(array_keys($variants)) as $value => $definitions) {
+        // A withheld variant is still declared: nothing derives in its
+        // place.
+        foreach ($deriver->variants([...array_keys($variants), ...$withheld]) as $value => $definitions) {
           $variants[(string) $value] ??= new SurfaceAttachment((new DataSurfaceBuilder($definitions))->setWatchedValueCheck($this->watchedValueCheck)->seal());
         }
       }
@@ -224,7 +258,7 @@ final class Surfaces implements SurfacesInterface {
   }
 
   /**
-   * Builds one child at a key, in the context its parent's hands it.
+   * Builds one child at a key, invoked the way invokeChild() resolves.
    *
    * @param class-string $child
    *   The child surface class.
@@ -232,32 +266,222 @@ final class Surfaces implements SurfacesInterface {
    *   The parent's context.
    * @param string $key
    *   The key the child sits at.
-   * @param array{class: class-string, id: string, key: string, inputs: string[]} $frame
-   *   The parent, for messages and the cycle check.
+   * @param array{class: class-string, id: string, key: string, inputs: string[], permission?: string|null} $frame
+   *   The parent, for messages and the cycle check, with the permission
+   *   its own situation asks, resolved.
    * @param array $ancestry
    *   The parent's own ancestry.
    *
-   * @return \Drupal\data_surface\SurfaceAttachment
-   *   The sealed child.
+   * @return array{0: \Drupal\data_surface\SurfaceAttachment|null, 1: \Drupal\data_surface\Surface\SurfaceAccess|null}
+   *   The sealed child, or NULL when its access omits it; and that access
+   *   answer, or NULL for a child invoked through no situation of its own,
+   *   whose access is asked only by access(), as it always was.
    */
-  protected function buildChild(string $child, SurfaceContext $context, string $key, array $frame, array $ancestry): SurfaceAttachment {
+  protected function buildChild(string $child, SurfaceContext $context, string $key, array $frame, array $ancestry): array {
     $definition = $this->registry->getDefinition($child);
+    [$child_context, $situation] = $this->invokeChild($definition, $context, $key, $frame['id']);
+    $access = $situation === NULL ? NULL : $this->childAccess($definition, $situation, $child_context, $this->currentUser, $frame['permission'] ?? NULL);
+    if ($access !== NULL && $access->isOmitted()) {
+      return [NULL, $access];
+    }
     $frame['key'] = $key;
-    return new SurfaceAttachment(
-      $this->buildSurface($definition->class, static::childContext($context, $key), [...$ancestry, $frame]),
-      $definition->class,
-      $definition->id,
-    );
+    return [
+      new SurfaceAttachment(
+        $this->buildSurface($definition->class, $child_context, [...$ancestry, $frame]),
+        $definition->class,
+        $definition->id,
+      ),
+      $access,
+    ];
   }
 
   /**
-   * Gets the context a child at a key is built and stored in.
+   * Resolves how a child at a key is invoked, the same way at every use.
+   *
+   * In this order, the first that applies:
+   * 1. The parent's context names one of the child's situations, by id,
+   *    with withChild($key, situation: ...); or it hands the child a
+   *    context whole with withChild($key, $context), which is taken as it
+   *    is and invokes no situation of the child's (so no access of its
+   *    own), exactly as before.
+   * 2. The child's situation whose id is the parent's operation.
+   * 3. The child's default situation, #[Situation(default: TRUE)].
+   * 4. None: the child sees its parent's operation, `creates` and known
+   *    identity, exactly as a child always did (childContext()).
+   *
+   * A situation invoked here is called with the arguments it declares,
+   * read by name from the identity the parent handed it and then from
+   * the parent's known identity; the context it returns then knows that
+   * identity too, its own known keys winning on a clash. A context handed
+   * whole is taken as it is. A situation found by operation or by default
+   * that cannot be given an argument it needs is passed over, for the
+   * next step; one the parent named is refused.
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $child
+   *   The child surface.
+   * @param \Drupal\data_surface\Surface\SurfaceContext $context
+   *   The parent's context.
+   * @param string $key
+   *   The key the child sits at.
+   * @param string $parent
+   *   The parent's id, for messages.
+   *
+   * @return array{0: \Drupal\data_surface\Surface\SurfaceContext, 1: \Drupal\data_surface\SurfaceBuild\SituationDefinition|null}
+   *   The child's context, and the situation of its own it was invoked
+   *   through, or NULL when it inherits.
+   *
+   * @throws \LogicException
+   *   When the parent names a situation the child does not declare, or
+   *   one that cannot be given an argument it needs.
+   */
+  protected function invokeChild(SurfaceDefinition $child, SurfaceContext $context, string $key, string $parent): array {
+    // Decision: see docs/decisions.md#one-invocation-model-for-both-levels.
+    $situations = $this->registry->getSituations($child->class);
+    $named = $context->childSituation($key);
+    if ($named !== NULL) {
+      $situation = $situations[$named['situation']] ?? throw new \LogicException(sprintf(
+        'The %s surface\'s "%s" context names the "%s" situation for its "%s" child, which the %s surface does not declare; it declares %s.',
+        $parent,
+        $context->operation,
+        $named['situation'],
+        $key,
+        $child->id,
+        $situations === [] ? 'none' : implode(', ', array_keys($situations)),
+      ));
+      $own = $this->childSituationContext($child, $situation, $context, $named['known'], $key, $parent);
+      assert($own !== NULL);
+      return [$own, $situation];
+    }
+    $handed = $context->forChild($key);
+    if ($handed !== $context) {
+      // A context handed whole was built by the parent, and is taken as
+      // it is, with no access of the child's own: what every withChild()
+      // written before situations could be named always meant.
+      return [$handed, NULL];
+    }
+    // The parent's operation is a hint, and so is the default: either is
+    // passed over when the parent knows too little to invoke it, as a
+    // context that knows nothing yet, which a static tool definition or
+    // a catalogue builds, does.
+    $candidates = isset($situations[$context->operation]) ? [$situations[$context->operation]] : [];
+    foreach ($situations as $candidate) {
+      if ($candidate->default && $candidate->id !== $context->operation) {
+        $candidates[] = $candidate;
+      }
+    }
+    foreach ($candidates as $situation) {
+      $own = $this->childSituationContext($child, $situation, $context, [], $key, $parent, FALSE);
+      if ($own !== NULL) {
+        return [$own, $situation];
+      }
+    }
+    return [static::childContext($context, $key), NULL];
+  }
+
+  /**
+   * Invokes one of a child's situations for its parent.
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $child
+   *   The child surface.
+   * @param \Drupal\data_surface\SurfaceBuild\SituationDefinition $situation
+   *   The child's situation.
+   * @param \Drupal\data_surface\Surface\SurfaceContext $context
+   *   The parent's context.
+   * @param array<string, mixed> $handed
+   *   The identity the parent handed the child with the situation's name.
+   * @param string $key
+   *   The key the child sits at, for messages.
+   * @param string $parent
+   *   The parent's id, for messages.
+   * @param bool $named
+   *   Whether the parent named the situation, so that one that cannot be
+   *   invoked is a mistake rather than a step to pass over.
+   *
+   * @return \Drupal\data_surface\Surface\SurfaceContext|null
+   *   The child's context, knowing what it was handed and what its parent
+   *   knows, its own known keys first; NULL for a situation the parent did
+   *   not name that cannot be given what it needs.
+   *
+   * @throws \LogicException
+   *   When a named situation needs an argument nothing handed it.
+   */
+  protected function childSituationContext(SurfaceDefinition $child, SituationDefinition $situation, SurfaceContext $context, array $handed, string $key, string $parent, bool $named = TRUE): ?SurfaceContext {
+    $identity = $handed + $context->known;
+    try {
+      $own = $this->situation($child->class, $situation->id, $identity);
+    }
+    catch (\InvalidArgumentException $e) {
+      if (!$named) {
+        return NULL;
+      }
+      throw new \LogicException(sprintf(
+        'The %s surface invokes the "%s" situation of the %s surface at its "%s" key, from its "%s" context, and cannot give it what it needs: %s Hand it with withChild(\'%s\', situation: \'%s\', known: [...]).',
+        $parent,
+        $situation->id,
+        $child->id,
+        $key,
+        $context->operation,
+        $e->getMessage(),
+        $key,
+        $situation->id,
+      ), 0, $e);
+    }
+    return $own->withKnown(array_diff_key($identity, $own->known));
+  }
+
+  /**
+   * Answers what an account may do with a child invoked through a situation.
+   *
+   * The child's situation's permission, then its surface's access class,
+   * in the child's own context, combined so the narrower answer stands. A
+   * permission the account lacks omits the child; one whose placeholder
+   * the context cannot fill says nothing, the parent's access having
+   * gated the caller already; core's answer from the class is read as
+   * SurfaceAccess::fromAnswer() reads it.
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $child
+   *   The child surface.
+   * @param \Drupal\data_surface\SurfaceBuild\SituationDefinition $situation
+   *   The situation it was invoked through.
+   * @param \Drupal\data_surface\Surface\SurfaceContext $context
+   *   The child's context.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account.
+   * @param string|null $gate
+   *   The permission the parent's own situation asks, resolved: a child
+   *   asking the same one narrows nothing, its parent's gate having asked
+   *   it already.
+   *
+   * @return \Drupal\data_surface\Surface\SurfaceAccess
+   *   Open, locked or omitted, with what the answer read.
+   */
+  protected function childAccess(SurfaceDefinition $child, SituationDefinition $situation, SurfaceContext $context, AccountInterface $account, ?string $gate = NULL): SurfaceAccess {
+    // Decision: see docs/decisions.md#access-has-three-answers.
+    $access = SurfaceAccess::open();
+    $resolved = $situation->permission === NULL ? NULL : static::resolvePermission($situation->permission, $context);
+    // Decision: see docs/decisions.md#a-permission-a-child-cannot-name.
+    if ($resolved !== NULL && $resolved !== $gate) {
+      $result = AccessResult::allowedIfHasPermission($account, $resolved);
+      if (!$result->isAllowed()) {
+        return SurfaceAccess::omitted(sprintf('The "%s" situation needs the "%s" permission.', $situation->id, $resolved))->addCacheableDependency($result);
+      }
+      $access->addCacheableDependency($result);
+    }
+    if ($child->access === NULL) {
+      return $access;
+    }
+    return $access->andIf(SurfaceAccess::fromAnswer($this->instance($child->access, SurfaceAccessInterface::class)->access($context, $account)));
+  }
+
+  /**
+   * Gets the context a child at a key sees when it invokes no situation.
    *
    * Its own, when the parent's context hands it one with withChild(),
    * as a situation does to tell a child the parent's identity. Otherwise
    * the parent's operation, whether it creates, and the identity it
    * knows, which is what lets a child's target load by the same thing
-   * its parent's does.
+   * its parent's does. A child with situations of its own is resolved by
+   * invokeChild() first, which falls back to this.
    *
    * @param \Drupal\data_surface\Surface\SurfaceContext $context
    *   The parent's context.
@@ -360,7 +584,7 @@ final class Surfaces implements SurfacesInterface {
       return $answer;
     }
     // Decision: see docs/decisions.md#children-may-refuse.
-    $answers = $this->childAnswers($context, $account, $this->build($definition->class, $context));
+    $answers = $this->childAnswers($context, $account, $this->build($definition->class, $context), $definition->id);
     foreach ($answers as $child) {
       if ($child->isForbidden()) {
         return $answer->andIf($child);
@@ -409,8 +633,33 @@ final class Surfaces implements SurfacesInterface {
     if ($definition->access === NULL) {
       return $result;
     }
-    $answer = $this->instance($definition->access, SurfaceAccessInterface::class)->access($context, $account);
+    $answer = static::atTheTop($this->instance($definition->access, SurfaceAccessInterface::class)->access($context, $account));
     return $permission === NULL ? $answer : $result->andIf($answer);
+  }
+
+  /**
+   * Reads an access class's answer the way a surface asked on its own is.
+   *
+   * Core's answer is the answer. Of the three SurfaceAccess answers, open
+   * is allowed and omitted is forbidden; locked is forbidden too, because
+   * a whole surface shown and not saved is not built at the top level
+   * yet, and refusing is the reading that writes nothing.
+   *
+   * @param \Drupal\Core\Access\AccessResultInterface|\Drupal\data_surface\Surface\SurfaceAccess $answer
+   *   The access class's answer.
+   *
+   * @return \Drupal\Core\Access\AccessResultInterface
+   *   Core's answer, with the cacheability it read.
+   */
+  protected static function atTheTop(AccessResultInterface|SurfaceAccess $answer): AccessResultInterface {
+    if ($answer instanceof AccessResultInterface) {
+      return $answer;
+    }
+    // Decision: see docs/decisions.md#locked-at-the-top.
+    $result = $answer->isOpen()
+      ? AccessResult::allowed()
+      : AccessResult::forbidden($answer->getReason() ?? sprintf('The surface\'s access answered %s.', $answer->answer()));
+    return $result->addCacheableDependency($answer);
   }
 
   /**
@@ -438,7 +687,9 @@ final class Surfaces implements SurfacesInterface {
    * Asks every child a context resolves that has an access class.
    *
    * An attached child, and a slot's variant when its deciding key is
-   * locked, each in the context the parent's hands it, recursively.
+   * locked, each in the context the parent's hands it, recursively. A
+   * child invoked through a situation of its own is not asked here: its
+   * access decided its keys when it was built.
    *
    * @param \Drupal\data_surface\Surface\SurfaceContext $context
    *   The parent's context.
@@ -446,11 +697,13 @@ final class Surfaces implements SurfacesInterface {
    *   The account.
    * @param \Drupal\data_surface\DataSurfaceInterface $built
    *   The parent, built in that context.
+   * @param string $parent
+   *   The parent's id, for messages.
    *
    * @return \Drupal\Core\Access\AccessResultInterface[]
    *   The children's answers, outermost first.
    */
-  protected function childAnswers(SurfaceContext $context, AccountInterface $account, DataSurfaceInterface $built): array {
+  protected function childAnswers(SurfaceContext $context, AccountInterface $account, DataSurfaceInterface $built, string $parent): array {
     $answers = [];
     foreach ($built->getDefinitions()->entries() as $key => $entry) {
       $attachment = $entry->attachment;
@@ -462,11 +715,14 @@ final class Surfaces implements SurfacesInterface {
         continue;
       }
       $child = $this->registry->getDefinition($attachment->source);
-      $child_context = static::childContext($context, (string) $key);
-      if ($child->access !== NULL) {
-        $answers[] = $this->instance($child->access, SurfaceAccessInterface::class)->access($child_context, $account);
+      [$child_context, $situation] = $this->invokeChild($child, $context, (string) $key, $parent);
+      // A child invoked through a situation of its own was answered for
+      // when it was built: its access shaped its keys, and refuses
+      // nothing above it.
+      if ($situation === NULL && $child->access !== NULL) {
+        $answers[] = static::atTheTop($this->instance($child->access, SurfaceAccessInterface::class)->access($child_context, $account));
       }
-      array_push($answers, ...$this->childAnswers($child_context, $account, $attachment->child));
+      array_push($answers, ...$this->childAnswers($child_context, $account, $attachment->child, $child->id));
     }
     return $answers;
   }
@@ -498,7 +754,7 @@ final class Surfaces implements SurfacesInterface {
    * Composes a surface's target with its children's, along the tree.
    *
    * Each subsurface whose class names a target of its own is routed to
-   * it, in the context the parent's hands that child, and recursively
+   * it, in the context it is invoked in (invokeChild()), and recursively
    * for the child's own children; a subsurface without one stays in its
    * parent's values, stored by the parent under its key. A slot routes
    * per variant, by what its deciding key holds.
@@ -522,7 +778,7 @@ final class Surfaces implements SurfacesInterface {
       foreach ($children as $id => $attachment) {
         $child = $attachment->source === NULL ? NULL : $this->registry->getDefinition($attachment->source);
         if ($child?->target !== NULL) {
-          $routes[(string) $key][(string) $id] = $this->targetFor($child, static::childContext($context, (string) $key), $attachment->child);
+          $routes[(string) $key][(string) $id] = $this->targetFor($child, $this->invokeChild($child, $context, (string) $key, $definition->id)[0], $attachment->child);
         }
       }
     }
@@ -531,7 +787,32 @@ final class Surfaces implements SurfacesInterface {
       $context,
       $routes,
       $definition->identity,
+      $this->omittedKeys($definition, $built),
     );
+  }
+
+  /**
+   * Lists the children the build left out, which the parent stores.
+   *
+   * The keys the owner's shape attaches a child at that the built surface
+   * does not carry: only a child's access omits a key. The target keeps
+   * what it holds under each, since the caller could not see it.
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $definition
+   *   The surface.
+   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   *   The surface as built.
+   *
+   * @return string[]
+   *   The omitted keys.
+   */
+  protected function omittedKeys(SurfaceDefinition $definition, DataSurfaceInterface $built): array {
+    $shape = new SurfaceShape(new DataSurfaceBuilder(), $this->typedDataManager);
+    static::surfaceClass($definition)::defineInputs($shape);
+    return array_values(array_filter(
+      array_keys($shape->attachments()),
+      static fn (string $key): bool => $built->getDefinitions()->entry($key) === NULL,
+    ));
   }
 
   /**

@@ -151,9 +151,10 @@ already known, and that is a **context**, a `SurfaceContext`:
 - A context may also narrow a key (`withConstraint()`, checked narrower)
   and, when it creates, give starting values (`withStarting()`), which
   become the key's defaults: values the caller sees first and may
-  change. It may hand a subsurface a context of its own
-  (`withChild()`). What depends on where you are is the situation's;
-  what depends on what was entered is a refiner's.
+  change. It may hand a subsurface a context of its own, or name the
+  subsurface's own situation to invoke (`withChild()`, see [Child
+  situations](#child-situations)). What depends on where you are is the
+  situation's; what depends on what was entered is a refiner's.
 
 The content type surface is the worked example:
 
@@ -257,6 +258,29 @@ floor, the content type listing's operation link, and the generated
 tool. A situation owns its operation, so a caller that hands the answer
 to the pipeline makes it decisive (`DataSurfaceAccess::decisive()`): no
 opinion is a refusal, as it is on a route.
+
+### Three answers
+
+An access class may return core's `AccessResultInterface`, as every one
+written before did, or a `Surface\SurfaceAccess`, which has three
+answers: **open** (the keys may be changed), **locked** (they are shown
+and fixed) and **omitted** (they are not there). Core's answer is read
+as one of them: allowed is open; forbidden is omitted at a child and
+denied at the top; neutral leaves a child open and is a refusal at the
+top, as above. Two answers about the same keys combine to the narrower,
+and either carries its cacheability, which reaches the built surface,
+both contracts and the form.
+
+| Answer | At the top (a situation asked on its own) | At a child invoked through a situation |
+| --- | --- | --- |
+| open | allowed, as today | as today |
+| locked | denied: the whole surface shown and not saved is not built yet | the parent's key locked: fieldset drawn disabled, every key `readOnly` and `x-surface.locked` in both contracts and locked in the tool's `values`, posted values ignored ([Value semantics](semantics.md#locked-and-omitted-children)) |
+| omitted | denied (route 403, tool access denied) | the key left out of the built surface, both contracts, the form, the tool's `values` and the read tool's output; a posted value is an unknown key; a write keeps what is stored under it |
+
+Access composes: the parent's situation access gates the whole surface
+as above, and each child's situation access then decides that child's
+keys. A child that invokes no situation of its own is asked only by
+`access()`, as before, and may refuse the whole surface, never allow.
 
 ## Targets
 
@@ -611,7 +635,10 @@ Each refusal names the class and method at fault:
 - a slot chosen by a key that is not a plain input, or a variant its
   deciding key does not allow;
 - a context constraint or starting value for a subsurface key;
-- a surface attached inside itself.
+- a surface attached inside itself;
+- two situations of one surface marked the default;
+- a parent context naming a situation its child does not declare, or
+  naming one that needs an argument nothing hands it.
 
 ## Subsurfaces
 
@@ -674,8 +701,9 @@ What that means, end to end:
 
 - **A child is built by the same build step**, after its parent's
   context is applied: its own shape, its own alters, its own refiners.
-  It sees the context
-  the parent's context hands it with `withChild()`, and otherwise the
+  It is invoked through one of its own situations when one applies
+  ([Child situations](#child-situations)), and otherwise sees the
+  context the parent's context hands it with `withChild()`, or the
   parent's operation, `creates` and known identity — never the parent's
   constraints or starting values, which name the parent's keys.
 - **Its value is a map at the key**, advertised as a map whose
@@ -724,6 +752,61 @@ What that means, end to end:
 
 An alter cannot attach yet (its keys are mounted under its module), and
 neither can an output; both are refused by name.
+
+### Child situations
+
+A child is invoked the way a surface asked on its own is: through one
+of its own `#[Situation]` methods, so its permission, its access class,
+its alters' `situations:` and the identity its context knows work the
+same at both levels. Which one is decided when the parent is built, the
+first of these that applies:
+
+1. **The parent's context names it.** `withChild('contact', situation:
+   'enter', known: ['email' => $email])` names the child's `enter`
+   situation and hands it identity. Naming a situation the child does
+   not declare is refused at build, naming the parent, the key and the
+   situation. A context handed whole, `withChild('storage',
+   FieldStorageSurface::edit($storage))`, is still taken as it is: the
+   parent built it, so the child invokes no situation of its own through
+   it and is asked no access of its own at build.
+2. **The child's situation whose id is the parent's operation.** Adding
+   a field invokes its storage's own `add`.
+3. **The child's default**, the one situation it marks
+   `#[Situation(..., default: TRUE)]`. Two defaults on one surface are
+   refused when it is built.
+4. **Otherwise it inherits**, exactly as a child always did: the
+   parent's operation, `creates` and known identity, and no situation
+   of its own. Every child in the examples is this case.
+
+The child's situation method is called with the arguments it declares,
+read by name from the identity the parent handed it and then from the
+parent's known identity (an entity parameter takes the entity or its
+id, as on a route). The context it returns then knows that identity
+too; on a clash **the child's own known keys win**. `creates` is the
+child's context's, as for a surface asked on its own. A situation the
+parent named that needs an argument nothing supplies is refused at
+build, with the `withChild()` call that would hand it; one found by
+operation or as the default is passed over for the next step, since a
+context that knows nothing yet (what a tool's static definition and the
+catalogue build in) cannot invoke a child situation that needs identity.
+
+That situation's access then decides the child's keys for the current
+account ([Three answers](#three-answers)): its permission, `%key`
+filled from the child's context (a permission the account lacks omits
+the child; one the context cannot name, or the very one the parent's
+own situation asks, says nothing, the parent's access having asked
+already), then the child's access class, the narrower answer standing. An alter naming a situation of the child,
+`#[AltersSurface(Child::class, situations: ['enter'])]`, applies only
+where that situation is invoked. A slot's variant is resolved the same
+way, one variant at a time; a variant whose access is not open is not
+offered, so its deciding value can no longer be chosen, and nothing is
+derived in its place.
+
+The test module's larder is the worked example: one spice rack surface
+attached twice, invoked through its `edit` by operation at one key and
+through `restock`, which the larder's edit situation names, at the
+other, with an access class that answers open, locked or omitted by
+permission (`ChildSituationTest`).
 
 ### Derived variants
 

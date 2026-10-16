@@ -62,11 +62,45 @@ docblock states it.*
 
 ### Child context
 
-A child sees the context its parent's hands it with `withChild()`;
-otherwise it sees the parent's operation, `creates` and known identity,
-and not the parent's constraints, starting values or child contexts.
-Those three name the parent's keys, so handing them down would apply
-them to keys the child does not have. (`Surfaces::childContext()`)
+A child that invokes no situation of its own sees the context its
+parent's hands it with `withChild()`; otherwise it sees the parent's
+operation, `creates` and known identity, and not the parent's
+constraints, starting values or child contexts. Those three name the
+parent's keys, so handing them down would apply them to keys the child
+does not have. (`Surfaces::childContext()`)
+
+### One invocation model for both levels
+
+A child is invoked the way a surface asked on its own is, through a
+situation of its own, so that its permission, its access class, its
+alters' `situations:` and its known identity mean the same thing at
+both levels. The motivating case is an entity form whose every field is
+a child, each answering for itself whether this person may change it,
+see it, or neither. Which situation is decided when the parent is
+built, in this order: the one the parent's context names
+(`withChild($key, situation: 'enter', known: [...])`); else the child's
+situation whose id is the parent's operation;
+else the child's default (`#[Situation(default: TRUE)]`, at most one);
+else none, and the child inherits as it always did. The parent's
+operation is only a hint, because the parent's verbs are the parent's:
+a field's `reuse` means nothing to its storage, and a child may have no
+situation for a verb at all, so a match is used when there is one and
+never required; a match, or the default, that needs identity the parent
+does not know is passed over for the next step, because a context that
+knows nothing yet is built on purpose (a tool's static definition). Naming comes first because it is the parent saying so
+in so many words, and a name the child does not declare is refused
+rather than skipped. The child's situation takes its arguments by name
+from the identity the parent handed it, then from the parent's; the
+context it returns knows both, its own known keys winning on a clash,
+because the child's situation is the authority on the child. A context
+handed whole (`withChild($key, $context)`) comes before all of these and
+is taken as it is, with no access of the child's own, even when its
+operation is one of the child's situations: the parent built it, and
+every existing call means what it meant, down to a field's reuse
+building its storage, through `FieldStorageSurface::edit()`, the same for
+any account.
+(`Surfaces::invokeChild()`, `Surfaces::childSituationContext()`,
+`SurfaceContext::withChild()`)
 
 ### Operation is the situation id
 
@@ -397,13 +431,86 @@ how to read the thing it wrote; a second verb would say the same twice.
 
 ## Access
 
+### Access has three answers
+
+Access answers open, locked or omitted (`Surface\SurfaceAccess`, a value
+object carrying cacheability like an access result), because field
+access has a middle: a field one may see and not change. An access class
+may still return core's `AccessResultInterface`, and the interface's
+return type is the union, so every class written before keeps
+implementing it unchanged. Core's answer is read as allowed is open and
+forbidden is omitted at a child, denied at the top; neutral leaves a
+child open, since its parent's access already let the caller in and a
+child's access only narrows what the parent allowed, and is a refusal
+at the top ([Neutral is a refusal for a situation's
+caller](#neutral-is-a-refusal-for-a-situations-caller)). At a child, the
+situation's permission comes first (lacking it omits the child), then
+the access class, and the narrower answer stands. Locked is the existing lock on the parent's key, so no
+door needs a second mechanism. The answer's cacheability is added to
+the parent's builder, so the contract and the form carry
+`user.permissions` when the answer read permissions.
+(`SurfaceAccess`, `Surfaces::childAccess()`)
+
+### A permission a child cannot name
+
+A child situation's permission whose `%key` the child's context cannot
+fill says nothing at a child, where at the top it is a refusal ([An
+unknown placeholder](#an-unknown-placeholder)). At a child the parent's
+own access has already gated the caller, and the one context that knows
+too little on purpose is the one a tool's static definition is built in,
+before any subject: there the child is described as it may be, and the
+per call definition, built in the real context, applies the permission.
+Adding a field invokes its storage's `add`, whose permission names the
+entity type the field's context knows; a bare context knows none. For
+the same reason a child situation's permission that resolves to the very
+permission its parent's situation asks says nothing either: the parent's
+gate asked it already, and a child narrows only what the parent allowed.
+That is the storage's case when the field's context does know the
+entity type, so a field is built with its storage for any account, as
+it always was, and only the field's own access decides.
+(`Surfaces::childAccess()`)
+
+### Omitted is omitted both ways
+
+An omitted child is not in the built surface, so it is in no contract,
+no form and no tool input, and a value posted for it is an unknown key,
+which the pipeline already refuses. It is also not read: the read tool
+leaves it out, because a caller who may not see a thing should not
+learn it through the other door. And it is not written: the target
+adapter hands what storage holds under the key back to the parent's
+target, which may store its values whole and would otherwise drop what
+the caller never saw. (`DataSurfaceBuilder::omit()`,
+`SurfaceTargetAdapter::prepare()`)
+
+### Locked at the top
+
+*Open.* A whole surface whose access answers locked, asked on its own,
+should render read-only with no save, refuse its write tool and allow
+its read tool. Every caller of `SurfacesInterface::access()` (the route,
+the form's floor, the tools, the React controllers) would have to tell
+locked from allowed, which is more than the child case, so for now a
+locked answer at the top is a refusal, the reading that writes nothing.
+(`Surfaces::atTheTop()`)
+
+### A variant is open or not offered
+
+A slot's variant invoked through a situation whose access is not open is
+dropped from the slot, so its deciding value can no longer be chosen,
+and no derived variant is put in its place. The engine has no lock per
+variant, and offering a value whose shape could not be changed is the
+same as not offering it. *Open:* a locked variant shown read-only.
+(`Surfaces::buildSurface()`)
+
 ### Children may refuse
 
 A child the context resolves (an attached child, or a slot variant
-whose deciding key is locked) is asked through its own access class in
-its own context, and may refuse but never allow. A field type's settings
-can then refuse the field they belong to, and nothing below a surface
-can open what its own access closed. (`Surfaces::access()`)
+whose deciding key is locked) that invokes no situation of its own is
+asked through its own access class in its own context, and may refuse
+but never allow. A field type's settings can then refuse the field they
+belong to, and nothing below a surface can open what its own access
+closed. A child invoked through a situation of its own is not asked
+here: its access decided its keys when it was built, and refuses
+nothing above it. (`Surfaces::access()`)
 
 ### No declared situation, no permission tier
 
@@ -514,6 +621,15 @@ rather than sent as an empty placeholder a caller could mistake for the
 value. Under a slot, a key any variant keeps secret is left out
 whichever variant holds. (`SurfaceInputDefinitions::secrets()`,
 `SituationInputs::stored()`)
+
+### A static tool definition is one account's
+
+*Open.* A derived tool's static definition builds the surface once, at
+discovery, for whichever account is current then, so a child whose
+access depends on the account is as that account saw it. The `values`
+input is refined for the caller on every call, which is what the
+pipeline holds a payload to, so only the advertised static definition
+can be off. (`SituationInputs::declaredValues()`)
 
 ### Reading asks what writing asks
 
