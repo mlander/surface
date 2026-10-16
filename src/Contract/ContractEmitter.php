@@ -17,6 +17,7 @@ use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Options\OptionSet;
 use Drupal\data_surface\Pipeline\ValueState;
+use Drupal\data_surface\SurfaceAttachment;
 use Drupal\data_surface\SurfaceEntry;
 
 /**
@@ -49,6 +50,20 @@ use Drupal\data_surface\SurfaceEntry;
  * advertises, the same surface refined against the values for what it
  * allows now, each subsurface in its own frame. Nothing names a surface
  * or a key, and nothing here reaches storage: the values are handed in.
+ *
+ * Each subsurface is a reusable subschema. The wall between a parent and
+ * its child (the parent cannot refine into the child, the child cannot
+ * watch the parent, the child keeps its own refiners and alters) makes a
+ * child self-contained, so it is written once under the root's `$defs`,
+ * keyed by its surface's id, as its own frame declares it for no values
+ * (define()). Each place it is used, an attached key or a slot's
+ * conditional, refers to it, beside what that place says about it: its
+ * label, its `x-surface`. Where the child here says more than its def (a
+ * key its context locked, a key refined for the values in this
+ * document), the reference is composed with only what differs, as
+ * `allOf: [{$ref}, {narrowing}]` (reference()): refinement only narrows,
+ * so that is refinement in the schema's own grammar.
+ * Decision: see docs/decisions.md#the-wall-is-the-reference-boundary.
  *
  * There are two documents, written by the one code path below so they
  * cannot drift apart:
@@ -108,6 +123,23 @@ final class ContractEmitter {
    * Decision: see docs/decisions.md#enumeration-is-capped.
    */
   public const ENUMERATION_CAP = 64;
+
+  /**
+   * The `x-surface` keywords only true of one moment, for one set of values.
+   *
+   * The full schema leaves them out (withoutPresent()).
+   */
+  protected const PRESENT = ['refined', 'stale', 'emptyOption', 'chosen'];
+
+  /**
+   * The `x-surface` keywords that are widget hints, written when asked for.
+   */
+  protected const WIDGET_HINTS = ['widget', 'multiple'];
+
+  /**
+   * Where every subschema a document defines is, as a JSON pointer.
+   */
+  public const DEFS = '#/$defs/';
 
   /**
    * Constraints the schema states in a keyword of its own, or not at all.
@@ -183,7 +215,9 @@ final class ContractEmitter {
     $stale = [];
     $standing = $values[DataSurfaceFormBuilderInterface::STANDING_KEY] ?? [];
     unset($values[DataSurfaceFormBuilderInterface::STANDING_KEY]);
-    [$schema, $shown] = $this->frame($surface, $values, '', $cacheability, $stale, is_array($standing) ? $standing : []);
+    $subschemas = new Subschemas(FALSE, $widgets ? [] : self::WIDGET_HINTS);
+    [$schema, $shown] = $this->frame($surface, $values, '', $surface_id, $cacheability, $stale, $subschemas, is_array($standing) ? $standing : []);
+    $schema += $this->definitions($subschemas);
     if (!$widgets) {
       $schema = $this->withoutWidgets($schema);
     }
@@ -251,7 +285,9 @@ final class ContractEmitter {
   public function emitFull(DataSurfaceInterface $surface, string $surface_id, ?string $situation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE): ServedContract {
     $cacheability = new CacheableMetadata();
     $ignored = [];
-    [$schema] = $this->frame($surface, $this->known($surface), '', $cacheability, $ignored, [], TRUE);
+    $subschemas = new Subschemas(TRUE, [...self::PRESENT, ...($widgets ? [] : self::WIDGET_HINTS)]);
+    [$schema] = $this->frame($surface, $this->known($surface), '', $surface_id, $cacheability, $ignored, $subschemas);
+    $schema += $this->definitions($subschemas);
     $schema = $this->withoutPresent($schema);
     if (!$widgets) {
       $schema = $this->withoutWidgets($schema);
@@ -300,14 +336,17 @@ final class ContractEmitter {
    *   The frame's definitions, as advertised.
    * @param \Drupal\data_surface\SurfaceEntry $entry
    *   The key.
+   * @param bool $declaring
+   *   Whether the frame is described as declared, where nothing is
+   *   locked.
    *
    * @return bool
    *   TRUE when one of its dependencies is not a locked key of the frame:
    *   a sibling a value can be given for, or a key an alter mounted.
    */
-  protected function watchesFree(DefinitionMap $advertised, SurfaceEntry $entry): bool {
+  protected function watchesFree(DefinitionMap $advertised, SurfaceEntry $entry, bool $declaring = FALSE): bool {
     foreach ($entry->dependencies as $key) {
-      if (!$advertised->isLocked($key)) {
+      if ($declaring || !$advertised->isLocked($key)) {
         return TRUE;
       }
     }
@@ -323,25 +362,38 @@ final class ContractEmitter {
    *   The values of this frame.
    * @param string $prefix
    *   The dotted path of this frame from the top, with its trailing dot.
+   * @param string $owner
+   *   The id of this frame's surface: the document's surface at the top,
+   *   a child's own, or the key a child with no class is defined under.
+   *   A child with no class of its own is defined as `<owner>.<key>`, a
+   *   variant with none as `<owner>.<key>.<value>`.
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
    *   Collects what the description depends on.
    * @param string[] $stale
    *   Collects the dotted paths of stale values.
-   * @param array<string, mixed> $standing
-   *   The orphans of a refinement, by dotted path from the top, each
-   *   mapped to the stored value it stands for; held unanswered in
-   *   $values.
-   * @param bool $full
-   *   Whether this is the full schema (emitFull()): $values are then the
+   * @param \Drupal\data_surface\Contract\Subschemas $subschemas
+   *   The document's defs, which every subsurface is written to, and
+   *   whether it is the full schema (emitFull()): $values are then the
    *   locked keys the frame knows and nothing else, every frame inside is
    *   described from its own locked keys instead of its defaults, and a
    *   key that watches anything a value could change is described as
    *   declared.
+   * @param array<string, mixed> $standing
+   *   The orphans of a refinement, by dotted path from the top, each
+   *   mapped to the stored value it stands for; held unanswered in
+   *   $values.
+   * @param bool $declaring
+   *   Whether this frame is a def: the surface as declared, for no
+   *   values, with nothing locked. A locked key is then described as the
+   *   key it is before a context fixes it (no `readOnly`, no `const`, and
+   *   no default, which is the context's), and every subsurface inside is
+   *   a bare reference to its own def.
    *
    * @return array{0: array, 1: array|\stdClass}
    *   The object schema of the frame, and its values as shown.
    */
-  protected function frame(DataSurfaceInterface $declared, array $values, string $prefix, CacheableMetadata $cacheability, array &$stale, array $standing = [], bool $full = FALSE): array {
+  protected function frame(DataSurfaceInterface $declared, array $values, string $prefix, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing = [], bool $declaring = FALSE): array {
+    $full = $subschemas->full;
     $refined = $declared->refine($values);
     $cacheability->addCacheableDependency($refined);
     $advertised = $declared->getDefinitions();
@@ -353,7 +405,9 @@ final class ContractEmitter {
     foreach ($advertised->entries() as $name => $entry) {
       $name = (string) $name;
       $current = $now->entry($name) ?? $entry;
-      if ($full && !$entry->isNested() && $this->watchesFree($advertised, $entry)) {
+      // A def is the declaration, which no context has locked.
+      $locked = $entry->locked && !$declaring;
+      if ($full && !$entry->isNested() && $this->watchesFree($advertised, $entry, $declaring)) {
         // A refiner that watches only a key an alter mounted is run even
         // while that key holds nothing. For any values, the key is the
         // one declared: what such a refiner answers is one moment's.
@@ -361,31 +415,48 @@ final class ContractEmitter {
       }
       $depends = $advertised->dependencies($name);
       if ($entry->slot !== NULL) {
-        [$properties[$name], $shown[$name], $branches] = $this->slot($declared, $entry, $values, $prefix . $name, $cacheability, $stale, $standing, $full);
+        [$properties[$name], $shown[$name], $branches] = $this->slot($declared, $entry, $values, $prefix . $name, $owner, $cacheability, $stale, $subschemas, $standing, $declaring);
         array_push($conditions, ...$branches);
       }
       elseif ($entry->attachment !== NULL) {
-        $child = $entry->attachment->child;
-        $held = $values[$name] ?? NULL;
-        $inside = $full ? $this->known($child) : array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
-        [$schema, $shown[$name]] = $this->frame($child, $inside, $prefix . $name . '.', $cacheability, $stale, $standing, $full);
-        $properties[$name] = $this->describe($current->definition) + $schema;
-        $properties[$name][self::EXTENSION] = $this->extension('fieldset', $entry->locked, $depends, $this->anyRefined($schema));
+        $attachment = $entry->attachment;
+        $fallback = $owner . '.' . $name;
+        $key = $this->define($attachment, $fallback, $cacheability, $subschemas);
+        if ($declaring) {
+          $instance = $subschemas->get($key) ?? [];
+          $reference = $this->reference($key);
+          $shown[$name] = new \stdClass();
+        }
+        else {
+          $child = $attachment->child;
+          $held = $values[$name] ?? NULL;
+          $inside = $full ? $this->known($child) : array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
+          [$instance, $shown[$name]] = $this->instance($child, $key, $inside, $prefix . $name . '.', $attachment->id ?? $fallback, $cacheability, $stale, $subschemas, $standing);
+          $reference = $this->reference($key, $instance, $subschemas);
+        }
+        $properties[$name] = $this->describe($current->definition) + $reference;
+        $properties[$name][self::EXTENSION] = $this->extension('fieldset', $locked, $depends, $this->anyRefined($instance));
       }
       else {
         // The value each element would be built with: a secret's is never
-        // handed over, a locked key holds what the situation knows, an
-        // orphan the stored value it stands for, and anything else what it
-        // was given or failing that its default.
+        // handed over, a locked key holds what the situation knows (and a
+        // def has no situation), an orphan the stored value it stands
+        // for, and anything else what it was given or failing that its
+        // default.
         $secret = DefinitionMetadata::isSecret($current->definition);
         $orphan = !$secret && !$entry->locked && array_key_exists($prefix . $name, $standing);
         $value = match (TRUE) {
-          $secret => NULL,
+          $secret, $declaring && $entry->locked => NULL,
           $entry->locked => $declared->getDefault($name),
           $orphan => $standing[$prefix . $name],
           default => $values[$name] ?? $declared->getDefault($name),
         };
-        [$properties[$name], $shown[$name]] = $this->property($current->definition, $entry->definition, $value, $prefix . $name, $entry->locked, $depends, $cacheability, $stale);
+        [$properties[$name], $shown[$name]] = $this->property($current->definition, $entry->definition, $value, $prefix . $name, $locked, $depends, $cacheability, $stale);
+        if ($declaring && $entry->locked) {
+          // What the context fixed it to is the instance's, not the
+          // declaration's: the reference site says it.
+          unset($properties[$name]['default']);
+        }
         if ($orphan) {
           // The edit moved what this key refines against, away from the
           // stored value, which the new answer no longer offers: stale,
@@ -401,7 +472,7 @@ final class ContractEmitter {
         // A key its refiners have not refined, because something it watches
         // holds nothing yet: what they would answer, for every value they
         // could be handed, or that it can only be asked.
-        if ($entry->dependencies !== [] && !$entry->locked && $current === $entry) {
+        if ($entry->dependencies !== [] && !$locked && $current === $entry) {
           $branches = $this->enumerate($declared, $refined, $entry, $values, $properties[$name], $prefix . $name, $cacheability);
           if ($branches === NULL) {
             $properties[$name][self::EXTENSION]['dynamic'] = TRUE;
@@ -431,6 +502,221 @@ final class ContractEmitter {
   }
 
   /**
+   * Writes a child's def, once, and answers the key it is filed under.
+   *
+   * The def is the child's frame as declared: described for no values,
+   * with nothing locked, every subsurface inside it a reference of its
+   * own. A child already written, here or at another key, is not written
+   * again; nor is one reached inside its own def, which is referred to,
+   * the def being written, so a surface that ever contained itself would
+   * end there instead of looping. (The build step refuses a surface
+   * attached inside itself, and a sealed surface cannot hold itself, so
+   * that is a guard, not a case.)
+   *
+   * @param \Drupal\data_surface\SurfaceAttachment $attachment
+   *   The child at its key.
+   * @param string $fallback
+   *   The id to define it under when it has no #[Surface] id of its own.
+   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
+   *   Collects what the description depends on.
+   * @param \Drupal\data_surface\Contract\Subschemas $subschemas
+   *   The document's defs.
+   *
+   * @return string
+   *   The key under `$defs`.
+   */
+  protected function define(SurfaceAttachment $attachment, string $fallback, CacheableMetadata $cacheability, Subschemas $subschemas): string {
+    $child = $attachment->child;
+    $key = $subschemas->keyOf($child);
+    if ($key !== NULL) {
+      return $key;
+    }
+    $writing = $subschemas->writing($child);
+    if ($writing !== NULL) {
+      return $writing;
+    }
+    $id = $attachment->id ?? $fallback;
+    $subschemas->begin($id, $child);
+    $ignored = [];
+    [$def] = $this->frame($child, [], '', $id, $cacheability, $ignored, $subschemas, [], TRUE);
+    return $subschemas->add($id, $def, $child);
+  }
+
+  /**
+   * Describes a child as it is at one site: its instance.
+   *
+   * In the full schema a child with nothing locked anywhere inside it is
+   * its own def, so its def is read back rather than described twice.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   *   The child.
+   * @param string $key
+   *   The key its def is filed under.
+   * @param array $values
+   *   Its values.
+   * @param string $prefix
+   *   Its dotted path from the top, with the trailing dot.
+   * @param string $owner
+   *   Its id.
+   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
+   *   Collects what the description depends on.
+   * @param string[] $stale
+   *   Collects the dotted paths of stale values.
+   * @param \Drupal\data_surface\Contract\Subschemas $subschemas
+   *   The document's defs.
+   * @param array<string, mixed> $standing
+   *   The orphans of a refinement, by dotted path from the top.
+   *
+   * @return array{0: array, 1: array|\stdClass}
+   *   The child's object schema here, and its values as shown.
+   */
+  protected function instance(DataSurfaceInterface $child, string $key, array $values, string $prefix, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing): array {
+    $def = $subschemas->get($key);
+    if ($subschemas->full && $def !== NULL && !$this->locks($child)) {
+      return [$def, new \stdClass()];
+    }
+    return $this->frame($child, $values, $prefix, $owner, $cacheability, $stale, $subschemas, $standing);
+  }
+
+  /**
+   * Answers whether a context locked anything in a surface, at any depth.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The surface.
+   *
+   * @return bool
+   *   TRUE when a key of it, or of a subsurface inside it, is locked.
+   */
+  protected function locks(DataSurfaceInterface $surface): bool {
+    foreach ($surface->getDefinitions()->entries() as $entry) {
+      $children = match (TRUE) {
+        $entry->slot !== NULL => $entry->slot->variants,
+        $entry->attachment !== NULL => [$entry->attachment],
+        default => [],
+      };
+      if ($entry->locked || array_filter($children, fn (SurfaceAttachment $child): bool => $this->locks($child->child)) !== []) {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
+
+  /**
+   * Writes the reference a site makes to a def, narrowed where it must be.
+   *
+   * A site whose instance says what its def says refers to it and nothing
+   * more. One that differs (a key the site's context locked, a key
+   * refined for the values in this document) composes the def with what
+   * differs: `allOf: [{$ref}, {narrowing}]`, the narrowing holding only
+   * the keywords that changed. Refinement only narrows, so a validator
+   * applying both accepts what the instance accepts.
+   *
+   * @param string $key
+   *   The def's key.
+   * @param array|null $instance
+   *   The child's schema at this site, or NULL to refer to the def alone.
+   * @param \Drupal\data_surface\Contract\Subschemas|null $subschemas
+   *   The document's defs, to compare the instance with.
+   *
+   * @return array
+   *   `$ref`, or `allOf` of it and the narrowing.
+   */
+  protected function reference(string $key, ?array $instance = NULL, ?Subschemas $subschemas = NULL): array {
+    $reference = ['$ref' => self::DEFS . self::pointer($key)];
+    $def = $subschemas?->get($key);
+    if ($instance === NULL || $def === NULL) {
+      return $reference;
+    }
+    $narrowing = $this->narrowing($instance, $def, $subschemas->transient);
+    return $narrowing === [] ? $reference : ['allOf' => [$reference, $narrowing]];
+  }
+
+  /**
+   * Keeps only what an instance says differently from its def.
+   *
+   * The same reading as narrowed(), for a whole frame: a frame's
+   * properties are compared one by one; its conditionals keep only those
+   * the def does not already state; and a property's `x-surface`, which
+   * a renderer reads whole, is written whole wherever it differs, less
+   * what the document strips anyway.
+   *
+   * @param array $instance
+   *   The instance.
+   * @param array $def
+   *   The def.
+   * @param string[] $transient
+   *   The `x-surface` keywords not compared.
+   *
+   * @return array
+   *   The keywords that differ; empty when none do.
+   */
+  protected function narrowing(array $instance, array $def, array $transient): array {
+    $narrowing = [];
+    foreach ($instance as $keyword => $value) {
+      if ($keyword === self::EXTENSION) {
+        $kept = array_diff_key((array) $value, array_flip($transient));
+        if (!Subschemas::same($kept, array_diff_key((array) ($def[$keyword] ?? []), array_flip($transient)))) {
+          $narrowing[$keyword] = $value;
+        }
+        continue;
+      }
+      if ($keyword === 'properties' && is_array($value) && is_array($def['properties'] ?? NULL)) {
+        $properties = [];
+        foreach ($value as $name => $property) {
+          $changed = $this->narrowing($property, $def['properties'][$name] ?? [], $transient);
+          if ($changed !== []) {
+            $properties[$name] = $changed;
+          }
+        }
+        if ($properties !== []) {
+          $narrowing['properties'] = $properties;
+        }
+        continue;
+      }
+      if ($keyword === 'allOf' && is_array($value) && is_array($def['allOf'] ?? NULL)) {
+        $added = array_values(array_filter($value, static fn (mixed $condition): bool => array_filter($def['allOf'], static fn (mixed $stated): bool => Subschemas::same($stated, $condition)) === []));
+        if ($added !== []) {
+          $narrowing['allOf'] = $added;
+        }
+        continue;
+      }
+      if (!array_key_exists($keyword, $def) || !Subschemas::same($def[$keyword], $value)) {
+        $narrowing[$keyword] = $value;
+      }
+    }
+    return $narrowing;
+  }
+
+  /**
+   * Spells a def's key as a JSON pointer segment inside a URI fragment.
+   *
+   * @param string $key
+   *   The key.
+   *
+   * @return string
+   *   The segment: `~` and `/` escaped as JSON Pointer says, and anything
+   *   a URI fragment cannot carry percent-encoded.
+   */
+  public static function pointer(string $key): string {
+    $escaped = str_replace(['~', '/'], ['~0', '~1'], $key);
+    return (string) preg_replace_callback('/[^A-Za-z0-9\-._~!$&\'()*+,;=:@]/', static fn (array $match): string => rawurlencode($match[0]), $escaped);
+  }
+
+  /**
+   * Gives the document its `$defs`, when it has any.
+   *
+   * @param \Drupal\data_surface\Contract\Subschemas $subschemas
+   *   The defs written.
+   *
+   * @return array
+   *   `$defs`, or nothing.
+   */
+  protected function definitions(Subschemas $subschemas): array {
+    $defs = $subschemas->all();
+    return $defs === [] ? [] : ['$defs' => $defs];
+  }
+
+  /**
    * Describes a slot: a placeholder, and one conditional per variant.
    *
    * The slot's own property says only what holds whatever is chosen: its
@@ -438,8 +724,10 @@ final class ContractEmitter {
    * decides and which variant is chosen now. Each variant's shape is a
    * `then` on the parent, under an `if` naming the deciding key's value
    * as a `const`, so a validator, and the React app, read the shape the
-   * chosen value selects. The chosen variant is described refined
-   * against what the slot holds; the others as they are advertised.
+   * chosen value selects. The `then` refers to the variant's def, beside
+   * the slot's label; the chosen variant is described refined against
+   * what the slot holds, which narrows its reference where that differs,
+   * and the others as they are advertised.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $declared
    *   The surface the slot belongs to.
@@ -449,26 +737,34 @@ final class ContractEmitter {
    *   The values of the slot's frame.
    * @param string $path
    *   The slot's dotted path.
+   * @param string $owner
+   *   The id of the surface the slot belongs to.
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
    *   Collects what the description depends on.
    * @param string[] $stale
    *   Collects the dotted paths of stale values.
+   * @param \Drupal\data_surface\Contract\Subschemas $subschemas
+   *   The document's defs, and whether it is the full schema: every
+   *   variant is then described from its own locked keys, none as the
+   *   chosen one.
    * @param array<string, mixed> $standing
    *   The orphans of a refinement, by dotted path from the top; only the
    *   chosen variant's are its own.
-   * @param bool $full
-   *   Whether this is the full schema: every variant is then described
-   *   from its own locked keys, none as the chosen one.
+   * @param bool $declaring
+   *   Whether the slot is part of a def: every variant is then a bare
+   *   reference, and a locked deciding key chooses nothing.
    *
    * @return array{0: array, 1: mixed, 2: array}
    *   The slot's property schema, its value as shown, and the
    *   conditionals for the parent's `allOf`.
    */
-  protected function slot(DataSurfaceInterface $declared, SurfaceEntry $entry, array $values, string $path, CacheableMetadata $cacheability, array &$stale, array $standing = [], bool $full = FALSE): array {
+  protected function slot(DataSurfaceInterface $declared, SurfaceEntry $entry, array $values, string $path, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing = [], bool $declaring = FALSE): array {
+    $full = $subschemas->full;
     $slot = $entry->slot;
     assert($slot !== NULL);
     $by = $declared->getDefinitions()->get($slot->by);
-    $chosen = $slot->chosen($values[$slot->by] ?? $declared->getDefault($slot->by));
+    $deciding = $values[$slot->by] ?? ($declaring && $declared->isLocked($slot->by) ? NULL : $declared->getDefault($slot->by));
+    $chosen = $slot->chosen($deciding);
     $held = $values[$entry->name] ?? NULL;
     $shell = $this->describe($slot->shell);
     $property = $shell + ['type' => $slot->shell->isRequired() ? 'object' : ['object', 'null']];
@@ -485,17 +781,26 @@ final class ContractEmitter {
     foreach ($slot->variants as $id => $variant) {
       $id = (string) $id;
       $child = $variant->child;
-      $is_chosen = !$full && $id === $chosen;
-      $own = $is_chosen && $slot->fits($id, $held) ? $held : [];
-      $variant_stale = [];
-      $inside = $full ? $this->known($child) : array_replace($child->getDefaultValues(), $own);
-      [$schema, $variant_values] = $this->frame($child, $inside, $path . '.', $cacheability, $variant_stale, $is_chosen ? $standing : [], $full);
-      if ($is_chosen) {
-        $shown = $variant_values;
-        array_push($stale, ...$variant_stale);
+      $fallback = $owner . '.' . $entry->name . '.' . $id;
+      $key = $this->define($variant, $fallback, $cacheability, $subschemas);
+      $is_chosen = !$full && !$declaring && $id === $chosen;
+      if ($declaring) {
+        $instance = $subschemas->get($key) ?? [];
+        $reference = $this->reference($key);
       }
-      $schema = $shell + $schema;
-      $schema[self::EXTENSION] = $this->extension('fieldset', FALSE, [], $is_chosen && $this->anyRefined($schema)) + ['variant' => $id];
+      else {
+        $own = $is_chosen && $slot->fits($id, $held) ? $held : [];
+        $variant_stale = [];
+        $inside = $full ? $this->known($child) : array_replace($child->getDefaultValues(), $own);
+        [$instance, $variant_values] = $this->instance($child, $key, $inside, $path . '.', $variant->id ?? $fallback, $cacheability, $variant_stale, $subschemas, $is_chosen ? $standing : []);
+        if ($is_chosen) {
+          $shown = $variant_values;
+          array_push($stale, ...$variant_stale);
+        }
+        $reference = $this->reference($key, $instance, $subschemas);
+      }
+      $schema = $shell + $reference;
+      $schema[self::EXTENSION] = $this->extension('fieldset', FALSE, [], $is_chosen && $this->anyRefined($instance)) + ['variant' => $id];
       $branches[] = [
         'if' => [
           'properties' => [$slot->by => ['const' => $by === NULL ? $id : $this->cast($id, $by)]],

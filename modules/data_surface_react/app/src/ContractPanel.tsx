@@ -1,5 +1,6 @@
+import { useMemo } from 'react';
 import type { Contract, Schema, Values } from './contract';
-import { choices, isObject, jsonType, resolveSlot } from './contract';
+import { choices, inlineSchema, isObject, jsonType, resolveSlot } from './contract';
 
 interface Row {
   path: string;
@@ -107,9 +108,12 @@ function rows(schema: Schema, values: Values, prefix = ''): Row[] {
 /**
  * The contract as it stands, collapsed under the form: a row per key,
  * then the JSON itself. The React twin of the contract panel the
- * situation form shows.
+ * situation form shows. The rows read each key's effective schema, its
+ * references resolved (`schema`, which the form resolves once per
+ * contract); the JSON is the document as served, `$defs` and all.
  */
-export function ContractPanel({ contract, values }: { contract: Contract; values: Values }): JSX.Element {
+export function ContractPanel({ contract, schema, values }: { contract: Contract; schema?: Schema; values: Values }): JSX.Element {
+  const inline = useMemo(() => schema ?? inlineSchema(contract.schema), [schema, contract]);
   return (
     <details className="dsr-contract">
       <summary>Contract</summary>
@@ -131,7 +135,7 @@ export function ContractPanel({ contract, values }: { contract: Contract; values
             </tr>
           </thead>
           <tbody>
-            {rows(contract.schema, values).map((row) => (
+            {rows(inline, values).map((row) => (
               <tr key={row.path} data-surface-key={row.path}>
                 <td>
                   <code>{row.path}</code>

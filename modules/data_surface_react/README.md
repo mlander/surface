@@ -38,6 +38,22 @@ and so on.
 
 ## What it does and does not
 
+- **Resolves** the contract's references before drawing anything. The
+  emitter writes each part (an attached surface, a slot's variant) once,
+  under the schema's `$defs`, and refers to it where it is used, with
+  what that place says beside the reference, or composed with a
+  narrowing (`allOf: [{$ref}, {narrowing}]`) where it says more
+  ([reusable subschemas](../../docs/served-contract.md#reusable-subschemas)).
+  `inlineSchema()` in `app/src/contract.ts` turns that into one inline
+  schema: a local `$ref` (`#/$defs/...`) is replaced by its def, the
+  keywords beside it are merged over, and a narrowing is applied by
+  taking its value for every keyword it states (`properties` one by
+  one, `required` as a union). The form resolves once per contract, on
+  load and after each refine or write, and every reader (the fields, a
+  slot's chosen variant, the keys a refine watches, where a refusal is
+  shown, the panel's rows) reads the result. The panel's JSON is the
+  document as served. The main module's
+  `Contract\SchemaResolver` is the same resolver in PHP.
 - **Renders** one component per `x-surface.widget`, mirroring the Form
   API mapping: select with the empty option rule, checkbox, number with
   its bounds and step, text with its maxlength, textarea, email, a
@@ -91,8 +107,9 @@ Run them on the host, not inside ddev. The library
 
 | Test | Covers |
 | --- | --- |
-| `Kernel\ServedContractTest` | The main module's emitter over examples 1 to 3, the content type surface and the demo block surface: labels, `oneOf` titles, bounds, the venue to room dependency, the slot's conditional, the locked machine name on edit, the widget hints off by default and on for this submodule's endpoint; every schema checked by opis/json-schema (draft 2020-12) and against the vendored draft-07 meta-schema. |
+| `Kernel\ServedContractTest` | The main module's emitter over examples 1 to 3, the content type surface and the demo block surface: labels, `oneOf` titles, bounds, the venue to room dependency, the slot's conditional, the locked machine name on edit, the widget hints off by default and on for this submodule's endpoint; each part defined once under `$defs` and referred to, one def per class attached twice, a site narrowing its def only where it differs, and each document's verdicts on example 3 held to the pipeline's; every schema checked by opis/json-schema (draft 2020-12) and against the vendored draft-07 meta-schema. |
 | `Functional\ServedContractEndpointsTest` | 200 and 403, the JSON shape, refine narrowing the room by the venue, validate refusing a wrong room and a capacity over the room's and accepting a valid payload, nothing written; the landing page's React links. |
 | `Functional\ServedSubmitEndpointTest` | Submit writing example 2 and answering the fresh contract; a wrong room refused with nothing written; anonymous, token-less and malformed posts; a stale fingerprint refused with nothing written, and no fingerprint meaning the last write wins; a content type added through it answering `created` at `edit` with its `type`, then edited and deleted. |
+| `app/src/test/contract.test.ts` | The resolver: a reference with keywords beside it, an `allOf` narrowing, a def inside a def, two sites sharing one def, a recursive reference kept, the JSON Pointer escaping; example 3's served contract defining its parts once and read inline. |
 | `app/src/test/widgets.test.tsx` | Each widget from a schema fragment, the empty option rule, locked, slot resolution, the list; a placed fieldset drawn after the sibling it names, its values sent under its group. |
-| `app/src/test/SurfaceForm.test.tsx` | The app against a mocked server serving the emitter's own contracts: refine on a dependency, the stale room, validate's inline and summary messages; submit's success with stale warnings and the re-render, a refusal, the fingerprint sent and its refusal, the toggle off, and the move to a created thing's page; example 3's Compliance fieldset right after the capacity. |
+| `app/src/test/SurfaceForm.test.tsx` | The app against a mocked server serving the emitter's own contracts: refine on a dependency, the stale room, validate's inline and summary messages; submit's success with stale warnings and the re-render, a refusal, the fingerprint sent and its refusal, the toggle off, and the move to a created thing's page; example 3's parts drawn from their defs, the paid ticket on a pricing change, a refusal on the contact's email shown on that field, and its Compliance fieldset right after the capacity. |

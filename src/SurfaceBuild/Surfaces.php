@@ -237,11 +237,12 @@ final class Surfaces implements SurfacesInterface {
    *   The sealed child.
    */
   protected function buildChild(string $child, SurfaceContext $context, string $key, array $frame, array $ancestry): SurfaceAttachment {
-    $class = $this->registry->getDefinition($child)->class;
+    $definition = $this->registry->getDefinition($child);
     $frame['key'] = $key;
     return new SurfaceAttachment(
-      $this->buildSurface($class, static::childContext($context, $key), [...$ancestry, $frame]),
-      $class,
+      $this->buildSurface($definition->class, static::childContext($context, $key), [...$ancestry, $frame]),
+      $definition->class,
+      $definition->id,
     );
   }
 

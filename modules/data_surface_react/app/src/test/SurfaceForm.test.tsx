@@ -337,6 +337,49 @@ describe('the React form of example 3', () => {
     expect(within(screen.getByRole('group', { name: 'Contact' })).getByLabelText(/Email/)).toHaveValue('events@example.com');
   });
 
+  it('draws the paid ticket from its def when the pricing changes', async () => {
+    const { fetcher } = server({
+      // The server's refine: the same contract, the paid ticket from its defaults.
+      '/surface-api/registration.step3/configure/refine': () => ({
+        ...(example3 as unknown as Contract),
+        values: { ...example3.values, pricing: 'paid', ticket: { price: null, currency: 'EUR' } },
+      }),
+      '/surface-api/registration.step3/configure': () => example3 as unknown as Contract,
+    });
+    render(<SurfaceForm settings={{ ...settings, surface: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
+    await userEvent.selectOptions(await screen.findByLabelText(/Pricing/), 'paid');
+    // Drawn at once from the variant the pricing chooses; the refine then
+    // brings the variant's defaults.
+    await waitFor(() => expect(within(screen.getByRole('group', { name: 'Ticket' })).getByLabelText(/Currency/)).toHaveDisplayValue('EUR'));
+    const ticket = screen.getByRole('group', { name: 'Ticket' });
+    expect(within(ticket).getByLabelText(/Price/)).toBeRequired();
+    expect(within(within(ticket).getByLabelText(/Currency/)).getAllByRole('option').map((option) => option.textContent)).toEqual(['EUR', 'GBP', 'USD']);
+    expect(within(ticket).queryByLabelText('Note')).toBeNull();
+  });
+
+  it('shows a refusal inside the contact on its email field', async () => {
+    const { calls, fetcher } = server({
+      '/surface-api/registration.step3/configure/submit': () => ({
+        committed: false,
+        valid: false,
+        violations: [{ path: 'contact.email', message: 'This value is not a valid email address.' }],
+        stale: [],
+        outputs: {},
+        contract: null,
+        created: null,
+      }),
+      '/surface-api/registration.step3/configure': () => example3 as unknown as Contract,
+    });
+    render(<SurfaceForm settings={{ ...settings, surface: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
+    const email = within(await screen.findByRole('group', { name: 'Contact' })).getByLabelText(/Email/);
+    await userEvent.clear(email);
+    await userEvent.type(email, 'nobody');
+    await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('contact.email: This value is not a valid email address.');
+    expect(email).toHaveAccessibleDescription('This value is not a valid email address.');
+    expect(JSON.parse(String(calls.find((call) => call.url.endsWith('/submit'))?.init?.body)).values.contact).toEqual({ email: 'nobody', phone: '' });
+  });
+
   it('draws example 4\'s keys in one fieldset, titled by its alter', async () => {
     const { fetcher } = server({ '/surface-api/registration.step3/configure': () => example3 as unknown as Contract });
     render(<SurfaceForm settings={{ ...settings, surface: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);

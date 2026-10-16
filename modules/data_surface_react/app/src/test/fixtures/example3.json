@@ -160,39 +160,7 @@
             },
             "contact": {
                 "title": "Contact",
-                "type": "object",
-                "properties": {
-                    "email": {
-                        "title": "Email",
-                        "type": "string",
-                        "format": "email",
-                        "x-surface": {
-                            "widget": "email",
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
-                    },
-                    "phone": {
-                        "title": "Phone",
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "x-surface": {
-                            "widget": "text",
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
-                    }
-                },
-                "additionalProperties": false,
-                "required": [
-                    "email"
-                ],
+                "$ref": "#/$defs/registration.contact",
                 "x-surface": {
                     "widget": "fieldset",
                     "locked": false,
@@ -299,25 +267,7 @@
                     "properties": {
                         "ticket": {
                             "title": "Ticket",
-                            "type": "object",
-                            "properties": {
-                                "note": {
-                                    "title": "Note",
-                                    "description": "Shown beside the register button, for example \"Donations welcome\".",
-                                    "type": [
-                                        "string",
-                                        "null"
-                                    ],
-                                    "x-surface": {
-                                        "widget": "text",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
-                                    }
-                                }
-                            },
-                            "additionalProperties": false,
+                            "$ref": "#/$defs/registration.step3.ticket.free",
                             "x-surface": {
                                 "widget": "fieldset",
                                 "locked": false,
@@ -345,56 +295,7 @@
                     "properties": {
                         "ticket": {
                             "title": "Ticket",
-                            "type": "object",
-                            "properties": {
-                                "price": {
-                                    "title": "Price",
-                                    "type": "number",
-                                    "minimum": 0.01,
-                                    "x-surface": {
-                                        "widget": "number",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
-                                    }
-                                },
-                                "currency": {
-                                    "title": "Currency",
-                                    "type": "string",
-                                    "oneOf": [
-                                        {
-                                            "const": "EUR",
-                                            "title": "EUR"
-                                        },
-                                        {
-                                            "const": "GBP",
-                                            "title": "GBP"
-                                        },
-                                        {
-                                            "const": "USD",
-                                            "title": "USD"
-                                        }
-                                    ],
-                                    "default": "EUR",
-                                    "x-surface": {
-                                        "widget": "select",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false,
-                                        "emptyOption": {
-                                            "show": false,
-                                            "label": "- Select -"
-                                        }
-                                    }
-                                }
-                            },
-                            "additionalProperties": false,
-                            "required": [
-                                "price",
-                                "currency"
-                            ],
+                            "$ref": "#/$defs/registration.step3.ticket.paid",
                             "x-surface": {
                                 "widget": "fieldset",
                                 "locked": false,
@@ -407,7 +308,117 @@
                     }
                 }
             }
-        ]
+        ],
+        "$defs": {
+            "registration.step3.ticket.free": {
+                "type": "object",
+                "properties": {
+                    "note": {
+                        "title": "Note",
+                        "description": "Shown beside the register button, for example \"Donations welcome\".",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "x-surface": {
+                            "widget": "text",
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    }
+                },
+                "additionalProperties": false
+            },
+            "registration.step3.ticket.paid": {
+                "type": "object",
+                "properties": {
+                    "price": {
+                        "title": "Price",
+                        "type": "number",
+                        "minimum": 0.01,
+                        "x-surface": {
+                            "widget": "number",
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    },
+                    "currency": {
+                        "title": "Currency",
+                        "type": "string",
+                        "oneOf": [
+                            {
+                                "const": "EUR",
+                                "title": "EUR"
+                            },
+                            {
+                                "const": "GBP",
+                                "title": "GBP"
+                            },
+                            {
+                                "const": "USD",
+                                "title": "USD"
+                            }
+                        ],
+                        "default": "EUR",
+                        "x-surface": {
+                            "widget": "select",
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false,
+                            "emptyOption": {
+                                "show": false,
+                                "label": "- Select -"
+                            }
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "price",
+                    "currency"
+                ]
+            },
+            "registration.contact": {
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "title": "Email",
+                        "type": "string",
+                        "format": "email",
+                        "x-surface": {
+                            "widget": "email",
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    },
+                    "phone": {
+                        "title": "Phone",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "x-surface": {
+                            "widget": "text",
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "email"
+                ]
+            }
+        }
     },
     "values": {
         "title": "Spring meetup",

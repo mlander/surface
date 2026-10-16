@@ -768,6 +768,45 @@ the Regex translation; nor is there a test holding every accepted value
 set to the full schema across the surfaces.
 (`ContractEmitter::emitFull()`, `ContractEmitter::frame()`)
 
+### The wall is the reference boundary
+
+Each subsurface is written once, as a def under the root's `$defs`, and
+referred to from every place it is used, in both documents. The line is
+drawn where the module already draws one: a parent cannot refine into a
+child, a child cannot watch a parent's key, and a child keeps its own
+refiners and alters. Nothing outside a child can change what the child
+declares, so the child's declaration can stand alone, and it is the
+only unit that can: a plain map is the parent's own and is refined by
+the parent's refiners, so it stays inline. One def per surface id, so
+the same class attached twice is one def.
+
+The def is the declaration and the site is the instance. The def is the
+child's frame for no values with nothing locked, which is what the
+child says about itself whatever context it sits in; a context's lock
+and the values of one document are the site's. A label is the parent's
+too: the parent names the key, the child does not know where it is
+attached.
+
+Narrowing is `allOf` composition. Where the child at a site says more
+than its def, the site is `allOf` of the reference and only what
+differs. That is "refinement only narrows" in the schema's own grammar:
+a validator applies both, and since the narrowing never widens, both
+together accept exactly what the child at that site accepts. It also
+means the def must be the widest reading of the child, which is why it
+is described for no values and unlocked, never from defaults or a
+context. Two children claiming one id whose declarations differ (only
+a hand-sealed surface, or two contexts giving one class different
+rules, can do it) are two defs, the second `<id>@2`, because neither
+would be a narrowing of the other.
+
+Local references only, for now: `#/$defs/<id>`, every def inside the
+document that uses it. Serving each surface's schema at an address of
+its own, so a def is fetched once and shared between documents, is
+later; it needs a route per surface and a decision on what context a
+def at its own address is described in.
+(`ContractEmitter::define()`, `ContractEmitter::reference()`,
+`Contract\SchemaResolver`)
+
 ### Enumeration is capped
 
 Where a key's refiners have nothing to refine against yet, the emitter

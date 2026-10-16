@@ -10,6 +10,7 @@ use Drupal\Core\Render\Element;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
+use Drupal\data_surface\Contract\SchemaResolver;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Form\DataSurfaceSituationForm;
@@ -327,7 +328,9 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     $branches = [];
     foreach ($contract['allOf'] as $branch) {
       $this->assertSame(['pricing'], $branch['if']['required']);
-      $branches[$branch['if']['properties']['pricing']['const']] = $branch['then']['properties']['ticket'];
+      // Each refers to its variant's def, read here as one schema.
+      $this->assertStringStartsWith('#/$defs/registration.step3.ticket.', $branch['then']['properties']['ticket']['$ref']);
+      $branches[$branch['if']['properties']['pricing']['const']] = SchemaResolver::inline($branch['then']['properties']['ticket'], $contract);
     }
     $this->assertSame(['free', 'paid'], array_keys($branches));
     $this->assertSame(['note'], array_keys($branches['free']['properties']));

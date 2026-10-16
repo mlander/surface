@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createApi, pageOf, SEND_FINGERPRINT, type Fetcher, type Settings } from './api';
 import type { Contract, Values, Violation } from './contract';
-import { watchedPaths, setAt } from './contract';
+import { inlineSchema, watchedPaths, setAt } from './contract';
 import { ContractPanel } from './ContractPanel';
 import { Properties } from './widgets/Field';
 
@@ -134,7 +134,10 @@ export function SurfaceForm({
     }
   }, [api, show]);
 
-  const watched = useMemo(() => (contract === null ? new Set<string>() : watchedPaths(contract.schema, values)), [contract, values]);
+  // The contract defines each part once and refers to it; the form reads
+  // every key inline, resolved once per contract, not once per render.
+  const schema = useMemo(() => (contract === null ? null : inlineSchema(contract.schema)), [contract]);
+  const watched = useMemo(() => (schema === null ? new Set<string>() : watchedPaths(schema, values)), [schema, values]);
 
   const onChange = useCallback(
     (path: string, value: unknown) => {
@@ -191,7 +194,7 @@ export function SurfaceForm({
     }
   }, [api, settings, navigate, show]);
 
-  if (contract === null) {
+  if (contract === null || schema === null) {
     return failure === null
       ? <p className="dsr-status">Loading the form…</p>
       : <div className="dsr-summary dsr-summary--error" role="alert">The form could not be loaded: {failure}</div>;
@@ -251,13 +254,13 @@ export function SurfaceForm({
           ) : null}
         </div>
       ) : null}
-      <Properties schema={contract.schema} values={values} prefix="" onChange={onChange} errors={errors} />
+      <Properties schema={schema} values={values} prefix="" onChange={onChange} errors={errors} />
       <div className="dsr-actions">
         <button type="submit" className="dsr-button dsr-button--primary" disabled={submitting}>
           Submit
         </button>
       </div>
-      <ContractPanel contract={contract} values={values} />
+      <ContractPanel contract={contract} schema={schema} values={values} />
     </form>
   );
 }

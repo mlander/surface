@@ -717,7 +717,10 @@ What that means, end to end:
   map input, and an unresolved slot to the widest honest map: every
   variant's keys, none required and none with a default, each
   annotated with the values it belongs to, the table in the
-  description. The Tool API cannot say a union keyed by a sibling.
+  description. The Tool API cannot say a union keyed by a sibling. The
+  served contract can, and writes each child once, as a def under
+  `$defs` that every place it is used refers to: the wall is where a
+  reference starts ([reusable subschemas](served-contract.md#reusable-subschemas)).
 
 An alter cannot attach yet (its keys are mounted under its module), and
 neither can an output; both are refused by name.

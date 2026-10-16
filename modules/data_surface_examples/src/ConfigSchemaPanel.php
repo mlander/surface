@@ -7,6 +7,7 @@ namespace Drupal\data_surface_examples;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\data_surface\Contract\ContractEmitter;
+use Drupal\data_surface\Contract\SchemaResolver;
 
 /**
  * Shows what config schema alone can say about an example's settings.
@@ -22,7 +23,9 @@ use Drupal\data_surface\Contract\ContractEmitter;
  * by side, key by key: the JSON Schema keywords each one states. That
  * table is counted from the two documents, never written down, and it is
  * static against static: neither side reads a value, so nothing in the
- * panel moves while the form is filled in.
+ * panel moves while the form is filled in. A part the surface defines
+ * once and refers to is counted as what the reference resolves to, and
+ * the reference is named beside it.
  *
  * @see \Drupal\data_surface_examples\ConfigSchemaContract
  * @see \Drupal\data_surface_examples\ExamplePanels
@@ -149,7 +152,11 @@ final class ConfigSchemaPanel {
         'data' => [
           ['data' => ['#markup' => '<code>' . htmlspecialchars($key) . '</code>']],
           is_array($from_schema) ? $this->keywords($from_schema) : (string) $this->t('not declared'),
-          implode(', ', array_filter([$this->keywords($property, ''), $this->conditionals($surface, $key)])),
+          implode(', ', array_filter([
+            $this->keywords(SchemaResolver::resolve($property, $surface), ''),
+            $this->reference($property),
+            $this->conditionals($surface, $key),
+          ])),
         ],
         'data-today-key' => $key,
       ];
@@ -191,13 +198,29 @@ final class ConfigSchemaPanel {
   }
 
   /**
+   * Names the def a property refers to, so the reader sees it is one.
+   *
+   * @param array $schema
+   *   The property's schema, as the surface wrote it.
+   *
+   * @return string
+   *   `$ref (<id>)`, or the empty string for a property that refers to no
+   *   def.
+   */
+  protected function reference(array $schema): string {
+    $def = SchemaResolver::refersTo($schema);
+    return $def === NULL ? '' : '$ref (' . $def . ')';
+  }
+
+  /**
    * Says what the surface states about a key as conditionals on its parent.
    *
    * A slot's shapes, one per value of the key that chooses it, and what
    * a refiner answers for each value it could be handed, are written on
    * the parent object as `allOf` of `if`/`then`, not on the key. A shape
-   * is named by the value that chooses it and the keys it has; a case
-   * that only narrows the key is counted.
+   * is named by the value that chooses it, the keys it has once its
+   * reference is resolved, and the def it refers to; a case that only
+   * narrows the key is counted.
    *
    * @param array $surface
    *   The full schema the surface emits.
@@ -205,27 +228,32 @@ final class ConfigSchemaPanel {
    *   The key.
    *
    * @return string
-   *   The phrase, such as "if/then on pricing (2 shapes: free has note;
-   *   paid has price, currency)" or "if/then on venue (3 cases)", or the
-   *   empty string when no conditional names the key.
+   *   The phrase, such as "if/then on pricing (2 shapes: free has note,
+   *   $ref (registration.step3.ticket.free); paid has price, currency,
+   *   $ref (registration.step3.ticket.paid))" or "if/then on venue (3
+   *   cases)", or the empty string when no conditional names the key.
    */
   protected function conditionals(array $surface, string $key): string {
     $count = 0;
     $on = [];
     $shapes = [];
     foreach ($surface['allOf'] ?? [] as $branch) {
-      $then = $branch['then']['properties'][$key] ?? NULL;
-      if (!is_array($then)) {
+      $site = $branch['then']['properties'][$key] ?? NULL;
+      if (!is_array($site)) {
         continue;
       }
       $count++;
       $if = is_array($branch['if']['properties'] ?? NULL) ? $branch['if']['properties'] : [];
       $on += array_fill_keys(array_map('strval', array_keys($if)), TRUE);
-      if (isset($then['properties'])) {
-        $shapes[] = $this->t('@value has @keys', [
-          '@value' => implode(', ', array_map('strval', array_column($if, 'const'))),
-          '@keys' => implode(', ', array_keys($then['properties'])),
-        ]);
+      $then = SchemaResolver::resolve($site, $surface);
+      if (is_array($then['properties'] ?? NULL)) {
+        $shapes[] = implode(', ', array_filter([
+          (string) $this->t('@value has @keys', [
+            '@value' => implode(', ', array_map('strval', array_column($if, 'const'))),
+            '@keys' => implode(', ', array_keys($then['properties'])),
+          ]),
+          $this->reference($site),
+        ]));
       }
     }
     if ($count === 0) {

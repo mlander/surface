@@ -124,7 +124,9 @@ with the last word. Example 2's full schema, abbreviated:
 
 Each surface frame — the top level, an attached part, a slot's variant —
 is an object with `properties` in declaration order, `required`, and
-`additionalProperties: false`.
+`additionalProperties: false`; an attached part and a slot's variant are
+each written once, as a def under `$defs`, and referred to
+([reusable subschemas](#reusable-subschemas)).
 
 | The surface says | The schema says |
 | --- | --- |
@@ -139,7 +141,8 @@ is an object with `properties` in declaration order, `required`, and
 | `Email` | `format: email` |
 | `NotBlank` | `minLength: 1` |
 | any list of allowed values | `oneOf: [{const, title, description?}]`, read from the options service, so the labels travel; never `enum`. An optional key adds an untitled `{const: null}`. |
-| a map, an attached part | a nested object |
+| a map | a nested object |
+| an attached part | a reference to its def under `$defs`, beside its label ([reusable subschemas](#reusable-subschemas)) |
 | a list | `type: array`, `items` |
 | a locked key | `readOnly: true` and `const` of the value the situation knows |
 | a secret | `writeOnly: true`, no default, no value |
@@ -157,7 +160,7 @@ is an object with `properties` in declaration order, `required`, and
 | `emptyOption` | On a single select: `{show, label}`, by [the empty option rule](decisions.md#the-empty-option-rule): always for an optional select (`- None -`), for a required one only while no valid choice is selected (`- Select -`). |
 | `multiple` | With the widget hints, on a list of allowed values: a multiple select. |
 | `by`, `variants`, `chosen` | On a slot: the deciding key, the values that choose a variant, and the one chosen now. |
-| `variant` | On a slot's variant schema: which value it is for. |
+| `variant` | On a slot's conditional, beside the reference to the variant's def: which value it is for. |
 | `group` | Only when `true`, on `third_party_settings`: the object only groups one object per contributing module, each that module's fieldset, so it has no `title` or `description` and a renderer draws nothing around them, as the form does. |
 | `after` | On a module's object inside a `group`, when its alter placed it (`describe(..., after:)`): draw this fieldset after the named property of the object that contains its group. Only where it is drawn: its properties stay in the group, where its values are sent, and the schema's order and nesting do not move. |
 | `checkedOnServer` | Constraints no keyword states. |
@@ -165,15 +168,136 @@ is an object with `properties` in declaration order, `required`, and
 | `enumerated` | Only when `true`: the key's refiners have nothing to refine against yet, and what they answer for every value they could be handed is stated as conditionals on the parent ([below](#exact-where-it-can-be)). The schema is exact for this key with no round trip. |
 | `dynamic` | Only when `true`: the key's refiners have nothing to refine against yet, and what they would answer cannot be listed (a watched key with no list of values, or too many combinations). The schema is the unrefined, looser one, wider than the pipeline and never narrower ([decision](decisions.md#two-documents-never-stricter-than-the-runtime)); refine when a `dependsOn` key changes. In [the full schema](#two-documents) every key that cannot be listed carries it. |
 
+### Reusable subschemas
+
+The module draws a wall between a parent and its child: a parent cannot
+refine into a child, a child cannot watch a parent's key, and a child
+keeps its own refiners and alters ([surfaces](surfaces.md#subsurfaces)).
+That makes a child a self-contained subschema, and both documents say
+so with JSON Schema 2020-12's own `$defs` and `$ref`, through the one
+code path they share (`ContractEmitter::define()` and `reference()`):
+
+1. **One def per child surface.** Every attached child and every slot's
+   variant is written once, under the root's `$defs`, keyed by its
+   surface's `#[Surface]` id (`registration.contact`). A child with no
+   class, a [derived variant](surfaces.md#derived-variants), is keyed
+   `<parent id>.<slot key>.<value>` (`field.storage.settings.string`), an
+   attached one `<parent id>.<key>`. The same class at two keys, or in
+   two frames, is one def. A def may refer to other defs (a child inside
+   a variant). Two children claiming one id with declarations that are
+   not the same, which only a hand-sealed surface or two different
+   contexts can produce, keep one def each, the second as `<id>@2`,
+   because a site may only narrow its def and neither would narrow the
+   other. A child reached inside its own def would be referred to, so a
+   surface that ever contained itself ends; the build step already
+   refuses one.
+2. **The def is the declaration**: the child's frame as it emits itself
+   for no values, with nothing locked. Its properties, `required` and
+   `additionalProperties: false`; its own conditionals under its
+   `allOf` (what its refiners answer for each value they could be
+   handed); and its own `x-surface` facts (a `dependsOn` inside the
+   child, `enumerated`, `dynamic`, `group`, `after`, a slot's `by` and
+   `variants`). An alter of the child applies in the def, since alters
+   apply by class. No label: that is the parent's to give. Each document
+   writes its own defs, the schema for these answers with its
+   `refined`, `stale` and `emptyOption` as they read for no values, the
+   full schema without them; otherwise they are the same.
+3. **The site carries the instance.** Where the child is used, the
+   property is `{"$ref": "#/$defs/<id>", ...}` with what is particular
+   to that use beside it: the title and description the parent gives the
+   key, and the `x-surface` the parent reads for it (`locked`,
+   `dependsOn` as the parent sees it, `refined`, `variant` on a slot's
+   conditional, the widget hint). JSON Schema 2020-12 applies keywords
+   beside `$ref` as well as its target.
+4. **Narrowing is composition.** Where the child at a site says more than
+   its def (a key its context locked, a key refined for the values in
+   this document), the site is `{"allOf": [{"$ref": ...}, {narrowing}],
+   ...}`, the narrowing holding only what differs from the def, by the
+   same "only what changed" reading the [enumeration](#exact-where-it-can-be)
+   uses: properties compared one by one, conditionals the def does not
+   already state, and a property's `x-surface` written whole where it
+   differs. Where nothing differs, the reference is bare. Refinement only
+   narrows, so a validator applying the def and the narrowing accepts
+   exactly what the child at that site accepts; `ServedContractTest`
+   holds the two readings to the same verdicts.
+5. **A slot's conditionals refer to the variants' defs.** Each `then`
+   names the slot with a reference to its variant's def, beside the
+   slot's label and `x-surface.variant`; the slot's own property keeps
+   what it said before (`by`, `variants`, `chosen`).
+
+Only local references, `#/$defs/<id>`, are written: the def's key is a
+JSON Pointer segment (`~` and `/` escaped) inside the URI fragment. A
+reader that wants a key's effective schema inline resolves them once:
+`Contract\SchemaResolver::inline()` in PHP, `inlineSchema()` in the
+React app. Both replace a reference by its def where it stood, lay a
+composition's narrowing over it taking the narrowing's value for every
+keyword it states (`properties` one by one, `required` as a union, the
+conditionals concatenated), and leave a reference back into a def being
+read as it is.
+
+Example 3's full schema, abbreviated. Nothing in example 3 differs from
+its def, so every reference is bare:
+
+```json
+"properties": {
+  ...
+  "ticket": {"title": "Ticket", "type": ["object", "null"],
+             "x-surface": {"dependsOn": ["pricing"], "by": "pricing", "variants": ["free", "paid"], ...}},
+  "contact": {"title": "Contact", "$ref": "#/$defs/registration.contact",
+              "x-surface": {"locked": false, "dependsOn": []}}
+},
+"allOf": [
+  ...the room per venue...
+  {"if": {"properties": {"pricing": {"const": "paid"}}, "required": ["pricing"]},
+   "then": {"properties": {"ticket": {"title": "Ticket", "$ref": "#/$defs/registration.step3.ticket.paid",
+     "x-surface": {"locked": false, "dependsOn": [], "variant": "paid"}}}}},
+  ...free...
+],
+"$defs": {
+  "registration.step3.ticket.free": {...},
+  "registration.step3.ticket.paid": {"type": "object", "properties": {"price": {...}, "currency": {...}},
+                                     "additionalProperties": false, "required": ["price", "currency"]},
+  "registration.contact": {"type": "object",
+    "properties": {
+      "email": {"title": "Email", "type": "string", "format": "email", "x-surface": {"locked": false, "dependsOn": []}},
+      "phone": {"title": "Phone", "type": ["string", "null"], "x-surface": {"locked": false, "dependsOn": []}}},
+    "additionalProperties": false, "required": ["email"]}
+}
+```
+
+A narrowing, from the full schema of `field.instance:edit` for a long
+text field: the field's storage is attached in the storage's own `edit`
+context, which knows its field type and locks it, while the
+`field.storage` def is the storage as declared, with the field type
+open:
+
+```json
+"storage": {
+  "title": "Field storage", "description": "What every bundle using this field shares.",
+  "allOf": [
+    {"$ref": "#/$defs/field.storage"},
+    {"properties": {"field_type": {"default": "string_long", "readOnly": true, "const": "string_long",
+                                   "x-surface": {"locked": true, "dependsOn": []}}}}
+  ],
+  "x-surface": {"locked": false, "dependsOn": []}
+}
+```
+
+In the schema for these answers a site also narrows where the child's
+own values refined it: a shelf whose unit is `cm` refers to the shelf's
+def, which states the ceiling for each unit, and narrows its height to
+`maximum: 200`, `x-surface.refined: true`.
+
 ### A slot is a conditional
 
 A slot's own property fixes no shape. Each variant is a `then` on the
 parent, under an `if` naming the deciding key's value as a `const`, so a
 validator applies exactly the chosen variant's rules and a renderer reads
-the shape the current value selects. There is no OpenAPI `discriminator`
-beside it: OpenAPI's names a property inside the object whose
-alternatives it picks, and a slot's deciding key is a sibling of it
-([decision](decisions.md#no-openapi-discriminator-on-a-slot)). Example
+the shape the current value selects. The `then` refers to the variant's
+def ([above](#reusable-subschemas)), beside the slot's label. There is no
+OpenAPI `discriminator` beside it: OpenAPI's names a property inside the
+object whose alternatives it picks, and a slot's deciding key is a
+sibling of it ([decision](decisions.md#no-openapi-discriminator-on-a-slot)). Example
 3's ticket, abbreviated, as `/surface-api` serves it (with the widget
 hints):
 
@@ -185,17 +309,24 @@ hints):
 ...
 "allOf": [
   {"if": {"properties": {"pricing": {"const": "free"}}, "required": ["pricing"]},
-   "then": {"properties": {"ticket": {"title": "Ticket", "type": "object",
-     "properties": {"note": {"title": "Note", "type": ["string", "null"], ...}},
-     "additionalProperties": false, "x-surface": {"widget": "fieldset", "variant": "free", ...}}}}},
+   "then": {"properties": {"ticket": {"title": "Ticket", "$ref": "#/$defs/registration.step3.ticket.free",
+     "x-surface": {"widget": "fieldset", "variant": "free", ...}}}}},
   {"if": {"properties": {"pricing": {"const": "paid"}}, "required": ["pricing"]},
-   "then": {"properties": {"ticket": {"title": "Ticket", "type": "object",
-     "properties": {
-       "price": {"title": "Price", "type": "number", "minimum": 0.01, ...},
-       "currency": {"title": "Currency", "type": "string", "default": "EUR",
-                    "oneOf": [{"const": "EUR", "title": "EUR"}, {"const": "GBP", "title": "GBP"}, {"const": "USD", "title": "USD"}], ...}},
-     "required": ["price", "currency"], "additionalProperties": false, ...}}}}
-]
+   "then": {"properties": {"ticket": {"title": "Ticket", "$ref": "#/$defs/registration.step3.ticket.paid",
+     "x-surface": {"widget": "fieldset", "variant": "paid", ...}}}}}
+],
+"$defs": {
+  "registration.step3.ticket.free": {"type": "object",
+    "properties": {"note": {"title": "Note", "type": ["string", "null"], ...}},
+    "additionalProperties": false},
+  "registration.step3.ticket.paid": {"type": "object",
+    "properties": {
+      "price": {"title": "Price", "type": "number", "minimum": 0.01, ...},
+      "currency": {"title": "Currency", "type": "string", "default": "EUR",
+                   "oneOf": [{"const": "EUR", "title": "EUR"}, {"const": "GBP", "title": "GBP"}, {"const": "USD", "title": "USD"}], ...}},
+    "required": ["price", "currency"], "additionalProperties": false},
+  ...
+}
 ```
 
 ### Exact where it can be

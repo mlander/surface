@@ -96,9 +96,13 @@ value resolves, and this reads none.
   `title, type` beside `title, type, oneOf (3)`, the room `title, type`
   beside `title, type, oneOf (6), if/then on venue (3 cases)`, the
   ticket `title, $comment` beside
-  `title, type, if/then on pricing (2 shapes: free has note; paid has price, currency)`,
+  `title, type, if/then on pricing (2 shapes: free has note, $ref (registration.step3.ticket.free); paid has price, currency, $ref (registration.step3.ticket.paid))`,
+  the contact `title, type, properties, additionalProperties` beside
+  `title, type, properties, additionalProperties, required, $ref (registration.contact)`,
   and the last row lists what is required: "not stated" beside
-  `title, venue, room, pricing`.
+  `title, venue, room, pricing`. The surface writes each part once,
+  under `$defs`, and refers to it where it is used; the table counts
+  what a reference resolves to and names the reference beside it.
 
 None of them reads a value, so nothing in this panel moves while the
 form is filled in. What follows the answers is the contract panel above

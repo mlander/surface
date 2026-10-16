@@ -21,7 +21,9 @@ use Drupal\Core\TypedData\MapDataDefinition;
  *
  * The source is the surface class the child was built from, when it was
  * built from one, so whatever reads the parent can say which surface sits
- * at the key and route its values to that surface's own target.
+ * at the key and route its values to that surface's own target; the id is
+ * that class's #[Surface] id, so whatever reads only sealed surfaces, as
+ * the contract emitter does, can name the child without the registry.
  *
  * @see \Drupal\data_surface\DataSurfaceBuilderInterface::attach()
  * @see \Drupal\data_surface\SurfaceSlot
@@ -36,10 +38,14 @@ final class SurfaceAttachment {
    * @param class-string|null $source
    *   The #[Surface] class the child was built from, or NULL for a child
    *   handed over already sealed.
+   * @param string|null $id
+   *   The #[Surface] id of that class, or NULL when there is no class: a
+   *   derived variant, or a child handed over already sealed.
    */
   public function __construct(
     public readonly DataSurfaceInterface $child,
     public readonly ?string $source = NULL,
+    public readonly ?string $id = NULL,
   ) {
   }
 

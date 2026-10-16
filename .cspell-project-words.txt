@@ -29,6 +29,8 @@ SECRETBOX
 staticness
 subform
 subforms
+subschema
+subschemas
 superfences
 textareas
 toolkits

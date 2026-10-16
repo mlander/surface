@@ -185,8 +185,9 @@ contract carries a `fingerprint` of the stored values; a submit that
 sends it back is refused when storage changed since, and one that sends
 none is not checked (opt-in; the app sends it).
 `/surface-react/{surface}/{situation}` renders it with a React app.
-`docs/served-contract.md` has the format, `docs/decisions.md` (Served
-contract) the seven points it settled.
+`docs/served-contract.md` has the format, with children and slot variants
+as `$defs` that the properties reference; `docs/decisions.md` (Served
+contract) has the points it settled.
 
 The app is `modules/data_surface_react/app/`: Vite, React 18 and
 TypeScript, every version pinned exactly. Run npm on the host, never

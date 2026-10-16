@@ -156,14 +156,21 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
       'pricing' => ['title, type', 'title, type, oneOf (2), default'],
       'ticket' => [
         'title, $comment',
-        'title, type, if/then on pricing (2 shapes: free has note; paid has price, currency)',
+        'title, type, if/then on pricing (2 shapes: free has note, $ref (registration.step3.ticket.free); paid has price, currency, $ref (registration.step3.ticket.paid))',
       ],
       'contact' => [
         'title, type, properties, additionalProperties',
-        'title, type, properties, additionalProperties, required',
+        'title, type, properties, additionalProperties, required, $ref (registration.contact)',
       ],
       'required' => ['not stated', 'title, venue, room, pricing'],
     ], $this->comparison($today));
+    // The examples' README quotes the rows, as the table prints them.
+    $readme = (string) file_get_contents(dirname(__DIR__, 3) . '/modules/data_surface_examples/README.md');
+    foreach (['venue', 'room', 'ticket', 'contact'] as $key) {
+      foreach ($this->comparison($today)[$key] as $cell) {
+        $this->assertStringContainsString('`' . $cell . '`', $readme, $key);
+      }
+    }
     // Counted from the two documents: the venue's row is longer on the
     // surface's side by the list config schema has no way to give.
     $surface = $this->document($panels[ExamplePanels::CONTRACT]['full'])['properties']['venue'];
@@ -212,7 +219,7 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
     $after = $container[DataSurfaceSituationForm::PANEL_KEY][ExamplePanels::TODAY];
     $this->assertSame([
       'title, $comment',
-      'title, type, if/then on pricing (2 shapes: free has note; paid has price, currency)',
+      'title, type, if/then on pricing (2 shapes: free has note, $ref (registration.step3.ticket.free); paid has price, currency, $ref (registration.step3.ticket.paid))',
     ], $this->comparison($after)['ticket']);
     $this->assertSame($this->comparison($before), $this->comparison($after));
     $this->assertSame($before['core']['json']['#value'], $after['core']['json']['#value']);
@@ -221,7 +228,7 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
     $markup = $this->ajaxMarkup($response, $panels);
     $this->assertStringContainsString('Behind the scenes: the contract, as it stands', $markup);
     $this->assertStringContainsString('Without a surface: what config schema can say', $markup);
-    $this->assertMatchesRegularExpression('#<tr data-today-key="ticket">(?:(?!</tr>).)*<td>title, \$comment</td>\s*<td>title, type, if/then on pricing \(2 shapes: free has note; paid has price, currency\)</td>#s', $markup);
+    $this->assertMatchesRegularExpression('#<tr data-today-key="ticket">(?:(?!</tr>).)*<td>title, \$comment</td>\s*<td>title, type, if/then on pricing \(2 shapes: free has note, \$ref \(registration\.step3\.ticket\.free\); paid has price, currency, \$ref \(registration\.step3\.ticket\.paid\)\)</td>#s', $markup);
     $this->assertStringContainsString('No schema is defined for property of type', $markup);
 
     $state = $this->postStep(3, ['venue' => 'harbour'] + self::SHIPPED, ['_triggering_element_name' => 'surface[venue]']);
