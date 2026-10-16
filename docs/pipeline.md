@@ -46,9 +46,10 @@ access class, `#[Surface(access:)]`, which may hold services and asks
 the thing itself. A context whose operation is no declared situation —
 a plugin host's `configure` — has no permission to check, so the access
 class is the whole answer, and a surface with neither answers neutral.
-Each subsurface the context resolves whose class names an access class
-of its own is asked too, and may refuse; a child never allows on its
-parent's behalf. A plugin host asks through its own `surfaceAccess()`,
+A slot's variant chosen by a locked deciding key whose class names an
+access class of its own is asked too, and may refuse; a child never
+allows on its parent's behalf. Every other child's access shaped its
+keys when it was built. A plugin host asks through its own `surfaceAccess()`,
 which takes the account and the host's operation and nothing else.
 
 The answer is core's `AccessResultInterface`, so it carries a reason and

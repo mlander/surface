@@ -264,7 +264,7 @@ fields`, named from the identity the situation's context knows — the
 entity type the add tool is given, or the one the storage or field it
 names is on — then `FieldInstanceAccess`, which refuses a locked
 storage, then the access class of the settings surface the field type
-resolves, which may refuse (the gated test field type does). A field or
+chose, which may refuse (the gated test field type does). A field or
 storage that does not exist builds no context, and is refused without
 saying why.
 

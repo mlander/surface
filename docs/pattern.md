@@ -405,11 +405,14 @@ Two tiers, and alters touch neither.
 
 An answer is open, locked or omitted (`SurfaceAccess`); core's allowed
 is open and its forbidden omitted. At the top, open lets the caller in
-and anything else keeps them out. At a child invoked through a
-situation of its own, the answer is about the child's keys: changeable,
-shown and fixed, or not there at all, the way field access treats a
-field. A child that invokes no situation of its own may refuse the
-whole surface through its access class, never allow.
+and anything else keeps them out. At a child, however it was invoked,
+the answer is about the child's keys: changeable, shown and fixed, or
+not there at all, the way field access treats a field. Its access class
+always answers; the permission of its situation is asked only where the
+build resolved one, since a parent that hands a context whole took
+responsibility for entering it. A slot's variant chosen by a locked
+deciding key may refuse the whole surface through its access class,
+never allow.
 
 ## Outputs
 

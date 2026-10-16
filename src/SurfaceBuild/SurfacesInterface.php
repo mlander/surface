@@ -91,11 +91,12 @@ interface SurfacesInterface {
    * context) has no permission to check, so the access class is the
    * whole answer, and a surface with neither answers neutral.
    *
-   * Then its subsurfaces: each child the context resolves — an attached
-   * one, and a slot's variant when its deciding key is known — whose
-   * class names an access class of its own is asked in the context the
-   * parent's hands it, and may refuse. A child never allows on its
-   * parent's behalf.
+   * Then the slot variants its identity chose: a slot's variant whose
+   * deciding key is locked, and whose class names an access class of its
+   * own, is asked in the context it is invoked in, and may refuse, since
+   * the parent cannot be written without it. A child never allows on its
+   * parent's behalf, and every other child's access shaped its own keys
+   * when it was built.
    *
    * @param string $surface
    *   The surface class, or its #[Surface] id.

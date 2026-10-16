@@ -34,8 +34,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * The derived tools reach the field type's surface as the field
  * instance surface's settings slot, resolved by the field type the
- * situation knows; a resolved child's access class may refuse its
- * parent.
+ * situation knows; a slot variant its locked deciding key chose may
+ * refuse its parent through its access class.
  *
  * @see \Drupal\data_surface_test\Surface\GatedFieldSettingsSurface
  * @see \Drupal\data_surface_test\Access\GatedFieldSettingsAccess

@@ -22,7 +22,11 @@ use Drupal\data_surface_surface_test\Target\LarderTarget;
  *   `restock`, which the larder's edit situation names, handing it a
  *   shelf;
  * - adding a larder, neither is named and the rack has no `add`, so both
- *   are invoked through the rack's default, `browse`.
+ *   are invoked through the rack's default, `browse`;
+ * - stocking a larder, the larder hands both racks a context whole, built
+ *   by calling the rack's own situations: no situation of the rack's is
+ *   invoked, so `restock`'s permission is not asked, and the rack's
+ *   access class answers all the same.
  *
  * The racks have no target: the larder stores them under their keys.
  */
@@ -47,6 +51,19 @@ final class LarderSurface implements SurfaceInterface {
   public static function edit(string $larder): SurfaceContext {
     return (new SurfaceContext('edit', known: ['larder' => $larder]))
       ->withChild('spare_rack', situation: 'restock', known: ['shelf' => 'TOP']);
+  }
+
+  /**
+   * An existing larder, both racks handed a context the larder built.
+   *
+   * The larder takes responsibility for entering them, as a field does
+   * for its storage, so only the rack's access class decides its keys.
+   */
+  #[Situation('stock', label: 'Stock a larder', permission: 'keep a larder')]
+  public static function stock(string $larder): SurfaceContext {
+    return (new SurfaceContext('stock', known: ['larder' => $larder]))
+      ->withChild('rack', SpiceRackSurface::browse())
+      ->withChild('spare_rack', SpiceRackSurface::restock($larder, 'TOP'));
   }
 
   /**

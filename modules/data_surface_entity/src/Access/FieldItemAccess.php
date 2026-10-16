@@ -25,6 +25,12 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * items, and a field has none without an entity. What both answers read
  * is carried on the answer, so the surface built from it varies by it.
  *
+ * A context that does not say which field of which entity type, as one
+ * the item inherits when neither of its situations can be invoked (a
+ * tool's static definition, built before any subject), has nothing to
+ * ask about, and says nothing: the field is described as it may be, and
+ * the definition per call, built in the real context, asks.
+ *
  * Decision: see docs/decisions.md#field-access-is-child-access.
  */
 final class FieldItemAccess implements SurfaceAccessInterface, ContainerInjectionInterface {
@@ -57,8 +63,11 @@ final class FieldItemAccess implements SurfaceAccessInterface, ContainerInjectio
    * {@inheritdoc}
    */
   public function access(SurfaceContext $context, AccountInterface $account): SurfaceAccess {
+    if (!isset($context->known['entity_type'], $context->known['field_name'])) {
+      return SurfaceAccess::open();
+    }
     $entity = $this->entity($context);
-    $field_name = (string) ($context->known['field_name'] ?? '');
+    $field_name = (string) $context->known['field_name'];
     if ($entity === NULL || !$entity->hasField($field_name)) {
       return SurfaceAccess::omitted(sprintf('There is no %s field to ask about.', $field_name));
     }

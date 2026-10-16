@@ -38,9 +38,11 @@ use Symfony\Component\HttpFoundation\Request;
  * The larder attaches the same spice rack twice. Editing it, the rack at
  * `rack` is invoked through the rack's own `edit`, by operation, and the
  * one at `spare_rack` through `restock`, which the larder's situation
- * names; adding one, both fall to the rack's default, `browse`. The rack's
- * access class answers open, locked or omitted from three permissions,
- * and `restock` asks a permission of its own.
+ * names; adding one, both fall to the rack's default, `browse`; stocking
+ * one, the larder hands both a context whole, built by calling the rack's
+ * own `browse` and `restock`. The rack's access class answers open,
+ * locked or omitted from three permissions however the rack was invoked,
+ * and `restock` asks a permission of its own where the build resolves it.
  *
  * Each answer is followed through every door: the built surface, both
  * contracts, the situation form, the write tool's `values` input, the
@@ -153,38 +155,54 @@ class ChildSituationTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Emits the edited larder's contract, as it stands or in full.
+   * Builds the larder being stocked, both racks handed a context whole.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The larder.
+   */
+  protected function stock(): DataSurfaceInterface {
+    return $this->surfaces()->buildSituation(LarderSurface::class, 'stock', ['larder' => 'main']);
+  }
+
+  /**
+   * Emits the larder's contract, as it stands or in full.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The larder, built.
    * @param bool $full
    *   Whether to emit the full schema.
+   * @param string $situation
+   *   The larder's situation it was built in.
    *
    * @return \Drupal\data_surface\Contract\ServedContract
    *   The contract.
    */
-  protected function contract(DataSurfaceInterface $surface, bool $full = FALSE): mixed {
+  protected function contract(DataSurfaceInterface $surface, bool $full = FALSE, string $situation = 'edit'): mixed {
     $emitter = $this->container->get('data_surface.contract_emitter');
     if ($full) {
-      return $emitter->emitFull($surface, 'surface_test.larder', 'edit');
+      return $emitter->emitFull($surface, 'surface_test.larder', $situation);
     }
-    $context = $this->surfaces()->situation(LarderSurface::class, 'edit', ['larder' => 'main']);
+    $context = $this->surfaces()->situation(LarderSurface::class, $situation, ['larder' => 'main']);
     $stored = $this->surfaces()->target(LarderSurface::class, $context, $surface)->load($surface);
-    return $emitter->emit($surface, array_replace($surface->getDefaultValues(), $stored), 'surface_test.larder', 'edit');
+    return $emitter->emit($surface, array_replace($surface->getDefaultValues(), $stored), 'surface_test.larder', $situation);
   }
 
   /**
-   * Builds the generic form at the larder's edit route.
+   * Builds the generic form at one of the larder's routes.
+   *
+   * @param string $situation
+   *   The larder's situation the route serves: edit or stock.
    *
    * @return array
    *   The surface part of the built form.
    */
-  protected function form(): array {
-    $route = $this->container->get('router.route_provider')->getRouteByName('data_surface_surface_test.larder.edit');
+  protected function form(string $situation = 'edit'): array {
+    $name = 'data_surface_surface_test.larder.' . $situation;
+    $route = $this->container->get('router.route_provider')->getRouteByName($name);
     $stack = $this->container->get('request_stack');
-    $request = Request::create('/surface-test/larder/main');
+    $request = Request::create($situation === 'edit' ? '/surface-test/larder/main' : '/surface-test/larder/main/' . $situation);
     $request->setSession($stack->getSession());
-    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, 'data_surface_surface_test.larder.edit');
+    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, $name);
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     $request->attributes->set('larder', 'main');
     $request->attributes->set('_raw_variables', new InputBag(['larder' => 'main']));
@@ -295,7 +313,8 @@ class ChildSituationTest extends DataSurfaceKernelTestBase {
    *
    * The pantry's shelf and label declare none, so each is built in the
    * context Surfaces::childContext() hands it, the parent's operation and
-   * identity, and is asked no access of its own at build.
+   * identity, and, having no access class either, is asked nothing at
+   * build.
    */
   public function testChildWithoutSituationsInherits(): void {
     $emitter = $this->container->get('data_surface.contract_emitter');
@@ -488,6 +507,78 @@ class ChildSituationTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($this->surfaces()->access(SpiceRackSurface::class, SpiceRackSurface::browse())->isForbidden());
     $this->actAs('stock spice rack');
     $this->assertTrue($this->surfaces()->access(SpiceRackSurface::class, SpiceRackSurface::browse())->isAllowed());
+  }
+
+  /**
+   * Tests a context handed whole: its access class answers, no permission.
+   *
+   * Stocking, the larder hands both racks a context it built itself, by
+   * calling the rack's `browse` and `restock`. No situation of the rack's
+   * is invoked, so `restock`'s permission is not asked: the larder took
+   * responsibility for entering it. The rack's access class answers
+   * exactly as on a resolved path, open, locked or omitted, and what it
+   * read reaches the larder's contracts and form.
+   */
+  public function testHandedContextIsAnsweredByItsAccessClass(): void {
+    // Inspecting alone, without restock's permission. Editing resolves
+    // restock by name and omits the spare rack for want of it; stocking
+    // hands restock whole, and both racks are locked by the access class.
+    $this->actAs('inspect spice rack');
+    $this->assertSame(['larder', 'note', 'rack'], $this->edit()->getDefinitions()->names());
+    $stock = $this->stock();
+    $this->assertSame(['larder', 'note', 'rack', 'spare_rack'], $stock->getDefinitions()->names());
+    $this->assertTrue($stock->isLocked('rack'));
+    $this->assertTrue($stock->isLocked('spare_rack'));
+    // Each handed context is taken as it is: browse's smaller range, and
+    // the shelf restock knows, locked.
+    $this->assertSame(['min' => 0, 'max' => 10], self::child($stock, 'rack')->getDefinition('spices')->getConstraints()['Range']);
+    $spare = self::child($stock, 'spare_rack');
+    $this->assertTrue($spare->isLocked('shelf'));
+    $this->assertSame('top', $spare->getDefault('shelf'));
+
+    // What the answer read reaches the parent and everything emitted.
+    $this->assertContains('user.permissions', $stock->getCacheContexts());
+    foreach ([FALSE, TRUE] as $full) {
+      $contract = $this->contract($stock, $full, 'stock');
+      $schema = $contract->document['schema'];
+      $this->assertTrue($schema['properties']['rack']['readOnly']);
+      $this->assertTrue($schema['properties']['spare_rack']['x-surface']['locked']);
+      $this->assertContains('user.permissions', $contract->getCacheContexts());
+    }
+    $form = $this->form('stock');
+    $this->assertTrue($form['rack']['#disabled']);
+    $this->assertTrue($form['spare_rack']['#disabled']);
+    $this->assertContains('user.permissions', $form['#cache']['contexts']);
+
+    // A child's answer shapes its own keys and refuses nothing above it.
+    $context = $this->surfaces()->situation(LarderSurface::class, 'stock', ['larder' => 'main']);
+    $this->assertTrue($this->surfaces()->access(LarderSurface::class, $context)->isAllowed());
+
+    // Hiding: both racks omitted, from the contracts and the form too.
+    $this->actAs('hide spice rack');
+    $stock = $this->stock();
+    $this->assertSame(['larder', 'note'], $stock->getDefinitions()->names());
+    foreach ([FALSE, TRUE] as $full) {
+      $contract = $this->contract($stock, $full, 'stock');
+      $this->assertSame(['larder', 'note'], array_keys($contract->document['schema']['properties']));
+      $this->assertContains('user.permissions', $contract->getCacheContexts());
+    }
+    $form = $this->form('stock');
+    $this->assertArrayNotHasKey('rack', $form);
+    $this->assertArrayNotHasKey('spare_rack', $form);
+    $this->assertContains('user.permissions', $form['#cache']['contexts']);
+    $this->assertTrue($this->surfaces()->access(LarderSurface::class, $context)->isAllowed());
+
+    // No rack permission at all: core's forbidden, omitted at a child.
+    $this->actAs();
+    $this->assertSame(['larder', 'note'], $this->stock()->getDefinitions()->names());
+
+    // Stocking: both open.
+    $this->actAs('stock spice rack');
+    $stock = $this->stock();
+    $this->assertSame(['larder', 'note', 'rack', 'spare_rack'], $stock->getDefinitions()->names());
+    $this->assertFalse($stock->isLocked('rack'));
+    $this->assertFalse($stock->isLocked('spare_rack'));
   }
 
   /**

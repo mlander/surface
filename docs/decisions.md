@@ -94,13 +94,28 @@ from the identity the parent handed it, then from the parent's; the
 context it returns knows both, its own known keys winning on a clash,
 because the child's situation is the authority on the child. A context
 handed whole (`withChild($key, $context)`) comes before all of these and
-is taken as it is, with no access of the child's own, even when its
-operation is one of the child's situations: the parent built it, and
-every existing call means what it meant, down to a field's reuse
-building its storage, through `FieldStorageSurface::edit()`, the same for
-any account.
+is taken as it is, invoking no situation of the child's even when its
+operation is one of them: the parent built it.
+
+However the child was invoked (named, matched, the default, inherited,
+or handed whole), its access class answers, open, locked or omitted, in
+the context it was invoked in, and what that answer read reaches the
+parent's cacheability. The permission of a situation is asked only where
+the build resolved that situation (named, matched or the default).
+Permission and access are two questions. A permission is about entering
+a situation, and a parent that built its child's context itself took
+responsibility for that entry, so the child's permission is not asked
+again: a field's reuse and edit build its storage through
+`FieldStorageSurface::edit()`, and the field's own permission is the
+gate. Access is about what may be done with what is there, and only
+access composes down the tree. A module like field_permissions hides a
+single field through access, so a context handed whole must not be a
+way around it: were the handed path to skip the child's access class,
+any parent could open a field its access closed by building the field's
+context itself. An inherited child with no access class is asked
+nothing and stays open.
 (`Surfaces::invokeChild()`, `Surfaces::childSituationContext()`,
-`SurfaceContext::withChild()`)
+`Surfaces::childAccess()`, `SurfaceContext::withChild()`)
 
 ### Operation is the situation id
 
@@ -501,8 +516,11 @@ child open, since its parent's access already let the caller in and a
 child's access only narrows what the parent allowed, and is a refusal
 at the top ([Neutral is a refusal for a situation's
 caller](#neutral-is-a-refusal-for-a-situations-caller)). At a child, the
-situation's permission comes first (lacking it omits the child), then
-the access class, and the narrower answer stands. Locked is the existing lock on the parent's key, so no
+permission of a situation the build resolved comes first (lacking it
+omits the child), then the access class, asked however the child was
+invoked ([One invocation model for both
+levels](#one-invocation-model-for-both-levels)), and the narrower answer
+stands. Locked is the existing lock on the parent's key, so no
 door needs a second mechanism. The answer's cacheability is added to
 the parent's builder, so the contract and the form carry
 `user.permissions` when the answer read permissions.
@@ -558,16 +576,26 @@ variant, and offering a value whose shape could not be changed is the
 same as not offering it. *Open:* a locked variant shown read-only.
 (`Surfaces::buildSurface()`)
 
-### Children may refuse
+### A chosen variant may refuse
 
-A child the context resolves (an attached child, or a slot variant
-whose deciding key is locked) that invokes no situation of its own is
-asked through its own access class in its own context, and may refuse
-but never allow. A field type's settings can then refuse the field they
-belong to, and nothing below a surface can open what its own access
-closed. A child invoked through a situation of its own is not asked
-here: its access decided its keys when it was built, and refuses
-nothing above it. (`Surfaces::access()`)
+A slot whose deciding key is locked has its variant chosen by what the
+parent is, as a field's settings are chosen by its type, and the parent
+cannot be written without that variant. Its access class, asked in the
+context it is invoked in however it was invoked, may refuse the whole
+parent, never allow. The build leaves a variant that is not open out of
+the slot ([A variant is open or not
+offered](#a-variant-is-open-or-not-offered)), so it is looked up among
+the slot's declared variants. A field type's settings refuse the field
+they belong to this way, and nothing below a surface can open what its
+own access closed. Every other child's access decided its own keys when
+it was built ([One invocation model for both
+levels](#one-invocation-model-for-both-levels)) and refuses nothing
+above it: a field its access hides is left out of its entity, which is
+not a reason to refuse the entity. This replaces an earlier rule under
+which any child invoking no situation of its own could refuse its
+parent; it was asked nowhere else, and now that its access answers at
+build, refusing the parent as well would turn a hidden field into a
+refused form. (`Surfaces::access()`, `Surfaces::childAnswers()`)
 
 ### No declared situation, no permission tier
 
@@ -934,7 +962,13 @@ No mechanism of its own was needed, which is what the child situations
 were built for ([One invocation model for both
 levels](#one-invocation-model-for-both-levels)). Field access takes
 items, so on add it is asked of a throwaway entity of the bundle, as
-core's entity form makes one. (`FieldItemAccess`)
+core's entity form makes one. A field whose situation cannot be invoked,
+because its context knows nothing yet (a tool's static definition),
+inherits, and its access is still asked; a context that does not say
+which field of which entity type has nothing to ask about, and it says
+nothing, as [A permission a child cannot
+name](#a-permission-a-child-cannot-name) does, and the per call
+definition asks in the real context. (`FieldItemAccess`)
 
 ### The content entity target
 

@@ -8,6 +8,7 @@ use Drupal\Core\Entity\Entity\EntityFormDisplay;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\UnknownKeysException;
+use Drupal\data_surface\Surface\SurfaceContext;
 use Drupal\data_surface\SurfaceBuild\SurfacesInterface;
 use Drupal\data_surface_entity_test\Hook\EntityTestHooks;
 use Drupal\data_surface_entity_test\Surface\TelephoneItemSurface;
@@ -169,6 +170,22 @@ class ContentEntityAccessTest extends DataSurfaceKernelTestBase {
     $edit = $this->edit();
     $this->assertFalse($edit->isLocked(EntityTestHooks::LOCKED));
     $this->assertNotNull($edit->getDefinitions()->entry(EntityTestHooks::HIDDEN));
+  }
+
+  /**
+   * Tests a field that inherits a context knowing nothing: described open.
+   *
+   * A context that knows no entity, as a tool's static definition is built
+   * in, cannot invoke a field's edit, which needs the id, so each field
+   * inherits. Its access class is still asked, and with no field of no
+   * entity to ask about, it says nothing: the field is there and open,
+   * for the definition per call to narrow.
+   */
+  public function testInheritedFieldIsDescribedOpen(): void {
+    $this->actAs();
+    $bare = $this->surfaces()->build('entity.content:node.page', new SurfaceContext('edit'));
+    $this->assertNotNull($bare->getDefinitions()->entry(EntityTestHooks::HIDDEN));
+    $this->assertFalse($bare->isLocked(EntityTestHooks::LOCKED));
   }
 
   /**

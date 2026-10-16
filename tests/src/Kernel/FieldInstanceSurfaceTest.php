@@ -220,6 +220,39 @@ class FieldInstanceSurfaceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Tests the storage child's access, whichever way it is invoked.
+   *
+   * Edit and reuse hand the storage a context whole, built by its own
+   * edit situation; add invokes the storage's add by operation. A child's
+   * access class answers on every one of those paths, and the permission
+   * of a situation is asked only where the build resolved it, so a
+   * handed storage is not asked its edit's permission again. The storage
+   * surface has no access class: it is open on every path, for an account
+   * with the field tools' permission and for one without, which the
+   * field's own permission keeps out at the top.
+   */
+  public function testTheStorageChildIsOpenOnEveryPath(): void {
+    $this->assertNull($this->container->get('data_surface.surface_registry')->getDefinition(FieldStorageSurface::class)->access);
+    $field = $this->createField();
+    $contexts = [
+      'add' => FieldInstanceSurface::add('entity_test', 'entity_test'),
+      'reuse' => $this->addContext(),
+      'edit' => FieldInstanceSurface::edit($field),
+    ];
+    foreach (['with' => ['administer entity_test fields'], 'without' => []] as $who => $permissions) {
+      $account = $this->setUpCurrentUser([], $permissions);
+      foreach ($contexts as $situation => $context) {
+        $surface = $this->surfaces()->build(FieldInstanceSurface::class, $context);
+        $storage = $surface->getDefinitions()->entry('storage');
+        $this->assertNotNull($storage?->attachment, "$situation, $who");
+        $this->assertSame(FieldStorageSurface::class, $storage->attachment->source, "$situation, $who");
+        $this->assertFalse($surface->isLocked('storage'), "$situation, $who");
+        $this->assertSame($permissions !== [], $this->surfaces()->access(FieldInstanceSurface::class, $context, $account)->isAllowed(), "$situation, $who");
+      }
+    }
+  }
+
+  /**
    * Tests the three situations and what each hands the storage child.
    *
    * Reuse is an add for the field and an edit for its storage; edit is

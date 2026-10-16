@@ -109,9 +109,9 @@ The rest of the framework, beside the build:
 access($surface, $context, $account)           Surfaces::access()
   the situation's permission, %keys filled from the known identity,
   then the surface's access class if it has one,
-  then each child the context resolves that invokes no situation of its
-  own, through its own access class, which may refuse and never allow
-  (a child invoked through a situation was answered for at build)
+  then each slot variant a locked deciding key chose, through its own
+  access class, which may refuse and never allow (every child's access
+  was answered at build, however it was invoked)
 
 target($surface, $context, $built)              Surfaces::target()
   the surface's SurfaceTargetInterface, wrapped in a SurfaceTargetAdapter

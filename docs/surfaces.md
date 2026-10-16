@@ -276,16 +276,18 @@ top, as above. Two answers about the same keys combine to the narrower,
 and either carries its cacheability, which reaches the built surface,
 both contracts and the form.
 
-| Answer | At the top (a situation asked on its own) | At a child invoked through a situation |
+| Answer | At the top (a situation asked on its own) | At a child, however invoked |
 | --- | --- | --- |
 | open | allowed, as today | as today |
 | locked | denied: the whole surface shown and not saved is not built yet | the parent's key locked: fieldset drawn disabled, every key `readOnly` and `x-surface.locked` in both contracts and locked in the tool's `values`, posted values ignored ([Value semantics](semantics.md#locked-and-omitted-children)) |
 | omitted | denied (route 403, tool access denied) | the key left out of the built surface, both contracts, the form, the tool's `values` and the read tool's output; a posted value is an unknown key; a write keeps what is stored under it |
 
 Access composes: the parent's situation access gates the whole surface
-as above, and each child's situation access then decides that child's
-keys. A child that invokes no situation of its own is asked only by
-`access()`, as before, and may refuse the whole surface, never allow.
+as above, and each child's access then decides that child's keys
+([Child situations](#child-situations)). One child may refuse the whole
+surface, never allow: a slot's variant chosen by a locked deciding key,
+which the parent cannot be written without ([A chosen variant may
+refuse](decisions.md#a-chosen-variant-may-refuse)).
 
 ## Targets
 
@@ -376,8 +378,8 @@ create, each key's default is the value stored now. The definition is static, wh
   anyone calls, and one that needs an existing thing refines `values`
   to its real context (a field's settings become its type's) through
   the Tool API's own input refiners once its parameters arrive.
-- **Access** is the situation's, decisively, then each subsurface the
-  context resolves may refuse through its own access class.
+- **Access** is the situation's, decisively, then a slot variant its
+  locked deciding key chose may refuse through its own access class.
 - **Execution** is the situation, the build, and one pipeline submit to
   the composed target; a dry run stops after prepare.
 - **Outputs** are the accepted `values`, `committed`, and the surface's
@@ -779,7 +781,8 @@ first of these that applies:
    situation. A context handed whole, `withChild('storage',
    FieldStorageSurface::edit($storage))`, is still taken as it is: the
    parent built it, so the child invokes no situation of its own through
-   it and is asked no access of its own at build.
+   it, and no situation's permission is asked of it. Its access class
+   still answers, below.
 2. **The child's situation whose id is the parent's operation.** Adding
    a field invokes its storage's own `add`.
 3. **The child's default**, the one situation it marks
@@ -801,12 +804,28 @@ operation or as the default is passed over for the next step, since a
 context that knows nothing yet (what a tool's static definition and the
 catalogue build in) cannot invoke a child situation that needs identity.
 
-That situation's access then decides the child's keys for the current
-account ([Three answers](#three-answers)): its permission, `%key`
-filled from the child's context (a permission the account lacks omits
-the child; one the context cannot name, or the very one the parent's
-own situation asks, says nothing, the parent's access having asked
-already), then the child's access class, the narrower answer standing. An alter naming a situation of the child,
+The child's access then decides its keys for the current account
+([Three answers](#three-answers)), and two rules say what is asked:
+
+- **The child's access class always answers**, however the child was
+  invoked: named, matched, the default, inherited, or a context handed
+  whole. A module like field_permissions hides a single field through
+  access, and a parent building its child's context itself must not be
+  a way around that. What the answer read reaches the parent's
+  cacheability, so both contracts and the form vary by it. An inherited
+  child with no access class is asked nothing and stays open.
+- **A situation's permission gates only a situation the build
+  resolved** (named, matched or the default): its `%key` is filled from
+  the child's context, and a permission the account lacks omits the
+  child; one the context cannot name, or the very one the parent's own
+  situation asks, says nothing, the parent's access having asked
+  already. A context handed whole asks no permission: the parent that
+  built it took responsibility for entering it, as a field does for its
+  storage.
+
+Permission is about entering a situation; access is about what may be
+done with what is there, and only access composes down the tree. Where
+both are asked, the narrower answer stands. An alter naming a situation of the child,
 `#[AltersSurface(Child::class, situations: ['enter'])]`, applies only
 where that situation is invoked. A slot's variant is resolved the same
 way, one variant at a time; a variant whose access is not open is not
@@ -817,7 +836,9 @@ The test module's larder is the worked example: one spice rack surface
 attached twice, invoked through its `edit` by operation at one key and
 through `restock`, which the larder's edit situation names, at the
 other, with an access class that answers open, locked or omitted by
-permission (`ChildSituationTest`).
+permission. Its `stock` situation hands both racks a context whole,
+where the access class answers the same and `restock`'s permission is
+not asked (`ChildSituationTest`).
 
 ### Derived variants
 

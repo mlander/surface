@@ -135,8 +135,11 @@ final class SurfaceContext {
    * @endcode
    *
    * Naming is the spelling that keeps the child's situation in charge of
-   * its own access and alters, and it is checked: a situation the child
-   * does not declare is refused when the parent is built.
+   * its own permission and alters, and it is checked: a situation the
+   * child does not declare is refused when the parent is built. A context
+   * handed whole asks no situation's permission, the parent having taken
+   * responsibility for entering it; the child's access class answers
+   * either way.
    *
    * @param string $key
    *   The key the subsurface sits at.
