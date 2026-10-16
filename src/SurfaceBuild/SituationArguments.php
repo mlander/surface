@@ -20,7 +20,7 @@ use Drupal\Core\Routing\RouteMatchInterface;
  *
  * Which entity type a parameter takes is read off its type the way the
  * Tool API reads a typed method's: the one entity type whose class
- * satisfies it.
+ * satisfies it; a derived situation's parameter names it instead.
  */
 final class SituationArguments {
 
@@ -55,6 +55,9 @@ final class SituationArguments {
   public function entityTypeOf(SituationParameter $parameter): ?string {
     if (!$parameter->takesObject()) {
       return NULL;
+    }
+    if ($parameter->entityType !== NULL) {
+      return $parameter->entityType;
     }
     $class = (string) $parameter->type;
     if (!array_key_exists($class, $this->entityTypes)) {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface\SurfaceBuild;
 
 use Drupal\data_surface\Surface\Attribute\AltersSurface;
+use Drupal\data_surface\Surface\Attribute\DerivesSurfaces;
 use Drupal\data_surface\Surface\Attribute\Situation;
 use Drupal\data_surface\Surface\Attribute\Surface;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
@@ -20,16 +21,20 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
  * container is rebuilt without it.
  *
  * What it keeps is deliberately small: which classes carry #[Surface],
- * which carry #[AltersSurface], and which have a #[Situation] method,
- * each with the module it came from. The reading of every attribute on
- * those classes — labels, identity, refiners, watched keys — is the
- * registry's, at run time, and cached the way plugin definitions are,
- * because a situation's label is translatable markup and a container
- * parameter holds scalars only.
+ * which carry #[AltersSurface], which carry #[DerivesSurfaces], and
+ * which have a #[Situation] method, each with the module it came from;
+ * and, for each deriver whose attribute names an override attribute,
+ * the classes in any src/Surface carrying that attribute. The reading
+ * of every attribute on those classes — labels, identity, refiners,
+ * watched keys — is the registry's, at run time, and cached the way
+ * plugin definitions are, because a situation's label is translatable
+ * markup and a container parameter holds scalars only.
  *
  * Classes that must be built with services are registered as autowired
  * services here, keyed by class name, the way a hook class is: every
- * alter, and every target and access class a discovered surface names.
+ * alter and every deriver, and every target and access class a
+ * discovered surface names. A derived surface's target and access class
+ * are named at run time, so the class resolver builds them.
  * A surface itself is not registered and never instantiated: its shape
  * and its refiners are static, called on the class.
  *
@@ -61,12 +66,26 @@ final class SurfaceCollectorPass implements CompilerPassInterface {
    */
   public function process(ContainerBuilder $container): void {
     $root = $container->hasParameter('app.root') ? $container->getParameter('app.root') . '/' : '';
-    $found = ['surfaces' => [], 'alters' => [], 'situations' => []];
+    $found = ['surfaces' => [], 'alters' => [], 'situations' => [], 'derivers' => [], 'overrides' => []];
+    $scanned = [];
     foreach ($container->getParameter('container.modules') as $module => $info) {
       $module_dir = $root . dirname($info['pathname']);
       foreach (self::DIRECTORIES as $directory) {
         foreach (self::classesIn($module_dir . '/src/' . $directory, 'Drupal\\' . $module . '\\' . $directory) as $class) {
-          $this->collect($container, new \ReflectionClass($class), (string) $module, $found);
+          $reflection = new \ReflectionClass($class);
+          $this->collect($container, $reflection, (string) $module, $found);
+          if ($directory === 'Surface') {
+            $scanned[$class] = [(string) $module, $reflection];
+          }
+        }
+      }
+    }
+    // A deriver's overrides may live in a module scanned after its own.
+    foreach (array_keys($found['derivers']) as $deriver) {
+      $attribute = (new \ReflectionClass($deriver))->getAttributes(DerivesSurfaces::class)[0]->newInstance();
+      foreach ($attribute->overrides === NULL ? [] : $scanned as $class => [$module, $reflection]) {
+        if ($reflection->getAttributes($attribute->overrides) !== []) {
+          $found['overrides'][$deriver][$class] = $module;
         }
       }
     }
@@ -101,6 +120,10 @@ final class SurfaceCollectorPass implements CompilerPassInterface {
     }
     if ($class->getAttributes(AltersSurface::class) !== []) {
       $found['alters'][$name] = $module;
+      self::registerAutowired($container, $name);
+    }
+    if ($class->getAttributes(DerivesSurfaces::class) !== []) {
+      $found['derivers'][$name] = $module;
       self::registerAutowired($container, $name);
     }
     foreach ($class->getMethods() as $method) {

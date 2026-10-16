@@ -36,11 +36,13 @@ final class DataSurfaceCatalogueDocument {
    *
    * @param array $catalogue
    *   What SurfaceCatalogue::describe() returns.
+   * @param array $derivers
+   *   What SurfaceCatalogue::derivers() returns.
    *
    * @return string
    *   The markdown.
    */
-  public static function render(array $catalogue): string {
+  public static function render(array $catalogue, array $derivers = []): string {
     $document = self::intro();
     $document .= "| Surface | Class | Identity | Situations |\n| --- | --- | --- | --- |\n";
     foreach ($catalogue as $surface) {
@@ -48,14 +50,16 @@ final class DataSurfaceCatalogueDocument {
         "| [`%s`](#%s) | `%s` | %s | %s |\n",
         $surface['id'],
         self::anchor($surface['id']),
-        self::short($surface['class']),
+        $surface['class'] === NULL ? 'derived' : self::short($surface['class']),
         self::codes($surface['identity']),
         self::codes(array_column($surface['situations'], 'id')),
       );
     }
     foreach ($catalogue as $surface) {
       $document .= "\n## " . $surface['id'] . "\n\n";
-      $document .= '`' . $surface['class'] . '`, in `' . $surface['module'] . "`.\n\n";
+      $document .= $surface['class'] === NULL
+        ? 'Derived under `' . $surface['deriver'] . '`, in `' . $surface['module'] . "`.\n\n"
+        : '`' . $surface['class'] . '`, in `' . $surface['module'] . "`.\n\n";
       $document .= '- Identity: ' . self::codes($surface['identity']) . "\n";
       $document .= '- Target: ' . ($surface['target'] === NULL ? 'none; its host or its parent stores it' : '`' . $surface['target'] . '`') . "\n";
       $document .= '- Access: ' . ($surface['access'] === NULL ? 'the situation\'s permission alone' : '`' . $surface['access'] . '`') . "\n";
@@ -100,7 +104,38 @@ final class DataSurfaceCatalogueDocument {
         $document .= "\n- Slot `" . $key . '` is filled, for every other value, by variants derived from ' . $source . ".\n";
       }
     }
+    if ($derivers !== []) {
+      $document .= "\n## Derivers\n\n" . self::deriversIntro() . "\n";
+      $document .= "| Base | Deriver | Module | Overridden by |\n| --- | --- | --- | --- |\n";
+      foreach ($derivers as $deriver) {
+        $document .= sprintf(
+          "| `%s` | `%s` | `%s` | %s |\n",
+          $deriver['base'],
+          $deriver['class'],
+          $deriver['module'],
+          $deriver['overrides'] === NULL ? 'nothing' : 'classes carrying `' . self::short($deriver['overrides']) . '`' . ($deriver['overridden'] === [] ? ', none here' : ': ' . self::codes(array_map(self::short(...), array_keys($deriver['overridden'])))),
+        );
+      }
+    }
     return $document;
+  }
+
+  /**
+   * The prose above the derivers.
+   *
+   * @return string
+   *   The paragraph.
+   */
+  private static function deriversIntro(): string {
+    return <<<'MARKDOWN'
+A deriver makes surfaces from site state at discovery, one per bundle or
+per field, under the id `<base>:<derivative>`. Which derivatives exist
+depends on the site (its bundles, their form displays and fields), so
+this file, generated on a test site with none, lists the derivers and
+not what they derive; the catalogue service lists every derivative a
+site has, with `class` empty and `deriver` naming the base.
+
+MARKDOWN;
   }
 
   /**

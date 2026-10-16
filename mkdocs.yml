@@ -30,6 +30,7 @@ nav:
   - How it fits: how-it-fits.md
   - Surfaces as classes: surfaces.md
   - Surface catalogue: catalogue.md
+  - Content entities: entities.md
   - Declaring a surface: declaring-a-surface.md
   - Decisions: decisions.md
   - Values:

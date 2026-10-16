@@ -99,14 +99,14 @@ abstract class SurfaceSituationToolBase extends ToolBase {
       throw new \LogicException(sprintf('The %s tool is not one of the derived surface tools.', $this->getPluginId()));
     }
     $surface = $this->surfaceRegistry->getDefinition(substr($derivative, 0, $separator));
-    $situation = $this->surfaceRegistry->getSituation($surface->class, substr($derivative, $separator + 1));
+    $situation = $this->surfaceRegistry->getSituation($surface->name(), substr($derivative, $separator + 1));
     $arguments = [];
     foreach ($situation->parameters as $parameter) {
       if (($values[$parameter->name] ?? NULL) !== NULL) {
         $arguments[$parameter->name] = $values[$parameter->name];
       }
     }
-    return [$surface, $situation, $this->surfaces->situation($surface->class, $situation->id, $arguments)];
+    return [$surface, $situation, $this->surfaces->situation($surface->name(), $situation->id, $arguments)];
   }
 
   /**
@@ -124,7 +124,7 @@ abstract class SurfaceSituationToolBase extends ToolBase {
    */
   protected function situationAccess(SurfaceDefinition $surface, SurfaceContext $context, AccountInterface $account): AccessResultInterface {
     return DataSurfaceAccess::decisive(
-      $this->surfaces->access($surface->class, $context, $account),
+      $this->surfaces->access($surface->name(), $context, $account),
       'The situation\'s permission and the surface\'s own access both have to allow this.',
     );
   }

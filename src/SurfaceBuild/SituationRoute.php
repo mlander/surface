@@ -117,7 +117,7 @@ final class SituationRoute {
         self::SITUATION,
       ));
     }
-    $class = $registry->getDefinition($surface)->class;
+    $class = $registry->getDefinition($surface)->name();
     $situation = $registry->getSituation($class, $id);
     $given = $arguments->fromRoute($situation, $route_match);
     $subject = NULL;

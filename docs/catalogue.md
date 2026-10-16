@@ -204,3 +204,17 @@ one thing whole, with a single entity or with every identity key.
 - Identity: none
 - Target: none; its host or its parent stores it
 - Access: the situation's permission alone
+
+## Derivers
+
+A deriver makes surfaces from site state at discovery, one per bundle or
+per field, under the id `<base>:<derivative>`. Which derivatives exist
+depends on the site (its bundles, their form displays and fields), so
+this file, generated on a test site with none, lists the derivers and
+not what they derive; the catalogue service lists every derivative a
+site has, with `class` empty and `deriver` naming the base.
+
+| Base | Deriver | Module | Overridden by |
+| --- | --- | --- | --- |
+| `entity.content` | `Drupal\data_surface_entity\Surface\ContentEntitySurfaces` | `data_surface_entity` | classes carrying `FieldItemSurface`, none here |
+| `field.item` | `Drupal\data_surface_entity\Surface\FieldItemSurfaces` | `data_surface_entity` | classes carrying `FieldItemSurface`, none here |

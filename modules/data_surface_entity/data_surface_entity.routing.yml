@@ -1,0 +1,44 @@
+# A basic page's create and update forms, served by the derived content
+# entity surface entity.content:node.page and the generic situation
+# form, with the contract panel beside each; and a landing page saying
+# what was derived and what was left out, read from the registry.
+#
+# Each route is one situation of the derived surface, named by its id:
+# a derived surface has no class. The edit route's {id} is the
+# situation's one parameter, the node, upcast; a node of another bundle
+# is refused by the situation, and so by the route's access.
+
+data_surface_entity.index:
+  path: '/surface-entity'
+  defaults:
+    _controller: '\Drupal\data_surface_entity\Controller\EntitySurfacesController::index'
+    _title: 'Content entity surfaces'
+  requirements:
+    _permission: 'access content overview'
+
+data_surface_entity.node_page_add:
+  path: '/surface-entity/node/page/add'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceSituationForm'
+    _title: 'Add a basic page (surface)'
+    _data_surface_surface: 'entity.content:node.page'
+    _data_surface_situation: 'add'
+    _data_surface_panel: 'data_surface_tool.contract_panel'
+  requirements:
+    _data_surface_situation_access: 'TRUE'
+
+data_surface_entity.node_page_edit:
+  path: '/surface-entity/node/{id}/edit'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceSituationForm'
+    _title: 'Edit a basic page (surface)'
+    _data_surface_surface: 'entity.content:node.page'
+    _data_surface_situation: 'edit'
+    _data_surface_panel: 'data_surface_tool.contract_panel'
+  requirements:
+    _data_surface_situation_access: 'TRUE'
+    id: '\d+'
+  options:
+    parameters:
+      id:
+        type: 'entity:node'

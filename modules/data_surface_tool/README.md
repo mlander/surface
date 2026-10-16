@@ -86,7 +86,9 @@ Five pieces:
   and `Plugin\tool\Tool\SurfaceSituationTool`, with `SituationInputs`
   describing them. Here that is `data_surface:field.instance:add`,
   `:reuse` and `:edit` and `data_surface:field.storage:edit`; the node
-  type demo adds `data_surface:node.type:add` and `:edit`. The inputs
+  type demo adds `data_surface:node.type:add` and `:edit`, and
+  `data_surface_entity` one `add` and one `edit` per content entity
+  bundle with a form display, `data_surface:entity.content:node.page:add`. The inputs
   are the situation's parameters (an entity parameter as its id; a
   scalar one named for a surface key described as that key), the
   surface's keys the situation does not know as `values`, and
@@ -175,6 +177,7 @@ base plugin id:
 | `data_surface:field.instance:edit:read` | `field` |
 | `data_surface:field.storage:edit:read` | `storage` |
 | `data_surface:registration.step1:configure:read`, `step2`, `step3` | nothing |
+| `data_surface:entity.content:<entity type>.<bundle>:edit:read`, with `data_surface_entity` | `id` |
 
 - **Which situations.** One that needs nothing and whose context does
   not create, and one that needs a subject and whose parameters name one

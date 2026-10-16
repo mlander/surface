@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface\SurfaceBuild;
 
+use Drupal\Core\Entity\EntityInterface;
+
 /**
  * One parameter of a #[Situation] method, as discovery read it.
  *
@@ -31,6 +33,10 @@ final class SituationParameter {
    *   Whether the parameter may be left out.
    * @param bool $nullable
    *   Whether NULL is a value it takes.
+   * @param string|null $entityType
+   *   The entity type it takes, when that is said rather than read off
+   *   the type: a derived situation's entity parameter, whose type is
+   *   any entity, names its entity type.
    */
   public function __construct(
     public readonly string $name,
@@ -38,7 +44,26 @@ final class SituationParameter {
     public readonly bool $builtin,
     public readonly bool $optional,
     public readonly bool $nullable,
+    public readonly ?string $entityType = NULL,
   ) {}
+
+  /**
+   * Reads one parameter a derived situation declares.
+   *
+   * @param string $name
+   *   The parameter name.
+   * @param string $type
+   *   A builtin type, or `entity:<entity type id>`.
+   *
+   * @return self
+   *   The parameter, required and not nullable.
+   */
+  public static function fromDeclaration(string $name, string $type): self {
+    if (str_starts_with($type, 'entity:')) {
+      return new self($name, EntityInterface::class, FALSE, FALSE, FALSE, substr($type, 7));
+    }
+    return new self($name, $type, TRUE, FALSE, FALSE);
+  }
 
   /**
    * Reads one parameter of a situation method.
@@ -76,9 +101,13 @@ final class SituationParameter {
    * Says the parameter the way a signature does.
    *
    * @return string
-   *   For example "NodeTypeInterface $type" or "string $bundle".
+   *   For example "NodeTypeInterface $type", "string $bundle", or for a
+   *   derived situation's entity parameter "entity:node $id".
    */
   public function describe(): string {
+    if ($this->entityType !== NULL) {
+      return 'entity:' . $this->entityType . ' $' . $this->name;
+    }
     $type = $this->type === NULL ? '' : (($this->nullable && $this->type !== 'mixed' ? '?' : '') . self::shortName($this->type) . ' ');
     return $type . '$' . $this->name;
   }

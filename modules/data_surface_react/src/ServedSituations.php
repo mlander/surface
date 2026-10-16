@@ -101,10 +101,10 @@ final class ServedSituations {
    */
   public function resolve(string $surface, string $situation, array $parameters): ServedSituation {
     $definition = $this->registry->getDefinition($surface);
-    $found = $this->registry->getSituation($definition->class, $situation);
-    $context = $this->surfaces->situation($definition->class, $situation, $parameters);
-    $built = $this->surfaces->build($definition->class, $context);
-    $target = $definition->target === NULL ? NULL : $this->surfaces->target($definition->class, $context, $built);
+    $found = $this->registry->getSituation($definition->name(), $situation);
+    $context = $this->surfaces->situation($definition->name(), $situation, $parameters);
+    $built = $this->surfaces->build($definition->name(), $context);
+    $target = $definition->target === NULL ? NULL : $this->surfaces->target($definition->name(), $context, $built);
     return new ServedSituation($definition, $found, $parameters, $context, $built, $target);
   }
 
@@ -125,7 +125,7 @@ final class ServedSituations {
    */
   public function access(ServedSituation $served, ?AccountInterface $account = NULL): AccessResultInterface {
     return DataSurfaceAccess::decisive(
-      $this->surfaces->access($served->definition->class, $served->context, $account),
+      $this->surfaces->access($served->definition->name(), $served->context, $account),
       'The surface this page serves may not be written by this account.',
     );
   }
@@ -197,9 +197,12 @@ final class ServedSituations {
    * The answer is checked rather than trusted: the situation is built
    * from those parameters, has to load what they name, and has to know
    * the same identity the write was given. A content type added as
-   * `recipe` lives at `edit` with `{type: recipe}`; a field added to a
-   * bundle has no answer, because its edit situation takes the field's
-   * own id, which neither its outputs nor its identity carry.
+   * `recipe` lives at `edit` with `{type: recipe}`; a page added through
+   * its derived surface lives at `edit` with `{id: <its new id>}`, which
+   * its `id` output says, the add situation knowing only that it had
+   * none; a field added to a bundle has no answer, because its edit
+   * situation takes the field's own id, which neither its outputs nor
+   * its identity carry.
    *
    * @param \Drupal\data_surface_react\ServedSituation $served
    *   The situation that wrote.
@@ -216,9 +219,14 @@ final class ServedSituations {
     if (!$served->context->creates) {
       return NULL;
     }
-    $identity = array_intersect_key($values, array_flip($served->definition->identity)) + $served->context->known;
+    // An identity key the write left empty (an id storage gives on save)
+    // names nothing yet: the outputs say what it became.
+    $identity = array_filter(
+      array_intersect_key($values, array_flip($served->definition->identity)) + $served->context->known,
+      static fn (mixed $value): bool => $value !== NULL,
+    );
     $supplied = $outputs + $identity;
-    foreach ($this->registry->getSituations($served->definition->class) as $id => $candidate) {
+    foreach ($this->registry->getSituations($served->definition->name()) as $id => $candidate) {
       if ($id === $served->situation->id) {
         continue;
       }
@@ -237,7 +245,7 @@ final class ServedSituations {
         continue;
       }
       try {
-        $context = $this->surfaces->situation($served->definition->class, (string) $id, $parameters);
+        $context = $this->surfaces->situation($served->definition->name(), (string) $id, $parameters);
       }
       catch (\InvalidArgumentException) {
         continue;

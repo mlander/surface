@@ -53,7 +53,7 @@ final class SurfaceSituationReadTool extends SurfaceSituationToolBase {
     if ($context->creates) {
       return ExecutableResult::failure($this->t('@label creates what it is about, so nothing is stored to read.', ['@label' => (string) $situation->label]));
     }
-    $built = $this->surfaces->build($surface->class, $context);
+    $built = $this->surfaces->build($surface->name(), $context);
     return ExecutableResult::success(
       $this->t('@label: the stored values were read, and nothing was written.', ['@label' => (string) $situation->label]),
       [SituationInputs::VALUES => $this->situationInputs->stored($surface, $built, $context)],

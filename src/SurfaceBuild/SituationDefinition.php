@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface\SurfaceBuild;
 
+use Drupal\data_surface\Surface\SurfaceCallable;
+
 /**
  * One #[Situation] method, as discovery read it.
  *
@@ -18,12 +20,13 @@ final class SituationDefinition {
    *   The situation id, which is the operation of the context it builds.
    * @param string|\Stringable $label
    *   For people and for tool descriptions.
-   * @param class-string $surface
-   *   The surface it is a situation of.
+   * @param string $surface
+   *   The surface it is a situation of: its class, or a derived
+   *   surface's id.
    * @param class-string $class
-   *   The class the static method is on.
+   *   The class the method is on.
    * @param string $method
-   *   The static method that builds the context.
+   *   The method that builds the context: static, for a #[Situation].
    * @param string|null $permission
    *   The static part of access, `%key` placeholders unresolved.
    * @param string $module
@@ -34,6 +37,11 @@ final class SituationDefinition {
    * @param bool $default
    *   Whether it is the situation the surface is invoked through as a
    *   child when nothing else picks one.
+   * @param \Drupal\data_surface\Surface\SurfaceCallable|null $context
+   *   For a derived surface's situation, the method and the arguments it
+   *   is bound to, called with the resolved arguments by name first;
+   *   NULL for a #[Situation] method, called with them as named
+   *   arguments.
    */
   public function __construct(
     public readonly string $id,
@@ -45,6 +53,7 @@ final class SituationDefinition {
     public readonly string $module,
     public readonly array $parameters = [],
     public readonly bool $default = FALSE,
+    public readonly ?SurfaceCallable $context = NULL,
   ) {}
 
   /**

@@ -78,7 +78,17 @@ alter rewording a key it does not own. A service implementing
 `SurfaceBuild\DerivedVariantsInterface` fills a slot for the values no
 variant class fills (`data_surface_tool` derives a field type's settings,
 and its storage settings, from its config schema). A child whose shape cannot be listed at all is
-a `#[RefinesInput]` method on an `any` key returning a map. A child is
+a `#[RefinesInput]` method on an `any` key returning a map.
+
+A shape that is the site's rather than the code's (one per bundle, one
+per field) is derived: a class in `src/Surface/` carrying
+`#[DerivesSurfaces(base:)]` and implementing `SurfaceDeriverInterface`
+returns `DerivedSurface` values at discovery, each `<base>:<derivative>`
+with no class (`SurfaceDefinition::$class` NULL; every caller asks by
+`name()`), its shape and situations `SurfaceCallable`s, cached under the
+tags of what it was read from. `data_surface_entity` derives a surface
+per content entity bundle and one per field, with field access as each
+field child's access (`docs/entities.md`). A child is
 built by the same build step in its own frame and sealed into the parent's entry as a `SurfaceAttachment`,
 or a `SurfaceSlot` of them; the pipeline, refinement, the form and the
 tool bridge recurse through those entries, and nothing in a parent can

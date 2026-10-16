@@ -202,6 +202,12 @@ their configuration may change without a deprecation path.
   surfaces and their settings derived from config schema; the contract
   panel; and a generated comparison of the field tools against Tool
   Belt's. Needs [Tool](https://www.drupal.org/project/tool).
+- **Data Surface - Content entities** (`data_surface_entity`) — a
+  surface derived for every content entity bundle with a form display,
+  one child per field derived from its typed data, field access as each
+  child's access, and a target that validates the entity; a basic page
+  added and edited through it at `/surface-entity`. Needs `node` and
+  `data_surface_tool`; see `docs/entities.md`.
 - **Data Surface Demo - Node type tool**
   (`data_surface_demo_node_type_tool`) — no code of its own: the
   generated comparison between `data_surface:node.type:add`, the tool

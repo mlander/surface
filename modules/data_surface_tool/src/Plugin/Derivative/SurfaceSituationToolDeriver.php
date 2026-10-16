@@ -116,12 +116,12 @@ final class SurfaceSituationToolDeriver extends DeriverBase implements Container
       // its host; one a plugin names with #[UsesSurface] is configured
       // through that plugin's host, which holds the instance and supplies
       // the target. Neither is a tool of its own.
-      $plugins = $this->plugins->usedBy($surface->class);
+      $plugins = $this->plugins->usedBy($surface->name());
       if ($surface->target === NULL || $plugins !== []) {
         continue;
       }
       try {
-        $situations = $this->registry->getSituations($surface->class);
+        $situations = $this->registry->getSituations($surface->name());
       }
       catch (\LogicException $e) {
         $this->skip($surface->id, $e);

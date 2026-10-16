@@ -1,0 +1,321 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\Tests\data_surface\Kernel;
+
+use Drupal\Core\Entity\Entity\EntityFormDisplay;
+use Drupal\data_surface\DataSurfaceInterface;
+use Drupal\data_surface\Surface\SurfaceContext;
+use Drupal\data_surface\SurfaceBuild\SurfaceCollectorPass;
+use Drupal\data_surface\SurfaceBuild\SurfaceRegistry;
+use Drupal\data_surface\SurfaceBuild\SurfacesInterface;
+use Drupal\data_surface_entity\Access\ContentEntityAccess;
+use Drupal\data_surface_entity\Access\FieldItemAccess;
+use Drupal\data_surface_entity\Surface\ContentEntitySurfaces;
+use Drupal\data_surface_entity\Surface\FieldItemSurfaces;
+use Drupal\data_surface_entity\Target\ContentEntityTarget;
+use Drupal\Tests\user\Traits\UserCreationTrait;
+use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+
+/**
+ * Tests the surfaces derived per bundle and per field, at discovery.
+ *
+ * One content entity surface per bundle with a stored form display, one
+ * field item surface per field it carries, each derived from the item's
+ * typed data, and the fields left out reported with the reason; all of
+ * it cached with the rest of discovery under the tags of what it was
+ * read from.
+ *
+ * @see \Drupal\data_surface_entity\Surface\ContentEntitySurfaces
+ * @see \Drupal\data_surface_entity\Surface\FieldItemSurfaces
+ */
+#[Group('data_surface')]
+#[RunTestsInSeparateProcesses]
+class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
+
+  use ContentEntityFixtureTrait;
+  use UserCreationTrait;
+
+  /**
+   * {@inheritdoc}
+   */
+  protected static $modules = self::ENTITY_MODULES;
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function setUp(): void {
+    parent::setUp();
+    $this->installEntityFixture();
+    $this->setUpCurrentUser(admin: TRUE);
+  }
+
+  /**
+   * Gets the registry.
+   *
+   * @return \Drupal\data_surface\SurfaceBuild\SurfaceRegistry
+   *   The service.
+   */
+  protected function registry(): SurfaceRegistry {
+    return $this->container->get('data_surface.surface_registry');
+  }
+
+  /**
+   * Gets the build step.
+   *
+   * @return \Drupal\data_surface\SurfaceBuild\SurfacesInterface
+   *   The service.
+   */
+  protected function surfaces(): SurfacesInterface {
+    return $this->container->get('data_surface.surfaces');
+  }
+
+  /**
+   * Builds a bundle's surface for adding.
+   *
+   * @param string $bundle
+   *   The node bundle.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The surface.
+   */
+  protected function add(string $bundle): DataSurfaceInterface {
+    return $this->surfaces()->buildSituation('entity.content:node.' . $bundle, 'add');
+  }
+
+  /**
+   * Gets the child at a key.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The parent.
+   * @param string $key
+   *   The key.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The child.
+   */
+  protected static function child(DataSurfaceInterface $surface, string $key): DataSurfaceInterface {
+    $attachment = $surface->getDefinitions()->entry($key)?->attachment;
+    assert($attachment !== NULL, $key);
+    return $attachment->child;
+  }
+
+  /**
+   * Tests one surface per bundle with a form display, and its situations.
+   */
+  public function testOneSurfacePerBundleWithFormDisplay(): void {
+    $page = $this->registry()->getDefinition('entity.content:node.page');
+    $this->assertTrue($this->registry()->hasDefinition('entity.content:node.kitchen'));
+    // No stored form display, no surface.
+    $this->assertFalse($this->registry()->hasDefinition('entity.content:node.article'));
+
+    $this->assertNull($page->class);
+    $this->assertTrue($page->isDerived());
+    $this->assertSame('entity.content:node.page', $page->name());
+    $this->assertSame('entity.content', $page->base);
+    $this->assertSame(ContentEntitySurfaces::class, $page->deriver);
+    $this->assertSame('data_surface_entity', $page->module);
+    $this->assertSame(['entity_type', 'bundle', 'id'], $page->identity);
+    $this->assertSame(ContentEntityTarget::class, $page->target);
+    $this->assertSame(ContentEntityAccess::class, $page->access);
+    $this->assertTrue($page->hasOutputs());
+
+    $situations = $this->registry()->getSituations('entity.content:node.page');
+    $this->assertSame(['add', 'edit'], array_keys($situations));
+    $this->assertSame([], $situations['add']->parameters);
+    $this->assertSame(['entity:node $id'], array_map(static fn ($parameter): string => $parameter->describe(), $situations['edit']->parameters));
+    $this->assertSame('node', $this->container->get('data_surface.situation_arguments')->entityTypeOf($situations['edit']->parameters[0]));
+
+    // The add situation knows the bundle, and that there is no id yet.
+    $context = $this->surfaces()->situation('entity.content:node.page', 'add');
+    $this->assertTrue($context->creates);
+    $this->assertSame(['entity_type' => 'node', 'bundle' => 'page', 'id' => NULL], $context->known);
+
+    // One child per field the display shows, in its order, after the
+    // identity; the tags are a collection, and left out.
+    $surface = $this->add('page');
+    $this->assertSame(
+      [
+        'entity_type', 'bundle', 'id',
+        'title', 'field_description', 'body', 'uid', 'created', 'status', 'promote', 'revision_log',
+      ],
+      array_keys($surface->getDefinitions()->entries()),
+    );
+    $this->assertTrue($surface->isLocked('id'));
+    $this->assertNull($surface->getDefault('id'));
+    $title = $surface->getDefinitions()->entry('title')?->attachment;
+    $this->assertNotNull($title);
+    $this->assertSame('field.item:node.page.title', $title->id);
+    $this->assertSame('field.item:node.page.title', $title->source);
+    $this->assertSame('integer', $surface->getOutputDefinitions()->toArray()['id']->getDataType());
+
+    $item = $this->registry()->getDefinition('field.item:node.page.body');
+    $this->assertSame(FieldItemSurfaces::class, $item->deriver);
+    $this->assertSame(FieldItemAccess::class, $item->access);
+    $this->assertNull($item->target);
+    $this->assertSame(['add', 'edit'], array_keys($this->registry()->getSituations('field.item:node.page.body')));
+  }
+
+  /**
+   * Tests the item surface derived for each covered field type.
+   */
+  public function testFieldItemSurfacesForEachCoveredType(): void {
+    $surface = $this->add('kitchen');
+    $shape = [];
+    foreach (array_keys(static::KITCHEN) + ['changed' => 'changed'] as $name) {
+      if (!$surface->getDefinitions()->has($name)) {
+        continue;
+      }
+      foreach (static::child($surface, $name)->getDefinitions() as $key => $definition) {
+        $shape[$name][$key] = $definition->getDataType();
+      }
+    }
+    $this->assertSame([
+      'field_string' => ['value' => 'string'],
+      'field_string_long' => ['value' => 'string'],
+      'field_text' => ['value' => 'string', 'format' => 'string'],
+      'field_text_long' => ['value' => 'string', 'format' => 'string'],
+      'field_text_with_summary' => ['value' => 'string', 'summary' => 'string', 'format' => 'string'],
+      'field_boolean' => ['value' => 'boolean'],
+      'field_integer' => ['value' => 'integer'],
+      'field_decimal' => ['value' => 'float'],
+      'field_float' => ['value' => 'float'],
+      'field_email' => ['value' => 'email'],
+      'field_telephone' => ['value' => 'string'],
+      'field_list_string' => ['value' => 'string'],
+      'field_list_integer' => ['value' => 'integer'],
+      'field_list_float' => ['value' => 'string'],
+      'field_date' => ['value' => 'string'],
+      'field_datetime' => ['value' => 'string'],
+      'field_timestamp' => ['value' => 'integer'],
+      'field_link' => ['uri' => 'uri', 'title' => 'string'],
+      'field_term' => ['target_id' => 'integer'],
+      'changed' => ['value' => 'integer'],
+    ], $shape);
+
+    $constraint = static fn (string $field, string $key, string $name): ?array => static::child($surface, $field)->getDefinition($key)?->getConstraints()[$name] ?? NULL;
+    // What the field type and its settings narrow, carried.
+    $this->assertSame(40, $constraint('field_string', 'value', 'Length')['max']);
+    $this->assertSame(60, $constraint('field_text', 'value', 'Length')['max']);
+    $range = (array) $constraint('field_integer', 'value', 'Range');
+    $this->assertEquals(['min' => 1, 'max' => 9], array_intersect_key($range, array_flip(['min', 'max'])));
+    $this->assertSame(['red', 'blue'], $constraint('field_list_string', 'value', 'LabeledChoice')['choices']);
+    $this->assertSame(['red' => 'Red', 'blue' => 'Blue'], $constraint('field_list_string', 'value', 'LabeledChoice')['labels']);
+    $this->assertSame([1, 2], $constraint('field_list_integer', 'value', 'LabeledChoice')['choices']);
+    $this->assertSame(['1.5'], $constraint('field_list_float', 'value', 'LabeledChoice')['choices']);
+    $this->assertSame('/^\d{4}-\d{2}-\d{2}$/', $constraint('field_date', 'value', 'Regex')['pattern']);
+    $this->assertSame('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/', $constraint('field_datetime', 'value', 'Regex')['pattern']);
+    // Every enabled format, or the ones the field allows.
+    $this->assertSame(['basic', 'plain_text', 'trusted'], $constraint('field_text', 'format', 'LabeledChoice')['choices']);
+    $this->assertSame(['basic'], $constraint('field_text_long', 'format', 'LabeledChoice')['choices']);
+    // A reference's targets are its selection handler's, listed by the
+    // options resolver while there are few enough.
+    $this->assertSame(['entityTypeId' => 'node', 'bundle' => 'kitchen', 'fieldName' => 'field_term'], $constraint('field_term', 'target_id', 'DataSurfaceReferenceable'));
+    $terms = $this->options()->resolve(static::child($surface, 'field_term')->getDefinition('target_id'));
+    $this->assertNotNull($terms);
+    $this->assertSame(['Larder', 'Pantry'], array_values(array_map('strval', $terms->options)));
+
+    // One property: the field's label; several: each property's.
+    $this->assertSame('String', (string) static::child($surface, 'field_string')->getDefinition('value')?->getLabel());
+    $this->assertSame('Text format', (string) static::child($surface, 'field_text')->getDefinition('format')?->getLabel());
+    // Required on the main property when the field is.
+    $this->assertTrue(static::child($surface, 'title')->getDefinition('value')?->isRequired());
+    $this->assertFalse(static::child($surface, 'field_text')->getDefinition('format')?->isRequired());
+  }
+
+  /**
+   * Tests that what is left out is reported, with why.
+   */
+  public function testSkippedFieldsAreReported(): void {
+    $kitchen = $this->registry()->getDefinition('entity.content:node.kitchen');
+    // A language field is not covered, and a new display shows it.
+    $this->assertSame(['langcode', 'field_uri', 'field_multi'], array_keys($kitchen->notes));
+    $this->assertSame('the language field type is not covered yet', (string) $kitchen->notes['langcode']);
+    $this->assertSame('the uri field type is not covered yet', (string) $kitchen->notes['field_uri']);
+    $this->assertSame('takes 3 values; a field of more than one value is a collection, which is not built yet', (string) $kitchen->notes['field_multi']);
+    $this->assertFalse($this->registry()->hasDefinition('field.item:node.kitchen.field_uri'));
+
+    $page = $this->registry()->getDefinition('entity.content:node.page');
+    $this->assertSame(['langcode', 'field_tags'], array_keys($page->notes));
+    $this->assertStringContainsString('any number of values', (string) $page->notes['field_tags']);
+    $this->assertStringContainsString('2 left out', (string) $page->description);
+
+    // What a field item's derivation could not carry, on the item.
+    $uid = $this->registry()->getDefinition('field.item:node.page.uid');
+    $this->assertStringContainsString('getDefaultEntityOwner', (string) $uid->notes['default_value']);
+    $this->assertArrayHasKey('target_id', $uid->notes);
+    $this->assertArrayHasKey('decimal', $this->registry()->getDefinition('field.item:node.kitchen.field_decimal')->notes);
+    $this->assertStringContainsString('LinkType', (string) $this->registry()->getDefinition('field.item:node.kitchen.field_link')->notes['constraints']);
+
+    // The catalogue lists them as derived, by base, and lists the derivers.
+    $catalogue = $this->container->get('data_surface.surface_catalogue');
+    $entry = $catalogue->describe()['entity.content:node.page'];
+    $this->assertNull($entry['class']);
+    $this->assertSame('entity.content', $entry['deriver']);
+    $this->assertSame(['entity.content', 'field.item'], array_keys($catalogue->derivers()));
+  }
+
+  /**
+   * Tests a literal default carried, and a callback's left to the entity.
+   */
+  public function testDefaultsComeFromTheFieldsLiteral(): void {
+    $surface = $this->add('page');
+    $this->assertTrue(static::child($surface, 'status')->getDefault('value'));
+    $this->assertNull(static::child($surface, 'uid')->getDefault('target_id'));
+  }
+
+  /**
+   * Tests the derived definitions round-trip through the discovery cache.
+   *
+   * The entry carries the tags of what was derived from; saving a field
+   * clears it and what this request already read.
+   */
+  public function testDerivedDefinitionsRoundTripThroughTheCache(): void {
+    $definitions = $this->registry()->getDefinitions();
+    $classes = $this->container->getParameter(SurfaceCollectorPass::PARAMETER);
+    $this->assertSame(['data_surface_entity'], array_values(array_unique($classes['derivers'])));
+    $plugins = $this->container->get('data_surface.surface_plugins');
+    // No plugin here is its own surface, so the id hashes the classes.
+    $this->assertSame([], $plugins->ownSurfaces());
+    $cid = 'data_surface:surfaces:' . hash('xxh3', serialize($classes));
+    $cached = $this->container->get('cache.discovery')->get($cid);
+    $this->assertNotFalse($cached);
+    $this->assertArrayHasKey('entity.content:node.page', $cached->data);
+    $tags = [
+      'entity_field_info',
+      'entity_bundles',
+      'config:entity_form_display_list',
+      'config:core.entity_form_display.node.page.default',
+    ];
+    foreach ($tags as $tag) {
+      $this->assertContains($tag, $cached->tags);
+    }
+    $fresh = new SurfaceRegistry($classes, $this->container->get('cache.discovery'), $plugins, $this->container->get('class_resolver'));
+    $this->assertEquals($definitions, $fresh->getDefinitions());
+
+    // A field added to the display clears the entry, and is a surface of
+    // its own at once, in this same request.
+    $this->addField('page', 'field_subtitle', 'string', [], [], 'Subtitle');
+    $display = EntityFormDisplay::load('node.page.default');
+    assert($display !== NULL);
+    $display->setComponent('field_subtitle', ['weight' => 100])->save();
+    $this->assertFalse($this->container->get('cache.discovery')->get($cid));
+    $this->assertTrue($this->registry()->hasDefinition('field.item:node.page.field_subtitle'));
+    $this->assertSame('field.item:node.page.field_subtitle', $this->add('page')->getDefinitions()->entry('field_subtitle')?->attachment?->id);
+  }
+
+  /**
+   * Tests that a context that knows nothing builds every surface.
+   *
+   * What a tool's static definition and the catalogue build in: the edit
+   * situation's children need an id, so they inherit.
+   */
+  public function testBareContextBuilds(): void {
+    $surface = $this->surfaces()->build('entity.content:node.page', new SurfaceContext('edit'));
+    $this->assertFalse($surface->isLocked('id'));
+    $this->assertSame(['value'], array_keys(static::child($surface, 'title')->getDefinitions()->toArray()));
+  }
+
+}

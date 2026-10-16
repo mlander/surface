@@ -35,12 +35,13 @@ final class SurfaceAttachment {
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $child
    *   The sealed child surface, as it was advertised.
-   * @param class-string|null $source
-   *   The #[Surface] class the child was built from, or NULL for a child
-   *   handed over already sealed.
+   * @param string|null $source
+   *   The surface the child was built from, by name: its class, or a
+   *   derived surface's id; or NULL for a child handed over already
+   *   sealed.
    * @param string|null $id
-   *   The #[Surface] id of that class, or NULL when there is no class: a
-   *   derived variant, or a child handed over already sealed.
+   *   The id of that surface, or NULL when there is none: a derived
+   *   variant, or a child handed over already sealed.
    */
   public function __construct(
     public readonly DataSurfaceInterface $child,

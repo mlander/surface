@@ -4,14 +4,19 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface\SurfaceBuild;
 
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\data_surface\Hook\SurfacePluginHooks;
 use Drupal\data_surface\Surface\Attribute\AltersSurface;
+use Drupal\data_surface\Surface\Attribute\DerivesSurfaces;
 use Drupal\data_surface\Surface\Attribute\RefinesInput;
 use Drupal\data_surface\Surface\Attribute\Situation;
 use Drupal\data_surface\Surface\Attribute\Surface;
 use Drupal\data_surface\Surface\Attribute\SurfaceVariant;
+use Drupal\data_surface\Surface\DerivedSituation;
 use Drupal\data_surface\Surface\HasOutputsInterface;
+use Drupal\data_surface\Surface\SurfaceDeriverInterface;
 use Drupal\data_surface\Surface\SurfaceInterface;
 
 /**
@@ -25,6 +30,13 @@ use Drupal\data_surface\Surface\SurfaceInterface;
  * a container rebuilt with a module more or less, or a plugin more or
  * less, is a different entry and needs no clearing; an attribute edited
  * in place needs a cache rebuild, exactly as a plugin attribute does.
+ *
+ * A deriver (#[DerivesSurfaces]) is asked for its surfaces here too, and
+ * each is read into a definition with no class, under the id
+ * `<base>:<derivative>`. What it derived from is live site state, so the
+ * entry carries the cache tags its derivatives name: invalidating one (a
+ * field saved, a form display changed) clears the entry, and, through
+ * SurfaceRegistryInvalidator, what this request already read.
  *
  * Two kinds of refusal, kept apart on purpose:
  * - What is wrong with the attributes themselves — a situation with no
@@ -53,32 +65,47 @@ final class SurfaceRegistry {
   protected ?array $definitions = NULL;
 
   /**
+   * The cache tags what is read depends on, once read.
+   *
+   * @var string[]
+   */
+  protected array $cacheTags = [];
+
+  /**
    * Constructs a SurfaceRegistry.
    *
-   * @param array<string, array<class-string, string>> $classes
+   * @param array<string, array<class-string, mixed>> $classes
    *   The class lists the compiler pass wrote, by kind, valued with the
-   *   module each class is in.
+   *   module each class is in; `overrides` is keyed by deriver, then by
+   *   the class carrying its override attribute.
    * @param \Drupal\Core\Cache\CacheBackendInterface $cache
    *   The discovery cache bin.
    * @param \Drupal\data_surface\SurfaceBuild\SurfacePlugins|null $plugins
    *   The plugin definitions, for the plugins that are their own surface;
    *   NULL reads none.
+   * @param \Drupal\Core\DependencyInjection\ClassResolverInterface|null $classResolver
+   *   What returns each deriver as the autowired service discovery
+   *   registered; NULL asks no deriver.
    */
   public function __construct(
     protected readonly array $classes,
     protected readonly CacheBackendInterface $cache,
     protected readonly ?SurfacePlugins $plugins = NULL,
+    protected readonly ?ClassResolverInterface $classResolver = NULL,
   ) {
   }
 
   /**
    * Gets every discovered surface.
    *
-   * @return array<class-string, \Drupal\data_surface\SurfaceBuild\SurfaceDefinition>
-   *   The definitions, keyed by surface class.
+   * @return array<string, \Drupal\data_surface\SurfaceBuild\SurfaceDefinition>
+   *   The definitions, keyed by name: a surface class, or a derived
+   *   surface's id.
    *
    * @throws \LogicException
-   *   When an attribute is misplaced or two surfaces claim one id.
+   *   When an attribute is misplaced, two surfaces claim one id, or a
+   *   deriver is no SurfaceDeriverInterface or names a derivative with a
+   *   colon.
    */
   public function getDefinitions(): array {
     if ($this->definitions !== NULL) {
@@ -87,12 +114,55 @@ final class SurfaceRegistry {
     $own = $this->plugins?->ownSurfaces() ?? [];
     $cid = self::CACHE_PREFIX . hash('xxh3', serialize($own === [] ? $this->classes : [$this->classes, $own]));
     $cached = $this->cache->get($cid);
-    if ($cached !== FALSE && is_array($cached->data)) {
-      return $this->definitions = $cached->data;
+    $this->definitions = $cached !== FALSE && is_array($cached->data) ? $cached->data : $this->discover($own);
+    $this->cacheTags = [];
+    foreach ($this->definitions as $definition) {
+      $this->cacheTags = Cache::mergeTags($this->cacheTags, $definition->cacheTags);
     }
-    $this->definitions = $this->discover($own);
-    $this->cache->set($cid, $this->definitions);
+    if ($cached === FALSE || !is_array($cached->data)) {
+      $this->cache->set($cid, $this->definitions, Cache::PERMANENT, $this->cacheTags);
+    }
     return $this->definitions;
+  }
+
+  /**
+   * Forgets what this request read, when what it was read from changed.
+   *
+   * The discovery bin's entry goes with the tags; this is the copy held
+   * since, which a request that saves a field and then builds a surface
+   * would otherwise read stale.
+   *
+   * @param string[] $tags
+   *   The tags being invalidated.
+   */
+  public function invalidateTags(array $tags): void {
+    if ($this->definitions !== NULL && array_intersect($tags, $this->cacheTags) !== []) {
+      $this->definitions = NULL;
+      $this->cacheTags = [];
+    }
+  }
+
+  /**
+   * Lists the derivers discovered, by base id.
+   *
+   * @return array<string, array{class: class-string, module: string, overrides: class-string|null, overridden: array<class-string, string>}>
+   *   Each deriver's class and module, the attribute an override of its
+   *   derivation carries and the classes that carry it, keyed by base id
+   *   and sorted.
+   */
+  public function getDerivers(): array {
+    $derivers = [];
+    foreach ($this->classes['derivers'] ?? [] as $class => $module) {
+      $attribute = (new \ReflectionClass($class))->getAttributes(DerivesSurfaces::class)[0]->newInstance();
+      $derivers[$attribute->base] = [
+        'class' => $class,
+        'module' => (string) $module,
+        'overrides' => $attribute->overrides,
+        'overridden' => $this->classes['overrides'][$class] ?? [],
+      ];
+    }
+    ksort($derivers);
+    return $derivers;
   }
 
   /**
@@ -256,8 +326,8 @@ final class SurfaceRegistry {
    *   The plugins that are their own surface, with the module and the id
    *   their plugin definitions give them.
    *
-   * @return array<class-string, \Drupal\data_surface\SurfaceBuild\SurfaceDefinition>
-   *   The definitions, keyed by surface class.
+   * @return array<string, \Drupal\data_surface\SurfaceBuild\SurfaceDefinition>
+   *   The definitions, keyed by name.
    */
   protected function discover(array $own = []): array {
     $surfaces = [];
@@ -294,13 +364,19 @@ final class SurfaceRegistry {
         refiners: self::refinersOf($reflection),
       );
     }
+    $situations = [];
+    $bases = [];
+    foreach ($this->derive($ids) as $id => [$definition, $derived_situations]) {
+      $surfaces[$id] = $definition;
+      $situations[$id] = $derived_situations;
+      $bases[(string) $definition->base][] = $id;
+    }
 
     // A plugin that is its own surface may carry its situations too.
     $situation_classes = $this->classes['situations'] ?? [];
     foreach ($own as $class => ['module' => $module]) {
       $situation_classes[$class] ??= $module;
     }
-    $situations = [];
     foreach ($situation_classes as $class => $module) {
       foreach ((new \ReflectionClass($class))->getMethods() as $method) {
         foreach ($method->getAttributes(Situation::class) as $attribute) {
@@ -341,19 +417,27 @@ final class SurfaceRegistry {
     foreach ($this->classes['alters'] ?? [] as $class => $module) {
       $reflection = new \ReflectionClass($class);
       $attribute = $reflection->getAttributes(AltersSurface::class)[0]->newInstance();
-      if (self::isUndiscovered($attribute->surface, $surfaces, sprintf('#[AltersSurface] on %s', $class))) {
-        continue;
-      }
-      $alters[$attribute->surface][] = new AlterDefinition(
+      // A deriver's base names every surface it derived.
+      $targets = $bases[$attribute->surface] ?? [$attribute->surface];
+      $alter = new AlterDefinition(
         class: $class,
         module: $module,
         situations: array_values($attribute->situations),
         refiners: self::refinersOf($reflection),
       );
+      foreach ($targets as $target) {
+        if (!isset($bases[$attribute->surface]) && self::isUndiscovered($target, $surfaces, sprintf('#[AltersSurface] on %s', $class))) {
+          continue;
+        }
+        $alters[$target][] = $alter;
+      }
     }
 
     $variants = [];
-    foreach (array_keys($surfaces) as $class) {
+    foreach ($surfaces as $class => $definition) {
+      if ($definition->isDerived()) {
+        continue;
+      }
       foreach ((new \ReflectionClass($class))->getAttributes(SurfaceVariant::class) as $attribute) {
         $variant = $attribute->newInstance();
         if (!self::isUndiscovered($variant->of, $surfaces, sprintf('#[SurfaceVariant] on %s', $class))) {
@@ -366,6 +450,87 @@ final class SurfaceRegistry {
       $surfaces[$class] = $definition->with($situations[$class] ?? [], $alters[$class] ?? [], $variants[$class] ?? []);
     }
     return $surfaces;
+  }
+
+  /**
+   * Asks every deriver for its surfaces, and reads each into a definition.
+   *
+   * @param array<string, class-string> $ids
+   *   The ids the class-based surfaces claimed, which a derived surface
+   *   may not claim again; extended with each derived id.
+   *
+   * @return array<string, array{0: \Drupal\data_surface\SurfaceBuild\SurfaceDefinition, 1: \Drupal\data_surface\SurfaceBuild\SituationDefinition[]}>
+   *   Each derived surface's definition, and its situations, keyed by id.
+   *
+   * @throws \LogicException
+   *   When a deriver does not implement SurfaceDeriverInterface, a
+   *   derivative id holds a colon, or an id is claimed twice.
+   */
+  protected function derive(array &$ids): array {
+    if ($this->classResolver === NULL) {
+      return [];
+    }
+    $derived = [];
+    foreach ($this->getDerivers() as $base => ['class' => $class, 'module' => $module, 'overridden' => $overridden]) {
+      $deriver = $this->classResolver->getInstanceFromDefinition($class);
+      if (!$deriver instanceof SurfaceDeriverInterface) {
+        throw new \LogicException(sprintf('%s carries #[DerivesSurfaces] but does not implement %s.', $class, SurfaceDeriverInterface::class));
+      }
+      foreach ($deriver->derivatives($overridden) as $derivative => $surface) {
+        $id = $base . ':' . $derivative;
+        if (str_contains((string) $derivative, ':')) {
+          throw new \LogicException(sprintf(
+            '%s::derivatives() answered "%s": a derivative id holds no colon, which separates it from the base.',
+            $class,
+            $derivative,
+          ));
+        }
+        if (isset($ids[$id])) {
+          throw new \LogicException(sprintf('Two surfaces claim the id "%s": %s and %s.', $id, $ids[$id], $class));
+        }
+        $ids[$id] = $class;
+        $refiners = [];
+        foreach ($surface->refiners as $refining) {
+          array_push($refiners, ...self::refinersOf(new \ReflectionClass($refining)));
+        }
+        $derived[$id] = [
+          new SurfaceDefinition(
+            class: NULL,
+            id: $id,
+            module: $module,
+            identity: array_values($surface->identity),
+            target: $surface->target,
+            access: $surface->access,
+            refiners: $refiners,
+            inputs: $surface->inputs,
+            outputs: $surface->outputs,
+            base: $base,
+            deriver: $class,
+            label: $surface->label,
+            description: $surface->description,
+            notes: $surface->notes,
+            cacheTags: array_values($surface->cacheTags),
+          ),
+          array_map(static fn (DerivedSituation $situation): SituationDefinition => new SituationDefinition(
+            id: $situation->id,
+            label: $situation->label,
+            surface: $id,
+            class: $situation->context->class,
+            method: $situation->context->method,
+            permission: $situation->permission,
+            module: $module,
+            parameters: array_map(
+              SituationParameter::fromDeclaration(...),
+              array_keys($situation->parameters),
+              array_values($situation->parameters),
+            ),
+            default: $situation->default,
+            context: $situation->context,
+          ), array_values($surface->situations)),
+        ];
+      }
+    }
+    return $derived;
   }
 
   /**

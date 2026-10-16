@@ -101,7 +101,7 @@ final class SurfaceSituationTool extends SurfaceSituationToolBase implements Inp
     }
     try {
       [$surface, , $context] = $this->situation($values);
-      return $this->situationInputs->values($surface, $this->surfaces->build($surface->class, $context), $context);
+      return $this->situationInputs->values($surface, $this->surfaces->build($surface->name(), $context), $context);
     }
     catch (\InvalidArgumentException) {
       return $definition;
@@ -121,8 +121,8 @@ final class SurfaceSituationTool extends SurfaceSituationToolBase implements Inp
     if (!$access->isAllowed()) {
       return ExecutableResult::failure($this->t('You do not have permission to do this.'));
     }
-    $built = $this->surfaces->build($surface->class, $context);
-    $target = $this->surfaces->target($surface->class, $context, $built);
+    $built = $this->surfaces->build($surface->name(), $context);
+    $target = $this->surfaces->target($surface->name(), $context, $built);
     $input = $values[SituationInputs::VALUES] ?? [];
     $result = $this->pipeline->submit(
       $built,

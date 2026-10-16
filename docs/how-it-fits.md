@@ -33,6 +33,13 @@ way, under the id `<host type>:<plugin id>` unless it carries
 `#[Surface]`, and the cache id hashes both lists. Discovery refuses a
 surface whose `defineInputs()` or `defineOutputs()` is not static.
 
+A class carrying `#[DerivesSurfaces]` is a deriver, registered as an
+autowired service; the registry asks it for its surfaces here, and reads
+each into a definition with no class, `<base>:<derivative>`, whose shape
+and situations are methods the deriver names. The cache entry carries
+the tags each derivative was read from, so a saved field or form
+display clears it ([Derived surfaces](surfaces.md#derived-surfaces)).
+
 ## The build step
 
 `SurfacesInterface::build(string $surface, SurfaceContext $context):

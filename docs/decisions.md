@@ -792,6 +792,122 @@ The demo formatter is written this way and the demo block is not, so
 the two spellings sit side by side.
 (`SurfaceRegistry::discover()`, `SurfacePluginHooks::usedSurfaceOf()`)
 
+## Derived surfaces
+
+### Derived definitions at discovery
+
+A surface whose shape is the site's (one per bundle, one per field) is
+made by a deriver at discovery, `#[DerivesSurfaces]` on a class
+implementing `SurfaceDeriverInterface`, and cached with the rest of
+discovery under the cache tags of what it was read from. Not a context
+handed to `defineInputs()`: the shape takes nothing but the shape, so
+that it is the same wherever it is asked for and a static tool
+definition, a catalogue and the full schema can describe it before
+anyone calls; a shape that read a bundle from its context would be a
+different surface in every context, with one id. And not one class per
+bundle: a bundle is site configuration, made and deleted in the UI, and
+a class per bundle would be code generated from config, out of date the
+moment a field is added. The plugin system settled the same question
+the same way, with derivers. What the deriver reads, it reads at
+discovery, so a derivative is listable, addressable and has a tool
+without being built; what changes per request is still refinement and
+access. (`SurfaceRegistry::derive()`, `SurfaceRegistryInvalidator`)
+
+### A derived surface has no class
+
+A derived surface is a `SurfaceDefinition` like any other, with `class`
+NULL and what a class would have said carried instead: the methods
+that fill its shapes (`SurfaceCallable`, a class, a method and the bound
+arguments), the base it was derived under and its deriver, a label, a
+description, notes on what the derivation could not carry, and its
+cache tags. Not a sibling class behind a shared interface: every caller
+of the registry reads the same fields of either, and two classes would
+have doubled every signature that takes a definition for no difference
+any caller acts on. Every caller asks for a surface by `name()`, its
+class or, for a derived one, its id, which is what the registry is
+keyed by; the build step fills a derived shape through its callable and
+calls a class's static methods otherwise, and that is the whole
+branch. A callable is a class, a method and plain values, so a derived
+definition survives the discovery cache, and the refiners bound from it
+survive a cached form, where a closure would not. A static callable
+method is called on the class; an instance method on the class
+resolver's instance, so a deriver's own methods may read site state,
+which is what a derived shape is for. (`SurfaceDefinition::name()`,
+`Surfaces::defineShape()`, `Surfaces::situation()`)
+
+### The id shape
+
+A derived surface's id is `<base>:<derivative>`: the base dotted like
+any surface id, one colon, then the derivative, dotted and holding no
+colon, `entity.content:node.page`, `field.item:node.page.body`. A tool
+is `data_surface:<surface>:<situation>` and a read tool adds `:read`;
+the tool reads the situation off the last colon, so a derivative with
+a colon of its own would be misread, and is refused. The MCP bridge
+mangles tool ids, so the derivative adds one colon, between base and
+derivative, and dots inside it, which surface ids already have; a route
+parameter, `/surface-react/{surface}`, takes a colon as it is. An alter names one derivative by its id or
+every derivative of a deriver by its base, `#[AltersSurface('entity.content')]`.
+A string that names no surface and no base is skipped, as a class from a
+module that is off is skipped, so a mistyped id passes silently where a
+mistyped class does not. (`SurfaceRegistry::discover()`)
+
+### Derived, then layered
+
+A field item's surface is derived from the item's typed data, since a
+field type already says what its item holds, and layered with what
+typed data does not say: the field's label and description, required
+on the main property, the literal default, the constraints a surface
+can state (`Length`, `Range`, `Regex`, `Choice`) and what the settings
+narrow (a list's allowed values, a text field's formats, a reference's
+targets, a date's form). What typed data says that a surface cannot
+(`LinkType`, `ValidReference`) is left to the entity's own validation
+at prepare, whose violations land on the key. A field type whose
+derivation is thin is written by hand, `#[FieldItemSurface(type:)]`, and
+replaces the shape and its refiners only: the field's label, situations
+and access stay derived, because they are the field's, not its type's.
+(`FieldItemDerivation`, `FieldItemSurfaces`)
+
+### Field access is child access
+
+Each field of a content entity surface is a child invoked through its
+own situation, `add` or `edit` by the parent's operation, so field
+access is the child's access, through the three answers access already
+had: edit allowed is open, view allowed is locked, neither is omitted.
+No mechanism of its own was needed, which is what the child situations
+were built for ([One invocation model for both
+levels](#one-invocation-model-for-both-levels)). Field access takes
+items, so on add it is asked of a throwaway entity of the bundle, as
+core's entity form makes one. (`FieldItemAccess`)
+
+### The content entity target
+
+`ContentEntityTarget` is `data_surface_entity`'s, not one of the
+engine's targets: what it reads and writes is the field item
+derivation's shape (a child per field, a key per property), which the
+engine does not own, and it reads the derivation to know which fields
+those are. It maps an entity violation to a key by its property path,
+the delta dropped, and one about the whole entity to `@entity`; it
+drops one about a field the surface does not carry, or one the account
+may not edit, as core's form does. (`ContentEntityTarget::prepare()`)
+
+### Tool definitions after a field changes
+
+*Open.* The registry forgets a derived surface when the tags it was
+read from are invalidated, but the Tool API caches its plugin
+definitions apart, so a field added to a bundle reaches the `add` tool's
+static `values` at the next cache rebuild; the `edit` tool refines
+`values` per call and sees it at once. Clearing the tool plugin cache on
+those tags would couple the engine to the Tool API, or need an
+invalidator in `data_surface_tool`.
+
+### Keys an alter adds to a content entity
+
+*Open.* An alter may add keys to every content entity surface, and they
+are built, validated and offered like any mounted key, but a content
+entity has nowhere to keep `third_party_settings`, so the target does
+not store them. A storage shape that maps a mount onto fields would be
+the place to say where they go.
+
 ## Plugins
 
 ### A plugin host's context
@@ -1033,6 +1149,16 @@ before it runs, 400 when the body cannot be read. Access refused inside
 the pipeline (a forbidden answer the route did not already give) is
 still filed as the `@access` violation, the pipeline's own rule.
 (`SurfaceApiController::submit()`)
+
+### An empty identity key names nothing
+
+Where a created thing now lives is read from the outputs and the
+identity the write accepted, and checked against the situation those
+build; an identity key the write left empty is not compared, since it
+named nothing: a content entity's add knows its id as empty, and its
+`id` output says what storage made it. Before, every accepted identity
+key was compared, and an add whose id storage gives could never say
+where its thing lives. (`ServedSituations::created()`)
 
 ### A fingerprint is opt-in
 

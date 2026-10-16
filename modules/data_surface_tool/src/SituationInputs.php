@@ -9,7 +9,6 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Surface\HasOutputsInterface;
 use Drupal\data_surface\Surface\SurfaceContext;
 use Drupal\data_surface\SurfaceBuild\SituationArguments;
 use Drupal\data_surface\SurfaceBuild\SituationDefinition;
@@ -190,7 +189,7 @@ final class SituationInputs {
     $neutral = $this->neutral($surface, $situation);
     // Where the secrets are: the neutral build, or, for a situation that
     // takes nothing, its own.
-    $built = $neutral ?? $this->surfaces->build($surface->class, $this->surfaces->situation($surface->class, $situation->id));
+    $built = $neutral ?? $this->surfaces->build($surface->name(), $this->surfaces->situation($surface->name(), $situation->id));
     return [
       self::VALUES => $this->inputDefinitions->outputFromInput(
         $this->declaredValues($surface, $situation, $neutral, FALSE),
@@ -220,7 +219,7 @@ final class SituationInputs {
    *   The stored values, keyed by surface key.
    */
   public function stored(SurfaceDefinition $surface, DataSurfaceInterface $built, SurfaceContext $context): array {
-    $stored = $this->surfaces->target($surface->class, $context, $built)->load($built);
+    $stored = $this->surfaces->target($surface->name(), $context, $built)->load($built);
     $stored = array_diff_key($stored, array_flip($this->knownIdentity($surface, $context)));
     return $this->inputDefinitions->withoutSecrets($stored, $this->inputDefinitions->secrets($built));
   }
@@ -247,7 +246,7 @@ final class SituationInputs {
     $map = $this->map($surface, $built, $this->knownIdentity($surface, $context));
     if (!$context->creates) {
       // Decision: see docs/decisions.md#required-is-the-surfaces-and-defaults-are-what-is-stored.
-      $this->inputDefinitions->withStored($map, $built, $this->surfaces->target($surface->class, $context, $built)->load($built));
+      $this->inputDefinitions->withStored($map, $built, $this->surfaces->target($surface->name(), $context, $built)->load($built));
     }
     return $map;
   }
@@ -272,12 +271,12 @@ final class SituationInputs {
    */
   protected function declaredValues(SurfaceDefinition $surface, SituationDefinition $situation, ?DataSurfaceInterface $neutral, bool $stored): MapInputDefinition {
     if ($situation->needsNothing()) {
-      $context = $this->surfaces->situation($surface->class, $situation->id);
-      $built = $this->surfaces->build($surface->class, $context);
+      $context = $this->surfaces->situation($surface->name(), $situation->id);
+      $built = $this->surfaces->build($surface->name(), $context);
       return $stored ? $this->values($surface, $built, $context) : $this->map($surface, $built, $this->knownIdentity($surface, $context));
     }
     // Decision: see docs/decisions.md#identity-before-the-parameters.
-    return $this->map($surface, $neutral ?? $this->surfaces->build($surface->class, new SurfaceContext($situation->id)), $this->suppliedIdentity($surface, $situation));
+    return $this->map($surface, $neutral ?? $this->surfaces->build($surface->name(), new SurfaceContext($situation->id)), $this->suppliedIdentity($surface, $situation));
   }
 
   /**
@@ -293,7 +292,7 @@ final class SituationInputs {
    *   NULL for a situation that takes no parameters.
    */
   protected function neutral(SurfaceDefinition $surface, SituationDefinition $situation): ?DataSurfaceInterface {
-    return $situation->parameters === [] ? NULL : $this->surfaces->build($surface->class, new SurfaceContext($situation->id));
+    return $situation->parameters === [] ? NULL : $this->surfaces->build($surface->name(), new SurfaceContext($situation->id));
   }
 
   /**
@@ -394,10 +393,10 @@ final class SituationInputs {
         required: FALSE,
       ),
     ];
-    if (!is_subclass_of($surface->class, HasOutputsInterface::class)) {
+    if (!$surface->hasOutputs()) {
       return $outputs;
     }
-    $built = $this->surfaces->build($surface->class, new SurfaceContext($situation->id));
+    $built = $this->surfaces->build($surface->name(), new SurfaceContext($situation->id));
     return $outputs + $this->inputDefinitions->outputsFromSurface($built);
   }
 

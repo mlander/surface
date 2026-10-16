@@ -27,7 +27,14 @@ services:
   # their definitions; and the build step that builds and seals them.
   data_surface.surface_registry:
     class: Drupal\data_surface\SurfaceBuild\SurfaceRegistry
-    arguments: ['%data_surface.surface_classes%', '@cache.discovery', '@data_surface.surface_plugins']
+    arguments: ['%data_surface.surface_classes%', '@cache.discovery', '@data_surface.surface_plugins', '@class_resolver']
+  # A derived surface is read from site state; when its cache tags are
+  # invalidated, the registry this request already read forgets it.
+  data_surface.surface_registry_invalidator:
+    class: Drupal\data_surface\SurfaceBuild\SurfaceRegistryInvalidator
+    arguments: ['@service_container']
+    tags:
+      - { name: cache_tags_invalidator }
   data_surface.surfaces:
     class: Drupal\data_surface\SurfaceBuild\Surfaces
     arguments: ['@data_surface.surface_registry', '@typed_data_manager', '@class_resolver', '@current_user', '@data_surface.situation_arguments', '@data_surface.derived_variants', '@data_surface.watched_value_check']

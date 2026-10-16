@@ -50,6 +50,7 @@ class SurfaceCatalogueTest extends DataSurfaceKernelTestBase {
     'data_surface_tool',
     'data_surface_examples',
     'data_surface_examples_compliance',
+    'data_surface_entity',
   ];
 
   /**
@@ -194,7 +195,7 @@ class SurfaceCatalogueTest extends DataSurfaceKernelTestBase {
    * first, which is what scripts/generate-catalogue.php does.
    */
   public function testCatalogueHasNotDrifted(): void {
-    $document = \DataSurfaceCatalogueDocument::render($this->catalogue());
+    $document = \DataSurfaceCatalogueDocument::render($this->catalogue(), $this->container->get('data_surface.surface_catalogue')->derivers());
     $path = dirname(__DIR__, 3) . '/' . \DataSurfaceCatalogueDocument::PATH;
     if (getenv(\DataSurfaceCatalogueDocument::WRITE_VARIABLE) === '1') {
       file_put_contents($path, $document);

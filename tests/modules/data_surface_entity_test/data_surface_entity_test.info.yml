@@ -1,0 +1,8 @@
+name: Data Surface Entity Test
+type: module
+description: 'Test support for derived content entity surfaces: field access that locks one field and hides another, an entity constraint, an alter of every content entity surface by base id, and a telephone item surface written by hand.'
+package: Testing
+version: VERSION
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - data_surface:data_surface_entity

@@ -120,10 +120,10 @@ final class Surfaces implements SurfacesInterface {
    * Builds one surface, or one subsurface inside the build of its parent.
    *
    * @param string $surface
-   *   The surface class, or its #[Surface] id.
+   *   The surface class, or its id; a derived surface has only its id.
    * @param \Drupal\data_surface\Surface\SurfaceContext $context
    *   Where it is being asked for.
-   * @param array<int, array{class: class-string, id: string, key: string, inputs: string[]}> $ancestry
+   * @param array<int, array{class: string, id: string, key: string, inputs: string[]}> $ancestry
    *   The surfaces this one is being built inside, outermost first, each
    *   with the key it is attached at and its own input keys; empty for
    *   a surface asked for on its own.
@@ -134,19 +134,21 @@ final class Surfaces implements SurfacesInterface {
   protected function buildSurface(string $surface, SurfaceContext $context, array $ancestry): DataSurfaceInterface {
     $definition = $this->registry->getDefinition($surface);
     // Refuses two providers of one situation id, whichever is asked for.
-    $this->registry->getSituations($definition->class);
+    $this->registry->getSituations($definition->name());
 
     $builder = (new DataSurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
-    // Decision: see docs/decisions.md#a-surface-is-static.
-    $owner = static::surfaceClass($definition);
     $inputs = new SurfaceShape($builder, $this->typedDataManager);
     $outputs = new SurfaceShape($builder, $this->typedDataManager, TRUE);
-    $owner::defineInputs($inputs);
-    if (is_subclass_of($owner, HasOutputsInterface::class)) {
-      $owner::defineOutputs($outputs);
-    }
+    $this->defineShape($definition, $inputs, $outputs);
 
-    $links = [[$owner, $definition->refiners, NULL]];
+    // The surface's own refiners first, one link per class they are on:
+    // the surface class itself, or the classes a deriver named.
+    $links = [];
+    foreach ($definition->refiners as $refiner) {
+      $links[$refiner->class] ??= [$refiner->class, [], NULL];
+      $links[$refiner->class][1][] = $refiner;
+    }
+    $links = array_values($links);
     $additions = [];
     foreach ($definition->alters as $alter) {
       if (!$alter->appliesIn($context->operation)) {
@@ -172,14 +174,14 @@ final class Surfaces implements SurfacesInterface {
         throw new \LogicException(sprintf(
           'The %s surface (%s) names "%s" as an identity key in #[Surface(identity:)], but its shape never declares that input%s.',
           $definition->id,
-          $definition->class,
+          $definition->class ?? $definition->inputs?->describe(),
           $key,
           in_array($key, $subsurfaces, TRUE) ? ' (it is a subsurface, which holds a map and cannot say which thing this is)' : '',
         ));
       }
     }
     foreach ($ancestry as $ancestor) {
-      if ($ancestor['class'] === $definition->class) {
+      if ($ancestor['class'] === $definition->name()) {
         throw new \LogicException(sprintf(
           'The %s surface is attached inside itself, through %s: a surface cannot contain itself.',
           $definition->id,
@@ -208,8 +210,8 @@ final class Surfaces implements SurfacesInterface {
     // its own shape, its own alters, its own refiners, and the context
     // it is invoked in, which its own situation's access may then narrow
     // to locked or to nothing at all.
-    $frame = ['class' => $definition->class, 'id' => $definition->id, 'key' => '', 'inputs' => $input_keys];
-    $permission = $this->registry->getSituations($definition->class)[$context->operation]->permission ?? NULL;
+    $frame = ['class' => $definition->name(), 'id' => $definition->id, 'key' => '', 'inputs' => $input_keys];
+    $permission = $this->registry->getSituations($definition->name())[$context->operation]->permission ?? NULL;
     $frame['permission'] = $permission === NULL ? NULL : static::resolvePermission($permission, $context);
     foreach ($inputs->attachments() as $key => $child) {
       [$attachment, $access] = $this->buildChild($child, $context, $key, $frame, $ancestry);
@@ -243,7 +245,7 @@ final class Surfaces implements SurfacesInterface {
         }
         $variants[(string) $value] = $attachment;
       }
-      $deriver = $this->derivedVariants->for($definition->class, $key);
+      $deriver = $this->derivedVariants->for($definition->name(), $key);
       if ($deriver !== NULL) {
         // A withheld variant is still declared: nothing derives in its
         // place.
@@ -260,8 +262,8 @@ final class Surfaces implements SurfacesInterface {
   /**
    * Builds one child at a key, invoked the way invokeChild() resolves.
    *
-   * @param class-string $child
-   *   The child surface class.
+   * @param string $child
+   *   The child surface's name: its class, or a derived surface's id.
    * @param \Drupal\data_surface\Surface\SurfaceContext $context
    *   The parent's context.
    * @param string $key
@@ -287,8 +289,8 @@ final class Surfaces implements SurfacesInterface {
     $frame['key'] = $key;
     return [
       new SurfaceAttachment(
-        $this->buildSurface($definition->class, $child_context, [...$ancestry, $frame]),
-        $definition->class,
+        $this->buildSurface($definition->name(), $child_context, [...$ancestry, $frame]),
+        $definition->name(),
         $definition->id,
       ),
       $access,
@@ -336,7 +338,7 @@ final class Surfaces implements SurfacesInterface {
    */
   protected function invokeChild(SurfaceDefinition $child, SurfaceContext $context, string $key, string $parent): array {
     // Decision: see docs/decisions.md#one-invocation-model-for-both-levels.
-    $situations = $this->registry->getSituations($child->class);
+    $situations = $this->registry->getSituations($child->name());
     $named = $context->childSituation($key);
     if ($named !== NULL) {
       $situation = $situations[$named['situation']] ?? throw new \LogicException(sprintf(
@@ -408,7 +410,7 @@ final class Surfaces implements SurfacesInterface {
   protected function childSituationContext(SurfaceDefinition $child, SituationDefinition $situation, SurfaceContext $context, array $handed, string $key, string $parent, bool $named = TRUE): ?SurfaceContext {
     $identity = $handed + $context->known;
     try {
-      $own = $this->situation($child->class, $situation->id, $identity);
+      $own = $this->situation($child->name(), $situation->id, $identity);
     }
     catch (\InvalidArgumentException $e) {
       if (!$named) {
@@ -532,7 +534,7 @@ final class Surfaces implements SurfacesInterface {
       // Decision: see docs/decisions.md#a-slot-nothing-fills.
       $slots[$key] = [
         'by' => $by,
-        'children' => $this->registry->getVariants($definition->class, $key),
+        'children' => $this->registry->getVariants($definition->name(), $key),
       ];
     }
     return $slots;
@@ -543,8 +545,12 @@ final class Surfaces implements SurfacesInterface {
    */
   public function situation(string $surface, string $situation, array $arguments = []): SurfaceContext {
     $found = $this->registry->getSituation($surface, $situation);
-    $context = (new \ReflectionMethod($found->class, $found->method))
-      ->invokeArgs(NULL, $this->situationArguments->resolve($found, $arguments));
+    $resolved = $this->situationArguments->resolve($found, $arguments);
+    // A derived situation is a method its deriver named, handed the
+    // arguments by name; a #[Situation] method takes them as its own.
+    $context = $found->context !== NULL
+      ? $found->context->call($this->classResolver, $resolved)
+      : (new \ReflectionMethod($found->class, $found->method))->invokeArgs(NULL, $resolved);
     if (!$context instanceof SurfaceContext) {
       throw new \LogicException(sprintf(
         'The "%s" situation, %s, returned %s; a situation returns a %s.',
@@ -584,7 +590,7 @@ final class Surfaces implements SurfacesInterface {
       return $answer;
     }
     // Decision: see docs/decisions.md#children-may-refuse.
-    $answers = $this->childAnswers($context, $account, $this->build($definition->class, $context), $definition->id);
+    $answers = $this->childAnswers($context, $account, $this->build($definition->name(), $context), $definition->id);
     foreach ($answers as $child) {
       if ($child->isForbidden()) {
         return $answer->andIf($child);
@@ -614,7 +620,7 @@ final class Surfaces implements SurfacesInterface {
    */
   protected function ownAccess(SurfaceDefinition $definition, SurfaceContext $context, AccountInterface $account): AccessResultInterface {
     // Decision: see docs/decisions.md#no-declared-situation-no-permission-tier.
-    $permission = $this->registry->getSituations($definition->class)[$context->operation]->permission ?? NULL;
+    $permission = $this->registry->getSituations($definition->name())[$context->operation]->permission ?? NULL;
     $result = AccessResult::neutral();
     if ($permission !== NULL) {
       $resolved = static::resolvePermission($permission, $context);
@@ -676,7 +682,7 @@ final class Surfaces implements SurfacesInterface {
    */
   protected function childrenMayAnswer(SurfaceDefinition $definition): bool {
     foreach ($this->registry->getDefinitions() as $other) {
-      if ($other->class !== $definition->class && $other->access !== NULL) {
+      if ($other->name() !== $definition->name() && $other->access !== NULL) {
         return TRUE;
       }
     }
@@ -732,7 +738,7 @@ final class Surfaces implements SurfacesInterface {
    */
   public function defaults(string $surface): array {
     $builder = new DataSurfaceBuilder();
-    static::surfaceClass($this->registry->getDefinition($surface))::defineInputs(new SurfaceShape($builder, $this->typedDataManager));
+    $this->defineShape($this->registry->getDefinition($surface), new SurfaceShape($builder, $this->typedDataManager));
     return $builder->seal()->getDefaultValues();
   }
 
@@ -747,7 +753,7 @@ final class Surfaces implements SurfacesInterface {
         $definition->id,
       ));
     }
-    return $this->targetFor($definition, $context, $built ?? $this->build($definition->class, $context));
+    return $this->targetFor($definition, $context, $built ?? $this->build($definition->name(), $context));
   }
 
   /**
@@ -808,7 +814,7 @@ final class Surfaces implements SurfacesInterface {
    */
   protected function omittedKeys(SurfaceDefinition $definition, DataSurfaceInterface $built): array {
     $shape = new SurfaceShape(new DataSurfaceBuilder(), $this->typedDataManager);
-    static::surfaceClass($definition)::defineInputs($shape);
+    $this->defineShape($definition, $shape);
     return array_values(array_filter(
       array_keys($shape->attachments()),
       static fn (string $key): bool => $built->getDefinitions()->entry($key) === NULL,
@@ -1249,6 +1255,37 @@ final class Surfaces implements SurfacesInterface {
       return (string) $value;
     }, $permission);
     return $unknown ? NULL : $resolved;
+  }
+
+  /**
+   * Fills a surface's shape, from its class or from what derived it.
+   *
+   * A class-based surface's defineInputs() and defineOutputs() are
+   * called on the class; a derived surface's shape methods are the ones
+   * its deriver named, handed the shape first.
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $definition
+   *   The surface.
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceShape $inputs
+   *   The input shape.
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceShape|null $outputs
+   *   The output shape, or NULL when only the inputs are wanted.
+   */
+  protected function defineShape(SurfaceDefinition $definition, SurfaceShape $inputs, ?SurfaceShape $outputs = NULL): void {
+    if ($definition->isDerived()) {
+      // Decision: see docs/decisions.md#a-derived-surface-has-no-class.
+      $definition->inputs?->call($this->classResolver, $inputs);
+      if ($outputs !== NULL) {
+        $definition->outputs?->call($this->classResolver, $outputs);
+      }
+      return;
+    }
+    // Decision: see docs/decisions.md#a-surface-is-static.
+    $owner = static::surfaceClass($definition);
+    $owner::defineInputs($inputs);
+    if ($outputs !== NULL && is_subclass_of($owner, HasOutputsInterface::class)) {
+      $owner::defineOutputs($outputs);
+    }
   }
 
   /**
