@@ -83,7 +83,7 @@ final class DemoFormatterAlter implements SurfaceAlterInterface {
    * casing it goes, and the formatter's own variants are the formatter's.
    */
   #[RefinesInput('variant')]
-  public function ribbonInUpperCase(DataDefinitionInterface $variant, string $casing): DataDefinitionInterface {
+  public static function ribbonInUpperCase(DataDefinitionInterface $variant, string $casing): DataDefinitionInterface {
     if ($casing === 'uppercase') {
       return $variant;
     }

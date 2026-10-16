@@ -81,7 +81,7 @@ final class DemoBlockAlter implements SurfaceAlterInterface {
    * A grid of fifty teasers is a page, not a block.
    */
   #[RefinesInput('limit')]
-  public function shortInGrid(DataDefinitionInterface $limit, string $presentation): DataDefinitionInterface {
+  public static function shortInGrid(DataDefinitionInterface $limit, string $presentation): DataDefinitionInterface {
     if ($presentation !== 'grid') {
       return $limit;
     }

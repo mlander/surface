@@ -48,7 +48,7 @@ discovery finds it and builds it as an autowired service.
 
 - `alterInputs()` adds the same `badge` the formatter gets, which the
   build mounts at `third_party_settings.data_surface_demo_extras.badge`.
-- `#[RefinesInput('limit')]` on `shortInGrid()` watches
+- `#[RefinesInput('limit')]` on the static `shortInGrid()` watches
   `presentation`, by parameter name, and caps the number of items at
   twenty while the block is a grid. It used to watch `show_summary`;
   that key now lives inside the list presentation's subsurface, and an

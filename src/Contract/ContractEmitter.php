@@ -18,6 +18,7 @@ use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Options\OptionSet;
 use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\data_surface\SurfaceAttachment;
+use Drupal\data_surface\SurfaceBuild\RefinesInputRefiner;
 use Drupal\data_surface\SurfaceEntry;
 use Drupal\data_surface\SurfaceList;
 
@@ -1030,6 +1031,8 @@ final class ContractEmitter {
    * what /refine would answer less what only the runtime knows. A
    * runtime refiner is never called here: what it answers is not a
    * function of the combination, and the key carries `runtime` instead.
+   * With assertions on, the first combination is refined a second time
+   * and must answer the same (answersAgain()).
    * Decision: see
    * docs/decisions.md#static-by-default-runtime-by-declaration.
    * Siblings are taken in declaration order, and each one's list is read
@@ -1093,14 +1096,11 @@ final class ContractEmitter {
     }
 
     $branches = [];
-    $ignored = [];
-    foreach ($combinations as [$combination, $surface]) {
-      $definition = $surface->getDefinition($entry->name) ?? $entry->definition;
-      // A collection's own keywords: its items are the child's, which no
-      // parent's refiner reaches.
-      [$schema] = $entry->list !== NULL
-        ? $this->listKeywords($definition)
-        : $this->property($definition, NULL, NULL, $path, FALSE, [], $cacheability, $ignored);
+    foreach ($combinations as $i => [$combination, $surface]) {
+      $schema = $this->stated($entry, $surface->getDefinition($entry->name) ?? $entry->definition, $path, $cacheability);
+      // In development and tests only, and for one combination per key:
+      // asked again, a static refiner answers the same.
+      assert($i > 0 || $this->answersAgain($declared, $entry, array_replace($values, $combination), $schema, $path, $cacheability));
       $narrowed = $this->narrowed($schema, $base);
       if ($narrowed === []) {
         continue;
@@ -1120,6 +1120,101 @@ final class ContractEmitter {
       ];
     }
     return $branches;
+  }
+
+  /**
+   * Describes a key the way a conditional is diffed from.
+   *
+   * @param \Drupal\data_surface\SurfaceEntry $entry
+   *   The key.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   Its definition: as declared, or refined for a combination.
+   * @param string $path
+   *   The key's dotted path.
+   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
+   *   Collects what the description depends on.
+   *
+   * @return array
+   *   A collection's own keywords, its items being the child's, which no
+   *   parent's refiner reaches; any other key's property schema.
+   */
+  protected function stated(SurfaceEntry $entry, DataDefinitionInterface $definition, string $path, CacheableMetadata $cacheability): array {
+    $ignored = [];
+    return $entry->list !== NULL
+      ? $this->listKeywords($definition)[0]
+      : $this->property($definition, NULL, NULL, $path, FALSE, [], $cacheability, $ignored)[0];
+  }
+
+  /**
+   * Describes one key as a conditional on it states it, in plain schema.
+   *
+   * What an agreement check compares: the key as declared, with a
+   * conditional's `then` laid over it, against the key refined afresh
+   * for the conditional's values, each described by this.
+   *
+   * @param \Drupal\data_surface\SurfaceEntry $entry
+   *   The key, from the surface's definition map.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $definition
+   *   The definition to describe; NULL for the entry's own.
+   *
+   * @return array
+   *   The schema, with no `x-surface` at any depth.
+   */
+  public function describeKey(SurfaceEntry $entry, ?DataDefinitionInterface $definition = NULL): array {
+    return $this->withoutExtension($this->stated($entry, $definition ?? $entry->definition, $entry->name, new CacheableMetadata()));
+  }
+
+  /**
+   * Refines once more for one combination, and refuses a different answer.
+   *
+   * A static refiner is a pure function of what it watches, so asked
+   * again for the same values it answers the same; one that read
+   * something else (a counter, the time, storage that changed between the
+   * two calls) does not, and its conditional would be a schema that lies.
+   * Called under assert() only, for the first combination of each key
+   * enumerated, so a hidden dependency shows in development at the cost
+   * of one refinement per key, and production pays nothing.
+   *
+   * Decision: see docs/decisions.md#static-by-default-runtime-by-declaration.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $declared
+   *   The surface of this frame, as advertised.
+   * @param \Drupal\data_surface\SurfaceEntry $entry
+   *   The key, unrefined.
+   * @param array $values
+   *   The values of the frame with the combination laid over them.
+   * @param array $schema
+   *   What the first refinement answered for the key.
+   * @param string $path
+   *   The key's dotted path.
+   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
+   *   Collects what the description depends on.
+   *
+   * @return bool
+   *   TRUE; a disagreement throws.
+   *
+   * @throws \LogicException
+   *   Naming the key's static refiners and the values.
+   */
+  protected function answersAgain(DataSurfaceInterface $declared, SurfaceEntry $entry, array $values, array $schema, string $path, CacheableMetadata $cacheability): bool {
+    $again = $this->stated($entry, $declared->refine($values, FALSE)->getDefinition($entry->name) ?? $entry->definition, $path, $cacheability);
+    if (json_encode($this->withoutExtension($again)) === json_encode($this->withoutExtension($schema))) {
+      return TRUE;
+    }
+    $refiners = [];
+    foreach ($entry->refiners as $chain) {
+      foreach ($chain as $link) {
+        if ($link instanceof RefinesInputRefiner) {
+          array_push($refiners, ...$link->describes($entry->name));
+        }
+      }
+    }
+    throw new \LogicException(sprintf(
+      'The refiner %s is declared static but answered differently when run again, for "%s" with %s: a refiner whose answer depends on anything but the siblings it watches must declare runtime: TRUE.',
+      $refiners === [] ? 'of "' . $entry->name . '"' : implode(' or ', $refiners),
+      $path,
+      json_encode(array_intersect_key($values, array_flip($entry->staticDependencies()))),
+    ));
   }
 
   /**

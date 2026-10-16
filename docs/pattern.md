@@ -107,13 +107,16 @@ tool; it is a service, so its methods are instance methods.
   refiner (`runtime: TRUE`): a rule no schema can state, such as a
   lookup or uniqueness, which nothing runs ahead of time
   ([refinement](refinement.md#static-and-runtime-refiners)). **A
-  surface's refiner is static; an alter's is an instance method**,
-  because an alter is a service that may hold configuration.
+  static refiner is a static method**, a surface's and an alter's
+  alike, so it holds no service; an alter's runtime refiner may be an
+  instance method, because an alter is a service that may hold what it
+  reads.
 - **Labels are `t('...')`.** A static method has no instance for the
   translation service to be injected into, and the global `t()` returns
   the same lazy `TranslatableMarkup`, which string extraction finds.
   `new TranslatableMarkup` is kept for attribute arguments, where a
-  function call is not allowed; an alter, a service, calls `$this->t()`.
+  function call is not allowed; an alter, a service, calls `$this->t()`
+  outside its static refiners.
 
 ```php
 #[Surface('field.instance',

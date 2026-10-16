@@ -144,10 +144,12 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
   /**
    * Tests the emitter never runs a runtime refiner ahead of time.
    *
-   * The full schema calls the static refiner once per aisle, and neither
-   * runtime refiner at all. The schema for no values does the same for
-   * its conditionals; the one call the refiner that watches nothing gets
-   * is the present moment's, as many as one refinement makes, not one per
+   * The full schema calls the static refiner once per aisle, and once
+   * more for the first aisle, which is the emitter asking it again under
+   * assert() to see that it answers the same; neither runtime refiner is
+   * called at all. The schema for no values does the same for its
+   * conditionals; the one call the refiner that watches nothing gets is
+   * the present moment's, as many as one refinement makes, not one per
    * combination.
    */
   public function testTheEmitterNeverRunsRuntimeRefinersAhead(): void {
@@ -156,7 +158,7 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
     StockroomSurface::$banned = ['red'];
     StockroomSurface::$calls = [];
     $this->schema($surface);
-    $this->assertSame(['shelfInAisle' => 2], StockroomSurface::calls(), 'The full schema ran the static refiner per aisle and no runtime one.');
+    $this->assertSame(['shelfInAisle' => 3], StockroomSurface::calls(), 'The full schema ran the static refiner per aisle, and again for one, and no runtime one.');
 
     StockroomSurface::$calls = [];
     $surface->refine([]);
@@ -165,7 +167,7 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
     StockroomSurface::$calls = [];
     $schema = $this->schema($surface, []);
     $calls = StockroomSurface::calls();
-    $this->assertSame(2, $calls['shelfInAisle'] ?? 0);
+    $this->assertSame(3, $calls['shelfInAisle'] ?? 0);
     $this->assertArrayNotHasKey('openShelf', $calls, 'A gated runtime refiner is not run for the conditionals.');
     $this->assertSame($once, $calls['allowedTag'] ?? 0, 'The ungated one runs for the present moment only.');
     // Enumerated by the static refiner alone, so a closed shelf is still

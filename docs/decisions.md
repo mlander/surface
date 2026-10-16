@@ -26,18 +26,22 @@ surface](#a-plugin-that-is-its-own-surface)), and it keeps an object
 out of every cached form: the surface's link in the refiner chain holds
 the class name, where an instance carrying `StringTranslationTrait` was
 measured at about 721 bytes more per cached form. `RefinesInputRefiner`
-dispatches a static and an instance method alike, so **a surface's
-refiner is static; an alter's is an instance method**: an alter is an
-autowired service and may hold configuration its refiner reads, a
-site's shipping zones, say. PHP itself refuses a class that implements
+dispatches a static and an instance method alike, but **a static
+refiner is a static method, a surface's and an alter's alike**: an
+alter is an autowired service and may hold configuration a refiner
+reads, a site's shipping zones, say, and a refiner that reads it is a
+runtime refiner, the one kind that may be an instance method (see
+[Static by default, runtime by declaration](#static-by-default-runtime-by-declaration)).
+PHP itself refuses a class that implements
 the interface with an instance `defineInputs()`, so discovery names the
 one that dropped the interface to get one past the compiler.
 (`Surfaces::buildSurface()`, `Surfaces::assertStaticOnSurface()`,
 `SurfaceRegistry::assertSurfaceClass()`)
 
 Translatable strings in static context use the global `t()`: a
-surface's shape, refiners and situations, a plugin's static protocol
-methods, an enum's labels, a value object's static helper.
+surface's shape, refiners and situations, an alter's static refiners
+(with `PluralTranslatableMarkup` for a plural), a plugin's static
+protocol methods, an enum's labels, a value object's static helper.
 `t('Label')` returns the same lazy `TranslatableMarkup` that
 `new TranslatableMarkup('Label')` does, and string extraction finds
 it; the coding standards' reason to prefer `$this->t()` is injection,
@@ -269,19 +273,47 @@ a remote lookup, the current account and the time can never be captured
 in JSON Schema; saying so on the method is the only place the knowledge
 exists.
 
-The build does not enforce purity. A static method cannot be injected,
-but it can call `\Drupal::service()`, and an alter's refiner is an
-instance method on a service that may hold anything; there is no cheap
-way to tell a pure function from one that reads the database without
-running it, and running it twice and comparing proves nothing about
-tomorrow. The module has no custom PHPStan rules to add one beside
-(`phpstan.neon` configures only the level, paths and ignores), and a
-rule that flagged `\Drupal::` inside a static refiner would catch the
-one spelling and miss an alter's injected service, which is the honest
-way to read state. So it is a declaration and its documentation: a
-static refiner that reads site state is a bug in that refiner, and the
-full schema it produces is wrong. (`RefinesInput`,
-`Surfaces::bindRefiners()`, `RuntimeRefiner`,
+The kind is enforced rather than trusted, in three layers, because a
+static refiner that reads site state writes a full schema that is
+wrong for any values once that state changes (a threshold read from
+config is the plain case), and no declaration alone stops it:
+
+- **Structural, at build.** A static refiner is a static method. The
+  one thing a static method cannot have is injected services, so the
+  build refuses an instance method that does not declare `runtime:
+  TRUE`, naming it and both fixes. A static method may still declare
+  runtime, since it can reach the global container. This moved the
+  alters' refiners that only translated to static methods calling
+  `t()` and constructing `PluralTranslatableMarkup`; an alter's
+  injected service, the honest way to read state, is now only reachable
+  from a runtime refiner. (`Surfaces::assertStaticUnlessRuntime()`)
+- **Observational, under `assert()`.** In development and tests a
+  static refiner's call runs with the global container replaced by a
+  wrapper that throws when asked for any service or parameter but the
+  typed data manager, which core's definitions ask for to read their
+  default constraints. `t()` passes: it builds a lazy markup. Production
+  compiles no assertion and pays nothing. It catches `\Drupal::service()`
+  and every shortcut through the container, `::currentUser()` and
+  `::time()` included. (`Refinement\StaticRefinerContainer`,
+  `RefinesInputRefiner::invoke()`)
+- **Agreement.** Under `assert()` the emitter asks each enumerated key's
+  static refiners again for one combination and refuses a different
+  answer, which catches a counter or a clock that reads no service; and
+  a kernel test trait holds every conditional of a document to a fresh
+  `refine()` for its values, run over the examples and the fixtures.
+  (`ContractEmitter::answersAgain()`,
+  `Tests\data_surface\Traits\StaticRefinerAgreementTrait`)
+
+None of them proves purity: running a refiner twice proves nothing about
+tomorrow, and a static method can still read a static property something
+else filled from storage. A PHPStan rule is left for later. The module
+has no custom rules to add one beside (`phpstan.neon` configures only
+the level, paths and ignores), and with the structural layer in place
+the rule left to write would flag `\Drupal::` and static state inside a
+static refiner, which the guard already catches whenever a test runs the
+refiner; it would add reach to refiners no test exercises, which is
+worth a rule once there are third-party refiners to hold to it.
+(`RefinesInput`, `Surfaces::bindRefiners()`, `RuntimeRefiner`,
 `ContractEmitter::frame()`, `ContractEmitter::enumerate()`)
 
 ## Alters

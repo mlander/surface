@@ -9,6 +9,7 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DataSurfaceRefinerInterface;
+use Drupal\data_surface\Refinement\StaticRefinerContainer;
 
 /**
  * The engine's refiner, spoken by one class's #[RefinesInput] methods.
@@ -39,10 +40,17 @@ use Drupal\data_surface\DataSurfaceRefinerInterface;
  * It rides inside the sealed surface, so inside cached forms. A surface's
  * link holds the surface's class name, because a surface's refiners are
  * static and a surface is never instantiated; an alter's link holds the
- * alter, an autowired service whose refiners may be instance methods,
+ * alter, an autowired service whose runtime refiners may be instance
+ * methods,
  * and the dependency serialization trait stores a service by its id, so
  * a serialized surface carries no container either way. A static method
  * and an instance method are dispatched alike.
+ *
+ * With assertions on, a static refiner, one not declared runtime (and
+ * so, the build has made sure, a static method), is called with the
+ * global container guarded (StaticRefinerContainer): asking it for a
+ * service throws, naming the method. Production, where assert() is not
+ * compiled, makes the call as it is.
  *
  * An alter's method on a key the alter itself added is bound under the
  * mount, `third_party_settings`, the one key the engine knows the
@@ -100,6 +108,19 @@ final class RefinesInputRefiner implements DataSurfaceRefinerInterface {
    */
   public static function path(string $module, string $key): string {
     return self::MOUNT . '.' . $module . '.' . $key;
+  }
+
+  /**
+   * Names the methods this link runs for one key, for a message.
+   *
+   * @param string $name
+   *   The key; the mount for an alter's methods on the keys it added.
+   *
+   * @return string[]
+   *   Each method, Class::method(), in the order the link calls them.
+   */
+  public function describes(string $name): array {
+    return array_map(static fn (RefinerDefinition $refiner): string => $refiner->describe(), $this->bindings[$name] ?? []);
   }
 
   /**
@@ -165,7 +186,14 @@ final class RefinesInputRefiner implements DataSurfaceRefinerInterface {
       $arguments[] = $values[$this->paths[$key] ?? $key] ?? NULL;
     }
     $method = new \ReflectionMethod($this->instance, $refiner->method);
-    $refined = $method->invokeArgs($method->isStatic() || !is_object($this->instance) ? NULL : $this->instance, $arguments);
+    $object = $method->isStatic() || !is_object($this->instance) ? NULL : $this->instance;
+    $call = static fn (): mixed => $method->invokeArgs($object, $arguments);
+    // In development and tests only: a static refiner runs with the
+    // global container guarded, so one that reaches for a service is
+    // caught rather than written into the schema.
+    $guarded = FALSE;
+    assert(StaticRefinerContainer::asserting($guarded));
+    $refined = $guarded && !$refiner->runtime ? StaticRefinerContainer::guard($refiner->describe(), $call) : $call();
     if (!$refined instanceof DataDefinitionInterface) {
       throw new \LogicException(sprintf(
         '%s returned %s; a #[RefinesInput] method returns the definition it was handed, tightened.',

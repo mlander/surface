@@ -87,7 +87,8 @@ outputs, which the demo formatter declares; the test module's
   instantiated: the build step calls its static methods on the class,
   and what rides along in a cached form is the class name. Targets,
   access classes and alters are autowired services and may hold
-  services; an alter's refiners are instance methods.
+  services; an alter's refiners are static methods too, unless they
+  declare `runtime: TRUE`, the one kind an instance method may be.
 
 ### Nothing live in the shape
 
@@ -294,11 +295,15 @@ strings injects `string_translation`, uses `StringTranslationTrait` and
 calls `$this->t()`, so that translation never resolves through the
 global container from our own code. A plugin whose base class already
 carries the trait, a condition's `summary()`, calls `$this->t()` too.
+An alter's static refiner is a static method, so it calls `t()`, or
+constructs `PluralTranslatableMarkup` for a plural, as a surface's
+does.
 
 So the split is by context, and can fall inside one file: the demo
 formatter's static `defineInputs()` calls `t()`, its plugin attribute
 constructs `new TranslatableMarkup`, and `DemoFormatterAlter`, an alter
-of it, calls `$this->t()`. `DataSurfaceBuilder`, the engine under the
+of it, calls `$this->t()` in `alterInputs()`; the compliance alter of
+example 3 calls `$this->t()` there and `t()` in its static refiners. `DataSurfaceBuilder`, the engine under the
 build step, is a value object made with `new`, so its one labeling
 method is static and calls `t()`.
 

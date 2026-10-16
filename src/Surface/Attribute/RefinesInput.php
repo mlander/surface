@@ -13,14 +13,14 @@ namespace Drupal\data_surface\Surface\Attribute;
  *
  *   - by parameter name, when `watches` is omitted:
  *       #[RefinesInput('bundle')]
- *       public function bundleOf(
+ *       public static function bundleOf(
  *         DataDefinitionInterface $bundle, string $entity_type)
  *
  *   - by `watches`, which then must match the parameters in order; a
  *     renamed parameter is a seal-time error rather than a refiner
  *     that silently never runs:
  *       #[RefinesInput('field', watches: ['entity_type', 'bundle'])]
- *       public function fieldOf(DataDefinitionInterface $field,
+ *       public static function fieldOf(DataDefinitionInterface $field,
  *         string $entity_type, string $bundle)
  *
  * Either way, sealing refuses a sibling that is not a declared input
@@ -55,9 +55,14 @@ namespace Drupal\data_surface\Surface\Attribute;
  *       public function openRooms(
  *         DataDefinitionInterface $room, string $venue)
  *
- * The kind is a declaration, not something the module can check: a
- * static refiner that reads site state anyway is a schema that lies.
- * See docs/refinement.md and
+ * The kind is enforced, not trusted. A static refiner is a static
+ * method: the build refuses an instance method that does not declare
+ * runtime, since an instance method can read the services its class was
+ * built with (a static method may declare runtime too). With assertions
+ * on, a static refiner runs with the global container guarded, so one
+ * asking for a service is refused, and the served contract asks it again
+ * for one combination per key it enumerates, so one answering
+ * differently is refused. See docs/refinement.md#enforcing-the-kind and
  * docs/decisions.md#static-by-default-runtime-by-declaration.
  */
 #[\Attribute(\Attribute::TARGET_METHOD)]

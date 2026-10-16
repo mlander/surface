@@ -454,7 +454,11 @@ changes it with one class. It adds two keys, an event licence and a
 number of stewards, stored under the module's own name (at
 `third_party_settings.data_surface_examples_compliance.licence` and
 `.stewards`, so example 3's storage never has to know them), and
-rewords the title's label. Its three methods are what you see move:
+rewords the title's label. Its three methods are what you see move.
+The first two are static methods, pure functions of what they watch,
+so the served contract states their answers ahead of time; the third
+reads State, so it is a runtime refiner, the only kind an instance
+method may be:
 
 - **The licence lifts a ceiling on example 3's own key.** The method on
   `capacity` watches the alter's `licence`. With no licence it caps the
@@ -531,7 +535,7 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
    * @see docs/decisions.md#a-refiner-never-sees-an-invalid-sibling
    */
   #[RefinesInput('capacity')]
-  public function capacityWithoutLicence(DataDefinition $capacity, ?string $licence): DataDefinition {
+  public static function capacityWithoutLicence(DataDefinition $capacity, ?string $licence): DataDefinition {
     $range = $capacity->getConstraints()['Range'] ?? [];
     $max = $range['max'] ?? NULL;
     if ((string) $licence !== '' || ($max !== NULL && $max <= 100)) {
@@ -539,8 +543,8 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
     }
     $capacity->addConstraint('Range', array_replace($range, ['max' => 100]));
     return $capacity->setDescription($max === NULL
-      ? $this->t('Up to 100 without an event licence.')
-      : $this->t('Up to 100 without an event licence. With one, up to @max.', ['@max' => $max]));
+      ? t('Up to 100 without an event licence.')
+      : t('Up to 100 without an event licence. With one, up to @max.', ['@max' => $max]));
   }
 
   /**
@@ -550,7 +554,9 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
    * values are held to it, so no schema can state it ahead of time. It
    * watches the venue so it narrows the venue's rooms, which the owner's
    * refiner has already listed; the full schema still offers every room
-   * per venue, and the pipeline refuses a closed one.
+   * per venue, and the pipeline refuses a closed one. The one refiner
+   * here that is an instance method, which only a runtime refiner may
+   * be: it reads the State this alter was built with.
    *
    * @see docs/decisions.md#static-by-default-runtime-by-declaration
    */
@@ -574,10 +580,10 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
    * One steward for every fifty people, at least one.
    */
   #[RefinesInput('stewards')]
-  public function stewardsForCapacity(DataDefinition $stewards, int $capacity): DataDefinition {
+  public static function stewardsForCapacity(DataDefinition $stewards, int $capacity): DataDefinition {
     $n = max(1, (int) ceil($capacity / 50));
     return $stewards->addConstraint('Range', ['min' => $n])
-      ->setDescription($this->formatPlural(
+      ->setDescription(new PluralTranslatableMarkup(
         $n,
         'At least 1 steward for @capacity attendees.',
         'At least @count stewards for @capacity attendees.',
@@ -735,6 +741,7 @@ Drush commands are checked against `ExampleCalls`.
 | --- | --- |
 | `Kernel\ExamplesStepsTest` | Examples 1 to 3: each form builds and saves, example 1 as its classic twin does; the venue narrows the room and the room the capacity; the ticket slot resolves by pricing; the contact validates its email; the panel's rows as the answers move; each example's class stays screen sized. |
 | `Kernel\ExamplesComplianceTest` | Example 4: the alter's keys and label; its keys in one fieldset titled "Compliance", drawn between the capacity and the pricing; the capacity capped at a hundred without a licence and the room's limit with one; the licence's pattern; the stewards' minimum following the capacity; what the licence and the capacity replace on the form; a room closed in State left out, said in the room's help, and refused on submit; example 5's calls unchanged. |
+| `Kernel\StaticRefinerEnforcementTest` | Examples 2 and 3, without example 4 and with it: every conditional the served contract enumerates, in the full schema and in the schema for no values and for the defaults, is what refining afresh for its values answers. |
 | `Kernel\ExamplesToolTest` | Example 5: the three calls and their answers; what the script prints. |
 | `Kernel\ConfigSchemaContractTest` | What config schema can say: the plain mapping of examples 1 and 3, whole, with no list, no bound, nothing required and no shape for the ticket, the same whatever is stored or mounted; core's answer, a comment and no property; a constraint a schema does declare is said; the JSON this page quotes. |
 | `Kernel\ExamplesTodayPanelTest` | The second panel under examples 1 to 3: its two documents and its table, row by row; its rows read from the surface's full schema, so the pricing, the venue and what is stored leave every row and both documents as they were; example 4's keys on the surface's side only; the classic twin's page. |

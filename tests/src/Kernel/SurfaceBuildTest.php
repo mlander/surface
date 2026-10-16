@@ -27,11 +27,13 @@ use Drupal\data_surface_surface_test\Surface\Broken\SelfAttachingSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\UnofferedVariantSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\WatchesSubsurfaceSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\ClashingSituationSurface;
+use Drupal\data_surface_surface_test\Surface\Broken\InstanceAlterRefinerSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\InstanceRefinerSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\RefinesOutputSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\UndeclaredIdentitySurface;
 use Drupal\data_surface_surface_test\Surface\Broken\StrictMountWatcherSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\WatchesMismatchSurface;
+use Drupal\data_surface_surface_test\SurfaceAlter\InstanceRefinerAlter;
 use Drupal\data_surface_surface_test\SurfaceAlter\StrictMountWatcherAlter;
 use Drupal\data_surface_surface_test\Surface\Broken\WatchesUndeclaredSurface;
 use Drupal\data_surface_surface_test\Surface\Broken\WideningRefinerSurface;
@@ -324,6 +326,10 @@ class SurfaceBuildTest extends DataSurfaceKernelTestBase {
       'a surface refiner that is an instance method' => [
         InstanceRefinerSurface::class,
         InstanceRefinerSurface::class . '::nameOfKind() is a #[RefinesInput] method of the surface_test.broken.instance_refiner surface and is not static.',
+      ],
+      'an alter refiner that is an instance method and not runtime' => [
+        InstanceAlterRefinerSurface::class,
+        InstanceRefinerAlter::class . '::nameOfKind() is an instance method of an alter of the surface_test.broken.instance_alter_refiner surface and does not declare runtime: TRUE.',
       ],
       'a surface inside itself' => [
         SelfAttachingSurface::class,

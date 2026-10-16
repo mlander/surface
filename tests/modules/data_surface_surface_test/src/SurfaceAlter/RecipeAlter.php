@@ -36,7 +36,7 @@ final class RecipeAlter implements SurfaceAlterInterface, AltersOutputsInterface
    * No fish in a vegetarian recipe. Runs after the owner's dish refiner.
    */
   #[RefinesInput('dish')]
-  public function noFishForVegetarians(DataDefinitionInterface $dish, bool $vegetarian): DataDefinitionInterface {
+  public static function noFishForVegetarians(DataDefinitionInterface $dish, bool $vegetarian): DataDefinitionInterface {
     if (!$vegetarian) {
       return $dish;
     }

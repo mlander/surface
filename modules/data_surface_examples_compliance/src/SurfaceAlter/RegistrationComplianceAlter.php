@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface_examples_compliance\SurfaceAlter;
 
 use Drupal\Core\State\StateInterface;
+use Drupal\Core\StringTranslation\PluralTranslatableMarkup;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\DataDefinition;
@@ -80,7 +81,7 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
    * @see docs/decisions.md#a-refiner-never-sees-an-invalid-sibling
    */
   #[RefinesInput('capacity')]
-  public function capacityWithoutLicence(DataDefinition $capacity, ?string $licence): DataDefinition {
+  public static function capacityWithoutLicence(DataDefinition $capacity, ?string $licence): DataDefinition {
     $range = $capacity->getConstraints()['Range'] ?? [];
     $max = $range['max'] ?? NULL;
     if ((string) $licence !== '' || ($max !== NULL && $max <= 100)) {
@@ -88,8 +89,8 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
     }
     $capacity->addConstraint('Range', array_replace($range, ['max' => 100]));
     return $capacity->setDescription($max === NULL
-      ? $this->t('Up to 100 without an event licence.')
-      : $this->t('Up to 100 without an event licence. With one, up to @max.', ['@max' => $max]));
+      ? t('Up to 100 without an event licence.')
+      : t('Up to 100 without an event licence. With one, up to @max.', ['@max' => $max]));
   }
 
   /**
@@ -99,7 +100,9 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
    * values are held to it, so no schema can state it ahead of time. It
    * watches the venue so it narrows the venue's rooms, which the owner's
    * refiner has already listed; the full schema still offers every room
-   * per venue, and the pipeline refuses a closed one.
+   * per venue, and the pipeline refuses a closed one. The one refiner
+   * here that is an instance method, which only a runtime refiner may
+   * be: it reads the State this alter was built with.
    *
    * @see docs/decisions.md#static-by-default-runtime-by-declaration
    */
@@ -123,10 +126,10 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
    * One steward for every fifty people, at least one.
    */
   #[RefinesInput('stewards')]
-  public function stewardsForCapacity(DataDefinition $stewards, int $capacity): DataDefinition {
+  public static function stewardsForCapacity(DataDefinition $stewards, int $capacity): DataDefinition {
     $n = max(1, (int) ceil($capacity / 50));
     return $stewards->addConstraint('Range', ['min' => $n])
-      ->setDescription($this->formatPlural(
+      ->setDescription(new PluralTranslatableMarkup(
         $n,
         'At least 1 steward for @capacity attendees.',
         'At least @count stewards for @capacity attendees.',

@@ -32,7 +32,7 @@ final class MountWatcherAlter implements SurfaceAlterInterface {
    * Without a kind, the detail is short.
    */
   #[RefinesInput('detail')]
-  public function detailOfKind(DataDefinitionInterface $detail, ?string $kind): DataDefinitionInterface {
+  public static function detailOfKind(DataDefinitionInterface $detail, ?string $kind): DataDefinitionInterface {
     return $kind === NULL ? $detail->addConstraint('Length', ['max' => 10]) : $detail;
   }
 
@@ -40,7 +40,7 @@ final class MountWatcherAlter implements SurfaceAlterInterface {
    * A large kind allows no more than a hundred.
    */
   #[RefinesInput('size')]
-  public function sizeOfKind(DataDefinitionInterface $size, ?string $kind): DataDefinitionInterface {
+  public static function sizeOfKind(DataDefinitionInterface $size, ?string $kind): DataDefinitionInterface {
     return $kind === 'large' ? $size->addConstraint('Range', ['max' => 100]) : $size;
   }
 

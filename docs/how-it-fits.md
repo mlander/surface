@@ -74,12 +74,14 @@ build(FieldInstanceSurface::class, $context):
 
   5. the refiners (bindRefiners), owner's first, then each alter's:
        each #[RefinesInput] method checked against the shape and the wall,
-         and a surface's checked static
+         a surface's checked static, and an alter's static unless it
+         declares runtime
        the keys it watches become refinement edges; a key its alter
          mounted, refined or watched, by its dotted path in the mount
        its class becomes one RefinesInputRefiner link on each key it refines:
          the surface's link holds its class name and calls static methods,
-         an alter's holds the alter service and calls instance methods
+         an alter's holds the alter service, whose runtime refiners
+         may be instance methods
        a method watching nothing runs now, checked narrower
 
   6. the children, each through this same build step in its own frame,

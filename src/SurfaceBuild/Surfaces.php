@@ -65,7 +65,9 @@ use Drupal\data_surface\SurfaceList;
  *    to the narrowing check. A runtime method (`runtime: TRUE`) is bound
  *    in a link of its own, wrapped in Refinement\RuntimeRefiner, after
  *    its class's static link; one that watches nothing is not run here
- *    but bound ungated, to run on every refinement.
+ *    but bound ungated, to run on every refinement. Only a runtime
+ *    method may be an instance method: a static refiner is a static
+ *    method, so it cannot hold the services its class was built with.
  * 6. The children, each through this same build step in its own frame,
  *    each invoked the way a surface asked on its own is: through one of
  *    its own situations when one applies (invokeChild()), otherwise in
@@ -1029,6 +1031,7 @@ final class Surfaces implements SurfacesInterface {
       // Decision: see docs/decisions.md#an-alter-refines-its-own-mounted-key.
       $own = $module !== NULL && in_array($refiner->key, $mounted, TRUE) && !in_array($refiner->key, $input_keys, TRUE);
       static::assertStaticOnSurface($definition, $refiner, $module);
+      static::assertStaticUnlessRuntime($definition, $refiner);
       static::assertWalled($definition, $refiner, $input_keys, $subsurfaces, $parent, $lists);
       static::assertNotWatchingForeignMount($definition, $refiner, $input_keys, $mounted, $mountedBy);
       // Decision: see docs/decisions.md#count-is-the-parents.
@@ -1115,9 +1118,42 @@ final class Surfaces implements SurfacesInterface {
   protected static function assertStaticOnSurface(SurfaceDefinition $definition, RefinerDefinition $refiner, ?string $module): void {
     if ($module === NULL && !$refiner->isStatic) {
       throw new \LogicException(sprintf(
-        '%s is a #[RefinesInput] method of the %s surface and is not static. A surface is never instantiated, so its refiners are static, like its shape; an alter\'s refiner may be an instance method, because an alter is a service.',
+        '%s is a #[RefinesInput] method of the %s surface and is not static. A surface is never instantiated, so its refiners are static, like its shape; only an alter\'s runtime refiner may be an instance method, because an alter is a service.',
         $refiner->describe(),
         $definition->id,
+      ));
+    }
+  }
+
+  /**
+   * Refuses an instance method that does not declare itself runtime.
+   *
+   * A static refiner promises to be a pure function of the siblings it
+   * watches, which the served contract runs ahead of time. The one thing
+   * a static method cannot have is the services its class was built
+   * with, so the language holds it to that promise where it can: an
+   * instance method can read whatever its alter was injected with, and
+   * is only allowed as a runtime refiner. A static method may still
+   * declare runtime, since it can reach the global container.
+   *
+   * Decision: see docs/decisions.md#static-by-default-runtime-by-declaration.
+   *
+   * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $definition
+   *   The surface.
+   * @param \Drupal\data_surface\SurfaceBuild\RefinerDefinition $refiner
+   *   The method, an alter's: a surface's that is not static is refused
+   *   before this, by assertStaticOnSurface().
+   *
+   * @throws \LogicException
+   *   Naming the method and the two ways to fix it.
+   */
+  protected static function assertStaticUnlessRuntime(SurfaceDefinition $definition, RefinerDefinition $refiner): void {
+    if (!$refiner->isStatic && !$refiner->runtime) {
+      throw new \LogicException(sprintf(
+        '%s is an instance method of an alter of the %s surface and does not declare runtime: TRUE. A static refiner is a pure function of the siblings it watches, which the served contract runs ahead of time, and an instance method can read the services its alter was built with: make it `public static` (translating with t()), or, if its answer depends on site state, declare #[RefinesInput(\'%s\', runtime: TRUE)].',
+        $refiner->describe(),
+        $definition->id,
+        $refiner->key,
       ));
     }
   }

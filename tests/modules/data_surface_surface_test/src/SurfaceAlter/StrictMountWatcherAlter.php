@@ -32,7 +32,7 @@ final class StrictMountWatcherAlter implements SurfaceAlterInterface {
    * Watches the kind, which may be NULL, as a string.
    */
   #[RefinesInput('size')]
-  public function sizeOfKind(DataDefinitionInterface $size, string $kind): DataDefinitionInterface {
+  public static function sizeOfKind(DataDefinitionInterface $size, string $kind): DataDefinitionInterface {
     return $size;
   }
 

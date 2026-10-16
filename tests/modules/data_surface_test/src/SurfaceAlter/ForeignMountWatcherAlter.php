@@ -31,7 +31,7 @@ final class ForeignMountWatcherAlter implements SurfaceAlterInterface {
    * Watches the other module's kind.
    */
   #[RefinesInput('note')]
-  public function noteOfKind(DataDefinitionInterface $note, ?string $kind): DataDefinitionInterface {
+  public static function noteOfKind(DataDefinitionInterface $note, ?string $kind): DataDefinitionInterface {
     return $note;
   }
 

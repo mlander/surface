@@ -1,0 +1,234 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\Tests\data_surface\Kernel;
+
+use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\data_surface\DataSurfaceInterface;
+use Drupal\data_surface\Surface\SurfaceContext;
+use Drupal\data_surface_demo\Surface\DemoBlockSurface;
+use Drupal\data_surface_examples\Surface\RegistrationStep2Surface;
+use Drupal\data_surface_examples\Surface\RegistrationStep3Surface;
+use Drupal\data_surface_examples_compliance\SurfaceAlter\RegistrationComplianceAlter;
+use Drupal\data_surface_surface_test\Surface\Broken\FickleSurface;
+use Drupal\data_surface_surface_test\Surface\Broken\ServiceReadingSurface;
+use Drupal\data_surface_surface_test\Surface\Crate\CrateSurface;
+use Drupal\data_surface_surface_test\Surface\StockroomSurface;
+use Drupal\node\Entity\NodeType;
+use Drupal\Tests\data_surface\Traits\StaticRefinerAgreementTrait;
+use Drupal\Tests\user\Traits\UserCreationTrait;
+use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+
+/**
+ * Tests a static refiner is held to being one, three ways.
+ *
+ * The build refuses an instance method not declared runtime (in
+ * SurfaceBuildTest's broken surfaces). With assertions on, a static
+ * refiner runs with the global container guarded, so one that asks for a
+ * service is caught while one that translates is not; and the emitter
+ * asks a static refiner again for one combination per key it enumerates,
+ * so one that answers differently is caught. Last, every enumerated
+ * conditional of the examples and the fixtures is what a fresh
+ * refinement answers (StaticRefinerAgreementTrait).
+ *
+ * @see docs/decisions.md#static-by-default-runtime-by-declaration
+ */
+#[Group('data_surface')]
+#[RunTestsInSeparateProcesses]
+class StaticRefinerEnforcementTest extends DataSurfaceKernelTestBase {
+
+  use StaticRefinerAgreementTrait;
+  use UserCreationTrait;
+
+  /**
+   * {@inheritdoc}
+   */
+  protected static $modules = [
+    'system',
+    'user',
+    'field',
+    'filter',
+    'text',
+    'node',
+    'block',
+    'serialization',
+    'tool',
+    'data_surface',
+    'data_surface_tool',
+    'data_surface_test',
+    'data_surface_surface_test',
+    'data_surface_examples',
+    'data_surface_demo',
+  ];
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function setUp(): void {
+    parent::setUp();
+    $this->installEntitySchema('user');
+    $this->installEntitySchema('node');
+    $this->installConfig(['field', 'node', 'data_surface_examples']);
+    $this->setUpCurrentUser(admin: TRUE);
+    FickleSurface::$calls = 0;
+  }
+
+  /**
+   * Builds a surface with nothing locked.
+   *
+   * @param class-string $class
+   *   The surface class.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The surface.
+   */
+  protected function configure(string $class): DataSurfaceInterface {
+    return $this->container->get('data_surface.surfaces')->build($class, new SurfaceContext('configure'));
+  }
+
+  /**
+   * Builds one of the examples in its configure situation.
+   *
+   * @param class-string $class
+   *   The surface class.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The surface.
+   */
+  protected function example(string $class): DataSurfaceInterface {
+    $surfaces = $this->container->get('data_surface.surfaces');
+    return $surfaces->build($class, $surfaces->situation($class, 'configure'));
+  }
+
+  /**
+   * Tests a static refiner that translates passes the guard.
+   *
+   * The global t() builds a lazy markup and asks the container for
+   * nothing; reading the constraints asks for the typed data manager,
+   * which the guard lets through. The markup is rendered after the
+   * refiner returns, with the real container back.
+   */
+  public function testTranslatingStaticRefinerPassesTheGuard(): void {
+    $this->assertTrue((bool) ini_get('zend.assertions'), 'The suite runs with assertions on.');
+    $name = $this->configure(ServiceReadingSurface::class)->refine(['kind' => 'short'])->getDefinition('name');
+    $this->assertSame(['max' => 10], $name->getConstraints()['Length']);
+    $this->assertInstanceOf(TranslatableMarkup::class, $name->getDescription());
+    $this->assertSame('Up to 10 characters for a short name.', (string) $name->getDescription());
+    $this->assertSame($this->container, \Drupal::getContainer());
+  }
+
+  /**
+   * Tests a static refiner that asks for a service is caught.
+   *
+   * The real container is back afterwards; and with assertions off, as in
+   * production, nothing is guarded and the refiner runs.
+   */
+  public function testStaticRefinerAskingForServiceIsCaught(): void {
+    $surface = $this->configure(ServiceReadingSurface::class);
+    try {
+      $surface->refine(['shelf' => 'top']);
+      $this->fail('A static refiner reading State was let through.');
+    }
+    catch (\LogicException $e) {
+      $this->assertSame(
+        'The refiner ' . ServiceReadingSurface::class . '::sizeOnShelf() is declared static but asked for the service state; a refiner that needs a service must declare runtime: TRUE.',
+        $e->getMessage(),
+      );
+    }
+    $this->assertSame($this->container, \Drupal::getContainer(), 'The real container is put back.');
+
+    // Production compiles no assertion, so the call is made as it is.
+    $this->container->get('state')->set(ServiceReadingSurface::LIMIT, 7);
+    ini_set('zend.assertions', '0');
+    try {
+      $size = $surface->refine(['shelf' => 'top'])->getDefinition('size');
+    }
+    finally {
+      ini_set('zend.assertions', '1');
+    }
+    $this->assertSame(['max' => 7], $size->getConstraints()['Range']);
+  }
+
+  /**
+   * Tests the emitter refuses a static refiner that answers differently.
+   */
+  public function testStaticRefinerAnsweringDifferentlyIsCaught(): void {
+    $surface = $this->configure(FickleSurface::class);
+    $this->expectException(\LogicException::class);
+    $this->expectExceptionMessage('The refiner ' . FickleSurface::class . '::sizeOfKind() is declared static but answered differently when run again, for "size" with {"kind":"small"}');
+    $this->container->get('data_surface.contract_emitter')->emitFull($surface, 'surface_test.broken.fickle');
+  }
+
+  /**
+   * Tests the agreement check itself fails a refiner that answers anew.
+   *
+   * With assertions off the emitter writes the fickle refiner down
+   * without asking it twice; the agreement check, asking afresh, finds
+   * the conditional is not what refinement answers now.
+   */
+  public function testTheAgreementCheckCatchesWhatTheEmitterWroteDown(): void {
+    $surface = $this->configure(FickleSurface::class);
+    ini_set('zend.assertions', '0');
+    try {
+      $this->assertStaticRefinersAgree($surface, NULL, 'surface_test.broken.fickle');
+      $failed = FALSE;
+    }
+    catch (\Throwable $e) {
+      $failed = str_contains($e->getMessage(), 'is declared static but answered differently when run again');
+    }
+    finally {
+      ini_set('zend.assertions', '1');
+    }
+    $this->assertTrue($failed, 'The agreement check failed the fickle refiner.');
+  }
+
+  /**
+   * Tests the examples' conditionals are what refinement answers.
+   *
+   * Steps 2 and 3, without the compliance module and with it, which makes
+   * its two refiners static methods: the full schema, the schema for the
+   * defaults, and for no values at all.
+   */
+  public function testTheExamplesAgree(): void {
+    $compared = [];
+    foreach (['without', 'with'] as $compliance) {
+      if ($compliance === 'with') {
+        $this->enableModules(['data_surface_examples_compliance']);
+        // A closed room is the runtime refiner's, which no conditional
+        // states; the static ones still agree.
+        $this->container->get('state')->set(RegistrationComplianceAlter::CLOSED_ROOMS, ['riverside_main']);
+      }
+      foreach ([RegistrationStep2Surface::class, RegistrationStep3Surface::class] as $class) {
+        $surface = $this->example($class);
+        $label = $class . ' ' . $compliance . ' compliance';
+        $compared[$label] = $this->assertStaticRefinersAgree($surface, NULL, $label)
+          + $this->assertStaticRefinersAgree($surface, [], $label)
+          + $this->assertStaticRefinersAgree($surface, $surface->getDefaultValues(), $label);
+      }
+    }
+    foreach ($compared as $label => $count) {
+      $this->assertGreaterThan(0, $count, $label . ' has enumerated conditionals to compare.');
+    }
+  }
+
+  /**
+   * Tests the fixtures with enumerated keys agree too.
+   *
+   * The demo block (bundles per entity type, fields per bundle), the
+   * stockroom (a static and a runtime refiner on one key) and the crate
+   * (a key enumerated inside a slot's variant).
+   */
+  public function testTheFixturesAgree(): void {
+    NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
+    StockroomSurface::$closed = ['north_2'];
+    foreach ([DemoBlockSurface::class, StockroomSurface::class, CrateSurface::class] as $class) {
+      $surface = $this->configure($class);
+      $count = $this->assertStaticRefinersAgree($surface, NULL, $class)
+        + $this->assertStaticRefinersAgree($surface, [], $class);
+      $this->assertGreaterThan(0, $count, $class . ' has enumerated conditionals to compare.');
+    }
+  }
+
+}

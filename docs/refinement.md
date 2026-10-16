@@ -178,14 +178,68 @@ owner's run before an alter's, as before. A key with both kinds is
 `enumerated` or `dynamic` for its static refiners, over the siblings
 those watch, and `runtime` besides.
 
-The kind is a declaration the module cannot check. A static method
-cannot be injected with a service, but it can call `\Drupal::service()`,
-and an alter's refiner is an instance method on a service; nothing tells
-a pure function from one that reads the database without running it.
-So a static refiner that reads site state is a schema that lies: the
-full schema would state, for any values, an answer that was only true
-when it was emitted. Declare it `runtime`
-([decision](decisions.md#static-by-default-runtime-by-declaration)).
+#### Enforcing the kind
+
+A static refiner that reads site state is a schema that lies: the full
+schema would state, for any values, an answer that was only true when
+it was emitted. Take a refiner that caps a capacity at a threshold read
+from configuration. It looks static, the same values in and the same
+cap out, until somebody changes the threshold: the served contract
+emitted before still says the old cap, for every value, and a client
+holding it refuses or accepts what the pipeline now does not. That is a
+runtime rule, and it says `runtime: TRUE`. So the kind is not taken on
+trust; three layers hold a static refiner to it
+([decision](decisions.md#static-by-default-runtime-by-declaration)):
+
+1. **Structural, at build: a static refiner is a static method.** The
+   one thing a static method cannot have is injected services, so the
+   build refuses a `#[RefinesInput]` instance method that does not
+   declare `runtime: TRUE`, naming the method and both fixes. A static
+   method may still declare runtime, since it can reach the global
+   container. So an instance method is always runtime, and a static
+   method is static unless it says otherwise. An alter's static refiner
+   that only needs translation calls `t()`, or constructs
+   `PluralTranslatableMarkup` for a plural, as a surface's does.
+2. **Observational, in development and tests: the container is
+   guarded.** With assertions on (`zend.assertions = 1`, as in ddev
+   and the test suite, never in production, where `assert()` is not
+   compiled), every call to a static refiner, from the build, the
+   engine's refinement, the pipeline or the emitter's enumeration, runs
+   with the global container replaced by
+   `Refinement\StaticRefinerContainer`, which throws when asked for a
+   service or a parameter:
+
+   > The refiner `Class::method()` is declared static but asked for the
+   > service state; a refiner that needs a service must declare
+   > runtime: TRUE.
+
+   That catches every `\Drupal` shortcut, since each goes through the
+   container: `\Drupal::service()`, `::state()`, `::config()`,
+   `::currentUser()`, `::time()`, `::entityTypeManager()`. Two things
+   pass. `t()` builds a lazy `TranslatableMarkup` and resolves the
+   translation service only when it is rendered, after the refiner has
+   returned. The typed data manager is let through by name: core's own
+   `DataDefinition::getConstraints()` asks the container for it to add
+   a type's default constraints, which is reading a definition, answered
+   from code. The real container is put back when the refiner returns or
+   throws.
+3. **The agreement check.** With assertions on, the emitter asks a
+   static refiner a second time for the first combination of every key
+   it enumerates, and refuses a different answer ("the refiner ... is
+   declared static but answered differently when run again"): a counter
+   or a clock reads no service and still is not a function of what it
+   watches. And `Tests\data_surface\Traits\StaticRefinerAgreementTrait`
+   holds a whole document to it: for every conditional the emitter
+   wrote, a fresh `refine()` against the conditional's values, static
+   refiners alone, answers the declared key with the conditional's
+   `then` laid over it, keyword for keyword, subsurfaces included. The
+   examples and the fixtures with enumerated keys run under it.
+
+None of the three proves purity, and a refiner can still lie in ways
+none sees: a static method reading a static property another class
+fills from storage, say. What they make is the honest spelling the easy
+one: a refiner that needs anything but its arguments is a runtime
+refiner, said on the method.
 
 ## The narrowing table
 
@@ -347,7 +401,7 @@ final class DemoFormatterAlter implements SurfaceAlterInterface {
   }
 
   #[RefinesInput('variant')]
-  public function ribbonInUpperCase(DataDefinitionInterface $variant, string $casing): DataDefinitionInterface {
+  public static function ribbonInUpperCase(DataDefinitionInterface $variant, string $casing): DataDefinitionInterface {
     return $casing === 'uppercase' ? $variant : $variant->addConstraint('LabeledChoice', ['choices' => []]);
   }
 
@@ -356,7 +410,9 @@ final class DemoFormatterAlter implements SurfaceAlterInterface {
 
 The method refines a key the alter offered more values on, so it is
 bound as the `data_surface_demo_extras` contribution's refiner, not in
-the owner's chain.
+the owner's chain. It is a static method, as every static refiner is,
+though its class is a service: only a runtime refiner may be an
+instance method.
 
 The advertised key now allows five values, and the surface records that
 one of them belongs to the extras module. At refinement time:

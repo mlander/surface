@@ -110,8 +110,10 @@ final class DemoBlockSurface implements SurfaceInterface {
   every watched sibling has a value, and again when one changes. A
   method that watches nothing runs once, when the surface is built. A
   surface's refiner is static, and one that is not is refused when the
-  surface is built; an alter's is an instance method, because an alter
-  is a service and may hold configuration.
+  surface is built; so is an alter's, unless it declares `runtime:
+  TRUE`, the one kind an instance method may be, because an alter is a
+  service and may hold what a runtime rule reads
+  ([refinement](refinement.md#enforcing-the-kind)).
 - **A refiner never calls a service.** A list that depends on a value
   is a constraint whose options resolver fetches it, handed the value as
   an option. The refiner points; the resolver fetches. Core's
