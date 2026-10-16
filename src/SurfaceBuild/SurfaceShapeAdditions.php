@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface\SurfaceBuild;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
@@ -55,6 +56,19 @@ final class SurfaceShapeAdditions extends ShapeAdapterBase {
   public function attach(string $key, string $child): MapDataDefinition {
     throw new \LogicException(sprintf(
       'The %s alter cannot attach %s at "%s" yet: an alter\'s keys are mounted under third_party_settings.%s, and a subsurface inside that mount is not built.',
+      $this->provider,
+      $child,
+      $key,
+      $this->provider,
+    ));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function attachList(string $key, string $child, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
+    throw new \LogicException(sprintf(
+      'The %s alter cannot attach a collection of %s at "%s" yet: an alter\'s keys are mounted under third_party_settings.%s, and a subsurface inside that mount is not built.',
       $this->provider,
       $child,
       $key,

@@ -199,8 +199,9 @@ than a refused refinement.
 | --- | --- |
 | Adding a constraint | narrower |
 | Dropping values from a list of allowed values | narrower |
-| Raising a `Length` or `Range` minimum, lowering its maximum | narrower |
-| Adding a `Length` or `Range` bound where there was none | narrower |
+| Raising a `Length`, `Range` or `Count` minimum, lowering its maximum | narrower |
+| Adding a `Length`, `Range` or `Count` bound where there was none | narrower |
+| Changing or dropping a `Length` or `Count` `exactly` | **refused** |
 | Sharpening a label, description, default or example | neither, and allowed |
 | Refining `any` to a concrete type, a map included | narrower — the declared escape hatch |
 | Changing the data type to one of its derivatives (`entity` to `entity:node` to `entity:node:article`) | narrower |
@@ -222,8 +223,17 @@ test is the base type followed by a colon.
 The conservatism lives in the replaced-options row: two `Regex` patterns
 cannot be compared for containment, so replacing one is refused rather
 than guessed at. A refiner that needs a different pattern advertises the
-narrower one in the first place. For `Length` and `Range` only `min` and
-`max` are compared, because the rest of their options are messages.
+narrower one in the first place. For `Length`, `Range` and a list's
+`Count` only the bounds are compared (`min`, `max`, and Symfony's
+`exactly`, which only narrows by staying what it was), because the rest
+of their options are messages. `Count` joined the comparison with
+collections, whose Count the parent narrows
+([decision](decisions.md#count-is-the-parents)); before, a changed
+`Count` was compared whole and refused.
+
+A collection's parent may narrow the list and not its items: a refiner
+of the list key that narrows inside the item it is handed is refused,
+naming the key ([Surfaces](surfaces.md#collections)).
 
 Inside a map the table recurses, which is what holds a subsurface to
 it: the child narrows its own keys, and the map its parent advertises

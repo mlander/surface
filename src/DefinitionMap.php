@@ -116,6 +116,9 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    *   The part of $refinements a static refiner declared, in the same
    *   form; what is in $refinements and not here only a runtime refiner
    *   watches. NULL when every refiner is static.
+   * @param array<string, \Drupal\data_surface\SurfaceList> $lists
+   *   The collections, each the child its items are, keyed by surface
+   *   key.
    *
    * @return static
    *   The map.
@@ -133,8 +136,9 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
     array $attachments = [],
     array $slots = [],
     ?array $staticRefinements = NULL,
+    array $lists = [],
   ): static {
-    foreach (array_merge(array_keys($refiners), array_keys($contributions), $locked, array_keys($attachments), array_keys($slots)) as $key) {
+    foreach (array_merge(array_keys($refiners), array_keys($contributions), $locked, array_keys($attachments), array_keys($slots), array_keys($lists)) as $key) {
       if (!isset($definitions[$key])) {
         throw new \InvalidArgumentException(sprintf('"%s" is not a surface definition.', $key));
       }
@@ -171,6 +175,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
         slot: $slots[$name] ?? NULL,
         paths: $paths[$name] ?? [],
         runtimeOnly: array_values(array_diff($dependencies[$name] ?? [], $static[$name] ?? [])),
+        list: $lists[$name] ?? NULL,
       );
     }
     return new static($entries);

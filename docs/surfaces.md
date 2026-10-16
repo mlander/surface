@@ -638,11 +638,14 @@ Each refusal names the class and method at fault:
 - two declarations of one situation id;
 - a context constraint, or a refiner that watches nothing, that widens;
 - starting values on a context that does not create;
-- a refiner that refines or watches a subsurface key, or a child's
-  refiner that watches a key only its parent declares;
+- a refiner that refines or watches a subsurface key, watches a
+  collection, or a child's refiner that watches a key only its parent
+  declares (a refiner of a collection that narrows inside its items is
+  refused when the surface is refined);
 - a slot chosen by a key that is not a plain input, or a variant its
   deciding key does not allow;
-- a context constraint or starting value for a subsurface key;
+- a context constraint or starting value for a subsurface key, and a
+  starting value for a collection;
 - a surface attached inside itself;
 - two situations of one surface marked the default;
 - a parent context naming a situation its child does not declare, or
@@ -861,6 +864,63 @@ child whose shape cannot be enumerated at all is the one case for a
 definition itself, a map included. No verb is needed for it: `any` may
 become anything narrower, and the method is an ordinary refiner.
 
+### Collections
+
+`attachList('key', Child::class, min: 1, max: 4)` is a collection: a
+key whose value is a list, every item of which is an instance of the
+child. It returns the list definition at the key, a core
+`ListDataDefinition` whose item is the child's map, so the owner labels
+and describes it with the core setters, as `attach()` returns its map.
+`min` and `max` are the list's `Count`; a NULL `max` is unlimited. The
+child is named the way `attach()` names one, by class or by a derived
+surface's id, and a derived surface's inputs callable may call it too.
+
+```php
+// CellarSurface, in the test module
+$inputs->attachList('racks', SpiceRackSurface::class, min: 1, max: 4)
+  ->setLabel('Spice racks')
+  ->setDescription('One rack to four.');
+
+#[RefinesInput('racks')]
+public static function fewerRacksWhenSmall(DataDefinitionInterface $racks, string $size): DataDefinitionInterface {
+  // A small cellar holds two racks at most: the parent narrows its list.
+}
+```
+
+- **Items are children.** Every item is the child, refined, accepted
+  and validated by it in its own frame, under its own key names. The
+  child is built once for the list, invoked exactly as an attached
+  child is ([Child situations](#child-situations)): the situation the
+  parent's context names for the key, else the one for the parent's
+  operation, else its default, otherwise the parent's operation and
+  known identity. Each item's context is that one with its `delta`
+  added to what it knows (`SurfaceList::contextFor()`); delta is
+  position, and nothing stores it.
+- **The wall, once per item.** A parent cannot refine into an item, and
+  an item cannot watch a parent key. A parent's refiner may not watch
+  the list either: every item is a child, and a parent does not read
+  its children's values. A refiner naming a key inside an item
+  (`racks.spices`) names nothing the parent declares.
+- **The list is the parent's.** Its `Count` and any other constraint on
+  the list itself belong to the parent: a `#[RefinesInput]` method of
+  the parent on the key may narrow them, and a situation may with
+  `withConstraint()`. A refiner of the list that narrows inside its item
+  is refused when the surface is refined, naming the key. Starting
+  values for a list are refused: a list starts empty.
+- **Access answers once for the list.** The child's situation access is
+  asked once, since field access is per field and not per delta: open,
+  locked (the list key is locked, every item with it, and the form's
+  add and remove controls), or omitted (the key is not in the surface).
+- **Storage.** The parent stores the list under its key. A child that
+  names a target of its own is not routed per item yet: its items are
+  still the parent's to store.
+
+A collection is not a subsurface in the engine's sense: its entry
+carries a `SurfaceList` (`SurfaceEntry::$list`), not an attachment, so
+`isNested()` is FALSE and the key is refined and locked as the
+parent's own. A list whose every item chooses its own child,
+`attachListBy()`, is not built.
+
 ## Derived surfaces
 
 A surface is a class because its shape is a property of the class. Some
@@ -945,8 +1005,8 @@ derived from what, and where core's APIs fell short.
 
 ## Not built yet
 
-Collections (`attachList()`, `attachListBy()`), input shapes, and
-options sources with their alters are deferred; [the
+A collection whose items choose their own child (`attachListBy()`),
+input shapes, and options sources with their alters are deferred; [the
 pattern](pattern.md#deferred) records the position each is held to.
 Until options sources exist, a live list is a constraint with an
 options resolver.

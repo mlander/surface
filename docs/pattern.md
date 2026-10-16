@@ -198,7 +198,9 @@ with its own shape and refiners, and alters can target it alone.
 - `attachBy()` is a slot: a child that a sibling key chooses. The
   field's `settings` are chosen by `field_type`, and so are the
   storage's own `settings`.
-- `attachList()` and `attachListBy()` are collections, and are
+- `attachList()` is a collection: a list whose every item is the
+  child, its Count the parent's ([Surfaces](surfaces.md#collections)).
+  `attachListBy()`, a list whose every item chooses its own child, is
   **deferred**; see [Deferred](#deferred).
 
 Both return the map definition at the key, as `add()` returns its
@@ -479,12 +481,14 @@ and `DataSurfacePluginForm` serves any other configurable plugin.
 ## Deferred
 
 Three concepts are recorded here so their position is fixed, and are
-not built.
+not built, or built only in part.
 
 ### Collections
 
-`attachList($key, Child::class)` would be a list whose every item is
-the child surface; `attachListBy($key, by: 'plugin')` a list whose every
+`attachList($key, Child::class)`, a list whose every item is the child
+surface, is built ([Surfaces](surfaces.md#collections)); the rest of
+this section is the position it was built to, and what is still open.
+`attachListBy($key, by: 'plugin')` would be a list whose every
 item chooses its own child, the deciding key being *inside* each item
 (visibility conditions, each naming its plugin), children marking
 themselves with `#[SurfaceVariant]` as for a slot.

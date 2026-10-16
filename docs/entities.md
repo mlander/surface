@@ -189,8 +189,9 @@ identity, whether a revision would be made, and each field's item.
 
 ## What it does not do
 
-- Collections. A field with more than one value is left out until
-  `attachList()` exists ([the pattern](pattern.md#collections)).
+- Collections. `attachList()` exists ([Surfaces](surfaces.md#collections)),
+  but a field with more than one value is still left out: deriving it
+  as a collection waits for the entity side to resume.
 - Keys another module adds. An alter may target every content entity
   surface by the deriver's base id (`#[AltersSurface('entity.content')]`),
   and its keys are built, refined, validated and offered, but a content

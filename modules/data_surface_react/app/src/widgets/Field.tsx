@@ -226,13 +226,24 @@ function newItem(items: Schema): unknown {
   }
 }
 
-/** A list with no option list: a minimal repeatable, rows added and removed. */
+/**
+ * A list with no option list: a repeatable, rows added and removed.
+ *
+ * A collection (`x-surface.list`) draws each item as the child's
+ * fieldset, titled with the list's title and the item's number, at least
+ * `minItems` of them; removing stops at `minItems` and adding at
+ * `maxItems`. Its items' schema is the child's def, dereferenced.
+ */
 export function ListField(props: FieldProps): JSX.Element {
   const id = fieldId(props.path);
   const items = props.schema.items ?? {};
-  const rows = Array.isArray(props.value) ? props.value : [];
+  const collection = Boolean(props.schema['x-surface']?.list);
+  const atLeast = collection ? props.schema.minItems ?? 0 : 0;
+  const held = Array.isArray(props.value) ? props.value : [];
+  const rows = held.length >= atLeast ? held : [...held, ...Array.from({ length: atLeast - held.length }, () => ({}))];
   const locked = isLocked(props);
   const atMost = props.schema.maxItems;
+  const title = props.schema.title ?? props.name;
   return (
     <fieldset className="dsr-fieldset dsr-list" id={id}>
       <legend className="dsr-legend">
@@ -244,20 +255,33 @@ export function ListField(props: FieldProps): JSX.Element {
       <ol className="dsr-list__rows">
         {rows.map((row, index) => (
           <li key={index} className="dsr-list__row">
-            <Field
-              name={String(index)}
-              path={`${props.path}.${index}`}
-              schema={{ ...items, title: `${items.title ?? props.schema.title ?? props.name} ${index + 1}` }}
-              value={row}
-              required={false}
-              onChange={props.onChange}
-              errors={props.errors}
-              disabled={locked}
-            />
+            {collection ? (
+              <FieldsetField
+                name={String(index)}
+                path={`${props.path}.${index}`}
+                schema={{ ...items, title: `${title} ${index + 1}` }}
+                value={isObject(row) ? row : {}}
+                required={false}
+                onChange={props.onChange}
+                errors={props.errors}
+                disabled={locked}
+              />
+            ) : (
+              <Field
+                name={String(index)}
+                path={`${props.path}.${index}`}
+                schema={{ ...items, title: `${items.title ?? title} ${index + 1}` }}
+                value={row}
+                required={false}
+                onChange={props.onChange}
+                errors={props.errors}
+                disabled={locked}
+              />
+            )}
             <button
               type="button"
               className="dsr-button dsr-button--small"
-              disabled={locked}
+              disabled={locked || rows.length <= atLeast}
               onClick={() => props.onChange(props.path, rows.filter((_, position) => position !== index))}
             >
               Remove {index + 1}
@@ -269,9 +293,9 @@ export function ListField(props: FieldProps): JSX.Element {
         type="button"
         className="dsr-button dsr-button--small"
         disabled={locked || (atMost !== undefined && rows.length >= atMost)}
-        onClick={() => props.onChange(props.path, [...rows, newItem(items)])}
+        onClick={() => props.onChange(props.path, [...rows, collection ? {} : newItem(items)])}
       >
-        Add {props.schema.title ? props.schema.title.toLowerCase() : 'a row'}
+        {collection ? 'Add another' : `Add ${props.schema.title ? props.schema.title.toLowerCase() : 'a row'}`}
       </button>
     </fieldset>
   );

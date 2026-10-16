@@ -444,7 +444,91 @@ describe('fieldset, slot and list', () => {
   });
 });
 
+describe('a collection', () => {
+  const rack: Schema = {
+    type: 'object',
+    properties: {
+      label: { title: 'Label', type: ['string', 'null'], 'x-surface': x('text') },
+      spices: { title: 'Spices', type: ['integer', 'null'], maximum: 40, 'x-surface': x('number') },
+    },
+    additionalProperties: false,
+  };
+  const racks = (more: Partial<Schema> = {}, extension: Partial<Extension> = {}): Schema => ({
+    title: 'Spice racks',
+    type: ['array', 'null'],
+    items: rack,
+    minItems: 1,
+    maxItems: 3,
+    'x-surface': x('list', { list: true, ...extension }),
+    ...more,
+  });
+
+  it('draws each item as the child\'s fieldset, titled with its number, and adds and removes them', async () => {
+    let seen: Values = {};
+    render(<Form schema={object({ racks: racks() })} initial={{ racks: [{ label: 'Everyday', spices: 7 }] }} onValues={(values) => (seen = values)} />);
+    const first = screen.getByRole('group', { name: 'Spice racks 1' });
+    expect(within(first).getByLabelText('Label')).toHaveValue('Everyday');
+    // The one item there is the minimum: it cannot be removed.
+    expect(screen.getByRole('button', { name: 'Remove 1' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Add another' }));
+    const second = screen.getByRole('group', { name: 'Spice racks 2' });
+    await userEvent.type(within(second).getByLabelText('Label'), 'Spare');
+    expect(seen.racks).toEqual([{ label: 'Everyday', spices: 7 }, { label: 'Spare' }]);
+    await userEvent.click(screen.getByRole('button', { name: 'Add another' }));
+    // Three is the most: adding stops there.
+    expect(screen.getByRole('button', { name: 'Add another' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Remove 1' }));
+    expect(seen.racks).toEqual([{ label: 'Spare' }, {}]);
+    expect(within(screen.getByRole('group', { name: 'Spice racks 1' })).getByLabelText('Label')).toHaveValue('Spare');
+  });
+
+  it('draws the minimum when it holds less, and an item\'s error under its delta', () => {
+    render(
+      <Properties
+        schema={object({ racks: racks() })}
+        values={{ racks: null }}
+        prefix=""
+        onChange={() => undefined}
+        errors={{ 'racks.0.spices': ['This value should be 40 or less.'] }}
+      />,
+    );
+    const first = screen.getByRole('group', { name: 'Spice racks 1' });
+    expect(within(first).getByText('This value should be 40 or less.')).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Spice racks 2' })).not.toBeInTheDocument();
+  });
+
+  it('locks every item and both controls with a locked list', () => {
+    render(<Form schema={object({ racks: racks({ readOnly: true }, { locked: true }) })} initial={{ racks: [{ label: 'Everyday' }] }} />);
+    expect(within(screen.getByRole('group', { name: 'Spice racks 1' })).getByLabelText('Label')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add another' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Remove 1' })).toBeDisabled();
+  });
+});
+
 describe('the contract panel', () => {
+  it('lists a collection, its bounds, and its item keys once, under a star', () => {
+    render(
+      <ContractPanel
+        contract={{ surface: 'cellar', situation: 'edit', label: null, stale: [], values: {}, schema: object({}) }}
+        schema={object({
+          racks: {
+            title: 'Spice racks',
+            type: ['array', 'null'],
+            minItems: 1,
+            maxItems: 4,
+            items: object({ label: { title: 'Label', type: 'string', 'x-surface': x('text') } }),
+            'x-surface': x('list', { list: true }),
+          },
+        })}
+        values={{}}
+      />,
+    );
+    const racks = document.querySelector('tr[data-surface-key="racks"]') as HTMLElement;
+    expect(racks.textContent).toContain('collection');
+    expect(racks.textContent).toContain('from 1 to 4 items');
+    expect(document.querySelector('tr[data-surface-key="racks.*.label"]')).not.toBeNull();
+  });
+
   it('explains a Regex by its message, and only a Regex without one by its pattern, in code', () => {
     const message = 'A licence number is four digits, such as 2048.';
     render(

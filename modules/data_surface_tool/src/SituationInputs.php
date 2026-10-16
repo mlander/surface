@@ -491,7 +491,7 @@ final class SituationInputs {
       );
     }
     $key = $neutral?->getDefinitions()->entry($parameter->name);
-    if ($key !== NULL && $key->attachment === NULL && $key->slot === NULL) {
+    if ($key !== NULL && $key->attachment === NULL && $key->slot === NULL && $key->list === NULL) {
       $input = $this->inputDefinitions->fromDefinition($key->definition);
       $input->setRequired(!$parameter->optional);
       return $input;

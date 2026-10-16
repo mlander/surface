@@ -19,6 +19,7 @@ use Drupal\data_surface\Options\OptionSet;
 use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\data_surface\SurfaceAttachment;
 use Drupal\data_surface\SurfaceEntry;
+use Drupal\data_surface\SurfaceList;
 
 /**
  * Turns a sealed surface and its values into the served contract.
@@ -458,6 +459,24 @@ final class ContractEmitter {
         [$properties[$name], $shown[$name], $branches] = $this->slot($declared, $entry, $values, $prefix . $name, $owner, $cacheability, $stale, $subschemas, $standing, $declaring, $locked);
         array_push($conditions, ...$branches);
       }
+      elseif ($entry->list !== NULL) {
+        [$properties[$name], $shown[$name]] = $this->collection($declared, $entry->list, $current, $entry, $values, $prefix . $name, $owner, $cacheability, $stale, $subschemas, $standing, $declaring, $locked, $depends);
+        if ($entry->staticDependencies() !== [] && !$locked && $stated === $entry) {
+          // A parent's refiner of the list watches a sibling that holds
+          // nothing yet: its Count for every value that sibling offers.
+          $branches = $this->enumerate($declared, $static, $entry, $values, $properties[$name], $prefix . $name, $cacheability);
+          if ($branches === NULL) {
+            $properties[$name][self::EXTENSION]['dynamic'] = TRUE;
+          }
+          else {
+            $properties[$name][self::EXTENSION]['enumerated'] = TRUE;
+            array_push($conditions, ...$branches);
+          }
+        }
+        if ($entry->isRefinedAtRuntime()) {
+          $properties[$name][self::EXTENSION]['runtime'] = TRUE;
+        }
+      }
       elseif ($entry->attachment !== NULL) {
         $attachment = $entry->attachment;
         $fallback = $owner . '.' . $name;
@@ -560,6 +579,119 @@ final class ContractEmitter {
   }
 
   /**
+   * Describes a collection: an array whose items refer to the child's def.
+   *
+   * The list is the parent's key, so its own property says what the
+   * parent says about it: its title and description, `minItems` and
+   * `maxItems` from its Count as the parent's refiners left it, whether
+   * it is locked, and `x-surface.list`. Its `items` refer to the child's
+   * def, as an attached child's property does, narrowed by composition
+   * only where every item differs from the def (a key the child's
+   * situation locked): described from the child's locked keys alone, in
+   * both documents, so the schema says nothing one item's answers
+   * decide, and what the module states as defaults stays on the def.
+   * Each item's values, and anything stale inside one, are read item by
+   * item in the child's own frame, into `values` and `stale`, under the
+   * item's delta.
+   *
+   * Decision: see docs/decisions.md#a-list-of-child-invocations.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $declared
+   *   The surface the collection belongs to.
+   * @param \Drupal\data_surface\SurfaceList $list
+   *   The child every item is.
+   * @param \Drupal\data_surface\SurfaceEntry $current
+   *   The key as it stands, refined by the parent.
+   * @param \Drupal\data_surface\SurfaceEntry $entry
+   *   The key as advertised.
+   * @param array $values
+   *   The values of the collection's frame.
+   * @param string $path
+   *   The collection's dotted path.
+   * @param string $owner
+   *   The id of the surface it belongs to.
+   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
+   *   Collects what the description depends on.
+   * @param string[] $stale
+   *   Collects the dotted paths of stale values, an item's under its
+   *   delta.
+   * @param \Drupal\data_surface\Contract\Subschemas $subschemas
+   *   The document's defs, and whether it is the full schema, which shows
+   *   no values.
+   * @param array<string, mixed> $standing
+   *   The orphans of a refinement, by dotted path from the top.
+   * @param bool $declaring
+   *   Whether the collection is part of a def: its items are then a bare
+   *   reference.
+   * @param bool $locked
+   *   Whether the list is locked: its items are then described locked.
+   * @param string[] $depends
+   *   The siblings the parent's refiners of the list watch.
+   *
+   * @return array{0: array, 1: mixed}
+   *   The collection's property schema, and its value as shown: one map
+   *   per item, or NULL for a list that holds nothing.
+   */
+  protected function collection(DataSurfaceInterface $declared, SurfaceList $list, SurfaceEntry $current, SurfaceEntry $entry, array $values, string $path, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing, bool $declaring, bool $locked, array $depends): array {
+    $child = $list->child();
+    $fallback = $owner . '.' . $entry->name;
+    $key = $this->define($list->item, $fallback, $cacheability, $subschemas);
+    if ($declaring) {
+      $items = $this->reference($key);
+    }
+    else {
+      $ignored = [];
+      [$instance] = $this->instance($child, $key, $this->known($child), $path . '.*.', $list->item->id ?? $fallback, $cacheability, $ignored, $subschemas, [], $locked);
+      $items = $this->reference($key, $instance, $subschemas);
+    }
+    $definition = $current->definition;
+    [$schema, $extras] = $this->listKeywords($definition);
+    $schema['items'] = $items;
+    if (DefinitionMetadata::hasDefaultValue($definition) && !$declaring) {
+      $schema['default'] = DefinitionMetadata::getDefaultValue($definition);
+    }
+    if ($locked) {
+      $schema['readOnly'] = TRUE;
+    }
+    $schema[self::EXTENSION] = $this->extension('list', $locked, $depends, $this->signature($entry->definition) !== $this->signature($definition)) + ['list' => TRUE] + $extras;
+
+    $shown = NULL;
+    $held = $values[$entry->name] ?? $declared->getDefault($entry->name);
+    if (!$subschemas->full && !$declaring && is_array($held)) {
+      // Each item as its element would be built with, read in the
+      // child's own frame: a secret not handed over, a stale value shown
+      // as nothing and listed under its delta.
+      $shown = [];
+      foreach (array_values($held) as $delta => $item) {
+        $inside = array_replace($child->getDefaultValues(), is_array($item) ? $item : []);
+        [, $shown[]] = $this->frame($child, $inside, $path . '.' . $delta . '.', $list->item->id ?? $fallback, $cacheability, $stale, $subschemas, $standing, FALSE, $locked);
+      }
+    }
+    return [$schema, $shown];
+  }
+
+  /**
+   * States what a collection's own definition says, without its items.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The list, as the parent says it.
+   *
+   * @return array{0: array, 1: array}
+   *   Its title, description, `type` and keywords (`minItems`,
+   *   `maxItems`); and what goes under `x-surface` beside them: the
+   *   constraints no keyword states.
+   */
+  protected function listKeywords(DataDefinitionInterface $definition): array {
+    $schema = $this->describe($definition) + ['type' => $this->nullable('array', $definition)] + $this->keywords($definition, 'array');
+    $extras = [];
+    if (isset($schema[self::EXTENSION . '-checked'])) {
+      $extras['checkedOnServer'] = $schema[self::EXTENSION . '-checked'];
+    }
+    unset($schema[self::EXTENSION . '-checked'], $schema[self::EXTENSION . '-pattern-message']);
+    return [$schema, $extras];
+  }
+
+  /**
    * Writes a child's def, once, and answers the key it is filed under.
    *
    * The def is the child's frame as declared: described for no values,
@@ -652,6 +784,7 @@ final class ContractEmitter {
       $children = match (TRUE) {
         $entry->slot !== NULL => $entry->slot->variants,
         $entry->attachment !== NULL => [$entry->attachment],
+        $entry->list !== NULL => [$entry->list->item],
         default => [],
       };
       if ($entry->locked || array_filter($children, fn (SurfaceAttachment $child): bool => $this->locks($child->child)) !== []) {
@@ -963,7 +1096,11 @@ final class ContractEmitter {
     $ignored = [];
     foreach ($combinations as [$combination, $surface]) {
       $definition = $surface->getDefinition($entry->name) ?? $entry->definition;
-      [$schema] = $this->property($definition, NULL, NULL, $path, FALSE, [], $cacheability, $ignored);
+      // A collection's own keywords: its items are the child's, which no
+      // parent's refiner reaches.
+      [$schema] = $entry->list !== NULL
+        ? $this->listKeywords($definition)
+        : $this->property($definition, NULL, NULL, $path, FALSE, [], $cacheability, $ignored);
       $narrowed = $this->narrowed($schema, $base);
       if ($narrowed === []) {
         continue;

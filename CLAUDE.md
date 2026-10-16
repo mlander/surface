@@ -79,6 +79,9 @@ alter rewording a key it does not own. A service implementing
 variant class fills (`data_surface_tool` derives a field type's settings,
 and its storage settings, from its config schema). A child whose shape cannot be listed at all is
 a `#[RefinesInput]` method on an `any` key returning a map.
+`attachList()` is a collection: a list of child instances, the list
+(its Count) the parent's, each item the child's, its entry a
+`SurfaceList` (`docs/surfaces.md#collections`).
 
 A shape that is the site's rather than the code's (one per bundle, one
 per field) is derived: a class in `src/Surface/` carrying

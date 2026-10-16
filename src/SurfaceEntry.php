@@ -70,6 +70,11 @@ final class SurfaceEntry {
    *   The keys in $dependencies that only a runtime refiner of this key
    *   watches: what refinement waits for, and what nothing stating the
    *   key ahead of time reads (staticDependencies()).
+   * @param \Drupal\data_surface\SurfaceList|null $list
+   *   The child every item is, when the key is a collection: its
+   *   definition is then a list whose item is the child's map. The key
+   *   is the parent's own, refined by the parent's refiners (its Count)
+   *   and locked by the parent; each item is the child's.
    */
   public function __construct(
     public readonly string $name,
@@ -83,6 +88,7 @@ final class SurfaceEntry {
     public readonly ?SurfaceSlot $slot = NULL,
     public readonly array $paths = [],
     public readonly array $runtimeOnly = [],
+    public readonly ?SurfaceList $list = NULL,
   ) {
   }
 
@@ -113,6 +119,7 @@ final class SurfaceEntry {
       $this->slot,
       $this->paths,
       $this->runtimeOnly,
+      $this->list,
     );
   }
 
@@ -179,11 +186,25 @@ final class SurfaceEntry {
   /**
    * Returns whether this key holds a subsurface: attached or a slot.
    *
+   * A collection is not nested in this sense: its value is a list, not a
+   * map one child answers for, and the key itself is the parent's to
+   * refine and lock. Its items are; see $list.
+   *
    * @return bool
    *   TRUE for an attached child or a slot.
    */
   public function isNested(): bool {
     return $this->attachment !== NULL || $this->slot !== NULL;
+  }
+
+  /**
+   * Gets the child every item of a collection is, if this key is one.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface|null
+   *   The child, as advertised, or NULL for any other key.
+   */
+  public function itemChild(): ?DataSurfaceInterface {
+    return $this->list?->item->child;
   }
 
   /**

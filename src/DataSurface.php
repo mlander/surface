@@ -151,7 +151,8 @@ final class DataSurface implements DataSurfaceInterface {
    * An attached child starts from its own defaults, read from the child
    * so its own subsurfaces answer for themselves. A slot starts from the
    * defaults of the variant its deciding key's default chooses, and from
-   * nothing when that chooses none.
+   * nothing when that chooses none. A collection starts from what its
+   * list declares, which is no items unless the owner said otherwise.
    *
    * @param \Drupal\data_surface\SurfaceEntry $entry
    *   The key.
@@ -276,14 +277,49 @@ final class DataSurface implements DataSurfaceInterface {
           continue;
         }
       }
-      $definitions = $definitions->with($entry->withDefinition(
-        $this->unionOfContributions($entry, $chains, $dependency_values, $cacheability),
-      ));
+      $refined = $this->unionOfContributions($entry, $chains, $dependency_values, $cacheability);
+      if ($entry->list !== NULL) {
+        static::assertItemsUntouched($entry, $refined);
+      }
+      $definitions = $definitions->with($entry->withDefinition($refined));
       $changed = TRUE;
     }
     return $changed
       ? new self($definitions, $cacheability, $this->outputs, $this->thirdPartyShapes, $this->watchedValueCheck)
       : $this;
+  }
+
+  /**
+   * Refuses a parent's refinement of a collection that reached its items.
+   *
+   * The list key is the parent's, so the parent's refiners narrow it: its
+   * Count, its own constraints. Each item is the child's, refined by the
+   * child in its own frame, so the item definition a parent's refiner
+   * hands back must be the one it was handed.
+   *
+   * Decision: see docs/decisions.md#count-is-the-parents.
+   *
+   * @param \Drupal\data_surface\SurfaceEntry $entry
+   *   The collection, as advertised.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $refined
+   *   What the parent's refiners made of it.
+   *
+   * @throws \LogicException
+   *   When the items were narrowed.
+   */
+  public static function assertItemsUntouched(SurfaceEntry $entry, DataDefinitionInterface $refined): void {
+    $before = $entry->definition instanceof ListDataDefinition ? $entry->definition->getItemDefinition() : NULL;
+    $after = $refined instanceof ListDataDefinition ? $refined->getItemDefinition() : NULL;
+    $narrowed = $before === NULL || $after === NULL
+      ? 'the list is no longer a list'
+      : Narrowing::narrowed($before, $after);
+    if ($narrowed !== NULL) {
+      throw new \LogicException(sprintf(
+        'Refining the "%s" collection reached inside its items: %s. The list is its parent\'s to narrow (its Count, its own constraints); every item is its child\'s, refined by the child in its own frame.',
+        $entry->name,
+        $narrowed,
+      ));
+    }
   }
 
   /**

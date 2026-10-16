@@ -64,9 +64,10 @@ use Drupal\tool\TypedData\OutputDefinitionInterface;
  *
  * Subsurfaces convert by what they are. An attached child, and a slot
  * whose deciding key already chose (or is locked), are a map like any
- * other: a nested map input whose properties are the child's keys. An
- * unresolved slot is the one shape the Tool API cannot say, and
- * fromSlot() says why and what is emitted instead.
+ * other: a nested map input whose properties are the child's keys. A
+ * collection is a list input of those maps, its Count the list's
+ * constraint. An unresolved slot is the one shape the Tool API cannot
+ * say, and fromSlot() says why and what is emitted instead.
  *
  * One Tool API gap is worth naming here rather than in a method
  * docblock, because it is why a derived tool declares its outputs as
@@ -174,6 +175,10 @@ final class SurfaceInputDefinitions {
         }
       }
     }
+    if ($input instanceof ListInputDefinition) {
+      // A locked collection locks every item with it.
+      static::lock($input->getItemDefinition());
+    }
   }
 
   /**
@@ -189,20 +194,50 @@ final class SurfaceInputDefinitions {
     if ($entry->slot !== NULL && DefinitionMetadata::slotOf($entry->definition) !== NULL) {
       return $this->fromSlot($entry->slot, $entry->definition);
     }
+    $item = $entry->definition instanceof ListDataDefinitionInterface ? $entry->definition->getItemDefinition() : NULL;
+    if ($entry->list !== NULL && $item instanceof ComplexDataDefinitionInterface) {
+      // A collection is a list of the child's maps, its Count carried as
+      // the list's constraint, each item converted the way the child's
+      // own entries say.
+      $list = $this->fromDefinition($entry->definition);
+      if ($list instanceof ListInputDefinition) {
+        $list->setItemDefinition($this->fromChild($entry->list->child(), $item));
+      }
+      return $list;
+    }
     $child = $entry->attachment?->child;
     if ($child === NULL || !$entry->definition instanceof ComplexDataDefinitionInterface) {
       return $this->fromDefinition($entry->definition);
     }
-    // An attached child is a map whose properties are the child's own
-    // keys, converted the way the child's own entries say: a slot inside
-    // the child is still a slot.
-    $map = $this->fromDefinition($entry->definition);
+    return $this->fromChild($child, $entry->definition);
+  }
+
+  /**
+   * Converts a child surface at a key, or each item of a collection.
+   *
+   * A map whose properties are the child's own keys, converted the way
+   * the child's own entries say: a slot inside the child is still a
+   * slot, and a collection still a list.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   *   The child.
+   * @param \Drupal\Core\TypedData\ComplexDataDefinitionInterface $definition
+   *   The map it is advertised as at the key.
+   *
+   * @return \Drupal\tool\TypedData\InputDefinitionInterface
+   *   The map input.
+   */
+  protected function fromChild(DataSurfaceInterface $child, ComplexDataDefinitionInterface $definition): InputDefinitionInterface {
+    $map = $this->fromDefinition($definition);
     if ($map instanceof MapInputDefinition) {
-      $properties = $entry->definition->getPropertyDefinitions();
+      $properties = $definition->getPropertyDefinitions();
       foreach ($child->getDefinitions()->entries() as $name => $child_entry) {
-        $map->setPropertyDefinition((string) $name, $child_entry->slot !== NULL && isset($properties[$name]) && DefinitionMetadata::slotOf($properties[$name]) !== NULL
-          ? $this->fromSlot($child_entry->slot, $properties[$name])
-          : $this->fromDefinition($properties[$name] ?? $child_entry->definition));
+        $property = $properties[$name] ?? $child_entry->definition;
+        $map->setPropertyDefinition((string) $name, match (TRUE) {
+          $child_entry->slot !== NULL && isset($properties[$name]) && DefinitionMetadata::slotOf($properties[$name]) !== NULL => $this->fromSlot($child_entry->slot, $properties[$name]),
+          $child_entry->list !== NULL => $this->fromEntry($child_entry->withDefinition($property)),
+          default => $this->fromDefinition($property),
+        });
       }
     }
     return $map;

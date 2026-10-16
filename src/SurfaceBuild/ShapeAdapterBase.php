@@ -6,6 +6,7 @@ namespace Drupal\data_surface\SurfaceBuild;
 
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
@@ -43,6 +44,13 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
    * @var array<string, class-string>
    */
   protected array $attachments = [];
+
+  /**
+   * The collections attached through this shape, keyed by key.
+   *
+   * @var array<string, string>
+   */
+  protected array $lists = [];
 
   /**
    * Constructs a shape over a builder.
@@ -101,6 +109,37 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
   public function attach(string $key, string $child): MapDataDefinition {
     $shell = $this->reserveSubsurface('attach', $key);
     $this->attachments[$key] = $child;
+    return $shell;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function attachList(string $key, string $child, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
+    if (($min !== NULL && $min < 0) || ($max !== NULL && $max < 0) || ($min !== NULL && $max !== NULL && $min > $max)) {
+      throw new \InvalidArgumentException(sprintf(
+        'attachList() was given %s to %s items for "%s": a collection holds from none upwards, and its fewest cannot be more than its most.',
+        $min ?? 'any',
+        $max ?? 'unlimited',
+        $key,
+      ));
+    }
+    if ($this->outputs) {
+      throw new \LogicException(sprintf('attachList() cannot place a collection at the output "%s": outputs do not hold subsurfaces yet.', $key));
+    }
+    if (in_array($key, $this->declared(), TRUE) || $this->isDeclared($key)) {
+      throw new \LogicException(sprintf(
+        'The input "%s" was already added to this shape. Adding is never replacing: what one declaration said, another may not change.',
+        $key,
+      ));
+    }
+    $shell = new ListDataDefinition([], MapDataDefinition::create());
+    $count = array_filter(['min' => $min, 'max' => $max], static fn (?int $bound): bool => $bound !== NULL);
+    if ($count !== []) {
+      $shell->addConstraint('Count', $count);
+    }
+    $this->declare($key, $shell, NULL);
+    $this->lists[$key] = $child;
     return $shell;
   }
 
@@ -223,13 +262,24 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
   }
 
   /**
+   * Gets the collections attached through this shape.
+   *
+   * @return array<string, string>
+   *   The child each item is, by name, keyed by key, in declaration
+   *   order.
+   */
+  public function lists(): array {
+    return $this->lists;
+  }
+
+  /**
    * Gets every key this shape declared, subsurfaces included.
    *
    * @return string[]
    *   The keys.
    */
   public function declared(): array {
-    return array_merge($this->keys, array_keys($this->attachments));
+    return array_merge($this->keys, array_keys($this->attachments), array_keys($this->lists));
   }
 
   /**

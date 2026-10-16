@@ -359,9 +359,13 @@ The concepts the surface pattern deferred, in the order they come
 next. `docs/pattern.md` (Deferred) records the position each is held
 to.
 
-1. **Collections**: `attachList()` / `attachListBy()`, an ordered list
-   whose items are a child surface, delta as position, stable identity
-   an identity key on the child, weights the target's business.
+1. **Collections**: ~~`attachList()`, an ordered list whose items are a
+   child surface, delta as position~~ DONE 2026-10-16 (`docs/surfaces.md`,
+   Collections). Still open: `attachListBy()`, each item choosing its own
+   child; an item routed to its child's own target, its stable identity
+   an identity key on the child and weights the target's business; a
+   collection inside an item on the form; content entity fields of more
+   than one value, with the entity side.
 2. **Input shapes**: another way to enter the same value, converted to
    one canonical value; the widget alter layer on the `variants` branch.
 3. **Options**: options sources, the `OptionsList` constraint naming

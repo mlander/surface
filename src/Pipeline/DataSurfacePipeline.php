@@ -11,6 +11,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\data_surface\DataSurfaceAccess;
@@ -18,6 +19,7 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\SurfaceEntry;
+use Drupal\data_surface\SurfaceList;
 
 /**
  * The one entry point from raw values to stored values.
@@ -160,6 +162,9 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       // here.
       $fallback = $entry->slot->defaultsOf($chosen);
     }
+    if ($entry->list !== NULL) {
+      return $this->acceptCollection($entry, $entry->list, $input, $fallback, $path);
+    }
     $child = $entry->childFor($values);
     if ($entry->locked) {
       // A locked key's value space is narrowed to exactly one value,
@@ -187,6 +192,77 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     return DefinitionMetadata::isSecret($entry->definition)
       ? $this->acceptSecret($entry->definition, $input[$name], $fallback, $path)
       : $this->acceptValue($entry->definition, $input[$name], $fallback, $path);
+  }
+
+  /**
+   * Accepts a collection's value: a list of items, each the child's.
+   *
+   * A list the input says nothing about, or a locked one, holds what the
+   * level already holds, each item read through the child the way an
+   * unanswered child is, so a stored item missing a key the child added
+   * since reads the way a fresh one would. Input for a locked list is
+   * ignored, as for any locked key. Otherwise the list is the input, in
+   * the input's order, its keys dropped: delta is position. An item that
+   * holds nothing at all, a row a form added and left blank, is dropped
+   * first, the way core drops an empty delta; every other item is
+   * accepted by the child in its own frame, over the child's defaults and
+   * not over what is stored at the same position, since the list is sent
+   * whole and an item may have moved.
+   *
+   * Decision: see docs/decisions.md#empty-items-are-dropped.
+   *
+   * @param \Drupal\data_surface\SurfaceEntry $entry
+   *   The collection.
+   * @param \Drupal\data_surface\SurfaceList $list
+   *   The child every item is.
+   * @param array $input
+   *   The raw input for the collection's level.
+   * @param mixed $fallback
+   *   What the collection already holds: the stored list, or the declared
+   *   default.
+   * @param string $path
+   *   The dotted path of the collection.
+   *
+   * @return mixed
+   *   The accepted list, NULL for a list that holds nothing, or what the
+   *   level held when the input said nothing.
+   *
+   * @throws \Drupal\data_surface\Pipeline\UnknownKeysException
+   *   When an item carries a key the child does not declare.
+   * @throws \Drupal\data_surface\Pipeline\ShapeMismatchException
+   *   When the input is not a list, or an item is not a map.
+   */
+  protected function acceptCollection(SurfaceEntry $entry, SurfaceList $list, array $input, mixed $fallback, string $path): mixed {
+    $child = $list->child();
+    $raw = $input[$entry->name] ?? NULL;
+    if ($entry->locked || !array_key_exists($entry->name, $input) || !ValueState::isConfigured($raw)) {
+      // As for a plain list: input that holds nothing says nothing, and
+      // what the list already holds stands. Emptying it is said with an
+      // empty list.
+      if (!is_array($fallback)) {
+        return $fallback;
+      }
+      $held = [];
+      foreach (array_values($fallback) as $delta => $item) {
+        $held[] = is_array($item) ? $this->acceptLevel($child, [], $item, $path . '.' . $delta) : $item;
+      }
+      return $held;
+    }
+    if (!is_array($raw)) {
+      throw new ShapeMismatchException($path, 'list', get_debug_type($raw));
+    }
+    $items = [];
+    foreach (array_values($raw) as $item) {
+      if (SurfaceList::isEmptyItem($item)) {
+        continue;
+      }
+      $at = $path . '.' . count($items);
+      if (!is_array($item)) {
+        throw new ShapeMismatchException($at, 'map', get_debug_type($item));
+      }
+      $items[] = $this->acceptLevel($child, $item, [], $at);
+    }
+    return $items;
   }
 
   /**
@@ -325,6 +401,10 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         foreach ($missing as $path => $label) {
           $errors[] = new SurfaceViolation($name, $path, $this->t('@label is required.', ['@label' => $label]));
         }
+        continue;
+      }
+      if ($entry->list !== NULL) {
+        $errors = array_merge($errors, $this->validateCollection($entry, $entry->list, $value, $current[$name] ?? NULL));
         continue;
       }
       $child = $entry->childFor($values);
@@ -466,6 +546,71 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     }
     foreach ($this->validateLevel($child, $value, is_array($current) ? $current : []) as $violation) {
       $errors[] = new SurfaceViolation($name, $violation->fullPath(), $violation->message, $violation->stale);
+    }
+    return $errors;
+  }
+
+  /**
+   * Validates a collection: the list as the parent's, each item as the child's.
+   *
+   * The list's own constraints, its Count above all, are the parent's,
+   * read off the key as the parent's refiners left it, and are said about
+   * the list itself. Then every item is judged by the child in its own
+   * frame, its own refiners run against that item alone, the stale rule
+   * against what is stored at the same position, and every violation it
+   * reports is filed under the list's key with the item's delta at the
+   * front of its path: `tags.2.target_id`.
+   *
+   * Decision: see docs/decisions.md#count-is-the-parents.
+   *
+   * @param \Drupal\data_surface\SurfaceEntry $entry
+   *   The collection, refined.
+   * @param \Drupal\data_surface\SurfaceList $list
+   *   The child every item is.
+   * @param mixed $value
+   *   The list, configured.
+   * @param mixed $current
+   *   What storage holds for it.
+   *
+   * @return \Drupal\data_surface\Pipeline\SurfaceViolation[]
+   *   The violations, filed under the key.
+   */
+  protected function validateCollection(SurfaceEntry $entry, SurfaceList $list, mixed $value, mixed $current): array {
+    $name = $entry->name;
+    if (!is_array($value)) {
+      return [
+        new SurfaceViolation($name, '', $this->t('This value must be of type @expected, @actual given.', [
+          '@expected' => 'list',
+          '@actual' => get_debug_type($value),
+        ])),
+      ];
+    }
+    $items = array_values($value);
+    // The list's own rules, apart from its items, which the child judges:
+    // a list of anything, carrying the list's constraints.
+    $own = ListDataDefinition::create('any');
+    $own->setLabel($entry->definition->getLabel());
+    foreach ($entry->definition->getConstraints() as $constraint => $options) {
+      $own->addConstraint((string) $constraint, $options);
+    }
+    $errors = [];
+    foreach ($this->typedDataManager->create($own, $items, $name)->validate() as $violation) {
+      $errors[] = new SurfaceViolation($name, (string) $violation->getPropertyPath(), $violation->getMessage());
+    }
+    $stored = is_array($current) ? array_values($current) : [];
+    $child = $list->child();
+    foreach ($items as $delta => $item) {
+      if (!is_array($item)) {
+        $errors[] = new SurfaceViolation($name, (string) $delta, $this->t('This value must be of type @expected, @actual given.', [
+          '@expected' => 'map',
+          '@actual' => get_debug_type($item),
+        ]));
+        continue;
+      }
+      $held = is_array($stored[$delta] ?? NULL) ? $stored[$delta] : [];
+      foreach ($this->validateLevel($child, $item, $held) as $violation) {
+        $errors[] = new SurfaceViolation($name, $delta . '.' . $violation->fullPath(), $violation->message, $violation->stale);
+      }
     }
     return $errors;
   }

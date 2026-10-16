@@ -10,3 +10,15 @@ data_surface_surface_test.larder.edit:
     _data_surface_situation: 'edit'
   requirements:
     _data_surface_situation_access: 'TRUE'
+
+# The cellar's edit situation, served by the generic form: two
+# collections, each with Add another and Remove, over AJAX.
+data_surface_surface_test.cellar.edit:
+  path: '/surface-test/cellar/{larder}'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceSituationForm'
+    _title: 'Edit a cellar'
+    _data_surface_surface: 'Drupal\data_surface_surface_test\Surface\Cellar\CellarSurface'
+    _data_surface_situation: 'edit'
+  requirements:
+    _data_surface_situation_access: 'TRUE'

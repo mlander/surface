@@ -46,6 +46,12 @@ export interface Extension {
    * keeps the key wider; this document is refined by it for its values.
    */
   runtime?: boolean;
+  /**
+   * On a collection: a list whose every item is a child surface, `items`
+   * referring to the child's def. Each item is drawn as the child's
+   * fieldset; the list's own `minItems` and `maxItems` are the parent's.
+   */
+  list?: boolean;
 }
 
 export interface Choice {
@@ -347,6 +353,14 @@ export function watchedPaths(schema: Schema, values: Values, prefix = ''): Set<s
       watched.add(prefix + dependency);
     }
     const nested = values[name];
+    if (property['x-surface']?.list && property.items !== undefined && Array.isArray(nested)) {
+      // Each item of a collection is a frame of its own, under its delta.
+      const items = property.items;
+      nested.forEach((item, delta) => {
+        watchedPaths(items, isObject(item) ? item : {}, `${prefix}${name}.${delta}.`).forEach((path) => watched.add(path));
+      });
+      continue;
+    }
     const nestedValues = isObject(nested) ? nested : {};
     const widget = property['x-surface']?.widget;
     const inner = widget === 'slot' ? resolveSlot(schema, name, values) : widget === 'fieldset' ? property : null;

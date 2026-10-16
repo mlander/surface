@@ -83,6 +83,14 @@ class NarrowingTypesTest extends UnitTestCase {
         DataDefinition::create('entity'),
         DataDefinition::create('entity:node')->addConstraint('Bundle', ['article']),
       ],
+      'a list given a Count' => [
+        new ListDataDefinition([], DataDefinition::create('string')),
+        (new ListDataDefinition([], DataDefinition::create('string')))->addConstraint('Count', ['max' => 4]),
+      ],
+      'a Count lowering its maximum, raising its minimum' => [
+        (new ListDataDefinition([], DataDefinition::create('string')))->addConstraint('Count', ['min' => 1, 'max' => 4]),
+        (new ListDataDefinition([], DataDefinition::create('string')))->addConstraint('Count', ['min' => 2, 'max' => 2]),
+      ],
     ];
   }
 
@@ -140,6 +148,16 @@ class NarrowingTypesTest extends UnitTestCase {
         new ListDataDefinition([], DataDefinition::create('string')),
         new ListDataDefinition([], DataDefinition::create('any')),
         'inside the list items, the data type changed from string to any',
+      ],
+      'a Count raising its maximum' => [
+        (new ListDataDefinition([], DataDefinition::create('string')))->addConstraint('Count', ['min' => 1, 'max' => 4]),
+        (new ListDataDefinition([], DataDefinition::create('string')))->addConstraint('Count', ['min' => 1, 'max' => 5]),
+        'the max of the Count constraint moved from 4 to 5',
+      ],
+      'a Count losing its exactly' => [
+        (new ListDataDefinition([], DataDefinition::create('string')))->addConstraint('Count', ['exactly' => 2]),
+        (new ListDataDefinition([], DataDefinition::create('string')))->addConstraint('Count', ['min' => 1]),
+        'the exactly of the Count constraint changed from 2',
       ],
       'a derivative that drops a constraint' => [
         DataDefinition::create('entity')->addConstraint('NotNull', []),

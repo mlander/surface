@@ -301,6 +301,47 @@ the select is redrawn without `- Select -` the moment something is
 chosen, and the page and the form agree again. It is redrawn only
 then; a trigger whose options did not move is never touched.
 
+### A collection on a form
+
+A collection ([Surfaces](surfaces.md#collections)) is drawn as its own
+`details`, titled with the list's label, holding one `details` per item
+and an "Add another" button:
+
+- **Each item** is the child's map, refined against that item's values
+  alone, drawn the way an attached child is and titled with the list's
+  label and the item's number ("Spice racks 2"). Its elements are named
+  by delta, `surface[racks][1][spices]`. Each carries a "Remove"
+  button.
+- **Add and remove** are submit buttons, named for their place
+  (`data_surface_racks_add`, `data_surface_racks_1_remove`), with
+  `#limit_validation_errors` empty: nothing is judged, every value is
+  still mid-edit. Their submit handler (`addListItem()`,
+  `removeListItem()`) rewrites the posted items, one empty item more at
+  the end, or one fewer with the rest moved up, and rebuilds the form.
+  Their AJAX callback is `refreshSurface()`, and each names the list as
+  the one element it replaces, so the list is replaced by its own
+  wrapper and nothing else on the page is: what was typed elsewhere,
+  and in the other items, survives. Without JavaScript they are plain
+  submits that rebuild the page.
+- **Bounds.** The list is drawn with at least its Count's minimum, an
+  empty item for each missing one; "Remove" is disabled while it holds
+  no more than its minimum, and "Add another" once it holds its maximum.
+- **Locked** by its access, the list is drawn disabled, every item and
+  both buttons with it, and says so in its description.
+- **Inside an item**, refinement is wired in the item's own frame: a
+  key another key of the same item refines against is a trigger whose
+  path carries the delta (`shelves.1.unit`), and replaces only what it
+  moves in that item (`shelves.1.height`), the dependents-only rule
+  unchanged. The discard cascade settles each item against what is
+  stored at the same delta.
+- **Extraction** reads each drawn item through the child's map, in the
+  order drawn, drops an item that holds nothing at all, and remembers
+  the delta each kept item was drawn at for the request, so a violation
+  at `racks.2.spices` after a dropped blank row is flagged on the row it
+  came from.
+
+A collection inside an item is not drawn yet.
+
 ### `#limit_validation_errors`
 
 Every `#ajax` the builder attached, at any depth, is limited to **that

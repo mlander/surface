@@ -8,6 +8,7 @@ use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Refinement\ChoiceSet;
@@ -108,6 +109,13 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   protected array $slots = [];
 
   /**
+   * Collections, keyed by surface key: the child every item is.
+   *
+   * @var array<string, \Drupal\data_surface\SurfaceList>
+   */
+  protected array $lists = [];
+
+  /**
    * Locked surface keys.
    *
    * @var string[]
@@ -200,10 +208,12 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   public function omit(string $name): static {
     $this->assertMutable();
     $shell = $this->definitions[$name] ?? NULL;
-    if (!$shell instanceof MapDataDefinition || $shell->getPropertyDefinitions() !== []) {
-      throw new \LogicException(sprintf('The "%s" key cannot be omitted: only a key reserved for a subsurface can be, and only before its child is attached.', $name));
+    if (!static::isEmptyShell($shell)) {
+      throw new \LogicException(sprintf('The "%s" key cannot be omitted: only a key reserved for a subsurface or a collection can be, and only before its child is attached.', $name));
     }
-    unset($this->definitions[$name], $this->attachments[$name], $this->slots[$name], $this->refinements[$name]);
+    // A collection's refiners are the parent's, bound before its child
+    // was asked, and go with the key.
+    unset($this->definitions[$name], $this->attachments[$name], $this->slots[$name], $this->lists[$name], $this->refinements[$name], $this->refiners[$name], $this->declaredBy[$name], $this->contributions[$name]);
     $this->locked = array_values(array_diff($this->locked, [$name]));
     return $this;
   }
@@ -332,6 +342,29 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
     foreach ($variants as $variant) {
       $this->cacheability->addCacheableDependency($variant->child);
     }
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function attachList(string $key, SurfaceList $list): static {
+    $this->assertMutable();
+    $this->assertNotNested($key);
+    $existing = $this->definitions[$key] ?? NULL;
+    if ($existing === NULL) {
+      $existing = new ListDataDefinition([], MapDataDefinition::create());
+    }
+    if (!$existing instanceof ListDataDefinition || !static::isEmptyShell($existing)) {
+      throw new \InvalidArgumentException(sprintf(
+        'The "%s" key already holds a %s definition. A collection is a list of its child\'s items; describe the key beforehand with a list of empty maps, if at all.',
+        $key,
+        $existing->getDataType(),
+      ));
+    }
+    $this->definitions[$key] = $existing;
+    $this->lists[$key] = $list;
+    $this->cacheability->addCacheableDependency($list->item->child);
     return $this;
   }
 
@@ -493,6 +526,9 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
         : NULL;
       $definitions[$key] = $chosen === NULL ? $slot->placeholder() : $slot->definitionFor($chosen);
     }
+    foreach ($this->lists as $key => $list) {
+      $definitions[$key] = SurfaceList::listOf($this->assertListShell((string) $key), $list->item->child);
+    }
     if ($this->thirdParty !== []) {
       $definitions['third_party_settings'] = $this->mountedMap($this->thirdParty, FALSE);
     }
@@ -516,6 +552,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
         attachments: $this->attachments,
         slots: $slots,
         staticRefinements: $this->staticRefinements(),
+        lists: $this->lists,
       ),
       $this->cacheability,
       DefinitionMap::fromArrays(definitions: $outputs),
@@ -638,17 +675,65 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   }
 
   /**
+   * Checks that a collection key still holds its shell at seal.
+   *
+   * The shell may have been narrowed since it was reserved, by a
+   * refiner of the parent's that watches nothing, and is read from where
+   * the key's definition is now; its item must still be the empty map
+   * the child fills.
+   *
+   * @param string $key
+   *   The surface key.
+   *
+   * @return \Drupal\Core\TypedData\ListDataDefinition
+   *   The shell.
+   *
+   * @throws \LogicException
+   *   When something replaced the shell or filled its item.
+   */
+  protected function assertListShell(string $key): ListDataDefinition {
+    $shell = $this->definitions[$key] ?? NULL;
+    if (!$shell instanceof ListDataDefinition || !static::isEmptyShell($shell)) {
+      throw new \LogicException(sprintf(
+        'The "%s" key is a collection, so what each item holds is its child\'s to say: its definition was replaced, or its item given properties, after it was attached.',
+        $key,
+      ));
+    }
+    return $shell;
+  }
+
+  /**
+   * Answers whether a definition is a shell a child has yet to fill.
+   *
+   * An empty map, for an attached child or a slot; a list whose item is
+   * an empty map, for a collection.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $definition
+   *   The definition at the key.
+   *
+   * @return bool
+   *   TRUE for an empty shell.
+   */
+  protected static function isEmptyShell(?DataDefinitionInterface $definition): bool {
+    if ($definition instanceof ListDataDefinition) {
+      $item = $definition->getItemDefinition();
+      return $item instanceof MapDataDefinition && $item->getPropertyDefinitions() === [];
+    }
+    return $definition instanceof MapDataDefinition && $definition->getPropertyDefinitions() === [];
+  }
+
+  /**
    * Refuses to attach at a key twice.
    *
    * @param string $key
    *   The surface key.
    *
    * @throws \LogicException
-   *   When the key is already attached or a slot.
+   *   When the key is already attached, a slot or a collection.
    */
   protected function assertNotNested(string $key): void {
-    if (isset($this->attachments[$key]) || isset($this->slots[$key])) {
-      throw new \LogicException(sprintf('The "%s" key is already a subsurface: one key holds one child, or one set of variants.', $key));
+    if (isset($this->attachments[$key]) || isset($this->slots[$key]) || isset($this->lists[$key])) {
+      throw new \LogicException(sprintf('The "%s" key is already a subsurface: one key holds one child, one set of variants, or one collection.', $key));
     }
   }
 

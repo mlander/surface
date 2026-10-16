@@ -37,6 +37,13 @@ function allows(schema: Schema): Phrase[] {
   else if (schema.maximum !== undefined) {
     phrases.push(`at most ${schema.maximum}`);
   }
+  if (schema['x-surface']?.list) {
+    const atLeast = schema.minItems;
+    const atMost = schema.maxItems;
+    phrases.push(atLeast !== undefined && atMost !== undefined
+      ? `from ${atLeast} to ${atMost} items`
+      : atLeast !== undefined ? `at least ${atLeast} items` : atMost !== undefined ? `at most ${atMost} items` : 'any number of items');
+  }
   if (schema.maxLength !== undefined) {
     phrases.push(`at most ${schema.maxLength} characters`);
   }
@@ -82,7 +89,7 @@ function rows(schema: Schema, values: Values, prefix = ''): Row[] {
     const widget = extension?.widget;
     found.push({
       path,
-      type: widget === 'slot' ? 'slot' : widget === 'fieldset' ? 'part' : (jsonType(property) ?? 'any'),
+      type: widget === 'slot' ? 'slot' : widget === 'fieldset' ? 'part' : extension?.list ? 'collection' : (jsonType(property) ?? 'any'),
       label: property.title ?? name,
       required: (schema.required ?? []).includes(name),
       allows: widget === 'slot'
@@ -99,6 +106,11 @@ function rows(schema: Schema, values: Values, prefix = ''): Row[] {
               ? (extension.refined ? 'narrowed at runtime' : 'as declared, checked at runtime')
               : extension?.refined ? 'narrowed' : 'as declared',
     });
+    if (extension?.list && property.items !== undefined) {
+      // A collection's item keys, once, under `*`: each item is the child.
+      found.push(...rows(property.items, {}, `${path}.*.`));
+      continue;
+    }
     const inner = widget === 'slot' ? resolveSlot(schema, name, values) : widget === 'fieldset' ? property : null;
     if (inner !== null) {
       found.push(...rows(inner, nested, `${path}.`));

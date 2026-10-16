@@ -406,6 +406,63 @@ makes the wall hold both ways. (`Surfaces::assertWalled()`)
 output vary by an input that way, but the engine's output map has no
 subsurfaces yet. (`ShapeAdapterBase`)
 
+## Collections
+
+### A list of child invocations
+
+A collection (`attachList()`) is a list of child invocations: every
+item is the child, built once for the list in the context its
+situation resolves, as `attach()` builds its child, and refined,
+accepted and validated by the child in its own frame, each item's
+context knowing its `delta`. Built once because a shape cannot depend
+on a value, and how many items there are is a value; the frames differ
+only in the values they are handed and their position. The entry
+carries a `SurfaceList` rather than an attachment, so the key is the
+parent's own and every door reads it as a list: an array of references
+to the child's def in both contracts, a list input of the child's maps
+in the tool, a details of item details on the form. Each item's
+context is carried (`SurfaceList::contextFor()`), and nothing reads an
+item's delta yet: a child that names a target of its own is not routed
+per item, and the parent stores the list. *Open:* routing an item to
+its child's target, which needs an identity key on the child to say
+which stored item it is. (`Surfaces::buildSurface()`, `SurfaceList`)
+
+### Access once per list
+
+A collection's child is invoked through its situation once for the
+list, and that access answers for the list: open, locked (the list key
+locked, so every item and the form's add and remove controls) or
+omitted (the key left out). Field access is per field, not per delta,
+and an item has no subject of its own to be asked about before it
+exists. (`Surfaces::buildSurface()`)
+
+### Empty items are dropped
+
+An item that holds nothing at all, every key `NULL` or `''` at any
+depth, is dropped before validation, the way core drops an empty
+delta: it is a row a form added and left blank, not an answer. FALSE
+and 0 are answers. The pipeline drops it in `accept()`, so a payload and
+a form agree, and the form drops it on extraction too, to flag a later
+item's violation on the row it was drawn as. An item is accepted over
+the child's defaults, not over what is stored at its delta, since the
+list is sent whole and an item may have moved.
+(`SurfaceList::isEmptyItem()`, `DataSurfacePipeline::acceptCollection()`)
+
+### Count is the parent's
+
+The list key belongs to the parent: its Count, and any constraint on
+the list itself, is the parent's to declare (`min`, `max`), to narrow
+with a `#[RefinesInput]` method on the key, and to narrow with a
+situation's `withConstraint()`. Each item's rules are the child's. So a
+parent's refiner may refine the list and may not watch it, a parent
+refiner that narrows inside the item it is handed is refused when the
+surface is refined, and validation says the Count about the list and
+each item's violations under its delta. Count is compared by its
+bounds, as Length and Range are, so narrowing it is checkable at all;
+no shipped surface carried a Count before, so nothing that narrowed
+one changed verdict.
+(`DataSurface::assertItemsUntouched()`, `Narrowing::COMPARATORS`)
+
 ## Targets
 
 ### A child learns its parent's accepted identity

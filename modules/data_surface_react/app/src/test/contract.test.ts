@@ -1,5 +1,5 @@
 import type { Schema } from '../contract';
-import { defName, inlineSchema, resolveSchema, resolveSlot } from '../contract';
+import { defName, inlineSchema, resolveSchema, resolveSlot, watchedPaths } from '../contract';
 import example3 from './fixtures/example3.json';
 
 // The resolver, over schemas shaped as the emitter writes them: each
@@ -135,5 +135,40 @@ describe('example 3 as the emitter serves it', () => {
     expect(paid?.title).toBe('Ticket');
     expect(paid?.['x-surface']?.variant).toBe('paid');
     expect(paid?.required).toEqual(['price', 'currency']);
+  });
+});
+
+describe('a collection', () => {
+  const shelf: Schema = {
+    type: 'object',
+    properties: {
+      unit: { title: 'Unit', type: 'string', 'x-surface': { widget: 'select', locked: false, dependsOn: [], refined: false, stale: false } },
+      height: { title: 'Height', type: 'integer', 'x-surface': { widget: 'number', locked: false, dependsOn: ['unit'], refined: false, stale: false } },
+    },
+    additionalProperties: false,
+  };
+  const root: Schema = {
+    type: 'object',
+    properties: {
+      shelves: {
+        title: 'Shelves',
+        type: ['array', 'null'],
+        items: { $ref: '#/$defs/surface_test.pantry.shelf' },
+        maxItems: 3,
+        'x-surface': { widget: 'list', list: true, locked: false, dependsOn: [], refined: false, stale: false },
+      },
+    },
+    $defs: { 'surface_test.pantry.shelf': shelf },
+  };
+
+  it('dereferences its items', () => {
+    const inline = inlineSchema(root);
+    expect(inline.properties!.shelves.items).toEqual(shelf);
+    expect(inline.properties!.shelves.maxItems).toBe(3);
+  });
+
+  it('watches what refines inside each item, under its delta', () => {
+    const watched = watchedPaths(inlineSchema(root), { shelves: [{ unit: 'cm' }, { unit: 'in' }] });
+    expect([...watched].sort()).toEqual(['shelves.0.unit', 'shelves.1.unit']);
   });
 });

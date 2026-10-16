@@ -57,6 +57,7 @@ it](https://www.drupal.org/project/drupal/issues/3622144).
 | **Situation** | One way a surface is asked for — add, edit, reuse — returning a context that says what is already known. Routes and tools are generated from them. | `#[Situation]` static methods, `Surface\SurfaceContext` |
 | **Alter** | Another module's class that adds keys to a surface, rewords a label, offers more values on a fixed list, and narrows with its own refinements. Never removes. | `#[AltersSurface]` on a class in `src/SurfaceAlter/` |
 | **Subsurface** | A child surface at a key: `attach()` for a fixed child, `attachBy()` for a slot a sibling key chooses. | `Surface\ShapeInterface` |
+| **Collection** | A list of child instances at a key, `attachList()`: the list and its Count the parent's, each item the child's. | `Surface\ShapeInterface`, `SurfaceList` |
 | **Variant** | A child that fills a slot for one value of its deciding key. | `#[SurfaceVariant(of:, key:, value:)]` |
 | **Derived variants** | Variants for the values no variant class fills, read from a description that already exists, such as a field type's config schema. | `SurfaceBuild\DerivedVariantsInterface`, tagged `data_surface.derived_variants` |
 | **Derived surface** | A surface whose shape is the site's, made at discovery by a deriver from facts a class cannot know: one per content entity bundle, one per field. It has no class; it is `<base>:<derivative>`. | `#[DerivesSurfaces]` on a `Surface\SurfaceDeriverInterface`, returning `Surface\DerivedSurface`; [Content entities](entities.md) |

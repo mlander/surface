@@ -167,6 +167,7 @@ each written once, as a def under `$defs`, and referred to
 | a map | a nested object |
 | an attached part | a reference to its def under `$defs`, beside its label ([reusable subschemas](#reusable-subschemas)) |
 | a list | `type: array`, `items` |
+| a collection | `type: array`, `items` a reference to the child's def, narrowed by composition only where every item differs from it (a key the child's situation locked, a locked list), `minItems` and `maxItems` from its Count as the parent's refiners left it, and `x-surface.list: true` ([below](#collections)) |
 | a locked key | `readOnly: true` and `const` of the value the situation knows |
 | a child its access locked | `readOnly: true` on the part, and on every key inside it with `const` of what is stored (none in the full schema); an omitted child is not there at all ([Three answers](surfaces.md#three-answers)) |
 | a secret | `writeOnly: true`, no default, no value |
@@ -176,7 +177,7 @@ each written once, as a def under `$defs`, and referred to
 
 | Keyword | Holds |
 | --- | --- |
-| `widget` | Only when the caller asks for widget hints (`data_surface_react` does). The Form API-equivalent hint: `select`, `radios`, `checkbox`, `number`, `text`, `textarea`, `email`, `fieldset`, `slot`, `list`; `null` when no widget would claim the key. |
+| `widget` | Only when the caller asks for widget hints (`data_surface_react` does). The Form API-equivalent hint: `select`, `radios`, `checkbox`, `number`, `text`, `textarea`, `email`, `fieldset`, `slot`, `list` (a collection too); `null` when no widget would claim the key. |
 | `locked` | Identity the situation knows, or a key of a child whose access answered locked: shown, never changed. |
 | `dependsOn` | The sibling keys this key's refiners watch, in its own frame; a key an alter mounted, which only that alter may watch, by its dotted path in that frame (`third_party_settings.<module>.<key>`). A client refines when one of them changes. |
 | `refined` | Whether the key is narrowed right now, compared with what the surface advertises in this situation. |
@@ -191,6 +192,7 @@ each written once, as a def under `$defs`, and referred to
 | `patternMessage` | On a key with a `pattern`: the Regex's own message, which is how a person is told what the pattern allows. The pattern is for machines; a renderer explains the key by this, never by the pattern. |
 | `enumerated` | Only when `true`: the key's static refiners have nothing to refine against yet, and what they answer for every value they could be handed is stated as conditionals on the parent ([below](#exact-where-it-can-be)). Captured exactly: the schema is exact for this key with no round trip, less what `runtime` adds. |
 | `dynamic` | Only when `true`: the key's static refiners have nothing to refine against yet, and what they would answer cannot be listed (a watched key with no list of values, or too many combinations). Static by declaration, not captured here: the schema is the unrefined, looser one, wider than the pipeline and never narrower ([decision](decisions.md#two-documents-never-stricter-than-the-runtime)); refine when a `dependsOn` key changes. In [the full schema](#two-documents) every key that cannot be listed carries it. |
+| `list` | Only when `true`, on a collection: an array whose every item is a child surface, its `items` a reference to the child's def. A renderer draws each item as that def's fieldset, adds and removes items within `minItems` and `maxItems`, and reads `dependsOn` inside each item under its delta (`shelves.1.unit`). |
 | `runtime` | Only when `true`: a runtime refiner narrows the key too, by a rule no schema can state ([three markers](#three-markers)). Never in a conditional and never in the full schema; the schema for these answers is refined by it for its values. Written beside `enumerated` or `dynamic` when the key has static refiners as well. |
 
 ### Reusable subschemas
@@ -312,6 +314,41 @@ In the schema for these answers a site also narrows where the child's
 own values refined it: a shelf whose unit is `cm` refers to the shelf's
 def, which states the ceiling for each unit, and narrows its height to
 `maximum: 200`, `x-surface.refined: true`.
+
+### Collections
+
+A collection is the parent's key, so its property says what the parent
+says about it: its title and description, `type: array`, `minItems` and
+`maxItems` from its Count, `readOnly` when locked, and under
+`x-surface` the usual instance facts (`locked`, `dependsOn`, `refined`,
+`enumerated` or `dynamic` when the parent's refiner of it watches a
+sibling) and `list: true`. Its `items` refer to the child's def, the
+same def an attached child of that surface refers to; both documents
+describe the items from the child's locked keys alone, so the schema
+says nothing one item's answers decide, and the reference is bare
+unless a lock narrows it. The schema stays value-independent: the
+items themselves are in `values`, one map per item, and an item's stale
+key is listed in `stale` under its delta. A parent's refiner of the
+list is enumerated like any key's: the cellar's full schema says, per
+size, how many racks fit.
+
+```json
+"racks": {
+  "title": "Spice racks", "description": "One rack to four.",
+  "type": ["array", "null"],
+  "items": {"$ref": "#/$defs/surface_test.larder.rack"},
+  "minItems": 1, "maxItems": 4,
+  "x-surface": {"widget": "list", "locked": false, "dependsOn": ["size"], "list": true, "enumerated": true}
+},
+...
+"allOf": [
+  {"if": {"properties": {"size": {"const": "small"}}, "required": ["size"]},
+   "then": {"properties": {"racks": {"maxItems": 2}}}}
+]
+```
+
+A list locked by its access is `readOnly`, and its items narrow the def
+by composition, every key inside them `readOnly`.
 
 ### A slot is a conditional
 
@@ -498,6 +535,7 @@ What the emitter's `widget`, when asked for, mirrors is
 | `integer`, `float` | `number`, `#min`/`#max` from Range, `#step` 1 or any | `number` | `NumberField` |
 | `boolean` | `checkbox`, never `#required` | `checkbox` | `CheckboxField` |
 | a list with no allowed values | no stock widget | `list` | `ListField` (add and remove rows) |
+| a collection | a `details` of item `details`, "Add another" and "Remove" over AJAX | `list`, `list: true` | `ListField`, each item the child's `FieldsetField`, at least `minItems`, at most `maxItems` |
 | a locked key | `#disabled`, "Fixed for this operation." | `locked: true` | disabled, the same note |
 | a locked child | its fieldset `#disabled`, every element inside with it | `locked: true` on the fieldset and on every key inside | a fieldset of disabled keys |
 

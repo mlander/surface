@@ -6,6 +6,7 @@ namespace Drupal\data_surface\Surface;
 
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 
 /**
@@ -137,6 +138,50 @@ interface ShapeAdditionsInterface {
    *   outputs) not yet built: see docs/decisions.md.
    */
   public function attach(string $key, string $child): MapDataDefinition;
+
+  /**
+   * A collection at a key: a list whose every item is the child surface.
+   *
+   * Each item is a child instance, invoked the way attach() invokes its
+   * child (through the situation the context names for this key, else
+   * the one for the parent's operation, else its default, otherwise in
+   * the parent's operation and known identity), built once for the list,
+   * with its access answered once for the list: open, locked (every
+   * item, and adding and removing one) or omitted (the key is not
+   * there). An item is refined, accepted and validated by the child in
+   * its own frame, its delta added to what its context knows; a parent
+   * cannot refine into an item and an item cannot watch a parent key.
+   *
+   * The key itself is the parent's: the list's Count, which $min and
+   * $max declare, is the parent's to narrow with a #[RefinesInput]
+   * method on the key, and its value is a list of item maps, in order.
+   *
+   * Returns the list definition at the key, whose item is the child's
+   * map, as attach() returns the map: the owner labels and describes it
+   * with the core setters, and may add list constraints of its own.
+   *
+   * A list whose every item chooses its own child (attachListBy()) is not
+   * built.
+   *
+   * @param string $key
+   *   The key the collection sits at.
+   * @param string $child
+   *   The surface every item is: its class, or a derived surface's id.
+   * @param int|null $min
+   *   The fewest items, or NULL for no bound.
+   * @param int|null $max
+   *   The most items, or NULL for unlimited.
+   *
+   * @return \Drupal\Core\TypedData\ListDataDefinition
+   *   The list at the key, already part of the shape.
+   *
+   * @throws \LogicException
+   *   When the key is already declared, or (for an alter, or for
+   *   outputs) not yet built: see docs/decisions.md.
+   * @throws \InvalidArgumentException
+   *   When a bound is negative, or $min is above $max.
+   */
+  public function attachList(string $key, string $child, ?int $min = NULL, ?int $max = NULL): ListDataDefinition;
 
   /**
    * Offers more values on a key someone else declared, as an alter.

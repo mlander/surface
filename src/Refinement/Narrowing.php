@@ -25,8 +25,9 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
  * | --- | --- |
  * | Adding a constraint | narrower |
  * | Dropping values from a list of allowed values | narrower |
- * | Raising a Length or Range minimum, lowering its maximum | narrower |
- * | Adding a Length or Range bound where there was none | narrower |
+ * | Raising a Length, Range or Count minimum, lowering its maximum | narrower |
+ * | Adding a Length, Range or Count bound where there was none | narrower |
+ * | Changing or dropping a Length or Count exactly | refused |
  * | Sharpening a label, description, default or example | neither |
  * | Changing the data type to one of its derivatives | narrower |
  * | Changing the data type any other way (except from 'any') | refused |
@@ -68,11 +69,12 @@ final class Narrowing {
   /**
    * Constraints whose options are compared as bounds rather than copied.
    *
-   * Both of core's comparator constraints spell their bounds the same
-   * way, and nothing else about them is a value space: their remaining
+   * Core's comparator constraints, and the list's Count, spell their
+   * bounds the same way (min, max, and Symfony's exactly for Length and
+   * Count), and nothing else about them is a value space: their remaining
    * options are messages.
    */
-  public const COMPARATORS = ['Length', 'Range'];
+  public const COMPARATORS = ['Length', 'Range', 'Count'];
 
   /**
    * Refuses a refinement that accepts more than what it was handed.
@@ -101,6 +103,26 @@ final class Narrowing {
         $widening,
       ));
     }
+  }
+
+  /**
+   * Says how a refined definition narrowed, or NULL when it did not.
+   *
+   * The same table read the other way: whatever the refined definition
+   * would widen, going back to what it was handed, is what it narrowed.
+   * For a check that a refinement left something alone, a collection's
+   * items under its parent's refiners.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $before
+   *   The definition handed over.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $after
+   *   What came back.
+   *
+   * @return string|null
+   *   What narrowed, in words, or NULL.
+   */
+  public static function narrowed(DataDefinitionInterface $before, DataDefinitionInterface $after): ?string {
+    return self::widening($after, $before);
   }
 
   /**
@@ -287,6 +309,11 @@ final class Narrowing {
    *   What widened, in words, or NULL.
    */
   protected static function boundsWidening(string $name, array $before, array $after): ?string {
+    // Symfony spells min equal to max as `exactly` too: a bound like the
+    // other two, which only narrows by staying what it was.
+    if (isset($before['exactly']) && is_numeric($before['exactly']) && ($after['exactly'] ?? NULL) != $before['exactly']) {
+      return sprintf('the exactly of the %s constraint changed from %s', $name, self::describe($before['exactly']));
+    }
     foreach (['min' => 1, 'max' => -1] as $bound => $direction) {
       if (!isset($before[$bound]) || !is_numeric($before[$bound])) {
         // No bound, or one this check cannot read as a number: adding or

@@ -93,6 +93,42 @@ list, has said nothing about the list, so **what the list already holds
 stands** — the stored value, or the declared default. Emptying a list is
 said with an empty list, which is a configured value.
 
+### Collections
+
+A collection's value ([Surfaces](surfaces.md#collections)) is a list
+of item maps, in order: delta is position, and the keys a sender used
+are dropped. It is a list, so the list rule above holds: a list the
+input says nothing about, or sends empty (`NULL`, `''`), keeps what it
+holds, and emptying it is said with `[]`.
+
+- **Each item is the child's.** It is accepted by the child in its own
+  frame, over the child's defaults and not over what is stored at the
+  same delta, since the list is sent whole and an item may have moved;
+  an unknown key inside an item is refused by its path
+  (`racks.1.brand`), as is an item that is not a map (`racks.1`) and a
+  list that is not a list (`racks`).
+- **Empty items are dropped.** An item that holds nothing at all, every
+  key of it `NULL` or `''` at any depth (a row a form added and left
+  blank), is dropped before validation, the way core drops an empty
+  delta. One holding `FALSE` or `0` is an answer, not empty. A form
+  drops it on extraction and remembers where each kept item was drawn,
+  so a violation about a later item is flagged on its own row.
+- **Count is the list's, items the child's.** `validate()` holds the
+  list itself to its own constraints, its `Count` as the parent's
+  refiners left it, and reports them on the list's key; then each item
+  is judged by the child, its own refiners run against that item alone,
+  and each violation is filed under the list's key with the item's
+  delta in front: `tags.2.target_id`.
+- **Stale, per item.** The stale rule applies inside an item as it does
+  anywhere: an item's key holding exactly what is stored at the same
+  delta, no longer offered, every key it refines against unmoved, is
+  kept and reported stale (`shelves.1.unit`), and never blocks. The
+  same value sent at another delta was chosen by whoever moved it, and
+  is refused.
+- **Locked and omitted.** A locked list keeps what is stored, each item
+  read through the child, and ignores what is posted for it; an omitted
+  one is not in the surface, so a value posted for it is an unknown key.
+
 ### Maps
 
 A complex definition with declared properties merges in one order at
@@ -222,11 +258,12 @@ rule](decisions.md#the-empty-option-rule).
 
 Two boundaries, both deliberate:
 
-- **Lists are not covered.** A multiple select's items are each members
-  of the same set, so a stale item would have to be stashed and warned
-  about per item, and a partial keep is a shape neither the widget nor
-  the rule has. A list whose items went stale is refused as it always
-  was.
+- **Lists of values are not covered.** A multiple select's items are
+  each members of the same set, so a stale item would have to be
+  stashed and warned about per item, and a partial keep is a shape
+  neither the widget nor the rule has. A list whose items went stale is
+  refused as it always was. A collection is covered, inside each item,
+  since each item is its own frame ([Collections](#collections)).
 - **`setConfiguration()` keeps what it is given.** A plugin's
   `setConfiguration()` is the load path — every host calls it from
   inside its own constructor with what the site saved — and it has one

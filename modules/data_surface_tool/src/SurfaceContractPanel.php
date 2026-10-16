@@ -11,6 +11,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\data_surface\Contract\ContractEmitter;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
@@ -224,6 +225,19 @@ final class SurfaceContractPanel implements DataSurfaceFormPanelInterface {
       }
       return;
     }
+    if ($entry->list !== NULL && $definition instanceof ListDataDefinitionInterface && $definition->getItemDefinition() instanceof ComplexDataDefinitionInterface) {
+      // A collection: the list is the parent's, each item the child's,
+      // whose keys are listed once, under `*`.
+      $source = $entry->list->item->source;
+      $count = $definition->getConstraints()['Count'] ?? NULL;
+      $rows[] = $this->row($path, $this->t('collection'), $definition, NULL, $this->t('A list of @surface@count', [
+        '@surface' => $source === NULL ? $this->t('a sealed surface') : $this->registry->getDefinition($source)->id,
+        '@count' => is_array($count) ? ', ' . $this->bounds('Count', $count) : '',
+      ]), $depends, $this->status($declared, $definition, $entry->locked, $entry->isRefinedAtRuntime()));
+      $declared_item = $declared instanceof ListDataDefinitionInterface ? $declared->getItemDefinition() : NULL;
+      $this->propertyRows($rows, $path . '.*', $definition->getItemDefinition(), $declared_item instanceof ComplexDataDefinitionInterface ? $declared_item->getPropertyDefinitions() : [], []);
+      return;
+    }
     if ($entry->attachment !== NULL && $definition instanceof ComplexDataDefinitionInterface) {
       $source = $entry->attachment->source;
       $rows[] = $this->row($path, $this->t('part'), $definition, NULL, $this->t('A fixed part: @surface', [
@@ -345,7 +359,7 @@ final class SurfaceContractPanel implements DataSurfaceFormPanelInterface {
         continue;
       }
       $phrases[] = (string) match ($name) {
-        'Range', 'Length' => $this->bounds((string) $name, $options),
+        'Range', 'Length', 'Count' => $this->bounds((string) $name, $options),
         'Email' => $this->t('an email address'),
         'Regex' => $this->regex($options),
         'NotBlank' => $this->t('not blank'),
@@ -392,8 +406,13 @@ final class SurfaceContractPanel implements DataSurfaceFormPanelInterface {
   protected function bounds(string $name, array $options): string {
     $min = $options['min'] ?? NULL;
     $max = $options['max'] ?? NULL;
+    $unit = match ($name) {
+      'Length' => $this->t('characters'),
+      'Count' => $this->t('items'),
+      default => '',
+    };
     $arguments = array_filter(
-      ['@min' => $min, '@max' => $max, '@unit' => $name === 'Length' ? $this->t('characters') : ''],
+      ['@min' => $min, '@max' => $max, '@unit' => $unit],
       static fn (mixed $argument): bool => $argument !== NULL,
     );
     return trim((string) match (TRUE) {

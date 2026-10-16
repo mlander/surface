@@ -125,7 +125,8 @@ interface DataSurfaceBuilderInterface {
    * key is not in the sealed surface at all, so nothing generated from it
    * draws, advertises or accepts it, and a value posted for it is an
    * unknown key. The one removal the build step makes, and only of a key
-   * that holds a child, which no sibling may watch.
+   * that holds a child or a collection of them, which no sibling may
+   * watch.
    *
    * @param string $name
    *   The subsurface key.
@@ -134,7 +135,7 @@ interface DataSurfaceBuilderInterface {
    *
    * @throws \LogicException
    *   When the builder is already sealed, or the key is not a subsurface
-   *   reserved by the shape.
+   *   or a collection reserved by the shape.
    */
   public function omit(string $name): static;
 
@@ -494,6 +495,32 @@ interface DataSurfaceBuilderInterface {
    *   the deciding key does not allow.
    */
   public function attachBy(string $key, string $by, array $variants): static;
+
+  /**
+   * Declares a collection: a key whose value is a list of child instances.
+   *
+   * Every item is the list's child, accepted, validated and refined by it
+   * in its own frame, under its own key names; nothing in the parent
+   * names a key inside an item. The key itself is the parent's: its
+   * definition is a list whose item is the child's map, and the list's
+   * own constraints (its Count) are the parent's to declare and narrow.
+   * The key may be described beforehand with a list whose item is an
+   * empty map; that list is kept as the shell the items are advertised
+   * in. The child's cacheability becomes the parent's.
+   *
+   * @param string $key
+   *   The surface key.
+   * @param \Drupal\data_surface\SurfaceList $list
+   *   The child every item is, sealed once.
+   *
+   * @return $this
+   *
+   * @throws \InvalidArgumentException
+   *   When the key already holds anything but such a list.
+   * @throws \LogicException
+   *   When the key is already a subsurface or a collection.
+   */
+  public function attachList(string $key, SurfaceList $list): static;
 
   /**
    * Seals the builder into an immutable surface.

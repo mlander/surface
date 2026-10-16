@@ -18,15 +18,20 @@ use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Render\ElementInfoManagerInterface;
 use Drupal\Core\Security\TrustedCallbackInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\data_surface\Pipeline\ViolationSet;
+use Drupal\data_surface\SurfaceAttachment;
+use Drupal\data_surface\SurfaceEntry;
+use Drupal\data_surface\SurfaceList;
 use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
 use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
 
@@ -86,6 +91,33 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    * callback can tell a trigger whose options the rebuild changed.
    */
   protected const RENDERED_OPTIONS = 'data_surface_rendered_options';
+
+  /**
+   * Render key marking a collection's element: its dotted path.
+   */
+  protected const LIST_KEY = '#data_surface_list';
+
+  /**
+   * The key of a collection's "Add another" button inside its element.
+   *
+   * With an at sign, which no delta and no surface key can take.
+   */
+  protected const ADD_KEY = '@add';
+
+  /**
+   * The key of an item's "Remove" button inside the item's element.
+   */
+  protected const REMOVE_KEY = '@remove';
+
+  /**
+   * Where a request keeps the delta each extracted item was drawn at.
+   *
+   * Temporary form state, keyed by the container's place in the form and
+   * the collection's dotted path: an empty item is dropped on extraction,
+   * so the items after it are accepted at a smaller delta than they were
+   * drawn at, and a violation about one is flagged on the one drawn.
+   */
+  protected const LIST_DELTAS = 'data_surface_list_deltas';
 
   /**
    * Element types that hold children rather than a value of their own.
@@ -167,6 +199,20 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     $container['#pre_render'] = $this->surfacePreRender('container');
     $definitions = $surface->getDefinitions();
     foreach ($definitions as $name => $definition) {
+      $list = $definitions->entry($name)?->list;
+      if ($list !== NULL && $definition instanceof ListDataDefinitionInterface) {
+        // Decision: see docs/decisions.md#a-list-of-child-invocations.
+        $container[$name] = $this->buildCollection(
+          $list,
+          $definition,
+          $values[$name] ?? $surface->getDefault($name),
+          $shown[$name] ?? $surface->getDefault($name),
+          $definitions->isLocked($name),
+          [(string) $name],
+          $wrapper_id,
+        );
+        continue;
+      }
       $slot = $definitions->entry($name)?->slot;
       if ($slot !== NULL && DefinitionMetadata::slotOf($definition) !== NULL) {
         // The values said nothing about the deciding key, so its own
@@ -243,6 +289,192 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
   }
 
   /**
+   * Builds a collection: one details per item, and its two controls.
+   *
+   * The list's own details holds one details per item, each the child's
+   * map refined against that item's values alone and titled with the
+   * list's label and the item's number, then an "Add another" button.
+   * Each item carries a "Remove" button. Both are submit buttons whose
+   * handler rewrites the posted items and rebuilds the form, and whose
+   * AJAX callback is the refinement one, replacing the list by its own
+   * wrapper and nothing else. Adding is disabled once the list holds its
+   * Count's maximum and removing once it holds its minimum, and the list
+   * is drawn with at least its minimum, an empty item for each missing
+   * one. A locked list is drawn disabled, every item and both controls
+   * with it.
+   *
+   * @param \Drupal\data_surface\SurfaceList $list
+   *   The child every item is.
+   * @param \Drupal\Core\TypedData\ListDataDefinitionInterface $definition
+   *   The list, as the parent's refiners left it.
+   * @param mixed $values
+   *   The items as the surface is refined against them, an orphan held
+   *   unanswered.
+   * @param mixed $shown
+   *   The items as their elements show them, an orphan standing for its
+   *   stored value.
+   * @param bool $locked
+   *   Whether the list is locked.
+   * @param string[] $path
+   *   The list's path below the container.
+   * @param string $wrapper_id
+   *   The container's id.
+   *
+   * @return array
+   *   The list's element.
+   */
+  protected function buildCollection(SurfaceList $list, ListDataDefinitionInterface $definition, mixed $values, mixed $shown, bool $locked, array $path, string $wrapper_id): array {
+    $child = $list->child();
+    $items = SurfaceList::items($values);
+    $showing = SurfaceList::items($shown);
+    $count = $definition->getConstraints()['Count'] ?? [];
+    $min = is_numeric($count['min'] ?? NULL) ? (int) $count['min'] : 0;
+    $max = is_numeric($count['max'] ?? NULL) ? (int) $count['max'] : NULL;
+    while (count($items) < $min) {
+      $items[] = [];
+    }
+    $label = $definition->getLabel() ?? end($path);
+    $dotted = implode('.', $path);
+    $element = [
+      '#type' => 'details',
+      '#title' => $label,
+      '#open' => TRUE,
+      self::LIST_KEY => $dotted,
+      // The list is what adding or removing an item replaces.
+      self::REFRESH_KEY => $dotted,
+    ];
+    if ($definition->getDescription() !== NULL) {
+      $element['#description'] = $definition->getDescription();
+    }
+    if ($definition->isRequired()) {
+      $element['#required'] = TRUE;
+    }
+    $control = fn (string $name, array $at, bool $disabled): array => [
+      '#type' => 'submit',
+      '#value' => static::controlLabel($name),
+      '#name' => 'data_surface_' . implode('_', array_map([Html::class, 'getId'], [...$path, ...$at])),
+      '#submit' => [[static::class, $name === self::ADD_KEY ? 'addListItem' : 'removeListItem']],
+      // Nothing is judged: the person said only "one more", or "not this
+      // one", and every value is still mid-edit.
+      '#limit_validation_errors' => [],
+      '#disabled' => $disabled || $locked,
+      '#ajax' => [
+        'callback' => [static::class, 'refreshSurface'],
+        'wrapper' => $wrapper_id,
+        'submit' => [self::WRAPPER_INPUT => $wrapper_id],
+      ],
+      self::TRIGGER_KEY => ['path' => [...$path, ...$at], 'replaces' => [$dotted]],
+    ];
+    foreach ($items as $delta => $item) {
+      $held = array_replace($child->getDefaultValues(), is_array($item) ? $item : []);
+      $map = SurfaceAttachment::mapOf(MapDataDefinition::create(), $child->refine($held));
+      $map->setLabel(static::itemLabel($label, $delta));
+      $showing_item = $showing[$delta] ?? $item;
+      $element[$delta] = $this->widgetManager->getWidgetFor($map)->buildElement(
+        $map,
+        array_replace($child->getDefaultValues(), is_array($showing_item) ? $showing_item : []),
+      );
+      $element[$delta][self::REMOVE_KEY] = $control(self::REMOVE_KEY, [(string) $delta, self::REMOVE_KEY], count($items) <= $min);
+      $element[$delta][self::REMOVE_KEY]['#weight'] = 1000;
+    }
+    $element[self::ADD_KEY] = $control(self::ADD_KEY, [self::ADD_KEY], $max !== NULL && count($items) >= $max);
+    if ($locked) {
+      $element['#disabled'] = TRUE;
+      $element = static::describeLocked($element);
+    }
+    return $element;
+  }
+
+  /**
+   * Titles one item of a collection: the list's label and its number.
+   *
+   * @param string|\Stringable $label
+   *   The list's label.
+   * @param int $delta
+   *   The item's delta; its number is one more.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   The title.
+   */
+  protected static function itemLabel(string|\Stringable $label, int $delta): TranslatableMarkup {
+    return t('@label @number', ['@label' => $label, '@number' => $delta + 1]);
+  }
+
+  /**
+   * Words a collection's control.
+   *
+   * @param string $control
+   *   ADD_KEY or REMOVE_KEY.
+   *
+   * @return string
+   *   What the button says.
+   */
+  protected static function controlLabel(string $control): string {
+    return (string) ($control === self::ADD_KEY ? t('Add another') : t('Remove'));
+  }
+
+  /**
+   * Adds an empty item to a collection: its "Add another" button's submit.
+   *
+   * The posted items are what the rebuild draws, so one more, holding
+   * nothing, is put at their end, and the form is rebuilt from them.
+   *
+   * @param array $form
+   *   The form.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   */
+  public static function addListItem(array &$form, FormStateInterface $form_state): void {
+    static::rewriteListInput($form_state, static function (array $items): array {
+      $items[] = [];
+      return $items;
+    }, 1);
+  }
+
+  /**
+   * Takes one item out of a collection: its "Remove" button's submit.
+   *
+   * The items after it move up one: delta is position.
+   *
+   * @param array $form
+   *   The form.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   */
+  public static function removeListItem(array &$form, FormStateInterface $form_state): void {
+    $trigger = $form_state->getTriggeringElement() ?? [];
+    $parents = $trigger['#parents'] ?? [];
+    $delta = (int) ($parents[count($parents) - 2] ?? -1);
+    static::rewriteListInput($form_state, static function (array $items) use ($delta): array {
+      unset($items[$delta]);
+      return array_values($items);
+    }, 2);
+  }
+
+  /**
+   * Rewrites the posted items of the collection a button belongs to.
+   *
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   * @param callable $rewrite
+   *   Takes the posted items, in order, and returns the new ones.
+   * @param int $depth
+   *   How far below the list the button sits.
+   */
+  protected static function rewriteListInput(FormStateInterface $form_state, callable $rewrite, int $depth): void {
+    $state = $form_state instanceof SubformStateInterface ? $form_state->getCompleteFormState() : $form_state;
+    $trigger = $state->getTriggeringElement() ?? [];
+    $parents = array_slice($trigger['#parents'] ?? [], 0, -$depth);
+    if ($parents === []) {
+      return;
+    }
+    $input = $state->getUserInput();
+    NestedArray::setValue($input, $parents, $rewrite(SurfaceList::items(NestedArray::getValue($input, $parents))), TRUE);
+    $state->setUserInput($input);
+    $state->setRebuild();
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function discardedRefinementInput(DataSurfaceInterface $surface, array $stored, array $input): array {
@@ -262,7 +494,8 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       // A mounted key falls back to what is stored, as a whole key does;
       // a child's key, inside its own frame, to the child's defaults.
       $parents = explode('.', $dotted);
-      if (count($parents) > 1 && !$surface->getDefinitions()->entry($parents[0])?->isNested()) {
+      $entry = $surface->getDefinitions()->entry($parents[0]);
+      if (count($parents) > 1 && $entry !== NULL && !$entry->isNested() && $entry->list === NULL) {
         static::restore($values, $stored, $parents);
       }
     }
@@ -339,6 +572,26 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     $values = static::frameValues($stored, $input, $discarded, $orphaned);
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
       $name = (string) $name;
+      if ($entry->list !== NULL && is_array($input[$name] ?? NULL)) {
+        // Each item is settled by the child in its own frame, against what
+        // is stored at the same position.
+        $child = $entry->list->child();
+        $held = is_array($stored[$name] ?? NULL) ? array_values($stored[$name]) : [];
+        foreach ($input[$name] as $delta => $item) {
+          if (!is_int($delta) || !is_array($item)) {
+            continue;
+          }
+          $child_stored = array_replace($child->getDefaultValues(), is_array($held[$delta] ?? NULL) ? $held[$delta] : []);
+          [$child_discarded, $child_orphaned] = $this->settle($child, $child_stored, $item);
+          foreach ($child_discarded as $path) {
+            $discarded[] = $name . '.' . $delta . '.' . $path;
+          }
+          foreach ($child_orphaned as $path => $value) {
+            $orphaned[$name . '.' . $delta . '.' . $path] = $value;
+          }
+        }
+        continue;
+      }
       if (!$entry->isNested() || in_array($name, $discarded, TRUE) || !is_array($input[$name] ?? NULL)) {
         continue;
       }
@@ -1071,6 +1324,10 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         $slots[] = $name;
         continue;
       }
+      if ($entry->list !== NULL) {
+        $raw += $this->extractCollection($entry, $container, $form_state);
+        continue;
+      }
       $raw += $this->extractKey((string) $name, $entry->definition, $container, $form_state);
     }
     if ($slots !== []) {
@@ -1089,6 +1346,52 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     // the same accept() a payload goes through, which is also where
     // locked keys take the value the surface declares.
     return $this->pipeline->accept($surface, $raw, $current);
+  }
+
+  /**
+   * Reads a collection's items out of the container, if it was rendered.
+   *
+   * Each item drawn is read through the child's map, in the order drawn.
+   * An item that holds nothing at all, a row added and left blank, is
+   * dropped here, before the pipeline would drop it, and the delta each
+   * item kept was drawn at is remembered for the request, so a violation
+   * about it is flagged on the element it came from.
+   *
+   * @param \Drupal\data_surface\SurfaceEntry $entry
+   *   The collection.
+   * @param array $container
+   *   The surface container.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   *
+   * @return array
+   *   The items keyed by surface key, or nothing for a list with no
+   *   element.
+   */
+  protected function extractCollection(SurfaceEntry $entry, array $container, FormStateInterface $form_state): array {
+    $name = $entry->name;
+    $element = $container[$name] ?? NULL;
+    $item = $entry->definition instanceof ListDataDefinitionInterface ? $entry->definition->getItemDefinition() : NULL;
+    if (!is_array($element) || !isset($element[self::LIST_KEY]) || $item === NULL) {
+      return [];
+    }
+    $widget = $this->widgetManager->getWidgetFor($item);
+    $items = [];
+    $deltas = [];
+    foreach (static::elementChildren($element) as $delta) {
+      if (!is_int($delta)) {
+        continue;
+      }
+      $value = $widget->extractValue($item, $element[$delta], $form_state, [$name, $delta]);
+      if (SurfaceList::isEmptyItem($value)) {
+        continue;
+      }
+      $items[] = $value;
+      $deltas[] = $delta;
+    }
+    $state = $form_state instanceof SubformStateInterface ? $form_state->getCompleteFormState() : $form_state;
+    $state->setTemporaryValue([self::LIST_DELTAS, static::containerKey($container), $name], $deltas);
+    return [$name => $items];
   }
 
   /**
@@ -1150,6 +1453,12 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         continue;
       }
       $element = $container[$violation->key] ?? NULL;
+      if (isset($element[self::LIST_KEY]) && $segments !== [] && ctype_digit((string) $segments[0])) {
+        // An item is flagged where it was drawn, which an empty item
+        // dropped before it may have moved.
+        $deltas = $state->getTemporaryValue([self::LIST_DELTAS, static::containerKey($container), $violation->key]) ?? [];
+        $segments[0] = (string) ($deltas[(int) $segments[0]] ?? $segments[0]);
+      }
       foreach ($segments as $segment) {
         if (!isset($element[$segment])) {
           break;
@@ -1434,6 +1743,26 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         // A target — a slot is one too, of its deciding key — has a
         // wrapper of its own, which is what the rebuild replaces.
         $element[$name][self::REFRESH_KEY] = implode('.', $at);
+      }
+      if ($entry->list !== NULL) {
+        // Each item is a frame of its own: what refines inside an item is
+        // wired inside it, and replaces what it moves there and nothing
+        // else.
+        $child = $entry->list->child();
+        $held = SurfaceList::items($values[$name] ?? NULL);
+        foreach (static::elementChildren($element[$name]) as $delta) {
+          if (is_int($delta) && is_array($element[$name][$delta])) {
+            $item = $held[$delta] ?? [];
+            $element[$name][$delta] = $this->wireRefinement(
+              $element[$name][$delta],
+              $child,
+              array_replace($child->getDefaultValues(), is_array($item) ? $item : []),
+              [...$at, (string) $delta],
+              $wrapper_id,
+            );
+          }
+        }
+        continue;
       }
       if (!$entry->isNested() || !empty($element[$name][self::PLACEHOLDER_KEY])) {
         continue;

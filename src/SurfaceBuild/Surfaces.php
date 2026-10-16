@@ -28,6 +28,8 @@ use Drupal\data_surface\Surface\SurfaceContext;
 use Drupal\data_surface\Surface\SurfaceInterface;
 use Drupal\data_surface\Surface\SurfaceTargetInterface;
 use Drupal\data_surface\SurfaceAttachment;
+use Drupal\data_surface\SurfaceEntry;
+use Drupal\data_surface\SurfaceList;
 
 /**
  * The build step, over the engine's builder and factory.
@@ -69,6 +71,8 @@ use Drupal\data_surface\SurfaceAttachment;
  *    its own situations when one applies (invokeChild()), whose access
  *    then decides whether the child is open, locked or left out for the
  *    current account (childAccess()); otherwise in its parent's context.
+ *    A collection's child is built the same way, once for the list, and
+ *    its access answers once for the list.
  * 7. The seal.
  *
  * The engine's builder is the whole state of a build. Nothing is cached
@@ -169,6 +173,7 @@ final class Surfaces implements SurfacesInterface {
 
     $input_keys = $inputs->keys();
     $subsurfaces = array_merge(array_keys($inputs->attachments()), array_keys($inputs->slots()));
+    $lists = array_keys($inputs->lists());
     foreach ($definition->identity as $key) {
       if (!in_array($key, $input_keys, TRUE)) {
         throw new \LogicException(sprintf(
@@ -176,7 +181,11 @@ final class Surfaces implements SurfacesInterface {
           $definition->id,
           $definition->class ?? $definition->inputs?->describe(),
           $key,
-          in_array($key, $subsurfaces, TRUE) ? ' (it is a subsurface, which holds a map and cannot say which thing this is)' : '',
+          match (TRUE) {
+            in_array($key, $subsurfaces, TRUE) => ' (it is a subsurface, which holds a map and cannot say which thing this is)',
+            in_array($key, $lists, TRUE) => ' (it is a collection, which holds a list and cannot say which thing this is)',
+            default => '',
+          },
         ));
       }
     }
@@ -191,7 +200,7 @@ final class Surfaces implements SurfacesInterface {
     }
     $slots = $this->slotsOf($definition, $inputs, $input_keys);
 
-    $this->applyContext($builder, $definition, $context, $input_keys, $subsurfaces);
+    $this->applyContext($builder, $definition, $context, $input_keys, $subsurfaces, $lists);
     // What each module mounted, so an alter's method may watch its own
     // module's keys and is told so when it names another's.
     $mounted_by = [];
@@ -203,7 +212,7 @@ final class Surfaces implements SurfacesInterface {
     foreach ($links as [$instance, $refiners, $module]) {
       $extended = $module !== NULL && isset($additions[$module][0]) ? $additions[$module][0]->extended() : [];
       $mounted = $module !== NULL && isset($additions[$module][0]) ? $additions[$module][0]->keys() : [];
-      $this->bindRefiners($builder, $definition, $instance, $refiners, $input_keys, $outputs->keys(), $subsurfaces, $ancestry === [] ? NULL : $ancestry[count($ancestry) - 1], $module, $extended, $mounted, $module === NULL ? [] : $mounted_by);
+      $this->bindRefiners($builder, $definition, $instance, $refiners, $input_keys, $outputs->keys(), $subsurfaces, $ancestry === [] ? NULL : $ancestry[count($ancestry) - 1], $module, $extended, $mounted, $module === NULL ? [] : $mounted_by, $lists);
     }
 
     // The children, each through this same build step in its own frame:
@@ -214,7 +223,7 @@ final class Surfaces implements SurfacesInterface {
     $permission = $this->registry->getSituations($definition->name())[$context->operation]->permission ?? NULL;
     $frame['permission'] = $permission === NULL ? NULL : static::resolvePermission($permission, $context);
     foreach ($inputs->attachments() as $key => $child) {
-      [$attachment, $access] = $this->buildChild($child, $context, $key, $frame, $ancestry);
+      [$attachment, $access] = $this->buildChild((string) $child, $context, $key, $frame, $ancestry);
       if ($access !== NULL) {
         // What the child's access answer read is what this surface, and
         // everything emitted from it, varies by.
@@ -255,6 +264,25 @@ final class Surfaces implements SurfacesInterface {
       }
       $builder->attachBy($key, $by, $variants);
     }
+    // Each collection's child, built once for the list: every item is
+    // invoked in the one context its situation resolves, and its access
+    // answers once for the list, since field access is per field and not
+    // per delta.
+    // Decision: see docs/decisions.md#access-once-per-list.
+    foreach ($inputs->lists() as $key => $child) {
+      [$attachment, $access, $child_context] = $this->buildChild($child, $context, $key, $frame, $ancestry);
+      if ($access !== NULL) {
+        $builder->addCacheableDependency($access);
+      }
+      if ($attachment === NULL) {
+        $builder->omit($key);
+        continue;
+      }
+      $builder->attachList($key, new SurfaceList($attachment, $child_context));
+      if ($access !== NULL && $access->isLocked()) {
+        $builder->lock($key);
+      }
+    }
 
     return $builder->seal();
   }
@@ -274,17 +302,18 @@ final class Surfaces implements SurfacesInterface {
    * @param array $ancestry
    *   The parent's own ancestry.
    *
-   * @return array{0: \Drupal\data_surface\SurfaceAttachment|null, 1: \Drupal\data_surface\Surface\SurfaceAccess|null}
-   *   The sealed child, or NULL when its access omits it; and that access
+   * @return array{0: \Drupal\data_surface\SurfaceAttachment|null, 1: \Drupal\data_surface\Surface\SurfaceAccess|null, 2: \Drupal\data_surface\Surface\SurfaceContext}
+   *   The sealed child, or NULL when its access omits it; that access
    *   answer, or NULL for a child invoked through no situation of its own,
-   *   whose access is asked only by access(), as it always was.
+   *   whose access is asked only by access(), as it always was; and the
+   *   context the child was invoked in.
    */
   protected function buildChild(string $child, SurfaceContext $context, string $key, array $frame, array $ancestry): array {
     $definition = $this->registry->getDefinition($child);
     [$child_context, $situation] = $this->invokeChild($definition, $context, $key, $frame['id']);
     $access = $situation === NULL ? NULL : $this->childAccess($definition, $situation, $child_context, $this->currentUser, $frame['permission'] ?? NULL);
     if ($access !== NULL && $access->isOmitted()) {
-      return [NULL, $access];
+      return [NULL, $access, $child_context];
     }
     $frame['key'] = $key;
     return [
@@ -294,6 +323,7 @@ final class Surfaces implements SurfacesInterface {
         $definition->id,
       ),
       $access,
+      $child_context,
     ];
   }
 
@@ -712,7 +742,7 @@ final class Surfaces implements SurfacesInterface {
   protected function childAnswers(SurfaceContext $context, AccountInterface $account, DataSurfaceInterface $built, string $parent): array {
     $answers = [];
     foreach ($built->getDefinitions()->entries() as $key => $entry) {
-      $attachment = $entry->attachment;
+      $attachment = $entry->attachment ?? $entry->list?->item;
       if ($attachment === NULL && $entry->slot !== NULL && $built->isLocked($entry->slot->by)) {
         $chosen = $entry->slot->chosen($built->getDefault($entry->slot->by));
         $attachment = $chosen === NULL ? NULL : $entry->slot->variant($chosen);
@@ -800,9 +830,10 @@ final class Surfaces implements SurfacesInterface {
   /**
    * Lists the children the build left out, which the parent stores.
    *
-   * The keys the owner's shape attaches a child at that the built surface
-   * does not carry: only a child's access omits a key. The target keeps
-   * what it holds under each, since the caller could not see it.
+   * The keys the owner's shape attaches a child or a collection at that
+   * the built surface does not carry: only a child's access omits a key.
+   * The target keeps what it holds under each, since the caller could not
+   * see it.
    *
    * @param \Drupal\data_surface\SurfaceBuild\SurfaceDefinition $definition
    *   The surface.
@@ -816,7 +847,7 @@ final class Surfaces implements SurfacesInterface {
     $shape = new SurfaceShape(new DataSurfaceBuilder(), $this->typedDataManager);
     $this->defineShape($definition, $shape);
     return array_values(array_filter(
-      array_keys($shape->attachments()),
+      [...array_keys($shape->attachments()), ...array_keys($shape->lists())],
       static fn (string $key): bool => $built->getDefinitions()->entry($key) === NULL,
     ));
   }
@@ -834,13 +865,31 @@ final class Surfaces implements SurfacesInterface {
    *   The owner's input keys.
    * @param string[] $subsurfaces
    *   The owner's subsurface keys.
+   * @param string[] $lists
+   *   The owner's collection keys, which a context may narrow and not
+   *   start.
    *
    * @throws \LogicException
    *   When the context names a key the shape does not declare, carries
    *   starting values without creating, or widens a key.
    */
-  protected function applyContext(DataSurfaceBuilderInterface $builder, SurfaceDefinition $definition, SurfaceContext $context, array $input_keys, array $subsurfaces = []): void {
-    $assert_input = static function (string $key, string $what) use ($definition, $context, $input_keys, $subsurfaces): void {
+  protected function applyContext(DataSurfaceBuilderInterface $builder, SurfaceDefinition $definition, SurfaceContext $context, array $input_keys, array $subsurfaces = [], array $lists = []): void {
+    $assert_input = static function (string $key, string $what) use ($definition, $context, $input_keys, $subsurfaces, $lists): void {
+      if (in_array($key, $lists, TRUE)) {
+        // The list key is the parent's, so where the parent is asked for
+        // may narrow it (its Count); its items are the child's, so no
+        // starting value can be given for them here.
+        if ($what === 'constraint') {
+          return;
+        }
+        throw new \LogicException(sprintf(
+          'The "%s" context gives a %s for "%s", which is a collection of the %s surface: its items are each the child\'s, accepted in the child\'s own frame, and a list of them starts empty.',
+          $context->operation,
+          $what,
+          $key,
+          $definition->id,
+        ));
+      }
       if (in_array($key, $subsurfaces, TRUE)) {
         throw new \LogicException(sprintf(
           'The "%s" context gives a %s for "%s", which is a subsurface of the %s surface: a child is narrowed and started by its own context, handed to it with withChild(\'%s\', ...).',
@@ -929,12 +978,15 @@ final class Surfaces implements SurfacesInterface {
    * @param array<string, string[]> $mountedBy
    *   For an alter, every key any alter of the surface mounted, mapped
    *   to the modules that mounted it; empty for the surface itself.
+   * @param string[] $lists
+   *   The owner's collection keys: a method may refine one (its Count),
+   *   and may not watch one.
    *
    * @throws \LogicException
    *   When a method fails a seal-time check, or one that watches nothing
    *   widens what it was given.
    */
-  protected function bindRefiners(DataSurfaceBuilderInterface $builder, SurfaceDefinition $definition, object|string $instance, array $refiners, array $input_keys, array $output_keys, array $subsurfaces = [], ?array $parent = NULL, ?string $module = NULL, array $extended = [], array $mounted = [], array $mountedBy = []): void {
+  protected function bindRefiners(DataSurfaceBuilderInterface $builder, SurfaceDefinition $definition, object|string $instance, array $refiners, array $input_keys, array $output_keys, array $subsurfaces = [], ?array $parent = NULL, ?string $module = NULL, array $extended = [], array $mounted = [], array $mountedBy = [], array $lists = []): void {
     if ($refiners === []) {
       return;
     }
@@ -946,9 +998,10 @@ final class Surfaces implements SurfacesInterface {
       // Decision: see docs/decisions.md#an-alter-refines-its-own-mounted-key.
       $own = $module !== NULL && in_array($refiner->key, $mounted, TRUE) && !in_array($refiner->key, $input_keys, TRUE);
       static::assertStaticOnSurface($definition, $refiner, $module);
-      static::assertWalled($definition, $refiner, $input_keys, $subsurfaces, $parent);
+      static::assertWalled($definition, $refiner, $input_keys, $subsurfaces, $parent, $lists);
       static::assertNotWatchingForeignMount($definition, $refiner, $input_keys, $mounted, $mountedBy);
-      $refinable = $own ? [...$input_keys, $refiner->key] : $input_keys;
+      // Decision: see docs/decisions.md#count-is-the-parents.
+      $refinable = $own ? [...$input_keys, $refiner->key] : [...$input_keys, ...$lists];
       static::assertRefinable($definition, $refiner, $refinable, $output_keys, [...$input_keys, ...$mounted]);
       // Decision: see docs/decisions.md#an-alter-watches-its-own-mounted-key.
       $watched = static::mountedWatches($definition, $refiner, $input_keys, $module, $mounted);
@@ -1000,6 +1053,9 @@ final class Surfaces implements SurfacesInterface {
       assert($advertised !== NULL);
       $refined = $link->invoke($refiner, DataSurface::deepClone($advertised), []);
       Narrowing::assertNarrows($refiner->key, $refiner->describe(), $advertised, $refined);
+      if (in_array($refiner->key, $lists, TRUE)) {
+        DataSurface::assertItemsUntouched(new SurfaceEntry($refiner->key, $advertised), $refined);
+      }
       DataSurface::carryMetadata($advertised, $refined);
       if ($own) {
         $builder->setThirdPartyDefinition((string) $module, $refiner->key, $refined);
@@ -1137,11 +1193,14 @@ final class Surfaces implements SurfacesInterface {
    *   The surface's subsurface keys.
    * @param array{class: class-string, id: string, key: string, inputs: string[]}|null $parent
    *   The surface this one is attached inside, or NULL.
+   * @param string[] $lists
+   *   The surface's collection keys, which a method may refine, the list
+   *   being the parent's, and may not watch, its items being the child's.
    *
    * @throws \LogicException
    *   Naming the method and the key it reached for.
    */
-  protected static function assertWalled(SurfaceDefinition $definition, RefinerDefinition $refiner, array $input_keys, array $subsurfaces, ?array $parent): void {
+  protected static function assertWalled(SurfaceDefinition $definition, RefinerDefinition $refiner, array $input_keys, array $subsurfaces, ?array $parent, array $lists = []): void {
     if (in_array($refiner->key, $subsurfaces, TRUE)) {
       throw new \LogicException(sprintf(
         '%s refines "%s", which is a subsurface of the %s surface. A subsurface is refined by its own #[RefinesInput] methods, in its own frame; a parent cannot refine into it.',
@@ -1151,6 +1210,14 @@ final class Surfaces implements SurfacesInterface {
       ));
     }
     foreach ($refiner->watched() as $watched) {
+      if (in_array($watched, $lists, TRUE)) {
+        throw new \LogicException(sprintf(
+          '%s watches "%s", which is a collection of the %s surface. A parent does not read its children\'s values, and every item of a collection is a child: what depends on an item belongs in the child.',
+          $refiner->describe(),
+          $watched,
+          $definition->id,
+        ));
+      }
       if (in_array($watched, $subsurfaces, TRUE)) {
         throw new \LogicException(sprintf(
           '%s watches "%s", which is a subsurface of the %s surface. A parent does not read its child\'s values: what depends on both belongs in the child.',
