@@ -51,6 +51,18 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   protected array $refiners = [];
 
   /**
+   * The edges each target was given, by who declared them.
+   *
+   * Keyed by target, then dependency, mapped to TRUE when a static
+   * refiner watches it and FALSE when only a runtime one does so far.
+   * Only addRefinement() writes it; an edge it never saw, a slot's on
+   * its deciding key or one handed to the constructor, is static.
+   *
+   * @var array<string, array<string, bool>>
+   */
+  protected array $declaredBy = [];
+
+  /**
    * Values contributed to a key's choices, keyed by key, then provider.
    *
    * @var array<string, array<string, array>>
@@ -387,10 +399,35 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * {@inheritdoc}
    */
-  public function addRefinement(string $target, array $dependencies): static {
+  public function addRefinement(string $target, array $dependencies, bool $runtime = FALSE): static {
     $this->assertMutable();
     $this->refinements[$target] = array_values(array_unique(array_merge($this->refinements[$target] ?? [], $dependencies)));
+    foreach ($dependencies as $dependency) {
+      $this->declaredBy[$target][$dependency] = !$runtime || ($this->declaredBy[$target][$dependency] ?? FALSE);
+    }
     return $this;
+  }
+
+  /**
+   * Reads the refinement edges a static refiner declared.
+   *
+   * @return array<string, string[]>|null
+   *   The edges less those only a runtime refiner declared, in the form
+   *   of $refinements; NULL when there are none of those, so every edge
+   *   is static.
+   */
+  protected function staticRefinements(): ?array {
+    if (!in_array(FALSE, array_merge([], ...array_values($this->declaredBy)), TRUE)) {
+      return NULL;
+    }
+    $static = [];
+    foreach ($this->refinements as $target => $dependencies) {
+      $static[$target] = array_values(array_filter(
+        $dependencies,
+        fn (string $dependency): bool => $this->declaredBy[$target][$dependency] ?? TRUE,
+      ));
+    }
+    return $static;
   }
 
   /**
@@ -464,6 +501,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
         contributions: $this->contributions,
         attachments: $this->attachments,
         slots: $slots,
+        staticRefinements: $this->staticRefinements(),
       ),
       $this->cacheability,
       DefinitionMap::fromArrays(definitions: $outputs),

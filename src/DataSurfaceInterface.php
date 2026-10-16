@@ -213,8 +213,19 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
    * implementing CacheableDependencyInterface, has it merged into the
    * refined surface when it runs.
    *
+   * A refiner is static or runtime ($runtime). A runtime refiner's link
+   * runs in its chain like any other, and one that watches nothing runs
+   * whatever the key's gate says, since it has nothing to wait for. Asked
+   * for the static refiners alone, the runtime ones are left out and each
+   * key waits only for what its static refiners watch: what the surface
+   * can state ahead of time, which is all the served contract's full
+   * schema and its enumerated conditionals may say.
+   *
    * @param array $values
    *   Values keyed by surface key.
+   * @param bool $runtime
+   *   TRUE, the default, for what the pipeline holds the values to: every
+   *   refiner. FALSE for the static refiners alone.
    *
    * @return static
    *   A refined surface, or the same surface when nothing refines.
@@ -223,6 +234,6 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
    *   When a refiner returns a definition that accepts more
    *   than the one it was given.
    */
-  public function refine(array $values): static;
+  public function refine(array $values, bool $runtime = TRUE): static;
 
 }

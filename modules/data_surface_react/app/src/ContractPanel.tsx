@@ -95,7 +95,9 @@ function rows(schema: Schema, values: Values, prefix = ''): Row[] {
           ? 'stale: shown empty, the stored value kept'
           : widget === 'slot'
             ? (extension?.chosen ? `the ${extension.chosen} variant` : 'not chosen yet')
-            : extension?.refined ? 'narrowed' : 'as declared',
+            : extension?.runtime
+              ? (extension.refined ? 'narrowed at runtime' : 'as declared, checked at runtime')
+              : extension?.refined ? 'narrowed' : 'as declared',
     });
     const inner = widget === 'slot' ? resolveSlot(schema, name, values) : widget === 'fieldset' ? property : null;
     if (inner !== null) {

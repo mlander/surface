@@ -24,7 +24,8 @@ To take the examples again from the start, follow **Reset to defaults**
 on the landing page (`/surface-examples/reset`). It puts all three
 config objects back to the files the module ships in `config/install`,
 including anything another module stored on them, such as the event
-licence example 4's module adds under example 3.
+licence example 4's module adds under example 3, and it opens again
+every room example 4 lets a site close.
 
 ## What a surface is, in one paragraph
 
@@ -453,7 +454,7 @@ changes it with one class. It adds two keys, an event licence and a
 number of stewards, stored under the module's own name (at
 `third_party_settings.data_surface_examples_compliance.licence` and
 `.stewards`, so example 3's storage never has to know them), and
-rewords the title's label. Its two methods are what you see move:
+rewords the title's label. Its three methods are what you see move:
 
 - **The licence lifts a ceiling on example 3's own key.** The method on
   `capacity` watches the alter's `licence`. With no licence it caps the
@@ -463,6 +464,15 @@ rewords the title's label. Its two methods are what you see move:
 - **The stewards follow the capacity.** The method on the alter's own
   `stewards` watches example 3's `capacity`: one steward per fifty
   people, at least one, and the number under the field says how many.
+- **A closed room is not offered.** The method on example 3's `room` is
+  a runtime refiner (`runtime: TRUE`): it reads the rooms a site has
+  closed from State, which no schema can state ahead of time. Nothing is
+  closed until a site says so (`drush state:set
+  data_surface_examples_compliance.closed_rooms '["riverside_east"]'
+  --input-format=json`); then the room leaves the East room out and says
+  "The East room is closed.", the submit refuses it, and the full schema
+  still lists it under Riverside Hall, marked `runtime`. Reset to
+  defaults opens every room again.
 
 No form alter, no hook.
 
@@ -475,12 +485,19 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
   use StringTranslationTrait;
 
   /**
+   * The State key listing the rooms that are closed, by room id.
+   */
+  public const CLOSED_ROOMS = 'data_surface_examples_compliance.closed_rooms';
+
+  /**
    * Constructs the alter, which the container builds as a service.
    *
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.
+   * @param \Drupal\Core\State\StateInterface $state
+   *   The State, where the closed rooms are listed.
    */
-  public function __construct(TranslationInterface $string_translation) {
+  public function __construct(TranslationInterface $string_translation, protected readonly StateInterface $state) {
     $this->stringTranslation = $string_translation;
   }
 
@@ -524,6 +541,33 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
     return $capacity->setDescription($max === NULL
       ? $this->t('Up to 100 without an event licence.')
       : $this->t('Up to 100 without an event licence. With one, up to @max.', ['@max' => $max]));
+  }
+
+  /**
+   * No room the site has closed, which only the site knows when asked.
+   *
+   * A runtime refiner: what it answers is read from State when the
+   * values are held to it, so no schema can state it ahead of time. It
+   * watches the venue so it narrows the venue's rooms, which the owner's
+   * refiner has already listed; the full schema still offers every room
+   * per venue, and the pipeline refuses a closed one.
+   *
+   * @see docs/decisions.md#static-by-default-runtime-by-declaration
+   */
+  #[RefinesInput('room', runtime: TRUE)]
+  public function openRooms(DataDefinitionInterface $room, string $venue): DataDefinitionInterface {
+    $rooms = $room->getConstraints()['LabeledChoice']['choices'] ?? [];
+    $closed = array_intersect_key($rooms, array_flip((array) $this->state->get(self::CLOSED_ROOMS, [])));
+    if ($closed === [] || !$room instanceof DataDefinition) {
+      return $room;
+    }
+    $room->addConstraint('LabeledChoice', ['choices' => array_diff_key($rooms, $closed)]);
+    return $room->setDescription($this->formatPlural(
+      count($closed),
+      'The @rooms is closed.',
+      'The @rooms are closed.',
+      ['@rooms' => implode(' and the ', $closed)],
+    ));
   }
 
   /**
@@ -690,14 +734,14 @@ Drush commands are checked against `ExampleCalls`.
 | Test | Covers |
 | --- | --- |
 | `Kernel\ExamplesStepsTest` | Examples 1 to 3: each form builds and saves, example 1 as its classic twin does; the venue narrows the room and the room the capacity; the ticket slot resolves by pricing; the contact validates its email; the panel's rows as the answers move; each example's class stays screen sized. |
-| `Kernel\ExamplesComplianceTest` | Example 4: the alter's keys and label; its keys in one fieldset titled "Compliance", drawn between the capacity and the pricing; the capacity capped at a hundred without a licence and the room's limit with one; the licence's pattern; the stewards' minimum following the capacity; what the licence and the capacity replace on the form; example 5's calls unchanged. |
+| `Kernel\ExamplesComplianceTest` | Example 4: the alter's keys and label; its keys in one fieldset titled "Compliance", drawn between the capacity and the pricing; the capacity capped at a hundred without a licence and the room's limit with one; the licence's pattern; the stewards' minimum following the capacity; what the licence and the capacity replace on the form; a room closed in State left out, said in the room's help, and refused on submit; example 5's calls unchanged. |
 | `Kernel\ExamplesToolTest` | Example 5: the three calls and their answers; what the script prints. |
 | `Kernel\ConfigSchemaContractTest` | What config schema can say: the plain mapping of examples 1 and 3, whole, with no list, no bound, nothing required and no shape for the ticket, the same whatever is stored or mounted; core's answer, a comment and no property; a constraint a schema does declare is said; the JSON this page quotes. |
 | `Kernel\ExamplesTodayPanelTest` | The second panel under examples 1 to 3: its two documents and its table, row by row; its rows read from the surface's full schema, so the pricing, the venue and what is stored leave every row and both documents as they were; example 4's keys on the surface's side only; the classic twin's page. |
 | `Unit\ExamplesReadmeTest` | This page against the files it quotes, and its Drush commands. |
 | `Functional\ExamplesRoutesTest` | Every route answers an administrator and refuses anonymous; the landing page; both panels under example 3, and a save through it; the classic twin's page with its two documents, and a save through it. |
 | `FunctionalJavascript\ExamplesAjaxRefreshTest` | In a browser: example 2's venue replaces the room and the capacity and leaves the venue the same node, the orphaned room on its empty option with the stale marker and the capacity back at 1000; a room then narrows the capacity and loses `- Select -`. Example 3's paid pricing swaps the note for a price and a currency, and leaves the second panel's table and its two documents as they were. |
-| `FunctionalJavascript\ExamplesComplianceRefreshTest` | Example 4, in a browser: one fieldset titled "Compliance", the ceiling of 100 lifted to the main hall's 400 by `2048`, and the stewards at 1 for 50 and 3 for 150; a malformed licence on blur is said once, under the licence, with `aria-invalid` and nothing at the top, and caps the capacity at a hundred; corrected, the error goes and the room's limit comes back. A refused capacity left by a click on text keeps no focus, and left by Tab lands on the Compliance fieldset after it. The fieldset is drawn below the capacity and above the pricing, and stays there when `2048` and Tab lift the capacity, which, with the stewards, is all that is replaced. |
+| `FunctionalJavascript\ExamplesComplianceRefreshTest` | Example 4, in a browser: one fieldset titled "Compliance", the ceiling of 100 lifted to the main hall's 400 by `2048`, and the stewards at 1 for 50 and 3 for 150; a malformed licence on blur is said once, under the licence, with `aria-invalid` and nothing at the top, and caps the capacity at a hundred; corrected, the error goes and the room's limit comes back. A refused capacity left by a click on text keeps no focus, and left by Tab lands on the Compliance fieldset after it. The fieldset is drawn below the capacity and above the pricing, and stays there when `2048` and Tab lift the capacity, which, with the stewards, is all that is replaced. With the East room closed in State, choosing Riverside Hall offers the main hall alone and says why. |
 | `Functional\ServedContractEndpointsTest` | In React: the landing page's links, and example 2's contract, refine and validate over HTTP. |
 | `Functional\ServedSubmitEndpointTest` | In React: example 2 saved over HTTP, refused, and refused after someone else saved. |
-| `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files. |
+| `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files, and opens every room example 4 closed. |

@@ -126,6 +126,67 @@ not have to carry the declared default or the examples forward: those
 are copied across every link, so the rendered form and the accepted
 value cannot disagree about what a key starts from.
 
+### Static and runtime refiners
+
+Refinement is one rule, narrow and never widen, but there are two kinds
+of rule, and a refiner says which it is:
+
+```php
+#[RefinesInput('room')]
+public static function roomInVenue(DataDefinitionInterface $room, string $venue): DataDefinitionInterface
+
+#[RefinesInput('room', runtime: TRUE)]
+public function openRooms(DataDefinitionInterface $room, string $venue): DataDefinitionInterface
+```
+
+- **Static, the default.** A pure function of the siblings it watches:
+  the same values in, the same definition out, whatever is stored,
+  whoever asks and whenever. That is a promise the module relies on:
+  the served contract runs a static refiner ahead of time, for every
+  value its watched siblings could take, and writes each answer down as
+  a JSON Schema conditional (`enumerated`), or, where the values cannot
+  be listed, says the key is `dynamic` and can be asked about with
+  values. Which rooms a venue has is static.
+- **Runtime, `runtime: TRUE`.** A rule whose answer depends on something
+  no schema can state: a lookup in the database or a remote service,
+  uniqueness (a machine name nobody has taken), the current account,
+  the time, any service. It promises the schema nothing. The served
+  contract never runs it ahead of time, in either document, and marks
+  the key `runtime`; only the pipeline, a form and the schema for one
+  set of values run it, against those values. Which rooms are closed
+  today is runtime: example 4 reads it from State.
+
+Everything else is the same for both. A runtime refiner names the keys
+it watches as its parameters, so a form and the React page refine again
+when one changes, it is gated the same way, and it is held to the same
+narrowing check. Two differences follow from the kind:
+
+- **One that watches nothing runs on every refinement.** A static
+  refiner that watches nothing runs once, at build, and its answer is
+  what the surface advertises
+  ([decision](decisions.md#a-refiner-that-watches-nothing)). A runtime
+  one cannot be fixed at build, so it runs on every refinement,
+  validation and submission instead, whatever the key's other refiners
+  are waiting for, and the surface advertises the key as declared.
+- **Its answer holds for the moment it was given.** A surface refined
+  through a runtime refiner is not cacheable (max-age 0), and nor is a
+  form or contract drawn from it; the surface itself, and the full
+  schema, which never run it, keep their own cacheability.
+
+On one key, a class's static methods run before its runtime ones; the
+owner's run before an alter's, as before. A key with both kinds is
+`enumerated` or `dynamic` for its static refiners, over the siblings
+those watch, and `runtime` besides.
+
+The kind is a declaration the module cannot check. A static method
+cannot be injected with a service, but it can call `\Drupal::service()`,
+and an alter's refiner is an instance method on a service; nothing tells
+a pure function from one that reads the database without running it.
+So a static refiner that reads site state is a schema that lies: the
+full schema would state, for any values, an answer that was only true
+when it was emitted. Declare it `runtime`
+([decision](decisions.md#static-by-default-runtime-by-declaration)).
+
 ## The narrowing table
 
 Every refiner link, and every constraint a situation adds, is checked
@@ -212,14 +273,17 @@ enters it:
   `defineInputs()`, for anything the definitions themselves were read
   from: a key offered only while a module is installed, a label read
   from configuration.
-- **Refiners.** A `#[RefinesInput]` method calls no service and is a
-  pure function of the siblings it watches, so it adds nothing of its
-  own. The site state it points at is fetched by an options resolver,
-  which says how long its answer holds; see the next item. (The
-  engine's internal refiner interface would merge the metadata of a
-  link that is itself a cacheable dependency, but the one link the
-  build step binds, `RefinesInputRefiner`, is not one, for that
-  reason.)
+- **Refiners.** A static `#[RefinesInput]` method calls no service and
+  is a pure function of the siblings it watches, so it adds nothing of
+  its own. The site state it points at is fetched by an options
+  resolver, which says how long its answer holds; see the next item.
+  (The engine's internal refiner interface merges the metadata of a
+  link that is itself a cacheable dependency, but the link the build
+  step binds for static methods, `RefinesInputRefiner`, is not one, for
+  that reason.) A runtime refiner reads what the surface does not
+  describe, so the link it is bound in, `Refinement\RuntimeRefiner`,
+  says max-age 0: a surface refined through it holds for the request
+  that refined it.
 - **Option resolvers.** Each resolved option list carries its own
   metadata on its `OptionSet`, which the options widget applies to the
   element it builds.

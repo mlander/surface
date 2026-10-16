@@ -74,7 +74,7 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests a changed example 2 and a mounted key on example 3 are reset.
+   * Tests a changed example 2, a mounted key and a closed room are reset.
    */
   public function testTheResetPutsBackWhatTheModuleShips(): void {
     $two = 'data_surface_examples.registration_step2';
@@ -87,6 +87,9 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
       ->set('third_party_settings', ['data_surface_examples_compliance' => ['licence' => '2048', 'stewards' => 3]])
       ->save();
     $this->assertSame('harbour_deck', $this->stored($two)['room']);
+    // Example 4's closed rooms live in State, not in any example's
+    // settings, and are opened again too.
+    $this->container->get('state')->set('data_surface_examples_compliance.closed_rooms', ['riverside_east']);
 
     $form_state = new FormState();
     $this->container->get('form_builder')->submitForm(ResetExamplesForm::class, $form_state);
@@ -96,6 +99,7 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
       $this->assertSame($this->shipped($name), $this->stored($name), $name);
     }
     $this->assertArrayNotHasKey('third_party_settings', $this->stored($three));
+    $this->assertNull($this->container->get('state')->get('data_surface_examples_compliance.closed_rooms'));
     // Riverside Hall's main hall seats 400, more than example 4 allows
     // without a licence, so its ceiling is what the shipped room shows.
     foreach ([$two, $three] as $name) {

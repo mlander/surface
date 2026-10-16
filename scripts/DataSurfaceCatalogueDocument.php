@@ -81,7 +81,7 @@ final class DataSurfaceCatalogueDocument {
       }
       foreach ($surface['alters'] as $alter) {
         $refines = array_map(
-          static fn (array $refiner): string => '`' . $refiner['key'] . '`' . ($refiner['watches'] === [] ? '' : ' (watching ' . self::codes($refiner['watches']) . ')'),
+          static fn (array $refiner): string => '`' . $refiner['key'] . '`' . ($refiner['watches'] === [] ? '' : ' (watching ' . self::codes($refiner['watches']) . ')') . ($refiner['runtime'] ? ' at runtime' : ''),
           $alter['refines'],
         );
         $document .= "\n- Altered by `" . $alter['class'] . '` (`' . $alter['module'] . '`), '

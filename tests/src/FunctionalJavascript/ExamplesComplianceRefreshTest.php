@@ -14,7 +14,8 @@ use WebDriver\Key;
  *
  * A licence the alter's pattern refuses is said under the licence, once,
  * as it is typed, and is no licence to the capacity: the refusal is the
- * trigger's own, held for the request while the rebuild goes ahead.
+ * trigger's own, held for the request while the rebuild goes ahead. A
+ * room the site closed is left out by the alter's runtime refiner.
  *
  * @see \Drupal\Tests\data_surface\Kernel\ExamplesComplianceTest
  *   For the same rules, asked of the surface and the form state.
@@ -79,6 +80,32 @@ class ExamplesComplianceRefreshTest extends ExamplesWebDriverTestBase {
     $capacity->blur();
     $assert->assertWaitOnAjaxRequest();
     $this->assertStringContainsString('At least 3 stewards for 150 attendees.', $this->formItemText(self::STEWARDS));
+  }
+
+  /**
+   * Tests a room the site closed is left out once its venue is chosen.
+   *
+   * The alter's runtime refiner reads the closed rooms from State on the
+   * refresh the venue triggers: the old library's rooms are all there,
+   * and back at Riverside Hall the East room is not, the room's help
+   * saying why.
+   */
+  public function testClosedRoomIsLeftOutAfterChoosingItsVenue(): void {
+    $assert = $this->assertSession();
+    $page = $this->getSession()->getPage();
+    $this->container->get('state')->set('data_surface_examples_compliance.closed_rooms', ['riverside_east']);
+    $this->drupalGet('surface-examples/3');
+    $page->selectFieldOption('surface[venue]', 'library');
+    $assert->assertWaitOnAjaxRequest();
+    $assert->optionExists('surface[room]', 'library_reading');
+    $assert->optionExists('surface[room]', 'library_garden');
+    $this->assertStringNotContainsString('closed', $this->formItemText('surface[room]'));
+
+    $page->selectFieldOption('surface[venue]', 'riverside');
+    $assert->assertWaitOnAjaxRequest();
+    $assert->optionExists('surface[room]', 'riverside_main');
+    $assert->optionNotExists('surface[room]', 'riverside_east');
+    $this->assertStringContainsString('The East room is closed.', $this->formItemText('surface[room]'));
   }
 
   /**

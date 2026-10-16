@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\data_surface\Refinement\RuntimeRefiner;
 
 /**
  * One key of a surface, and everything the surface knows about it.
@@ -65,6 +66,10 @@ final class SurfaceEntry {
    *   against, keyed by its dotted path below this key. $dependencies is
    *   their union, which is what gates the key; these are what a form
    *   rebuilds by.
+   * @param string[] $runtimeOnly
+   *   The keys in $dependencies that only a runtime refiner of this key
+   *   watches: what refinement waits for, and what nothing stating the
+   *   key ahead of time reads (staticDependencies()).
    */
   public function __construct(
     public readonly string $name,
@@ -77,6 +82,7 @@ final class SurfaceEntry {
     public readonly ?SurfaceAttachment $attachment = NULL,
     public readonly ?SurfaceSlot $slot = NULL,
     public readonly array $paths = [],
+    public readonly array $runtimeOnly = [],
   ) {
   }
 
@@ -106,7 +112,42 @@ final class SurfaceEntry {
       $this->attachment,
       $this->slot,
       $this->paths,
+      $this->runtimeOnly,
     );
+  }
+
+  /**
+   * Gets the sibling keys this key's static refiners watch.
+   *
+   * What the served contract may enumerate the key over: a runtime
+   * refiner's answer is never computed ahead of time, so a key only it
+   * watches is no reason to list anything.
+   *
+   * @return string[]
+   *   The keys, in the order of $dependencies; empty for a key no static
+   *   refiner narrows against a sibling.
+   */
+  public function staticDependencies(): array {
+    return $this->runtimeOnly === [] ? $this->dependencies : array_values(array_diff($this->dependencies, $this->runtimeOnly));
+  }
+
+  /**
+   * Returns whether a runtime refiner narrows this key.
+   *
+   * Decision: see docs/decisions.md#static-by-default-runtime-by-declaration.
+   *
+   * @return bool
+   *   TRUE when a link of any of its chains is a runtime refiner's.
+   */
+  public function isRefinedAtRuntime(): bool {
+    foreach ($this->refiners as $chain) {
+      foreach ($chain as $link) {
+        if ($link instanceof RuntimeRefiner) {
+          return TRUE;
+        }
+      }
+    }
+    return FALSE;
   }
 
   /**

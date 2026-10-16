@@ -103,9 +103,12 @@ tool; it is a service, so its methods are instance methods.
   tightened with plain core API, and the framework checks the result is
   narrower, so a refinement cannot widen, retype, or add or remove a
   map property. It receives only what it named, so it is a pure
-  function of its arguments. **A surface's refiner is static; an
-  alter's is an instance method**, because an alter is a service that
-  may hold configuration.
+  function of its arguments, unless it declares itself a runtime
+  refiner (`runtime: TRUE`): a rule no schema can state, such as a
+  lookup or uniqueness, which nothing runs ahead of time
+  ([refinement](refinement.md#static-and-runtime-refiners)). **A
+  surface's refiner is static; an alter's is an instance method**,
+  because an alter is a service that may hold configuration.
 - **Labels are `t('...')`.** A static method has no instance for the
   translation service to be injected into, and the global `t()` returns
   the same lazy `TranslatableMarkup`, which string extraction finds.

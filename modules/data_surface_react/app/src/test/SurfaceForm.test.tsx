@@ -380,6 +380,15 @@ describe('the React form of example 3', () => {
     expect(JSON.parse(String(calls.find((call) => call.url.endsWith('/submit'))?.init?.body)).values.contact).toEqual({ email: 'nobody', phone: '' });
   });
 
+  it('says in the contract table where a runtime rule narrows a key', async () => {
+    const { fetcher } = server({ '/surface-api/registration.step3/configure': () => example3 as unknown as Contract });
+    render(<SurfaceForm settings={{ ...settings, surface: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
+    const panel = (await screen.findByText('Contract')).closest('details');
+    // Example 4 takes away the rooms a site has closed: a runtime refiner.
+    expect(panel?.querySelector('tr[data-surface-key="room"]')).toHaveTextContent('narrowed at runtime');
+    expect(panel?.querySelector('tr[data-surface-key="capacity"]')).not.toHaveTextContent('runtime');
+  });
+
   it('draws example 4\'s keys in one fieldset, titled by its alter', async () => {
     const { fetcher } = server({ '/surface-api/registration.step3/configure': () => example3 as unknown as Contract });
     render(<SurfaceForm settings={{ ...settings, surface: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);

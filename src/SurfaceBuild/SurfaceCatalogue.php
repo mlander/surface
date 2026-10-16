@@ -93,6 +93,7 @@ final class SurfaceCatalogue {
           'refines' => array_map(static fn (RefinerDefinition $refiner): array => [
             'key' => $refiner->key,
             'watches' => $refiner->watched(),
+            'runtime' => $refiner->runtime,
           ], $alter->refiners),
         ], $definition->alters),
         'variants' => $definition->variants,

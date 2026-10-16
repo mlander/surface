@@ -30,7 +30,8 @@ use Drupal\tool\Tool\ToolManager;
  * One row per key, children and mounted keys included: its type, label,
  * whether it is required, its default, what it allows in words, what it
  * depends on, and whether what it allows right now is what was declared
- * or has been narrowed by the answers in the form. The form places it
+ * or has been narrowed by the answers in the form, and whether a runtime
+ * refiner, which no schema states, narrows it too. The form places it
  * inside the surface container, so the AJAX rebuild a refinement
  * triggers rebuilds the panel too.
  *
@@ -149,7 +150,7 @@ final class SurfaceContractPanel implements DataSurfaceFormPanelInterface {
       '#open' => FALSE,
       '#title' => $this->t('The full schema, for any answers'),
       'note' => [
-        '#markup' => '<p>' . $this->t('What the surface states whatever the answers are, as JSON Schema: every key as it is declared, and for each key another key narrows, one conditional per value that other key could take. It reads no value, so it does not change when an answer changes. A key marked <code>dynamic</code> depends on something that cannot be listed: it is shown as declared, and the form still holds it to more.') . '</p>',
+        '#markup' => '<p>' . $this->t('What the surface states whatever the answers are, as JSON Schema: every key as it is declared, and for each key another key narrows, one conditional per value that other key could take. It reads no value, so it does not change when an answer changes. A key marked <code>dynamic</code> depends on something that cannot be listed: it is shown as declared, and the form still holds it to more. A key marked <code>runtime</code> is also narrowed by a rule only the site can apply when asked, which no schema states.') . '</p>',
       ],
       'json' => $this->json($full->document['schema']),
     ];
@@ -245,7 +246,7 @@ final class SurfaceContractPanel implements DataSurfaceFormPanelInterface {
       $refined->getDefault($entry->name),
       $this->allows($definition),
       $depends,
-      $this->status($declared, $definition, $entry->locked),
+      $this->status($declared, $definition, $entry->locked, $entry->isRefinedAtRuntime()),
     );
   }
 
@@ -411,19 +412,24 @@ final class SurfaceContractPanel implements DataSurfaceFormPanelInterface {
    *   The key now.
    * @param bool $locked
    *   Whether the key is locked.
+   * @param bool $runtime
+   *   Whether a runtime refiner narrows it, which the table says because
+   *   no schema does.
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup
    *   The status.
    */
-  protected function status(?DataDefinitionInterface $declared, DataDefinitionInterface $refined, bool $locked): TranslatableMarkup {
+  protected function status(?DataDefinitionInterface $declared, DataDefinitionInterface $refined, bool $locked, bool $runtime = FALSE): TranslatableMarkup {
     if ($locked) {
       return $this->t('locked');
     }
-    if ($declared === NULL) {
-      return $this->t('as declared');
-    }
-    $narrowed = $declared->isRequired() !== $refined->isRequired() || $this->allows($declared) !== $this->allows($refined);
-    return $narrowed ? $this->t('narrowed') : $this->t('as declared');
+    $narrowed = $declared !== NULL && ($declared->isRequired() !== $refined->isRequired() || $this->allows($declared) !== $this->allows($refined));
+    return match (TRUE) {
+      $runtime && $narrowed => $this->t('narrowed at runtime'),
+      $runtime => $this->t('as declared, checked at runtime'),
+      $narrowed => $this->t('narrowed'),
+      default => $this->t('as declared'),
+    };
   }
 
 }

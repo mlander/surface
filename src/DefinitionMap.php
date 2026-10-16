@@ -112,6 +112,10 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    *   The child surfaces fixed at keys, keyed by surface key.
    * @param array<string, \Drupal\data_surface\SurfaceSlot> $slots
    *   The variant tables of the slot keys, keyed by surface key.
+   * @param array<string, string[]>|null $staticRefinements
+   *   The part of $refinements a static refiner declared, in the same
+   *   form; what is in $refinements and not here only a runtime refiner
+   *   watches. NULL when every refiner is static.
    *
    * @return static
    *   The map.
@@ -128,6 +132,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
     array $contributions = [],
     array $attachments = [],
     array $slots = [],
+    ?array $staticRefinements = NULL,
   ): static {
     foreach (array_merge(array_keys($refiners), array_keys($contributions), $locked, array_keys($attachments), array_keys($slots)) as $key) {
       if (!isset($definitions[$key])) {
@@ -147,6 +152,11 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
         $paths[$key][$path] = $watched;
       }
     }
+    $static = $staticRefinements === NULL ? $dependencies : [];
+    foreach ($staticRefinements ?? [] as $target => $watched) {
+      $key = explode('.', (string) $target, 2)[0];
+      $static[$key] = array_values(array_unique([...($static[$key] ?? []), ...array_map('strval', $watched)]));
+    }
     $entries = [];
     foreach ($definitions as $name => $definition) {
       $entries[] = new SurfaceEntry(
@@ -160,6 +170,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
         attachment: $attachments[$name] ?? NULL,
         slot: $slots[$name] ?? NULL,
         paths: $paths[$name] ?? [],
+        runtimeOnly: array_values(array_diff($dependencies[$name] ?? [], $static[$name] ?? [])),
       );
     }
     return new static($entries);

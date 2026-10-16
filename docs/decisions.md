@@ -185,7 +185,55 @@ without ever being able to take another module's away.
 `ShapeInterface::addCacheableDependency()` lets the owner's shape say
 what site state it read; the sealed surface carries it. An alter cannot,
 because what it adds reaches no further than the owner's keys, and a
-refiner cannot, because it calls no service. (`SurfaceShape`)
+static refiner cannot, because it calls no service. A runtime refiner
+does read site state, and says nothing of what: its link is max-age 0
+(see [Static by default, runtime by declaration](#static-by-default-runtime-by-declaration)).
+(`SurfaceShape`)
+
+### Static by default, runtime by declaration
+
+A `#[RefinesInput]` method is static unless its attribute says
+`runtime: TRUE`. A static refiner promises to be a pure function of the
+siblings it watches, so the served contract runs it ahead of time and
+states its answers as conditionals (`enumerated`), or says they cannot
+be listed (`dynamic`). A runtime refiner promises the schema nothing: the
+emitter never runs it, in either document; the key keeps the width its
+static refiners give it in the full schema and carries `runtime: true`;
+the schema for one set of values, which describes that moment, is
+refined by it like any other; the pipeline runs it on every validate and
+submit and has the last word, as it always had. One that watches nothing
+runs on every refinement rather than once at build, and a surface
+refined through one is max-age 0. The engine knows the kind by the link:
+the build step binds a class's runtime methods in a link of their own,
+wrapped in `Refinement\RuntimeRefiner`, and a key's entry keeps which
+siblings only a runtime refiner watches, so asking for the static
+refiners alone (`refine($values, FALSE)`) gates each key on what its
+static refiners watch.
+
+The kind is declared because the emitter must not guess. Before this,
+the emitter inferred which rules it could capture from the shape of the
+watched keys, and a rule that reads storage looked exactly like one that
+reads a constant: it would have been run once at emission and its answer
+written down as true for any values, which is a schema stricter or looser
+than the runtime depending on the day, and so not a contract. Uniqueness,
+a remote lookup, the current account and the time can never be captured
+in JSON Schema; saying so on the method is the only place the knowledge
+exists.
+
+The build does not enforce purity. A static method cannot be injected,
+but it can call `\Drupal::service()`, and an alter's refiner is an
+instance method on a service that may hold anything; there is no cheap
+way to tell a pure function from one that reads the database without
+running it, and running it twice and comparing proves nothing about
+tomorrow. The module has no custom PHPStan rules to add one beside
+(`phpstan.neon` configures only the level, paths and ignores), and a
+rule that flagged `\Drupal::` inside a static refiner would catch the
+one spelling and miss an alter's injected service, which is the honest
+way to read state. So it is a declaration and its documentation: a
+static refiner that reads site state is a bug in that refiner, and the
+full schema it produces is wrong. (`RefinesInput`,
+`Surfaces::bindRefiners()`, `RuntimeRefiner`,
+`ContractEmitter::frame()`, `ContractEmitter::enumerate()`)
 
 ## Alters
 
@@ -712,7 +760,7 @@ renderer, and `multiple`, its qualifier, are written only when a caller
 passes `widgets: TRUE`; `data_surface_react` does, for its app. The rest
 of `x-surface` (locked, dependsOn, refined, stale, emptyOption, a slot's
 by, variants and chosen, a variant's id, checkedOnServer, enumerated,
-dynamic) is the
+dynamic, runtime) is the
 surface's own reading of a key, not a widget, and is always written.
 The hints are stripped after the schema is built rather than threaded
 through it, so the widget a key gets is still read in the same pass as
@@ -758,7 +806,10 @@ guard and has the last word. Where a rule cannot be stated (a constraint
 with no keyword, named in `checkedOnServer`) or a dependency cannot be
 listed or would be too large (free text, a number, a key an alter
 mounted, more than the cap), the schema stays at the declared width and
-marks the key `dynamic`, never an approximation that is narrower.
+marks the key `dynamic`, never an approximation that is narrower; where
+a refiner is declared runtime, the full schema never runs it and marks
+the key `runtime` ([Static by default, runtime by
+declaration](#static-by-default-runtime-by-declaration)).
 Exactness is pursued wherever it is possible, which is what enumeration
 is for, and is the goal there, not the guarantee. For the schema as it
 stands the rule is about the values it was built for and no others.

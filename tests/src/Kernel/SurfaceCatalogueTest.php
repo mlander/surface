@@ -127,11 +127,13 @@ class SurfaceCatalogueTest extends DataSurfaceKernelTestBase {
     $this->assertSame([
       ['class' => NodeTypeAlter::class, 'module' => 'data_surface_demo_extras', 'situations' => [], 'refines' => []],
     ], $node_type['alters']);
-    // An alter's methods, each by the key it refines and what it watches,
-    // its own mounted licence by the name it added it under.
+    // An alter's methods, each by the key it refines, what it watches,
+    // its own mounted licence by the name it added it under, and whether
+    // it is a runtime refiner.
     $this->assertSame([
-      ['key' => 'capacity', 'watches' => ['licence']],
-      ['key' => 'stewards', 'watches' => ['capacity']],
+      ['key' => 'capacity', 'watches' => ['licence'], 'runtime' => FALSE],
+      ['key' => 'room', 'watches' => ['venue'], 'runtime' => TRUE],
+      ['key' => 'stewards', 'watches' => ['capacity'], 'runtime' => FALSE],
     ], $catalogue['registration.step3']['alters'][0]['refines']);
 
     $field = $catalogue['field.instance'];

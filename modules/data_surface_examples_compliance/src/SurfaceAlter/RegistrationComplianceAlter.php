@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_examples_compliance\SurfaceAlter;
 
+use Drupal\Core\State\StateInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\DataDefinition;
+use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Surface\Attribute\AltersSurface;
 use Drupal\data_surface\Surface\Attribute\RefinesInput;
@@ -22,8 +24,9 @@ use Drupal\data_surface_examples\Surface\RegistrationStep3Surface;
  * draws it right after the capacity its licence lifts, and rewords one
  * of the owner's labels. Without an event licence the
  * owner's capacity stops at a hundred, and the stewards it asks for
- * follow the capacity. Example 3 is not changed and does not know this
- * module exists.
+ * follow the capacity. A room the site has closed is not offered, which
+ * only the site knows when it is asked. Example 3 is not changed and
+ * does not know this module exists.
  */
 #[AltersSurface(RegistrationStep3Surface::class)]
 final class RegistrationComplianceAlter implements SurfaceAlterInterface {
@@ -31,12 +34,19 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
   use StringTranslationTrait;
 
   /**
+   * The State key listing the rooms that are closed, by room id.
+   */
+  public const CLOSED_ROOMS = 'data_surface_examples_compliance.closed_rooms';
+
+  /**
    * Constructs the alter, which the container builds as a service.
    *
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.
+   * @param \Drupal\Core\State\StateInterface $state
+   *   The State, where the closed rooms are listed.
    */
-  public function __construct(TranslationInterface $string_translation) {
+  public function __construct(TranslationInterface $string_translation, protected readonly StateInterface $state) {
     $this->stringTranslation = $string_translation;
   }
 
@@ -80,6 +90,33 @@ final class RegistrationComplianceAlter implements SurfaceAlterInterface {
     return $capacity->setDescription($max === NULL
       ? $this->t('Up to 100 without an event licence.')
       : $this->t('Up to 100 without an event licence. With one, up to @max.', ['@max' => $max]));
+  }
+
+  /**
+   * No room the site has closed, which only the site knows when asked.
+   *
+   * A runtime refiner: what it answers is read from State when the
+   * values are held to it, so no schema can state it ahead of time. It
+   * watches the venue so it narrows the venue's rooms, which the owner's
+   * refiner has already listed; the full schema still offers every room
+   * per venue, and the pipeline refuses a closed one.
+   *
+   * @see docs/decisions.md#static-by-default-runtime-by-declaration
+   */
+  #[RefinesInput('room', runtime: TRUE)]
+  public function openRooms(DataDefinitionInterface $room, string $venue): DataDefinitionInterface {
+    $rooms = $room->getConstraints()['LabeledChoice']['choices'] ?? [];
+    $closed = array_intersect_key($rooms, array_flip((array) $this->state->get(self::CLOSED_ROOMS, [])));
+    if ($closed === [] || !$room instanceof DataDefinition) {
+      return $room;
+    }
+    $room->addConstraint('LabeledChoice', ['choices' => array_diff_key($rooms, $closed)]);
+    return $room->setDescription($this->formatPlural(
+      count($closed),
+      'The @rooms is closed.',
+      'The @rooms are closed.',
+      ['@rooms' => implode(' and the ', $closed)],
+    ));
   }
 
   /**

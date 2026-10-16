@@ -222,6 +222,11 @@ so the rule is this sentence. `npm test` is not part of
   fetches. A surface's refiner is static; an alter's is an instance
   method. Alters, targets and access classes are autowired services and
   may hold services (`docs/decisions.md#a-surface-is-static`).
+- A `#[RefinesInput]` method is static, a pure function of what it
+  watches that the served contract runs ahead of time, unless it says
+  `runtime: TRUE`: a rule no schema can state (a lookup, uniqueness),
+  never run ahead, marked `runtime`, applied by the pipeline
+  (`docs/decisions.md#static-by-default-runtime-by-declaration`).
 - `#[RefinesInput]` methods narrow a definition; an alter adds keys and,
   with `extendChoices()`, offers more values on a fixed choice list (the
   one widening verb). Nothing removes a key or a value: a remove-only

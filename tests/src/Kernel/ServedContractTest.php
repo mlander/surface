@@ -1066,6 +1066,65 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Tests a room closed at runtime: never stated, always refused.
+   *
+   * Example 4's alter takes away the rooms a site has closed, which only
+   * the site knows when asked, so its refiner is a runtime one. Nothing
+   * closed, nothing changes: the schema for these answers is the same
+   * document as with a closed room no venue here has. The room is
+   * `enumerated` for the owner's refiner and `runtime` for the alter's in
+   * both documents. With the East room closed, the full schema is the
+   * same document byte for byte and still lists it under Riverside, while
+   * the schema for these answers leaves it out and says why. The model
+   * case of the invariant: a validator holding the full schema accepts
+   * the East room, wider than the runtime by design, and the pipeline,
+   * whose refinement has the last word, refuses it.
+   */
+  public function testClosedRoomIsLeftToTheRuntime(): void {
+    $this->enableModules(['data_surface_examples_compliance']);
+    $state = $this->container->get('state');
+    $closed = 'data_surface_examples_compliance.closed_rooms';
+    $this->assertNull($state->get($closed));
+    $full = (string) json_encode($this->full('registration.step3'));
+    $stored = $this->contract('registration.step3', 'configure', widgets: FALSE);
+    $state->set($closed, ['harbour_deck']);
+    $this->assertSame((string) json_encode($stored), (string) json_encode($this->contract('registration.step3', 'configure', widgets: FALSE)), 'A closed room elsewhere changes nothing here.');
+
+    $state->set($closed, ['riverside_east']);
+    $this->assertSame($full, (string) json_encode($this->full('registration.step3')), 'The full schema reads no State.');
+    $schema = $this->full('registration.step3')['schema'];
+    $room = $schema['properties']['room'];
+    $this->assertSame(['locked' => FALSE, 'dependsOn' => ['venue'], 'enumerated' => TRUE, 'runtime' => TRUE], $room['x-surface']);
+    $this->assertArrayHasKey('riverside_east', $this->titles($room));
+    $riverside = [];
+    foreach ($this->branches($schema, 'room') as [$when, $then]) {
+      $riverside[$when['venue']] = array_keys($this->titles($then));
+    }
+    $this->assertSame(['riverside_main', 'riverside_east'], $riverside['riverside']);
+
+    $now = $this->contract('registration.step3', 'configure', widgets: FALSE);
+    $room = $now['schema']['properties']['room'];
+    $this->assertSame(['riverside_main' => 'Main hall'], $this->titles($room));
+    $this->assertSame('The East room is closed.', $room['description']);
+    $this->assertTrue($room['x-surface']['refined']);
+    $this->assertTrue($room['x-surface']['runtime']);
+    $this->assertWellFormed($now['schema']);
+    $this->assertTrue($this->validates($now['schema'], $now['values']));
+
+    // Wider than the runtime, by design, and the runtime has the last
+    // word.
+    $east = ['room' => 'riverside_east', 'capacity' => 100] + $now['values'];
+    $this->assertTrue($this->validates($schema, $east), 'The full schema accepts the East room.');
+    $this->assertFalse($this->validates($now['schema'], $east), 'The schema for these answers does not.');
+    $surface = $this->situationSurface('registration.step3');
+    $pipeline = $this->container->get('data_surface.pipeline');
+    $this->assertNotContains('room', $pipeline->validate($surface, $now['values'])->keys());
+    $this->assertContains('room', $pipeline->validate($surface, $east)->keys(), 'The pipeline refuses it.');
+    $state->delete($closed);
+    $this->assertNotContains('room', $pipeline->validate($surface, $east)->keys(), 'Opened again, it is accepted.');
+  }
+
+  /**
    * Tests one child class is one def, and a site narrows only what differs.
    *
    * The cupboard attaches the shelf twice and the bin twice, and its

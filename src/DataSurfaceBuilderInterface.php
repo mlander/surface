@@ -357,13 +357,17 @@ interface DataSurfaceBuilderInterface {
    * @param array $dependencies
    *   The sibling keys it is refined against; a mounted key by its
    *   dotted path.
+   * @param bool $runtime
+   *   TRUE when only a runtime refiner watches them: refinement still
+   *   waits for them, and nothing that states the target ahead of time
+   *   reads them (SurfaceEntry::staticDependencies()).
    *
    * @return $this
    *
    * @throws \LogicException
    *   When the builder is already sealed.
    */
-  public function addRefinement(string $target, array $dependencies): static;
+  public function addRefinement(string $target, array $dependencies, bool $runtime = FALSE): static;
 
   /**
    * Appends a refiner to one contribution's chain for a target.

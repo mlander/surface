@@ -10,6 +10,7 @@ use Drupal\Core\Config\InstallStorage;
 use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\Core\Form\ConfirmFormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\State\StateInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Url;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -22,7 +23,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * example 3's third party settings — each config object is replaced
  * whole by its file in config/install. Read from the files rather than
  * written down here, so a shipped value that changes is reset to the new
- * one without touching this form.
+ * one without touching this form. The rooms example 4 lets a site close,
+ * which it keeps in State rather than in any example's settings, are
+ * opened again too.
  */
 final class ResetExamplesForm extends ConfirmFormBase {
 
@@ -32,23 +35,34 @@ final class ResetExamplesForm extends ConfirmFormBase {
   public const PREFIX = 'data_surface_examples.registration_step';
 
   /**
+   * The State keys an example reads, cleared whether or not it is on.
+   *
+   * Named here rather than read from the compliance module's class, which
+   * is not loaded while that module is off.
+   */
+  public const STATE = ['data_surface_examples_compliance.closed_rooms'];
+
+  /**
    * Constructs the form.
    *
    * @param \Drupal\Core\Config\ConfigFactoryInterface $configs
    *   The config factory, written through.
    * @param \Drupal\Core\Extension\ModuleExtensionList $moduleList
    *   The module list, which knows where this module's files are.
+   * @param \Drupal\Core\State\StateInterface $state
+   *   The State, where example 4 lists the rooms a site has closed.
    */
   public function __construct(
     protected readonly ConfigFactoryInterface $configs,
     protected readonly ModuleExtensionList $moduleList,
+    protected readonly StateInterface $state,
   ) {}
 
   /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
-    return new static($container->get('config.factory'), $container->get('extension.list.module'));
+    return new static($container->get('config.factory'), $container->get('extension.list.module'), $container->get('state'));
   }
 
   /**
@@ -98,6 +112,7 @@ final class ResetExamplesForm extends ConfirmFormBase {
       $core = $config->get('_core');
       $config->setData((array) $shipped->read($name) + ($core === NULL ? [] : ['_core' => $core]))->save();
     }
+    $this->state->deleteMultiple(self::STATE);
     $this->messenger()->addStatus($this->t('The examples are back to the settings the module ships with.'));
     $form_state->setRedirectUrl($this->getCancelUrl());
   }

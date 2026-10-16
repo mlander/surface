@@ -86,7 +86,8 @@
                     "emptyOption": {
                         "show": false,
                         "label": "- Select -"
-                    }
+                    },
+                    "runtime": true
                 }
             },
             "capacity": {

@@ -33,7 +33,10 @@ final class RefinerDefinition {
    *   Whether the method has a first parameter to receive the definition.
    * @param bool $isStatic
    *   Whether the method is static, as a surface's must be; an alter's
-   *   may be either.
+   *   may be either. Not to be confused with the refiner's kind.
+   * @param bool $runtime
+   *   Whether the attribute declares it a runtime refiner: one whose
+   *   answer nothing may compute ahead of time.
    */
   public function __construct(
     public readonly string $class,
@@ -43,6 +46,7 @@ final class RefinerDefinition {
     public readonly array $parameters,
     public readonly bool $takesDefinition,
     public readonly bool $isStatic = FALSE,
+    public readonly bool $runtime = FALSE,
   ) {}
 
   /**

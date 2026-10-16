@@ -14,6 +14,7 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\data_surface\Refinement\ChoiceSet;
 use Drupal\data_surface\Refinement\Narrowing;
+use Drupal\data_surface\Refinement\RuntimeRefiner;
 use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
 use Drupal\data_surface\Target\SettingsShapeInterface;
 
@@ -193,19 +194,19 @@ final class DataSurface implements DataSurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function refine(array $values): static {
-    $refines = $this->refines();
+  public function refine(array $values, bool $runtime = TRUE): static {
+    $refines = $this->refines($runtime);
     if (!$refines && !$this->definitions->hasNested()) {
       return $this;
     }
     if (!$refines || $this->watchedValueCheck === NULL) {
-      return $this->refineAgainst($values, $values);
+      return $this->refineAgainst($values, $values, $runtime);
     }
     // Decision: see docs/decisions.md#a-refiner-never-sees-an-invalid-sibling.
     $admitted = $values;
     $graph = $this->definitions->refinementPaths();
     do {
-      $refined = $this->refineAgainst($values, $admitted);
+      $refined = $this->refineAgainst($values, $admitted, $runtime);
       $refused = $this->refusedWatchedValues($refined, $admitted);
       // Only the refusals nothing refused stands upstream of are final:
       // withholding a venue moves the room's definition, and the room is
@@ -224,18 +225,23 @@ final class DataSurface implements DataSurfaceInterface {
   /**
    * Refines every key once, against the values each refiner may see.
    *
+   * Decision: see docs/decisions.md#static-by-default-runtime-by-declaration.
+   *
    * @param array $values
    *   The values as they stand, which a subsurface is refined against in
    *   its own frame, and which choose a slot's variant.
    * @param array $admitted
    *   The same values with every refused watched value withheld, which
    *   are what a refiner is handed.
+   * @param bool $runtime
+   *   Whether the runtime refiners run too, or only the static ones; for
+   *   the static ones alone, a key waits only for what they watch.
    *
    * @return static
    *   A refined surface, or this one when nothing refines.
    */
-  protected function refineAgainst(array $values, array $admitted): static {
-    $refines = $this->refines();
+  protected function refineAgainst(array $values, array $admitted, bool $runtime = TRUE): static {
+    $refines = $this->refines($runtime);
     $definitions = $this->definitions;
     $cacheability = CacheableMetadata::createFromObject($this);
     $changed = FALSE;
@@ -243,23 +249,32 @@ final class DataSurface implements DataSurfaceInterface {
       if ($entry->isNested()) {
         // A subsurface is refined by its child, in the child's frame, and
         // by nothing in the parent: no parent refiner can name it.
-        $resolved = $this->refineNested($entry, $values, $cacheability);
+        $resolved = $this->refineNested($entry, $values, $cacheability, $runtime);
         if ($resolved !== NULL) {
           $definitions = $definitions->with($entry->withDefinition($resolved));
           $changed = TRUE;
         }
         continue;
       }
-      if (!$refines || $entry->dependencies === []) {
+      if (!$refines) {
         continue;
       }
-      $dependency_values = $this->dependencyValues($entry->dependencies, $admitted);
+      $dependencies = $runtime ? $entry->dependencies : $entry->staticDependencies();
+      $dependency_values = $dependencies === [] ? NULL : $this->dependencyValues($dependencies, $admitted);
       if ($dependency_values === NULL) {
-        continue;
+        // Gated, or watching nothing: only a runtime link that watches
+        // nothing has nothing to wait for.
+        $chains = $runtime ? $this->chainsFor($entry, TRUE, TRUE) : [];
+        if ($chains === []) {
+          continue;
+        }
+        $dependency_values = [];
       }
-      $chains = $this->chainsFor($entry);
-      if ($chains === [] && $entry->contributions === []) {
-        continue;
+      else {
+        $chains = $this->chainsFor($entry, $runtime);
+        if ($chains === [] && $entry->contributions === []) {
+          continue;
+        }
       }
       $definitions = $definitions->with($entry->withDefinition(
         $this->unionOfContributions($entry, $chains, $dependency_values, $cacheability),
@@ -355,12 +370,14 @@ final class DataSurface implements DataSurfaceInterface {
    *   The values the surface is being refined against.
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
    *   Collects what the child's refinement depended on.
+   * @param bool $runtime
+   *   Whether the child's runtime refiners run too.
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
    *   The key's definition for these values, or NULL when nothing about
    *   it changes.
    */
-  protected function refineNested(SurfaceEntry $entry, array $values, CacheableMetadata $cacheability): ?DataDefinitionInterface {
+  protected function refineNested(SurfaceEntry $entry, array $values, CacheableMetadata $cacheability, bool $runtime = TRUE): ?DataDefinitionInterface {
     $child = $entry->childFor($values);
     if ($child === NULL) {
       return NULL;
@@ -372,7 +389,7 @@ final class DataSurface implements DataSurfaceInterface {
       // one, so the variant is refined from its own defaults.
       $value = [];
     }
-    $refined = $child->refine(array_replace($child->getDefaultValues(), is_array($value) ? $value : []));
+    $refined = $child->refine(array_replace($child->getDefaultValues(), is_array($value) ? $value : []), $runtime);
     $cacheability->addCacheableDependency($refined);
     if ($chosen !== NULL) {
       $definition = $entry->slot->definitionFor($chosen, $refined);
@@ -394,18 +411,27 @@ final class DataSurface implements DataSurfaceInterface {
    * Returns whether anything on this surface can narrow at all.
    *
    * A refiner with nothing to refine against, and a refinement edge with
-   * no refiner to run, are both nothing happening.
+   * no refiner to run, are both nothing happening; a runtime refiner that
+   * watches nothing always has something to do, when runtime refiners
+   * run at all.
+   *
+   * @param bool $runtime
+   *   Whether the runtime refiners run too.
    *
    * @return bool
    *   TRUE when at least one key declares a dependency and at least one
-   *   refiner is registered to narrow something.
+   *   refiner is registered to narrow something, or a runtime refiner
+   *   that watches nothing is registered.
    */
-  protected function refines(): bool {
+  protected function refines(bool $runtime = TRUE): bool {
     $has_edges = FALSE;
     $has_refiners = FALSE;
     foreach ($this->definitions->entries() as $entry) {
       $has_edges = $has_edges || $entry->dependencies !== [];
       $has_refiners = $has_refiners || $entry->refiners !== [];
+      if ($runtime && $this->chainsFor($entry, TRUE, TRUE) !== []) {
+        return TRUE;
+      }
     }
     return $has_edges && $has_refiners;
   }
@@ -454,16 +480,33 @@ final class DataSurface implements DataSurfaceInterface {
   /**
    * Collects one target's refiner chains, keyed by contributor.
    *
-   * The owner's chain comes first.
+   * The owner's chain comes first. A chain left with no link is left out.
    *
    * @param \Drupal\data_surface\SurfaceEntry $entry
    *   The key being refined.
+   * @param bool $runtime
+   *   Whether the runtime refiners' links are kept.
+   * @param bool $ungated
+   *   Whether to keep only the runtime links that watch nothing, which
+   *   run while the key's gate is closed.
    *
    * @return array<string, \Drupal\data_surface\DataSurfaceRefinerInterface[]>
    *   The chains, keyed by contributor.
    */
-  protected function chainsFor(SurfaceEntry $entry): array {
+  protected function chainsFor(SurfaceEntry $entry, bool $runtime = TRUE, bool $ungated = FALSE): array {
     $registered = $entry->refiners;
+    if (!$runtime || $ungated) {
+      foreach ($registered as $contributor => $links) {
+        $kept = array_values(array_filter($links, static fn (DataSurfaceRefinerInterface $link): bool => $ungated
+          ? $link instanceof RuntimeRefiner && !$link->gated
+          : !$link instanceof RuntimeRefiner));
+        if ($kept === []) {
+          unset($registered[$contributor]);
+          continue;
+        }
+        $registered[$contributor] = $kept;
+      }
+    }
     $owner = $registered[self::OWNER] ?? [];
     $chains = $owner === [] ? [] : [self::OWNER => $owner];
     foreach ($registered as $contributor => $links) {

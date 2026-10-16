@@ -40,11 +40,13 @@ use Drupal\data_surface\SurfaceEntry;
  *   watch, whether it is narrowed right now, whether a select shows its
  *   empty option and under what label, and whether the value it holds
  *   has gone stale;
- * - where a key's refiners have nothing to refine against yet, what they
- *   would answer for every value their watched siblings could take, as
- *   conditionals on the parent beside the slots' (enumerate()), so a
- *   static contract is exact wherever the answers are finite; and where
- *   they are not, that the key is `dynamic`, to be asked again.
+ * - where a key's static refiners have nothing to refine against yet,
+ *   what they would answer for every value their watched siblings could
+ *   take, as conditionals on the parent beside the slots' (enumerate()),
+ *   so a static contract is exact wherever the answers are finite; where
+ *   they are not, that the key is `dynamic`, to be asked again; and where
+ *   a runtime refiner narrows it too, that the key is `runtime`, which no
+ *   schema states ahead of time.
  *
  * Everything is read from the surface: the declared shape for what it
  * advertises, the same surface refined against the values for what it
@@ -255,9 +257,12 @@ final class ContractEmitter {
    *   values, never narrower, and to be asked about with values;
    * - a slot is its conditionals, and every subsurface frame is described
    *   by the same rule, from nothing, not from the child's defaults;
+   * - a runtime refiner contributes nothing but `runtime: true` on the key
+   *   it narrows: it is never run here, so the key keeps the width its
+   *   static refiners give it, wider than the pipeline for some values;
    * - `x-surface` carries only what holds for any values: `locked`,
-   *   `dependsOn`, `enumerated`, `dynamic`, a slot's `by` and `variants`,
-   *   a variant's id, `group`, `after`, `patternMessage`,
+   *   `dependsOn`, `enumerated`, `dynamic`, `runtime`, a slot's `by` and
+   *   `variants`, a variant's id, `group`, `after`, `patternMessage`,
    *   `checkedOnServer`, and the widget hints when asked for. What is
    *   only true of a moment (`refined`, `stale`, `emptyOption`, a slot's
    *   `chosen`) is not written, and there is no `values` and no `stale`
@@ -341,12 +346,33 @@ final class ContractEmitter {
    *   locked.
    *
    * @return bool
-   *   TRUE when one of its dependencies is not a locked key of the frame:
-   *   a sibling a value can be given for, or a key an alter mounted.
+   *   TRUE when one of the keys its static refiners watch is not a locked
+   *   key of the frame: a sibling a value can be given for, or a key an
+   *   alter mounted. What only a runtime refiner watches is never read
+   *   for any values.
    */
   protected function watchesFree(DefinitionMap $advertised, SurfaceEntry $entry, bool $declaring = FALSE): bool {
-    foreach ($entry->dependencies as $key) {
+    foreach ($entry->staticDependencies() as $key) {
       if ($declaring || !$advertised->isLocked($key)) {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
+
+  /**
+   * Answers whether a runtime refiner narrows any key of a frame.
+   *
+   * @param \Drupal\data_surface\DefinitionMap $advertised
+   *   The frame's definitions.
+   *
+   * @return bool
+   *   TRUE when one does, so what the static refiners alone answer has to
+   *   be asked separately.
+   */
+  protected function refinedAtRuntime(DefinitionMap $advertised): bool {
+    foreach ($advertised->entries() as $entry) {
+      if ($entry->isRefinedAtRuntime()) {
         return TRUE;
       }
     }
@@ -394,10 +420,18 @@ final class ContractEmitter {
    */
   protected function frame(DataSurfaceInterface $declared, array $values, string $prefix, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing = [], bool $declaring = FALSE): array {
     $full = $subschemas->full;
-    $refined = $declared->refine($values);
+    // Decision: see docs/decisions.md#static-by-default-runtime-by-declaration.
+    // The present moment is refined by every refiner; the full schema and
+    // a def, which are for any values, by the static ones alone.
+    $runtime = !$full && !$declaring;
+    $refined = $declared->refine($values, $runtime);
     $cacheability->addCacheableDependency($refined);
     $advertised = $declared->getDefinitions();
     $now = $refined->getDefinitions();
+    // What the static refiners alone answer for these values, which is
+    // all a conditional may state: a runtime refiner is never run ahead.
+    $static = $runtime && $this->refinedAtRuntime($advertised) ? $declared->refine($values, FALSE) : $refined;
+    $ahead = $static->getDefinitions();
     $properties = [];
     $required = [];
     $conditions = [];
@@ -405,6 +439,7 @@ final class ContractEmitter {
     foreach ($advertised->entries() as $name => $entry) {
       $name = (string) $name;
       $current = $now->entry($name) ?? $entry;
+      $stated = $ahead->entry($name) ?? $entry;
       // A def is the declaration, which no context has locked.
       $locked = $entry->locked && !$declaring;
       if ($full && !$entry->isNested() && $this->watchesFree($advertised, $entry, $declaring)) {
@@ -412,6 +447,7 @@ final class ContractEmitter {
         // while that key holds nothing. For any values, the key is the
         // one declared: what such a refiner answers is one moment's.
         $current = $entry;
+        $stated = $entry;
       }
       $depends = $advertised->dependencies($name);
       if ($entry->slot !== NULL) {
@@ -469,11 +505,16 @@ final class ContractEmitter {
           }
           $shown[$name] = NULL;
         }
-        // A key its refiners have not refined, because something it watches
-        // holds nothing yet: what they would answer, for every value they
-        // could be handed, or that it can only be asked.
-        if ($entry->dependencies !== [] && !$locked && $current === $entry) {
-          $branches = $this->enumerate($declared, $refined, $entry, $values, $properties[$name], $prefix . $name, $cacheability);
+        // A key its static refiners have not refined, because something
+        // they watch holds nothing yet: what they would answer, for every
+        // value they could be handed, or that it can only be asked.
+        if ($entry->staticDependencies() !== [] && !$locked && $stated === $entry) {
+          // Stated over the key as declared: a runtime refiner may have
+          // narrowed it for the present moment already, and a conditional
+          // says what the static ones add to the declaration.
+          $ignored = [];
+          $base = $current === $entry ? $properties[$name] : $this->property($entry->definition, NULL, NULL, $prefix . $name, FALSE, [], $cacheability, $ignored)[0];
+          $branches = $this->enumerate($declared, $static, $entry, $values, $base, $prefix . $name, $cacheability);
           if ($branches === NULL) {
             $properties[$name][self::EXTENSION]['dynamic'] = TRUE;
           }
@@ -481,6 +522,11 @@ final class ContractEmitter {
             $properties[$name][self::EXTENSION]['enumerated'] = TRUE;
             array_push($conditions, ...$branches);
           }
+        }
+        if ($entry->isRefinedAtRuntime()) {
+          // Declared impossible to capture: never in a conditional, never
+          // in the full schema, and only in this one for its values.
+          $properties[$name][self::EXTENSION]['runtime'] = TRUE;
         }
       }
       if ($current->definition->isRequired()) {
@@ -817,17 +863,22 @@ final class ContractEmitter {
   /**
    * States what a key's refiners answer for every value they could see.
    *
-   * Refiners are pure functions of the values they watch, so where every
-   * watched sibling that holds nothing yet offers a finite list of
-   * values, the refined key can be written down for each combination
+   * Static refiners are pure functions of the values they watch, so where
+   * every sibling they watch that holds nothing yet offers a finite list
+   * of values, the refined key can be written down for each combination
    * ahead of time: one conditional per combination, on the parent, its
    * `if` naming each watched sibling's value as a `const` and its `then`
    * what the key's schema says differently from the unrefined one. A
    * watched sibling that holds a value is held at it.
    *
    * Each combination is answered by refining the whole surface against
-   * the values with the combination over them, the very call /refine
-   * makes, so a conditional states exactly what /refine would answer.
+   * the values with the combination over them, the call /refine makes
+   * with the runtime refiners left out, so a conditional states exactly
+   * what /refine would answer less what only the runtime knows. A
+   * runtime refiner is never called here: what it answers is not a
+   * function of the combination, and the key carries `runtime` instead.
+   * Decision: see
+   * docs/decisions.md#static-by-default-runtime-by-declaration.
    * Siblings are taken in declaration order, and each one's list is read
    * from the surface refined for the combination so far, so a chain
    * composes: a bundle's list is read under each entity type.
@@ -835,7 +886,8 @@ final class ContractEmitter {
    * @param \Drupal\data_surface\DataSurfaceInterface $declared
    *   The surface of this frame, as advertised.
    * @param \Drupal\data_surface\DataSurfaceInterface $refined
-   *   The same surface refined against the frame's values.
+   *   The same surface refined against the frame's values by its static
+   *   refiners alone.
    * @param \Drupal\data_surface\SurfaceEntry $entry
    *   The key, unrefined.
    * @param array $values
@@ -855,7 +907,7 @@ final class ContractEmitter {
    */
   protected function enumerate(DataSurfaceInterface $declared, DataSurfaceInterface $refined, SurfaceEntry $entry, array $values, array $base, string $path, CacheableMetadata $cacheability): ?array {
     $order = array_flip($declared->getDefinitions()->names());
-    $watched = $entry->dependencies;
+    $watched = $entry->staticDependencies();
     foreach ($watched as $key) {
       if (!isset($order[$key])) {
         // A key an alter mounted, by its dotted path: a free value, or one
@@ -881,7 +933,7 @@ final class ContractEmitter {
         }
       }
       foreach ($next as $i => [$combination]) {
-        $next[$i][1] = $declared->refine(array_replace($values, $combination));
+        $next[$i][1] = $declared->refine(array_replace($values, $combination), FALSE);
         $cacheability->addCacheableDependency($next[$i][1]);
       }
       $combinations = $next;

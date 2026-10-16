@@ -11,7 +11,9 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
  *
  * The engine's link in a refiner chain. Nothing an author writes
  * implements it: the build step binds each class's #[RefinesInput]
- * methods as one RefinesInputRefiner, which is the implementation.
+ * methods as one RefinesInputRefiner, which is the implementation, and
+ * a class's runtime methods as another, wrapped in
+ * Refinement\RuntimeRefiner so the engine can tell the kinds apart.
  *
  * The narrowing contract: a refiner may tighten constraints, supply a
  * concrete option list, or sharpen a description — but the refined
@@ -31,12 +33,14 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
  * the refined surface is the union of the slices.
  *
  * A link that also implements core's CacheableDependencyInterface has
- * its metadata merged into the refined surface whenever it runs. The
- * one implementation, RefinesInputRefiner, does not: a #[RefinesInput]
- * method calls no service and is a pure function of the siblings it
- * watches, so the site state a refined key depends on is said by the
- * shape (ShapeInterface::addCacheableDependency()) and by the options
- * resolver that fetches the list a constraint points at.
+ * its metadata merged into the refined surface whenever it runs.
+ * RefinesInputRefiner does not: a static #[RefinesInput] method calls no
+ * service and is a pure function of the siblings it watches, so the site
+ * state a refined key depends on is said by the shape
+ * (ShapeInterface::addCacheableDependency()) and by the options resolver
+ * that fetches the list a constraint points at. RuntimeRefiner does, and
+ * says max-age 0: a runtime method reads what the surface does not
+ * describe.
  *
  * @see \Drupal\data_surface\DataSurfaceBuilderInterface::addRefiner()
  * @see \Drupal\data_surface\SurfaceBuild\RefinesInputRefiner

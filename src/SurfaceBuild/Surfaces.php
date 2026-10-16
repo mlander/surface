@@ -16,6 +16,7 @@ use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\DataSurfaceTargetInterface;
 use Drupal\data_surface\Refinement\Narrowing;
+use Drupal\data_surface\Refinement\RuntimeRefiner;
 use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
 use Drupal\data_surface\Surface\AltersOutputsInterface;
 use Drupal\data_surface\Surface\HasOutputsInterface;
@@ -58,7 +59,10 @@ use Drupal\data_surface\SurfaceAttachment;
  *    an autowired service. An alter's method may refine and watch the
  *    keys that alter mounted, each bound by its dotted path inside the
  *    mount. A method that watches nothing runs once, here, and is held
- *    to the narrowing check.
+ *    to the narrowing check. A runtime method (`runtime: TRUE`) is bound
+ *    in a link of its own, wrapped in Refinement\RuntimeRefiner, after
+ *    its class's static link; one that watches nothing is not run here
+ *    but bound ungated, to run on every refinement.
  * 6. The children, each through this same build step in its own frame.
  * 7. The seal.
  *
@@ -647,7 +651,8 @@ final class Surfaces implements SurfacesInterface {
     if ($refiners === []) {
       return;
     }
-    $bindings = [];
+    // Decision: see docs/decisions.md#static-by-default-runtime-by-declaration.
+    $bindings = ['static' => [], 'runtime' => [], 'ungated' => []];
     $once = [];
     $paths = [];
     foreach ($refiners as $refiner) {
@@ -663,6 +668,12 @@ final class Surfaces implements SurfacesInterface {
       $paths += $watched;
       $key = $own ? RefinesInputRefiner::MOUNT : $refiner->key;
       if ($refiner->watched() === []) {
+        // A runtime refiner that watches nothing still cannot be run
+        // ahead of time: it runs on every refinement instead.
+        if ($refiner->runtime) {
+          $bindings['ungated'][$key][] = $refiner;
+          continue;
+        }
         $once[] = [$refiner, $own];
         continue;
       }
@@ -670,15 +681,28 @@ final class Surfaces implements SurfacesInterface {
       $builder->addRefinement(
         $own ? RefinesInputRefiner::path((string) $module, $refiner->key) : $refiner->key,
         array_map(static fn (string $name): string => $watched[$name] ?? $name, $refiner->watched()),
+        $refiner->runtime,
       );
-      $bindings[$key][] = $refiner;
+      $bindings[$refiner->runtime ? 'runtime' : 'static'][$key][] = $refiner;
     }
-    $link = new RefinesInputRefiner($instance, $bindings, $module, $paths);
-    foreach (array_keys($bindings) as $key) {
-      // An alter's method on a key it offered more values on is that
-      // contribution's refiner: the engine hands it the alter's values
-      // only, and the union of both chains is what is offered.
-      $builder->addRefiner((string) $key, $link, in_array($key, $extended, TRUE) ? $module : NULL);
+    // One link per kind, so the engine can leave a runtime refiner out of
+    // what is stated ahead of time; on one key, the static methods of a
+    // class run before its runtime ones.
+    $link = new RefinesInputRefiner($instance, $bindings['static'], $module, $paths);
+    $runtime = new RefinesInputRefiner($instance, $bindings['runtime'], $module, $paths);
+    $ungated = new RefinesInputRefiner($instance, $bindings['ungated'], $module, $paths);
+    $links = [
+      [$link, $bindings['static']],
+      [new RuntimeRefiner($runtime), $bindings['runtime']],
+      [new RuntimeRefiner($ungated, gated: FALSE), $bindings['ungated']],
+    ];
+    foreach ($links as [$kind, $bound]) {
+      foreach (array_keys($bound) as $key) {
+        // An alter's method on a key it offered more values on is that
+        // contribution's refiner: the engine hands it the alter's values
+        // only, and the union of both chains is what is offered.
+        $builder->addRefiner((string) $key, $kind, in_array($key, $extended, TRUE) ? $module : NULL);
+      }
     }
     // A method that watches nothing has nothing to wait for, so its one
     // run is now, and what it returns is what the surface advertises.

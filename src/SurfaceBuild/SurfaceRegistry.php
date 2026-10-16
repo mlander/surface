@@ -453,6 +453,7 @@ final class SurfaceRegistry {
           ),
           takesDefinition: $parameters !== [],
           isStatic: $method->isStatic(),
+          runtime: $refines->runtime,
         );
       }
     }

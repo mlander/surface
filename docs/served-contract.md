@@ -62,19 +62,24 @@ The emitter writes two documents from one surface, by one code path.
 - **The schema as it stands**, `emit()`, is everything below: built for
   one set of values, with `values` and `stale` beside it. A key whose
   watched siblings hold values is refined for them, so with Riverside
-  Hall stored the room offers Riverside's two rooms. It is what a form
-  is drawn from, and what `/surface-api` and `/refine` serve. It
-  describes those values and no others: do not validate an arbitrary
-  submission against it.
+  Hall stored the room offers Riverside's two rooms. A runtime refiner
+  is run for it like any other, because this document is the present
+  moment: with the East room closed, Riverside offers the main hall
+  alone. It is what a form is drawn from, and what `/surface-api` and
+  `/refine` serve. It describes those values and no others, at the
+  moment it was emitted: do not validate an arbitrary submission against
+  it.
 - **The full schema**, `emitFull()`, reads no value, so it is the same
   whatever is stored or typed. Every key is the one the surface declares
   (every room; a capacity from 1 to 1000), every dependency that can be
   listed is written as conditionals on the parent, always, under
   [the same rules and cap](#exact-where-it-can-be), and a key whose
   dependency cannot be listed keeps its declared schema with
-  `x-surface.dynamic: true`. Its `x-surface` carries only what holds for
-  any values (`locked`, `dependsOn`, `enumerated`, `dynamic`, a slot's
-  `by` and `variants`, `group`, `after`, `patternMessage`,
+  `x-surface.dynamic: true`. A runtime refiner is never run for it: the
+  key keeps the width its static refiners give it and carries
+  `x-surface.runtime: true`. Its `x-surface` carries only what holds for
+  any values (`locked`, `dependsOn`, `enumerated`, `dynamic`, `runtime`,
+  a slot's `by` and `variants`, `group`, `after`, `patternMessage`,
   `checkedOnServer`); there is no `refined`, `stale`, `emptyOption` or
   `chosen`, and no `values` or `stale` beside the schema. A subsurface's
   frame is described from nothing, not from the child's defaults. Only
@@ -85,10 +90,28 @@ The emitter writes two documents from one surface, by one code path.
 
 Neither is ever stricter than the pipeline
 ([decision](decisions.md#two-documents-never-stricter-than-the-runtime)).
-Where a rule has no JSON Schema keyword, or a dependency is free text or
-too large to list, the schema stays at the declared width and says so
-(`checkedOnServer`, `dynamic`); the pipeline's refinement is the guard
-with the last word. Example 2's full schema, abbreviated:
+Where a rule has no JSON Schema keyword, a dependency is free text or
+too large to list, or a refiner is declared runtime, the schema stays at
+the declared width and says so (`checkedOnServer`, `dynamic`,
+`runtime`); the pipeline's refinement is the guard with the last word.
+
+### Three markers
+
+A key a refiner narrows carries at most one of `enumerated` and
+`dynamic`, for its static refiners, and `runtime` besides when a runtime
+refiner narrows it too ([refinement](refinement.md#static-and-runtime-refiners)).
+
+| Marker | Means | In the full schema | In the schema for these answers |
+| --- | --- | --- | --- |
+| `enumerated` | Captured exactly. The key's static refiners watch only keys that offer a list, within the cap, so what they answer for every combination is written as conditionals on the parent. | On every such key, always: no value is read. | Only while a sibling its static refiners watch holds nothing; once all do, the key is refined for them and carries neither this nor `dynamic`. |
+| `dynamic` | Static by declaration, but not captured here: a watched key cannot be listed (free text, a number, a key an alter mounted) or the combinations exceed `ENUMERATION_CAP`. The key keeps its declared schema; a client can ask, with values, at `/refine`. | On every such key. | As for `enumerated`. |
+| `runtime` | Declared impossible to capture: a runtime refiner narrows the key with a rule no schema can state (a lookup, uniqueness, the account, the time). Never run ahead of time and never in a conditional. | On the key, which keeps the width its static refiners give it: wider than the pipeline, by design. | On the key, always; the key is refined by the runtime refiner for these values, so this document is valid for those values, at that moment, and no others. |
+
+A key with a static and a runtime refiner, example 4's room, is
+`enumerated` (per venue) and `runtime` (closed rooms). A key with only a
+runtime refiner carries `runtime` alone.
+
+Example 2's full schema, abbreviated:
 
 ```json
 "room": {"title": "Room", "type": "string", "oneOf": [...all six rooms...],
@@ -165,8 +188,9 @@ each written once, as a def under `$defs`, and referred to
 | `after` | On a module's object inside a `group`, when its alter placed it (`describe(..., after:)`): draw this fieldset after the named property of the object that contains its group. Only where it is drawn: its properties stay in the group, where its values are sent, and the schema's order and nesting do not move. |
 | `checkedOnServer` | Constraints no keyword states. |
 | `patternMessage` | On a key with a `pattern`: the Regex's own message, which is how a person is told what the pattern allows. The pattern is for machines; a renderer explains the key by this, never by the pattern. |
-| `enumerated` | Only when `true`: the key's refiners have nothing to refine against yet, and what they answer for every value they could be handed is stated as conditionals on the parent ([below](#exact-where-it-can-be)). The schema is exact for this key with no round trip. |
-| `dynamic` | Only when `true`: the key's refiners have nothing to refine against yet, and what they would answer cannot be listed (a watched key with no list of values, or too many combinations). The schema is the unrefined, looser one, wider than the pipeline and never narrower ([decision](decisions.md#two-documents-never-stricter-than-the-runtime)); refine when a `dependsOn` key changes. In [the full schema](#two-documents) every key that cannot be listed carries it. |
+| `enumerated` | Only when `true`: the key's static refiners have nothing to refine against yet, and what they answer for every value they could be handed is stated as conditionals on the parent ([below](#exact-where-it-can-be)). Captured exactly: the schema is exact for this key with no round trip, less what `runtime` adds. |
+| `dynamic` | Only when `true`: the key's static refiners have nothing to refine against yet, and what they would answer cannot be listed (a watched key with no list of values, or too many combinations). Static by declaration, not captured here: the schema is the unrefined, looser one, wider than the pipeline and never narrower ([decision](decisions.md#two-documents-never-stricter-than-the-runtime)); refine when a `dependsOn` key changes. In [the full schema](#two-documents) every key that cannot be listed carries it. |
+| `runtime` | Only when `true`: a runtime refiner narrows the key too, by a rule no schema can state ([three markers](#three-markers)). Never in a conditional and never in the full schema; the schema for these answers is refined by it for its values. Written beside `enumerated` or `dynamic` when the key has static refiners as well. |
 
 ### Reusable subschemas
 
@@ -331,10 +355,10 @@ hints):
 
 ### Exact where it can be
 
-A refiner is a static, pure function of the values it watches, and most
-watched keys offer a short list of values. So where a key's refiners
-have nothing to refine against yet (a watched sibling holds nothing),
-the emitter runs them ahead of time for every value they could be
+A static refiner is a pure function of the values it watches, and most
+watched keys offer a short list of values. So where a key's static
+refiners have nothing to refine against yet (a sibling they watch holds
+nothing), the emitter runs them ahead of time for every value they could be
 handed and writes each answer as a conditional on the parent, beside
 the slots': an `if` naming each watched sibling's value as a `const`,
 and a `then` saying what the key's schema says differently from the
@@ -357,11 +381,14 @@ no `/refine` round trip.
   `x-surface.dynamic: true` instead: its schema is the unrefined one and
   `dependsOn` says what to refine on, as before
   ([decision](decisions.md#enumeration-is-capped)).
-- **Each conditional is what `/refine` answers.** It is computed by
-  refining the whole surface against the values with the combination
-  over them, the same call `/refine` makes, so chains compose (the room
-  per venue, the capacity per room) and an alter's refiners in the chain
-  are included.
+- **Each conditional is what `/refine` answers, less the runtime.** It
+  is computed by refining the whole surface against the values with the
+  combination over them, the same call `/refine` makes with the runtime
+  refiners left out, so chains compose (the room per venue, the capacity
+  per room) and an alter's static refiners in the chain are included. A
+  runtime refiner is never called for a conditional; only the siblings
+  the static refiners watch are enumerated over, and the key carries
+  `runtime` besides.
 - **Only what changed.** A `then` names the key and only the keywords
   that differ from the unrefined schema (the narrowed `oneOf`, a lower
   `maximum`, the description naming the reason); a map's properties are
@@ -389,7 +416,10 @@ the demo block's `bundle` (per entity type) and `field` (per entity type
 and bundle); the demo formatter's `variant` (per casing); the demo
 extras' `limit` (per presentation; only the grid writes one). Dynamic:
 example 4's capacity, which also watches the free-text licence, and its
-stewards, inside the mount, which watch the capacity, a number. The
+stewards, inside the mount, which watch the capacity, a number. Runtime:
+example 4's room, which its alter narrows by the rooms a site has closed,
+read from State; it stays enumerated per venue for example 3's own
+refiner. The
 field instance's `bundle` would be enumerated per entity type, but every
 situation of it knows the entity type, so it is always served refined.
 

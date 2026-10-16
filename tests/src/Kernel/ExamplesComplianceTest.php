@@ -365,6 +365,36 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Tests a room the site closed is not offered, and not written.
+   *
+   * The alter's runtime refiner reads the closed rooms from State when
+   * the values are held to it. Nothing closed, Riverside offers both its
+   * rooms; with the East room closed it offers the main hall only and
+   * says why, and a submit choosing the East room is refused at the room,
+   * nothing written. Another venue's rooms are untouched.
+   */
+  public function testClosedRoomIsRefused(): void {
+    $state = $this->container->get('state');
+    $rooms = fn (array $values): array => array_keys($this->options()->resolve($this->surface()->refine($values)->getDefinition('room'))->options);
+    $this->assertSame(['riverside_main', 'riverside_east'], $rooms(self::EVENT));
+
+    $state->set('data_surface_examples_compliance.closed_rooms', ['riverside_east']);
+    $this->assertSame(['riverside_main'], $rooms(self::EVENT));
+    $this->assertSame('The East room is closed.', (string) $this->surface()->refine(self::EVENT)->getDefinition('room')->getDescription());
+    $this->assertSame(['harbour_auditorium', 'harbour_deck'], $rooms(['venue' => 'harbour'] + self::EVENT));
+    $state->set('data_surface_examples_compliance.closed_rooms', ['riverside_east', 'riverside_main']);
+    $this->assertSame('The Main hall and the East room are closed.', (string) $this->surface()->refine(self::EVENT)->getDefinition('room')->getDescription());
+    $state->set('data_surface_examples_compliance.closed_rooms', ['riverside_east']);
+
+    $result = $this->submit(['room' => 'riverside_east', 'capacity' => 50] + self::compliance(NULL) + self::EVENT);
+    $this->assertFalse($result->isValid());
+    $this->assertSame(['room'], array_map(static fn ($violation): string => $violation->fullPath(), iterator_to_array($result->violations)));
+    $this->assertSame('riverside_main', $this->config('data_surface_examples.registration_step3')->get('room'));
+    $result = $this->submit(['capacity' => 50] + self::compliance(NULL) + self::EVENT);
+    $this->assertTrue($result->isValid(), ViolationSummary::fromViolations($result->violations));
+  }
+
+  /**
    * Tests what each trigger replaces on the form.
    *
    * The licence moves the capacity's ceiling, and through the capacity

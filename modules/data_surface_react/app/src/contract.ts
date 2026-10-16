@@ -40,6 +40,12 @@ export interface Extension {
   group?: boolean;
   /** On a module's fieldset inside a group: draw it right after this sibling of the group instead. */
   after?: string;
+  /**
+   * A runtime refiner narrows the key too: a rule only the server applies,
+   * when asked, which no schema states ahead of time. The full schema
+   * keeps the key wider; this document is refined by it for its values.
+   */
+  runtime?: boolean;
 }
 
 export interface Choice {
