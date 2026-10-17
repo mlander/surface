@@ -1,0 +1,31 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\data_surface_surface_test\Structure\Crate;
+
+use Drupal\data_surface\Resource\Attribute\Structure;
+use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\StructureInterface;
+
+/**
+ * A crate: a slot whose variant refines one of its keys by another.
+ *
+ * For the served contract, which enumerates a variant's refined keys
+ * inside the variant's own conditional.
+ */
+#[Structure('surface_test.crate')]
+final class CrateStructure implements StructureInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('contents', 'string', 'Contents', default: 'fruit')
+      ->setRequired(TRUE)
+      ->addConstraint('Choice', ['choices' => ['fruit']]);
+    $inputs->attachBy('contents_settings', by: 'contents')
+      ->setLabel('Contents settings');
+  }
+
+}

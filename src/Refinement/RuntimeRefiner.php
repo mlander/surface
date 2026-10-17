@@ -26,11 +26,11 @@ use Drupal\data_surface\DataSurfaceRefinerInterface;
  * is nothing it could wait for and its answer cannot be fixed at build
  * the way a static refiner that watches nothing is.
  *
- * Its answer was read from something the surface does not describe, so
- * it holds for the moment it was given: a surface refined through it is
- * not cacheable (max-age 0), and neither is anything drawn from it. The
- * surface itself, and the full schema, which never run it, keep their
- * own cacheability.
+ * Its answer was read from something the data surface does not describe,
+ * so it holds for the moment it was given: a data surface refined through
+ * it is not cacheable (max-age 0), and neither is anything drawn from it.
+ * The data surface itself, and the full schema, which never run it, keep
+ * their own cacheability.
  *
  * Decision: see docs/decisions.md#static-by-default-runtime-by-declaration.
  *

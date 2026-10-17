@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Drupal\data_surface_entity\Refinement;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\Surface\Attribute\RefinesInput;
+use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\filter\FilterFormatRepositoryInterface;
 
 /**
  * Narrows a text field's formats to those the account may use.
  *
- * The item surface lists every format the field allows, whoever asks:
+ * The item structure lists every format the field allows, whoever asks:
  * that is what the full schema can say. Which of them this account may
  * use is a fact about the account, so it is a runtime refiner, never run
  * ahead of time; the contract marks the key `runtime`, and the pipeline

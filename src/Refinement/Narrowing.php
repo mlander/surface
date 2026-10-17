@@ -11,7 +11,7 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
 /**
  * The check that refinement only ever narrows.
  *
- * The module's loudest claim is that a surface advertises what it
+ * The module's loudest claim is that a data surface advertises what it
  * accepts and refinement can only make that smaller, so a consumer that
  * read the advertisement is never surprised by a value space it did not
  * see. That claim is worth nothing as a convention: it has to be checked
@@ -80,11 +80,11 @@ final class Narrowing {
    * Refuses a refinement that accepts more than what it was handed.
    *
    * @param string $key
-   *   The surface key being refined, named in the message because a
+   *   The definition key being refined, named in the message because a
    *   refiner that breaks the contract has to be findable.
    * @param string $contributor
-   *   Who did it, in words: the surface owner, a named contribution, a
-   *   situation or a slot.
+   *   Who did it, in words: the declaring class, a named contribution, an
+   *   operation or a slot.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $before
    *   The definition handed to the refiner.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $after

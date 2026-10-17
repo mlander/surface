@@ -26,7 +26,7 @@ use PHPUnit\Framework\Attributes\Group;
 use Symfony\Component\Validator\ConstraintViolationList;
 
 /**
- * The specification of the surface's value semantics.
+ * The specification of the data surface's value semantics.
  *
  * Every rule about absent, empty, NULL, required and casting is stated
  * here as a row rather than as prose, because prose is what let the
@@ -38,7 +38,7 @@ use Symfony\Component\Validator\ConstraintViolationList;
  *
  * The pipeline is built here with a stub typed data manager, which is
  * the point: accept() coerces without a container, so a caller that
- * holds a surface and some strings needs nothing else.
+ * holds a data surface and some strings needs nothing else.
  *
  * @see \Drupal\data_surface\Pipeline\DataSurfacePipeline
  * @see docs/semantics.md
@@ -83,7 +83,7 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
    * @param mixed $input
    *   The raw input.
    * @param array $current
-   *   The stored values, in surface shape.
+   *   The stored values, in input shape.
    *
    * @return mixed
    *   The accepted value of the key.
@@ -447,7 +447,7 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
    *
    * A complex definition with declared properties says what the map
    * holds. Anything else in the stored array belongs to whatever wrote
-   * it, and carrying it back out of the surface would make the surface
+   * it, and carrying it back out would make the data surface
    * responsible for a value it never advertised.
    */
   public function testUndeclaredStoredKeysDoNotRoundTrip(): void {
@@ -671,7 +671,7 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
     $this->assertCount(1, $errors->byKey('value'));
     $this->assertSame('', $errors->byKey('value')[0]->path);
     $message = $errors->byKey('value')[0]->message;
-    // The surface's own message, as a translatable string with the label
+    // The data surface's own message, as a translatable string with the label
     // as a placeholder, rather than whichever message a type-specific
     // constraint would have produced.
     $this->assertInstanceOf(TranslatableMarkup::class, $message);
@@ -691,8 +691,8 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
     yield 'a string is present' => ['x', FALSE];
     // The deliberate reading: a required checkbox that is off, a
     // required zero, and a required list or map with nothing in it are
-    // answers. A surface that wants more than an answer says so with a
-    // constraint of its own.
+    // answers. A resource or structure that wants more than an answer
+    // says so with a constraint of its own.
     yield 'FALSE is an answer' => [FALSE, FALSE];
     yield 'zero is an answer' => [0, FALSE];
     yield "the string '0' is an answer" => ['0', FALSE];

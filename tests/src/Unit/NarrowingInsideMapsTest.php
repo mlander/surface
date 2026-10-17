@@ -18,11 +18,11 @@ use PHPUnit\Framework\Attributes\Group;
 /**
  * Tests that narrowing is checked inside maps and list items.
  *
- * A subsurface is advertised as a map whose properties are its child's
- * keys, and what the child narrows arrives in the parent as a narrower
- * map. So the check has to read inside a map: the same properties, each
- * held to the same table, and the one exception a slot's placeholder
- * resolving to the variant its deciding key chose.
+ * An attached structure is advertised as a map whose properties are the
+ * child's keys, and what the child narrows arrives in the parent as a
+ * narrower map. So the check has to read inside a map: the same
+ * properties, each held to the same table, and the one exception a
+ * slot's placeholder resolving to the variant its deciding key chose.
  *
  * @see \Drupal\data_surface\Refinement\Narrowing
  */

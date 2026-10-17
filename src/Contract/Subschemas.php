@@ -9,8 +9,8 @@ use Drupal\data_surface\DataSurfaceInterface;
 /**
  * The subschemas one emission writes under `$defs`, as it writes them.
  *
- * One per child surface: an attached child or a slot's variant, keyed by
- * the surface's id. The same child reached again, at another key, in
+ * One per child: an attached child or a slot's variant, keyed by the
+ * child's id. The same child reached again, at another key, in
  * another frame, or by the instance pass after the declaration pass, is
  * the same def. Two children claiming one id with different declarations
  * (built in contexts that gave them different rules) each keep their own,
@@ -40,7 +40,7 @@ final class Subschemas {
   protected \SplObjectStorage $writing;
 
   /**
-   * The key each child surface's def was filed under.
+   * The key each child's def was filed under.
    *
    * @var \SplObjectStorage<\Drupal\data_surface\DataSurfaceInterface, string>
    */
@@ -69,7 +69,7 @@ final class Subschemas {
    * Gets the key a child's def was filed under, if it was.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $child
-   *   The child surface.
+   *   The built child.
    *
    * @return string|null
    *   The key, or NULL when its def is not written yet.
@@ -82,7 +82,7 @@ final class Subschemas {
    * Gets the id a child's def is being written under, if it is.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $child
-   *   The child surface.
+   *   The built child.
    *
    * @return string|null
    *   The id, inside that def's own declaration; NULL elsewhere.

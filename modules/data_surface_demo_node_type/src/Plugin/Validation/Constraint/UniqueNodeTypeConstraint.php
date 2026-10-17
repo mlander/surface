@@ -15,7 +15,7 @@ use Symfony\Component\Validator\Constraint as SymfonyConstraint;
  * taken can only be answered by asking storage, which static schema
  * cannot do, but a definition-level constraint can, and then the same
  * check runs in the generated form, in a payload validated without a
- * form, and in anything else built on the surface.
+ * form, and in anything else built on the resource.
  */
 #[Constraint(
   id: 'DataSurfaceUniqueNodeType',

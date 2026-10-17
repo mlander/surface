@@ -1,0 +1,420 @@
+# Storage
+
+A resource says what a thing accepts. Its storage says where that thing
+is kept. Keeping them apart is what lets one resource describe a node
+type whether a form, a config action, a test or an agent is doing the
+submitting, and what lets one storage class serve both the operation
+that adds a thing and the operation that edits it.
+
+This page is about the second half: a resource's own storage and the
+engine's six storage classes, the prepare-versus-commit split, dry runs,
+what may ride on a form, and the one small interface storage uses when
+the input shape and the storage shape differ. [The pipeline](pipeline.md)
+is the other half, and the stage names below are its.
+
+## What storage is
+
+Three methods, `Drupal\data_surface\Pipeline\DataSurfaceStorageInterface`:
+
+| Method | Does | Writes? |
+| --- | --- | --- |
+| `load($surface)` | Reads what is stored, in input shape. | no |
+| `prepare($surface, $values)` | Turns accepted values into the storage shape and hands back a `PreparedValues`. | no |
+| `commit($prepared)` | Stores the artifact. | yes |
+
+The data surface is an argument rather than something the storage
+holds. Storage describes a destination and a data surface describes
+values: the same node type is the destination of the add operation and
+the edit operation, and storage holding the built resource for one of
+them could not serve both.
+
+`load()` is what makes a partial update legal. It is the `current`
+argument of [the pipeline's `accept()`](pipeline.md#accept), so a key
+nobody sent keeps what it holds instead of falling back to its declared
+default.
+
+A resource names its storage with `#[Resource(storage:)]`, a
+`Resource\ResourceStorageInterface` with the same three verbs over the
+context instead of the data surface: `load($context)`,
+`prepare($context, $values)`, which returns the storage-shaped array
+after storage's own checks, and `commit($context, $prepared)`. It loads
+by the identity the context knows, so the context never carries an
+entity, and creates or updates by whether the context creates.
+`StorageAdapter` binds the context and makes it this interface;
+[Prepare](resources.md#prepare) says what each storage class here
+checks. A resource's storage class is where its own storage logic lives:
+`NodeTypeStorage`, `FieldInstanceStorage`, `FieldStorageStorage` and
+`AddressFieldSettingsStorage` each rehearse a config entity in
+`prepare()` and hold it to its config schema with `SchemaViolations`,
+and a resource's storage class may delegate to an engine storage class
+below where one already says the translation: `NodeTypeStorage` writes
+a content type's title label and workflow defaults through
+`BaseFieldOverrideStorage`.
+
+A slot variant derived from a config schema has no class and so no
+storage of its own: its values are stored by its parent under the slot's
+key, as `FieldStorageStorage` stores a string's derived `max_length`
+among the field storage's settings.
+
+## Getting one
+
+```php
+$resources = \Drupal::service('data_surface.resources');
+$context = $resources->operation(NodeTypeResource::class, 'edit', ['type' => 'article']);
+$storage = $resources->storage(NodeTypeResource::class, $context);
+```
+
+`ResourcesInterface::storage()` adapts the resource's storage to the
+pipeline's interface and composes it along the tree of its children: a
+child whose class names storage of its own (an attached resource) has
+its values routed there, and a child without any (a structure, usually)
+is stored by its parent under its key.
+
+A structure a plugin uses names no storage, because only the plugin's
+host holds the instance its values belong to. The host supplies it:
+
+| Host family | Answers with |
+| --- | --- |
+| Any configurable plugin (block, condition, action) | `PluginConfigurationStorage` over itself, from `DataSurfaceHostFormTrait`: the one construction path for the family, which the form submit asks for rather than building inline. |
+| Field types | `FieldSettingsStorage` over the field config entity the item is bound to, from `DataSurfaceFieldTypeTrait`. A field type whose storage shape differs overrides `getDataSurfaceStorage()` and hands `FieldSettingsStorage` a shape. |
+| Field formatters | Nothing: they throw. |
+
+### The refusal, and why it is a refusal
+
+`ResourcesInterface::storage()` throws `\LogicException` for a class
+that names no storage, and a host whose values have no destination of
+its own throws from `getDataSurfaceStorage()`. Two kinds legitimately do:
+
+1. **A host that owns the write.** A field formatter's settings are one
+   component of an entity view display, and Field UI copies whatever the
+   settings element produced onto that display and saves it. The
+   formatter has no destination to hand out, so it says so.
+2. **A read-only resource or structure**, describing values nobody
+   writes through the pipeline.
+
+Quietly useless storage would be worse than the exception: a caller
+would submit into it, the pipeline would report the values committed,
+and nothing would have been stored.
+
+### When the destination is named by the submission
+
+An add operation knows no identity, because the thing it creates does
+not exist to be named, and yet its destination may depend on what is
+being created. The node type demo is the worked example: a content
+type's base field overrides belong to a bundle, and the bundle IS the
+machine name being submitted.
+
+The answer is that storage reads the identity in `prepare()`, not
+before. `NodeTypeStorage` loads by the machine name the context knows,
+and on add, where it knows none, loads nothing; `prepare()` builds the
+node type around the machine name the accepted values carry, and has
+`BaseFieldOverrideStorage` plan the overrides for that bundle, which
+need not exist yet. Storage taking the accepted values when it is made
+would have put a write-path argument on a method a discovery document
+calls with nothing but a context.
+
+## Prepare and commit are separate, and that is the whole design
+
+`prepare()` writes nothing. It shapes, it validates against whatever the
+storage itself has an opinion about (a config schema, usually), and it
+hands back the artifact a commit would store. So a caller can preview a
+submission, diff it, show it, or throw it away without anything having
+happened.
+
+Two rules follow, and both were bugs before they were rules:
+
+1. **Prepare never touches what the caller handed over.** The config
+   entity storage and every resource's storage class that rehearses an
+   entity work on a copy, and the copy is the artifact. The object a
+   caller passes in is almost always the one its form, its route and the
+   rest of the request are holding; shaping values onto it would make a
+   rehearsal visible to everybody, and the next unrelated save of that
+   object would persist a submission nobody accepted.
+2. **Commit stores the artifact, not the thing the storage holds.** They
+   used to be able to differ, which is how a dry run could be saved by
+   accident. After a commit the storage describes what it saved, so a
+   `load()` afterwards reads the values that were written.
+
+### The host-owns-the-write split
+
+Some hosts save for themselves. Field UI copies whatever a settings
+element produced onto the field config entity and saves it, so a field
+type's settings form runs accept, validate and **prepare**, writes the
+prepared artifact into form state, and deliberately does not commit:
+calling both would save the field twice. That is why the transform lives
+in `prepare()` and not in `commit()`: a caller that does own the write
+reaches the same transform through `submit()` and gets the same stored
+settings.
+
+### Dry runs
+
+`DataSurfacePipelineInterface::submit()` takes a `$dry_run` flag: it runs
+everything up to and including prepare and hands back the artifact with
+`committed` false.
+
+Config entities write through the container's config factory, so an
+entity cannot be pointed at another bin for one call. An unsaved clone,
+held to the schema, is as far as a dry run goes; a resource's storage
+class returns that clone's exported array from `prepare()`, which is
+what a derived tool's dry run reports as `prepared`.
+
+## The six engine storage classes
+
+| Storage | Destination | Artifact | Used by |
+| --- | --- | --- | --- |
+| `StateStorage` | One State key. | The accepted values. | the demo form |
+| `ConfigEntityStorage` | One config entity's properties, plus core's third party settings. | An unsaved clone of the entity. | no shipped resource yet |
+| `FieldSettingsStorage` | One field instance's settings. | The settings array. | the field type host |
+| `BaseFieldOverrideStorage` | A bundle's overrides of an entity type's base fields. | The overrides to save, as exported arrays, and the fields whose override goes. | `NodeTypeStorage` |
+| `PluginConfigurationStorage` | A plugin's configuration array. | The complete configuration. | the plugin hosts |
+| `CompositeStorage` | Several of the above, in order. | One prepared set per child. | no shipped resource yet |
+
+A config object storage class, mirroring core's `ConfigTarget`, was
+removed for having no adopter; a resource whose values are a simple
+config object writes it in a storage class of its own, held to the
+schema with `SchemaViolations`, until enough of them share the
+translation to name it again.
+
+A few things each of them is opinionated about:
+
+- **`ConfigEntityStorage`** maps an input key to an entity property
+  name, or to `['method' => 'setX']` for a property that needs a real
+  setter. The method form is a string rather than a callable on purpose:
+  it survives serialization, and it is the spelling core's config
+  actions use, so a key a resource can write is a key a recipe can
+  write.
+- **`BaseFieldOverrideStorage`** is the translation nobody had written
+  down: a content type's "published by default" is the default value of
+  the node status base field narrowed to one bundle, and its title label
+  is the title base field's label narrowed the same way. It compares
+  before writing, as core's own bundle forms do, because an override
+  that restates the base field's value is config nobody asked for. A
+  key sent as `NULL` asks for the override to go away entirely, which is
+  different from not sending the key at all: that says nothing and
+  changes nothing. Only base fields have overrides; a map naming a
+  configurable field is refused by name rather than quietly rewriting
+  that field instance. Besides the pipeline's three verbs it offers
+  their bodies to a resource's storage class that writes a bundle of
+  its own: `values()` reads the mapped keys, `plan()` rehearses, and
+  `write()` writes a plan onto the bundle as it then exists, after that
+  storage class has saved the bundle.
+- **`CompositeStorage`** requires every input key to be claimed by
+  exactly one child. A key no child claims would be accepted, validated,
+  reported committed and never written; a key two children claim would
+  be written to two destinations that disagree the moment either is
+  edited alone. Both are silent, so both are refused, at the first call
+  that has the data surface to check against. A child listed without a
+  key list is the one-child shorthand for "this child owns everything".
+  A child may name a key the data surface does not declare: that is how
+  a destination says where a mount would go before anything has mounted
+  there.
+- **`CompositeStorage` ordering is load-bearing.** Children run in the
+  order they were listed, which matters when a later write needs an
+  earlier one to have happened: base field overrides belong to a bundle,
+  so on an add operation the storage that creates the bundle must be
+  listed first. A resource's own children are composed by
+  `StorageAdapter` instead, which routes a slot by its sibling's
+  value; a composite hands each child only the keys it claims.
+
+## Config schema, and whose violation it is
+
+Every storage class that writes config holds its artifact to the config
+schema, through `SchemaViolations`, and reports what it says in the
+same `ViolationSet` the resource's own constraints answer with, filed
+under the input key that owns the path.
+
+Only the paths the storage writes are reported. A schema validates the
+whole object, so a config object carrying a violation under a key the
+resource never declared (written by another module, or left behind by
+an older schema) used to refuse a submission that had nothing to do
+with it, naming a key the caller cannot even see. That violation is real
+and it is somebody's problem; it is not this write's problem. A caller
+that wants the whole picture asks for it:
+
+```php
+SchemaViolations::collect($typed_config, $name, $data, $paths, FALSE);
+```
+
+Config with no schema at all is not an error. Plenty of config still has
+none, and storage that insisted would be unusable there.
+
+## SettingsShapeInterface
+
+`Drupal\data_surface\Storage\SettingsShapeInterface` has two methods,
+`toStorage(array $values): array` and `fromStorage(array $settings):
+array`. `FieldSettingsStorage` takes one, optionally; without one the
+input shape is the storage shape. It is also where encryption sits,
+below.
+
+It exists because storage shapes are frequently not the shape a person
+or an agent should be asked for. The address field type stores its
+countries as a map of each code to itself, wraps every field override in
+a single-key array, and keeps a deprecated key that silently wins over
+the current one. That translation already exists today, half of it in a
+settings form's validate handler and half in the item class's accessors,
+which is exactly why only a form can write those settings correctly.
+`AddressSettingsShape` is the same translation with a name, so a form, a
+kernel test, a config action and an agent all go through it.
+
+An implementation must be pure shape: no services, no current user, no
+site state. The two halves are expected to round-trip, and where they
+cannot the implementation says so in its own documentation.
+
+### A shape for settings another module mounted
+
+An alter that adds keys may ask for a value in one shape and store it
+in another. It does not own the storage, so it hands the translation to
+the data surface instead, by implementing
+`HasStorageShapeInterface`, whose `storageShape()` returns a
+`SettingsShapeInterface`.
+
+The sealed data surface carries the shape, refinement keeps it, and
+`getThirdPartyShape($module)` answers it. It is applied to that
+module's mount, `third_party_settings.<module>`, and nothing else:
+`toStorage()` before the storage prepares, so storage's own checks judge
+what will actually be stored; `fromStorage()` after it loads. The shape
+sees only that module's own settings, keyed by the keys it mounted. A
+shape for a module that mounts nothing is refused.
+
+`data_surface_demo_extras` is the worked example: `NodeTypeAlter` asks
+for a content type's review deadline as an amount and a unit, and its
+`ReviewDeadlineShape` stores seconds, through `NodeTypeStorage`, which
+knows nothing about it. `StorageAdapter` applies the shape for a
+resource's own storage class; of the engine's storage classes, only
+`ConfigEntityStorage` writes third party settings, so it is the only one
+that reads it.
+
+## Secrets at the codec
+
+An input key declared secret
+([Declaring a resource](declaring-a-resource.md#secrets)) is encrypted
+on its way into storage and decrypted on its way back out, so plaintext
+never reaches storage from any caller. Two small pieces do it:
+
+| Piece | What it is |
+| --- | --- |
+| `SecretCodecInterface` | `encrypt()`, `decrypt()`, `isEncrypted()`. A service, so a deployment can replace it. |
+| `EncryptedSettingsShape` | A `SettingsShapeInterface` decorator that wraps another shape, or none, and enciphers the secret keys of the data surface it was made for. |
+
+The shipped codec, `SodiumSecretCodec`, is a **reference
+implementation**: libsodium's `crypto_secretbox` with a fresh random
+nonce per value, keyed by HKDF-SHA256 from the site's hash salt. It is
+correct encryption and it is not key management: an attacker who can
+read `settings.php` can read the secrets, and rotating the hash salt
+makes every stored secret unreadable. A site holding real secrets
+replaces the `data_surface.secret_codec` service with one backed by a key
+manager, an HSM or a cloud KMS, and nothing else changes: no resource,
+no structure, no storage class, no form. The envelope is
+`data_surface:sodium:v1:` followed by base64 of the nonce and
+ciphertext, and the prefix is what lets a migration tell ciphertext from
+plaintext.
+
+The decorator works in **input shape**: it encrypts before the inner
+shape runs on the way in and decrypts after the inner shape has run on
+the way out. That order is what lets it compose with any shape. The
+secret flag is declared on the resource or structure, so input shape is
+the only place the keys can be named, and an inner shape then carries
+an opaque string exactly as it carried the plaintext. The one thing an
+inner shape may not do is look *into* a secret value, since by then it
+is ciphertext.
+
+It takes its key list at construction rather than reading a data
+surface at call time, because a shape has no data surface and is not
+going to get one: `SettingsShapeInterface` is pure shape, built once and
+reused for every instance of a field type.
+`EncryptedSettingsShape::forSurface()` is the one line that reads the
+flags off a data surface and hands back the inner shape unchanged when
+there are none.
+
+### What is wired, and what is not
+
+`FieldSettingsStorage` composes the decorator itself. It is handed the
+data surface on both calls that translate, so it wraps its shape when
+the data surface declares a secret key and the codec service is
+available, and leaves everything else exactly as it was.
+
+**The other storage classes do not, and that is the honest state of
+it.** The state storage, the config entity storage, the base field
+override storage and the plugin configuration storage write values that
+never pass through a `SettingsShapeInterface`, so there is nowhere for
+the decorator to sit. Generalizing it to a decorator around any storage
+class is the follow-up, and it is not a rename: storage that writes
+config holds its artifact to the config schema, which would be
+validating ciphertext against a schema describing the plaintext, and the
+plugin configuration storage's values are read back by the plugin itself
+rather than only by the pipeline. Until that is designed, a host with a
+secret key in one of those destinations either uses
+`FieldSettingsStorage` or calls the codec itself, and a resource or
+structure declaring a secret against unwired storage still gets the form
+and `accept()` halves of the flag, which is to say the value is kept and
+never echoed, but stored in the clear.
+
+### Values written before the flag
+
+`fromStorage()` asks the codec `isEncrypted()` and hands plaintext
+through unchanged, so a key declared secret today reads the values it
+already had. `toStorage()` enciphers them on the next write. Migration is
+therefore the next save of each affected thing, with no update hook and
+no scan, and it is not retroactive: until that save the old plaintext is
+still in storage, which is worth saying out loud to whoever administers
+the site.
+
+`NULL` and the empty string are stored as they are. There is no secret
+to keep in "no secret", and enciphering nothing would make an absent
+value look like a present one.
+
+One consequence of a fresh nonce per value: an unchanged secret is
+written as different ciphertext every time its thing is saved, so the
+stored config differs even when nothing was edited. That is the price of
+two equal secrets not looking equal in storage, and it is the right way
+round, but it does mean a config export diff after an unrelated save is
+not evidence that the secret changed.
+
+## The serialization rule
+
+**An element carries identifiers. The callback rebuilds the objects.**
+
+Some host protocols have no validate or submit hook, so the whole
+pipeline runs in an `#element_validate` callback, which is static and
+has only the element and the form state to work from. The obvious thing
+is to put the data surface and its storage on the element, and the
+obvious thing is wrong, because a cached form is a serialized form
+array, and a data surface holds its refiners while storage holds
+services. That hands the form cache responsibility for objects nobody
+designed to be stored.
+
+So each element carries strings, and each static callback rebuilds:
+
+| Host | The element carries | The callback rebuilds from |
+| --- | --- | --- |
+| Field formatter | `#data_surface` (plugin id), `#data_surface_field_name`, `#data_surface_current` | the entity display the host form is editing, which has the real field definition; failing that, the formatter plugin manager |
+| Field type | `#data_surface` (field config id), `#data_surface_current` | the field config the host form is editing, which is also the only way to find an unsaved one; failing that, a load by id |
+
+`#data_surface_current` is the values the form started from, and it is an
+array, so it stores as it is. It is there because a key with no rendered
+element has said nothing and must keep what is stored rather than fall
+back to its declared default.
+
+Every storage class also composes core's `DependencySerializationTrait`,
+as a safety net for adopters who do put one on a form: its services
+then store as service ids and come back as the container's own objects
+rather than as dead copies. Two of them cannot be made fully safe that
+way, because what they hold is not a service: `ConfigEntityStorage` and
+`FieldSettingsStorage` each carry a config entity. The rule for
+those is the one each class documents: hand it an object you own.
+
+## Writing a storage class
+
+Worth having when a destination is reached more than once, or when the
+translation between input shape and storage shape is worth a name. The
+checklist:
+
+1. `load()` reads in input shape and returns an empty array when
+   nothing is stored.
+2. `prepare()` writes nothing, touches nothing the caller handed over,
+   and puts everything a commit needs into the artifact.
+3. `commit()` stores the artifact it is given, and refuses an artifact
+   that did not come from this storage.
+4. Declare any dependencies the artifact carries in the `PreparedValues`,
+   in the shape `calculateDependencies()` collects them.
+5. Compose `DependencySerializationTrait`, and hold no closures.

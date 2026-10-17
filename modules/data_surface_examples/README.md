@@ -1,6 +1,6 @@
 # Data Surface Examples
 
-One surface that grows, one idea per example. The thing being described is
+One resource that grows, one idea per example. The thing being described is
 the settings of an event registration: a title, how many people, where,
 what it costs, who to contact. Each example adds one idea, each example with a
 form is a page of its own, and under each form, collapsed, is the contract the
@@ -27,24 +27,26 @@ including anything another module stored on them, such as the event
 licence example 4's module adds under example 3, and it opens again
 every room example 4 lets a site close.
 
-## What a surface is, in one paragraph
+## What a resource is, in one paragraph
 
-A surface is a class that says what a piece of software accepts: each
-value's name, type, label, and what it may hold. It says nothing about
-forms. The form is generated from it, the validation is its, and the
-same class is a tool an agent can call. The rule that makes this work is
-that a surface may only ever *narrow* what it said: once a caller has
-read it, nothing it accepts later contradicts what it advertised.
+A resource is a class that says what a piece of software accepts: each
+value's name, type, label, and what it may hold, and the storage that
+keeps it. It says nothing about forms. The form is generated from it,
+the validation is its, and the same class is a tool an agent can call.
+A part a resource holds, with no storage of its own, is a structure,
+declared the same way. The rule that makes this work is that a resource
+may only ever *narrow* what it said: once a caller has read it, nothing
+it accepts later contradicts what it advertised.
 
-## Without a surface: what config schema can say
+## Without a resource: what config schema can say
 
 Under the contract panel of examples 1 to 3 is a second one, collapsed
-as "Without a surface: what config schema can say". It is what a client
+as "Without a resource: what config schema can say". It is what a client
 could be told about the same settings today, when the options, the
 limits and what depends on what are written in Form API code and the
 only declarative description is the config schema. It holds two
-documents that read no surface, and a table that sets the second beside
-the surface's contract:
+documents that read no resource, and a table that sets the second beside
+the resource's contract:
 
 - **What core answers when asked for a JSON Schema.** The example's
   typed config, normalized by core's serializer in the `json_schema`
@@ -91,8 +93,8 @@ the ticket has a title and a `$comment`: its type is
 value resolves, and this reads none.
 
 - **Key by key.** A table counted from two documents, one row per key
-  the surface declares: the JSON Schema keywords the mapping states,
-  beside those the surface's full schema states, the one the contract
+  the resource declares: the JSON Schema keywords the mapping states,
+  beside those the resource's full schema states, the one the contract
   panel shows as "The full schema, for any answers". The venue reads
   `title, type` beside `title, type, oneOf (3)`, the room `title, type`
   beside `title, type, oneOf (6), if/then on venue (3 cases)`, the
@@ -101,7 +103,7 @@ value resolves, and this reads none.
   the contact `title, type, properties, additionalProperties` beside
   `title, type, properties, additionalProperties, required, $ref (registration.contact)`,
   and the last row lists what is required: "not stated" beside
-  `title, venue, room, pricing`. The surface writes each part once,
+  `title, venue, room, pricing`. The resource writes each part once,
   under `$defs`, and refers to it where it is used; the table counts
   what a reference resolves to and names the reference beside it.
 
@@ -110,7 +112,7 @@ form is filled in. What follows the answers is the contract panel above
 it: its table, and "The schema for these answers".
 
 The classic twin of example 1 carries the same two documents under its
-form, and no table, having no surface to compare with. Its form requires
+form, and no table, having no resource to compare with. Its form requires
 the title and holds the capacity between 1 and 1000. Neither rule is in
 the config schema, so neither is in either document.
 
@@ -119,22 +121,22 @@ the config schema, so neither is in either document.
 `/surface-examples/1`
 
 Three settings, each on one line: its name, its type, its label, and
-what it allows. The situation at the top, `configure`, is how the
-surface is asked for: it needs nothing, and only an account that may
+what it allows. The operation at the top, `configure`, is how the
+resource is asked for: it needs nothing, and only an account that may
 administer site configuration may ask.
 
-<!-- code: src/Surface/RegistrationStep1Surface.php -->
+<!-- code: src/Resource/RegistrationStep1Resource.php -->
 
 ```php
-#[Surface('registration.step1', target: RegistrationStep1Target::class)]
-final class RegistrationStep1Surface implements SurfaceInterface {
+#[Resource('registration.step1', storage: RegistrationStep1Storage::class)]
+final class RegistrationStep1Resource implements ResourceInterface {
 
   /**
    * Configures the registration settings, which always exist.
    */
-  #[Situation('configure', label: 'Configure registration', permission: 'administer site configuration')]
-  public static function configure(): SurfaceContext {
-    return new SurfaceContext('configure');
+  #[Operation('configure', label: 'Configure registration', permission: 'administer site configuration')]
+  public static function configure(): OperationContext {
+    return new OperationContext('configure');
   }
 
   /**
@@ -152,7 +154,7 @@ final class RegistrationStep1Surface implements SurfaceInterface {
 ```
 
 That class is the whole of the form at `/surface-examples/1`, its
-validation (try a capacity of 1001), and what is written: the target it
+validation (try a capacity of 1001), and what is written: the storage it
 names keeps the values in config, and checks them against the config
 schema before anything is saved.
 
@@ -163,7 +165,7 @@ handler, and the elements' own `#required`, `#min` and `#max` are its
 validation. It edits the same config object. The landing page counts
 both. What the classic form cannot do is be *asked*: nothing outside it
 knows what its three settings accept, which is what the panel under it
-shows ([above](#without-a-surface-what-config-schema-can-say)).
+shows ([above](#without-a-resource-what-config-schema-can-say)).
 
 <!-- code: src/Form/RegistrationStep1ClassicForm.php -->
 
@@ -224,18 +226,18 @@ by parameter name, the value of the key it reads. Its signature is its
 dependency. Declaration order is form order, so the capacity is
 declared after the room it depends on.
 
-<!-- code: src/Surface/RegistrationStep2Surface.php -->
+<!-- code: src/Resource/RegistrationStep2Resource.php -->
 
 ```php
-#[Surface('registration.step2', target: RegistrationStep2Target::class)]
-final class RegistrationStep2Surface implements SurfaceInterface {
+#[Resource('registration.step2', storage: RegistrationStep2Storage::class)]
+final class RegistrationStep2Resource implements ResourceInterface {
 
   /**
    * Configures the registration settings, which always exist.
    */
-  #[Situation('configure', label: 'Configure registration', permission: 'administer site configuration')]
-  public static function configure(): SurfaceContext {
-    return new SurfaceContext('configure');
+  #[Operation('configure', label: 'Configure registration', permission: 'administer site configuration')]
+  public static function configure(): OperationContext {
+    return new OperationContext('configure');
   }
 
   /**
@@ -302,25 +304,25 @@ answer stays true.
 
 `/surface-examples/3`
 
-Two parts, each a surface of its own. The **ticket** is a *slot*: the
-pricing chooses which surface fills it. Example 3 names neither ticket;
-each ticket names example 3, with `#[SurfaceVariant]`, so a third kind of
+Two parts, each a structure of its own. The **ticket** is a *slot*: the
+pricing chooses which structure fills it. Example 3 names neither ticket;
+each ticket names example 3, with `#[Variant]`, so a third kind of
 ticket is a new class and example 3 never changes. The **contact** is a
 fixed part, attached with `attach()`: always there, and validated in
 its own frame, so its email is checked by its own rules.
 
-<!-- code: src/Surface/RegistrationStep3Surface.php -->
+<!-- code: src/Resource/RegistrationStep3Resource.php -->
 
 ```php
-#[Surface('registration.step3', target: RegistrationStep3Target::class)]
-final class RegistrationStep3Surface implements SurfaceInterface {
+#[Resource('registration.step3', storage: RegistrationStep3Storage::class)]
+final class RegistrationStep3Resource implements ResourceInterface {
 
   /**
    * Configures the registration settings, which always exist.
    */
-  #[Situation('configure', label: 'Configure registration', permission: 'administer site configuration')]
-  public static function configure(): SurfaceContext {
-    return new SurfaceContext('configure');
+  #[Operation('configure', label: 'Configure registration', permission: 'administer site configuration')]
+  public static function configure(): OperationContext {
+    return new OperationContext('configure');
   }
 
   /**
@@ -343,7 +345,7 @@ final class RegistrationStep3Surface implements SurfaceInterface {
       ->addConstraint('Choice', ['choices' => ['free', 'paid']]);
     $inputs->attachBy('ticket', by: 'pricing')
       ->setLabel(t('Ticket'));
-    $inputs->attach('contact', ContactSurface::class)
+    $inputs->attach('contact', ContactStructure::class)
       ->setLabel(t('Contact'));
   }
 
@@ -376,12 +378,12 @@ final class RegistrationStep3Surface implements SurfaceInterface {
 
 The two tickets:
 
-<!-- code: src/Surface/FreeTicketSurface.php -->
+<!-- code: src/Structure/FreeTicketStructure.php -->
 
 ```php
-#[Surface('registration.step3.ticket.free')]
-#[SurfaceVariant(of: RegistrationStep3Surface::class, key: 'ticket', value: 'free')]
-final class FreeTicketSurface implements SurfaceInterface {
+#[Structure('registration.step3.ticket.free')]
+#[Variant(of: RegistrationStep3Resource::class, key: 'ticket', value: 'free')]
+final class FreeTicketStructure implements StructureInterface {
 
   /**
    * {@inheritdoc}
@@ -394,12 +396,12 @@ final class FreeTicketSurface implements SurfaceInterface {
 }
 ```
 
-<!-- code: src/Surface/PaidTicketSurface.php -->
+<!-- code: src/Structure/PaidTicketStructure.php -->
 
 ```php
-#[Surface('registration.step3.ticket.paid')]
-#[SurfaceVariant(of: RegistrationStep3Surface::class, key: 'ticket', value: 'paid')]
-final class PaidTicketSurface implements SurfaceInterface {
+#[Structure('registration.step3.ticket.paid')]
+#[Variant(of: RegistrationStep3Resource::class, key: 'ticket', value: 'paid')]
+final class PaidTicketStructure implements StructureInterface {
 
   /**
    * {@inheritdoc}
@@ -418,11 +420,11 @@ final class PaidTicketSurface implements SurfaceInterface {
 
 And the contact:
 
-<!-- code: src/Surface/ContactSurface.php -->
+<!-- code: src/Structure/ContactStructure.php -->
 
 ```php
-#[Surface('registration.contact')]
-final class ContactSurface implements SurfaceInterface {
+#[Structure('registration.contact')]
+final class ContactStructure implements StructureInterface {
 
   /**
    * {@inheritdoc}
@@ -480,11 +482,11 @@ method may be:
 
 No form alter, no hook.
 
-<!-- code: ../data_surface_examples_compliance/src/SurfaceAlter/RegistrationComplianceAlter.php -->
+<!-- code: ../data_surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php -->
 
 ```php
-#[AltersSurface(RegistrationStep3Surface::class)]
-final class RegistrationComplianceAlter implements SurfaceAlterInterface {
+#[Alters(RegistrationStep3Resource::class)]
+final class RegistrationComplianceAlter implements AltersInputsInterface {
 
   use StringTranslationTrait;
 
@@ -623,7 +625,7 @@ away what the owner declared.
 
 `/surface-examples/5`
 
-Nothing to write. Example 3 names a target and has a situation that needs
+Nothing to write. Example 3 names its storage and has an operation that needs
 nothing, so the Tool API bridge (`data_surface_tool`) derives a tool
 from it, `data_surface:registration.step3:configure`. It takes what
 example 3's form takes, refuses what it refuses, with the same messages,
@@ -670,13 +672,13 @@ drush tool:run data_surface:registration.step3:configure --uid=1 --input='{"valu
 ```
 
 `--uid=1` because `tool:run` runs as anonymous unless told otherwise,
-and the situation asks for "administer site configuration", for a read
+and the operation asks for "administer site configuration", for a read
 as for a write. The dry run
 is a second input, which `tool:run` reads as `name=value` and decodes as
 JSON, so `true` is a boolean.
 
 The script and the Drush commands exercise the same tool, through the
-same pipeline, against the same surface. The difference is where they
+same pipeline, against the same resource. The difference is where they
 run: the script runs the calls inside a kernel test,
 `ExamplesToolTest`, on a fresh database it throws away, so it can be
 run any number of times and is what the test suite verifies; the Drush
@@ -691,7 +693,7 @@ refuse.
 
 ## In React
 
-Examples 1 to 3 again, with no Form API: the same situation served as a
+Examples 1 to 3 again, with no Form API: the same operation served as a
 JSON contract and rendered by a React app, from the experimental
 submodule `data_surface_react`.
 
@@ -702,7 +704,7 @@ drush pm:install data_surface_react
 The landing page then links each example "In React":
 `/surface-react/registration.step1/configure`,
 `/surface-react/registration.step2/configure` and
-`/surface-react/registration.step3/configure`. Each is the same surface
+`/surface-react/registration.step3/configure`. Each is the same resource
 as the form beside it, read from `/surface-api/registration.stepN/configure`:
 JSON Schema with the labels as `oneOf` titles, the bounds as `minimum`
 and `maximum`, the ticket slot as a conditional on the pricing, and an
@@ -744,7 +746,7 @@ Drush commands are checked against `ExampleCalls`.
 | `Kernel\StaticRefinerEnforcementTest` | Examples 2 and 3, without example 4 and with it: every conditional the served contract enumerates, in the full schema and in the schema for no values and for the defaults, is what refining afresh for its values answers. |
 | `Kernel\ExamplesToolTest` | Example 5: the three calls and their answers; what the script prints. |
 | `Kernel\ConfigSchemaContractTest` | What config schema can say: the plain mapping of examples 1 and 3, whole, with no list, no bound, nothing required and no shape for the ticket, the same whatever is stored or mounted; core's answer, a comment and no property; a constraint a schema does declare is said; the JSON this page quotes. |
-| `Kernel\ExamplesTodayPanelTest` | The second panel under examples 1 to 3: its two documents and its table, row by row; its rows read from the surface's full schema, so the pricing, the venue and what is stored leave every row and both documents as they were; example 4's keys on the surface's side only; the classic twin's page. |
+| `Kernel\ExamplesTodayPanelTest` | The second panel under examples 1 to 3: its two documents and its table, row by row; its rows read from the resource's full schema, so the pricing, the venue and what is stored leave every row and both documents as they were; example 4's keys on the resource's side only; the classic twin's page. |
 | `Unit\ExamplesReadmeTest` | This page against the files it quotes, and its Drush commands. |
 | `Functional\ExamplesRoutesTest` | Every route answers an administrator and refuses anonymous; the landing page; both panels under example 3, and a save through it; the classic twin's page with its two documents, and a save through it. |
 | `FunctionalJavascript\ExamplesAjaxRefreshTest` | In a browser: example 2's venue replaces the room and the capacity and leaves the venue the same node, the orphaned room on its empty option with the stale marker and the capacity back at 1000; a room then narrows the capacity and loses `- Select -`. Example 3's paid pricing swaps the note for a price and a currency, and leaves the second panel's table and its two documents as they were. |

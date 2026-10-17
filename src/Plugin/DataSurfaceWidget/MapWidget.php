@@ -83,7 +83,7 @@ final class MapWidget extends DataSurfaceWidgetBase implements ContainerFactoryP
     if ($definition->isRequired()) {
       // A details holds no value of its own, so this paints the required
       // marker on the summary and nothing else: what makes the map
-      // required is the surface, checked in the pipeline's validate().
+      // required is the data surface, checked in the pipeline's validate().
       // Without it a required map is the one required key on a generated
       // form with no marker at all.
       $element['#required'] = TRUE;

@@ -6,14 +6,14 @@ namespace Drupal\data_surface_test\Plugin\Condition;
 
 use Drupal\Core\Condition\Attribute\Condition;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\data_surface\Surface\Attribute\UsesSurface;
-use Drupal\data_surface_test\Surface\TestConditionSurface;
+use Drupal\data_surface\Resource\Attribute\UsesStructure;
+use Drupal\data_surface_test\Structure\TestConditionStructure;
 use Drupal\data_surface\Plugin\Condition\DataSurfaceConditionBase;
 
 /**
- * A condition that adopts surfaces and says nothing else about settings.
+ * A condition that adopts structures and says nothing else about settings.
  *
- * #[UsesSurface] and the two methods the condition host asks for; the
+ * #[UsesStructure] and the two methods the condition host asks for; the
  * negate checkbox core owns is still there, because the base class keeps
  * the host's own half.
  *
@@ -24,7 +24,7 @@ use Drupal\data_surface\Plugin\Condition\DataSurfaceConditionBase;
   id: 'data_surface_test_condition',
   label: new TranslatableMarkup('Data surface test condition'),
 )]
-#[UsesSurface(TestConditionSurface::class)]
+#[UsesStructure(TestConditionStructure::class)]
 final class DataSurfaceTestCondition extends DataSurfaceConditionBase {
 
   /**
@@ -40,7 +40,7 @@ final class DataSurfaceTestCondition extends DataSurfaceConditionBase {
   /**
    * {@inheritdoc}
    *
-   * The word standing for the stored mode is read from the surface's own
+   * The word standing for the stored mode is read from the structure's own
    * option set, which is derived from the constraint that validates the
    * value. A summary cannot drift from what the setting means, because
    * there is only one place either of them is written down.

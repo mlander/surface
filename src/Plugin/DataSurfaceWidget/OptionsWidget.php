@@ -91,7 +91,7 @@ final class OptionsWidget extends DataSurfaceWidgetBase implements ContainerFact
    * optional select keeps it besides, because choosing nothing is one of
    * its answers. A valid choice is a value the list offers — what is
    * stored, or failing that the declared default, since the form builder
-   * hands over whichever applies and the surface author chose the
+   * hands over whichever applies and the shape's author chose the
    * default. Anything else comes up on the empty option, selected: a key
    * never answered, and a stored value the list no longer offers.
    */
@@ -118,7 +118,7 @@ final class OptionsWidget extends DataSurfaceWidgetBase implements ContainerFact
       // where that answer is rendered: an element built from a list read
       // out of site state may only be cached for as long as that state
       // holds. Without this the whole declaration is computed and
-      // dropped. (The surface's own cacheability is a separate half.)
+      // dropped. (The data surface's own cacheability is a separate half.)
       CacheableMetadata::createFromObject($set)->applyTo($element);
     }
     return $element;
@@ -170,7 +170,7 @@ final class OptionsWidget extends DataSurfaceWidgetBase implements ContainerFact
       $element[self::STALE_KEY] = $value;
       if ($required) {
         // Empty is not a refusal here, it is "keep": so not core's
-        // required check, which would refuse it before the surface is
+        // required check, which would refuse it before the data surface is
         // asked. The marker stays on the label, where it is drawn.
         $element['#required'] = FALSE;
         $element['#label_attributes']['class'] = ['js-form-required', 'form-required'];
@@ -178,7 +178,7 @@ final class OptionsWidget extends DataSurfaceWidgetBase implements ContainerFact
     }
     elseif ($required) {
       // First entry: nothing stored, so nothing to keep, and saving with
-      // the empty option still selected is refused in the surface's own
+      // the empty option still selected is refused in the data surface's own
       // words. Core's required check runs first and a form state keeps
       // only the first error on an element, so its generic "field is
       // required" would otherwise be the one shown.

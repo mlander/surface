@@ -1,7 +1,7 @@
 # Decisions
 
-[The pattern](pattern.md) says what a surface, an alter, a situation, a
-subsurface, a target and an access class are. Building it meant
+[The pattern](pattern.md) says what a resource, a structure, an alter,
+an operation, storage and an access class are. Building it meant
 deciding points the pattern did not cover. Each is here, once, grouped
 by topic: what was decided, in one or two sentences, and why. They are
 written for the module's owner to accept or change; changing one is a
@@ -10,24 +10,96 @@ code change at the place its entry names.
 A point that comes up undecided while working on the module is added
 here, as an entry marked *open*, rather than as a comment in the code.
 
+## Vocabulary
+
+### Resources, structures and operations
+
+What the module first called a surface is now one of two kinds, and
+what it called a situation is an operation. A **resource** is a thing
+with identity and storage that operations read and write; the form, the
+tool, the route and the schema are derived from it
+(`#[Resource(id, identity:, storage:, access:)]`, `ResourceInterface`).
+A resource may live in a config object, a config entity, State, a
+plugin's settings or a content entity, and only its storage
+(`ResourceStorageInterface`: `load()`, `prepare()`, `commit()`) knows
+which. The examples' registration settings are one config object and
+name no identity keys: a resource with no identifiers, such as a
+settings object, is a singleton resource. A content type is a config
+entity whose identity is its machine name, and a basic page,
+`entity.content:node.page`, is the same shape applied to content. A
+**structure** is a shape with members and no identity or storage of its
+own: it is attached to a parent, fills a slot as a variant, or is the
+configuration of the plugin that names it (`#[Structure(id, access:)]`,
+`StructureInterface`). Both extend `DefinesInputsInterface`, whose static
+`defineInputs()` is all they share by contract, and one
+`ResourceDefinition` describes either and says its `kind`. A way a
+resource is asked for is an **operation** (`#[Operation]`, returning an
+`OperationContext` whose `id` is the operation's).
+
+The words are Smithy's, where every named type is a shape, a structure
+is a shape composed of members, a resource is a shape with identifiers
+and the lifecycle operations that act on it, and an operation is what a
+caller invokes. They say what the old word did not: whether a class can
+be reached on its own. A resource can, through its operations; a
+structure only through what holds it. Operation is also the word Drupal
+already asks access by: an entity's access is asked per operation, and
+here an operation's permission and then the access class are asked the
+same way. A structure may still declare operations, but only for its
+container to choose between (the larder's spice rack, invoked through
+`edit` or `restock`); asked on its own, it is the container that is
+reached.
+
+The attribute decides the kind, not the directory: a module's
+`src/Resource/` and `src/Structure/` are scanned as one list, so a class
+moved between them changes nothing, and the two directories are for the
+reader. Alters are in `src/Alter/` and reach both kinds. Discovery
+refuses a class carrying both attributes, one that does not implement
+its kind's interface, and a `#[Resource]` that names no storage, no
+identity and no plugin that hosts it, since everything it says a
+structure says. A `#[Structure]` cannot name identity or storage: its
+attribute has no such arguments. A derived resource is of the kind its
+values say: storage or identity makes it a resource (a content entity
+bundle), neither a structure (one of its fields, stored by the entity).
+
+The project keeps its name, Data Surface, and the engine keeps the name
+of what it seals (`DataSurfaceInterface`, a *data surface*); the served
+contract keeps its `surface` and `situation` keys and its `x-surface`
+keyword, and the URL paths their `{surface}` and `{situation}`
+parameters, because clients already read them; tool ids are unchanged.
+(`ResourceRegistry::assertResourceClass()`, `ResourceRegistry::discover()`,
+`ResourceCollectorPass`, `DerivedResource::kind()`)
+
+### A resource has storage or a host
+
+A `#[Resource]` with no storage of its own is accepted when it names
+identity or a plugin names it: a plugin's host supplies the storage, and
+an identity-bearing child (the cupboard's bin, the spice rack) is stored
+by the parent it is attached to, which discovery cannot see, since
+attachment is declared inside `defineInputs()`. One with neither is
+refused at discovery. Asking such a resource for its storage on its own
+is refused by `Resources::storage()`. *Open:* whether an attached
+resource with no storage should be a structure whose identity its parent
+hands it, which would need identity on a structure.
+(`ResourceRegistry::discover()`, `Resources::storage()`)
+
 ## Authoring
 
-### A surface is static
+### A shape is static
 
-`SurfaceInterface::defineInputs()` and `HasOutputsInterface::defineOutputs()`
+`DefinesInputsInterface::defineInputs()` and `HasOutputsInterface::defineOutputs()`
 are `public static`, and the build step calls them on the class, never
-on an instance; a surface's `#[RefinesInput]` methods are static too,
-and one that is not is refused when the surface is built. Shape is a
+on an instance; a resource's or structure's `#[RefinesInput]` methods
+are static too, and one that is not is refused when it is built. Shape is a
 property of the class: it takes no values, no context and no services,
 and static enforces that by the language rather than by a docblock. It
-also lets a plugin class be its own surface without anything
+also lets a plugin class be its own structure without anything
 constructing the plugin to ask (see [A plugin that is its own
-surface](#a-plugin-that-is-its-own-surface)), and it keeps an object
-out of every cached form: the surface's link in the refiner chain holds
+structure](#a-plugin-that-is-its-own-structure)), and it keeps an object
+out of every cached form: the owner's link in the refiner chain holds
 the class name, where an instance carrying `StringTranslationTrait` was
 measured at about 721 bytes more per cached form. `RefinesInputRefiner`
 dispatches a static and an instance method alike, but **a static
-refiner is a static method, a surface's and an alter's alike**: an
+refiner is a static method, an owner's and an alter's alike**: an
 alter is an autowired service and may hold configuration a refiner
 reads, a site's shipping zones, say, and a refiner that reads it is a
 runtime refiner, the one kind that may be an instance method (see
@@ -35,12 +107,13 @@ runtime refiner, the one kind that may be an instance method (see
 PHP itself refuses a class that implements
 the interface with an instance `defineInputs()`, so discovery names the
 one that dropped the interface to get one past the compiler.
-(`Surfaces::buildSurface()`, `Surfaces::assertStaticOnSurface()`,
-`SurfaceRegistry::assertSurfaceClass()`)
+(`Resources::buildResource()`, `Resources::assertStaticOnResource()`,
+`ResourceRegistry::assertResourceClass()`)
 
 Translatable strings in static context use the global `t()`: a
-surface's shape, refiners and situations, an alter's static refiners
-(with `PluralTranslatableMarkup` for a plural), a plugin's static
+resource's or structure's shape, refiners and operations, an alter's
+static refiners (with `PluralTranslatableMarkup` for a plural), a
+plugin's static
 protocol methods, an enum's labels, a value object's static helper.
 `t('Label')` returns the same lazy `TranslatableMarkup` that
 `new TranslatableMarkup('Label')` does, and string extraction finds
@@ -49,7 +122,7 @@ which does not apply where nothing can be injected, and
 `DrupalPractice` does not flag `t()` in a static method.
 `Drupal.Semantics.FunctionT` holds it to literal strings, so a value is
 always a placeholder. `new TranslatableMarkup` stays only inside
-attribute arguments (`#[Situation(label:)]`, plugin attributes), where
+attribute arguments (`#[Operation(label:)]`, plugin attributes), where
 a function call is not allowed; a class the container builds keeps
 injecting `string_translation` and calling `$this->t()`.
 
@@ -57,8 +130,8 @@ injecting `string_translation` and calling `$this->t()`.
 
 ### A build is not cached
 
-Every `Surfaces::build()` builds afresh; the pattern's "cache by
-(surface id, context)" is not done. A surface describes live site
+Every `Resources::build()` builds afresh; the pattern's "cache by
+(id, context)" is not done. A build describes live site
 state, and a cache keyed by context alone would serve a stale one; what
 that state is, a shape says with `addCacheableDependency()`, for a
 caller that caches. *Not from a code comment; the build step's
@@ -66,51 +139,51 @@ docblock states it.*
 
 ### Child context
 
-A child that invokes no situation of its own sees the context its
+A child that invokes no operation of its own sees the context its
 parent's hands it with `withChild()`; otherwise it sees the parent's
-operation, `creates` and known identity, and not the parent's
+context id, `creates` and known identity, and not the parent's
 constraints, starting values or child contexts. Those three name the
 parent's keys, so handing them down would apply them to keys the child
-does not have. (`Surfaces::childContext()`)
+does not have. (`Resources::childContext()`)
 
 ### One invocation model for both levels
 
-A child is invoked the way a surface asked on its own is, through a
-situation of its own, so that its permission, its access class, its
-alters' `situations:` and its known identity mean the same thing at
+A child is invoked the way a resource asked on its own is, through an
+operation of its own, so that its permission, its access class, its
+alters' `operations:` and its known identity mean the same thing at
 both levels. The motivating case is an entity form whose every field is
 a child, each answering for itself whether this person may change it,
-see it, or neither. Which situation is decided when the parent is
+see it, or neither. Which operation is decided when the parent is
 built, in this order: the one the parent's context names
-(`withChild($key, situation: 'enter', known: [...])`); else the child's
-situation whose id is the parent's operation;
-else the child's default (`#[Situation(default: TRUE)]`, at most one);
+(`withChild($key, operation: 'enter', known: [...])`); else the child's
+operation whose id is the parent's context id;
+else the child's default (`#[Operation(default: TRUE)]`, at most one);
 else none, and the child inherits as it always did. The parent's
-operation is only a hint, because the parent's verbs are the parent's:
+context id is only a hint, because the parent's verbs are the parent's:
 a field's `reuse` means nothing to its storage, and a child may have no
-situation for a verb at all, so a match is used when there is one and
+operation for a verb at all, so a match is used when there is one and
 never required; a match, or the default, that needs identity the parent
 does not know is passed over for the next step, because a context that
 knows nothing yet is built on purpose (a tool's static definition). Naming comes first because it is the parent saying so
 in so many words, and a name the child does not declare is refused
-rather than skipped. The child's situation takes its arguments by name
+rather than skipped. The child's operation takes its arguments by name
 from the identity the parent handed it, then from the parent's; the
 context it returns knows both, its own known keys winning on a clash,
-because the child's situation is the authority on the child. A context
+because the child's operation is the authority on the child. A context
 handed whole (`withChild($key, $context)`) comes before all of these and
-is taken as it is, invoking no situation of the child's even when its
-operation is one of them: the parent built it.
+is taken as it is, invoking no operation of the child's even when its
+id names one of them: the parent built it.
 
 However the child was invoked (named, matched, the default, inherited,
 or handed whole), its access class answers, open, locked or omitted, in
 the context it was invoked in, and what that answer read reaches the
-parent's cacheability. The permission of a situation is asked only where
-the build resolved that situation (named, matched or the default).
+parent's cacheability. The permission of an operation is asked only where
+the build resolved that operation (named, matched or the default).
 Permission and access are two questions. A permission is about entering
-a situation, and a parent that built its child's context itself took
+an operation, and a parent that built its child's context itself took
 responsibility for that entry, so the child's permission is not asked
 again: a field's reuse and edit build its storage through
-`FieldStorageSurface::edit()`, and the field's own permission is the
+`FieldStorageResource::edit()`, and the field's own permission is the
 gate. Access is about what may be done with what is there, and only
 access composes down the tree. A module like field_permissions hides a
 single field through access, so a context handed whole must not be a
@@ -118,54 +191,56 @@ way around it: were the handed path to skip the child's access class,
 any parent could open a field its access closed by building the field's
 context itself. An inherited child with no access class is asked
 nothing and stays open.
-(`Surfaces::invokeChild()`, `Surfaces::childSituationContext()`,
-`Surfaces::childAccess()`, `SurfaceContext::withChild()`)
+(`Resources::invokeChild()`, `Resources::childOperationContext()`,
+`Resources::childAccess()`, `OperationContext::withChild()`)
 
-### Operation is the situation id
+### A context's id is the operation id
 
-A situation whose context carries an operation other than its own id is
-refused when the situation is asked. The pattern says the operation *is*
-the situation id; enforcing it is what lets alters (`situations:`),
-permissions and catalogues trust it. A situation built on another calls
-`withOperation()`. (`Surfaces::situation()`)
+An operation whose context carries an id other than its own is
+refused when the operation is asked. The pattern says the context's id
+*is* the operation id; enforcing it is what lets alters (`operations:`),
+permissions and catalogues trust it. An operation built on another calls
+`withId()`. (`Resources::operation()`)
 
-### Constraints and starting values for a subsurface key
+### Constraints and starting values for an attached key
 
-A context constraint or starting value naming a subsurface key is
-refused, and the message points at `withChild()`. A child is narrowed
-and started by its own context, which is the one door through the wall
-between parent and child. (`Surfaces::applyContext()`)
+A context constraint or starting value naming the key a child is
+attached at is refused, and the message points at `withChild()`. A
+child is narrowed and started by its own context, which is the one door
+through the wall
+between parent and child. (`Resources::applyContext()`)
 
 ### Starting values without creating
 
 A context that carries starting values but does not create is refused
-rather than ignored. A thing that exists begins from what its target
+rather than ignored. A thing that exists begins from what its storage
 loads; a silently dropped starting value would be a bug nobody sees.
-(`Surfaces::applyContext()`)
+(`Resources::applyContext()`)
 
 ### Starting values are defaults
 
 A starting value becomes the key's declared default for that build
 only. That is exactly what a starting value is to the engine: what the
-caller sees first and may replace. (`Surfaces::applyContext()`)
+caller sees first and may replace. (`Resources::applyContext()`)
 
 ### Known keys that are not identity
 
-A known key that is not one of `#[Surface(identity:)]` is not locked;
-it stays on the context for the target and the access class to read.
-`FieldStorageSurface::edit()` knows the storage's entity type and field
-name this way, which its target loads by, while `field_type`, its one
+A known key that is not one of `#[Resource(identity:)]` is not locked;
+it stays on the context for the storage and the access class to read.
+`FieldStorageResource::edit()` knows the field storage's entity type and
+field name this way, which `FieldStorageStorage` loads by, while
+`field_type`, its one
 identity key, is locked. (Before storage settings existed, the field
 type was known the same way; it became identity when it started
 choosing the settings slot.)
 
 ### An entity parameter given as an id
 
-A route parameter or tool input for a situation parameter typed as an
+A route parameter or tool input for an operation parameter typed as an
 entity interface is loaded by the one entity type whose class satisfies
 that type; a type several entity types satisfy is taken only as an
 object. A guess between entity types would load the wrong thing.
-(`SituationArguments`)
+(`OperationArguments`)
 
 ## Refinement
 
@@ -175,16 +250,16 @@ The engine runs a key's refiners once every sibling any of them watches
 has a value, so a key refined by two methods watching different siblings
 waits for the union. The pattern runs each method once its own siblings
 have values; gating per key is what the engine's refinement edges, the
-form's AJAX rebuild and the discard cascade already ride, and no surface
-has needed finer. Per-method gating is listed in `ROADMAP.md`, after
-the rework, for when a case needs it. (`Surfaces::bindRefiners()`)
+form's AJAX rebuild and the discard cascade already ride, and nothing
+shipped has needed finer. Per-method gating is listed in `ROADMAP.md`, after
+the rework, for when a case needs it. (`Resources::bindRefiners()`)
 
 ### A refiner that watches nothing
 
 It runs once, at build, after the context is applied; its result is
-held to the narrowing check and is what the surface advertises. The
+held to the narrowing check and is what the data surface advertises. The
 pattern says it "runs once" without saying when; at build is the only
-time that gives every caller the same answer. (`Surfaces::bindRefiners()`)
+time that gives every caller the same answer. (`Resources::bindRefiners()`)
 
 ### Sibling values are coerced
 
@@ -215,13 +290,14 @@ and it lives in `DataSurface::refine()` itself, so the form, the AJAX
 rebuild, the pipeline's validate, the served contract and the React
 refine all get it from one place. The check is
 `Refinement\WatchedValueCheck`, typed data's own validation, sealed
-into every surface the build step makes and serialized by its service
-id; a surface sealed without one, which only the engine's tests build,
+into every data surface the build step makes and serialized by its
+service id; a data surface sealed without one, which only the engine's
+tests build,
 hands every configured value over. A refiner may therefore assume what
 it is handed satisfies its sibling's constraints, and
 `RegistrationComplianceAlter` tests only that a licence is there.
 (`DataSurface::refine()`, `DataSurface::refusedWatchedValues()`,
-`Surfaces::buildSurface()`)
+`Resources::buildResource()`)
 
 ### Alters' refiners in the owner's chain
 
@@ -231,17 +307,17 @@ more values on with `extendChoices()`, it is that contribution's
 refiner instead, handed the alter's values only. The engine keeps one
 chain per contribution, so an alter can tighten the owner's values
 without ever being able to take another module's away.
-(`Surfaces::bindRefiners()`)
+(`Resources::bindRefiners()`)
 
 ### Cacheability on the shape
 
 `ShapeInterface::addCacheableDependency()` lets the owner's shape say
-what site state it read; the sealed surface carries it. An alter cannot,
+what site state it read; the data surface carries it. An alter cannot,
 because what it adds reaches no further than the owner's keys, and a
 static refiner cannot, because it calls no service. A runtime refiner
 does read site state, and says nothing of what: its link is max-age 0
 (see [Static by default, runtime by declaration](#static-by-default-runtime-by-declaration)).
-(`SurfaceShape`)
+(`ResourceShape`)
 
 ### Static by default, runtime by declaration
 
@@ -255,7 +331,7 @@ static refiners give it in the full schema and carries `runtime: true`;
 the schema for one set of values, which describes that moment, is
 refined by it like any other; the pipeline runs it on every validate and
 submit and has the last word, as it always had. One that watches nothing
-runs on every refinement rather than once at build, and a surface
+runs on every refinement rather than once at build, and a data surface
 refined through one is max-age 0. The engine knows the kind by the link:
 the build step binds a class's runtime methods in a link of their own,
 wrapped in `Refinement\RuntimeRefiner`, and a key's entry keeps which
@@ -286,7 +362,7 @@ config is the plain case), and no declaration alone stops it:
   alters' refiners that only translated to static methods calling
   `t()` and constructing `PluralTranslatableMarkup`; an alter's
   injected service, the honest way to read state, is now only reachable
-  from a runtime refiner. (`Surfaces::assertStaticUnlessRuntime()`)
+  from a runtime refiner. (`Resources::assertStaticUnlessRuntime()`)
 - **Observational, under `assert()`.** In development and tests a
   static refiner's call runs with the global container replaced by a
   wrapper that throws when asked for any service or parameter but the
@@ -313,7 +389,7 @@ the rule left to write would flag `\Drupal::` and static state inside a
 static refiner, which the guard already catches whenever a test runs the
 refiner; it would add reach to refiners no test exercises, which is
 worth a rule once there are third-party refiners to hold to it.
-(`RefinesInput`, `Surfaces::bindRefiners()`, `RuntimeRefiner`,
+(`RefinesInput`, `Resources::bindRefiners()`, `RuntimeRefiner`,
 `ContractEmitter::frame()`, `ContractEmitter::enumerate()`)
 
 ## Alters
@@ -324,13 +400,14 @@ An alter's key is mounted at `third_party_settings.<module>.<key>`
 (outputs: `third_party_outputs.<module>.<key>`), not beside the
 owner's. The owner's storage and schema then never have to know a
 contributor's keys, which is how core keeps third-party settings.
-(`SurfaceShapeAdditions`)
+(`ResourceShapeAdditions`)
 
 ### An alter cannot attach
 
 `attach()` on an alter is refused. An alter's keys are mounted under
-its module, and a subsurface inside that mount is not built yet.
-(`SurfaceShapeAdditions::attach()`)
+its module, and an attached structure inside that mount is not built
+yet.
+(`ResourceShapeAdditions::attach()`)
 
 ### An alter refines its own mounted key
 
@@ -344,7 +421,7 @@ so the form rebuilds and the discard cascade drops that one key rather
 than the whole mount; the mount itself is gated on the union of what
 its keys watch. *Changed for example 4 of the examples, which needed a
 key the alter adds to tighten with the owner's capacity; until then
-such a method was refused.* (`Surfaces::bindRefiners()`,
+such a method was refused.* (`Resources::bindRefiners()`,
 `RefinesInputRefiner::refineMounted()`, `DefinitionMap::refinementPaths()`)
 
 ### An alter watches its own mounted key
@@ -369,22 +446,23 @@ licence while the stewards beside it watch the capacity is no cycle.
 *Changed for example 4 of the examples; until then watching any mounted
 key was refused, pending dotted refinement paths, `ROADMAP.md` item 16,
 of which this is the one case the third-party mount needs.*
-(`Surfaces::assertNotWatchingForeignMount()`, `Surfaces::mountedWatches()`,
+(`Resources::assertNotWatchingForeignMount()`, `Resources::mountedWatches()`,
 `DataSurface::dependencyValues()`, `DataSurfaceBuilder::edgesOf()`)
 
 ### A storage shape for a mount
 
 An alter whose keys are asked for in one shape and stored in another
 implements `HasStorageShapeInterface`; its shape applies to its own
-module's mount and nothing else. The alter does not own the target, so
-it hands the translation to the surface, and the composed target
-applies it. (`Surfaces`, `SurfaceTargetAdapter`)
+module's mount and nothing else. The alter does not own the storage, so
+it hands the translation to the data surface, and the composed storage
+applies it. (`Resources::buildResource()`, `StorageAdapter`)
 
 ### Required inside a plain map
 
-A required property inside a plain map (a key that is neither a
-subsurface nor a slot, such as the mount alters' keys live in) that
-holds no value is refused with the surface's own "is required"
+A required property inside a plain map (a key that is neither an
+attached structure nor a slot, such as the mount alters' keys live in)
+that holds no value is refused with the pipeline's own "is required"
+
 message, filed at its path, whether or not the map itself holds
 anything; typed data's NotNull for the same path is dropped so it is
 said once. No child judges a plain map's properties, and NotNull alone
@@ -421,37 +499,38 @@ alter alike, and `add()` with a NULL default means "no default", not a
 declared NULL. A second `add()` silently replacing the first would be
 an alter changing the owner's key. (`ShapeAdapterBase::add()`)
 
-## Subsurfaces
+## Attached structures
 
 ### A slot nothing fills
 
 A slot with no variant stays a placeholder and its deciding key gains
-an empty `Choice`, so nothing can be chosen. Refusing the whole surface
+an empty `Choice`, so nothing can be chosen. Refusing the whole parent
 would break it on every site without a variant module.
-(`Surfaces::slotsOf()`)
+(`Resources::slotsOf()`)
 
 ### Derived variants
 
-A value no `#[SurfaceVariant]` class fills may get a variant derived
+A value no `#[Variant]` class fills may get a variant derived
 from a description that already exists, through a
 `DerivedVariantsInterface` service: a field type's config schema fills
 the field's settings slot and the storage's. A derived
-variant is a shape with no class, so no alter, refiner, target or access
+variant is a shape with no class, so no alter, refiner, storage or access
 class of its own, and a declared variant always wins.
-(`Surfaces::buildSurface()`)
+(`Resources::buildResource()`)
 
-### A parent watching a subsurface
+### A parent watching a child
 
-A parent's refiner that watches a whole subsurface key is refused, as
-is one that refines it. The pattern says a parent cannot refine into a
+A parent's refiner that watches the whole key a child is attached at is
+refused, as is one that refines it. The pattern says a parent cannot
+refine into a
 child and a child cannot read a parent's value; refusing the watch too
-makes the wall hold both ways. (`Surfaces::assertWalled()`)
+makes the wall hold both ways. (`Resources::assertWalled()`)
 
-### Outputs hold no subsurfaces
+### Outputs hold no children
 
 `attach()` and `attachBy()` on outputs are refused. The pattern lets an
 output vary by an input that way, but the engine's output map has no
-subsurfaces yet. (`ShapeAdapterBase`)
+children yet. (`ShapeAdapterBase`)
 
 ## Collections
 
@@ -459,29 +538,29 @@ subsurfaces yet. (`ShapeAdapterBase`)
 
 A collection (`attachList()`) is a list of child invocations: every
 item is the child, built once for the list in the context its
-situation resolves, as `attach()` builds its child, and refined,
+operation resolves, as `attach()` builds its child, and refined,
 accepted and validated by the child in its own frame, each item's
 context knowing its `delta`. Built once because a shape cannot depend
 on a value, and how many items there are is a value; the frames differ
 only in the values they are handed and their position. The entry
-carries a `SurfaceList` rather than an attachment, so the key is the
+carries a `Collection` rather than an attachment, so the key is the
 parent's own and every door reads it as a list: an array of references
 to the child's def in both contracts, a list input of the child's maps
 in the tool, a details of item details on the form. Each item's
-context is carried (`SurfaceList::contextFor()`), and nothing reads an
-item's delta yet: a child that names a target of its own is not routed
+context is carried (`Collection::contextFor()`), and nothing reads an
+item's delta yet: a child that names storage of its own is not routed
 per item, and the parent stores the list. *Open:* routing an item to
-its child's target, which needs an identity key on the child to say
-which stored item it is. (`Surfaces::buildSurface()`, `SurfaceList`)
+its child's storage, which needs an identity key on the child to say
+which stored item it is. (`Resources::buildResource()`, `Collection`)
 
 ### Access once per list
 
-A collection's child is invoked through its situation once for the
+A collection's child is invoked through its operation once for the
 list, and that access answers for the list: open, locked (the list key
 locked, so every item and the form's add and remove controls) or
 omitted (the key left out). Field access is per field, not per delta,
 and an item has no subject of its own to be asked about before it
-exists. (`Surfaces::buildSurface()`)
+exists. (`Resources::buildResource()`)
 
 ### Empty items are dropped
 
@@ -493,51 +572,52 @@ a form agree, and the form drops it on extraction too, to flag a later
 item's violation on the row it was drawn as. An item is accepted over
 the child's defaults, not over what is stored at its delta, since the
 list is sent whole and an item may have moved.
-(`SurfaceList::isEmptyItem()`, `DataSurfacePipeline::acceptCollection()`)
+(`Collection::isEmptyItem()`, `DataSurfacePipeline::acceptCollection()`)
 
 ### Count is the parent's
 
 The list key belongs to the parent: its Count, and any constraint on
 the list itself, is the parent's to declare (`min`, `max`), to narrow
-with a `#[RefinesInput]` method on the key, and to narrow with a
-situation's `withConstraint()`. Each item's rules are the child's. So a
+with a `#[RefinesInput]` method on the key, and to narrow with an
+operation's `withConstraint()`. Each item's rules are the child's. So a
 parent's refiner may refine the list and may not watch it, a parent
 refiner that narrows inside the item it is handed is refused when the
-surface is refined, and validation says the Count about the list and
+parent is refined, and validation says the Count about the list and
 each item's violations under its delta. Count is compared by its
 bounds, as Length and Range are, so narrowing it is checkable at all;
-no shipped surface carried a Count before, so nothing that narrowed
+nothing shipped carried a Count before, so nothing that narrowed
 one changed verdict.
 (`DataSurface::assertItemsUntouched()`, `Narrowing::COMPARATORS`)
 
-## Targets
+## Storage
 
 ### A child learns its parent's accepted identity
 
 A routed child is prepared and committed in its own context plus the
 identity values its parent accepted that it does not already know. A
-creating parent's identity exists only once accepted, and a child target
-loads by identity. (`SurfaceTargetAdapter`)
+creating parent's identity exists only once accepted, and a child's
+storage loads by identity. (`StorageAdapter`)
 
 ### Write order
 
 An attached child is committed before its parent, a slot's variant
 after. An attached child is a part the parent is built on (a field's
 storage); a variant lives on what the parent writes (a field's
-settings). (`SurfaceTargetAdapter::commit()`)
+settings). (`StorageAdapter::commit()`)
 
 ### Who produces outputs
 
-A surface's outputs are what its target's `load()` hands back under an
-output's name, once the values are committed. The target already knows
-how to read the thing it wrote; a second verb would say the same twice.
-(`SurfaceTargetAdapter::outputs()`)
+A resource's outputs are what its storage's `load()` hands back under
+an output's name, once the values are committed. The storage class
+already knows how to read the thing it wrote; a second verb would say
+the same twice.
+(`StorageAdapter::outputs()`)
 
 ## Access
 
 ### Access has three answers
 
-Access answers open, locked or omitted (`Surface\SurfaceAccess`, a value
+Access answers open, locked or omitted (`Resource\AccessAnswer`, a value
 object carrying cacheability like an access result), because field
 access has a middle: a field one may see and not change. An access class
 may still return core's `AccessResultInterface`, and the interface's
@@ -546,9 +626,9 @@ implementing it unchanged. Core's answer is read as allowed is open and
 forbidden is omitted at a child, denied at the top; neutral leaves a
 child open, since its parent's access already let the caller in and a
 child's access only narrows what the parent allowed, and is a refusal
-at the top ([Neutral is a refusal for a situation's
-caller](#neutral-is-a-refusal-for-a-situations-caller)). At a child, the
-permission of a situation the build resolved comes first (lacking it
+at the top ([Neutral is a refusal for an operation's
+caller](#neutral-is-a-refusal-for-an-operations-caller)). At a child, the
+permission of an operation the build resolved comes first (lacking it
 omits the child), then the access class, asked however the child was
 invoked ([One invocation model for both
 levels](#one-invocation-model-for-both-levels)), and the narrower answer
@@ -556,11 +636,11 @@ stands. Locked is the existing lock on the parent's key, so no
 door needs a second mechanism. The answer's cacheability is added to
 the parent's builder, so the contract and the form carry
 `user.permissions` when the answer read permissions.
-(`SurfaceAccess`, `Surfaces::childAccess()`)
+(`AccessAnswer`, `Resources::childAccess()`)
 
 ### A permission a child cannot name
 
-A child situation's permission whose `%key` the child's context cannot
+A child operation's permission whose `%key` the child's context cannot
 fill says nothing at a child, where at the top it is a refusal ([An
 unknown placeholder](#an-unknown-placeholder)). At a child the parent's
 own access has already gated the caller, and the one context that knows
@@ -569,44 +649,44 @@ before any subject: there the child is described as it may be, and the
 per call definition, built in the real context, applies the permission.
 Adding a field invokes its storage's `add`, whose permission names the
 entity type the field's context knows; a bare context knows none. For
-the same reason a child situation's permission that resolves to the very
-permission its parent's situation asks says nothing either: the parent's
+the same reason a child operation's permission that resolves to the very
+permission its parent's operation asks says nothing either: the parent's
 gate asked it already, and a child narrows only what the parent allowed.
 That is the storage's case when the field's context does know the
 entity type, so a field is built with its storage for any account, as
 it always was, and only the field's own access decides.
-(`Surfaces::childAccess()`)
+(`Resources::childAccess()`)
 
 ### Omitted is omitted both ways
 
-An omitted child is not in the built surface, so it is in no contract,
+An omitted child is not in the data surface, so it is in no contract,
 no form and no tool input, and a value posted for it is an unknown key,
 which the pipeline already refuses. It is also not read: the read tool
 leaves it out, because a caller who may not see a thing should not
-learn it through the other door. And it is not written: the target
-adapter hands what storage holds under the key back to the parent's
-target, which may store its values whole and would otherwise drop what
+learn it through the other door. And it is not written: the storage
+adapter hands what is stored under the key back to the parent's
+storage, which may store its values whole and would otherwise drop what
 the caller never saw. (`DataSurfaceBuilder::omit()`,
-`SurfaceTargetAdapter::prepare()`)
+`StorageAdapter::prepare()`)
 
 ### Locked at the top
 
-*Open.* A whole surface whose access answers locked, asked on its own,
+*Open.* A whole resource whose access answers locked, asked on its own,
 should render read-only with no save, refuse its write tool and allow
-its read tool. Every caller of `SurfacesInterface::access()` (the route,
+its read tool. Every caller of `ResourcesInterface::access()` (the route,
 the form's floor, the tools, the React controllers) would have to tell
 locked from allowed, which is more than the child case, so for now a
 locked answer at the top is a refusal, the reading that writes nothing.
-(`Surfaces::atTheTop()`)
+(`Resources::atTheTop()`)
 
 ### A variant is open or not offered
 
-A slot's variant invoked through a situation whose access is not open is
+A slot's variant invoked through an operation whose access is not open is
 dropped from the slot, so its deciding value can no longer be chosen,
 and no derived variant is put in its place. The engine has no lock per
 variant, and offering a value whose shape could not be changed is the
 same as not offering it. *Open:* a locked variant shown read-only.
-(`Surfaces::buildSurface()`)
+(`Resources::buildResource()`)
 
 ### A chosen variant may refuse
 
@@ -618,67 +698,67 @@ parent, never allow. The build leaves a variant that is not open out of
 the slot ([A variant is open or not
 offered](#a-variant-is-open-or-not-offered)), so it is looked up among
 the slot's declared variants. A field type's settings refuse the field
-they belong to this way, and nothing below a surface can open what its
+they belong to this way, and nothing below a parent can open what its
 own access closed. Every other child's access decided its own keys when
 it was built ([One invocation model for both
 levels](#one-invocation-model-for-both-levels)) and refuses nothing
 above it: a field its access hides is left out of its entity, which is
 not a reason to refuse the entity. This replaces an earlier rule under
-which any child invoking no situation of its own could refuse its
+which any child invoking no operation of its own could refuse its
 parent; it was asked nowhere else, and now that its access answers at
 build, refusing the parent as well would turn a hidden field into a
-refused form. (`Surfaces::access()`, `Surfaces::childAnswers()`)
+refused form. (`Resources::access()`, `Resources::childAnswers()`)
 
-### No declared situation, no permission tier
+### No declared operation, no permission tier
 
-A context whose operation is no declared situation (a plugin host's
+A context whose id names no declared operation (a plugin host's
 `configure`) has no permission tier: the access class alone answers, or
 neutral when there is none. The host already checked the permission
-that guards its own form. (`Surfaces::ownAccess()`)
+that guards its own form. (`Resources::ownAccess()`)
 
 ### An unknown placeholder
 
-A `%key` in a situation's permission that the context does not know
+A `%key` in an operation's permission that the context does not know
 makes access forbidden. The permission cannot be named, and guessing
-one would grant or refuse the wrong thing. (`Surfaces::ownAccess()`)
+one would grant or refuse the wrong thing. (`Resources::ownAccess()`)
 
-### Neutral is a refusal for a situation's caller
+### Neutral is a refusal for an operation's caller
 
-A route or tool addressing a situation reads a neutral answer as a
-refusal (`DataSurfaceAccess::decisive()`). The situation owns its
-operation, so nothing else is going to allow it. (`SurfaceSituationTool`,
-`SituationAccessCheck`)
+A route or tool addressing an operation reads a neutral answer as a
+refusal (`DataSurfaceAccess::decisive()`). Asked on its own, an
+operation has no parent to allow it, so nothing else is going to.
+(`ResourceOperationTool`, `OperationAccessCheck`)
 
 ## Tools
 
 ### Identity before the parameters
 
-A tool's static definition reads which identity keys a situation knows
+A tool's static definition reads which identity keys an operation knows
 off its signature: a scalar parameter supplies its own name, an entity
 parameter every identity key no scalar names. The tool then refines
-`values` to the real context once the parameters arrive. What a
-situation knows is only on the context it returns, and a static
-definition cannot call it. (`SituationInputs::inputs()`)
+`values` to the real context once the parameters arrive. What an
+operation knows is only on the context it returns, and a static
+definition cannot call it. (`OperationInputs::inputs()`)
 
 ### A parameter named for a key
 
-A scalar situation parameter named for one of the surface's plain keys
+A scalar operation parameter named for one of the resource's plain keys
 is described as that key: its label, meaning and allowed values. It is
 that key's value, so it says what the key says.
-(`SituationInputs::parameterInput()`)
+(`OperationInputs::parameterInput()`)
 
-### A plugin's surface is no tool
+### A plugin's structure is no tool
 
-A surface any plugin names with `#[UsesSurface]` gets no tool,
+A class any plugin names with `#[UsesStructure]` gets no tool,
 whatever it declares. Only the plugin's host holds the instance it
-configures. (`SurfaceSituationToolDeriver`, `SurfaceCatalogue::standalone()`)
+configures. (`ResourceOperationToolDeriver`, `ResourceCatalogue::standalone()`)
 
 ### A permission nothing can name is no tool
 
-A situation whose permission has a `%key` none of its parameters can
+An operation whose permission has a `%key` none of its parameters can
 supply is no tool: it could never be allowed. `field.storage`'s `add`
-is only ever a field's child. (`SurfaceSituationToolDeriver`,
-`SurfaceCatalogue::standalone()`)
+is only ever a field's child. (`ResourceOperationToolDeriver`,
+`ResourceCatalogue::standalone()`)
 
 ### A violation summary is plain text
 
@@ -686,39 +766,39 @@ A derived tool's refusal names each violation with its message rendered
 as plain text before the line is handed on as a placeholder value. The
 line is escaped there, so a message's own placeholder markup (Range's
 `<em class="placeholder">`) would otherwise reach the caller, Drush
-included, as literal tags. (`SurfaceResultReportingTrait::violationSummary()`)
+included, as literal tags. (`ResultReportingTrait::violationSummary()`)
 
-### Required is the surface's, and defaults are what is stored
+### Required is the resource's, and defaults are what is stored
 
-A derived tool's `values` property is required exactly when the surface,
-built for the situation, requires the key, whatever its default and
-whether or not the situation creates; built in a real context that
-changes a thing that exists, each property defaults to what the target
+A derived tool's `values` property is required exactly when the resource,
+built for the operation, requires the key, whatever its default and
+whether or not the operation creates; built in a real context that
+changes a thing that exists, each property defaults to what its storage
 loads now (a secret to nothing). `drush tool:info` has to say what the
-surface requires and what is there. The cost is the Tool API's: it
+resource requires and what is there. The cost is the Tool API's: it
 refuses a required map property a payload leaves out, default or not
 (`TypedInputsTrait::validateInputValue()`), so an edit sends every
-required key. A situation that needs a subject keeps declared defaults
+required key. An operation that needs a subject keeps declared defaults
 until its parameters refine it. A static definition is cached, so its
 stored defaults are as of the last discovery; a write through the tool
 clears it, a write by any other path shows at the next cache rebuild.
-(`SituationInputs::values()`, `SurfaceInputDefinitions::withStored()`,
-`SurfaceSituationTool::doExecute()`)
+(`OperationInputs::values()`, `InputDefinitions::withStored()`,
+`ResourceOperationTool::doExecute()`)
 
-### Which situations read
+### Which operations read
 
-A situation that can be asked on its own has a read tool when it changes
+An operation that can be asked on its own has a read tool when it changes
 a thing that exists: one that needs nothing, by its context not
 creating; one that needs a subject, by its parameters naming one thing
 whole, a single entity with no scalar identity key beside it, or a
 scalar for every identity key. The context is the truth and cannot be
 asked before the subject is named, and `creates` is not on
-`#[Situation]` ([Whether a situation creates](#whether-a-situation-creates)), so the signature is
+`#[Operation]` ([Whether an operation creates](#whether-an-operation-creates)), so the signature is
 read, as identity is. A context that turns out to create is refused when
-the read runs. *Open:* whether `#[Situation]` should say `creates`
+the read runs. *Open:* whether `#[Operation]` should say `creates`
 itself, checked against the context the way its id is, which would
-replace the reading. (`SituationDefinition::namesOneThing()`,
-`SurfaceCatalogue::reads()`)
+replace the reading. (`OperationDefinition::namesOneThing()`,
+`ResourceCatalogue::reads()`)
 
 ### A read promises shape, not membership
 
@@ -728,7 +808,7 @@ constraint and no property required. The Tool API holds a tool's outputs
 to their definitions, and a stored value may have gone stale, which a
 read reports and must not fail on; a key storage holds nothing for is
 absent. The vocabulary is on the write tool's input.
-(`SurfaceInputDefinitions::outputFromInput()`)
+(`InputDefinitions::outputFromInput()`)
 
 ### A read leaves a secret out
 
@@ -736,45 +816,47 @@ A secret is never returned by a read, and is not in its output
 definition either: left out, as the write tool's defaults leave it out,
 rather than sent as an empty placeholder a caller could mistake for the
 value. Under a slot, a key any variant keeps secret is left out
-whichever variant holds. (`SurfaceInputDefinitions::secrets()`,
-`SituationInputs::stored()`)
+whichever variant holds. (`InputDefinitions::secrets()`,
+`OperationInputs::stored()`)
 
 ### A static tool definition is one account's
 
-*Open.* A derived tool's static definition builds the surface once, at
+*Open.* A derived tool's static definition builds the resource once, at
 discovery, for whichever account is current then, so a child whose
 access depends on the account is as that account saw it. The `values`
 input is refined for the caller on every call, which is what the
 pipeline holds a payload to, so only the advertised static definition
-can be off. (`SituationInputs::declaredValues()`)
+can be off. (`OperationInputs::declaredValues()`)
 
 ### Reading asks what writing asks
 
-A read tool's access is its write tool's: the situation's permission,
-then the surface's access class, for the context its parameters build.
+A read tool's access is its write tool's: the operation's permission,
+then the resource's access class, for the context its parameters build.
+
 A caller who may not change a thing may not read it through the tool
 either. *Open:* a read permission of its own.
-(`SurfaceSituationToolBase::checkAccess()`)
+(`ResourceOperationToolBase::checkAccess()`)
 
 ## Forms
 
-### A panel inside the situation form
+### A panel inside the operation form
 
 A route may name a read-only panel in `_data_surface_panel`, a service
 id or class implementing `DataSurfaceFormPanelInterface`, the way it
-names a cosmetic layer. The situation form places what it returns
-inside the surface container, and the AJAX rebuild replaces it along
-with the dependents of whatever changed, because a panel describing the
-surface as it stands has to follow every change; it is handed the values the elements are built with,
-not a refined surface, so it can tell which variant a slot shows. The
+names a cosmetic layer. The operation form places what it returns
+inside the form's `surface` container, and the AJAX rebuild replaces it
+along with the dependents of whatever changed, because a panel
+describing the resource as it stands has to follow every change; it is
+handed the values the elements are built with, not a refined data
+surface, so it can tell which variant a slot shows. The
 contract panel lives in `data_surface_tool`, since half of it is the
-derived tool's JSON Schema. (`DataSurfaceSituationForm::surfacePanel()`)
+derived tool's JSON Schema. (`DataSurfaceOperationForm::surfacePanel()`)
 
 ### An error on the trigger renders inline
 
 A refinement request validates one value, the trigger's, and what is
-wrong with it is said under the trigger, once. A violation the surface
-reports on the trigger is not made a Form API error on that request:
+wrong with it is said under the trigger, once. A violation the data
+surface reports on the trigger is not made a Form API error on that request:
 Form API skips the rebuild once anything has errored, and the
 dependents would come back refined against the answer before this one.
 `flagSurfaceErrors()` holds it in temporary form state instead, the
@@ -784,14 +866,14 @@ by [the rule above](#a-refiner-never-sees-an-invalid-sibling)), and
 `aria-invalid` and the `error` class, printed in the form element
 template's own error slot by the module's preprocess, which is where
 Inline Form Errors would print it, so the two never print it twice.
-The response then replaces the trigger's own wrapper — the one
-exception to never redrawing the element that was touched — and the
+The response then replaces the trigger's own wrapper (the one
+exception to never redrawing the element that was touched), and the
 trigger's next request says it showed an error (`INVALID_INPUT`), so
 it is replaced once more and an error the person fixed is taken away.
 An error Form API's own element validation sets on the trigger, a
 maximum length, does stop the rebuild; it is printed the same way and
 taken back out of the messages at the top, so it is not said twice
-either. The surface's message wins when both have one. On a full
+either. The data surface's message wins when both have one. On a full
 submission nothing changes: core prints every error at the top and
 marks the elements. (`DataSurfaceFormBuilder::flagSurfaceErrors()`,
 `DataSurfaceFormBuilder::refreshSurface()`, `Hook\InlineErrorHooks`)
@@ -799,16 +881,16 @@ marks the elements. (`DataSurfaceFormBuilder::flagSurfaceErrors()`,
 ### A Regex is explained by its message
 
 A pattern is for machines. Wherever the module explains what a key
-allows — the contract panel's "Allows" column, the React app's twin of
-it — a Regex is said in its own `message`, the sentence a refusal is
+allows (the contract panel's "Allows" column, the React app's twin of
+it), a Regex is said in its own `message`, the sentence a refusal is
 reported in, and the pattern stays in the machine schema (`pattern`,
 with the message beside it as `x-surface.patternMessage`). Only a Regex
 with no message falls back to "matches a required format" and the
 pattern in code. Neither the string widget nor the React text input
 puts the pattern on the input: an HTML `pattern` makes the browser ask
 for "the requested format", and Form API's `#pattern` says
-"is not in the right format", both vaguer than the message the surface
-answers with. (`SurfaceContractPanel::regex()`,
+"is not in the right format", both vaguer than the message the data
+surface answers with. (`ContractPanel::regex()`,
 `ContractEmitter::keywords()`, `ContractPanel.tsx`)
 
 ### The empty option rule
@@ -830,12 +912,12 @@ the stash model under them is unchanged:
    is selected: nothing stored and no declared default, or a stored
    value no longer offered. A stored value still offered, or a declared
    default the list offers, is a valid choice, and no empty option is
-   shown — the surface author chose the default.
+   shown: the shape's author chose the default.
 3. On first entry a required select comes up on the empty option, and
    a save leaving it there is refused with the key's own required
    message ("@label is required."), set as the element's
    `#required_error` so core's check, which answers first, says it in
-   the surface's words. A required select standing for a stale value is
+   the pipeline's words. A required select standing for a stale value is
    not `#required` to core, since empty there means keep; its label
    keeps the marker.
 4. An optional select keeps its empty option always. Choosing it on a
@@ -852,95 +934,96 @@ stale entry, as before. (`OptionsWidget::singleSelect()`,
 
 ## Discovery
 
-### Whether a situation creates
+### Whether an operation creates
 
-The catalogue says whether a situation creates only for one that needs
+The catalogue says whether an operation creates only for one that needs
 nothing; one that needs a subject is listed as not knowing. `creates`
-is on the context a situation returns, not on `#[Situation]`, and the
-catalogue builds nothing. (`SurfaceCatalogue::creates()`)
+is on the context an operation returns, not on `#[Operation]`, and the
+catalogue builds nothing. (`ResourceCatalogue::creates()`)
 
 ### A class that is not there
 
-An alter, situation or variant naming a surface class that does not
-load, or that loads and is a surface but was not discovered (its module
-is off) — it carries `#[Surface]`, or it is a plugin that is its own
-surface — is skipped; one naming a class that loads and is no surface
-is refused. A disabled module must not break the site, and a
-typo must not pass silently. (`SurfaceRegistry`)
+An alter, operation or variant naming a class that does not load, or
+that loads and is a resource or structure but was not discovered (its
+module is off: it carries `#[Resource]` or `#[Structure]`, or it is a
+plugin that is its own structure), is skipped; one naming a class that
+loads and is neither is refused. A disabled module must not break the
+site, and a typo must not pass silently. (`ResourceRegistry`)
 
-### `#[UsesSurface]` into the plugin definition
+### `#[UsesStructure]` into the plugin definition
 
 Core's discovery reads only a plugin type's own attribute, so one
-definition alter per plugin host copies `#[UsesSurface]` into the
-definition under `UsesSurface::DEFINITION_KEY`, run last so a swapped
-class is the one read. That is what lets a catalogue list surfaced
-plugins without instantiating any. (`SurfacePluginHooks`)
+definition alter per plugin host copies `#[UsesStructure]` into the
+definition under `UsesStructure::DEFINITION_KEY`, run last so a swapped
+class is the one read. That is what lets a catalogue list the plugins
+that use a structure without instantiating any. (`ResourcePluginHooks`)
 
-### `#[UsesSurface]` is inherited
+### `#[UsesStructure]` is inherited
 
-A subclass inherits its parent's `#[UsesSurface]`; the nearest class
+A subclass inherits its parent's `#[UsesStructure]`; the nearest class
 naming one wins. A subclassed block keeps its parent's form, as it
 would with `blockForm()`. A subclass of a plugin that is its own
-surface is its own surface in turn, inheriting the static shape, so an
+structure is its own structure in turn, inheriting the static shape, so an
 alter of the parent's class does not reach it.
-(`SurfacePluginHooks::usedSurfaceOf()`)
+(`ResourcePluginHooks::usedStructureOf()`)
 
-### A plugin that is its own surface
+### A plugin that is its own structure
 
-`#[UsesSurface]` with no argument means the plugin class is its own
-surface: it implements `SurfaceInterface`, with a static
+`#[UsesStructure]` with no argument means the plugin class is its own
+structure: it implements `StructureInterface`, with a static
 `defineInputs()` and static `#[RefinesInput]` methods, and its
-definition records its own class under `UsesSurface::DEFINITION_KEY`,
-so every host builds it exactly as it builds a named surface. Such a
-surface is found through the plugin definitions
-(`SurfacePlugins::ownSurfaces()`), not a directory: a plugin lives
+definition records its own class under `UsesStructure::DEFINITION_KEY`,
+so every host builds it exactly as it builds a named structure. Such a
+structure is found through the plugin definitions
+(`ResourcePlugins::ownStructures()`), not a directory: a plugin lives
 where its plugin type says. Its id is `<host type>:<plugin id>`, the
 catalogue's name for the plugin, unless the class also carries
-`#[Surface]`, whose id, identity, target and access then apply; a class
-several plugins share (a deriver's derivatives) is one surface, named
+`#[Structure]`, whose id and access then apply; a class
+several plugins share (a deriver's derivatives) is one structure, named
 after the first of them in sorted order. The catalogue lists it as used
 by that same plugin, and an alter targets it by the plugin class. The
 registry's cache id hashes the plugin-own list beside the compiler
 pass's, so a plugin more or less is a different entry. The compiler
-pass never sees such a class, so a target or access class it names is
+pass never sees such a class, so an access class it names is
 not registered as an autowired service; the class resolver builds it,
 which means no constructor arguments or `ContainerInjectionInterface`.
 The demo formatter is written this way and the demo block is not, so
 the two spellings sit side by side.
-(`SurfaceRegistry::discover()`, `SurfacePluginHooks::usedSurfaceOf()`)
+(`ResourceRegistry::discover()`, `ResourcePluginHooks::usedStructureOf()`)
 
-## Derived surfaces
+## Derived resources
 
 ### Derived definitions at discovery
 
-A surface whose shape is the site's (one per bundle, one per field) is
-made by a deriver at discovery, `#[DerivesSurfaces]` on a class
-implementing `SurfaceDeriverInterface`, and cached with the rest of
+A resource or structure whose shape is the site's (one per bundle, one
+per field) is made by a deriver at discovery, `#[DerivesResources]` on a class
+implementing `ResourceDeriverInterface`, and cached with the rest of
 discovery under the cache tags of what it was read from. Not a context
 handed to `defineInputs()`: the shape takes nothing but the shape, so
 that it is the same wherever it is asked for and a static tool
 definition, a catalogue and the full schema can describe it before
 anyone calls; a shape that read a bundle from its context would be a
-different surface in every context, with one id. And not one class per
+different shape in every context, with one id. And not one class per
 bundle: a bundle is site configuration, made and deleted in the UI, and
 a class per bundle would be code generated from config, out of date the
 moment a field is added. The plugin system settled the same question
 the same way, with derivers. What the deriver reads, it reads at
 discovery, so a derivative is listable, addressable and has a tool
 without being built; what changes per request is still refinement and
-access. (`SurfaceRegistry::derive()`, `SurfaceRegistryInvalidator`)
+access. (`ResourceRegistry::derive()`, `ResourceRegistryInvalidator`)
 
-### A derived surface has no class
+### A derived resource has no class
 
-A derived surface is a `SurfaceDefinition` like any other, with `class`
-NULL and what a class would have said carried instead: the methods
-that fill its shapes (`SurfaceCallable`, a class, a method and the bound
+A derived resource or structure is a `ResourceDefinition` like any
+other, with `class` NULL and what a class would have said carried
+instead: the methods
+that fill its shapes (`ResourceCallable`, a class, a method and the bound
 arguments), the base it was derived under and its deriver, a label, a
 description, notes on what the derivation could not carry, and its
 cache tags. Not a sibling class behind a shared interface: every caller
 of the registry reads the same fields of either, and two classes would
 have doubled every signature that takes a definition for no difference
-any caller acts on. Every caller asks for a surface by `name()`, its
+any caller acts on. Every caller asks for a definition by `name()`, its
 class or, for a derived one, its id, which is what the registry is
 keyed by; the build step fills a derived shape through its callable and
 calls a class's static methods otherwise, and that is the whole
@@ -949,52 +1032,52 @@ definition survives the discovery cache, and the refiners bound from it
 survive a cached form, where a closure would not. A static callable
 method is called on the class; an instance method on the class
 resolver's instance, so a deriver's own methods may read site state,
-which is what a derived shape is for. (`SurfaceDefinition::name()`,
-`Surfaces::defineShape()`, `Surfaces::situation()`)
+which is what a derived shape is for. (`ResourceDefinition::name()`,
+`Resources::defineShape()`, `Resources::operation()`)
 
 ### The id shape
 
-A derived surface's id is `<base>:<derivative>`: the base dotted like
-any surface id, one colon, then the derivative, dotted and holding no
+A derived id is `<base>:<derivative>`: the base dotted like
+any other id, one colon, then the derivative, dotted and holding no
 colon, `entity.content:node.page`, `field.item:node.page.body`. A tool
-is `data_surface:<surface>:<situation>` and a read tool adds `:read`;
-the tool reads the situation off the last colon, so a derivative with
+is `data_surface:<id>:<operation>` and a read tool adds `:read`;
+the tool reads the operation off the last colon, so a derivative with
 a colon of its own would be misread, and is refused. The MCP bridge
 mangles tool ids, so the derivative adds one colon, between base and
-derivative, and dots inside it, which surface ids already have; a route
+derivative, and dots inside it, which ids already have; a route
 parameter, `/surface-react/{surface}`, takes a colon as it is. An alter names one derivative by its id or
-every derivative of a deriver by its base, `#[AltersSurface('entity.content')]`.
-A string that names no surface and no base is skipped, as a class from a
+every derivative of a deriver by its base, `#[Alters('entity.content')]`.
+A string that names no resource, structure or base is skipped, as a class from a
 module that is off is skipped, so a mistyped id passes silently where a
-mistyped class does not. (`SurfaceRegistry::discover()`)
+mistyped class does not. (`ResourceRegistry::discover()`)
 
 ### Derived, then layered
 
-A field item's surface is derived from the item's typed data, since a
+A field item's structure is derived from the item's typed data, since a
 field type already says what its item holds, and layered with what
 typed data does not say: the field's label and description, required
-on the main property, the literal default, the constraints a surface
+on the main property, the literal default, the constraints a shape
 can state (`Length`, `Range`, `Regex`, `Choice`) and what the settings
 narrow (a list's allowed values, a text field's formats, a reference's
-targets, a date's form). What typed data says that a surface cannot
+targets, a date's form). What typed data says that a shape cannot
 (`LinkType`, `ValidReference`) is left to the entity's own validation
 at prepare, whose violations land on the key. A field type whose
-derivation is thin is written by hand, `#[FieldItemSurface(type:)]`, and
-replaces the shape and its refiners only: the field's label, situations
+derivation is thin is written by hand, `#[FieldItemStructure(type:)]`, and
+replaces the shape and its refiners only: the field's label, operations
 and access stay derived, because they are the field's, not its type's.
-(`FieldItemDerivation`, `FieldItemSurfaces`)
+(`FieldItemDerivation`, `FieldItemStructures`)
 
 ### Field access is child access
 
-Each field of a content entity surface is a child invoked through its
-own situation, `add` or `edit` by the parent's operation, so field
+Each field of a content entity resource is a child invoked through its
+own operation, `add` or `edit` to match the parent's, so field
 access is the child's access, through the three answers access already
 had: edit allowed is open, view allowed is locked, neither is omitted.
-No mechanism of its own was needed, which is what the child situations
+No mechanism of its own was needed, which is what the child operations
 were built for ([One invocation model for both
 levels](#one-invocation-model-for-both-levels)). Field access takes
 items, so on add it is asked of a throwaway entity of the bundle, as
-core's entity form makes one. A field whose situation cannot be invoked,
+core's entity form makes one. A field whose operation cannot be invoked,
 because its context knows nothing yet (a tool's static definition),
 inherits, and its access is still asked; a context that does not say
 which field of which entity type has nothing to ask about, and it says
@@ -1002,20 +1085,20 @@ nothing, as [A permission a child cannot
 name](#a-permission-a-child-cannot-name) does, and the per call
 definition asks in the real context. (`FieldItemAccess`)
 
-### The content entity target
+### The content entity storage
 
-`ContentEntityTarget` is `data_surface_entity`'s, not one of the
-engine's targets: what it reads and writes is the field item
+`ContentEntityStorage` is `data_surface_entity`'s, not one of the
+engine's storage classes: what it reads and writes is the field item
 derivation's shape (a child per field, a key per property), which the
 engine does not own, and it reads the derivation to know which fields
 those are. It maps an entity violation to a key by its property path,
 the delta dropped, and one about the whole entity to `@entity`; it
-drops one about a field the surface does not carry, or one the account
-may not edit, as core's form does. (`ContentEntityTarget::prepare()`)
+drops one about a field the resource does not carry, or one the account
+may not edit, as core's form does. (`ContentEntityStorage::prepare()`)
 
 ### Tool definitions after a field changes
 
-*Open.* The registry forgets a derived surface when the tags it was
+*Open.* The registry forgets a derived definition when the tags it was
 read from are invalidated, but the Tool API caches its plugin
 definitions apart, so a field added to a bundle reaches the `add` tool's
 static `values` at the next cache rebuild; the `edit` tool refines
@@ -1025,26 +1108,26 @@ invalidator in `data_surface_tool`.
 
 ### Keys an alter adds to a content entity
 
-*Open.* An alter may add keys to every content entity surface, and they
+*Open.* An alter may add keys to every content entity resource, and they
 are built, validated and offered like any mounted key, but a content
-entity has nowhere to keep `third_party_settings`, so the target does
-not store them. A storage shape that maps a mount onto fields would be
+entity has nowhere to keep `third_party_settings`, so its storage does
+not keep them. A storage shape that maps a mount onto fields would be
 the place to say where they go.
 
 ## Plugins
 
 ### A plugin host's context
 
-A plugin host builds the surface its plugin names in a bare context
-whose operation is the host's own verb (`configure`, `field_settings`),
-which is no declared situation. The pattern says the host "supplies the
-situation" without naming one; a plugin's configuration has no add or
+A plugin host builds the structure its plugin names in a bare context
+whose id is the host's own verb (`configure`, `field_settings`),
+which is no declared operation. The pattern says the host "supplies the
+operation" without naming one; a plugin's configuration has no add or
 edit, only the instance the host holds. (`DataSurfaceHostTrait`)
 
 ### A plugin host cannot overlay a full submission
 
-*Open.* A plugin host — a block, or any plugin using
-`DataSurfaceHostFormTrait` — answers NULL from `surfaceSubmissionPath()`,
+*Open.* A plugin host (a block, or any plugin using
+`DataSurfaceHostFormTrait`) answers NULL from `surfaceSubmissionPath()`,
 so the build a full submission is processed against is built from what
 is stored, not from what was submitted. A nested subform cannot know its
 position in the input at build time: Form API assigns its `#parents`
@@ -1064,34 +1147,34 @@ A plugin protocol that asks a class for its defaults statically
 (`defaultSettings()`, `defaultFieldSettings()`) gets the owner's shape
 alone, sealed on the spot: no alter, no context. There is no instance
 and no context to build with, and alters' keys are mounted where those
-protocols do not look. (`SurfacesInterface::defaults()`)
+protocols do not look. (`ResourcesInterface::defaults()`)
 
 ### The demo's bundle-field constraint
 
-`DemoBlockSurface` points at a bundle's fields with a constraint of the
+`DemoBlockStructure` points at a bundle's fields with a constraint of the
 demo's own, `DataSurfaceDemoBundleField`, and its options resolver.
 The pattern fetches such a list through an options source, which is
 not built yet, and no core constraint names a bundle's fields.
-(`DemoBlockSurface::fieldOfBundle()`)
+(`DemoBlockStructure::fieldOfBundle()`)
 
 ## Examples
 
 ### What the examples are made of
 
 Each example of `data_surface_examples` keeps its settings in a config
-object of its own and names a target subclass of `RegistrationTarget`
-that says which; an example's surface repeats the previous example's
+object of its own and names a storage subclass of `RegistrationStorage`
+that says which; an example's resource repeats the previous example's
 keys rather than extending its class, so each example reads alone on
 screen. The machine names keep the word step (`registration_step2`,
-`RegistrationStep2Surface`, the `data_surface_examples.step2` route):
+`RegistrationStep2Resource`, the `data_surface_examples.step2` route):
 they were never shown to anybody, and renaming them would churn the
 catalogue and every test for no reader's benefit. A
 ticket price is a `float` with a `Range` minimum of 0.01: core's typed
 data has no decimal type and no `Positive` constraint plugin. The event
 title is stored as a `string`, not a translatable `label`, because a
 `label` would make the classic twin's `#config_target` demand a
-language code the surface side never needs. (`RegistrationStep3Surface`,
-`PaidTicketSurface`, `data_surface_examples.schema.yml`)
+language code the data surface side never needs. (`RegistrationStep3Resource`,
+`PaidTicketStructure`, `data_surface_examples.schema.yml`)
 
 ### The examples' README is held, not generated
 
@@ -1106,9 +1189,9 @@ code true.
 
 ### The emitter is the main module's, and widgets are asked for
 
-The served contract's emitter reads any sealed surface and nothing else,
+The served contract's emitter reads any data surface and nothing else,
 so it is the main module's (`data_surface.contract_emitter`), the
-canonical contract the situation form's contract panel shows and
+canonical contract the operation form's contract panel shows and
 `/surface-api` serves. The roadmap rejects widget vocabulary in the
 contract, so `x-surface.widget`, the Form API mapping said for a
 renderer, and `multiple`, its qualifier, are written only when a caller
@@ -1116,7 +1199,7 @@ passes `widgets: TRUE`; `data_surface_react` does, for its app. The rest
 of `x-surface` (locked, dependsOn, refined, stale, emptyOption, a slot's
 by, variants and chosen, a variant's id, checkedOnServer, enumerated,
 dynamic, runtime) is the
-surface's own reading of a key, not a widget, and is always written.
+data surface's own reading of a key, not a widget, and is always written.
 The hints are stripped after the schema is built rather than threaded
 through it, so the widget a key gets is still read in the same pass as
 its shape. (`Contract\ContractEmitter::emit()`)
@@ -1152,7 +1235,7 @@ conditionals to learn what a select offers, which it should not need an
 evaluator for; kept alone, it is valid only for the current values, and
 a schema that is only true of one set of values is not a contract. Both
 come from one code path, a frame described for the values it is handed,
-which for the full schema are the locked keys the situation knows and
+which for the full schema are the locked keys the operation knows and
 nothing else.
 
 One rule holds for both: the schema is never stricter than the runtime.
@@ -1171,19 +1254,19 @@ stands the rule is about the values it was built for and no others.
 *Open:* the rule has not been audited against the pipeline's casting,
 its handling of unknown keys and of an untouched stale stored value, or
 the Regex translation; nor is there a test holding every accepted value
-set to the full schema across the surfaces.
+set to the full schema across the shipped resources and structures.
 (`ContractEmitter::emitFull()`, `ContractEmitter::frame()`)
 
 ### The wall is the reference boundary
 
-Each subsurface is written once, as a def under the root's `$defs`, and
+Each child is written once, as a def under the root's `$defs`, and
 referred to from every place it is used, in both documents. The line is
 drawn where the module already draws one: a parent cannot refine into a
 child, a child cannot watch a parent's key, and a child keeps its own
 refiners and alters. Nothing outside a child can change what the child
 declares, so the child's declaration can stand alone, and it is the
 only unit that can: a plain map is the parent's own and is refined by
-the parent's refiners, so it stays inline. One def per surface id, so
+the parent's refiners, so it stays inline. One def per id, so
 the same class attached twice is one def.
 
 The def is the declaration and the site is the instance. The def is the
@@ -1201,14 +1284,14 @@ together accept exactly what the child at that site accepts. It also
 means the def must be the widest reading of the child, which is why it
 is described for no values and unlocked, never from defaults or a
 context. Two children claiming one id whose declarations differ (only
-a hand-sealed surface, or two contexts giving one class different
+a hand-sealed data surface, or two contexts giving one class different
 rules, can do it) are two defs, the second `<id>@2`, because neither
 would be a narrowing of the other.
 
 Local references only, for now: `#/$defs/<id>`, every def inside the
-document that uses it. Serving each surface's schema at an address of
-its own, so a def is fetched once and shared between documents, is
-later; it needs a route per surface and a decision on what context a
+document that uses it. Serving each resource's or structure's schema at
+an address of its own, so a def is fetched once and shared between
+documents, is later; it needs a route per id and a decision on what context a
 def at its own address is described in.
 (`ContractEmitter::define()`, `ContractEmitter::reference()`,
 `Contract\SchemaResolver`)
@@ -1222,8 +1305,9 @@ offers a list of values and there are at most 64 combinations per key
 (`ContractEmitter::ENUMERATION_CAP`). The cap is per key, over the
 product of the lists, and bounds two costs at once: the document, which
 a person reads in the contract panel and a client downloads on every
-GET, and the emission, which refines the whole surface once per
-combination. 64 holds every finite domain the shipped surfaces have
+GET, and the emission, which refines the whole data surface once per
+combination. 64 holds every finite domain the shipped resources and
+structures have
 (the largest is the demo block's field, entity types times bundles) with
 room for a real site's bundles, and is small enough that a
 country-sized list (some 250) is refused outright rather than written.
@@ -1231,32 +1315,33 @@ Above it the key is `dynamic`. A key watching free text, a number, a
 boolean or a key an alter mounted stays `dynamic` whatever the count:
 its domain is not a list, so there is nothing to enumerate, and
 inventing one (sampling numbers, guessing at a licence) would state a
-rule the surface never made. Such a key keeps `dependsOn`, and a client
+rule the shape never made. Such a key keeps `dependsOn`, and a client
 asks `/refine` when a watched key changes, as before.
 (`ContractEmitter::enumerate()`)
 
 ### A served contract is never stored
 
-The contract response carries the surface's, the option lists' and the
-access answer's cacheability as HTTP cache metadata, and max-age 0: its
-values are what a target loaded, and a target does not say how long that
-holds, so a cached contract would serve values from before a save.
-(`SurfaceApiController::respond()`)
+The contract response carries the data surface's, the option lists' and
+the access answer's cacheability as HTTP cache metadata, and max-age 0:
+its values are what storage loaded, and storage does not say how long
+that holds, so a cached contract would serve values from before a save.
+(`ResourceApiController::respond()`)
 
 ### Stale paths travel, stored values do not
 
 A stale value is served as `null`, its path listed under `stale`; a
 client sends the paths back, and an empty answer at one of them stands
-for the stored value again. It is the situation form's stale marker,
+for the stored value again. It is the operation form's stale marker,
 said in JSON, and it keeps a stored value off the wire whether or not a
-person may still choose it. (`ServedSituations::keepStale()`)
+person may still choose it. (`ServedOperations::keepStale()`)
 
 ### Required means must hold a value
 
-A key the surface requires is in the schema's `required`, whatever its
-default: the surface's meaning, which a form's required marker shows.
+A key the resource requires is in the schema's `required`, whatever its
+default: the resource's meaning, which a form's required marker shows.
 The Tool API bridge copies the same flag unchanged (see "Required is
-the surface's, and defaults are what is stored"); the served contract's
+the resource's, and defaults are what is stored"); the served contract's
+
 `values` always carry every key, so presence is never the question
 there. (`ContractEmitter::frame()`)
 
@@ -1265,34 +1350,34 @@ there. (`ContractEmitter::frame()`)
 `POST .../submit` answers a refusal with 200 and `committed: false`,
 the violations as data, never 422 or 400: a value the pipeline refuses
 is the expected outcome of asking, exactly as `/validate` reports it and
-as the situation form shows it beside the field, and a client renders
+as the operation form shows it beside the field, and a client renders
 both the same way from the same keys. A status code is kept for what is
 not an answer about the values: 403 when access refuses the request
 before it runs, 400 when the body cannot be read. Access refused inside
 the pipeline (a forbidden answer the route did not already give) is
 still filed as the `@access` violation, the pipeline's own rule.
-(`SurfaceApiController::submit()`)
+(`ResourceApiController::submit()`)
 
 ### An empty identity key names nothing
 
 Where a created thing now lives is read from the outputs and the
-identity the write accepted, and checked against the situation those
+identity the write accepted, and checked against the operation those
 build; an identity key the write left empty is not compared, since it
 named nothing: a content entity's add knows its id as empty, and its
 `id` output says what storage made it. Before, every accepted identity
 key was compared, and an add whose id storage gives could never say
-where its thing lives. (`ServedSituations::created()`)
+where its thing lives. (`ServedOperations::created()`)
 
 ### A fingerprint is opt-in
 
 The contract carries a fingerprint of the stored values it was built
 from, and a submit that sends it back is refused, nothing written, when
 storage no longer matches. A submit that sends none is not checked, and
-the last write wins, which is what the situation form, the tool and
+the last write wins, which is what the operation form, the tool and
 every PHP caller of the pipeline do. Opt-in, because making it required
 would refuse every client that never asked for a contract first (a
 script, an agent calling the tool's twin) and would put a rule on the
 API the form does not have. The React app opts in; a page can turn it
 off with `sendFingerprint: false`. A check, not a lock: it narrows the
 window to the moment between the comparison and the commit.
-(`ServedSituations::fingerprint()`)
+(`ServedOperations::fingerprint()`)

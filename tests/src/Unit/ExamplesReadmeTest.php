@@ -62,10 +62,10 @@ class ExamplesReadmeTest extends UnitTestCase {
   public function testTheCodeBlocksMatchTheFiles(): void {
     preg_match_all('/<!-- code: (\S+) -->\n\n```php\n(.*?)\n```/s', self::readme(), $blocks, PREG_SET_ORDER);
     $quoted = array_column($blocks, 1);
-    $this->assertContains('src/Surface/RegistrationStep1Surface.php', $quoted);
-    $this->assertContains('src/Surface/RegistrationStep2Surface.php', $quoted);
-    $this->assertContains('src/Surface/RegistrationStep3Surface.php', $quoted);
-    $this->assertContains('../data_surface_examples_compliance/src/SurfaceAlter/RegistrationComplianceAlter.php', $quoted);
+    $this->assertContains('src/Resource/RegistrationStep1Resource.php', $quoted);
+    $this->assertContains('src/Resource/RegistrationStep2Resource.php', $quoted);
+    $this->assertContains('src/Resource/RegistrationStep3Resource.php', $quoted);
+    $this->assertContains('../data_surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php', $quoted);
     foreach ($blocks as [, $path, $code]) {
       $file = self::MODULE . '/' . $path;
       $this->assertFileExists($file);

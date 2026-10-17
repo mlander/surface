@@ -13,15 +13,15 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\data_surface\Contract\SchemaResolver;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
-use Drupal\data_surface\Form\DataSurfaceSituationForm;
-use Drupal\data_surface\SurfaceBuild\SituationRoute;
+use Drupal\data_surface\Form\DataSurfaceOperationForm;
+use Drupal\data_surface\ResourceBuild\OperationRoute;
 use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
 use Drupal\data_surface_examples\CodeLines;
 use Drupal\data_surface_examples\ExamplePanels;
 use Drupal\data_surface_examples\Form\RegistrationStep1ClassicForm;
-use Drupal\data_surface_examples\Surface\RegistrationStep1Surface;
-use Drupal\data_surface_examples\Surface\RegistrationStep2Surface;
-use Drupal\data_surface_examples\Surface\RegistrationStep3Surface;
+use Drupal\data_surface_examples\Resource\RegistrationStep1Resource;
+use Drupal\data_surface_examples\Resource\RegistrationStep2Resource;
+use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\user\Entity\Role;
 use Drupal\user\RoleInterface;
@@ -32,8 +32,8 @@ use Symfony\Component\HttpFoundation\Request;
 /**
  * Tests the examples' steps 1 to 3, and the contract panel under them.
  *
- * Each step's route is served by the generic situation form, so what is
- * asserted is what a person sees: the form builds from the surface, a
+ * Each step's route is served by the generic operation form, so what is
+ * asserted is what a person sees: the form builds from the resource, a
  * refinement narrows what the next key offers, the slot resolves to the
  * chosen ticket, the contact part validates in its own frame, and the
  * panel says what each key allows as the answers stand.
@@ -90,37 +90,37 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
    * Submits the generic form at the route on the stack.
    *
    * @param array $values
-   *   Raw values keyed by surface key.
+   *   Raw values keyed by resource key.
    *
    * @return \Drupal\Core\Form\FormStateInterface
    *   The form state after the submission.
    */
   protected function submitTheForm(array $values): FormStateInterface {
     $form_state = new FormState();
-    $form_state->setValues([DataSurfaceSituationForm::SURFACE_KEY => $values]);
-    $this->container->get('form_builder')->submitForm(DataSurfaceSituationForm::class, $form_state);
+    $form_state->setValues([DataSurfaceOperationForm::SURFACE_KEY => $values]);
+    $this->container->get('form_builder')->submitForm(DataSurfaceOperationForm::class, $form_state);
     return $form_state;
   }
 
   /**
-   * Builds a step's surface in its configure situation.
+   * Builds a step's resource in its configure operation.
    *
    * @param class-string $class
-   *   The surface class.
+   *   The resource class.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface.
+   *   The built resource.
    */
   protected function surface(string $class): DataSurfaceInterface {
-    $surfaces = $this->container->get('data_surface.surfaces');
-    return $surfaces->build($class, $surfaces->situation($class, 'configure'));
+    $resources = $this->container->get('data_surface.resources');
+    return $resources->build($class, $resources->operation($class, 'configure'));
   }
 
   /**
-   * Builds the contract panel's rows for a surface and values.
+   * Builds the contract panel's rows for a resource and values.
    *
    * @param class-string $class
-   *   The surface class.
+   *   The resource class.
    * @param array $values
    *   The values the form would be built with.
    *
@@ -128,16 +128,16 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
    *   The rows' cells, keyed by the key's path.
    */
   protected function panelRows(string $class, array $values): array {
-    $surfaces = $this->container->get('data_surface.surfaces');
-    $context = $surfaces->situation($class, 'configure');
-    $served = new SituationRoute(
+    $resources = $this->container->get('data_surface.resources');
+    $context = $resources->operation($class, 'configure');
+    $served = new OperationRoute(
       $class,
-      $this->container->get('data_surface.surface_registry')->getSituation($class, 'configure'),
+      $this->container->get('data_surface.resource_registry')->getOperation($class, 'configure'),
       $context,
       NULL,
     );
     $panel = $this->container->get('data_surface_tool.contract_panel')
-      ->buildPanel($served, $surfaces->build($class, $context), $values);
+      ->buildPanel($served, $resources->build($class, $context), $values);
     $rows = [];
     foreach ($panel['keys']['#rows'] as $row) {
       $rows[$row['data-surface-key']] = array_map(
@@ -153,13 +153,13 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
    */
   public function testStepOneSavesWhatTheClassicFormSaves(): void {
     $this->serveRoute('data_surface_examples.step1');
-    $form = $this->container->get('form_builder')->getForm(DataSurfaceSituationForm::class);
-    $container = $form[DataSurfaceSituationForm::SURFACE_KEY];
+    $form = $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class);
+    $container = $form[DataSurfaceOperationForm::SURFACE_KEY];
     $this->assertSame('textfield', $container['title']['#type']);
     $this->assertSame('Spring meetup', $container['title']['#default_value']);
     $this->assertSame(1000, $container['capacity']['#max']);
     $this->assertSame('checkbox', $container['open']['#type']);
-    $this->assertArrayHasKey(DataSurfaceSituationForm::PANEL_KEY, $container);
+    $this->assertArrayHasKey(DataSurfaceOperationForm::PANEL_KEY, $container);
 
     // A checkbox left clear is submitted as nothing at all.
     $state = $this->submitTheForm(['title' => 'Summer meetup', 'capacity' => '200', 'open' => NULL]);
@@ -183,7 +183,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
    * Tests step 2: the venue narrows the room, and the room the capacity.
    */
   public function testStepTwoNarrowsRoomByVenueAndCapacityByRoom(): void {
-    $surface = $this->surface(RegistrationStep2Surface::class);
+    $surface = $this->surface(RegistrationStep2Resource::class);
     $this->assertSame(['venue'], $surface->getDefinitions()->dependencies('room'));
     $this->assertSame(['room'], $surface->getDefinitions()->dependencies('capacity'));
 
@@ -204,8 +204,8 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
 
     // The form offers the stored venue's rooms, and rebuilds on both.
     $this->serveRoute('data_surface_examples.step2');
-    $form = $this->container->get('form_builder')->getForm(DataSurfaceSituationForm::class);
-    $container = $form[DataSurfaceSituationForm::SURFACE_KEY];
+    $form = $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class);
+    $container = $form[DataSurfaceOperationForm::SURFACE_KEY];
     $this->assertSame(['riverside_main', 'riverside_east'], array_keys(array_diff_key($container['room']['#options'], ['' => TRUE])));
     $this->assertArrayHasKey('#ajax', $container['venue']);
     $this->assertArrayHasKey('#ajax', $container['room']);
@@ -232,7 +232,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
    * Tests step 3: the pricing resolves the ticket slot; the contact part.
    */
   public function testStepThreeResolvesTheTicketAndValidatesTheContact(): void {
-    $surface = $this->surface(RegistrationStep3Surface::class);
+    $surface = $this->surface(RegistrationStep3Resource::class);
     $entry = $surface->getDefinitions()->entry('ticket');
     $this->assertSame('pricing', $entry->slot?->by);
     $this->assertSame(['free', 'paid'], $entry->slot->variantIds());
@@ -289,7 +289,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
    */
   public function testThePanelFollowsTheAnswers(): void {
     $stored = $this->config('data_surface_examples.registration_step3')->getRawData();
-    $rows = $this->panelRows(RegistrationStep3Surface::class, $stored);
+    $rows = $this->panelRows(RegistrationStep3Resource::class, $stored);
     $this->assertSame([
       'title',
       'open',
@@ -311,7 +311,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     $this->assertSame('an email address', $rows['contact.email'][5]);
 
     $answers = ['venue' => 'harbour', 'room' => 'harbour_deck', 'pricing' => 'paid'];
-    $rows = $this->panelRows(RegistrationStep3Surface::class, $answers + $stored);
+    $rows = $this->panelRows(RegistrationStep3Resource::class, $answers + $stored);
     $this->assertSame('one of Auditorium, Upper deck', $rows['room'][5]);
     $this->assertSame('from 1 to 150', $rows['capacity'][5]);
     $this->assertSame('the paid variant', $rows['ticket'][7]);
@@ -320,8 +320,8 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     // The panel shows the contract itself: the ticket as one conditional
     // per variant, keyed on the pricing beside it, and no widget hints.
     $this->serveRoute('data_surface_examples.step3');
-    $form = $this->container->get('form_builder')->getForm(DataSurfaceSituationForm::class);
-    $panel = $form[DataSurfaceSituationForm::SURFACE_KEY][DataSurfaceSituationForm::PANEL_KEY][ExamplePanels::CONTRACT];
+    $form = $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class);
+    $panel = $form[DataSurfaceOperationForm::SURFACE_KEY][DataSurfaceOperationForm::PANEL_KEY][ExamplePanels::CONTRACT];
     $this->assertSame('The schema for these answers', (string) $panel['contract']['#title']);
     $contract = json_decode(htmlspecialchars_decode((string) $panel['contract']['json']['#value']), TRUE);
     $this->assertSame('https://json-schema.org/draft/2020-12/schema', $contract['$schema']);
@@ -388,7 +388,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     $this->serveRoute('data_surface_examples.step3', 'POST');
     $form_state = new FormState();
     $form_state->setUserInput([
-      'form_id' => 'data_surface_situation_form_data_surface_examples_step3',
+      'form_id' => 'data_surface_operation_form_data_surface_examples_step3',
       'surface' => [
         'title' => 'Spring meetup',
         'capacity' => '50',
@@ -401,10 +401,10 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
       ],
       '_triggering_element_name' => 'surface[venue]',
     ]);
-    $form = $this->container->get('form_builder')->buildForm(DataSurfaceSituationForm::class, $form_state);
+    $form = $this->container->get('form_builder')->buildForm(DataSurfaceOperationForm::class, $form_state);
     $this->assertTrue($form_state->isRebuilding());
     $this->assertSame([], $form_state->getErrors());
-    $container = $form[DataSurfaceSituationForm::SURFACE_KEY];
+    $container = $form[DataSurfaceOperationForm::SURFACE_KEY];
     // The harbour's rooms and nothing else. The stored room is not among
     // them, so the select comes up on its empty option with the stored
     // room stashed behind it: a Save from here keeps it only if the venue
@@ -415,7 +415,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     $this->assertSame('room', $container[DataSurfaceFormBuilderInterface::STALE_MARKER_KEY]['#value']);
 
     $rows = [];
-    foreach ($container[DataSurfaceSituationForm::PANEL_KEY][ExamplePanels::CONTRACT]['keys']['#rows'] as $row) {
+    foreach ($container[DataSurfaceOperationForm::PANEL_KEY][ExamplePanels::CONTRACT]['keys']['#rows'] as $row) {
       $rows[$row['data-surface-key']] = $row['data'];
     }
     $this->assertSame('one of Auditorium, Upper deck', (string) $rows['room'][5]['data']['#markup']);
@@ -430,9 +430,9 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
    * @param array $stored
    *   What the step's configuration holds, over its installed values.
    * @param array $input
-   *   The surface's input as the browser sent it.
+   *   The resource's input as the browser sent it.
    * @param string $trigger
-   *   The surface key that was changed.
+   *   The resource key that was changed.
    *
    * @return \Drupal\Core\Form\FormStateInterface
    *   The form state after the rebuild.
@@ -451,11 +451,11 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     $this->serveRoute('data_surface_examples.step' . $step, 'POST');
     $form_state = new FormState();
     $form_state->setUserInput([
-      'form_id' => 'data_surface_situation_form_data_surface_examples_step' . $step,
+      'form_id' => 'data_surface_operation_form_data_surface_examples_step' . $step,
       'surface' => $input,
       '_triggering_element_name' => 'surface[' . $trigger . ']',
     ]);
-    $this->container->get('form_builder')->buildForm(DataSurfaceSituationForm::class, $form_state);
+    $this->container->get('form_builder')->buildForm(DataSurfaceOperationForm::class, $form_state);
     $this->assertTrue($form_state->isRebuilding());
     $this->assertSame([], $form_state->getErrors());
     return $form_state;
@@ -479,7 +479,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
       'room' => 'riverside_east',
       'capacity' => '20',
     ], 'venue');
-    $container = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY];
+    $container = $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY];
     $this->assertSame(['', 'harbour_auditorium', 'harbour_deck'], array_keys($container['room']['#options']));
     $this->assertSame('', $container['room']['#value']);
     $this->assertSame('riverside_east', $container['room'][DataSurfaceWidgetBase::STALE_KEY]);
@@ -492,7 +492,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     $this->assertSame([
       $this->wrapperSelector($container['room']),
       $capacity,
-      $this->wrapperSelector($container[DataSurfaceSituationForm::PANEL_KEY]),
+      $this->wrapperSelector($container[DataSurfaceOperationForm::PANEL_KEY]),
     ], $this->ajaxSelectors($response, 'replaceWith'));
     $markup = $this->ajaxMarkup($response, $capacity);
     $this->assertStringContainsString('max="1000"', $markup);
@@ -500,7 +500,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     $this->assertStringNotContainsString('Up to', $markup);
     // The panel beside it says the same thing.
     $rows = [];
-    foreach ($container[DataSurfaceSituationForm::PANEL_KEY][ExamplePanels::CONTRACT]['keys']['#rows'] as $row) {
+    foreach ($container[DataSurfaceOperationForm::PANEL_KEY][ExamplePanels::CONTRACT]['keys']['#rows'] as $row) {
       $rows[$row['data-surface-key']] = $row['data'];
     }
     $this->assertSame('from 1 to 1000', (string) $rows['capacity'][5]['data']['#markup']);
@@ -528,7 +528,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
       'ticket' => ['note' => 'Bring a badge'],
       'contact' => ['email' => 'desk@example.com', 'phone' => '555 0100'],
     ], 'venue');
-    $container = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY];
+    $container = $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY];
     $this->assertSame('riverside_east', $container['room'][DataSurfaceWidgetBase::STALE_KEY]);
     $this->assertSame(1000, $container['capacity']['#max']);
     $this->assertArrayNotHasKey('#description', $container['capacity']);
@@ -540,7 +540,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     $this->assertSame([
       $this->wrapperSelector($container['room']),
       $this->wrapperSelector($container['capacity']),
-      $this->wrapperSelector($container[DataSurfaceSituationForm::PANEL_KEY]),
+      $this->wrapperSelector($container[DataSurfaceOperationForm::PANEL_KEY]),
     ], $this->ajaxSelectors($response, 'replaceWith'));
     $settings = $state->getUserInput()['surface'];
     $this->assertSame(['note' => 'Bring a badge'], $settings['ticket']);
@@ -551,7 +551,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
    * Tests the line counts the landing page shows stay screen sized.
    */
   public function testEachStepFitsOnOneScreen(): void {
-    foreach ([RegistrationStep1Surface::class, RegistrationStep2Surface::class, RegistrationStep3Surface::class] as $class) {
+    foreach ([RegistrationStep1Resource::class, RegistrationStep2Resource::class, RegistrationStep3Resource::class] as $class) {
       $lines = CodeLines::count((string) (new \ReflectionClass($class))->getFileName());
       $this->assertGreaterThan(10, $lines, $class);
       $this->assertLessThanOrEqual(45, $lines, $class);

@@ -7,20 +7,20 @@ namespace Drupal\data_surface_surface_test\Plugin\Condition;
 use Drupal\Core\Condition\Attribute\Condition;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Plugin\Condition\DataSurfaceConditionBase;
-use Drupal\data_surface\Surface\Attribute\UsesSurface;
-use Drupal\data_surface_surface_test\Surface\ThresholdSurface;
+use Drupal\data_surface\Resource\Attribute\UsesStructure;
+use Drupal\data_surface_surface_test\Structure\ThresholdStructure;
 
 /**
- * A condition whose configuration is a surface named by attribute.
+ * A condition whose configuration is a structure named by attribute.
  *
  * Its two methods are the condition host's, and nothing about settings:
- * the host reads #[UsesSurface] from the definition.
+ * the host reads #[UsesStructure] from the definition.
  */
 #[Condition(
   id: 'data_surface_surface_test_threshold',
   label: new TranslatableMarkup('Threshold (surface test)'),
 )]
-#[UsesSurface(ThresholdSurface::class)]
+#[UsesStructure(ThresholdStructure::class)]
 final class ThresholdCondition extends DataSurfaceConditionBase {
 
   /**

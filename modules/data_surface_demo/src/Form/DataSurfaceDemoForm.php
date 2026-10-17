@@ -11,20 +11,20 @@ use Drupal\Core\State\StateInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DataSurfaceHostTrait;
 use Drupal\data_surface\Plugin\Block\DataSurfaceBlockBase;
-use Drupal\data_surface\Target\StateTarget;
+use Drupal\data_surface\Storage\StateStorage;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * A standalone form generated entirely from the demo block's surface.
+ * A standalone form generated entirely from the demo block's structure.
  *
- * Two claims in one class. A plugin-hosted surface stays externally
+ * Two claims in one class. A plugin-hosted structure stays externally
  * consumable: this form never instantiates a form element of its own and
- * never repeats the block's declaration — it asks the block manager for
+ * never repeats the block's declaration. It asks the block manager for
  * the plugin and reads its contract, which is what any other consumer
- * would do. And a surface is independent of where its values are stored:
- * the same surface the block commits into its configuration array is
- * committed here into State, because the target, not the surface, owns
- * the storage shape.
+ * would do. And a structure is independent of where its values are kept:
+ * the same structure the block commits into its configuration array is
+ * committed here into State, because the storage, not the structure,
+ * owns the shape the values are kept in.
  *
  * Build, validate and submit are three delegations. The host trait
  * supplies the pipeline, the form builder and the in-progress AJAX input
@@ -40,7 +40,7 @@ final class DataSurfaceDemoForm extends FormBase {
   protected const STATE_KEY = 'data_surface_demo.settings';
 
   /**
-   * The AJAX wrapper key for this form's surface container.
+   * The AJAX wrapper key for this form's data surface container.
    */
   protected const WRAPPER_KEY = 'data-surface-demo-form';
 
@@ -50,7 +50,7 @@ final class DataSurfaceDemoForm extends FormBase {
   protected BlockManagerInterface $blockManager;
 
   /**
-   * The state store this form's target writes to.
+   * The state store this form's storage writes to.
    */
   protected StateInterface $state;
 
@@ -77,11 +77,11 @@ final class DataSurfaceDemoForm extends FormBase {
   public function buildForm(array $form, FormStateInterface $form_state): array {
     $surface = $this->demoSurface();
     // The pipeline's own merge rule, reused rather than restated: the
-    // surface's defaults, then whatever the target holds, then the
+    // structure's defaults, then whatever the storage holds, then the
     // in-progress choice an AJAX rebuild is refining against.
     $values = $this->surfaceFormValues(
       $surface,
-      $this->surfacePipeline()->accept($surface, [], $this->demoTarget()->load($surface)),
+      $this->surfacePipeline()->accept($surface, [], $this->demoStorage()->load($surface)),
       $form_state,
     );
     $form['surface'] = $this->surfaceFormBuilder()
@@ -105,7 +105,7 @@ final class DataSurfaceDemoForm extends FormBase {
     // What State already holds goes with the form: a key with no
     // rendered element has said nothing and must keep its stored value
     // rather than fall back to its declared default.
-    $current = $this->demoTarget()->load($surface);
+    $current = $this->demoStorage()->load($surface);
     $values = $builder->extractSurfaceValues(
       $surface,
       $form['surface'],
@@ -121,9 +121,9 @@ final class DataSurfaceDemoForm extends FormBase {
   public function submitForm(array &$form, FormStateInterface $form_state): void {
     $surface = $this->demoSurface();
     $builder = $this->surfaceFormBuilder();
-    $target = $this->demoTarget();
-    $values = $builder->extractSurfaceValues($surface, $form['surface'], $form_state, $target->load($surface));
-    $result = $this->surfacePipeline()->submit($surface, $values, $target);
+    $storage = $this->demoStorage();
+    $values = $builder->extractSurfaceValues($surface, $form['surface'], $form_state, $storage->load($surface));
+    $result = $this->surfacePipeline()->submit($surface, $values, $storage);
     if (!$result->isValid()) {
       $builder->flagSurfaceErrors($result->violations, $form['surface'], $form_state);
       return;
@@ -140,30 +140,30 @@ final class DataSurfaceDemoForm extends FormBase {
   }
 
   /**
-   * Reads the demo block's surface through the plugin manager.
+   * Reads the demo block's built structure through the plugin manager.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The block's surface, refiners bound.
+   *   The block's built structure, refiners bound.
    *
    * @throws \LogicException
-   *   When the plugin behind the demo ID is not a surface block.
+   *   When the plugin behind the demo ID is not a data surface block.
    */
   protected function demoSurface(): DataSurfaceInterface {
     $block = $this->blockManager->createInstance('data_surface_demo');
     if (!$block instanceof DataSurfaceBlockBase) {
-      throw new \LogicException('The data_surface_demo block is not a surface block.');
+      throw new \LogicException('The data_surface_demo block is not a data surface block.');
     }
     return $block->getDataSurface();
   }
 
   /**
-   * Builds the target this form's values are read from and written to.
+   * Builds the storage this form's values are read from and written to.
    *
-   * @return \Drupal\data_surface\Target\StateTarget
-   *   The state target.
+   * @return \Drupal\data_surface\Storage\StateStorage
+   *   The State storage.
    */
-  protected function demoTarget(): StateTarget {
-    return new StateTarget($this->state, self::STATE_KEY);
+  protected function demoStorage(): StateStorage {
+    return new StateStorage($this->state, self::STATE_KEY);
   }
 
 }

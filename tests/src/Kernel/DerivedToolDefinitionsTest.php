@@ -26,7 +26,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * object: a LabeledChoice's TranslatableMarkup labels on the node type's
  * preview mode and on the extras' deadline unit broke the page for
  * data_surface:node.type:add. And a module installed after the tool
- * definitions were cached has to have its surfaces' tools discovered
+ * definitions were cached has to have its resources' tools discovered
  * without anyone clearing a plugin cache by hand.
  */
 #[Group('data_surface')]
@@ -83,8 +83,8 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
    * Lists the derived tools' ids.
    *
    * @return list<string>
-   *   Every `data_surface:<surface>:<situation>` tool and every read tool
-   *   beside one, `data_surface:<surface>:<situation>:read`, sorted.
+   *   Every `data_surface:<id>:<operation>` tool and every read tool
+   *   beside one, `data_surface:<id>:<operation>:read`, sorted.
    */
   protected function derivedIds(): array {
     $ids = array_values(array_filter(
@@ -150,7 +150,7 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
       assert($definition instanceof ToolDefinition);
       $build = $explorer->viewTool($id);
       // Explorer suggests a config schema for a tool that takes inputs,
-      // which a read tool for a situation that needs nothing does not.
+      // which a read tool for an operation that needs nothing does not.
       $this->assertSame($definition->getInputDefinitions() !== [], isset($build['config_schema']), $id);
       $schema = $this->suggestedSchema($explorer, $definition->getInputDefinitions());
       $this->assertIsString(Yaml::encode(['tool.plugin.' . $id => $schema]), $id);
@@ -172,13 +172,13 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that installing a module with a surface derives its tools.
+   * Tests that installing a module with a resource derives its tools.
    *
    * The tool definitions are read, and so cached, before the module is
    * installed; installing it is all that happens before they are read
    * again, as on a site. Tool Explorer's index lists them too.
    */
-  public function testInstalledModuleSurfacesBecomeTools(): void {
+  public function testInstalledModuleResourcesBecomeTools(): void {
     $before = $this->derivedIds();
     $this->assertContains('data_surface:node.type:add', $before);
     $this->assertNotContains('data_surface:registration.step3:configure', $before);

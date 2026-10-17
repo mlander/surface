@@ -23,7 +23,7 @@ serving, and evolution.
 0. **The definitions map** — DONE 2026-09-15. (groundwork; done first, while the interfaces
    are still ours to reshape). Replace the surface's parallel arrays
    (definitions, refinements, refiner chains, locked, contributions)
-   with one typed, ordered, immutable `DefinitionMap` of `SurfaceEntry`
+   with one typed, ordered, immutable `DefinitionMap` of `Entry`
    value objects, each entry carrying its definition plus contributor,
    locked state, and dependency edges. Validated once at construction;
    iterator and array-access compatible so call sites keep working;
@@ -81,9 +81,9 @@ serving, and evolution.
    password rendering that never echoes, keep-on-empty semantics with
    the `CLEAR_SECRET` marker (a documented exception to D3), and the
    write-only note in the tool conversion. Riders left open: a
-   target-level decorator for targets that use no settings shape
+   storage-level decorator for storage classes that use no settings shape
    (state, config, plugin configuration currently store a secret in
-   the clear, documented honestly in docs/targets.md); builder
+   the clear, documented honestly in docs/storage.md); builder
    `secret()` sugar; a guard against secret plus Choice rendering as a
    visible select. Original spec: a `secret` flag on `DefinitionMetadata`
    plus an encrypting `SettingsShapeInterface` decorator, so plaintext
@@ -110,7 +110,7 @@ and the dry-run endpoint address surfaces by: host type, host id,
 operation, subject.
 
 Prerequisite, second half — DONE 2026-09-15. The triple is complete
-(`getDataSurfaceTarget()` on both provider contracts, the field-side
+(`getDataSurfaceStorage()` on both provider contracts, the field-side
 accessor renamed to match), `DataSurfaceProviderForm` serves provider
 forms from route coordinates with a three-method cosmetics seam, and
 the node type demo's form class is gone, not shrunk: routing plus a
@@ -167,7 +167,7 @@ which serves the real contract.
    Schema 2020-12; labeled options as `oneOf` const/title; refinement
    edges as `dependentSchemas`/`if-then` where declared, honestly
    marked runtime-narrowed where an object refiner is in play.
-5. **Generate the config schema from the surface.** The hand-written
+5. **Generate the config schema from the shape.** The hand-written
    `block.settings.*` and formatter-settings YAML becomes an emitted
    artifact via config schema discovery, deleting the parallel
    declaration every critique named first among Drupalisms.
@@ -253,7 +253,7 @@ which serves the real contract.
    reports it as runtime-narrowed.
    - **Options alters** (later concept, from the sketch): a class in
      `src/OptionsAlter/` changing one list of allowed values everywhere
-     it is used, not per surface.
+     it is used, not per resource or structure.
    - **Remove-only policy** (later concept, beside options alters): a
      site hiding an owner's key, and an options alter removing an entry
      stored values use; both need the stale rule (item 11).
@@ -291,16 +291,16 @@ which serves the real contract.
 
 ## Phase D: evolution
 
-13. **Surface versioning with pure stored-value migrations** (decided;
+13. **Shape versioning with pure stored-value migrations** (decided;
     refined). A version on the attribute; pure shape-to-shape
     transforms shipped with the definition; the pipeline's accept
     stage converts stored values forward on read. Borrowed discipline: only
     up-transforms are required (down is a restore), and a
     per-destination ledger stamps the applied version at commit so
     environments converge in recorded order.
-14. **Additive-diff lint.** Emit each surface's schema against a
-    committed snapshot in CI; fail on removed keys, tightened
-    constraints, or type changes without a version bump. The
+14. **Additive-diff lint.** Emit each resource's and structure's
+    schema against a committed snapshot in CI; fail on removed keys,
+    tightened constraints, or type changes without a version bump. The
     registry's publish-time diff, as a test any module can run.
 15. **Deprecation as definition metadata.** `deprecated` and sunset
     keys through `DefinitionMetadata`; widgets flag dying options; a
@@ -343,27 +343,27 @@ which serves the real contract.
     attribute, validated through the pipeline at build, surfaced as
     placement starting points and reused as test fixtures.
 18. **Derived host cache metadata**: the base classes merge the
-    surface's cacheability union into the host's contexts and tags
+    data surface's cacheability union into the host's contexts and tags
     automatically, closing the last hand-authored cache seam.
 19. **Storage settings for field types** with the has-data lock (safe
     now that locked keys keep stored values), and the storage-settings
     tool bridge.
-20. **Contributor dependencies**: `PluginConfigurationTarget` reads
+20. **Contributor dependencies**: `PluginConfigurationStorage` reads
     `getDefinitions()->contributions()` into `calculateDependencies()` so
     uninstalling a contributor cleans up its keys.
 21. **Retire `config_surface`** once the functional suite runs in CI.
 
 ## After the rework
 
-The concepts the surface pattern deferred, in the order they come
+The concepts the pattern deferred, in the order they come
 next. `docs/pattern.md` (Deferred) records the position each is held
 to.
 
 1. **Collections**: ~~`attachList()`, an ordered list whose items are a
-   child surface, delta as position~~ DONE 2026-10-16 (`docs/surfaces.md`,
+   child structure, delta as position~~ DONE 2026-10-16 (`docs/resources.md`,
    Collections). Still open: `attachListBy()`, each item choosing its own
-   child; an item routed to its child's own target, its stable identity
-   an identity key on the child and weights the target's business; a
+   child; an item routed to its child's own storage, its stable identity
+   an identity key on the child and weights the storage's business; a
    collection inside an item on the form; content entity fields of more
    than one value, with the entity side.
 2. **Input shapes**: another way to enter the same value, converted to
@@ -376,16 +376,16 @@ to.
 5. **Per-method refinement gating**, if a case needs it: today a key's
    refiners wait for the union of what they watch.
 6. **Partial updates of a collection item**: changing one item without
-   resending the list, probably a situation on the child.
+   resending the list, probably an operation on the child.
 7. **Plugin hosts overlay a full submission**: a host supplies its
    subform's parents to `surfaceSubmissionPath()`, so a save without
    JavaScript that moves a parent and its dependent together is not
    refused by Form API (`docs/decisions.md`).
 8. **Served contract, first shape** — DONE 2026-10-08: `data_surface_react`
-   serves one situation as JSON Schema 2020-12 with `x-surface`, refine
+   serves one operation as JSON Schema 2020-12 with `x-surface`, refine
    and validate (dry run) endpoints, and a React form rendered from it
    (`docs/served-contract.md`). Writes since: `/submit`, with `created`
-   for a situation that creates and an opt-in stored-values fingerprint.
+   for an operation that creates and an opt-in stored-values fingerprint.
 
 ## Rejected, on the record
 

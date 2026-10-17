@@ -1,6 +1,6 @@
 // The served contract, as the main module's ContractEmitter writes it:
 // JSON Schema 2020-12 with an `x-surface` keyword on every property, each
-// subsurface defined once under `$defs` and referred to where it is used.
+// child defined once under `$defs` and referred to where it is used.
 // The app reads it through inlineSchema(), once per contract, so nothing
 // else here follows a reference.
 
@@ -47,7 +47,7 @@ export interface Extension {
    */
   runtime?: boolean;
   /**
-   * On a collection: a list whose every item is a child surface, `items`
+   * On a collection: a list whose every item is a child, `items`
    * referring to the child's def. Each item is drawn as the child's
    * fieldset; the list's own `minItems` and `maxItems` are the parent's.
    */
@@ -69,7 +69,7 @@ export interface Schema {
   $schema?: string;
   /** A reference to a def, `#/$defs/<id>`; resolved by inlineSchema(). */
   $ref?: string;
-  /** The root's subschemas, one per child surface, by id. */
+  /** The root's subschemas, one per child, by id. */
   $defs?: Record<string, Schema>;
   title?: string;
   description?: string;
@@ -124,7 +124,7 @@ export interface Validation {
   prepared: unknown;
 }
 
-/** Where a created thing now lives: a situation and its parameters. */
+/** Where a created thing now lives: an operation and its parameters. */
 export interface Created {
   surface: string;
   situation: string;

@@ -13,14 +13,14 @@ use Drupal\data_surface_examples\CodeLines;
 use Drupal\data_surface_examples\ConfigSchemaPanel;
 use Drupal\data_surface_examples\ExampleCalls;
 use Drupal\data_surface_examples\Form\RegistrationStep1ClassicForm;
-use Drupal\data_surface_examples\Surface\RegistrationStep1Surface;
-use Drupal\data_surface_examples\Surface\RegistrationStep2Surface;
-use Drupal\data_surface_examples\Surface\RegistrationStep3Surface;
-use Drupal\data_surface_examples\Target\RegistrationStep1Target;
+use Drupal\data_surface_examples\Resource\RegistrationStep1Resource;
+use Drupal\data_surface_examples\Resource\RegistrationStep2Resource;
+use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
+use Drupal\data_surface_examples\Storage\RegistrationStep1Storage;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * The examples' landing page, and the pages no situation form serves.
+ * The examples' landing page, and the pages no operation form serves.
  *
  * Those are the two examples with no form, and example 1's classic twin
  * with what config schema says under it.
@@ -39,7 +39,7 @@ final class ExamplesController extends ControllerBase {
   /**
    * The alter of example 4, relative to its module.
    */
-  public const COMPLIANCE_ALTER = 'src/SurfaceAlter/RegistrationComplianceAlter.php';
+  public const COMPLIANCE_ALTER = 'src/Alter/RegistrationComplianceAlter.php';
 
   /**
    * The module serving examples 1 to 3 as React forms.
@@ -93,7 +93,7 @@ final class ExamplesController extends ControllerBase {
     }
     return [
       'intro' => [
-        '#markup' => '<p>' . $this->t('One surface that grows, one idea per example: the settings of an event registration. Under each example\'s form, collapsed as "Behind the scenes: the contract, as it stands", is the contract the form is built from. Below it, collapsed as "Without a surface: what config schema can say", is what a client could be told about the same settings today, from config schema alone.') . '</p>',
+        '#markup' => '<p>' . $this->t('One resource that grows, one idea per example: the settings of an event registration. Under each example\'s form, collapsed as "Behind the scenes: the contract, as it stands", is the contract the form is built from. Below it, collapsed as "Without a resource: what config schema can say", is what a client could be told about the same settings today, from config schema alone.') . '</p>',
       ],
       'reset' => [
         '#type' => 'container',
@@ -116,7 +116,7 @@ final class ExamplesController extends ControllerBase {
     return [
       'form' => $this->formBuilder()->getForm(RegistrationStep1ClassicForm::class),
       'today' => $this->configSchemaPanel->build(
-        RegistrationStep1Target::CONFIG,
+        RegistrationStep1Storage::CONFIG,
         note: $this->t('This form requires the event title and holds the capacity between 1 and 1000. Neither rule is in the config schema, so neither is in either document below: only the form knows them.'),
       ),
     ];
@@ -161,7 +161,7 @@ final class ExamplesController extends ControllerBase {
     }
     return [
       'what' => [
-        '#markup' => '<p>' . $this->t('Example 5 has nothing to write. Example 3 names a target and has a situation that needs nothing, so the Tool API bridge derives a tool from it: <code>@tool</code>. It takes what the form of example 3 takes, refuses what it refuses, and can rehearse a write without making it.', ['@tool' => ExampleCalls::TOOL]) . '</p>',
+        '#markup' => '<p>' . $this->t('Example 5 has nothing to write. Example 3 names its storage and has an operation that needs nothing, so the Tool API bridge derives a tool from it: <code>@tool</code>. It takes what the form of example 3 takes, refuses what it refuses, and can rehearse a write without making it.', ['@tool' => ExampleCalls::TOOL]) . '</p>',
       ],
       'script' => [
         '#markup' => '<p>' . $this->t('The three calls, made by a kernel test and printed, from the site root:') . '</p>',
@@ -196,7 +196,7 @@ final class ExamplesController extends ControllerBase {
         'items' => [
           $this->route('data_surface_examples.step1'),
           $this->react('registration.step1'),
-          $this->lines(RegistrationStep1Surface::class),
+          $this->lines(RegistrationStep1Resource::class),
           $this->route('data_surface_examples.step1_classic'),
           $this->t('The classic twin, a config form: @lines lines of code.', ['@lines' => CodeLines::count($this->file(RegistrationStep1ClassicForm::class))]),
         ],
@@ -207,16 +207,16 @@ final class ExamplesController extends ControllerBase {
         'items' => [
           $this->route('data_surface_examples.step2'),
           $this->react('registration.step2'),
-          $this->lines(RegistrationStep2Surface::class),
+          $this->lines(RegistrationStep2Resource::class),
         ],
       ],
       3 => [
         'title' => $this->t('made of parts'),
-        'sentence' => $this->t('The pricing chooses which ticket surface fills a slot, and a contact surface is always attached; each part is a class of its own.'),
+        'sentence' => $this->t('The pricing chooses which ticket structure fills a slot, and a contact structure is always attached; each part is a class of its own.'),
         'items' => [
           $this->route('data_surface_examples.step3'),
           $this->react('registration.step3'),
-          $this->lines(RegistrationStep3Surface::class),
+          $this->lines(RegistrationStep3Resource::class),
         ],
       ],
       4 => [
@@ -260,29 +260,29 @@ final class ExamplesController extends ControllerBase {
   /**
    * Links an example's form in React, or says where it will be.
    *
-   * The same situation, rendered by data_surface_react from the contract
+   * The same operation, rendered by data_surface_react from the contract
    * it serves; the examples do not depend on that module, so while it is
    * off the path is named rather than linked.
    *
-   * @param string $surface
-   *   The example's surface id.
+   * @param string $resource
+   *   The example's resource id.
    *
    * @return array|\Drupal\Core\StringTranslation\TranslatableMarkup
    *   A link render array, or the sentence naming the path.
    */
-  protected function react(string $surface): array|TranslatableMarkup {
+  protected function react(string $resource): array|TranslatableMarkup {
     if (!$this->moduleHandler()->moduleExists(self::REACT)) {
       return $this->t('In React at /surface-react/@surface/configure, once @module is enabled.', [
-        '@surface' => $surface,
+        '@surface' => $resource,
         '@module' => self::REACT,
       ]);
     }
-    $url = Url::fromRoute('data_surface_react.page', ['surface' => $surface, 'situation' => 'configure']);
+    $url = Url::fromRoute('data_surface_react.page', ['surface' => $resource, 'situation' => 'configure']);
     return Link::fromTextAndUrl($this->t('In React: @path', ['@path' => $url->toString()]), $url)->toRenderable();
   }
 
   /**
-   * Says how many lines of code an example's surface class is.
+   * Says how many lines of code an example's resource class is.
    *
    * @param class-string $class
    *   The class.
@@ -291,7 +291,7 @@ final class ExamplesController extends ControllerBase {
    *   The sentence.
    */
   protected function lines(string $class): TranslatableMarkup {
-    return $this->t('The surface: @lines lines of code.', ['@lines' => CodeLines::count($this->file($class))]);
+    return $this->t('The resource: @lines lines of code.', ['@lines' => CodeLines::count($this->file($class))]);
   }
 
   /**

@@ -43,7 +43,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
   protected static $modules = ['system', 'data_surface'];
 
   /**
-   * Builds a surface exercising every stock widget.
+   * Builds a data surface exercising every stock widget.
    */
   protected function surface(array $locked = []): DataSurfaceInterface {
     $badge = DataDefinition::create('string')
@@ -103,7 +103,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
    * carry the right values, and this owns what those keys render as.
    *
    * @return array<string, array{0: string, 1: array}>
-   *   Test cases, each a surface key and the element properties the
+   *   Test cases, each a key and the element properties the
    *   definitions on it must produce.
    */
   public static function constraintMappingCases(): array {
@@ -246,7 +246,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($values['active']);
     $this->assertSame(['badge' => 'star'], $values['extras']);
 
-    // The extracted values validate against the surface — the choice
+    // The extracted values validate against the data surface: the choice
     // constraints hold because casting restored native types.
     $this->assertCount(0, $this->pipeline()->validate($surface, $values));
   }
@@ -285,7 +285,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
     $this->formBuilder()->flagSurfaceErrors($errors, $form, $form_state);
     $flagged = $form_state->getErrors();
 
-    // The surface's own required message, with the label in a
+    // The data surface's own required message, with the label in a
     // placeholder rather than rendered into the string.
     $this->assertInstanceOf(TranslatableMarkup::class, $flagged['title']);
     $this->assertSame('@label is required.', $flagged['title']->getUntranslatedString());
@@ -306,10 +306,10 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Builds a surface holding one list of labeled choices.
+   * Builds a data surface holding one list of labeled choices.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface.
+   *   The data surface.
    */
   protected function tagsSurface(): DataSurfaceInterface {
     $tags = ListDataDefinition::create('string')->setLabel('Tags');
@@ -545,7 +545,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
 
     // Scoped to the element, not to the container around it. Touching
     // one select says one thing about one key; every other key on the
-    // surface is still mid-edit and has not been submitted, so nothing
+    // data surface is still mid-edit and has not been submitted, so nothing
     // else may be judged. Scoped to the container, a dependent the new
     // choice had just orphaned was flagged as a wrong answer — and Form
     // API skips the rebuild outright once anything has errored, so the
@@ -692,7 +692,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the surface's own cacheability reaches the container.
+   * Tests that the data surface's own cacheability reaches the container.
    *
    * The other half of the same rule. The widget says how long one option
    * list may be reused; this says how long the shape the whole container
@@ -737,13 +737,13 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
     $this->assertSame('host-own-id', $merged['#attributes']['id']);
     $this->assertSame(['host'], $merged['#attributes']['class']);
     $this->assertSame('textfield', $merged['host_key']['#type']);
-    // The surface's children and its marker are added, and the AJAX now
+    // The data surface's children and its marker are added, and the AJAX now
     // replaces the element the host named rather than one that is not
     // in the document.
     $this->assertSame('host-own-id', $merged['#data_surface_wrapper']);
     $this->assertSame('host-own-id', $merged['kind']['#ajax']['wrapper']);
     $this->assertSame('textfield', $merged['detail']['#type']);
-    // A host that says nothing gets the surface's container.
+    // A host that says nothing gets the data surface's container.
     $this->assertSame('container', $this->formBuilder()->mergeSurfaceContainer($container, [])['#type']);
   }
 
@@ -772,7 +772,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
     ]);
     // What a host hands its plugin: a state that reads values relative
     // to the fragment it wraps. Read naively, every absolute path lands
-    // one level too deep and comes back NULL — which the surface would
+    // one level too deep and comes back NULL, which the data surface would
     // report as "not configured" and write over what is stored.
     $subform_state = SubformState::createForSubform($form['settings'], $form, $form_state);
 
@@ -784,10 +784,10 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Builds a two-key surface whose second key refines against the first.
+   * Builds a two-key data surface whose second key refines against the first.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface.
+   *   The data surface.
    */
   protected function dependencySurface(): DataSurfaceInterface {
     return new DataSurface(

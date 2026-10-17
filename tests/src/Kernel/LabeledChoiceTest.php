@@ -41,7 +41,7 @@ class LabeledChoiceTest extends DataSurfaceKernelTestBase {
   protected const MESSAGE = 'The value you selected is not a valid choice.';
 
   /**
-   * Builds a one-key surface carrying a labeled choice.
+   * Builds a one-key data surface carrying a labeled choice.
    *
    * Spelled canonically: the allowed values are Choice's own list, the
    * labels hang beside them keyed by value. Integer choices have to be
@@ -49,7 +49,7 @@ class LabeledChoiceTest extends DataSurfaceKernelTestBase {
    * from a list of values.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface.
+   *   The data surface.
    */
   protected function surface(): DataSurfaceInterface {
     return new DataSurface(
@@ -114,7 +114,7 @@ class LabeledChoiceTest extends DataSurfaceKernelTestBase {
    * Tests that the constraint carries nothing but the list and its meaning.
    *
    * It is expected to land in core, so it may know about values, labels
-   * and help text and about nothing else: no surface, no widget, no
+   * and help text and about nothing else: no data surface, no widget, no
    * options resolver.
    */
   public function testCarriesNoModuleSpecificOption(): void {
@@ -212,7 +212,7 @@ class LabeledChoiceTest extends DataSurfaceKernelTestBase {
    * Core's ChoiceValidator compares with in_array(..., strict), so the
    * string '1' is not the integer 1 and a form submission, where every
    * value arrives as a string, would fail against integer choices. The
-   * surface makes the two agree one layer earlier: accept() casts every
+   * pipeline makes the two agree one layer earlier: accept() casts every
    * value to its definition's type before anything validates, so what
    * reaches the constraint is already the integer the choices are
    * written in. Keeping the reconciliation there is what lets the

@@ -14,15 +14,15 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Refinement\ChoiceSet;
 use Drupal\data_surface\Refinement\Narrowing;
 use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
-use Drupal\data_surface\Target\SettingsShapeInterface;
+use Drupal\data_surface\Storage\SettingsShapeInterface;
 
 /**
- * The mutable stage a surface passes through before it is sealed.
+ * The mutable stage a data surface passes through before it is sealed.
  *
- * Internal to the build step: Surfaces fills one per surface it builds,
- * through the shape adapters an author's defineInputs() and an alter's
- * alterInputs() are handed, and seals it. Nothing else constructs one
- * outside the engine's own tests.
+ * Internal to the build step: Resources fills one per resource or
+ * structure it builds, through the shape adapters an author's
+ * defineInputs() and an alter's alterInputs() are handed, and seals it.
+ * Nothing else constructs one outside the engine's own tests.
  *
  * The builder is a value object made with `new DataSurfaceBuilder()`, so
  * there is no constructor to inject the translation service through. The
@@ -90,40 +90,40 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * How each provider's mounted settings are written down, by provider.
    *
-   * @var array<string, \Drupal\data_surface\Target\SettingsShapeInterface>
+   * @var array<string, \Drupal\data_surface\Storage\SettingsShapeInterface>
    */
   protected array $thirdPartyShapes = [];
 
   /**
-   * Children fixed at a key, keyed by surface key.
+   * Children fixed at a key, keyed by definition key.
    *
-   * @var array<string, \Drupal\data_surface\SurfaceAttachment>
+   * @var array<string, \Drupal\data_surface\Attachment>
    */
   protected array $attachments = [];
 
   /**
-   * Slots, keyed by surface key: the deciding key and the variants.
+   * Slots, keyed by definition key: the deciding key and the variants.
    *
-   * @var array<string, array{by: string, variants: array<string, \Drupal\data_surface\SurfaceAttachment>}>
+   * @var array<string, array{by: string, variants: array<string, \Drupal\data_surface\Attachment>}>
    */
   protected array $slots = [];
 
   /**
-   * Collections, keyed by surface key: the child every item is.
+   * Collections, keyed by definition key: the child every item is.
    *
-   * @var array<string, \Drupal\data_surface\SurfaceList>
+   * @var array<string, \Drupal\data_surface\Collection>
    */
   protected array $lists = [];
 
   /**
-   * Locked surface keys.
+   * Locked definition keys.
    *
    * @var string[]
    */
   protected array $locked = [];
 
   /**
-   * What the surface being built depends on.
+   * What the data surface being built depends on.
    */
   protected CacheableMetadata $cacheability;
 
@@ -133,10 +133,10 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   protected ?WatchedValueCheckInterface $watchedValueCheck = NULL;
 
   /**
-   * The sealed surface, once seal() has produced it.
+   * The sealed data surface, once seal() has produced it.
    *
    * Holding it is what makes seal() idempotent and every mutator's
-   * refusal unambiguous: there is a surface out in the world describing
+   * refusal unambiguous: there is a data surface out in the world describing
    * what this builder held, and changing the builder now would mean two
    * different answers to the same question.
    */
@@ -146,7 +146,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
    * Constructs a DataSurfaceBuilder.
    *
    * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $definitions
-   *   The owner's own definitions, keyed by surface key.
+   *   The owner's own definitions, keyed by definition key.
    * @param array<string, string[]> $refinements
    *   Refinement dependencies: target => dependency names.
    * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $outputs
@@ -209,7 +209,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
     $this->assertMutable();
     $shell = $this->definitions[$name] ?? NULL;
     if (!static::isEmptyShell($shell)) {
-      throw new \LogicException(sprintf('The "%s" key cannot be omitted: only a key reserved for a subsurface or a collection can be, and only before its child is attached.', $name));
+      throw new \LogicException(sprintf('The "%s" key cannot be omitted: only a key reserved for an attached structure or a collection can be, and only before its child is attached.', $name));
     }
     // A collection's refiners are the parent's, bound before its child
     // was asked, and go with the key.
@@ -286,7 +286,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * {@inheritdoc}
    */
-  public function attach(string $key, SurfaceAttachment $attachment): static {
+  public function attach(string $key, Attachment $attachment): static {
     $this->assertMutable();
     $this->assertNotNested($key);
     $this->definitions[$key] = $this->shellFor($key);
@@ -348,7 +348,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * {@inheritdoc}
    */
-  public function attachList(string $key, SurfaceList $list): static {
+  public function attachList(string $key, Collection $list): static {
     $this->assertMutable();
     $this->assertNotNested($key);
     $existing = $this->definitions[$key] ?? NULL;
@@ -506,20 +506,20 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
     $unmounted = array_diff_key($this->thirdPartyShapes, $this->thirdParty);
     if ($unmounted !== []) {
       throw new \LogicException(sprintf(
-        'A storage shape was given for the third-party settings of %s, which mount nothing on this surface.',
+        'A storage shape was given for the third-party settings of %s, which mount nothing on this data surface.',
         implode(', ', array_keys($unmounted)),
       ));
     }
     $definitions = $this->definitions;
     foreach ($this->attachments as $key => $attachment) {
-      $definitions[$key] = SurfaceAttachment::mapOf($this->assertShell((string) $key), $attachment->child);
+      $definitions[$key] = Attachment::mapOf($this->assertShell((string) $key), $attachment->child);
     }
     $slots = [];
     foreach ($this->slots as $key => ['by' => $by, 'variants' => $variants]) {
-      $slot = new SurfaceSlot($by, $this->assertShell((string) $key), $variants);
+      $slot = new Slot($by, $this->assertShell((string) $key), $variants);
       $slots[$key] = $slot;
       // A locked deciding key has its one value already, so the slot is
-      // that variant from the start: what the surface advertises is the
+      // that variant from the start: what the data surface advertises is the
       // shape the caller will actually be held to.
       $chosen = in_array($by, $this->locked, TRUE)
         ? $slot->chosen(DefinitionMetadata::defaultOf($this->named($by)))
@@ -527,7 +527,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
       $definitions[$key] = $chosen === NULL ? $slot->placeholder() : $slot->definitionFor($chosen);
     }
     foreach ($this->lists as $key => $list) {
-      $definitions[$key] = SurfaceList::listOf($this->assertListShell((string) $key), $list->item->child);
+      $definitions[$key] = Collection::listOf($this->assertListShell((string) $key), $list->item->child);
     }
     if ($this->thirdParty !== []) {
       $definitions['third_party_settings'] = $this->mountedMap($this->thirdParty, FALSE);
@@ -621,14 +621,14 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   }
 
   /**
-   * Gets the map describing a subsurface key, before it is filled.
+   * Gets the map describing an attached structure's key, before filling.
    *
    * A key may be described before it is attached, with an empty map
    * carrying its label and description, and that map is kept; otherwise
    * a bare one is made.
    *
    * @param string $key
-   *   The surface key.
+   *   The definition key.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The shell.
@@ -652,10 +652,10 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   }
 
   /**
-   * Checks that a subsurface key still holds an empty map at seal.
+   * Checks that an attached structure's key still holds an empty map.
    *
    * @param string $key
-   *   The surface key.
+   *   The definition key.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The shell.
@@ -667,7 +667,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
     $shell = $this->definitions[$key] ?? NULL;
     if (!$shell instanceof MapDataDefinition || $shell->getPropertyDefinitions() !== []) {
       throw new \LogicException(sprintf(
-        'The "%s" key is a subsurface, so what it holds is its child\'s to say: its definition was replaced or given properties of its own after it was attached.',
+        'The "%s" key holds an attached structure, so what it holds is its child\'s to say: its definition was replaced or given properties of its own after it was attached.',
         $key,
       ));
     }
@@ -683,7 +683,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
    * the child fills.
    *
    * @param string $key
-   *   The surface key.
+   *   The definition key.
    *
    * @return \Drupal\Core\TypedData\ListDataDefinition
    *   The shell.
@@ -726,19 +726,19 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
    * Refuses to attach at a key twice.
    *
    * @param string $key
-   *   The surface key.
+   *   The definition key.
    *
    * @throws \LogicException
    *   When the key is already attached, a slot or a collection.
    */
   protected function assertNotNested(string $key): void {
     if (isset($this->attachments[$key]) || isset($this->slots[$key]) || isset($this->lists[$key])) {
-      throw new \LogicException(sprintf('The "%s" key is already a subsurface: one key holds one child, one set of variants, or one collection.', $key));
+      throw new \LogicException(sprintf('The "%s" key already holds an attached structure: one key holds one child, one set of variants, or one collection.', $key));
     }
   }
 
   /**
-   * Refuses an output the surface cannot honor as declared.
+   * Refuses an output the data surface cannot honor as declared.
    *
    * Two refusals, and both are about a promise nothing could keep: the
    * reserved name, which belongs to whoever mounts under it rather than
@@ -756,7 +756,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   protected static function assertOutputDeclarable(string $name, DataDefinitionInterface $definition): void {
     if ($name === self::THIRD_PARTY_OUTPUTS) {
       throw new \InvalidArgumentException(sprintf(
-        'The "%s" output key is reserved for the outputs other modules mount, so the surface owner cannot declare it: mount one with setThirdPartyOutputDefinition() instead.',
+        'The "%s" output key is reserved for the outputs other modules mount, so the declaring class cannot declare it: mount one with setThirdPartyOutputDefinition() instead.',
         self::THIRD_PARTY_OUTPUTS,
       ));
     }
@@ -803,7 +803,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
    * A provider id is a module machine name, and the module list already
    * holds that module's human name, so the mounted container is titled
    * with it rather than with the machine name. A provider no module
-   * answers for — a test fixture, a module being uninstalled — keeps its
+   * answers for (a test fixture, a module being uninstalled) keeps its
    * id, which is still better than no title at all.
    *
    * @param string $provider
@@ -819,14 +819,14 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   }
 
   /**
-   * Refuses every mutation once the surface has been advertised.
+   * Refuses every mutation once the data surface has been advertised.
    *
    * @throws \LogicException
    *   When the builder is already sealed.
    */
   protected function assertMutable(): void {
     if ($this->sealed !== NULL) {
-      throw new \LogicException('The surface has been sealed and can no longer be changed: widening is a build-time act, and the build is over.');
+      throw new \LogicException('The data surface has been sealed and can no longer be changed: widening is a build-time act, and the build is over.');
     }
   }
 
@@ -834,7 +834,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
    * Refuses a refinement map in which a key depends on itself.
    *
    * Refinement walks the map one target at a time, so a cycle is not an
-   * infinite loop: it is a surface whose answer depends on the order the
+   * infinite loop: it is a data surface whose answer depends on the order the
    * keys happen to be read in, which is worse, because it looks like it
    * works. The map is whole only once every contributor has spoken, so
    * this is asked at seal and not before.
@@ -892,7 +892,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
    * and a key with whatever refines a path inside it.
    *
    * @param string $target
-   *   A surface key, or a dotted path into one.
+   *   A definition key, or a dotted path into one.
    *
    * @return string[]
    *   The keys and dotted paths it refines against.
@@ -909,10 +909,10 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   }
 
   /**
-   * Gets a definition by surface key, or fails naming the key.
+   * Gets a definition by key, or fails naming the key.
    *
    * @param string $name
-   *   The surface key.
+   *   The definition key.
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface
    *   The definition.
@@ -922,14 +922,14 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
    */
   protected function named(string $name): DataDefinitionInterface {
     return $this->definitions[$name]
-      ?? throw new \InvalidArgumentException(sprintf('Unknown surface definition "%s".', $name));
+      ?? throw new \InvalidArgumentException(sprintf('Unknown data surface definition "%s".', $name));
   }
 
   /**
    * Says who a key's existing value belongs to.
    *
    * @param string $name
-   *   The surface key.
+   *   The definition key.
    * @param mixed $value
    *   The value somebody is trying to contribute a second time.
    *
@@ -942,7 +942,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
         return (string) $contributor;
       }
     }
-    return 'the surface owner';
+    return 'the declaring class';
   }
 
   /**

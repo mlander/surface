@@ -6,15 +6,15 @@ namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Surface\SurfaceContext;
-use Drupal\data_surface_demo\Surface\DemoBlockSurface;
-use Drupal\data_surface_examples\Surface\RegistrationStep2Surface;
-use Drupal\data_surface_examples\Surface\RegistrationStep3Surface;
-use Drupal\data_surface_examples_compliance\SurfaceAlter\RegistrationComplianceAlter;
-use Drupal\data_surface_surface_test\Surface\Broken\FickleSurface;
-use Drupal\data_surface_surface_test\Surface\Broken\ServiceReadingSurface;
-use Drupal\data_surface_surface_test\Surface\Crate\CrateSurface;
-use Drupal\data_surface_surface_test\Surface\StockroomSurface;
+use Drupal\data_surface\Resource\OperationContext;
+use Drupal\data_surface_demo\Structure\DemoBlockStructure;
+use Drupal\data_surface_examples\Resource\RegistrationStep2Resource;
+use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
+use Drupal\data_surface_examples_compliance\Alter\RegistrationComplianceAlter;
+use Drupal\data_surface_surface_test\Structure\Broken\FickleStructure;
+use Drupal\data_surface_surface_test\Structure\Broken\ServiceReadingStructure;
+use Drupal\data_surface_surface_test\Structure\Crate\CrateStructure;
+use Drupal\data_surface_surface_test\Structure\StockroomStructure;
 use Drupal\node\Entity\NodeType;
 use Drupal\Tests\data_surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -25,7 +25,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Tests a static refiner is held to being one, three ways.
  *
  * The build refuses an instance method not declared runtime (in
- * SurfaceBuildTest's broken surfaces). With assertions on, a static
+ * ResourceBuildTest's broken classes). With assertions on, a static
  * refiner runs with the global container guarded, so one that asks for a
  * service is caught while one that translates is not; and the emitter
  * asks a static refiner again for one combination per key it enumerates,
@@ -72,34 +72,34 @@ class StaticRefinerEnforcementTest extends DataSurfaceKernelTestBase {
     $this->installEntitySchema('node');
     $this->installConfig(['field', 'node', 'data_surface_examples']);
     $this->setUpCurrentUser(admin: TRUE);
-    FickleSurface::$calls = 0;
+    FickleStructure::$calls = 0;
   }
 
   /**
-   * Builds a surface with nothing locked.
+   * Builds a structure with nothing locked.
    *
    * @param class-string $class
-   *   The surface class.
+   *   The structure class.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface.
+   *   The built structure.
    */
   protected function configure(string $class): DataSurfaceInterface {
-    return $this->container->get('data_surface.surfaces')->build($class, new SurfaceContext('configure'));
+    return $this->container->get('data_surface.resources')->build($class, new OperationContext('configure'));
   }
 
   /**
-   * Builds one of the examples in its configure situation.
+   * Builds one of the examples in its configure operation.
    *
    * @param class-string $class
-   *   The surface class.
+   *   The resource class.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface.
+   *   The built resource.
    */
   protected function example(string $class): DataSurfaceInterface {
-    $surfaces = $this->container->get('data_surface.surfaces');
-    return $surfaces->build($class, $surfaces->situation($class, 'configure'));
+    $resources = $this->container->get('data_surface.resources');
+    return $resources->build($class, $resources->operation($class, 'configure'));
   }
 
   /**
@@ -112,7 +112,7 @@ class StaticRefinerEnforcementTest extends DataSurfaceKernelTestBase {
    */
   public function testTranslatingStaticRefinerPassesTheGuard(): void {
     $this->assertTrue((bool) ini_get('zend.assertions'), 'The suite runs with assertions on.');
-    $name = $this->configure(ServiceReadingSurface::class)->refine(['kind' => 'short'])->getDefinition('name');
+    $name = $this->configure(ServiceReadingStructure::class)->refine(['kind' => 'short'])->getDefinition('name');
     $this->assertSame(['max' => 10], $name->getConstraints()['Length']);
     $this->assertInstanceOf(TranslatableMarkup::class, $name->getDescription());
     $this->assertSame('Up to 10 characters for a short name.', (string) $name->getDescription());
@@ -126,21 +126,21 @@ class StaticRefinerEnforcementTest extends DataSurfaceKernelTestBase {
    * production, nothing is guarded and the refiner runs.
    */
   public function testStaticRefinerAskingForServiceIsCaught(): void {
-    $surface = $this->configure(ServiceReadingSurface::class);
+    $surface = $this->configure(ServiceReadingStructure::class);
     try {
       $surface->refine(['shelf' => 'top']);
       $this->fail('A static refiner reading State was let through.');
     }
     catch (\LogicException $e) {
       $this->assertSame(
-        'The refiner ' . ServiceReadingSurface::class . '::sizeOnShelf() is declared static but asked for the service state; a refiner that needs a service must declare runtime: TRUE.',
+        'The refiner ' . ServiceReadingStructure::class . '::sizeOnShelf() is declared static but asked for the service state; a refiner that needs a service must declare runtime: TRUE.',
         $e->getMessage(),
       );
     }
     $this->assertSame($this->container, \Drupal::getContainer(), 'The real container is put back.');
 
     // Production compiles no assertion, so the call is made as it is.
-    $this->container->get('state')->set(ServiceReadingSurface::LIMIT, 7);
+    $this->container->get('state')->set(ServiceReadingStructure::LIMIT, 7);
     ini_set('zend.assertions', '0');
     try {
       $size = $surface->refine(['shelf' => 'top'])->getDefinition('size');
@@ -155,9 +155,9 @@ class StaticRefinerEnforcementTest extends DataSurfaceKernelTestBase {
    * Tests the emitter refuses a static refiner that answers differently.
    */
   public function testStaticRefinerAnsweringDifferentlyIsCaught(): void {
-    $surface = $this->configure(FickleSurface::class);
+    $surface = $this->configure(FickleStructure::class);
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('The refiner ' . FickleSurface::class . '::sizeOfKind() is declared static but answered differently when run again, for "size" with {"kind":"small"}');
+    $this->expectExceptionMessage('The refiner ' . FickleStructure::class . '::sizeOfKind() is declared static but answered differently when run again, for "size" with {"kind":"small"}');
     $this->container->get('data_surface.contract_emitter')->emitFull($surface, 'surface_test.broken.fickle');
   }
 
@@ -169,7 +169,7 @@ class StaticRefinerEnforcementTest extends DataSurfaceKernelTestBase {
    * the conditional is not what refinement answers now.
    */
   public function testTheAgreementCheckCatchesWhatTheEmitterWroteDown(): void {
-    $surface = $this->configure(FickleSurface::class);
+    $surface = $this->configure(FickleStructure::class);
     ini_set('zend.assertions', '0');
     try {
       $this->assertStaticRefinersAgree($surface, NULL, 'surface_test.broken.fickle');
@@ -200,7 +200,7 @@ class StaticRefinerEnforcementTest extends DataSurfaceKernelTestBase {
         // states; the static ones still agree.
         $this->container->get('state')->set(RegistrationComplianceAlter::CLOSED_ROOMS, ['riverside_main']);
       }
-      foreach ([RegistrationStep2Surface::class, RegistrationStep3Surface::class] as $class) {
+      foreach ([RegistrationStep2Resource::class, RegistrationStep3Resource::class] as $class) {
         $surface = $this->example($class);
         $label = $class . ' ' . $compliance . ' compliance';
         $compared[$label] = $this->assertStaticRefinersAgree($surface, NULL, $label)
@@ -222,8 +222,8 @@ class StaticRefinerEnforcementTest extends DataSurfaceKernelTestBase {
    */
   public function testTheFixturesAgree(): void {
     NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
-    StockroomSurface::$closed = ['north_2'];
-    foreach ([DemoBlockSurface::class, StockroomSurface::class, CrateSurface::class] as $class) {
+    StockroomStructure::$closed = ['north_2'];
+    foreach ([DemoBlockStructure::class, StockroomStructure::class, CrateStructure::class] as $class) {
       $surface = $this->configure($class);
       $count = $this->assertStaticRefinersAgree($surface, NULL, $class)
         + $this->assertStaticRefinersAgree($surface, [], $class);

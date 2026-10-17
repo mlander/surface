@@ -1,0 +1,79 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\data_surface_examples\Resource;
+
+use Drupal\Core\TypedData\DataDefinition;
+use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\data_surface\Resource\Attribute\RefinesInput;
+use Drupal\data_surface\Resource\Attribute\Operation;
+use Drupal\data_surface\Resource\Attribute\Resource;
+use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\OperationContext;
+use Drupal\data_surface\Resource\ResourceInterface;
+use Drupal\data_surface_examples\Storage\RegistrationStep2Storage;
+use Drupal\data_surface_examples\Venues;
+
+/**
+ * Example 2: answers depend on answers.
+ *
+ * Example 1's keys, plus a venue and a room. Which rooms are offered
+ * depends on the venue, and how many people fit depends on the room:
+ * one #[RefinesInput] method each, whose signature names what it reads.
+ * Declaration order is form order, so the capacity comes after the room
+ * that decides it, and its description names that room's limit.
+ */
+#[Resource('registration.step2', storage: RegistrationStep2Storage::class)]
+final class RegistrationStep2Resource implements ResourceInterface {
+
+  /**
+   * Configures the registration settings, which always exist.
+   */
+  #[Operation('configure', label: 'Configure registration', permission: 'administer site configuration')]
+  public static function configure(): OperationContext {
+    return new OperationContext('configure');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('title', 'string', t('Event title'))
+      ->setRequired(TRUE);
+    $inputs->add('open', 'boolean', t('Registration open'), default: TRUE);
+    $inputs->add('venue', 'string', t('Venue'))
+      ->setRequired(TRUE)
+      ->addConstraint('LabeledChoice', ['choices' => Venues::VENUES]);
+    $inputs->add('room', 'string', t('Room'))
+      ->setRequired(TRUE)
+      ->addConstraint('LabeledChoice', ['choices' => Venues::rooms()]);
+    $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
+      ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
+  }
+
+  /**
+   * The room must be one of the chosen venue's rooms.
+   */
+  #[RefinesInput('room')]
+  public static function roomInVenue(DataDefinitionInterface $room, string $venue): DataDefinitionInterface {
+    return $room->addConstraint('LabeledChoice', ['choices' => Venues::rooms($venue)]);
+  }
+
+  /**
+   * No more people than the chosen room seats, said under the field.
+   */
+  #[RefinesInput('capacity')]
+  public static function capacityOfRoom(DataDefinitionInterface $capacity, string $room): DataDefinitionInterface {
+    $seats = Venues::seats($room);
+    $capacity->addConstraint('Range', ['min' => 1, 'max' => $seats ?? 1000]);
+    if ($seats !== NULL && $capacity instanceof DataDefinition) {
+      $capacity->setDescription(t('Up to @seats for the @room.', [
+        '@seats' => $seats,
+        '@room' => Venues::rooms()[$room],
+      ]));
+    }
+    return $capacity;
+  }
+
+}

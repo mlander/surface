@@ -16,31 +16,31 @@ use Drupal\data_surface\Refinement\ChoiceSet;
 use Drupal\data_surface\Refinement\Narrowing;
 use Drupal\data_surface\Refinement\RuntimeRefiner;
 use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
-use Drupal\data_surface\Target\SettingsShapeInterface;
+use Drupal\data_surface\Storage\SettingsShapeInterface;
 
 /**
- * The immutable surface a builder seals.
+ * The immutable data surface a builder seals.
  *
  * Pure data: it reaches no service, holds no container, and does nothing
  * but read its own definitions and apply the refiners it was sealed
- * with. That is what lets a surface ride along in a cached form and be
+ * with. That is what lets a data surface ride along in a cached form and be
  * read by a caller that has no container at all. Validation, which needs
  * the typed data manager, is the pipeline's. The one question refinement
- * asks of a value — may a refiner see it? — goes to the watched value
- * check the surface was sealed with, which serializes as a service id
+ * asks of a value (may a refiner see it?) goes to the watched value
+ * check the data surface was sealed with, which serializes as a service id
  * the way an alter's refiner link does.
  *
- * Everything the surface knows about one key lives on that key's
- * SurfaceEntry inside the DefinitionMap, so there are no parallel arrays
+ * Everything the data surface knows about one key lives on that key's
+ * Entry inside the DefinitionMap, so there are no parallel arrays
  * left to fall out of step. The outputs are a second map of the same
- * type, read the same way and never refined. What is not per key — the
- * cacheability of the whole surface and the storage shapes of what
- * alters mounted — stays here.
+ * type, read the same way and never refined. What is not per key (the
+ * cacheability of the whole data surface and the storage shapes of what
+ * alters mounted) stays here.
  *
  * Default values live on the definitions themselves, read through
  * DefinitionMetadata so they move to core's own methods when those land
- * (see PLAN.md). Locking stays on the surface, and arguably belongs
- * there anyway — whether a key is immutable is context (add vs edit),
+ * (see PLAN.md). Locking stays on the data surface, and arguably belongs
+ * there anyway: whether a key is immutable is context (add vs edit),
  * not an intrinsic property of its type.
  *
  * @see \Drupal\data_surface\DataSurfaceInterface
@@ -56,31 +56,31 @@ final class DataSurface implements DataSurfaceInterface {
    * Constructs a DataSurface.
    *
    * @param \Drupal\data_surface\DefinitionMap $definitions
-   *   What the surface advertises: one entry per key, in declaration
+   *   What the data surface advertises: one entry per key, in declaration
    *   order, carrying the definition, the contributor, the locked flag,
    *   the refinement edges, the contributed values and the refiner
    *   chains.
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
-   *   What the surface itself depends on: everything the builder was
+   *   What the data surface itself depends on: everything the builder was
    *   told at build time, plus what each refiner that ran declared.
    * @param \Drupal\data_surface\DefinitionMap $outputs
    *   What the host's execution emits: one entry per output key, in
    *   declaration order, carrying the definition and the contributor.
-   *   Empty for a surface that declares no outputs.
-   * @param array<string, \Drupal\data_surface\Target\SettingsShapeInterface> $thirdPartyShapes
+   *   Empty for a data surface that declares no outputs.
+   * @param array<string, \Drupal\data_surface\Storage\SettingsShapeInterface> $thirdPartyShapes
    *   How each provider's mounted third-party settings are stored, by
    *   provider; a provider not listed stores them as described.
    * @param \Drupal\data_surface\Refinement\WatchedValueCheckInterface|null $watchedValueCheck
    *   What a watched value passes before a refiner is handed it; NULL
-   *   for a surface no build step made, which hands every configured
+   *   for a data surface no build step made, which hands every configured
    *   value over.
    *
    * @internal
-   *   A surface is built by the build step, which seals a
+   *   A data surface is built by the build step, which seals a
    *   DataSurfaceBuilder. The constructor stays public only because
-   *   refine() reconstructs the surface with narrowed definitions, and
-   *   because the engine's own tests assert on surfaces no build step
-   *   made; nothing else may call it.
+   *   refine() reconstructs the data surface with narrowed definitions,
+   *   and because the engine's own tests assert on data surfaces no build
+   *   step made; nothing else may call it.
    */
   public function __construct(
     protected readonly DefinitionMap $definitions,
@@ -149,18 +149,19 @@ final class DataSurface implements DataSurfaceInterface {
    * Reads what one key starts from.
    *
    * An attached child starts from its own defaults, read from the child
-   * so its own subsurfaces answer for themselves. A slot starts from the
-   * defaults of the variant its deciding key's default chooses, and from
-   * nothing when that chooses none. A collection starts from what its
-   * list declares, which is no items unless the owner said otherwise.
+   * so its own attached structures answer for themselves. A slot starts
+   * from the defaults of the variant its deciding key's default chooses,
+   * and from nothing when that chooses none. A collection starts from
+   * what its list declares, which is no items unless the owner said
+   * otherwise.
    *
-   * @param \Drupal\data_surface\SurfaceEntry $entry
+   * @param \Drupal\data_surface\Entry $entry
    *   The key.
    *
    * @return mixed
    *   The default.
    */
-  protected function defaultOf(SurfaceEntry $entry): mixed {
+  protected function defaultOf(Entry $entry): mixed {
     if ($entry->attachment !== NULL) {
       return $entry->attachment->child->getDefaultValues();
     }
@@ -229,8 +230,8 @@ final class DataSurface implements DataSurfaceInterface {
    * Decision: see docs/decisions.md#static-by-default-runtime-by-declaration.
    *
    * @param array $values
-   *   The values as they stand, which a subsurface is refined against in
-   *   its own frame, and which choose a slot's variant.
+   *   The values as they stand, which an attached structure is refined
+   *   against in its own frame, and which choose a slot's variant.
    * @param array $admitted
    *   The same values with every refused watched value withheld, which
    *   are what a refiner is handed.
@@ -239,7 +240,7 @@ final class DataSurface implements DataSurfaceInterface {
    *   the static ones alone, a key waits only for what they watch.
    *
    * @return static
-   *   A refined surface, or this one when nothing refines.
+   *   A refined data surface, or this one when nothing refines.
    */
   protected function refineAgainst(array $values, array $admitted, bool $runtime = TRUE): static {
     $refines = $this->refines($runtime);
@@ -248,8 +249,9 @@ final class DataSurface implements DataSurfaceInterface {
     $changed = FALSE;
     foreach ($this->definitions->entries() as $entry) {
       if ($entry->isNested()) {
-        // A subsurface is refined by its child, in the child's frame, and
-        // by nothing in the parent: no parent refiner can name it.
+        // An attached structure is refined by its child, in the child's
+        // frame, and by nothing in the parent: no parent refiner can name
+        // it.
         $resolved = $this->refineNested($entry, $values, $cacheability, $runtime);
         if ($resolved !== NULL) {
           $definitions = $definitions->with($entry->withDefinition($resolved));
@@ -299,7 +301,7 @@ final class DataSurface implements DataSurfaceInterface {
    *
    * Decision: see docs/decisions.md#count-is-the-parents.
    *
-   * @param \Drupal\data_surface\SurfaceEntry $entry
+   * @param \Drupal\data_surface\Entry $entry
    *   The collection, as advertised.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $refined
    *   What the parent's refiners made of it.
@@ -307,7 +309,7 @@ final class DataSurface implements DataSurfaceInterface {
    * @throws \LogicException
    *   When the items were narrowed.
    */
-  public static function assertItemsUntouched(SurfaceEntry $entry, DataDefinitionInterface $refined): void {
+  public static function assertItemsUntouched(Entry $entry, DataDefinitionInterface $refined): void {
     $before = $entry->definition instanceof ListDataDefinition ? $entry->definition->getItemDefinition() : NULL;
     $after = $refined instanceof ListDataDefinition ? $refined->getItemDefinition() : NULL;
     $narrowed = $before === NULL || $after === NULL
@@ -327,13 +329,13 @@ final class DataSurface implements DataSurfaceInterface {
    *
    * A watched key is judged by its definition as refined against the
    * same admitted values, because that is the definition it is held to
-   * once the surface is refined: a capacity of 250 is refused under the
+   * once the data surface is refined: a capacity of 250 is refused under the
    * hundred an unlicensed event allows, and nothing watching it sees it.
-   * A key that holds nothing is withheld already, and a subsurface is
-   * judged by its own child, so neither is asked here.
+   * A key that holds nothing is withheld already, and an attached
+   * structure is judged by its own child, so neither is asked here.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $refined
-   *   The surface refined against the admitted values.
+   *   The data surface refined against the admitted values.
    * @param array $admitted
    *   The values a refiner is handed so far.
    *
@@ -385,12 +387,12 @@ final class DataSurface implements DataSurfaceInterface {
   }
 
   /**
-   * Refines one subsurface in its child's own frame.
+   * Refines one attached structure in its child's own frame.
    *
    * The child is refined against the value at this key, merged over the
    * child's own defaults, under the child's own key names: no parent
    * refiner reaches into it and its refiners never see a parent value.
-   * What comes back is the key's definition for these values — the
+   * What comes back is the key's definition for these values: the
    * child's refined map for an attached child, and for a slot the chosen
    * variant's refined map, or nothing while no variant is chosen.
    *
@@ -400,10 +402,10 @@ final class DataSurface implements DataSurfaceInterface {
    * one resolution refinement allows from a placeholder: `any`, to the
    * map of a variant declared before anything was chosen.
    *
-   * @param \Drupal\data_surface\SurfaceEntry $entry
+   * @param \Drupal\data_surface\Entry $entry
    *   The key, as advertised.
    * @param array $values
-   *   The values the surface is being refined against.
+   *   The values the data surface is being refined against.
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
    *   Collects what the child's refinement depended on.
    * @param bool $runtime
@@ -413,7 +415,7 @@ final class DataSurface implements DataSurfaceInterface {
    *   The key's definition for these values, or NULL when nothing about
    *   it changes.
    */
-  protected function refineNested(SurfaceEntry $entry, array $values, CacheableMetadata $cacheability, bool $runtime = TRUE): ?DataDefinitionInterface {
+  protected function refineNested(Entry $entry, array $values, CacheableMetadata $cacheability, bool $runtime = TRUE): ?DataDefinitionInterface {
     $child = $entry->childFor($values);
     if ($child === NULL) {
       return NULL;
@@ -434,17 +436,17 @@ final class DataSurface implements DataSurfaceInterface {
       return NULL;
     }
     elseif ($entry->definition instanceof MapDataDefinition) {
-      $definition = SurfaceAttachment::mapOf($entry->definition, $refined);
+      $definition = Attachment::mapOf($entry->definition, $refined);
     }
     else {
-      throw new \LogicException(sprintf('The "%s" subsurface no longer holds a map, so its child has nowhere to be written.', $entry->name));
+      throw new \LogicException(sprintf('The "%s" key no longer holds a map, so its attached child has nowhere to be written.', $entry->name));
     }
-    Narrowing::assertNarrows($entry->name, 'the surface attached there', $entry->definition, $definition);
+    Narrowing::assertNarrows($entry->name, 'the child attached there', $entry->definition, $definition);
     return $definition;
   }
 
   /**
-   * Returns whether anything on this surface can narrow at all.
+   * Returns whether anything on this data surface can narrow at all.
    *
    * A refiner with nothing to refine against, and a refinement edge with
    * no refiner to run, are both nothing happening; a runtime refiner that
@@ -490,7 +492,7 @@ final class DataSurface implements DataSurfaceInterface {
    * @param string[] $dependencies
    *   The keys the target refines against.
    * @param array $values
-   *   The values the surface is being refined against.
+   *   The values the data surface is being refined against.
    *
    * @return array|null
    *   The dependency values, or NULL when one of them is unanswered and
@@ -518,7 +520,7 @@ final class DataSurface implements DataSurfaceInterface {
    *
    * The owner's chain comes first. A chain left with no link is left out.
    *
-   * @param \Drupal\data_surface\SurfaceEntry $entry
+   * @param \Drupal\data_surface\Entry $entry
    *   The key being refined.
    * @param bool $runtime
    *   Whether the runtime refiners' links are kept.
@@ -529,7 +531,7 @@ final class DataSurface implements DataSurfaceInterface {
    * @return array<string, \Drupal\data_surface\DataSurfaceRefinerInterface[]>
    *   The chains, keyed by contributor.
    */
-  protected function chainsFor(SurfaceEntry $entry, bool $runtime = TRUE, bool $ungated = FALSE): array {
+  protected function chainsFor(Entry $entry, bool $runtime = TRUE, bool $ungated = FALSE): array {
     $registered = $entry->refiners;
     if (!$runtime || $ungated) {
       foreach ($registered as $contributor => $links) {
@@ -567,8 +569,8 @@ final class DataSurface implements DataSurfaceInterface {
    * A key with a single contribution, which is nearly every key, reduces
    * to exactly the chain this replaced, minus the ability to widen.
    *
-   * @param \Drupal\data_surface\SurfaceEntry $entry
-   *   The key being refined, as the surface advertises it.
+   * @param \Drupal\data_surface\Entry $entry
+   *   The key being refined, as the data surface advertises it.
    * @param array<string, \Drupal\data_surface\DataSurfaceRefinerInterface[]> $chains
    *   The refiner chains, keyed by contributor.
    * @param array $values
@@ -579,7 +581,7 @@ final class DataSurface implements DataSurfaceInterface {
    * @return \Drupal\Core\TypedData\DataDefinitionInterface
    *   The refined definition.
    */
-  protected function unionOfContributions(SurfaceEntry $entry, array $chains, array $values, CacheableMetadata $cacheability): DataDefinitionInterface {
+  protected function unionOfContributions(Entry $entry, array $chains, array $values, CacheableMetadata $cacheability): DataDefinitionInterface {
     $target = $entry->name;
     $advertised = $entry->definition;
     $contributed = $entry->contributions;
@@ -626,7 +628,7 @@ final class DataSurface implements DataSurfaceInterface {
    * Runs one contribution's refiner chain, checking every link.
    *
    * @param string $target
-   *   The surface key being refined.
+   *   The definition key being refined.
    * @param string $contributor
    *   The contributor whose chain this is.
    * @param \Drupal\data_surface\DataSurfaceRefinerInterface[] $chain
@@ -647,7 +649,7 @@ final class DataSurface implements DataSurfaceInterface {
    */
   protected function runChain(string $target, string $contributor, array $chain, DataDefinitionInterface $definition, array $values, CacheableMetadata $cacheability): DataDefinitionInterface {
     $who = $contributor === self::OWNER
-      ? 'the surface owner'
+      ? 'the declaring class'
       : sprintf('the %s contribution', $contributor);
     foreach ($chain as $link) {
       // The link is handed a copy and the original is kept as the
@@ -681,7 +683,7 @@ final class DataSurface implements DataSurfaceInterface {
    *   What came back.
    *
    * @internal
-   *   Public only for the surface build step, which runs a refiner that
+   *   Public only for the build step, which runs a refiner that
    *   watches nothing once, at build time, under the same rules.
    */
   public static function carryMetadata(DataDefinitionInterface $from, DataDefinitionInterface $to): void {
@@ -703,7 +705,8 @@ final class DataSurface implements DataSurfaceInterface {
    * them, so what it hands over cannot be the advertised object. A plain
    * clone is not enough: core's MapDataDefinition declares no __clone at
    * all, so a clone shares its property definitions with the original
-   * and a refiner touching one map property mutates the sealed surface.
+   * and a refiner touching one map property mutates the sealed data
+   * surface.
    * ListDataDefinition does clone its item definition, and cloning it
    * again here is harmless.
    *
@@ -719,8 +722,8 @@ final class DataSurface implements DataSurfaceInterface {
    *   The deep clone.
    *
    * @internal
-   *   Public only for the surface build step, which keeps a pre-image of
-   *   what a situation narrows and of what a build-time refiner returns,
+   *   Public only for the build step, which keeps a pre-image of
+   *   what an operation narrows and of what a build-time refiner returns,
    *   for the same narrowing check refinement makes here.
    */
   public static function deepClone(DataDefinitionInterface $definition): DataDefinitionInterface {

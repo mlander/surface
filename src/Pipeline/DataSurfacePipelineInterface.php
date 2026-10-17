@@ -12,8 +12,8 @@ use Drupal\data_surface\DataSurfaceInterface;
  *
  * Whether values arrive through Form API, a service endpoint, a config
  * action, or an agent, they pass the same four stages: accept coerces
- * partial untyped input into a complete typed value set, validate runs
- * the surface's constraints, prepare hands the values to a target for
+ * partial untyped input into a complete typed value set, validate runs the
+ * data surface's constraints, prepare hands the values to a storage for
  * shaping, and commit writes. The form path calls accept() through the
  * form builder rather than casting in its widgets, so the generated form
  * and a JSON payload cannot drift apart.
@@ -21,18 +21,19 @@ use Drupal\data_surface\DataSurfaceInterface;
  * Only commit has side effects, which is what makes a dry run a matter
  * of not calling it.
  *
- * This is also the only place values are validated. The surface is pure
- * data and reaches no service; running a surface's constraints needs the
- * typed data manager, so it belongs here — and putting it here is what
- * guarantees every validation refines the surface against the values
- * first, which a caller holding only a surface could forget to do.
+ * This is also the only place values are validated. The data surface is
+ * pure data and reaches no service; running a data surface's constraints
+ * needs the typed data manager, so it belongs here, and putting it here
+ * is what guarantees every validation refines the data surface against
+ * the values first, which a caller holding only a data surface could
+ * forget to do.
  */
 interface DataSurfacePipelineInterface {
 
   /**
    * The key a refusal by access is filed under in a violation set.
    *
-   * Reserved, and spelled so it cannot collide: a surface key is a
+   * Reserved, and spelled so it cannot collide: a data surface key is a
    * definition name and no definition is named with a leading "@", so
    * the whole "@" prefix is the pipeline's own namespace for a refusal
    * that belongs to no particular key. A caller reporting per key skips
@@ -64,29 +65,29 @@ interface DataSurfacePipelineInterface {
   /**
    * Produces a complete, typed value set from partial, untyped input.
    *
-   * Values merge in one order at every level: the surface's declared
+   * Values merge in one order at every level: the data surface's declared
    * defaults, then the current stored values (so a partial update is
    * legal), then the input, cast through each definition. Input that is
-   * not configured — NULL or the empty string — means the key holds
-   * nothing and becomes NULL, for every data type. Secret keys are the
-   * documented exception: input that is not configured keeps what they
-   * hold, because a form cannot echo a stored secret, and CLEAR_SECRET
-   * is how a caller empties one on purpose. Locked keys take what
-   * storage holds, falling back to the declared default, and ignore
-   * whatever was submitted for them. Keys the surface does not declare
-   * are refused rather than dropped, at any depth, and so is input in a
-   * shape the definition cannot hold. The casting table and the
-   * configured/not configured rule are stated in docs/semantics.md.
+   * not configured (NULL or the empty string) means the key holds nothing
+   * and becomes NULL, for every data type. Secret keys are the documented
+   * exception: input that is not configured keeps what they hold, because
+   * a form cannot echo a stored secret, and CLEAR_SECRET is how a caller
+   * empties one on purpose. Locked keys take what storage holds, falling
+   * back to the declared default, and ignore whatever was submitted for
+   * them. Keys the data surface does not declare are refused rather than
+   * dropped, at any depth, and so is input in a shape the definition
+   * cannot hold. The casting table and the configured/not configured rule
+   * are stated in docs/semantics.md.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface describing what the values may be.
+   *   The data surface describing what the values may be.
    * @param array $input
-   *   Raw input keyed by surface key; may be partial.
+   *   Raw input keyed by data surface key; may be partial.
    * @param array $current
-   *   The stored values, in surface shape.
+   *   The stored values, in input shape.
    *
    * @return array
-   *   The accepted values: every surface key present, each in its
+   *   The accepted values: every data surface key present, each in its
    *   definition's native type.
    *
    * @throws \Drupal\data_surface\Pipeline\UnknownKeysException
@@ -101,49 +102,49 @@ interface DataSurfacePipelineInterface {
   public function accept(DataSurfaceInterface $surface, array $input, array $current = []): array;
 
   /**
-   * Validates values against the surface, refined against those values.
+   * Validates values against the data surface, refined against them.
    *
-   * The surface is refined first, so the constraints the values are held
-   * to are the ones the values themselves selected — the same set the
+   * The data surface is refined first, so the constraints the values are
+   * held to are the ones the values themselves selected: the same set the
    * generated form rendered.
    *
    * A value is "not configured" when it is NULL or the empty string:
    * acceptable for an optional key, and for a required key a violation
-   * carrying the surface's own message rather than a type-specific one.
-   * Everything else is configured, so FALSE, 0 and the empty array
+   * carrying the data surface's own message rather than a type-specific
+   * one. Everything else is configured, so FALSE, 0 and the empty array
    * satisfy a required key and are then held to its constraints like any
    * other value.
    *
-   * One refusal is not a refusal. A key whose value the refined surface
-   * will not take, which is exactly what is stored for that key, and
-   * which is no longer among the values the key offers, is **stale**:
-   * nothing about this run tried to change it, so refusing it would
-   * punish a caller for something the site did. It is reported as a
-   * stale entry in the returned set, which does not block — see
-   * ViolationSet::stale() and docs/semantics.md. A value that differs
-   * from what is stored is an ordinary violation however far out of the
-   * list it is, because that one was chosen.
+   * One refusal is not a refusal. A key whose value the refined data
+   * surface will not take, which is exactly what is stored for that key,
+   * and which is no longer among the values the key offers, is **stale**:
+   * nothing about this run tried to change it, so refusing it would punish
+   * a caller for something the site did. It is reported as a stale entry
+   * in the returned set, which does not block (see ViolationSet::stale()
+   * and docs/semantics.md). A value that differs from what is stored is an
+   * ordinary violation however far out of the list it is, because that one
+   * was chosen.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface, as advertised.
+   *   The data surface, as advertised.
    * @param array $values
    *   The accepted values.
    * @param array $current
-   *   The stored values, in surface shape; what a key already holds is
+   *   The stored values, in input shape; what a key already holds is
    *   the only thing that can be stale. The default says nothing is
    *   stored, so nothing can be stale, which is right for a caller
    *   validating values that are not on their way to storage at all.
    *
    * @return \Drupal\data_surface\Pipeline\ViolationSet
-   *   The violations, each carrying its surface key, the property path
-   *   within that key ('' for the value itself) and an unrendered
+   *   The violations, each carrying its data surface key, the property
+   *   path within that key ('' for the value itself) and an unrendered
    *   message, with any stale entries held to one side. Empty when the
    *   values are valid.
    */
   public function validate(DataSurfaceInterface $surface, array $values, array $current = []): ViolationSet;
 
   /**
-   * Checks an emitted array against what the surface says it emits.
+   * Checks an emitted array against what the data surface says it emits.
    *
    * The output half of validate(), and the reason a declared output is
    * worth more than a docblock: a host that says what it emits can be
@@ -172,7 +173,7 @@ interface DataSurfacePipelineInterface {
    * is refused and an optional one is not.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface whose outputs the values are held to.
+   *   The data surface whose outputs the values are held to.
    * @param array $output
    *   The emitted values, keyed by output key, Omitted included.
    *
@@ -187,32 +188,32 @@ interface DataSurfacePipelineInterface {
   public function conformOutput(DataSurfaceInterface $surface, array $output): ViolationSet;
 
   /**
-   * Shapes accepted values for a storage target without writing.
+   * Shapes accepted values for a storage without writing.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface the values belong to.
+   *   The data surface the values belong to.
    * @param array $values
    *   The accepted, validated values.
-   * @param \Drupal\data_surface\Pipeline\DataSurfaceTargetInterface $target
-   *   The target that owns the storage shape.
+   * @param \Drupal\data_surface\Pipeline\DataSurfaceStorageInterface $storage
+   *   The storage that owns the storage shape.
    *
    * @return \Drupal\data_surface\Pipeline\PreparedValues
    *   The prepared artifact.
    *
-   * @throws \Drupal\data_surface\Pipeline\TargetViolationsException
-   *   When the target's storage refuses the values.
+   * @throws \Drupal\data_surface\Pipeline\StorageViolationsException
+   *   When the storage refuses the values.
    */
-  public function prepare(DataSurfaceInterface $surface, array $values, DataSurfaceTargetInterface $target): PreparedValues;
+  public function prepare(DataSurfaceInterface $surface, array $values, DataSurfaceStorageInterface $storage): PreparedValues;
 
   /**
-   * Writes a prepared artifact through its target.
+   * Writes a prepared artifact through its storage.
    *
    * @param \Drupal\data_surface\Pipeline\PreparedValues $prepared
    *   The artifact to store.
-   * @param \Drupal\data_surface\Pipeline\DataSurfaceTargetInterface $target
-   *   The target that owns the storage.
+   * @param \Drupal\data_surface\Pipeline\DataSurfaceStorageInterface $storage
+   *   The storage that prepared it.
    */
-  public function commit(PreparedValues $prepared, DataSurfaceTargetInterface $target): void;
+  public function commit(PreparedValues $prepared, DataSurfaceStorageInterface $storage): void;
 
   /**
    * Runs every stage: access, accept, validate, prepare, and commit.
@@ -225,32 +226,32 @@ interface DataSurfacePipelineInterface {
    * build step's access() for the context it is running in and hands
    * the result over, so a form, a tool, a config action and an agent all
    * pass the same answer through the same gate. A forbidden answer
-   * refuses before the target is read at all — nothing is loaded,
-   * nothing is accepted, nothing is written — and comes back as a
+   * refuses before the storage is read at all (nothing is loaded,
+   * nothing is accepted, nothing is written) and comes back as a
    * violation under ACCESS_VIOLATION_KEY carrying the refusal's reason.
-   * Neutral and allowed both proceed, identically: a surface with no
-   * opinion blocks nothing.
+   * Neutral and allowed both proceed, identically: a resource or
+   * structure with no opinion blocks nothing.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface describing what the values may be.
+   *   The data surface describing what the values may be.
    * @param array $input
-   *   Raw input keyed by surface key; may be partial.
-   * @param \Drupal\data_surface\Pipeline\DataSurfaceTargetInterface $target
-   *   The target to read current values from and write the result to.
+   *   Raw input keyed by data surface key; may be partial.
+   * @param \Drupal\data_surface\Pipeline\DataSurfaceStorageInterface $storage
+   *   The storage to read current values from and write the result to.
    * @param bool $dry_run
    *   TRUE to prepare the artifact but skip the write.
    * @param \Drupal\Core\Access\AccessResultInterface|null $access
-   *   The surface's answer for this context and account, already
-   *   resolved by the caller, or NULL when the caller has no access
-   *   answer to apply. NULL is not "allowed": it means nothing was
-   *   asked, which is what every caller written before this stage
-   *   existed means, and what a host that gates elsewhere means.
+   *   The resource or structure's answer for this context and account,
+   *   already resolved by the caller, or NULL when the caller has no
+   *   access answer to apply. NULL is not "allowed": it means nothing was
+   *   asked, which is what every caller written before this stage existed
+   *   means, and what a host that gates elsewhere means.
    *
    * @return \Drupal\data_surface\Pipeline\DataSurfaceResult
    *   The accepted values, any violations, the prepared artifact when
    *   the values were valid, whether the write happened, and the access
    *   answer it was given, so a caller can merge its cacheability.
    */
-  public function submit(DataSurfaceInterface $surface, array $input, DataSurfaceTargetInterface $target, bool $dry_run = FALSE, ?AccessResultInterface $access = NULL): DataSurfaceResult;
+  public function submit(DataSurfaceInterface $surface, array $input, DataSurfaceStorageInterface $storage, bool $dry_run = FALSE, ?AccessResultInterface $access = NULL): DataSurfaceResult;
 
 }

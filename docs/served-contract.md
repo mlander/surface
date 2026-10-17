@@ -1,19 +1,19 @@
 # The served contract
 
-A surface built in one of its situations, served as a JSON document a
+A resource built in one of its operations, served as a JSON document a
 client with no PHP can render a form from, re-narrow as answers change,
 validate against before anything is written, and then write through. The
 emitter is the main module's; the four endpoints and a React app that
 renders from them are the experimental submodule `data_surface_react`.
 
 This is the roadmap's "served contract" in its first shape: one
-situation at a time, read, rehearsed and written.
+operation at a time, read, rehearsed and written.
 
 ## Where the emitter lives
 
 `Drupal\data_surface\Contract\ContractEmitter`, the service
 `data_surface.contract_emitter`, is the module's canonical contract: it
-reads any sealed surface and nothing else, and `emit()` answers a
+reads any sealed data surface and nothing else, and `emit()` answers a
 `ServedContract` (the document, and its cacheability beside it). The
 contract names no widget. `x-surface.widget` (and `multiple`, its
 qualifier on a list of allowed values) is presentation, the Form API
@@ -21,8 +21,8 @@ mapping said out loud for a renderer, and the roadmap rejects widget
 vocabulary in the contract, so it is written only when a caller asks:
 `emit(..., widgets: TRUE)`. `data_surface_react` is that caller; its
 endpoints serve the contract with the hints, for its app to draw from.
-Everything else under `x-surface` is the surface's own reading of a key
-and is always there.
+Everything else under `x-surface` is the data surface's own reading of
+a key and is always there.
 
 It is this module's own emitter, not the Tool API's: the Tool API's
 context definitions have no place for labelled values, a conditional on
@@ -31,33 +31,33 @@ JSON Schema cannot say them. This one can.
 
 ## Where to see it
 
-- **Under a situation form.** `data_surface_tool`'s contract panel,
+- **Under an operation form.** `data_surface_tool`'s contract panel,
   which the examples show under each form, shows it collapsed as "The
-  schema for these answers", emitted for the situation and the form's
+  schema for these answers", emitted for the operation and the form's
   values as they stand, so it rebuilds with the form. Beside it, "The
   full schema, for any answers" is [the second document](#two-documents),
   which does not. Below them, "What the Tool API can advertise" shows
   the derived tool's schema for comparison. The examples add a second
-  panel under that one, "Without a surface: what config schema can
+  panel under that one, "Without a resource: what config schema can
   say": the same settings described from config schema alone, set
   beside the full schema key by key
   (`modules/data_surface_examples/README.md`).
-- **Over HTTP.** `GET /surface-api/{surface}/{situation}` with
-  `data_surface_react` enabled: the whole document, widget hints
-  included.
+- **Over HTTP.** `GET /surface-api/{surface}/{situation}`, the
+  resource's id and the operation's id, with `data_surface_react`
+  enabled: the whole document, widget hints included.
 - **Not `drush tool:info`.** That prints the Tool API's rendering of the
   derived tool, which cannot say a shape keyed by a sibling: a slot is
   flattened to one map, the variant the stored values choose, or every
   variant's keys with none required before anything chooses
-  ([surfaces](surfaces.md), "Emission"). The `allOf` of `if`/`then`
+  ([resources](resources.md), "Emission"). The `allOf` of `if`/`then`
   below is only in this contract, for a slot and for
   [an enumerated key](#exact-where-it-can-be) alike: a Tool API context
   definition has no conditional, so the tool's schema stays as loose as
-  the unrefined surface.
+  the unrefined data surface.
 
 ## Two documents
 
-The emitter writes two documents from one surface, by one code path.
+The emitter writes two documents from one data surface, by one code path.
 
 - **The schema as it stands**, `emit()`, is everything below: built for
   one set of values, with `values` and `stale` beside it. A key whose
@@ -70,7 +70,7 @@ The emitter writes two documents from one surface, by one code path.
   moment it was emitted: do not validate an arbitrary submission against
   it.
 - **The full schema**, `emitFull()`, reads no value, so it is the same
-  whatever is stored or typed. Every key is the one the surface declares
+  whatever is stored or typed. Every key is the one declared
   (every room; a capacity from 1 to 1000), every dependency that can be
   listed is written as conditionals on the parent, always, under
   [the same rules and cap](#exact-where-it-can-be), and a key whose
@@ -81,9 +81,9 @@ The emitter writes two documents from one surface, by one code path.
   any values (`locked`, `dependsOn`, `enumerated`, `dynamic`, `runtime`,
   a slot's `by` and `variants`, `group`, `after`, `patternMessage`,
   `checkedOnServer`); there is no `refined`, `stale`, `emptyOption` or
-  `chosen`, and no `values` or `stale` beside the schema. A subsurface's
+  `chosen`, and no `values` or `stale` beside the schema. A child's
   frame is described from nothing, not from the child's defaults. Only
-  the locked keys a situation knows are read, since no value changes
+  the locked keys an operation knows are read, since no value changes
   them. It is what a validator, or an agent planning its values, or
   anything that takes the schema once, wants. No route serves it yet;
   the contract panel shows it.
@@ -133,29 +133,29 @@ Example 2's full schema, abbreviated:
 
 | Key | Holds |
 | --- | --- |
-| `surface` | The `#[Surface]` id. |
-| `situation` | The situation id, or `null` for a surface asked for in no situation. |
-| `label` | The situation's label. |
+| `surface` | The resource's id, the one on its `#[Resource]` (or a structure's, on its `#[Structure]`). |
+| `situation` | The operation's id, or `null` for a resource or structure asked for in no operation. |
+| `label` | The operation's label. |
 | `schema` | JSON Schema 2020-12 for the inputs, `x-surface` on every property. |
-| `values` | The values the schema describes now: what the target holds over the surface's defaults (which carry a situation's starting values and known identity), with any in-progress answers over that. Every key is present. A secret is `null`; a stale value is `null`. |
+| `values` | The values the schema describes now: what storage holds over the declared defaults (which carry an operation's starting values and known identity), with any in-progress answers over that. Every key is present. A secret is `null`; a stale value is `null`. |
 | `stale` | The dotted paths shown on the empty option in place of a stored value. |
-| `outputs` | The output schema, when the surface declares outputs. |
-| `fingerprint` | On the GET and in a submit's answer: a keyed hash of the stored values the document was built from, for a submit to send back ([the fingerprint rule](#the-fingerprint-rule)); `null` for a surface with no target. Not on a refine. |
+| `outputs` | The output schema, when the resource or structure declares outputs. |
+| `fingerprint` | On the GET and in a submit's answer: a keyed hash of the stored values the document was built from, for a submit to send back ([the fingerprint rule](#the-fingerprint-rule)); `null` for a resource or structure with no storage. Not on a refine. |
 | `discarded` | On a refine only: the keys whose answer the new choices orphaned. |
 
 ### The schema
 
-Each surface frame — the top level, an attached part, a slot's variant —
-is an object with `properties` in declaration order, `required`, and
+Each frame (the top level, an attached part, a slot's variant) is an
+object with `properties` in declaration order, `required`, and
 `additionalProperties: false`; an attached part and a slot's variant are
 each written once, as a def under `$defs`, and referred to
 ([reusable subschemas](#reusable-subschemas)).
 
-| The surface says | The schema says |
+| The declaration says | The schema says |
 | --- | --- |
 | label, description | `title`, `description` |
 | `string`, `email`, `uri`, `integer`, `float`, `boolean` | `type` (`format: email` / `uri` for those types); an optional key also allows `null` |
-| `setRequired(TRUE)` | the key in `required`. The surface's meaning: it must hold a value. The contract's `values` always carry every key, so presence is never the question. |
+| `setRequired(TRUE)` | the key in `required`. Its meaning here: it must hold a value. The contract's `values` always carry every key, so presence is never the question. |
 | a declared default, examples | `default`, `examples` |
 | `Range` | `minimum`, `maximum` |
 | `Length` | `minLength`, `maxLength` |
@@ -167,9 +167,9 @@ each written once, as a def under `$defs`, and referred to
 | a map | a nested object |
 | an attached part | a reference to its def under `$defs`, beside its label ([reusable subschemas](#reusable-subschemas)) |
 | a list | `type: array`, `items` |
-| a collection | `type: array`, `items` a reference to the child's def, narrowed by composition only where every item differs from it (a key the child's situation locked, a locked list), `minItems` and `maxItems` from its Count as the parent's refiners left it, and `x-surface.list: true` ([below](#collections)) |
-| a locked key | `readOnly: true` and `const` of the value the situation knows |
-| a child its access locked | `readOnly: true` on the part, and on every key inside it with `const` of what is stored (none in the full schema); an omitted child is not there at all ([Three answers](surfaces.md#three-answers)) |
+| a collection | `type: array`, `items` a reference to the child's def, narrowed by composition only where every item differs from it (a key the child's operation locked, a locked list), `minItems` and `maxItems` from its Count as the parent's refiners left it, and `x-surface.list: true` ([below](#collections)) |
+| a locked key | `readOnly: true` and `const` of the value the operation knows |
+| a child its access locked | `readOnly: true` on the part, and on every key inside it with `const` of what is stored (none in the full schema); an omitted child is not there at all ([Three answers](resources.md#three-answers)) |
 | a secret | `writeOnly: true`, no default, no value |
 | any other constraint | named in `x-surface.checkedOnServer`: the schema is not the whole story, ask `/validate` |
 
@@ -178,9 +178,9 @@ each written once, as a def under `$defs`, and referred to
 | Keyword | Holds |
 | --- | --- |
 | `widget` | Only when the caller asks for widget hints (`data_surface_react` does). The Form API-equivalent hint: `select`, `radios`, `checkbox`, `number`, `text`, `textarea`, `email`, `fieldset`, `slot`, `list` (a collection too); `null` when no widget would claim the key. |
-| `locked` | Identity the situation knows, or a key of a child whose access answered locked: shown, never changed. |
+| `locked` | Identity the operation knows, or a key of a child whose access answered locked: shown, never changed. |
 | `dependsOn` | The sibling keys this key's refiners watch, in its own frame; a key an alter mounted, which only that alter may watch, by its dotted path in that frame (`third_party_settings.<module>.<key>`). A client refines when one of them changes. |
-| `refined` | Whether the key is narrowed right now, compared with what the surface advertises in this situation. |
+| `refined` | Whether the key is narrowed right now, compared with what the resource or structure advertises in this operation. |
 | `stale` | The stored value is no longer offered; the key is shown on its empty option, standing for it. |
 | `emptyOption` | On a single select: `{show, label}`, by [the empty option rule](decisions.md#the-empty-option-rule): always for an optional select (`- None -`), for a required one only while no valid choice is selected (`- Select -`). |
 | `multiple` | With the widget hints, on a list of allowed values: a multiple select. |
@@ -192,32 +192,33 @@ each written once, as a def under `$defs`, and referred to
 | `patternMessage` | On a key with a `pattern`: the Regex's own message, which is how a person is told what the pattern allows. The pattern is for machines; a renderer explains the key by this, never by the pattern. |
 | `enumerated` | Only when `true`: the key's static refiners have nothing to refine against yet, and what they answer for every value they could be handed is stated as conditionals on the parent ([below](#exact-where-it-can-be)). Captured exactly: the schema is exact for this key with no round trip, less what `runtime` adds. |
 | `dynamic` | Only when `true`: the key's static refiners have nothing to refine against yet, and what they would answer cannot be listed (a watched key with no list of values, or too many combinations). Static by declaration, not captured here: the schema is the unrefined, looser one, wider than the pipeline and never narrower ([decision](decisions.md#two-documents-never-stricter-than-the-runtime)); refine when a `dependsOn` key changes. In [the full schema](#two-documents) every key that cannot be listed carries it. |
-| `list` | Only when `true`, on a collection: an array whose every item is a child surface, its `items` a reference to the child's def. A renderer draws each item as that def's fieldset, adds and removes items within `minItems` and `maxItems`, and reads `dependsOn` inside each item under its delta (`shelves.1.unit`). |
+| `list` | Only when `true`, on a collection: an array whose every item is a child, its `items` a reference to the child's def. A renderer draws each item as that def's fieldset, adds and removes items within `minItems` and `maxItems`, and reads `dependsOn` inside each item under its delta (`shelves.1.unit`). |
 | `runtime` | Only when `true`: a runtime refiner narrows the key too, by a rule no schema can state ([three markers](#three-markers)). Never in a conditional and never in the full schema; the schema for these answers is refined by it for its values. Written beside `enumerated` or `dynamic` when the key has static refiners as well. |
 
 ### Reusable subschemas
 
 The module draws a wall between a parent and its child: a parent cannot
 refine into a child, a child cannot watch a parent's key, and a child
-keeps its own refiners and alters ([surfaces](surfaces.md#subsurfaces)).
+keeps its own refiners and alters
+([attached structures](resources.md#children)).
 That makes a child a self-contained subschema, and both documents say
 so with JSON Schema 2020-12's own `$defs` and `$ref`, through the one
 code path they share (`ContractEmitter::define()` and `reference()`):
 
-1. **One def per child surface.** Every attached child and every slot's
-   variant is written once, under the root's `$defs`, keyed by its
-   surface's `#[Surface]` id (`registration.contact`). A child with no
-   class, a [derived variant](surfaces.md#derived-variants), is keyed
+1. **One def per child.** Every attached child and every slot's
+   variant is written once, under the root's `$defs`, keyed by the id on
+   its class's `#[Structure]` or `#[Resource]` (`registration.contact`).
+   A child with no class, a [derived variant](resources.md#derived-variants), is keyed
    `<parent id>.<slot key>.<value>` (`field.storage.settings.string`), an
    attached one `<parent id>.<key>`. The same class at two keys, or in
    two frames, is one def. A def may refer to other defs (a child inside
    a variant). Two children claiming one id with declarations that are
-   not the same, which only a hand-sealed surface or two different
+   not the same, which only a hand-sealed data surface or two different
    contexts can produce, keep one def each, the second as `<id>@2`,
    because a site may only narrow its def and neither would narrow the
    other. A child reached inside its own def would be referred to, so a
-   surface that ever contained itself ends; the build step already
-   refuses one.
+   resource or structure that ever contained itself ends; the build step
+   already refuses one.
 2. **The def is the declaration**: the child's frame as it emits itself
    for no values, with nothing locked. Its properties, `required` and
    `additionalProperties: false`; its own conditionals under its
@@ -323,7 +324,7 @@ says about it: its title and description, `type: array`, `minItems` and
 `x-surface` the usual instance facts (`locked`, `dependsOn`, `refined`,
 `enumerated` or `dynamic` when the parent's refiner of it watches a
 sibling) and `list: true`. Its `items` refer to the child's def, the
-same def an attached child of that surface refers to; both documents
+same def an attached child of that class refers to; both documents
 describe the items from the child's locked keys alone, so the schema
 says nothing one item's answers decide, and the reference is bare
 unless a lock narrows it. The schema stays value-independent: the
@@ -408,7 +409,7 @@ no `/refine` round trip.
   refined for the combination so far, resolves to an option set (a
   `Choice`, a `LabeledChoice`, a list an options resolver reads). A
   sibling that holds a value is held at it. A sibling that is free text,
-  a number, a boolean, a list of values, a subsurface, or a key an alter
+  a number, a boolean, a list of values, a child, or a key an alter
   mounted (named by its dotted path) cannot be listed.
 - **The combinations are capped**, at 64 per key
   (`ContractEmitter::ENUMERATION_CAP`): the product of the watched
@@ -420,7 +421,7 @@ no `/refine` round trip.
   `dependsOn` says what to refine on, as before
   ([decision](decisions.md#enumeration-is-capped)).
 - **Each conditional is what `/refine` answers, less the runtime.** It
-  is computed by refining the whole surface against the values with the
+  is computed by refining the whole data surface against the values with the
   combination over them, the same call `/refine` makes with the runtime
   refiners left out, so chains compose (the room per venue, the capacity
   per room) and an alter's static refiners in the chain are included. A
@@ -432,9 +433,9 @@ no `/refine` round trip.
   `maximum`, the description naming the reason); a map's properties are
   compared one by one. A combination that changes nothing writes no
   conditional.
-- **Inside a subsurface too.** Each frame is described the same way, so
+- **Inside a child too.** Each frame is described the same way, so
   a slot's variant enumerates its own keys inside the variant's schema,
-  under the slot's conditional. A subsurface's frame starts from the
+  under the slot's conditional. A child's frame starts from the
   child's defaults, as refinement does, so a child key watching a
   sibling with a default is shown refined against that default, not
   enumerated.
@@ -444,22 +445,22 @@ no `/refine` round trip.
   [the full schema](#two-documents) is handed no values, so there every
   listable key is enumerated, always.
 - **The lists are dependencies.** Every option list and every refined
-  surface a conditional was read from is merged into the contract's
+  data surface a conditional was read from is merged into the contract's
   cacheability (the demo block's static contract depends on
   `entity_bundles`).
 
-In the shipped surfaces, described for no values: example 2's and
-example 3's room (per venue, 3 conditionals) and capacity (per room, 6);
-the demo block's `bundle` (per entity type) and `field` (per entity type
-and bundle); the demo formatter's `variant` (per casing); the demo
-extras' `limit` (per presentation; only the grid writes one). Dynamic:
-example 4's capacity, which also watches the free-text licence, and its
-stewards, inside the mount, which watch the capacity, a number. Runtime:
-example 4's room, which its alter narrows by the rooms a site has closed,
-read from State; it stays enumerated per venue for example 3's own
-refiner. The
-field instance's `bundle` would be enumerated per entity type, but every
-situation of it knows the entity type, so it is always served refined.
+In the shipped resources and structures, described for no values:
+example 2's and example 3's room (per venue, 3 conditionals) and
+capacity (per room, 6); the demo block's `bundle` (per entity type) and
+`field` (per entity type and bundle); the demo formatter's `variant`
+(per casing); the demo extras' `limit` (per presentation; only the grid
+writes one). Dynamic: example 4's capacity, which also watches the
+free-text licence, and its stewards, inside the mount, which watch the
+capacity, a number. Runtime: example 4's room, which its alter narrows
+by the rooms a site has closed, read from State; it stays enumerated per
+venue for example 3's own refiner. The field instance's `bundle` would
+be enumerated per entity type, but every operation of it knows the
+entity type, so it is always served refined.
 
 Example 2, nothing chosen, abbreviated:
 
@@ -541,27 +542,30 @@ What the emitter's `widget`, when asked for, mirrors is
 
 ## The endpoints
 
-All five routes take the situation's parameters from the query string
+All five routes take the operation's parameters from the query string
 (and a POST body's `parameters`), and are gated by
-`_data_surface_react_access`: the situation's permission, then the
-surface's access class, through `Surfaces::access()`, with no opinion
-read as a refusal. A surface, situation or parameter that names nothing
-is refused. The POSTs require `X-CSRF-Token` from `/session/token`
+`_data_surface_react_access`: the operation's permission, then the
+access class the resource or structure names, through
+`Resources::access()`, with no opinion read as a refusal. A resource,
+operation or parameter that names nothing is refused. The POSTs require
+`X-CSRF-Token` from `/session/token`
 (`_csrf_request_header_token`). A POST body that is not a JSON object is
-a 400: the access check reads the situation from the query string alone
+a 400: the access check reads the operation from the query string alone
 when it cannot read the body, and the controller refuses the body.
 
-**`GET /surface-api/{surface}/{situation}`** answers the document for
-the values the situation form would open with, and their `fingerprint`.
+**`GET /surface-api/{surface}/{situation}`**, `{surface}` the
+resource's id and `{situation}` the operation's id, answers the document
+for the values the operation form would open with, and their
+`fingerprint`.
 
 **`POST .../refine`**, body `{values, stale}`, answers the document
 re-narrowed against the values, which is what the form's AJAX rebuild
 computes, the same way:
 
-1. The values are narrowed to the surface's keys and overlaid on what
-   the situation opens with.
+1. The values are narrowed to the data surface's keys and overlaid on what
+   the operation opens with.
 2. A path in `stale` whose value comes back empty stands for the stored
-   value again: the served form of the marker the situation form's
+   value again: the served form of the marker the operation form's
    container posts. The stored value never travels; the path does.
 3. The form builder's discard rule (`discardedRefinementInput()`) drops
    an answer the new choice of its dependency orphans: it falls back to
@@ -608,7 +612,7 @@ room left stale after its venue moved is refused. It answers:
 `violations` are refusals by full dotted path (`ticket.price`,
 `contact.email`, `@access`), messages rendered to plain text at this
 boundary; `stale` the non-blocking stale references; `values` what
-`accept()` made of the input; `prepared` what the target rehearsed
+`accept()` made of the input; `prepared` what storage rehearsed
 writing, when the run reached prepare. Nothing is written.
 
 **`POST .../submit`**, body `{values, stale, parameters, fingerprint?}`,
@@ -620,17 +624,17 @@ refused. A refusal is data, not an error: the answer is 200 with
 request access refuses, or that carries no token; 400 for a malformed
 body (not an object; `values` or `parameters` not an object; `stale`
 not a list of strings; `fingerprint` neither a string nor `null`) or a
-surface with no target. Every key is always present:
+resource or structure with no storage. Every key is always present:
 
 | Key | Holds |
 | --- | --- |
 | `committed` | Whether the values were written. |
 | `valid` | Whether nothing was refused; on this endpoint the same answer as `committed`. |
 | `violations` | Each refusal, `{path, message}`, as validate's. |
-| `stale` | Each stale reference the write kept, `{path, message}`: the situation form's warning, said out loud. Present on a write as on a refusal. |
-| `outputs` | The surface's declared outputs as its target reads them back after the write (`SurfaceTargetAdapter::outputs()`), the tool's same answer; `{}` when the surface declares none, as the examples, the content type and the field do. |
+| `stale` | Each stale reference the write kept, `{path, message}`: the operation form's warning, said out loud. Present on a write as on a refusal. |
+| `outputs` | The declared outputs as storage reads them back after the write (`StorageAdapter::outputs()`), the tool's same answer; `{}` when none are declared, as the examples, the content type and the field do. |
 | `contract` | On a write, the whole document rebuilt from what is stored now, `fingerprint` included, so a client re-renders without a second request; `null` on a refusal. |
-| `created` | On a write by a situation that creates, where the created thing now lives: `{surface, situation, parameters}`; otherwise `null`. |
+| `created` | On a write by an operation that creates, where the created thing now lives: `{surface, situation, parameters}`: the resource's id, the id of an operation of it that does not create ([below](#where-a-created-thing-lives)), and that operation's parameters; otherwise `null`. |
 
 A refused example 2, the library's garden room sent with the harbour:
 
@@ -659,25 +663,25 @@ The harbour's deck, written:
 ```
 
 A content type added at `node.type/add` as `served_demo` answers the
-same, with the add situation's empty contract, and:
+same, with the add operation's empty contract, and:
 
 ```json
 "created": {"surface": "node.type", "situation": "edit", "parameters": {"type": "served_demo"}}
 ```
 
-The situation form's cosmetic message and redirect are its route's, and
+The operation form's cosmetic message and redirect are its route's, and
 the API has no route default to read them from; their JSON equivalents
 are `committed` and `created`, and the client says the rest.
 
 ### Where a created thing lives
 
-`ServedSituations::created()` answers only for a situation whose
-context `creates`. It takes the surface's situations in declaration
+`ServedOperations::created()` answers only for an operation whose
+context `creates`. It takes the resource's operations in declaration
 order and picks the first that does not create and whose every required
-parameter is supplied, by name, from the outputs the target read back,
+parameter is supplied, by name, from the outputs storage read back,
 then from the identity keys the write accepted, then from the identity
-the creating situation already knew. The answer is checked, not
-assumed: the situation is built from those parameters (an entity
+the creating operation already knew. The answer is checked, not
+assumed: the operation is built from those parameters (an entity
 parameter loads what its id names), its context must not create, and
 every identity key it knows must equal what was written. The content
 type's `edit(NodeTypeInterface $type)` is answered by the `type` the
@@ -690,15 +694,15 @@ would answer it. Example 2's `configure` creates nothing, so `null`.
 ### The fingerprint rule
 
 Optional, and off unless a client sends one. The GET contract carries
-`fingerprint`, an HMAC (the site's hash salt) of the surface id and the
-stored values `load()` returned, narrowed to the surface's keys
-(`ServedSituations::fingerprint()`). A submit body may send it back.
+`fingerprint`, an HMAC (the site's hash salt) of the resource's id and
+the stored values `load()` returned, narrowed to the data surface's keys
+(`ServedOperations::fingerprint()`). A submit body may send it back.
 When it is sent and no longer matches what storage holds when the
 submit arrives, the submit is refused before the pipeline runs:
 `committed: false` and one violation at path `''`, "The stored values
 changed since this form was loaded. Reload it to see them, then make
 your changes again.", with nothing written. When it is not sent (absent
-or `null`), the last write wins, as on the situation form
+or `null`), the last write wins, as on the operation form
 ([decision](decisions.md#a-fingerprint-is-opt-in)). A refine never
 carries one: it re-reads storage, so a client that took its fingerprint
 would always match. A write's answer carries the new one, for the next
@@ -707,11 +711,11 @@ the commit, a few milliseconds, still wins.
 
 ### Cacheability
 
-The contract carries what the refined surface and every option list in
+The contract carries what the refined data surface and every option list in
 it depend on, those an [enumerated](#exact-where-it-can-be) conditional
 was read from included, the access answer's own, and `url.query_args`, as HTTP
 cache metadata on a `CacheableJsonResponse`. It is never stored: the
-values in it come from a target, and a target says nothing about how
+values in it come from storage, and storage says nothing about how
 long what it loaded holds ([decision](decisions.md#a-served-contract-is-never-stored)).
 
 ## What a write needs
@@ -724,9 +728,9 @@ What this list asked for before Submit was wired, and where each is now:
   the app says "Saved" itself.
 - Its stale references said out loud, as the form's warning is.
   **Done**: `stale` on every answer.
-- A situation that creates (`add`) answering where the created thing now
-  lives, so the app can move to its `edit` situation's page. **Done**
-  for any surface whose non-creating situation's parameters the outputs
+- An operation that creates (`add`) answering where the created thing now
+  lives, so the app can move to its `edit` operation's page. **Done**
+  for any resource whose non-creating operation's parameters the outputs
   or identity answer (the content type); not for the field instance,
   [above](#where-a-created-thing-lives).
 - A decision on concurrent edits. **Done**: the opt-in

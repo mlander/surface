@@ -16,7 +16,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * Tests the surface value object: refinement contract, defaults, locking.
+ * Tests the data surface value object: refinement contract, defaults, locking.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -33,12 +33,12 @@ class DataSurfaceTest extends DataSurfaceKernelTestBase {
    * @param array $refiners
    *   Extra refiners to register, keyed by contributor name.
    * @param array $defaults
-   *   Declared defaults, keyed by surface key.
+   *   Declared defaults, keyed by definition key.
    * @param array $locked
    *   The keys to lock.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface.
+   *   The data surface.
    */
   protected function surface(array $refiners = [], array $defaults = [], array $locked = []): DataSurfaceInterface {
     return $this->casingVariantSurface($refiners, $defaults, $locked);
@@ -53,7 +53,7 @@ class DataSurfaceTest extends DataSurfaceKernelTestBase {
    * setRequired() call is declaring an optional key, and would be
    * declaring a required one if core ever changed its mind.
    *
-   * @see docs/declaring-a-surface.md
+   * @see docs/declaring-a-resource.md
    */
   public function testCoreDefinitionsAreOptionalByDefault(): void {
     $this->assertFalse(DataDefinition::create('string')->isRequired());
@@ -77,7 +77,7 @@ class DataSurfaceTest extends DataSurfaceKernelTestBase {
     // Refined: the owner narrows the open key to the casing's variants.
     $refined = $surface->refine(['casing' => 'uppercase']);
     $this->assertSame(['bold', 'strong'], $refined->getDefinition('variant')->getConstraints()['Choice']['choices']);
-    // The advertised surface is untouched.
+    // The advertised data surface is untouched.
     $this->assertArrayNotHasKey('Choice', $surface->getDefinition('variant')->getConstraints());
 
     // Validation runs against the refined definitions.
@@ -156,8 +156,8 @@ class DataSurfaceTest extends DataSurfaceKernelTestBase {
     $surface = new DataSurface(DefinitionMap::fromArrays(definitions: ['settings' => $outer, 'empty' => $empty]));
     // Properties that declare nothing are left out at the nested level.
     $this->assertSame(['provider' => ['badge' => 'star']], $surface->getDefault('settings'));
-    // A map with nothing to assemble has no default, and every surface
-    // key is still present at the top level.
+    // A map with nothing to assemble has no default, and every
+    // definition key is still present at the top level.
     $this->assertSame(['settings' => ['provider' => ['badge' => 'star']], 'empty' => NULL], $surface->getDefaultValues());
 
     // A default declared on the map itself merges over what its
@@ -207,13 +207,13 @@ class DataSurfaceTest extends DataSurfaceKernelTestBase {
   /**
    * Tests that unknown keys in construction are refused.
    *
-   * The map is where a surface's shape is checked, so this is where the
+   * The map is where a data surface's shape is checked, so this is where the
    * refusal comes from: there is no longer a second list of locked keys
    * to disagree with the definitions.
    */
   public function testUnknownKeysRefused(): void {
     $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('"missing" is not a surface definition.');
+    $this->expectExceptionMessage('"missing" is not a data surface definition.');
     DefinitionMap::fromArrays(
       definitions: ['a' => DataDefinition::create('string')],
       locked: ['missing'],

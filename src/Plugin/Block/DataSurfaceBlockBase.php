@@ -11,12 +11,13 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Form\DataSurfaceHostFormTrait;
 
 /**
- * Base class for blocks whose settings are described by a surface.
+ * Base class for blocks whose settings are described by a structure.
  *
- * A block extending this contains its output and #[UsesSurface] naming
- * the surface class its configuration is. Nothing else: no
+ * A block extending this contains its output and #[UsesStructure] naming
+ * the structure class its configuration is. Nothing else: no
  * defaultConfiguration, no blockForm, no blockValidate, no blockSubmit.
- * Everything those would have said is in the surface.
+ * Everything those would have said is in the structure. The host
+ * supplies the operation (`configure`) and the storage.
  *
  * The class itself only composes the two traits and translates the
  * block host's names and quirks:
@@ -25,8 +26,8 @@ use Drupal\data_surface\Form\DataSurfaceHostFormTrait;
  *   trait's three bodies. The public triple stays BlockBase's, which is
  *   why the trait carrying those three names is not used here: it would
  *   replace the block form this class is supposed to extend.
- * - baseConfigurationDefaults() is the block host's own set of keys —
- *   id, label, label_display, provider — which the surface must neither
+ * - baseConfigurationDefaults() is the block host's own set of keys
+ *   (id, label, label_display, provider), which the structure must neither
  *   advertise nor destroy. setConfiguration() fills them in before the
  *   trait runs, and the trait passes undeclared keys through untouched,
  *   so they survive every round trip.
@@ -37,9 +38,9 @@ use Drupal\data_surface\Form\DataSurfaceHostFormTrait;
  *   is the visibility question core's host owns. surfaceAccess(), from
  *   the host trait, asks whether an account may *configure* the block's
  *   settings, which is the question a form, a config action or an agent
- *   is answering when it writes them: the surface's access class, when
- *   it names one. The two are unrelated — a block everyone may see is
- *   usually a block only an administrator may reconfigure — and that is
+ *   is answering when it writes them: the structure's access class, when
+ *   it names one. The two are unrelated (a block everyone may see is
+ *   usually a block only an administrator may reconfigure), and that is
  *   also why the method is not called access(): BlockPluginInterface
  *   already owns that name with an incompatible signature.
  */
@@ -51,17 +52,17 @@ abstract class DataSurfaceBlockBase extends BlockBase {
   use DataSurfaceHostFormTrait;
 
   /**
-   * Builds the surface the class's #[UsesSurface] names.
+   * Builds the structure the class's #[UsesStructure] names.
    *
    * In the block host's `configure` context, stored as the host always
-   * stored it, through the plugin configuration target this host
+   * stored it, through the plugin configuration storage this host
    * supplies.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface, alters applied.
+   *   The built structure, alters applied.
    */
   public function getDataSurface(): DataSurfaceInterface {
-    return $this->hostedSurface();
+    return $this->hostedStructure();
   }
 
   /**
@@ -78,7 +79,7 @@ abstract class DataSurfaceBlockBase extends BlockBase {
   /**
    * {@inheritdoc}
    *
-   * The surface enters here; the block's own description, title and
+   * The structure enters here; the block's own description, title and
    * visibility elements stay BlockBase's business.
    */
   public function blockForm($form, FormStateInterface $form_state) {

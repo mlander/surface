@@ -7,12 +7,12 @@ namespace Drupal\data_surface\Pipeline;
 /**
  * Thrown when input arrives in a shape the definition cannot hold.
  *
- * The sibling of UnknownKeysException, and refused for the same reason:
- * a caller that sends a string where the surface advertised a map, or a
- * map where it advertised a number, has made a mistake that silence
- * would turn into lost data. Casting is for values that mean the same
- * thing in another notation; a shape mismatch means nothing in any
- * notation, so accept() stops rather than guessing.
+ * The sibling of UnknownKeysException, and refused for the same reason: a
+ * caller that sends a string where the data surface advertised a map, or a
+ * map where it advertised a number, has made a mistake that silence would
+ * turn into lost data. Casting is for values that mean the same thing in
+ * another notation; a shape mismatch means nothing in any notation, so
+ * accept() stops rather than guessing.
  *
  * The exception names the dotted path of the offending value and a short
  * description of what was expected and what arrived, so a caller reading
@@ -25,7 +25,8 @@ final class ShapeMismatchException extends \InvalidArgumentException {
    * Constructs a ShapeMismatchException.
    *
    * @param string $path
-   *   The dotted path of the offending value, starting at a surface key.
+   *   The dotted path of the offending value, starting at a top level
+   *   key.
    * @param string $expected
    *   A short name for the shape the definition holds: a data type such
    *   as 'integer', or 'list' or 'map'.
@@ -50,7 +51,7 @@ final class ShapeMismatchException extends \InvalidArgumentException {
    * Gets the dotted path of the offending value.
    *
    * @return string
-   *   The path, starting at the surface key that carries the value.
+   *   The path, starting at the top level key that carries the value.
    */
   public function getPath(): string {
     return $this->path;

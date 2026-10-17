@@ -1,11 +1,11 @@
 services:
   # What a client could be told about an example's settings with no
-  # surface: core's own JSON Schema answer for the config object, and a
+  # resource: core's own JSON Schema answer for the config object, and a
   # plain mapping of its config schema.
   data_surface_examples.config_schema_contract:
     class: Drupal\data_surface_examples\ConfigSchemaContract
     arguments: ['@config.typed', '@serializer']
-  # Shows both, collapsed, and compares the second with a surface's
+  # Shows both, collapsed, and compares the second with a resource's
   # contract when it is handed one.
   data_surface_examples.config_schema_panel:
     class: Drupal\data_surface_examples\ConfigSchemaPanel
@@ -14,4 +14,4 @@ services:
   # contract panel, and below it what config schema says today.
   data_surface_examples.panels:
     class: Drupal\data_surface_examples\ExamplePanels
-    arguments: ['@data_surface_tool.contract_panel', '@data_surface_examples.config_schema_panel', '@data_surface.contract_emitter', '@data_surface.surface_registry']
+    arguments: ['@data_surface_tool.contract_panel', '@data_surface_examples.config_schema_panel', '@data_surface.contract_emitter', '@data_surface.resource_registry']

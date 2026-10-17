@@ -8,12 +8,12 @@ use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
-use Drupal\data_surface\Target\SettingsShapeInterface;
+use Drupal\data_surface\Storage\SettingsShapeInterface;
 
 /**
- * The mutable stage a surface passes through before it is sealed.
+ * The mutable stage a data surface passes through before it is sealed.
  *
- * The engine under the build step. Surfaces writes an owner's shape, its
+ * The engine under the build step. Resources writes an owner's shape, its
  * alters' additions, the context and the bound #[RefinesInput] methods
  * into one of these, then seals it; nothing an author writes holds one.
  * ShapeInterface and ShapeAdditionsInterface are the author's view of
@@ -22,13 +22,13 @@ use Drupal\data_surface\Target\SettingsShapeInterface;
  * Every addition is a contribution recorded under the name of whoever
  * made it, which is what lets refinement be shared: a contributor's
  * refiners narrow the values that contributor added and nothing else,
- * and the refined surface is the union of what each contribution
+ * and the refined data surface is the union of what each contribution
  * narrowed to. The owner is the first contributor.
  *
  * A builder is single use. seal() is idempotent, and every mutator
  * throws once it has run.
  *
- * @see \Drupal\data_surface\SurfaceBuild\Surfaces
+ * @see \Drupal\data_surface\ResourceBuild\Resources
  * @see docs/refinement.md
  *
  * @internal
@@ -50,7 +50,7 @@ interface DataSurfaceBuilderInterface {
    * Gets a definition, so alters can inspect or modify it.
    *
    * @param string $name
-   *   The surface key.
+   *   The definition key.
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
    *   The definition, or NULL when the builder holds no such key.
@@ -64,7 +64,7 @@ interface DataSurfaceBuilderInterface {
    * module with setThirdPartyDefinition() instead.
    *
    * @param string $name
-   *   The surface key.
+   *   The definition key.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition describing that key.
    *
@@ -83,7 +83,7 @@ interface DataSurfaceBuilderInterface {
    * will keep it once they land (see PLAN.md).
    *
    * @param string $name
-   *   The surface key.
+   *   The definition key.
    * @param mixed $value
    *   The default value; NULL is a declared default, distinct from
    *   declaring none.
@@ -101,13 +101,13 @@ interface DataSurfaceBuilderInterface {
    * Locks a key: its value is fixed to the declared default.
    *
    * Locking is build-time context (an edit operation locking an
-   * identifier, say) — the degenerate refinement, narrowing the value
+   * identifier, say): the degenerate refinement, narrowing the value
    * space to exactly one value. Locked keys stay advertised: consumers
    * see the key and its value, rendered disabled in generated forms,
    * and extraction ignores submitted input for them.
    *
    * @param string $name
-   *   The surface key.
+   *   The definition key.
    *
    * @return $this
    *
@@ -119,23 +119,23 @@ interface DataSurfaceBuilderInterface {
   public function lock(string $name): static;
 
   /**
-   * Leaves a subsurface key out of what the surface advertises.
+   * Leaves a child's key out of what the data surface advertises.
    *
    * What a child's access answers when the account may not see it: the
-   * key is not in the sealed surface at all, so nothing generated from it
-   * draws, advertises or accepts it, and a value posted for it is an
-   * unknown key. The one removal the build step makes, and only of a key
-   * that holds a child or a collection of them, which no sibling may
+   * key is not in the sealed data surface at all, so nothing generated
+   * from it draws, advertises or accepts it, and a value posted for it is
+   * an unknown key. The one removal the build step makes, and only of a
+   * key that holds a child or a collection of them, which no sibling may
    * watch.
    *
    * @param string $name
-   *   The subsurface key.
+   *   The key reserved for the child.
    *
    * @return $this
    *
    * @throws \LogicException
-   *   When the builder is already sealed, or the key is not a subsurface
-   *   or a collection reserved by the shape.
+   *   When the builder is already sealed, or the key is not an attached
+   *   child or a collection reserved by the shape.
    */
   public function omit(string $name): static;
 
@@ -149,7 +149,7 @@ interface DataSurfaceBuilderInterface {
    * handed exactly these values and no others.
    *
    * Widening here is legal precisely because nothing has been advertised
-   * yet: every consumer reads the extended surface, never a variant of
+   * yet: every consumer reads the extended data surface, never a variant of
    * it.
    *
    * Both choice constraints are understood, and the list is written back
@@ -165,7 +165,7 @@ interface DataSurfaceBuilderInterface {
    * because giving it one would narrow what its owner left open.
    *
    * @param string $name
-   *   The surface key.
+   *   The definition key.
    * @param array $choices
    *   The values to add: a list of bare values, or values mapped to
    *   their labels.
@@ -187,8 +187,8 @@ interface DataSurfaceBuilderInterface {
    * Mounts a third-party definition under the provider's namespace.
    *
    * Mirrors core's third-party settings storage shape: the sealed
-   * surface gains a 'third_party_settings' map with one map per
-   * provider, so values land at third_party_settings.<provider>.<key> —
+   * data surface gains a 'third_party_settings' map with one map per
+   * provider, so values land at third_party_settings.<provider>.<key>:
    * advertised, validated, and machine-visible, unlike the form-alter
    * era.
    *
@@ -215,22 +215,22 @@ interface DataSurfaceBuilderInterface {
    * Says how a provider's mounted settings are written down.
    *
    * A contributor may ask a caller for a value in one shape and store it
-   * in another — a duration asked for as an amount and a unit and stored
-   * as a number of seconds. The owner's target cannot know that, and the
-   * contributor does not build the target, so the translation travels on
-   * the surface: a target that writes third-party settings applies the
+   * in another: a duration asked for as an amount and a unit and stored
+   * as a number of seconds. The owner's storage cannot know that, and the
+   * contributor does not build the storage, so the translation travels on
+   * the data surface: storage that writes third-party settings applies the
    * provider's shape to that provider's namespace, toStorage() on the
    * way in and fromStorage() on the way out, and to nothing else.
    *
    * The shape sees the provider's settings only, keyed by the keys the
-   * provider mounted, and must be pure — the SettingsShapeInterface
-   * contract — because the surface carrying it is serialized with every
+   * provider mounted, and must be pure (the SettingsShapeInterface
+   * contract), because the data surface carrying it is serialized with every
    * form that renders it.
    *
    * @param string $provider
    *   The module whose mounted settings the shape translates. It must
-   *   mount at least one definition before the surface is sealed.
-   * @param \Drupal\data_surface\Target\SettingsShapeInterface $shape
+   *   mount at least one definition before the data surface is sealed.
+   * @param \Drupal\data_surface\Storage\SettingsShapeInterface $shape
    *   The translation.
    *
    * @return $this
@@ -238,21 +238,21 @@ interface DataSurfaceBuilderInterface {
    * @throws \LogicException
    *   When the builder is already sealed.
    *
-   * @see \Drupal\data_surface\Target\ConfigEntityTarget
+   * @see \Drupal\data_surface\Storage\ConfigEntityStorage
    */
   public function setThirdPartyShape(string $provider, SettingsShapeInterface $shape): static;
 
   /**
-   * Gives the sealed surface the check its watched values pass.
+   * Gives the sealed data surface the check its watched values pass.
    *
    * Refinement hands a refiner a sibling's value only when that value
    * satisfies the sibling's own refined definition; a refused value is
-   * passed as if the sibling held nothing. A surface sealed without a
-   * check — the engine's own tests build those — hands every configured
+   * passed as if the sibling held nothing. A data surface sealed without a
+   * check (the engine's own tests build those) hands every configured
    * value over.
    *
    * @param \Drupal\data_surface\Refinement\WatchedValueCheckInterface $check
-   *   The check, which rides inside the sealed surface.
+   *   The check, which rides inside the sealed data surface.
    *
    * @return $this
    *
@@ -356,7 +356,7 @@ interface DataSurfaceBuilderInterface {
    * The map is the provider's own fieldset on a form: titled with the
    * module's human name until someone labels it, which is what an
    * alter's describe('third_party_settings.<module>') does. Its keys are
-   * put into it when the surface is sealed.
+   * put into it when the data surface is sealed.
    *
    * @param string $provider
    *   The module that mounted the keys.
@@ -372,7 +372,7 @@ interface DataSurfaceBuilderInterface {
    * Declares that a target refines against sibling values.
    *
    * @param string $target
-   *   The surface key whose definition is refined, or the dotted path of
+   *   The key whose definition is refined, or the dotted path of
    *   a mounted key, `third_party_settings.<module>.<key>`, refined
    *   inside the mount.
    * @param array $dependencies
@@ -381,7 +381,7 @@ interface DataSurfaceBuilderInterface {
    * @param bool $runtime
    *   TRUE when only a runtime refiner watches them: refinement still
    *   waits for them, and nothing that states the target ahead of time
-   *   reads them (SurfaceEntry::staticDependencies()).
+   *   reads them (Entry::staticDependencies()).
    *
    * @return $this
    *
@@ -393,7 +393,7 @@ interface DataSurfaceBuilderInterface {
   /**
    * Appends a refiner to one contribution's chain for a target.
    *
-   * A chain narrows one contribution's own slice of the target: the
+   * A chain narrows one contribution's own slice of the storage: the
    * owner's refiners are handed the values the owner declared, and a
    * contributor's are handed the values that contributor added with
    * extendChoices(). Links run in registration order, each receiving the
@@ -403,15 +403,16 @@ interface DataSurfaceBuilderInterface {
    * it was not given.
    *
    * Refiners must be serializable (services or named classes, no
-   * closures or anonymous classes): surfaces ride along in cached forms.
+   * closures or anonymous classes): data surfaces ride along in cached
+   * forms.
    *
    * @param string $target
-   *   The surface key whose definition is refined.
+   *   The key whose definition is refined.
    * @param \Drupal\data_surface\DataSurfaceRefinerInterface $refiner
    *   The refiner to append.
    * @param string|null $contributor
    *   The provider whose contribution this refiner speaks for, or NULL
-   *   for the surface's owner.
+   *   for the owner.
    *
    * @return $this
    *
@@ -421,13 +422,13 @@ interface DataSurfaceBuilderInterface {
   public function addRefiner(string $target, DataSurfaceRefinerInterface $refiner, ?string $contributor = NULL): static;
 
   /**
-   * Declares what the surface being built depends on.
+   * Declares what the data surface being built depends on.
    *
-   * A surface is computed from live site state, so it can only be reused
-   * for as long as that state holds. Whatever is declared here is
-   * carried by the sealed surface, merged with what every refiner that
-   * runs declares, and read by anything that renders or stores the
-   * surface. The split between metadata that travels into a shared
+   * A data surface is computed from live site state, so it can only be
+   * reused for as long as that state holds. Whatever is declared here is
+   * carried by the sealed data surface, merged with what every refiner
+   * that runs declares, and read by anything that renders or stores the
+   * data surface. The split between metadata that travels into a shared
    * cache and metadata that only holds for one request is in
    * docs/refinement.md.
    *
@@ -442,7 +443,7 @@ interface DataSurfaceBuilderInterface {
   public function addCacheableDependency(CacheableDependencyInterface $dependency): static;
 
   /**
-   * Fixes a child surface at a key: a subsurface.
+   * Fixes a child at a key: an attached structure (or resource).
    *
    * The key's value is a map whose properties are the child's keys, and
    * it is the child that accepts, validates and refines it, in its own
@@ -453,35 +454,35 @@ interface DataSurfaceBuilderInterface {
    * the child is advertised in.
    *
    * @param string $key
-   *   The surface key.
-   * @param \Drupal\data_surface\SurfaceAttachment $attachment
-   *   The sealed child, and the surface class it was built from.
+   *   The definition key.
+   * @param \Drupal\data_surface\Attachment $attachment
+   *   The sealed child, and the class it was built from.
    *
    * @return $this
    *
    * @throws \InvalidArgumentException
    *   When the key already holds anything but an empty map.
    * @throws \LogicException
-   *   When the key is already a subsurface.
+   *   When the key already holds an attached child.
    */
-  public function attach(string $key, SurfaceAttachment $attachment): static;
+  public function attach(string $key, Attachment $attachment): static;
 
   /**
-   * Declares a slot: a subsurface a sibling key chooses.
+   * Declares a slot: an attached structure a sibling key chooses.
    *
    * Advertised as an `any` placeholder marked as a slot until the deciding
    * key holds a value, and as exactly the chosen variant's map once it
-   * does — or from the start, when the deciding key is locked. The
+   * does, or from the start, when the deciding key is locked. The
    * deciding key gains a Choice over the variant ids, checked narrower
    * against any list of values it already declares, and becomes a
    * refinement dependency of the slot, so a form rebuilds on it and the
    * discard cascade resets a variant it orphaned.
    *
    * @param string $key
-   *   The surface key.
+   *   The definition key.
    * @param string $by
    *   The sibling key whose value chooses the variant.
-   * @param array<string, \Drupal\data_surface\SurfaceAttachment> $variants
+   * @param array<string, \Drupal\data_surface\Attachment> $variants
    *   One sealed child per value of the deciding key. May be empty: an
    *   open slot nothing has filled offers nothing to choose.
    *
@@ -491,8 +492,8 @@ interface DataSurfaceBuilderInterface {
    *   When the deciding key is the slot itself, is not declared, holds a
    *   list or a map, or the key already holds anything but an empty map.
    * @throws \LogicException
-   *   When the key is already a subsurface, or a variant names a value
-   *   the deciding key does not allow.
+   *   When the key already holds an attached child, or a variant names a
+   *   value the deciding key does not allow.
    */
   public function attachBy(string $key, string $by, array $variants): static;
 
@@ -509,8 +510,8 @@ interface DataSurfaceBuilderInterface {
    * in. The child's cacheability becomes the parent's.
    *
    * @param string $key
-   *   The surface key.
-   * @param \Drupal\data_surface\SurfaceList $list
+   *   The definition key.
+   * @param \Drupal\data_surface\Collection $list
    *   The child every item is, sealed once.
    *
    * @return $this
@@ -518,17 +519,17 @@ interface DataSurfaceBuilderInterface {
    * @throws \InvalidArgumentException
    *   When the key already holds anything but such a list.
    * @throws \LogicException
-   *   When the key is already a subsurface or a collection.
+   *   When the key already holds an attached child or a collection.
    */
-  public function attachList(string $key, SurfaceList $list): static;
+  public function attachList(string $key, Collection $list): static;
 
   /**
-   * Seals the builder into an immutable surface.
+   * Seals the builder into an immutable data surface.
    *
-   * The only construction path for a surface. Idempotent: the same
-   * surface comes back however often this is called, so a caller holding
-   * a builder and a caller holding its surface are looking at one
-   * object.
+   * The only construction path for a data surface. Idempotent: the same
+   * data surface comes back however often this is called, so a caller
+   * holding a builder and a caller holding its data surface are looking
+   * at one object.
    *
    * This is also where the refinement map is checked for cycles. It is
    * asked here and not earlier because the map is only whole once every
@@ -536,9 +537,9 @@ interface DataSurfaceBuilderInterface {
    * would otherwise produce an answer that depends on the order the keys
    * happened to be read in.
    *
-   * What comes out is a DefinitionMap: the builder's own bookkeeping —
-   * definitions, refinement edges, locked keys, contributed values and
-   * refiner chains — folded into one entry per key, in declaration
+   * What comes out is a DefinitionMap: the builder's own bookkeeping
+   * (definitions, refinement edges, locked keys, contributed values and
+   * refiner chains) folded into one entry per key, in declaration
    * order, and checked once for the rest of its shape.
    *
    * The outputs become a second map of the same type, holding whatever
@@ -547,7 +548,7 @@ interface DataSurfaceBuilderInterface {
    * never refined.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The advertised surface.
+   *   The advertised data surface.
    *
    * @throws \LogicException
    *   When a key refines, directly or indirectly, against itself.

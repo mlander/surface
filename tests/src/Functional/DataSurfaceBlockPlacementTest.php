@@ -10,13 +10,13 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests a surface-driven block through the real block placement form.
+ * Tests a structure-driven block through the real block placement form.
  *
  * Everything under this test had been exercised by kernel tests calling
  * the host protocol directly; nothing had ever taken a generated form
  * through a browser, a form build, a POST, entity validation and a
  * render. Five claims had therefore never been checked end to end: that
- * the surface's elements land at the value paths the host stores them
+ * the structure's elements land at the value paths the host stores them
  * at and beside the host's own elements rather than on top of them,
  * that the container the AJAX path replaces actually reaches the
  * document, that what comes back out of a real submission is the
@@ -73,7 +73,7 @@ class DataSurfaceBlockPlacementTest extends BrowserTestBase {
     $this->drupalGet(self::ADD_ROUTE);
     $assert_session->statusCodeEquals(200);
 
-    // The surface's elements are the host's own: no wrapper nesting, so
+    // The structure's elements are the host's own: no wrapper nesting, so
     // every key sits at the path the block stores it at.
     $assert_session->fieldExists('settings[headline]');
     $assert_session->fieldExists('settings[limit]');
@@ -126,9 +126,9 @@ class DataSurfaceBlockPlacementTest extends BrowserTestBase {
     $this->assertSame('data_surface_test', $settings['provider']);
 
     // The saved configuration answers to the schema, not only to the
-    // surface. The test site validates every save; saying so here as
+    // structure. The test site validates every save; saying so here as
     // well is the point, because the schema is what a real site is held
-    // to and the surface is what the form is held to.
+    // to and the structure is what the form is held to.
     $violations = $this->container->get('config.typed')
       ->get('block.block.' . $id)
       ->validate();
@@ -150,7 +150,7 @@ class DataSurfaceBlockPlacementTest extends BrowserTestBase {
   }
 
   /**
-   * Tests that a value the surface refuses is refused by the form.
+   * Tests that a value the structure refuses is refused by the form.
    */
   public function testInvalidValueIsRefusedOnItsOwnElement(): void {
     $assert_session = $this->assertSession();
@@ -163,7 +163,7 @@ class DataSurfaceBlockPlacementTest extends BrowserTestBase {
       'settings[limit]' => '999',
     ], 'Save block');
 
-    // The violation is the surface's own, flagged on the element it
+    // The violation is the structure's own, flagged on the element it
     // belongs to, and nothing was stored.
     $assert_session->pageTextNotContains('The block configuration has been saved.');
     $assert_session->elementExists('css', 'input[name="settings[limit]"].error');

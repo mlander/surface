@@ -28,22 +28,22 @@ nav:
   - Installation: installation.md
   - The pattern: pattern.md
   - How it fits: how-it-fits.md
-  - Surfaces as classes: surfaces.md
-  - Surface catalogue: catalogue.md
+  - Resources and structures: resources.md
+  - Catalogue: catalogue.md
   - Content entities: entities.md
-  - Declaring a surface: declaring-a-surface.md
+  - Declaring a resource: declaring-a-resource.md
   - Decisions: decisions.md
   - Values:
       - The pipeline: pipeline.md
       - Value semantics: semantics.md
       - Outputs: outputs.md
-      - Targets: targets.md
+      - Storage: storage.md
   - Forms:
       - Generated forms: forms.md
       - Widgets: widgets.md
       - Options and resolvers: options.md
       - The served contract: served-contract.md
-  - Extending a surface:
+  - Extending a resource or structure:
       - Refinement and contributions: refinement.md
   - For core:
       - Adoption catalogue: adoption.md

@@ -19,7 +19,7 @@ use Psr\Http\Message\ResponseInterface;
  * without the session's token never runs, and a fingerprint from before
  * someone else's write refuses the submit while leaving that write
  * alone. A content type added through it answers where it now lives,
- * its edit situation, by the machine name it was given.
+ * its edit operation, by the machine name it was given.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -109,7 +109,7 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
    * @param string $path
    *   The contract's path.
    * @param array $query
-   *   The situation's parameters.
+   *   The operation's parameters.
    *
    * @return array
    *   The contract.
@@ -150,7 +150,7 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
     $this->assertSame([], $answer['violations']);
     $this->assertSame([], $answer['stale']);
     $this->assertSame([], $answer['outputs']);
-    // The situation configures; it creates nothing to move to.
+    // The operation configures; it creates nothing to move to.
     $this->assertNull($answer['created']);
 
     // Written, and the contract answered is the one storage now builds:

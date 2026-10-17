@@ -18,7 +18,7 @@ use WebDriver\Key;
  * room the site closed is left out by the alter's runtime refiner.
  *
  * @see \Drupal\Tests\data_surface\Kernel\ExamplesComplianceTest
- *   For the same rules, asked of the surface and the form state.
+ *   For the same rules, asked of the resource and the form state.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]

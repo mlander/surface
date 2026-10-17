@@ -9,20 +9,20 @@ use Drupal\Core\Action\Attribute\Action;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Plugin\Action\DataSurfaceActionBase;
-use Drupal\data_surface\Surface\Attribute\UsesSurface;
-use Drupal\data_surface_surface_test\Surface\ThresholdSurface;
+use Drupal\data_surface\Resource\Attribute\UsesStructure;
+use Drupal\data_surface_surface_test\Structure\ThresholdStructure;
 
 /**
- * An action whose configuration is the same surface a condition's is.
+ * An action whose configuration is the same structure a condition's is.
  *
- * One surface, two hosts: the action host supplies its own context and
- * target, and its execute() and access() are its own.
+ * One structure, two hosts: the action host supplies its own context and
+ * storage, and its execute() and access() are its own.
  */
 #[Action(
   id: 'data_surface_surface_test_threshold',
   label: new TranslatableMarkup('Threshold (surface test)'),
 )]
-#[UsesSurface(ThresholdSurface::class)]
+#[UsesStructure(ThresholdStructure::class)]
 final class ThresholdAction extends DataSurfaceActionBase {
 
   /**

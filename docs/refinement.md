@@ -1,38 +1,39 @@
 # Refinement, contributions, and cacheability
 
-A surface says what a key may hold. Refinement says what it may hold
-*given what the other keys hold* — which variants exist for the chosen
-casing, which bundles exist for the chosen entity type, which fields
-exist on that bundle. This page says who is allowed to change a surface,
+A resource or structure says what a key may hold. Refinement says what
+it may hold *given what the other keys hold*: which variants exist for
+the chosen casing, which bundles exist for the chosen entity type, which
+fields exist on that bundle. This page says who is allowed to change a shape,
 when, by how much, and how long the answer is good for.
 
 It is the contribution-model chapter: read
-[Declaring a surface](declaring-a-surface.md) first for how a surface of
-your own is built, [Surfaces as classes](surfaces.md#surface-alters) for
-what an alter is, and [Options and resolvers](options.md) for how the
+[Declaring a resource](declaring-a-resource.md) first for how a resource
+or structure of your own is built, [Alters](resources.md#alters)
+for what an alter is, and [Options and resolvers](options.md) for how the
 lists of allowed values this page narrows are declared.
 
 One rule governs the whole page:
 
-> **Widening is a build-time act. After a surface is advertised, nothing
-> may make it accept a value it did not already accept.**
+> **Widening is a build-time act. After a data surface is advertised,
+> nothing may make it accept a value it did not already accept.**
 
 That is what makes an advertisement worth reading. A form, a validator,
-a config action, a REST client and an agent all read the same surface,
-and none of them can be surprised later by a value space they never saw.
+a config action, a REST client and an agent all read the same data
+surface, and none of them can be surprised later by a value space they
+never saw.
 
 ## The two roles
 
-Every module touching a surface is in one of two roles, and each role
-has exactly one permission.
+Every module touching a resource or structure is in one of two roles, and
+each role has exactly one permission.
 
 | Role | When | May | May not |
 | --- | --- | --- | --- |
 | **Contributor** | Build time: an alter's `alterInputs()` | Add keys, mounted under its own module's name; offer more values on a fixed list with `extendChoices()`; reword a label or description with `describe()` | Add bare top-level keys, take anything away, change a key's type, contribute a value somebody already owns |
 | **Refiner** | Refinement, per request: a `#[RefinesInput]` method | Narrow one key, reading the siblings it watches | Touch a value its class did not contribute, hand back a value it was not given |
 
-The surface's **owner** — the `#[Surface]` class whose shape this is —
-is simply the first contributor. Its keys and its `#[RefinesInput]`
+The shape's **owner**, the `#[Resource]` or `#[Structure]` class that
+declares it, is simply the first contributor. Its keys and its `#[RefinesInput]`
 methods are contribution number one, and they are held to the same rules
 as everybody who arrives later.
 
@@ -44,8 +45,8 @@ policy is a later concept, not a role here.
 An alter contributes in `alterInputs()`:
 
 ```php
-#[AltersSurface(DataSurfaceDemoFormatter::class)]
-final class DemoFormatterAlter implements SurfaceAlterInterface {
+#[Alters(DataSurfaceDemoFormatter::class)]
+final class DemoFormatterAlter implements AltersInputsInterface {
 
   public function alterInputs(ShapeAdditionsInterface $inputs): void {
     $inputs->add('badge', 'string', $this->t('Badge'), default: 'star');
@@ -112,7 +113,7 @@ the owner's, because the owner is the one who answers for the key.
 
 A refiner is a method, so a class that refines several keys has several
 methods, each named for its rule and each attributed with the one key it
-refines: `DemoBlockSurface::bundleOfEntityType()` and
+refines: `DemoBlockStructure::bundleOfEntityType()` and
 `::fieldOfBundle()`. Nothing dispatches on a key's name. The method
 takes the key's definition first and one parameter per sibling it
 watches, and runs once every watched sibling has a value. A watched
@@ -163,15 +164,15 @@ narrowing check. Two differences follow from the kind:
 
 - **One that watches nothing runs on every refinement.** A static
   refiner that watches nothing runs once, at build, and its answer is
-  what the surface advertises
+  what the data surface advertises
   ([decision](decisions.md#a-refiner-that-watches-nothing)). A runtime
   one cannot be fixed at build, so it runs on every refinement,
   validation and submission instead, whatever the key's other refiners
-  are waiting for, and the surface advertises the key as declared.
-- **Its answer holds for the moment it was given.** A surface refined
-  through a runtime refiner is not cacheable (max-age 0), and nor is a
-  form or contract drawn from it; the surface itself, and the full
-  schema, which never run it, keep their own cacheability.
+  are waiting for, and the data surface advertises the key as declared.
+- **Its answer holds for the moment it was given.** A data surface
+  refined through a runtime refiner is not cacheable (max-age 0), and nor
+  is a form or contract drawn from it; the unrefined data surface, and
+  the full schema, which never run it, keep their own cacheability.
 
 On one key, a class's static methods run before its runtime ones; the
 owner's run before an alter's, as before. A key with both kinds is
@@ -199,7 +200,7 @@ trust; three layers hold a static refiner to it
    container. So an instance method is always runtime, and a static
    method is static unless it says otherwise. An alter's static refiner
    that only needs translation calls `t()`, or constructs
-   `PluralTranslatableMarkup` for a plural, as a surface's does.
+   `PluralTranslatableMarkup` for a plural, as the owner's does.
 2. **Observational, in development and tests: the container is
    guarded.** With assertions on (`zend.assertions = 1`, as in ddev
    and the test suite, never in production, where `assert()` is not
@@ -232,8 +233,9 @@ trust; three layers hold a static refiner to it
    holds a whole document to it: for every conditional the emitter
    wrote, a fresh `refine()` against the conditional's values, static
    refiners alone, answers the declared key with the conditional's
-   `then` laid over it, keyword for keyword, subsurfaces included. The
-   examples and the fixtures with enumerated keys run under it.
+   `then` laid over it, keyword for keyword, attached structures
+   included. The examples and the fixtures with enumerated keys run
+   under it.
 
 None of the three proves purity, and a refiner can still lie in ways
 none sees: a static method reading a static property another class
@@ -243,7 +245,7 @@ refiner, said on the method.
 
 ## The narrowing table
 
-Every refiner link, and every constraint a situation adds, is checked
+Every refiner link, and every constraint an operation adds, is checked
 against what it was handed before its answer is used. The check is
 deliberately conservative: it is applied to arbitrary constraints
 written by arbitrary modules, and a wrong "this is narrower" is worse
@@ -287,13 +289,13 @@ collections, whose Count the parent narrows
 
 A collection's parent may narrow the list and not its items: a refiner
 of the list key that narrows inside the item it is handed is refused,
-naming the key ([Surfaces](surfaces.md#collections)).
+naming the key ([Collections](resources.md#collections)).
 
-Inside a map the table recurses, which is what holds a subsurface to
-it: the child narrows its own keys, and the map its parent advertises
-narrows with them. Refining `any` to a map is how a slot's placeholder
-resolves to the variant its deciding key chose (see
-[Surfaces as classes](surfaces.md#subsurfaces)), and how a
+Inside a map the table recurses, which is what holds an attached
+structure to it: the child narrows its own keys, and the map its parent
+advertises narrows with them. Refining `any` to a map is how a slot's
+placeholder resolves to the variant its deciding key chose (see
+[Attached structures](resources.md#children)), and how a
 `#[RefinesInput]` method on an `any` key describes a child that cannot
 be listed statically.
 
@@ -305,31 +307,31 @@ what widened:
 > values bold. Refinement may only narrow; widening is a build-time act,
 > and the build is over.
 
-Two more checks belong to the same contract. Building refuses a surface
-in which a key refines, directly or indirectly, against itself: a cycle
-is not an infinite loop — each target is walked once — which is exactly
-why it has to be refused, since the answer would otherwise depend on the
-order the keys happened to be read in. And a sealed surface is only
-read: refinement returns a new surface rather than changing the one it
-was asked of.
+Two more checks belong to the same contract. Building refuses a
+resource or structure in which a key refines, directly or indirectly,
+against itself: a cycle is not an infinite loop (each target is walked
+once), which is exactly why it has to be refused, since the answer would
+otherwise depend on the order the keys happened to be read in. And a
+sealed data surface is only read: refinement returns a new data surface
+rather than changing the one it was asked of.
 
-What the build step seals is a `DefinitionMap`: one `SurfaceEntry` per
+What the build step seals is a `DefinitionMap`: one `Entry` per
 key, in declaration order, carrying that key's definition, its
 contributor, its locked state, its refinement edges, the values
 contributed to it and the refiner chains bound to it. The map checks
 the rest of the shape once, as it is built — a key declared twice, or a
 refinement edge naming a key nobody declared, is refused there.
 Refinement then rebuilds the map one entry at a time through `with()`,
-replacing only the definition, so a narrowed surface cannot lose track
-of who owns what.
+replacing only the definition, so a narrowed data surface cannot lose
+track of who owns what.
 
 ## Cacheability
 
-A surface is computed from live site state. What it advertises can
-depend on which entity types exist, which languages are installed, what
-the current user may do — so anything that renders or stores a surface
-has to be able to say for how long, and under what conditions, that
-rendering holds. A surface is therefore a
+A data surface is computed from live site state. What it advertises
+can depend on which entity types exist, which languages are installed,
+what the current user may do, so anything that renders or stores a data
+surface has to be able to say for how long, and under what conditions,
+that rendering holds. A data surface is therefore a
 `CacheableDependencyInterface`, and there are three places metadata
 enters it:
 
@@ -344,15 +346,15 @@ enters it:
   (The engine's internal refiner interface merges the metadata of a
   link that is itself a cacheable dependency, but the link the build
   step binds for static methods, `RefinesInputRefiner`, is not one, for
-  that reason.) A runtime refiner reads what the surface does not
+  that reason.) A runtime refiner reads what the data surface does not
   describe, so the link it is bound in, `Refinement\RuntimeRefiner`,
-  says max-age 0: a surface refined through it holds for the request
+  says max-age 0: a data surface refined through it holds for the request
   that refined it.
 - **Option resolvers.** Each resolved option list carries its own
   metadata on its `OptionSet`, which the options widget applies to the
   element it builds.
 
-The form builder applies the refined surface's metadata to the surface
+The form builder applies the refined data surface's metadata to its
 container, so a generated form carries both halves: the shape's, on the
 container, and each list's, on its element. See
 [Generated forms](forms.md).
@@ -360,7 +362,7 @@ container, and each list's, on its element. See
 ### Site state versus per-request
 
 The split matters, and it is the one thing to get right when caching a
-surface:
+data surface:
 
 - **Cache tags and max-age travel.** They describe how long an answer
   stays true for *everybody*, so they can be stored in a shared cache
@@ -375,11 +377,11 @@ surface:
   without them is storing one visitor's shape and serving it to the
   next.
 
-The practical rule for anything holding a surface: **never persist a
+The practical rule for anything holding a data surface: **never persist a
 refined shape that carries cache contexts** unless the thing persisting
-it varies by those contexts. A surface with no contexts, a `PERMANENT`
-max-age and no tags is static, and may be reused freely. Anything else
-is only as reusable as its shortest-lived half.
+it varies by those contexts. A data surface with no contexts, a
+`PERMANENT` max-age and no tags is static, and may be reused freely.
+Anything else is only as reusable as its shortest-lived half.
 
 ## Worked example: the extras demo
 
@@ -389,12 +391,12 @@ refiner that narrows them to the ones the chosen casing offers. It knows
 nothing about any other module.
 
 `data_surface_demo_extras` is a separate module that owns neither the
-formatter nor its form. Its alter of the formatter's surface contributes
+formatter nor its form. Its alter of the formatter's structure contributes
 a fifth value, and a refiner of its own for it:
 
 ```php
-#[AltersSurface(DataSurfaceDemoFormatter::class)]
-final class DemoFormatterAlter implements SurfaceAlterInterface {
+#[Alters(DataSurfaceDemoFormatter::class)]
+final class DemoFormatterAlter implements AltersInputsInterface {
 
   public function alterInputs(ShapeAdditionsInterface $inputs): void {
     $inputs->extendChoices('variant', [self::RIBBON => $this->t('Ribbon')]);
@@ -414,8 +416,8 @@ the owner's chain. It is a static method, as every static refiner is,
 though its class is a service: only a runtime refiner may be an
 instance method.
 
-The advertised key now allows five values, and the surface records that
-one of them belongs to the extras module. At refinement time:
+The advertised key now allows five values, and the data surface records
+that one of them belongs to the extras module. At refinement time:
 
 | Casing | Owner's slice → narrowed to | Extras' slice → narrowed to | Union |
 | --- | --- | --- | --- |
@@ -448,5 +450,5 @@ contract all see the same five values, narrowed the same way.
   capacity. A watched mounted key is never waited for: it is handed as
   it stands, NULL while empty. Another module's mounted key, and any
   key inside a map that is not a mount, still needs the dotted paths.
-- **Storage.** For a config-backed surface, widening is a schema alter
-  and the surface follows; storage gates the write either way.
+- **Storage.** For config-backed values, widening is a schema alter and
+  the shape follows; storage gates the write either way.

@@ -7,13 +7,13 @@ namespace Drupal\data_surface_test\Plugin\Block;
 use Drupal\Core\Block\Attribute\Block;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Plugin\Block\DataSurfaceBlockBase;
-use Drupal\data_surface\Surface\Attribute\UsesSurface;
-use Drupal\data_surface_test\Surface\TestBlockSurface;
+use Drupal\data_surface\Resource\Attribute\UsesStructure;
+use Drupal\data_surface_test\Structure\TestBlockStructure;
 
 /**
- * A block that adopts surfaces and says nothing else about its settings.
+ * A block that adopts structures and says nothing else about its settings.
  *
- * #[UsesSurface] and build(). No defaultConfiguration, no blockForm, no
+ * #[UsesStructure] and build(). No defaultConfiguration, no blockForm, no
  * blockValidate, no blockSubmit.
  */
 #[Block(
@@ -21,7 +21,7 @@ use Drupal\data_surface_test\Surface\TestBlockSurface;
   admin_label: new TranslatableMarkup('Data surface test block'),
   forms: ['alternate' => 'data_surface_test.alternate_form'],
 )]
-#[UsesSurface(TestBlockSurface::class)]
+#[UsesStructure(TestBlockStructure::class)]
 final class DataSurfaceTestBlock extends DataSurfaceBlockBase {
 
   /**

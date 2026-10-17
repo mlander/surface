@@ -122,7 +122,7 @@ function rows(schema: Schema, values: Values, prefix = ''): Row[] {
 /**
  * The contract as it stands, collapsed under the form: a row per key,
  * then the JSON itself. The React twin of the contract panel the
- * situation form shows. The rows read each key's effective schema, its
+ * operation form shows. The rows read each key's effective schema, its
  * references resolved (`schema`, which the form resolves once per
  * contract); the JSON is the document as served, `$defs` and all.
  */
@@ -132,7 +132,7 @@ export function ContractPanel({ contract, schema, values }: { contract: Contract
     <details className="dsr-contract">
       <summary>Contract</summary>
       <p>
-        Read from the contract the server serves for this situation, re-narrowed as the answers above change.
+        Read from the contract the server serves for this operation, re-narrowed as the answers above change.
         Change an answer another key depends on and this changes with the form.
       </p>
       <div className="dsr-contract__table">

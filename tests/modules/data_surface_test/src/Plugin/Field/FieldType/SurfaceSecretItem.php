@@ -9,8 +9,8 @@ use Drupal\Core\Field\Plugin\Field\FieldType\StringItem;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Form\DataSurfaceFieldTypeTrait;
 use Drupal\data_surface\Form\FieldSurfaceProviderInterface;
-use Drupal\data_surface\Surface\Attribute\UsesSurface;
-use Drupal\data_surface_test\Surface\SecretFieldSettingsSurface;
+use Drupal\data_surface\Resource\Attribute\UsesStructure;
+use Drupal\data_surface_test\Structure\SecretFieldSettingsStructure;
 
 /**
  * A field type with one secret instance setting and one ordinary one.
@@ -22,15 +22,15 @@ use Drupal\data_surface_test\Surface\SecretFieldSettingsSurface;
  * moves while the secret is meant to stand still, which is the case that
  * turns the keep rule from a nicety into a requirement.
  *
- * Everything about it is otherwise stock: the plain settings target,
+ * Everything about it is otherwise stock: the plain settings storage,
  * with no shape of its own, so the encryption the test sees is the
- * generic wiring in FieldSettingsTarget and not something this fixture
+ * generic wiring in FieldSettingsStorage and not something this fixture
  * arranged.
  *
- * The settings are SecretFieldSettingsSurface, named with
- * #[UsesSurface], whose token carries the secret flag.
+ * The settings are SecretFieldSettingsStructure, named with
+ * #[UsesStructure], whose token carries the secret flag.
  *
- * @see \Drupal\data_surface_test\Surface\SecretFieldSettingsSurface
+ * @see \Drupal\data_surface_test\Structure\SecretFieldSettingsStructure
  */
 #[FieldType(
   id: 'data_surface_secret',
@@ -40,7 +40,7 @@ use Drupal\data_surface_test\Surface\SecretFieldSettingsSurface;
   default_widget: 'string_textfield',
   default_formatter: 'string',
 )]
-#[UsesSurface(SecretFieldSettingsSurface::class)]
+#[UsesStructure(SecretFieldSettingsStructure::class)]
 class SurfaceSecretItem extends StringItem implements FieldSurfaceProviderInterface {
 
   use DataSurfaceFieldTypeTrait;

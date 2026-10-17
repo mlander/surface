@@ -6,30 +6,30 @@ namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Core\Entity\Entity\EntityFormDisplay;
 use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Surface\SurfaceContext;
-use Drupal\data_surface\SurfaceBuild\SurfaceCollectorPass;
-use Drupal\data_surface\SurfaceBuild\SurfaceRegistry;
-use Drupal\data_surface\SurfaceBuild\SurfacesInterface;
+use Drupal\data_surface\Resource\OperationContext;
+use Drupal\data_surface\ResourceBuild\ResourceCollectorPass;
+use Drupal\data_surface\ResourceBuild\ResourceRegistry;
+use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface_entity\Access\ContentEntityAccess;
 use Drupal\data_surface_entity\Access\FieldItemAccess;
-use Drupal\data_surface_entity\Surface\ContentEntitySurfaces;
-use Drupal\data_surface_entity\Surface\FieldItemSurfaces;
-use Drupal\data_surface_entity\Target\ContentEntityTarget;
+use Drupal\data_surface_entity\Resource\ContentEntityResources;
+use Drupal\data_surface_entity\Resource\FieldItemStructures;
+use Drupal\data_surface_entity\Storage\ContentEntityStorage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests the surfaces derived per bundle and per field, at discovery.
+ * Tests the resources derived per bundle and structures per field.
  *
- * One content entity surface per bundle with a stored form display, one
- * field item surface per field it carries, each derived from the item's
+ * One content entity resource per bundle with a stored form display, one
+ * field item structure per field it carries, each derived from the item's
  * typed data, and the fields left out reported with the reason; all of
  * it cached with the rest of discovery under the tags of what it was
  * read from.
  *
- * @see \Drupal\data_surface_entity\Surface\ContentEntitySurfaces
- * @see \Drupal\data_surface_entity\Surface\FieldItemSurfaces
+ * @see \Drupal\data_surface_entity\Resource\ContentEntityResources
+ * @see \Drupal\data_surface_entity\Resource\FieldItemStructures
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -55,34 +55,34 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the registry.
    *
-   * @return \Drupal\data_surface\SurfaceBuild\SurfaceRegistry
+   * @return \Drupal\data_surface\ResourceBuild\ResourceRegistry
    *   The service.
    */
-  protected function registry(): SurfaceRegistry {
-    return $this->container->get('data_surface.surface_registry');
+  protected function registry(): ResourceRegistry {
+    return $this->container->get('data_surface.resource_registry');
   }
 
   /**
    * Gets the build step.
    *
-   * @return \Drupal\data_surface\SurfaceBuild\SurfacesInterface
+   * @return \Drupal\data_surface\ResourceBuild\ResourcesInterface
    *   The service.
    */
-  protected function surfaces(): SurfacesInterface {
-    return $this->container->get('data_surface.surfaces');
+  protected function resources(): ResourcesInterface {
+    return $this->container->get('data_surface.resources');
   }
 
   /**
-   * Builds a bundle's surface for adding.
+   * Builds a bundle's resource for adding.
    *
    * @param string $bundle
    *   The node bundle.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface.
+   *   The built resource.
    */
   protected function add(string $bundle): DataSurfaceInterface {
-    return $this->surfaces()->buildSituation('entity.content:node.' . $bundle, 'add');
+    return $this->resources()->buildOperation('entity.content:node.' . $bundle, 'add');
   }
 
   /**
@@ -103,33 +103,33 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests one surface per bundle with a form display, and its situations.
+   * Tests one resource per bundle with a form display, and its operations.
    */
-  public function testOneSurfacePerBundleWithFormDisplay(): void {
+  public function testOneResourcePerBundleWithFormDisplay(): void {
     $page = $this->registry()->getDefinition('entity.content:node.page');
     $this->assertTrue($this->registry()->hasDefinition('entity.content:node.kitchen'));
-    // No stored form display, no surface.
+    // No stored form display, no resource.
     $this->assertFalse($this->registry()->hasDefinition('entity.content:node.article'));
 
     $this->assertNull($page->class);
     $this->assertTrue($page->isDerived());
     $this->assertSame('entity.content:node.page', $page->name());
     $this->assertSame('entity.content', $page->base);
-    $this->assertSame(ContentEntitySurfaces::class, $page->deriver);
+    $this->assertSame(ContentEntityResources::class, $page->deriver);
     $this->assertSame('data_surface_entity', $page->module);
     $this->assertSame(['entity_type', 'bundle', 'id'], $page->identity);
-    $this->assertSame(ContentEntityTarget::class, $page->target);
+    $this->assertSame(ContentEntityStorage::class, $page->storage);
     $this->assertSame(ContentEntityAccess::class, $page->access);
     $this->assertTrue($page->hasOutputs());
 
-    $situations = $this->registry()->getSituations('entity.content:node.page');
-    $this->assertSame(['add', 'edit'], array_keys($situations));
-    $this->assertSame([], $situations['add']->parameters);
-    $this->assertSame(['entity:node $id'], array_map(static fn ($parameter): string => $parameter->describe(), $situations['edit']->parameters));
-    $this->assertSame('node', $this->container->get('data_surface.situation_arguments')->entityTypeOf($situations['edit']->parameters[0]));
+    $operations = $this->registry()->getOperations('entity.content:node.page');
+    $this->assertSame(['add', 'edit'], array_keys($operations));
+    $this->assertSame([], $operations['add']->parameters);
+    $this->assertSame(['entity:node $id'], array_map(static fn ($parameter): string => $parameter->describe(), $operations['edit']->parameters));
+    $this->assertSame('node', $this->container->get('data_surface.operation_arguments')->entityTypeOf($operations['edit']->parameters[0]));
 
-    // The add situation knows the bundle, and that there is no id yet.
-    $context = $this->surfaces()->situation('entity.content:node.page', 'add');
+    // The add operation knows the bundle, and that there is no id yet.
+    $context = $this->resources()->operation('entity.content:node.page', 'add');
     $this->assertTrue($context->creates);
     $this->assertSame(['entity_type' => 'node', 'bundle' => 'page', 'id' => NULL], $context->known);
 
@@ -152,16 +152,16 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
     $this->assertSame('integer', $surface->getOutputDefinitions()->toArray()['id']->getDataType());
 
     $item = $this->registry()->getDefinition('field.item:node.page.body');
-    $this->assertSame(FieldItemSurfaces::class, $item->deriver);
+    $this->assertSame(FieldItemStructures::class, $item->deriver);
     $this->assertSame(FieldItemAccess::class, $item->access);
-    $this->assertNull($item->target);
-    $this->assertSame(['add', 'edit'], array_keys($this->registry()->getSituations('field.item:node.page.body')));
+    $this->assertNull($item->storage);
+    $this->assertSame(['add', 'edit'], array_keys($this->registry()->getOperations('field.item:node.page.body')));
   }
 
   /**
-   * Tests the item surface derived for each covered field type.
+   * Tests the item structure derived for each covered field type.
    */
-  public function testFieldItemSurfacesForEachCoveredType(): void {
+  public function testFieldItemStructuresForEachCoveredType(): void {
     $surface = $this->add('kitchen');
     $shape = [];
     foreach (array_keys(static::KITCHEN) + ['changed' => 'changed'] as $name) {
@@ -250,7 +250,7 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
     $this->assertStringContainsString('LinkType', (string) $this->registry()->getDefinition('field.item:node.kitchen.field_link')->notes['constraints']);
 
     // The catalogue lists them as derived, by base, and lists the derivers.
-    $catalogue = $this->container->get('data_surface.surface_catalogue');
+    $catalogue = $this->container->get('data_surface.resource_catalogue');
     $entry = $catalogue->describe()['entity.content:node.page'];
     $this->assertNull($entry['class']);
     $this->assertSame('entity.content', $entry['deriver']);
@@ -274,12 +274,12 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
    */
   public function testDerivedDefinitionsRoundTripThroughTheCache(): void {
     $definitions = $this->registry()->getDefinitions();
-    $classes = $this->container->getParameter(SurfaceCollectorPass::PARAMETER);
+    $classes = $this->container->getParameter(ResourceCollectorPass::PARAMETER);
     $this->assertSame(['data_surface_entity'], array_values(array_unique($classes['derivers'])));
-    $plugins = $this->container->get('data_surface.surface_plugins');
-    // No plugin here is its own surface, so the id hashes the classes.
-    $this->assertSame([], $plugins->ownSurfaces());
-    $cid = 'data_surface:surfaces:' . hash('xxh3', serialize($classes));
+    $plugins = $this->container->get('data_surface.resource_plugins');
+    // No plugin here is its own structure, so the id hashes the classes.
+    $this->assertSame([], $plugins->ownStructures());
+    $cid = 'data_surface:resources:' . hash('xxh3', serialize($classes));
     $cached = $this->container->get('cache.discovery')->get($cid);
     $this->assertNotFalse($cached);
     $this->assertArrayHasKey('entity.content:node.page', $cached->data);
@@ -292,10 +292,10 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
     foreach ($tags as $tag) {
       $this->assertContains($tag, $cached->tags);
     }
-    $fresh = new SurfaceRegistry($classes, $this->container->get('cache.discovery'), $plugins, $this->container->get('class_resolver'));
+    $fresh = new ResourceRegistry($classes, $this->container->get('cache.discovery'), $plugins, $this->container->get('class_resolver'));
     $this->assertEquals($definitions, $fresh->getDefinitions());
 
-    // A field added to the display clears the entry, and is a surface of
+    // A field added to the display clears the entry, and is a structure of
     // its own at once, in this same request.
     $this->addField('page', 'field_subtitle', 'string', [], [], 'Subtitle');
     $display = EntityFormDisplay::load('node.page.default');
@@ -307,13 +307,13 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that a context that knows nothing builds every surface.
+   * Tests that a context that knows nothing builds the whole resource.
    *
    * What a tool's static definition and the catalogue build in: the edit
-   * situation's children need an id, so they inherit.
+   * operation's children need an id, so they inherit.
    */
   public function testBareContextBuilds(): void {
-    $surface = $this->surfaces()->build('entity.content:node.page', new SurfaceContext('edit'));
+    $surface = $this->resources()->build('entity.content:node.page', new OperationContext('edit'));
     $this->assertFalse($surface->isLocked('id'));
     $this->assertSame(['value'], array_keys(static::child($surface, 'title')->getDefinitions()->toArray()));
   }

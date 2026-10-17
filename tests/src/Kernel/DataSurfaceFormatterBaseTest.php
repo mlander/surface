@@ -64,7 +64,7 @@ class DataSurfaceFormatterBaseTest extends DataSurfaceKernelTestBase {
    *
    * There is one declaration, so there is nothing to keep in step: the
    * static array the host prunes against is derived from the same
-   * definitions the surface is built from.
+   * definitions the structure is built from.
    */
   public function testStaticDefaultsComeFromTheAttribute(): void {
     $defaults = DataSurfaceTestFormatter::defaultSettings();
@@ -76,7 +76,7 @@ class DataSurfaceFormatterBaseTest extends DataSurfaceKernelTestBase {
       'third_party_settings' => [],
     ], $defaults);
 
-    // They agree with what the built surface declares.
+    // They agree with what the built structure declares.
     $surface_defaults = $this->createFormatter()->getDataSurface()->getDefaultValues();
     $this->assertSame(
       $surface_defaults,
@@ -87,7 +87,7 @@ class DataSurfaceFormatterBaseTest extends DataSurfaceKernelTestBase {
   /**
    * Tests that the settings form generates, unrefined and refined.
    *
-   * What a host owes its surface is that every declared key reaches the
+   * What a host owes its structure is that every declared key reaches the
    * form and carries the values the definitions declare. Which element
    * type a constraint maps to is the form builder's contract, pinned
    * once in SurfaceFormTest; repeating the matrix here would only make
@@ -115,7 +115,7 @@ class DataSurfaceFormatterBaseTest extends DataSurfaceKernelTestBase {
     // The default casing offers no variants, so nothing narrowed the
     // variant and it is offered without a list of its own.
     $this->assertArrayNotHasKey('#options', $form['variant']);
-    // The surface rides along for the element validate callback, which
+    // The data surface rides along for the element validate callback, which
     // is the only stage this host protocol leaves room for.
     $this->assertArrayHasKey('#data_surface', $form);
 
@@ -130,7 +130,7 @@ class DataSurfaceFormatterBaseTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the settings form is the surface's elements and no more.
+   * Tests that the settings form is the structure's elements and no more.
    *
    * Field UI hands settingsForm() the whole manage display form as
    * $form, and places what comes back inside one row of that same form.
@@ -161,12 +161,12 @@ class DataSurfaceFormatterBaseTest extends DataSurfaceKernelTestBase {
       $this->assertArrayNotHasKey($key, $form);
     }
     // The host's render keys did not come through either: the container
-    // describes itself, with the type and the tree flag the surface's
+    // describes itself, with the type and the tree flag the structure's
     // children are addressed through.
     $this->assertSame('container', $form['#type']);
     $this->assertTrue($form['#tree']);
     $this->assertNotSame('field-display-overview', $form['#attributes']['id']);
-    // And the surface's own children are all that is left.
+    // And the structure's own children are all that is left.
     $this->assertSame(
       ['prefix', 'casing', 'variant'],
       array_values(array_filter(array_keys($form), static fn ($key): bool => !str_starts_with((string) $key, '#'))),
@@ -243,7 +243,7 @@ class DataSurfaceFormatterBaseTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the summary is derived from the surface's labels.
+   * Tests that the summary is derived from the structure's labels.
    */
   public function testSettingsSummary(): void {
     $summary = array_map('strval', $this->createFormatter([

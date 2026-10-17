@@ -286,7 +286,7 @@ describe('submitting example 2', () => {
   });
 });
 
-describe('submitting a situation that creates', () => {
+describe('submitting an operation that creates', () => {
   it('moves to the page where the created thing now lives', async () => {
     const add: Settings = { ...settings, surface: 'node.type', situation: 'add', pageBase: '/base/surface-react' };
     const { fetcher } = server({

@@ -7,7 +7,7 @@ namespace Drupal\data_surface\Contract;
 /**
  * Reads a schema the contract emitter wrote as one inline schema.
  *
- * The emitter writes each subsurface once, under the root's `$defs`, and
+ * The emitter writes each child once, under the root's `$defs`, and
  * refers to it from each site, beside what is particular to that site
  * (`{"$ref": ..., "title": ..., "x-surface": ...}`), composing it with a
  * narrowing where the site says more than the def

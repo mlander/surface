@@ -14,7 +14,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Tests the refinement chain over AJAX, in a browser, on the real form.
  *
  * The claim the module is built on is that a host never re-implements a
- * dependency between its settings: the surface declares which key
+ * dependency between its settings: the structure declares which key
  * narrows which, and the form rebuilds that part of itself. Every piece
  * of that had been tested by calling the pieces — the refiner, the
  * builder, the callback — and the one thing that had never run was the
@@ -32,8 +32,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * What is also proven, and is only visible here, is that the rebuild
  * judges nothing: the region is still unchosen and required while the
  * chain runs, the dependent a change has just orphaned holds a value
- * that would not validate, and no error is raised over either — the
- * surface's AJAX is scoped to the one element that was touched.
+ * that would not validate, and no error is raised over either: the
+ * data surface's AJAX is scoped to the one element that was touched.
  *
  * @see \Drupal\Tests\data_surface\Functional\DataSurfaceBlockPlacementTest
  *   For the same form without JavaScript.
@@ -76,7 +76,7 @@ class DataSurfaceRefinementTest extends WebDriverTestBase {
   /**
    * Tests entity type to bundle to field, each narrowing the next.
    */
-  public function testRefinementChainRebuildsTheSurface(): void {
+  public function testRefinementChainRebuildsTheDataSurface(): void {
     $assert_session = $this->assertSession();
     $page = $this->getSession()->getPage();
     $this->drupalGet('admin/structure/block/add/data_surface_demo/' . $this->defaultTheme);
@@ -91,8 +91,8 @@ class DataSurfaceRefinementTest extends WebDriverTestBase {
     $assert_session->optionExists('settings[bundle]', 'user');
     $assert_session->optionNotExists('settings[bundle]', 'article');
 
-    // Choosing node rebuilds the surface against the new choice, and the
-    // bundles arrive with the labels the site gives them, from the
+    // Choosing node rebuilds the data surface against the new choice, and
+    // the bundles arrive with the labels the site gives them, from the
     // definition the refiner replaced rather than from a second list
     // kept somewhere beside it. Only what the entity type moves is
     // replaced: the bundle and the field, and not the entity type select
@@ -162,7 +162,7 @@ class DataSurfaceRefinementTest extends WebDriverTestBase {
    * Tests the entity type replaces the bundle and the field, and only them.
    *
    * Every named element on the placement form is marked first, the
-   * block's own and the surface's: the headline, the limit, the
+   * block's own and the structure's: the headline, the limit, the
    * presentation and its slot, the region, the machine name. Afterwards
    * the two the entity type moves are new nodes and every other one is
    * the node it was.

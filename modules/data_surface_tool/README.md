@@ -1,11 +1,11 @@
 # Data Surface - Tool API bridge
 
-Tools generated from surfaces: one per situation of every surface that
-can be asked on its own, `data_surface:<surface>:<situation>`, and a
+Tools generated from resources: one per operation of every resource that
+can be asked on its own, `data_surface:<resource>:<operation>`, and a
 read tool beside each that changes a thing that exists,
-`data_surface:<surface>:<situation>:read`. For a
+`data_surface:<resource>:<operation>:read`. For a
 field that is `data_surface:field.instance:add`, `:reuse` and `:edit`,
-whose `settings` are the field type's own settings surface where it has
+whose `settings` are the field type's own settings variant where it has
 one, so the A/B against the free-form Tool Belt tools is a fair one: the
 same question, "what may the settings be?", answered from a contract
 instead of a config schema.
@@ -14,8 +14,8 @@ instead of a config schema.
 
 The hand-written `data_surface:field_add` and `data_surface:field_update`
 are gone, replaced by the tools derived from the field instance
-surface's situations. Nothing about the settings changed: the same
-surface fills the same slot, and the comparison below is the same
+resource's operations. Nothing about the settings changed: the same
+variant fills the same slot, and the comparison below is the same
 document. What a caller sends moved:
 
 | Was | Is | Inputs |
@@ -24,14 +24,14 @@ document. What a caller sends moved:
 | — (a new storage) | `data_surface:field.instance:add` | `entity_type_id`, `bundle`, `values` (with `field_type`, `field_name`, `storage`) |
 | `data_surface:field_update` | `data_surface:field.instance:edit` | `field` (`<entity type>.<bundle>.<field name>`), `values` |
 
-`values` holds what used to be top-level inputs — `label`,
-`description`, `required`, `settings` — beside `storage` (cardinality,
+`values` holds what used to be top-level inputs (`label`,
+`description`, `required`, `settings`) beside `storage` (cardinality,
 translatability, and the storage settings its field type chooses, such
 as a string's `max_length`), and every tool takes `dry_run`, which answers with
 what would be stored, after storage's own checks, as `prepared`. The
 field type key offers every field type offered in the UI. One whose
-module marks a settings surface with `#[SurfaceVariant]` is described
-by that surface; every other, a plain `string` or `integer` field
+module marks a settings class with `#[Variant]` is described
+by that class; every other, a plain `string` or `integer` field
 among them, is described by its config schema,
 `field.field_settings.<field type>`, through `FieldSettingsSchemaVariants`
 (below): its keys, their types and labels, and the field type's own
@@ -49,7 +49,7 @@ yields three types, a nested `override` key with nothing to put a
 property name in, a deprecated `fields` key offered as an ordinary one,
 and no vocabulary, labels or defaults anywhere below the top level.
 
-Here the same input is converted from the surface the field type
+Here the same input is converted from the settings the field type
 declares. [`COMPARISON.md`](COMPARISON.md) holds both JSON Schema
 documents side by side, `values.settings` of
 `data_surface:field.instance:reuse` and `settings` of
@@ -60,17 +60,17 @@ what the retired ones did.
 
 Five pieces:
 
-- `Surface\FieldInstanceSurface` — a field on a bundle, in the new
-  spelling, with `add`, `reuse` and `edit` situations, a target and an
-  access class. It attaches `Surface\FieldStorageSurface` at `storage`
-  (its field type, cardinality, translatability and storage settings,
-  with a target of its own, committed before the field), and its
+- `Resource\FieldInstanceResource`: a field on a bundle, in the new
+  spelling, with `add`, `reuse` and `edit` operations, a storage class
+  and an access class. It attaches `Resource\FieldStorageResource` at
+  `storage` (its field type, cardinality, translatability and storage
+  settings, with storage of its own, committed before the field), and its
   `settings` are an open slot chosen by
-  `field_type`, filled by whichever settings surface a field type's
-  module marks with `#[SurfaceVariant]` (the address module's, and the
+  `field_type`, filled by whichever settings class a field type's
+  module marks with `#[Variant]` (the address module's, and the
   test module's gated one), and for every other field type by
   `FieldSettingsSchemaVariants`. `reuse($storage, $bundle)` is an add for the
-  field and an edit for its storage; the storage's edit situation knows
+  field and an edit for its storage; the storage's edit operation knows
   the field type, which locks its settings to that type's, and refuses
   shrinking its cardinality once the field has data. Adding a field
   leaves the type open on the storage as on the field: a caller setting
@@ -78,40 +78,42 @@ Five pieces:
   other than the field's. A settings change that would alter the
   database columns of a field with data is refused when the storage is
   prepared, where the SQL storage would otherwise throw on save. Executing
-  submits the whole field instance surface to its composed target,
-  which prepares every part — the storage, the field, the settings —
+  submits the whole field instance resource to its composed storage,
+  which prepares every part (the storage, the field, the settings)
   against its config schema, then writes the storage if it moved, the
-  field, and, through the settings surface's own target, its settings.
-- The generated tools — `Plugin\Derivative\SurfaceSituationToolDeriver`
-  and `Plugin\tool\Tool\SurfaceSituationTool`, with `SituationInputs`
+  field, and, through the settings variant's own storage where it names
+  one, its settings.
+- The generated tools: `Plugin\Derivative\ResourceOperationToolDeriver`
+  and `Plugin\tool\Tool\ResourceOperationTool`, with `OperationInputs`
   describing them. Here that is `data_surface:field.instance:add`,
   `:reuse` and `:edit` and `data_surface:field.storage:edit`; the node
   type demo adds `data_surface:node.type:add` and `:edit`, and
   `data_surface_entity` one `add` and one `edit` per content entity
   bundle with a form display, `data_surface:entity.content:node.page:add`. The inputs
-  are the situation's parameters (an entity parameter as its id; a
-  scalar one named for a surface key described as that key), the
-  surface's keys the situation does not know as `values`, and
-  `dry_run`; see `docs/surfaces.md`, Tools. Two rules leave a situation
+  are the operation's parameters (an entity parameter as its id; a
+  scalar one named for a resource key described as that key), the
+  resource's keys the operation does not know as `values`, and
+  `dry_run`; see `docs/resources.md`, Tools. Two rules leave an operation
   out: `field.storage`'s `add` asks `administer %entity_type_id fields`
   and no parameter supplies the entity type, so it could never be
-  allowed and is only ever a field's; and a surface a plugin names with
-  `#[UsesSurface]` is configured through the plugin's host. Beside the
-  edit tools is a read tool, `Plugin\tool\Tool\SurfaceSituationReadTool`
+  allowed and is only ever a field's; and a structure a plugin names
+  with `#[UsesStructure]` is configured through the plugin's host. Only
+  a resource that names its storage is a tool. Beside the
+  edit tools is a read tool, `Plugin\tool\Tool\ResourceOperationReadTool`
   (below).
-- `FieldSettingsSchemaVariants` — a service tagged
+- `FieldSettingsSchemaVariants`: a service tagged
   `data_surface.derived_variants` that fills the field instance
-  surface's `settings` slot for every field type offered in the UI that
-  no `#[SurfaceVariant]` fills, reading `field.field_settings.<field
+  resource's `settings` slot for every field type offered in the UI that
+  no `#[Variant]` fills, reading `field.field_settings.<field
   type>` through typed config: a mapping becomes a map, a sequence a
   list, a primitive its typed data type, and what the schema cannot
   resolve without a value `any`. `FieldStorageSettingsSchemaVariants`
-  is the same class pointed at the storage surface's `settings` slot,
+  is the same class pointed at the storage resource's `settings` slot,
   `field.storage_settings.<field type>` and the field type's default
-  storage settings. A derived variant has no target, so the field, or
-  the storage, stores it. The catalogue says, per slot, where derived
-  variants come from.
-- `SurfaceInputDefinitions` — converts core data definitions into the
+  storage settings. A derived variant has no storage of its own, so the
+  field, or the storage, stores it. The catalogue says, per slot, where
+  derived variants come from.
+- `InputDefinitions`: converts core data definitions into the
   Tool API's input definitions: type, label, description, required,
   default value and constraints, with maps and lists becoming the Tool
   API's own map and list input definitions.
@@ -124,12 +126,12 @@ Five pieces:
 
 Tool Belt's update tool strips every null from the settings it is given
 before merging them over the stored ones, so a setting can be set but
-never cleared. Here the pipeline merges the payload over what the target
+never cleared. Here the pipeline merges the payload over what storage
 loads, key by key and at every depth, and a null is a value like any
 other. Sending `{"label": "Address", "settings": {"field_overrides":
 {"organization": null}}}` to the edit tool removes that one override and
 leaves the rest alone, which is what a caller correcting one mistake
-actually wants to say. The label is there because the surface requires
+actually wants to say. The label is there because the resource requires
 it, and the Tool API refuses a required key left out (below).
 
 ## How to try it
@@ -141,19 +143,19 @@ drush tool:list
 ```
 
 `drush tool:info data_surface:field.instance:reuse` prints the input
-definitions. Every key in `values` is required exactly when the surface
-requires it, on an edit as on an add; a tool for a situation that needs
+definitions. Every key in `values` is required exactly when the resource
+requires it, on an edit as on an add; a tool for an operation that needs
 nothing and changes what exists, such as
 `data_surface:registration.step3:configure`, defaults each key to what
 is stored now, and a tool that needs a subject does the same once its
 parameters name one. The `values` input's `settings` carry every field type's
-settings until the storage is known, and refine into the address surface
-once `storage` names an address storage. Compare with
+settings until the storage is known, and refine into the address
+settings once `storage` names an address storage. Compare with
 `drush tool:info tool_belt:field_add` on the same site, or read
 [`COMPARISON.md`](COMPARISON.md), which has both.
 
-`tool:info` shows the Tool API's rendering of a situation, not the
-surface's whole contract. The Tool API cannot say a shape chosen by a
+`tool:info` shows the Tool API's rendering of an operation, not the
+resource's whole contract. The Tool API cannot say a shape chosen by a
 sibling key, so a slot is flattened to one map: the variant the stored
 values choose (example 3's ticket, as the free ticket while `pricing`
 is `free`), or every variant's keys with none required before anything
@@ -166,7 +168,7 @@ enabled, at `/surface-api/{surface}/{situation}`
 ## The read tool
 
 A caller that wants to change a thing usually wants to see it first,
-and a write tool's `values` defaults are not a read. So every situation
+and a write tool's `values` defaults are not a read. So every operation
 that can be asked on its own and changes a thing that exists has a read
 tool beside its write tool, derived by the same deriver under the same
 base plugin id:
@@ -179,34 +181,34 @@ base plugin id:
 | `data_surface:registration.step1:configure:read`, `step2`, `step3` | nothing |
 | `data_surface:entity.content:<entity type>.<bundle>:edit:read`, with `data_surface_entity` | `id` |
 
-- **Which situations.** One that needs nothing and whose context does
+- **Which operations.** One that needs nothing and whose context does
   not create, and one that needs a subject and whose parameters name one
   thing whole: a single entity, or a scalar for every identity key.
   `node.type:add`, `field.instance:add` and `field.instance:reuse`
-  create, and have none. `SurfaceCatalogue::reads()` decides, and the
+  create, and have none. `ResourceCatalogue::reads()` decides, and the
   catalogue lists it ("Read on its own"); a context that turns out to
   create is refused when the read runs.
-- **Inputs.** The situation's parameters, exactly as the write tool
+- **Inputs.** The operation's parameters, exactly as the write tool
   declares them, and nothing else: no `values`, no `dry_run`.
-- **Output.** `values`: what the surface's composed target loads, in the
-  shape the write tool's `values` input takes (the surface's keys less
-  the identity keys the situation knows, keys other modules mount under
-  `third_party_settings` included, subsurfaces and slots as nested
-  maps). Its definition is the write tool's `values` map said as an
-  output, `SurfaceInputDefinitions::outputFromInput()`: the same data
+- **Output.** `values`: what the resource's composed storage loads, in
+  the shape the write tool's `values` input takes (the resource's keys
+  less the identity keys the operation knows, keys other modules mount
+  under `third_party_settings` included, attached structures and slots
+  as nested maps). Its definition is the write tool's `values` map said as an
+  output, `InputDefinitions::outputFromInput()`: the same data
   types, labels, descriptions and nesting, so `tools/list` over MCP shows
   the same keys as the input schema, with no constraint and no property
   required. A read reports storage as it is, and a stale value
   ([`docs/semantics.md`](../../docs/semantics.md)) must not fail the
   output validation the Tool API runs on every result; a key storage
   holds nothing for is absent.
-- **Secrets.** A key the surface marks secret is never returned, at any
+- **Secrets.** A key the resource marks secret is never returned, at any
   depth, and is not in the output definition: left out, as the write
   tool's defaults leave it out, not sent as a placeholder.
-  `SurfaceInputDefinitions::secrets()` finds every one, under a slot in
+  `InputDefinitions::secrets()` finds every one, under a slot in
   any of its variants, and cuts both the definition and the values.
-- **Access.** The write tool's, deliberately, for now: the situation's
-  permission, then the surface's access class, for the context the
+- **Access.** The write tool's, deliberately, for now: the operation's
+  permission, then the resource's access class, for the context the
   parameters build. A caller who may not change a thing may not read it
   either. A parameter that names nothing fails as it does for the write
   tool.
@@ -223,14 +225,14 @@ serializer emits, and what an MCP client sees as `outputSchema`.
 
 ## The contract panel
 
-`SurfaceContractPanel`, the service `data_surface_tool.contract_panel`,
-is a read-only panel any situation route can name in
-`_data_surface_panel`. The generic situation form places it inside the
-surface, so it rebuilds with the form: every key with its type, label,
+`ContractPanel`, the service `data_surface_tool.contract_panel`,
+is a read-only panel any operation route can name in
+`_data_surface_panel`. The generic operation form places it inside the
+data surface's form, so it rebuilds with the form: every key with its type, label,
 requiredness, default, what it allows in words, what it depends on, and
 whether it is narrowed right now. Below the table, collapsed, are three
 JSON Schema documents: "The schema for these answers", which
-`data_surface.contract_emitter` emits for the situation and the form's
+`data_surface.contract_emitter` emits for the operation and the form's
 values as they stand (slots as `allOf` of `if`/`then`, titled `oneOf`,
 `x-surface` with dependsOn and locked, no widget hints); "The full
 schema, for any answers", the same emitter's `emitFull()`, which reads
@@ -248,22 +250,22 @@ The routes of `data_surface_examples` name it.
 | `Kernel\FieldToolsTest` | The three field tools end to end: add, reuse, edit, dry run, the schema refusing at prepare, a `string` field added and edited through settings derived from its schema, its storage's `max_length` set on add and changed by `data_surface:field.storage:edit`, a storage type other than the field's refused, cardinality and columns kept once the field has data, access. |
 | `Kernel\FieldToolsAccessTest` | The field type's own access class refusing both the tools and its Field UI host. |
 | `Kernel\FieldToolsComparisonTest` | The two JSON Schema documents in `COMPARISON.md`, against what the code emits, and parity with the retired tools. |
-| `Kernel\FieldInstanceSurfaceTest` | The three situations, the storage child (its keys, its locked type) and its has-data constraint, the settings slot, starting values. |
-| `Kernel\SituationToolsTest` | The generated tools: which exist, the two derivation rules, what they advertise, refinement to the thing a parameter names, execution, dry run, access, the storage tool's has-data constraint. |
-| `Kernel\SurfaceCatalogueTest` | The catalogue read from the static layer, and `docs/catalogue.md` against it, where each derived slot is listed. |
+| `Kernel\FieldInstanceResourceTest` | The three operations, the storage child (its keys, its locked type) and its has-data constraint, the settings slot, starting values. |
+| `Kernel\OperationToolsTest` | The generated tools: which exist, the two derivation rules, what they advertise, refinement to the thing a parameter names, execution, dry run, access, the storage tool's has-data constraint. |
+| `Kernel\ResourceCatalogueTest` | The catalogue read from the static layer, and `docs/catalogue.md` against it, where each derived slot is listed. |
 | `Kernel\ExamplesStepsTest` | The contract panel: its rows as the answers narrow them, the contract's slot conditionals, and the tool's schema below them. |
-| `Kernel\ExamplesToolTest` | `data_surface:registration.step3:configure`: the example calls, its definition (required as the surface says, defaulting to what is stored, and current again after a write), and a partial update the Tool API refuses. |
-| `Kernel\ReadToolTest` | The read tools: one per situation that changes a thing that exists and none for one that creates, a read operation taking exactly the parameters, an output map of the write tool's keys, step 3's stored values with the compliance module's mounted keys before and after a write, the content type read by its type, an unknown parameter failing as for the write tool, access as the write tool's, and a secret never returned. |
+| `Kernel\ExamplesToolTest` | `data_surface:registration.step3:configure`: the example calls, its definition (required as the resource says, defaulting to what is stored, and current again after a write), and a partial update the Tool API refuses. |
+| `Kernel\ReadToolTest` | The read tools: one per operation that changes a thing that exists and none for one that creates, a read operation taking exactly the parameters, an output map of the write tool's keys, step 3's stored values with the compliance module's mounted keys before and after a write, the content type read by its type, an unknown parameter failing as for the write tool, access as the write tool's, and a secret never returned. |
 | `Kernel\DerivedToolDefinitionsTest` | Tool Explorer showing every derived tool, read tools included, and installing a module deriving its tools. |
 
 ## Who may run them
 
 The write tools are `ToolOperation::Write`, so the access answer has to
-be the real one, and a read tool asks the same question. It is the situation's permission, `administer %entity_type_id
-fields`, named from the identity the situation's context knows — the
+be the real one, and a read tool asks the same question. It is the operation's permission, `administer %entity_type_id
+fields`, named from the identity the operation's context knows (the
 entity type the add tool is given, or the one the storage or field it
-names is on — then `FieldInstanceAccess`, which refuses a locked
-storage, then the access class of the settings surface the field type
+names is on), then `FieldInstanceAccess`, which refuses a locked
+storage, then the access class of the settings variant the field type
 chose, which may refuse (the gated test field type does). A field or
 storage that does not exist builds no context, and is refused without
 saying why.
@@ -298,13 +300,13 @@ changing the Tool API.
   the value passes a truthy test, so an empty list default and a null
   default are both dropped. The converted definitions carry them; the
   JSON does not.
-- **`setLocked()` has no effect below the top level.** A locked surface
+- **`setLocked()` has no effect below the top level.** A locked resource
   key converts to a locked property definition, but only top level inputs
   are filtered by it, and the map normalizer walks every property. The
   statement is carried anyway.
-- **A required map property's default is not honoured.** A surface's
+- **A required map property's default is not honoured.** A resource's
   required key must hold a value, which a default or a stored value
-  can supply; the bridge says `required` as the surface does, and puts
+  can supply; the bridge says `required` as the resource does, and puts
   what is stored in each property's `default`. But
   `TypedInputsTrait::validateInputValue()` refuses a required property
   the payload leaves out ("This property is required.") whatever its
@@ -326,7 +328,7 @@ changing the Tool API.
 `TypedDataManager::getPropertyInstance()` caches item prototypes by root
 data type and property path, not by field config object, so asking two
 different unsaved `FieldConfig` objects for their first item hands back
-two clones of the first one's item — and a target built from the second
+two clones of the first one's item, and storage built for the second
 writes to the first one's entity. A tool hits this immediately, because
 it describes an unsaved field while refining its inputs and creates
 another while executing. The field type trait sidesteps it by building

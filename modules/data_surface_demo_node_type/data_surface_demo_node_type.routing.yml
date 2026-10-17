@@ -1,42 +1,42 @@
-# Each route is one situation of the content type surface.
+# Each route is one operation of the content type resource.
 #
 # Neither route names a form class of this module's own. The generic
-# form builds both from the surface class and the situation; the route's
-# parameters are the situation method's, by name, so the edit route's
-# {type} is upcast to the node type that NodeTypeSurface::edit() takes.
+# form builds both from the resource class and the operation; the route's
+# parameters are the operation method's, by name, so the edit route's
+# {type} is upcast to the node type that NodeTypeResource::edit() takes.
 #
-# One requirement, and it is the situation's: its permission, this
-# module's own, then the surface's access class, which asks the node type
+# One requirement, and it is the operation's: its permission, this
+# module's own, then the resource's access class, which asks the node type
 # entity whether one may be created or this one updated. Both have to
 # allow. The entity answer is the one that decides whether these values
-# may be written at all — a content type is a content type however it is
-# edited, so this module never grants more than core's own forms grant —
-# and the permission decides whether this second, surface-driven way in
+# may be written at all (a content type is a content type however it is
+# edited, so this module never grants more than core's own forms grant),
+# and the permission decides whether this second, resource-driven way in
 # is open on this site. The form, the operation link and the tool for the
-# same situation read the same answer.
+# same operation read the same answer.
 #
 # What stays this module's is the cosmetic layer the last default names.
 data_surface_demo_node_type.add:
   path: '/admin/structure/types/surface-add'
   defaults:
-    _form: 'Drupal\data_surface\Form\DataSurfaceSituationForm'
-    _title: 'Add content type (surface)'
-    _data_surface_surface: 'Drupal\data_surface_demo_node_type\Surface\NodeTypeSurface'
-    _data_surface_situation: 'add'
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Add content type (resource)'
+    _data_surface_resource: 'Drupal\data_surface_demo_node_type\Resource\NodeTypeResource'
+    _data_surface_operation: 'add'
     _data_surface_cosmetics: 'data_surface_demo_node_type.form_cosmetics'
   requirements:
-    _data_surface_situation_access: 'TRUE'
+    _data_surface_operation_access: 'TRUE'
 
 data_surface_demo_node_type.edit:
   path: '/admin/structure/types/manage/{type}/surface-edit'
   defaults:
-    _form: 'Drupal\data_surface\Form\DataSurfaceSituationForm'
-    _title: 'Edit content type (surface)'
-    _data_surface_surface: 'Drupal\data_surface_demo_node_type\Surface\NodeTypeSurface'
-    _data_surface_situation: 'edit'
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Edit content type (resource)'
+    _data_surface_resource: 'Drupal\data_surface_demo_node_type\Resource\NodeTypeResource'
+    _data_surface_operation: 'edit'
     _data_surface_cosmetics: 'data_surface_demo_node_type.form_cosmetics'
   requirements:
-    _data_surface_situation_access: 'TRUE'
+    _data_surface_operation_access: 'TRUE'
   options:
     parameters:
       type:

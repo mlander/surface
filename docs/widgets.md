@@ -6,8 +6,8 @@ submitted value back. It is a plugin type: classes live in
 `#[DataSurfaceWidget]` attribute.
 
 A widget reads the definition and **nothing else**. It never sees the
-surface, the host or the target: everything it needs — type, label,
-description, whether the value is required, the values it allows — is on
+data surface, the host or the storage: everything it needs (type, label,
+description, whether the value is required, the values it allows) is on
 the definition. That is what makes one definition render the same way
 wherever it appears.
 
@@ -96,8 +96,9 @@ with no `#default_value`, no `#placeholder` and no `#required`, plus the
 note "Leave blank to keep the current value." The form builder does not
 hand a secret's value to the widget in the first place, so nothing about
 a stored secret reaches the render array from either side. Why each of
-those is missing is in [Declaring a surface](declaring-a-surface.md#secrets)
-and [Value semantics](semantics.md#secrets-keep-what-they-hold).
+those is missing is in
+[Declaring a resource](declaring-a-resource.md#secrets) and
+[Value semantics](semantics.md#secrets-keep-what-they-hold).
 
 ## Extraction returns raw shapes
 
@@ -108,7 +109,7 @@ pipeline's `accept()` casts it.
 
 This is not a division of labor for its own sake. Casting in the widgets
 is what an earlier design did, and it meant a caller that handed the
-surface a JSON payload rather than a form submission got no coercion at
+pipeline a JSON payload rather than a form submission got no coercion at
 all and validated raw strings. With one casting table in `accept()`, a
 generated form and a payload carrying the same strings produce the same
 values. The rules are in [Value semantics](semantics.md).
@@ -124,7 +125,7 @@ are absolute, while a subform state reads values relative to the fragment
 it wraps. A host that hands its plugin a subform state — a block's
 settings, built with `SubformState::createForSubform()`, is the common
 case — would therefore have every value looked up one level too deep and
-come back `NULL`, which the surface reports as "not configured": a
+come back `NULL`, which the data surface reports as "not configured": a
 spurious violation for a required key, and a stored value silently
 replaced by nothing for an optional one.
 
@@ -173,5 +174,5 @@ Three things to hold to:
 2. **Do not coerce.** Give back what was submitted, in the definition's
    shape.
 3. **Read nothing but the definition.** If you find yourself wanting the
-   surface or the host, the thing you want is probably a constraint on
+   data surface or the host, the thing you want is probably a constraint on
    the definition and a resolver that reads it.

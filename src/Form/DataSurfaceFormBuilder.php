@@ -29,14 +29,14 @@ use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\data_surface\Pipeline\ViolationSet;
-use Drupal\data_surface\SurfaceAttachment;
-use Drupal\data_surface\SurfaceEntry;
-use Drupal\data_surface\SurfaceList;
+use Drupal\data_surface\Attachment;
+use Drupal\data_surface\Entry;
+use Drupal\data_surface\Collection;
 use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
 use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
 
 /**
- * Generates, extracts, and validates Form API elements from a surface.
+ * Generates, extracts, and validates Form API elements from a data surface.
  *
  * Compared to the adapter-era proof of concept this layer carries no
  * masks: widgets own defaults, constraint mapping and empty options
@@ -50,7 +50,7 @@ use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
 class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, TrustedCallbackInterface {
 
   /**
-   * Render key marking the surface container the AJAX path rebuilds.
+   * Render key marking the data surface container the AJAX path rebuilds.
    */
   protected const WRAPPER_KEY = '#data_surface_wrapper';
 
@@ -100,7 +100,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
   /**
    * The key of a collection's "Add another" button inside its element.
    *
-   * With an at sign, which no delta and no surface key can take.
+   * With an at sign, which no delta and no data surface key can take.
    */
   protected const ADD_KEY = '@add';
 
@@ -149,7 +149,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    *   the element type declares instead of adding to it, so the type's
    *   own callbacks are read from here and kept.
    * @param \Drupal\Core\Messenger\MessengerInterface $messenger
-   *   The messenger, which carries the one thing a surface has to say
+   *   The messenger, which carries the one thing a data surface has to say
    *   that is not an error and not part of an element: that a stored
    *   value went stale and is being kept.
    * @param \Drupal\data_surface\Options\DataSurfaceOptions $options
@@ -170,7 +170,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    * {@inheritdoc}
    */
   public function buildSurfaceForm(DataSurfaceInterface $surface, array $values, FormStateInterface $form_state, string $wrapper_key = 'data-surface'): array {
-    // Two views of one overlay. The surface is refined against the keys
+    // Two views of one overlay. The data surface is refined against the keys
     // as they stand, an orphan held unanswered; each element is rendered
     // with what it holds, an orphan standing for its stored value, so its
     // select comes up on the empty option with that value behind it.
@@ -246,7 +246,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         // above the widget that would place it, rather than only in the
         // widget that knows better than to.
         DefinitionMetadata::isSecret($definition) => NULL,
-        // A locked identity key holds what the situation knows, its
+        // A locked identity key holds what the operation knows, its
         // default; a locked child, what is stored, as given.
         $definitions->isLocked($name) && !$definitions->entry($name)?->isNested() => $surface->getDefault($name),
         default => $shown[$name] ?? $surface->getDefault($name),
@@ -278,11 +278,11 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         '#value' => implode(' ', $stale),
       ];
     }
-    // What the refined surface depends on is what this container
+    // What the refined data surface depends on is what this container
     // depends on: the option lists inside it were read from live site
     // state, and the refiners that produced them said so. The widget
     // applies each option set's own metadata to its element; this is the
-    // other half, the surface's, and without it a form holding a
+    // other half, the data surface's, and without it a form holding a
     // state-dependent shape would be cached as though it were static.
     CacheableMetadata::createFromObject($surface)->applyTo($container);
     return $container;
@@ -303,12 +303,12 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    * one. A locked list is drawn disabled, every item and both controls
    * with it.
    *
-   * @param \Drupal\data_surface\SurfaceList $list
+   * @param \Drupal\data_surface\Collection $list
    *   The child every item is.
    * @param \Drupal\Core\TypedData\ListDataDefinitionInterface $definition
    *   The list, as the parent's refiners left it.
    * @param mixed $values
-   *   The items as the surface is refined against them, an orphan held
+   *   The items as the data surface is refined against them, an orphan held
    *   unanswered.
    * @param mixed $shown
    *   The items as their elements show them, an orphan standing for its
@@ -323,10 +323,10 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    * @return array
    *   The list's element.
    */
-  protected function buildCollection(SurfaceList $list, ListDataDefinitionInterface $definition, mixed $values, mixed $shown, bool $locked, array $path, string $wrapper_id): array {
+  protected function buildCollection(Collection $list, ListDataDefinitionInterface $definition, mixed $values, mixed $shown, bool $locked, array $path, string $wrapper_id): array {
     $child = $list->child();
-    $items = SurfaceList::items($values);
-    $showing = SurfaceList::items($shown);
+    $items = Collection::items($values);
+    $showing = Collection::items($shown);
     $count = $definition->getConstraints()['Count'] ?? [];
     $min = is_numeric($count['min'] ?? NULL) ? (int) $count['min'] : 0;
     $max = is_numeric($count['max'] ?? NULL) ? (int) $count['max'] : NULL;
@@ -367,7 +367,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     ];
     foreach ($items as $delta => $item) {
       $held = array_replace($child->getDefaultValues(), is_array($item) ? $item : []);
-      $map = SurfaceAttachment::mapOf(MapDataDefinition::create(), $child->refine($held));
+      $map = Attachment::mapOf(MapDataDefinition::create(), $child->refine($held));
       $map->setLabel(static::itemLabel($label, $delta));
       $showing_item = $showing[$delta] ?? $item;
       $element[$delta] = $this->widgetManager->getWidgetFor($map)->buildElement(
@@ -469,7 +469,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       return;
     }
     $input = $state->getUserInput();
-    NestedArray::setValue($input, $parents, $rewrite(SurfaceList::items(NestedArray::getValue($input, $parents))), TRUE);
+    NestedArray::setValue($input, $parents, $rewrite(Collection::items(NestedArray::getValue($input, $parents))), TRUE);
     $state->setUserInput($input);
     $state->setRebuild();
   }
@@ -532,7 +532,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    * Reads a definition by key, or by dotted path to a mounted key.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface.
+   *   The data surface.
    * @param string $path
    *   A key, or `third_party_settings.<module>.<key>`.
    *
@@ -552,7 +552,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    * Settles a rebuild's input: what it drops, and what it leaves orphaned.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface or child surface, as advertised.
+   *   The data surface or built child, as advertised.
    * @param array $stored
    *   What is stored for its keys.
    * @param array $input
@@ -632,7 +632,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    * depth of the longest dependency chain.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface or child surface, as advertised.
+   *   The data surface or built child, as advertised.
    * @param array $stored
    *   What is stored for its keys.
    * @param array $input
@@ -679,7 +679,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         $again = TRUE;
       }
       if ($again) {
-        // What a drop falls back to is only known once the surface is
+        // What a drop falls back to is only known once the data surface is
         // refined against it.
         continue;
       }
@@ -748,7 +748,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    * the screen.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $refined
-   *   The surface refined against the values as they now stand.
+   *   The data surface refined against the values as they now stand.
    * @param string $name
    *   The target key, or a mounted key's dotted path.
    * @param string[] $dependencies
@@ -825,7 +825,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    * another open string is still holding exactly what was typed into it.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $refined
-   *   The surface refined against the values as they now stand.
+   *   The data surface refined against the values as they now stand.
    * @param string $name
    *   The target key, or a mounted key's dotted path.
    * @param string[] $dependencies
@@ -882,33 +882,33 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    * {@inheritdoc}
    */
   public function mergeSurfaceContainer(array $container, array $form): array {
-    // The rule, in one line: the surface fills in what the host left
-    // unsaid and overwrites nothing the host said itself. A host form
-    // that already declares #type, #tree, #attributes or #process is
-    // describing its own element, and the surface is a guest inside it;
-    // taking those keys over is how a fieldset became a container and a
-    // host's own wrapper id disappeared. Only the surface's own children
-    // and the marker are the surface's to place.
+    // The rule, in one line: the data surface fills in what the host left
+    // unsaid and overwrites nothing the host said itself. A host form that
+    // already declares #type, #tree, #attributes or #process is describing
+    // its own element, and the data surface is a guest inside it; taking
+    // those keys over is how a fieldset became a container and a host's own
+    // wrapper id disappeared. Only the data surface's own children and the
+    // marker are the data surface's to place.
     $merged = $form;
     if (isset($form['#attributes']['id']) && $form['#attributes']['id'] !== $container[self::WRAPPER_KEY]) {
-      // The host named its element before the surface arrived, so that
+      // The host named its element before the data surface arrived, so that
       // id is the wrapper the rebuild replaces and the generated one is
-      // discarded — including in the #ajax already attached to children.
+      // discarded, including in the #ajax already attached to children.
       $container = static::retargetWrapper($container, $form['#attributes']['id']);
     }
     foreach ($container as $key => $value) {
       if (!is_string($key) || !str_starts_with($key, '#')) {
-        // The surface's keys are the surface's own, so they win over a
-        // host key of the same name; its render keys, below, do not.
+        // The data surface's keys are the data surface's own, so they win
+        // over a host key of the same name; its render keys, below, do not.
         $merged[$key] = $value;
         continue;
       }
-      // Anything the host has not said itself, the surface says.
+      // Anything the host has not said itself, the data surface says.
       $merged[$key] ??= $value;
     }
     // Attributes merge rather than replace, so a host that set a class
-    // keeps it and the surface adds only what is missing. The type, the
-    // tree flag and the rest were settled by the loop above.
+    // keeps it and the data surface adds only what is missing. The type,
+    // the tree flag and the rest were settled by the loop above.
     $merged['#attributes'] = ($form['#attributes'] ?? []) + $container['#attributes'];
     $merged['#process'] = isset($form['#process'])
       ? array_merge($form['#process'], [[static::class, 'processSurfaceContainer']])
@@ -934,7 +934,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    *
    * What is replaced is read off the trigger, which carries the
    * dependent closure it was built with: the dependency edges are fixed
-   * when a surface is sealed and no refinement changes them, so the
+   * when a data surface is sealed and no refinement changes them, so the
    * closure the previous build computed is the closure of this one. Each
    * element is then taken from the rebuilt container, because that is
    * the one built against the new answer.
@@ -1019,7 +1019,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
   }
 
   /**
-   * Finds the surface container around an element of a built form.
+   * Finds the data surface container around an element of a built form.
    *
    * The walk reads the form and never writes to it: a walk by reference
    * would create every key it looked for.
@@ -1064,16 +1064,16 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     //
     // The limit is the triggering element and nothing else, not the
     // container around it. Touching a select is not a submission of the
-    // surface: the person has said one thing, about one key, and every
+    // data surface: the person has said one thing, about one key, and every
     // other key is still mid-edit. Scoped to the container, the rebuild
-    // validated the whole surface — so a dependent holding a value the
+    // validated the whole data surface, so a dependent holding a value the
     // new choice had just orphaned was flagged as a wrong answer to a
     // question nobody asked, and, because Form API skips the rebuild
     // outright once anything has errored, the container came back
     // refined against the old choice as well. Both halves of the bug
     // were that one line.
     //
-    // The surface's real validation is unaffected: it runs on submit,
+    // The data surface's real validation is unaffected: it runs on submit,
     // through the host's validate stage, where every key has been
     // answered on purpose.
     //
@@ -1126,7 +1126,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    * element below it, so an attached part's own mounts are placed in
    * the part's details.
    *
-   * It moves under a key no surface key can take, so it collides with
+   * It moves under a key no data surface key can take, so it collides with
    * nothing; with a #weight, when the key it follows has one, so a
    * frame Form API sorts keeps it there.
    *
@@ -1257,7 +1257,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    * Derives the id of one of the container's own wrappers.
    *
    * With an underscore, which Html::getId() never leaves in a key's part
-   * of a refreshId(), so no surface key can collide with it.
+   * of a refreshId(), so no data surface key can collide with it.
    *
    * @param string $wrapper_id
    *   The container's id.
@@ -1304,7 +1304,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     $found = static::searchSurfaceContainer($form);
     if ($found === NULL) {
       throw new \LogicException(sprintf(
-        'No surface container was found: nothing in the given form carries the "%s" marker. The container built by buildSurfaceForm() must reach extraction intact, because a surface whose container cannot be found collects no values at all and every stored value is replaced by its default.',
+        'No data surface container was found: nothing in the given form carries the "%s" marker. The container built by buildSurfaceForm() must reach extraction intact, because a data surface whose container cannot be found collects no values at all and every stored value is replaced by its default.',
         self::WRAPPER_KEY,
       ));
     }
@@ -1344,7 +1344,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     }
     // One coercion path for every caller: the form hands its raw tree to
     // the same accept() a payload goes through, which is also where
-    // locked keys take the value the surface declares.
+    // locked keys take the value the data surface declares.
     return $this->pipeline->accept($surface, $raw, $current);
   }
 
@@ -1357,18 +1357,18 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    * item kept was drawn at is remembered for the request, so a violation
    * about it is flagged on the element it came from.
    *
-   * @param \Drupal\data_surface\SurfaceEntry $entry
+   * @param \Drupal\data_surface\Entry $entry
    *   The collection.
    * @param array $container
-   *   The surface container.
+   *   The data surface container.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state.
    *
    * @return array
-   *   The items keyed by surface key, or nothing for a list with no
+   *   The items keyed by data surface key, or nothing for a list with no
    *   element.
    */
-  protected function extractCollection(SurfaceEntry $entry, array $container, FormStateInterface $form_state): array {
+  protected function extractCollection(Entry $entry, array $container, FormStateInterface $form_state): array {
     $name = $entry->name;
     $element = $container[$name] ?? NULL;
     $item = $entry->definition instanceof ListDataDefinitionInterface ? $entry->definition->getItemDefinition() : NULL;
@@ -1383,7 +1383,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         continue;
       }
       $value = $widget->extractValue($item, $element[$delta], $form_state, [$name, $delta]);
-      if (SurfaceList::isEmptyItem($value)) {
+      if (Collection::isEmptyItem($value)) {
         continue;
       }
       $items[] = $value;
@@ -1398,16 +1398,16 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    * Reads one key's raw value out of the container, if it was rendered.
    *
    * @param string $name
-   *   The surface key.
+   *   The data surface key.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $definition
    *   The definition to read it through.
    * @param array $container
-   *   The surface container.
+   *   The data surface container.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state.
    *
    * @return array
-   *   The raw value keyed by surface key, or nothing for a key with no
+   *   The raw value keyed by data surface key, or nothing for a key with no
    *   element: it was never offered, so it has nothing to say, and
    *   accept() keeps whatever the key already holds.
    */
@@ -1486,7 +1486,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    * Reads which element of this container triggered a refinement request.
    *
    * @param array $container
-   *   The surface container, processed.
+   *   The data surface container, processed.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state.
    *
@@ -1595,7 +1595,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     $messages = $state->getTemporaryValue([self::TRIGGER_ERRORS, $container_key, $dotted]) ?? [];
     $own = $element['#errors'] ?? NULL;
     if ($own !== NULL && $own !== '') {
-      // One answer per element, as Form API keeps one: the surface's own
+      // One answer per element, as Form API keeps one: the data surface's own
       // when it has one, a constraint's message being the most exact
       // thing anyone can say about the value; Form API's otherwise.
       $messages = $messages === [] ? [$own] : $messages;
@@ -1633,7 +1633,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
   }
 
   /**
-   * Wires a refinement dependency to rebuild the surface over AJAX.
+   * Wires a refinement dependency to rebuild the data surface over AJAX.
    *
    * A widget that renders a grouping element — the map widget's details
    * — is skipped on purpose. A details is not an input: it emits no
@@ -1643,7 +1643,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    * depends on the whole value of a key, so a rebuild fired by one leaf
    * would refine against a half-filled map, and the leaves of a map are
    * exactly where a person types rather than chooses. A map dependency
-   * is therefore declared and left unwired; the surface still refines
+   * is therefore declared and left unwired; the data surface still refines
    * when the form is submitted, or when a scalar dependency is touched.
    *
    * A trigger whose change fires on blur, a number or a text input, is
@@ -1701,7 +1701,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
   /**
    * Marks what a rebuild may replace and wires what triggers one.
    *
-   * One frame at a time, the surface's own and then each child's, under
+   * One frame at a time, the data surface's own and then each child's, under
    * the names each frame gives its keys: a child's refiners run in the
    * child's frame, so its dependencies and its targets are the child's
    * keys, and what one of them moves is inside that child and nowhere
@@ -1711,7 +1711,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    *   The container, or the element an attached child or a slot variant
    *   is rendered as.
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface or child surface the element renders.
+   *   The data surface or built child the element renders.
    * @param array $values
    *   The values the frame is rendered with.
    * @param string[] $path
@@ -1749,7 +1749,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         // wired inside it, and replaces what it moves there and nothing
         // else.
         $child = $entry->list->child();
-        $held = SurfaceList::items($values[$name] ?? NULL);
+        $held = Collection::items($values[$name] ?? NULL);
         foreach (static::elementChildren($element[$name]) as $delta) {
           if (is_int($delta) && is_array($element[$name][$delta])) {
             $item = $held[$delta] ?? [];

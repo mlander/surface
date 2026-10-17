@@ -18,8 +18,8 @@ use Drupal\data_surface\DataSurfaceAccess;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Options\DataSurfaceOptions;
-use Drupal\data_surface\SurfaceEntry;
-use Drupal\data_surface\SurfaceList;
+use Drupal\data_surface\Entry;
+use Drupal\data_surface\Collection;
 
 /**
  * The one entry point from raw values to stored values.
@@ -48,7 +48,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * Constructs a DataSurfacePipeline.
    *
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
-   *   The typed data manager, used to run the surface's constraints.
+   *   The typed data manager, used to run the data surface's constraints.
    * @param \Drupal\data_surface\Options\DataSurfaceOptions $options
    *   The options service, asked one question and only when a value has
    *   already been refused: is this value among the ones its key offers?
@@ -78,9 +78,9 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   }
 
   /**
-   * Accepts one surface's values, at the top or inside a subsurface.
+   * Accepts one data surface's values, at the top or inside a child.
    *
-   * A subsurface's value is accepted by the child surface describing it,
+   * A child's value is accepted by the built child describing it,
    * through this same method, so its locked keys, secrets and defaults
    * answer for themselves exactly as they would on their own. Slots are
    * accepted after everything else, because the variant is read from the
@@ -88,7 +88,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * order.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface describing this level.
+   *   The data surface describing this level.
    * @param array $input
    *   The raw input for this level.
    * @param array $current
@@ -131,8 +131,8 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * Accepts the value of one key.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface the key belongs to.
-   * @param \Drupal\data_surface\SurfaceEntry $entry
+   *   The data surface the key belongs to.
+   * @param \Drupal\data_surface\Entry $entry
    *   The key.
    * @param array $input
    *   The raw input for the key's level.
@@ -147,7 +147,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * @return mixed
    *   The accepted value.
    */
-  protected function acceptKey(DataSurfaceInterface $surface, SurfaceEntry $entry, array $input, array $current, string $prefix, array $values): mixed {
+  protected function acceptKey(DataSurfaceInterface $surface, Entry $entry, array $input, array $current, string $prefix, array $values): mixed {
     $name = $entry->name;
     $path = static::joinPath($prefix, $name);
     // What the key already holds: the stored value when storage has
@@ -178,7 +178,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         : $fallback;
     }
     if (!array_key_exists($name, $input)) {
-      // A subsurface the input says nothing about still holds a whole
+      // A child the input says nothing about still holds a whole
       // value of the child's shape, the child's defaults beneath what
       // the level already holds, so a stored value missing a key the
       // child added since reads the way a fresh one would.
@@ -211,9 +211,9 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *
    * Decision: see docs/decisions.md#empty-items-are-dropped.
    *
-   * @param \Drupal\data_surface\SurfaceEntry $entry
+   * @param \Drupal\data_surface\Entry $entry
    *   The collection.
-   * @param \Drupal\data_surface\SurfaceList $list
+   * @param \Drupal\data_surface\Collection $list
    *   The child every item is.
    * @param array $input
    *   The raw input for the collection's level.
@@ -232,7 +232,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * @throws \Drupal\data_surface\Pipeline\ShapeMismatchException
    *   When the input is not a list, or an item is not a map.
    */
-  protected function acceptCollection(SurfaceEntry $entry, SurfaceList $list, array $input, mixed $fallback, string $path): mixed {
+  protected function acceptCollection(Entry $entry, Collection $list, array $input, mixed $fallback, string $path): mixed {
     $child = $list->child();
     $raw = $input[$entry->name] ?? NULL;
     if ($entry->locked || !array_key_exists($entry->name, $input) || !ValueState::isConfigured($raw)) {
@@ -253,7 +253,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     }
     $items = [];
     foreach (array_values($raw) as $item) {
-      if (SurfaceList::isEmptyItem($item)) {
+      if (Collection::isEmptyItem($item)) {
         continue;
       }
       $at = $path . '.' . count($items);
@@ -266,9 +266,9 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   }
 
   /**
-   * Accepts a subsurface's value through the child surface describing it.
+   * Accepts a child's value through the built child describing it.
    *
-   * @param \Drupal\data_surface\SurfaceEntry $entry
+   * @param \Drupal\data_surface\Entry $entry
    *   The attached or slot key.
    * @param \Drupal\data_surface\DataSurfaceInterface $child
    *   The child answering for it: the attached one, or the chosen
@@ -290,7 +290,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * @throws \Drupal\data_surface\Pipeline\VariantMismatchException
    *   When the input carries another variant's keys.
    */
-  protected function acceptChild(SurfaceEntry $entry, DataSurfaceInterface $child, mixed $input, mixed $fallback, string $path, ?string $chosen): ?array {
+  protected function acceptChild(Entry $entry, DataSurfaceInterface $child, mixed $input, mixed $fallback, string $path, ?string $chosen): ?array {
     if (!ValueState::isConfigured($input)) {
       return NULL;
     }
@@ -307,7 +307,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   }
 
   /**
-   * Accepts one value for a key the surface declared secret.
+   * Accepts one value for a key the data surface declared secret.
    *
    * The one documented exception to the rule that input holding nothing
    * means the key holds nothing. A generated form can never echo a
@@ -364,16 +364,16 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   }
 
   /**
-   * Validates one surface's values, at the top or inside a subsurface.
+   * Validates one data surface's values, at the top or inside a child.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface describing this level.
+   *   The data surface describing this level.
    * @param array $values
    *   The accepted values of this level.
    * @param array $current
    *   What this level holds in storage, for the stale rule.
    *
-   * @return \Drupal\data_surface\Pipeline\SurfaceViolation[]
+   * @return \Drupal\data_surface\Pipeline\Violation[]
    *   The violations, filed under this level's keys.
    */
   protected function validateLevel(DataSurfaceInterface $surface, array $values, array $current): array {
@@ -389,17 +389,17 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         : [];
       if (!ValueState::isConfigured($value)) {
         // Not configured: nothing to hold to a constraint, and for a
-        // required key the surface's own message rather than whichever
+        // required key the data surface's own message rather than whichever
         // type-specific one a constraint would have produced. A key that
         // was never set is this case whether it is required or not, and
         // it is never stale: there is no value to keep.
         if ($definition->isRequired()) {
-          $errors[] = new SurfaceViolation($name, '', $this->t('@label is required.', [
+          $errors[] = new Violation($name, '', $this->t('@label is required.', [
             '@label' => $definition->getLabel() ?? $name,
           ]));
         }
         foreach ($missing as $path => $label) {
-          $errors[] = new SurfaceViolation($name, $path, $this->t('@label is required.', ['@label' => $label]));
+          $errors[] = new Violation($name, $path, $this->t('@label is required.', ['@label' => $label]));
         }
         continue;
       }
@@ -417,7 +417,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         // deciding key holds a value that names none, that key's own
         // Choice says so; when it holds nothing, this does.
         if (!ValueState::isConfigured($values[$entry->slot->by] ?? NULL)) {
-          $errors[] = new SurfaceViolation($name, '', $this->t('@label depends on @by, which holds no value.', [
+          $errors[] = new Violation($name, '', $this->t('@label depends on @by, which holds no value.', [
             '@label' => $definition->getLabel() ?? $name,
             '@by' => $refined->getDefinition($entry->slot->by)?->getLabel() ?? $entry->slot->by,
           ]));
@@ -429,7 +429,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       foreach ($typed_data->validate() as $violation) {
         $path = (string) $violation->getPropertyPath();
         if (isset($missing[$path])) {
-          // Said below, in the surface's own words.
+          // Said below, in the data surface's own words.
           continue;
         }
         // The message stays the object the constraint built. Flattening
@@ -437,10 +437,10 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         // whatever reads the violation afterwards would escape that text
         // a second time; a form error, a tool result and a log line each
         // render it themselves, at their own boundary.
-        $refusals[] = new SurfaceViolation($name, $path, $violation->getMessage());
+        $refusals[] = new Violation($name, $path, $violation->getMessage());
       }
       foreach ($missing as $path => $label) {
-        $refusals[] = new SurfaceViolation($name, $path, $this->t('@label is required.', ['@label' => $label]));
+        $refusals[] = new Violation($name, $path, $this->t('@label is required.', ['@label' => $label]));
       }
       if ($refusals !== [] && $this->isStale($definition, $value, $name, $current, $refined->getDefinitions()->dependencies($name), $values)) {
         // The whole key is reported as stale and not re-judged. What
@@ -459,10 +459,10 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   /**
    * Finds the required properties of a plain map that hold no value.
    *
-   * A plain map is not a subsurface, so no child judges its keys; without
+   * A plain map is not a child, so no child judges its keys; without
    * this, a required property inside one would be held only to typed
    * data's NotNull, which an empty string passes and an absent map never
-   * reaches. The surface's rule for a key, applied to the map's own
+   * reaches. The data surface's rule for a key, applied to the map's own
    * properties: required and not configured is refused, with the same
    * message. A mounted key an alter made required is the case it is for.
    *
@@ -496,7 +496,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   }
 
   /**
-   * Validates a subsurface's value through the child describing it.
+   * Validates a child's value through the built child describing it.
    *
    * The child judges its own keys by its own rules — the required
    * message, the stale rule, its refiners, in its own frame — and every
@@ -506,7 +506,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * whoever reads the set. Dotted paths into a child exist here and in
    * emitted schemas, and nowhere a refiner could name them.
    *
-   * @param \Drupal\data_surface\SurfaceEntry $entry
+   * @param \Drupal\data_surface\Entry $entry
    *   The attached or slot key.
    * @param \Drupal\data_surface\DataSurfaceInterface $child
    *   The child answering for it, as advertised.
@@ -517,14 +517,14 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * @param array $values
    *   The values of the key's own level, for a slot's deciding key.
    *
-   * @return \Drupal\data_surface\Pipeline\SurfaceViolation[]
+   * @return \Drupal\data_surface\Pipeline\Violation[]
    *   The violations, filed under the key.
    */
-  protected function validateChild(SurfaceEntry $entry, DataSurfaceInterface $child, mixed $value, mixed $current, array $values): array {
+  protected function validateChild(Entry $entry, DataSurfaceInterface $child, mixed $value, mixed $current, array $values): array {
     $name = $entry->name;
     if (!is_array($value)) {
       return [
-        new SurfaceViolation($name, '', $this->t('This value must be of type @expected, @actual given.', [
+        new Violation($name, '', $this->t('This value must be of type @expected, @actual given.', [
           '@expected' => 'map',
           '@actual' => get_debug_type($value),
         ])),
@@ -536,7 +536,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       $strangers = $entry->slot->strangers($chosen, $value);
       $owners = $entry->slot->owners($strangers, $chosen);
       foreach ($strangers as $stranger) {
-        $errors[] = new SurfaceViolation($name, $stranger, isset($owners[$stranger])
+        $errors[] = new Violation($name, $stranger, isset($owners[$stranger])
           ? $this->variantMismatchMessage($name . '.' . $stranger, $entry->slot->by, $chosen, $owners[$stranger])
           : $this->t('Unknown key @key.', ['@key' => $name . '.' . $stranger]));
       }
@@ -545,7 +545,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       $value = array_diff_key($value, array_flip($strangers));
     }
     foreach ($this->validateLevel($child, $value, is_array($current) ? $current : []) as $violation) {
-      $errors[] = new SurfaceViolation($name, $violation->fullPath(), $violation->message, $violation->stale);
+      $errors[] = new Violation($name, $violation->fullPath(), $violation->message, $violation->stale);
     }
     return $errors;
   }
@@ -563,23 +563,23 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *
    * Decision: see docs/decisions.md#count-is-the-parents.
    *
-   * @param \Drupal\data_surface\SurfaceEntry $entry
+   * @param \Drupal\data_surface\Entry $entry
    *   The collection, refined.
-   * @param \Drupal\data_surface\SurfaceList $list
+   * @param \Drupal\data_surface\Collection $list
    *   The child every item is.
    * @param mixed $value
    *   The list, configured.
    * @param mixed $current
    *   What storage holds for it.
    *
-   * @return \Drupal\data_surface\Pipeline\SurfaceViolation[]
+   * @return \Drupal\data_surface\Pipeline\Violation[]
    *   The violations, filed under the key.
    */
-  protected function validateCollection(SurfaceEntry $entry, SurfaceList $list, mixed $value, mixed $current): array {
+  protected function validateCollection(Entry $entry, Collection $list, mixed $value, mixed $current): array {
     $name = $entry->name;
     if (!is_array($value)) {
       return [
-        new SurfaceViolation($name, '', $this->t('This value must be of type @expected, @actual given.', [
+        new Violation($name, '', $this->t('This value must be of type @expected, @actual given.', [
           '@expected' => 'list',
           '@actual' => get_debug_type($value),
         ])),
@@ -595,13 +595,13 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     }
     $errors = [];
     foreach ($this->typedDataManager->create($own, $items, $name)->validate() as $violation) {
-      $errors[] = new SurfaceViolation($name, (string) $violation->getPropertyPath(), $violation->getMessage());
+      $errors[] = new Violation($name, (string) $violation->getPropertyPath(), $violation->getMessage());
     }
     $stored = is_array($current) ? array_values($current) : [];
     $child = $list->child();
     foreach ($items as $delta => $item) {
       if (!is_array($item)) {
-        $errors[] = new SurfaceViolation($name, (string) $delta, $this->t('This value must be of type @expected, @actual given.', [
+        $errors[] = new Violation($name, (string) $delta, $this->t('This value must be of type @expected, @actual given.', [
           '@expected' => 'map',
           '@actual' => get_debug_type($item),
         ]));
@@ -609,7 +609,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       }
       $held = is_array($stored[$delta] ?? NULL) ? $stored[$delta] : [];
       foreach ($this->validateLevel($child, $item, $held) as $violation) {
-        $errors[] = new SurfaceViolation($name, $delta . '.' . $violation->fullPath(), $violation->message, $violation->stale);
+        $errors[] = new Violation($name, $delta . '.' . $violation->fullPath(), $violation->message, $violation->stale);
       }
     }
     return $errors;
@@ -674,9 +674,9 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * @param mixed $value
    *   The value that was refused.
    * @param string $name
-   *   The surface key.
+   *   The key.
    * @param array $current
-   *   The stored values, in surface shape.
+   *   The stored values, in input shape.
    * @param string[] $dependencies
    *   The keys the key refines against.
    * @param array $values
@@ -712,13 +712,13 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *   The stale value, which the message names so that whoever reads it
    *   knows what is about to be kept.
    * @param string $name
-   *   The surface key.
+   *   The key.
    *
-   * @return \Drupal\data_surface\Pipeline\SurfaceViolation
+   * @return \Drupal\data_surface\Pipeline\Violation
    *   The stale entry.
    */
-  protected function staleViolation(DataDefinitionInterface $definition, mixed $value, string $name): SurfaceViolation {
-    return new SurfaceViolation($name, '', $this->t('@label keeps the value @value, which is no longer available. Choose a new one when you can.', [
+  protected function staleViolation(DataDefinitionInterface $definition, mixed $value, string $name): Violation {
+    return new Violation($name, '', $this->t('@label keeps the value @value, which is no longer available. Choose a new one when you can.', [
       '@label' => $definition->getLabel() ?? $name,
       '@value' => (string) $value,
     ]), TRUE);
@@ -735,7 +735,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     $output = Omitted::strip($output);
     $errors = [];
     foreach (array_keys(array_diff_key($output, $definitions->toArray())) as $unknown) {
-      $errors[] = new SurfaceViolation((string) $unknown, '', $this->t('Unknown output key @key.', [
+      $errors[] = new Violation((string) $unknown, '', $this->t('Unknown output key @key.', [
         '@key' => $unknown,
       ]));
     }
@@ -746,7 +746,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         // NULL is not this case: NULL is a value and is held to the
         // definition below like any other.
         if ($definition->isRequired()) {
-          $errors[] = new SurfaceViolation($name, '', $this->t('@label was not emitted.', [
+          $errors[] = new Violation($name, '', $this->t('@label was not emitted.', [
             '@label' => $definition->getLabel() ?? $name,
           ]));
         }
@@ -765,7 +765,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       }
       $typed_data = $this->typedDataManager->create($definition, $output[$name], $name);
       foreach ($typed_data->validate() as $violation) {
-        $errors[] = new SurfaceViolation($name, (string) $violation->getPropertyPath(), $violation->getMessage());
+        $errors[] = new Violation($name, (string) $violation->getPropertyPath(), $violation->getMessage());
       }
     }
     return new ViolationSet($errors);
@@ -798,7 +798,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *   Set to FALSE when the value is in a shape the definition cannot
    *   hold, so the caller knows not to hand it to typed data.
    *
-   * @return \Drupal\data_surface\Pipeline\SurfaceViolation[]
+   * @return \Drupal\data_surface\Pipeline\Violation[]
    *   The violations found.
    */
   protected function conformStructure(DataDefinitionInterface $definition, mixed $value, string $key, string $path, bool &$holdable): array {
@@ -836,7 +836,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     $errors = [];
     foreach (array_keys(array_diff_key($value, $properties)) as $unknown) {
       $unknown_path = static::joinPath($path, (string) $unknown);
-      $errors[] = new SurfaceViolation($key, $unknown_path, $this->t('Unknown output key @key.', [
+      $errors[] = new Violation($key, $unknown_path, $this->t('Unknown output key @key.', [
         '@key' => $key . '.' . $unknown_path,
       ]));
     }
@@ -883,10 +883,10 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * @param string $path
    *   The property path within it.
    *
-   * @return \Drupal\data_surface\Pipeline\SurfaceViolation|null
+   * @return \Drupal\data_surface\Pipeline\Violation|null
    *   The violation, or NULL when the type is right or unknown here.
    */
-  protected function outputTypeMismatch(DataDefinitionInterface $definition, mixed $value, string $key, string $path): ?SurfaceViolation {
+  protected function outputTypeMismatch(DataDefinitionInterface $definition, mixed $value, string $key, string $path): ?Violation {
     $type = $definition->getDataType();
     if (!in_array($type, self::CAST_TYPES, TRUE)) {
       return NULL;
@@ -916,11 +916,11 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * @param mixed $value
    *   What arrived instead.
    *
-   * @return \Drupal\data_surface\Pipeline\SurfaceViolation
+   * @return \Drupal\data_surface\Pipeline\Violation
    *   The violation.
    */
-  protected function outputShapeViolation(string $key, string $path, string $expected, mixed $value): SurfaceViolation {
-    return new SurfaceViolation($key, $path, $this->t('This value must be of type @expected, @actual given.', [
+  protected function outputShapeViolation(string $key, string $path, string $expected, mixed $value): Violation {
+    return new Violation($key, $path, $this->t('This value must be of type @expected, @actual given.', [
       '@expected' => $expected,
       '@actual' => get_debug_type($value),
     ]));
@@ -944,29 +944,29 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   /**
    * {@inheritdoc}
    */
-  public function prepare(DataSurfaceInterface $surface, array $values, DataSurfaceTargetInterface $target): PreparedValues {
-    return $target->prepare($surface, $values);
+  public function prepare(DataSurfaceInterface $surface, array $values, DataSurfaceStorageInterface $storage): PreparedValues {
+    return $storage->prepare($surface, $values);
   }
 
   /**
    * {@inheritdoc}
    */
-  public function commit(PreparedValues $prepared, DataSurfaceTargetInterface $target): void {
-    $target->commit($prepared);
+  public function commit(PreparedValues $prepared, DataSurfaceStorageInterface $storage): void {
+    $storage->commit($prepared);
   }
 
   /**
    * {@inheritdoc}
    */
-  public function submit(DataSurfaceInterface $surface, array $input, DataSurfaceTargetInterface $target, bool $dry_run = FALSE, ?AccessResultInterface $access = NULL): DataSurfaceResult {
+  public function submit(DataSurfaceInterface $surface, array $input, DataSurfaceStorageInterface $storage, bool $dry_run = FALSE, ?AccessResultInterface $access = NULL): DataSurfaceResult {
     if ($access !== NULL && $access->isForbidden()) {
-      // Before the target is touched, on purpose: a refused caller must
+      // Before the storage is touched, on purpose: a refused caller must
       // not be able to learn what storage holds by being refused, and a
       // load is a query, a cache entry and sometimes an entity build.
       // The values come back empty for the same reason.
       return new DataSurfaceResult([], $this->accessViolations($access), access: $access);
     }
-    $current = $target->load($surface);
+    $current = $storage->load($surface);
     try {
       $values = $this->accept($surface, $input, $current);
     }
@@ -987,9 +987,9 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       return new DataSurfaceResult($values, $violations, access: $access);
     }
     try {
-      $prepared = $this->prepare($surface, $values, $target);
+      $prepared = $this->prepare($surface, $values, $storage);
     }
-    catch (TargetViolationsException $e) {
+    catch (StorageViolationsException $e) {
       return new DataSurfaceResult($values, $e->getViolations(), access: $access);
     }
     // The set travels on rather than being replaced by an empty one: it
@@ -999,7 +999,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     if ($dry_run) {
       return new DataSurfaceResult($values, $violations, $prepared, access: $access);
     }
-    $this->commit($prepared, $target);
+    $this->commit($prepared, $storage);
     return new DataSurfaceResult($values, $violations, $prepared, TRUE, $access);
   }
 
@@ -1055,8 +1055,8 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     }
     // The result holds exactly the declared properties, in declaration
     // order: a key storage carries that no property declares is
-    // storage's own business and does not round-trip through the
-    // surface. Each property merges the same way its parent did —
+    // storage's own business and does not round-trip through the data
+    // surface. Each property merges the same way its parent did:
     // declared default, then what the level already holds, then input.
     $values = [];
     foreach ($properties as $property => $property_definition) {
@@ -1282,7 +1282,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   /**
    * Turns a refusal by access into the one violation it is.
    *
-   * Filed under the reserved key rather than under a surface key,
+   * Filed under the reserved key rather than under a top level key,
    * because nothing about any particular value was wrong: the run itself
    * was refused. The reason travels as a message object, like every
    * other violation, so whoever prints it escapes it once.
@@ -1295,14 +1295,14 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    */
   protected function accessViolations(AccessResultInterface $access): ViolationSet {
     return new ViolationSet([
-      new SurfaceViolation(self::ACCESS_VIOLATION_KEY, '', DataSurfaceAccess::message($access)),
+      new Violation(self::ACCESS_VIOLATION_KEY, '', DataSurfaceAccess::message($access)),
     ]);
   }
 
   /**
    * Turns refused keys into violations in the shape validation returns.
    *
-   * The key a violation is filed under is always a surface key, so a
+   * The key a violation is filed under is always a top level key, so a
    * nested unknown key is reported on its top-level key with the rest of
    * its path, exactly like a constraint violation inside a map.
    *
@@ -1310,7 +1310,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *   The refusal from accept().
    *
    * @return \Drupal\data_surface\Pipeline\ViolationSet
-   *   The violations, filed under their surface keys.
+   *   The violations, filed under their top level keys.
    */
   protected function unknownKeyViolations(UnknownKeysException $exception): ViolationSet {
     $violations = [];
@@ -1318,7 +1318,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       $path = $exception->getPath() === '' ? $key : $exception->getPath() . '.' . $key;
       $segments = explode('.', $path);
       $name = array_shift($segments);
-      $violations[] = new SurfaceViolation(
+      $violations[] = new Violation(
         (string) $name,
         implode('.', $segments),
         $this->t('Unknown key @key.', ['@key' => $path]),
@@ -1331,7 +1331,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * Turns a slot value shaped for another variant into violations.
    *
    * One per misplaced key, each on its own path inside the slot, filed
-   * under the surface key that carries the slot, so a form flags the
+   * under the top level key that carries the slot, so a form flags the
    * slot and a caller reads exactly which keys to move.
    *
    * @param \Drupal\data_surface\Pipeline\VariantMismatchException $exception
@@ -1345,7 +1345,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     $name = (string) array_shift($segments);
     $violations = [];
     foreach ($exception->getOwners() as $key => $owners) {
-      $violations[] = new SurfaceViolation(
+      $violations[] = new Violation(
         $name,
         implode('.', [...$segments, $key]),
         $this->variantMismatchMessage($exception->getPath() . '.' . $key, $exception->getBy(), $exception->getChosen(), $owners),
@@ -1361,13 +1361,14 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *   The refusal from accept().
    *
    * @return \Drupal\data_surface\Pipeline\ViolationSet
-   *   One violation, filed under the surface key that carries the value.
+   *   One violation, filed under the top level key that carries the
+   *   value.
    */
   protected function shapeMismatchViolations(ShapeMismatchException $exception): ViolationSet {
     $segments = explode('.', $exception->getPath());
     $name = array_shift($segments);
     return new ViolationSet([
-      new SurfaceViolation(
+      new Violation(
         (string) $name,
         implode('.', $segments),
         $this->t('This value must be of type @expected, @actual given.', [

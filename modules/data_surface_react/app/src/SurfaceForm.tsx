@@ -40,11 +40,11 @@ function byPath(violations: Violation[]): Record<string, string[]> {
 }
 
 /**
- * One situation of one surface, as a form rendered from its contract.
+ * One operation of one resource, as a form rendered from its contract.
  *
  * On a change of any key something depends on, the current values go to
  * /refine (debounced) and the form re-renders from the contract that
- * comes back, the way the situation form rebuilds over AJAX: a value the
+ * comes back, the way the operation form rebuilds over AJAX: a value the
  * person has touched since the request left is kept, everything else
  * takes the server's answer, so an orphaned dependent comes back on its
  * empty option, standing for the stored value the server kept. Submit

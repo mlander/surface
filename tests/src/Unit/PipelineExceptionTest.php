@@ -34,7 +34,7 @@ use PHPUnit\Framework\Attributes\Group;
 class PipelineExceptionTest extends UnitTestCase {
 
   /**
-   * Tests an undeclared key at the surface's own top level.
+   * Tests an undeclared key at the data surface's own top level.
    */
   public function testUnknownKeysAtTheTopLevel(): void {
     $exception = new UnknownKeysException(['bogus']);
@@ -111,7 +111,7 @@ class PipelineExceptionTest extends UnitTestCase {
   /**
    * Tests the mismatch a top level key raises.
    *
-   * The path starts at a surface key rather than at the empty string,
+   * The path starts at an input key rather than at the empty string,
    * because a value always belongs to one: there is no shape to mismatch
    * above the keys themselves.
    */

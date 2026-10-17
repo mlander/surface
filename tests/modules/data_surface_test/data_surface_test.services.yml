@@ -1,5 +1,5 @@
 services:
-  # A generic surface plugin form bound to one named operation: naming a
+  # A generic data surface plugin form bound to one named operation: naming a
   # service ID in a plugin's 'forms' key is how the operation reaches the
   # form's constructor, since the class resolver builds a bare class with
   # no arguments.

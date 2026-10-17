@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Core\Form\FormState;
-use Drupal\data_surface\Surface\Attribute\UsesSurface;
+use Drupal\data_surface\Resource\Attribute\UsesStructure;
 use Drupal\data_surface_test\Plugin\Block\DataSurfaceTestBlock;
-use Drupal\data_surface_test\Surface\TestBlockSurface;
+use Drupal\data_surface_test\Structure\TestBlockStructure;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
  * Tests progressive adoption on a block, the busiest group A host.
  *
- * The test block names its surface with #[UsesSurface] and writes
+ * The test block names its structure with #[UsesStructure] and writes
  * build(); everything asserted here — defaults, validation at the
  * configuration boundary, a generated form, refinement over AJAX, and
  * storage through the pipeline — comes from the base class and its
@@ -52,9 +52,9 @@ class DataSurfaceBlockBaseTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the surface, and nothing else, declares the defaults.
+   * Tests that the structure, and nothing else, declares the defaults.
    */
-  public function testDefaultsComeFromTheSurface(): void {
+  public function testDefaultsComeFromTheStructure(): void {
     $block = $this->createBlock();
 
     $this->assertSame([
@@ -75,7 +75,7 @@ class DataSurfaceBlockBaseTest extends DataSurfaceKernelTestBase {
    * Tests that the block host's own keys survive setConfiguration().
    *
    * The keys id, label, label_display and provider belong to the block
-   * host, not to the surface, which may neither advertise nor destroy
+   * host, not to the structure, which may neither advertise nor destroy
    * them.
    */
   public function testHostKeysSurvive(): void {
@@ -88,8 +88,8 @@ class DataSurfaceBlockBaseTest extends DataSurfaceKernelTestBase {
     $this->assertSame('data_surface_test', $configuration['provider']);
     $this->assertArrayHasKey('label_display', $configuration);
     $this->assertSame('Stored', $configuration['headline']);
-    // Declared keys the caller left out fall back to surface defaults
-    // rather than to whatever was stored before.
+    // Declared keys the caller left out fall back to the structure's
+    // defaults rather than to whatever was stored before.
     $this->assertSame(10, $configuration['limit']);
   }
 
@@ -107,7 +107,7 @@ class DataSurfaceBlockBaseTest extends DataSurfaceKernelTestBase {
   /**
    * Tests that the generated form carries current values and the host's.
    *
-   * What this host owes the surface is that every declared key reaches
+   * What this host owes the structure is that every declared key reaches
    * the form beside the block's own elements rather than on top of them,
    * and that each one arrives carrying what storage holds. Which element
    * a constraint maps to is the form builder's contract and is pinned
@@ -115,7 +115,7 @@ class DataSurfaceBlockBaseTest extends DataSurfaceKernelTestBase {
    *
    * @see \Drupal\Tests\data_surface\Kernel\SurfaceFormTest::testConstraintsMapToElementProperties
    */
-  public function testBlockFormBuildsFromTheSurface(): void {
+  public function testBlockFormBuildsFromTheStructure(): void {
     $block = $this->createBlock();
     $block->setConfiguration(['headline' => 'Stored', 'casing' => 'uppercase']);
 
@@ -125,7 +125,7 @@ class DataSurfaceBlockBaseTest extends DataSurfaceKernelTestBase {
     $this->assertArrayHasKey('label', $form);
     $this->assertArrayHasKey('label_display', $form);
 
-    // Every surface key is there, carrying the stored value.
+    // Every structure key is there, carrying the stored value.
     foreach (['headline', 'limit', 'show_summary', 'casing', 'variant'] as $key) {
       $this->assertArrayHasKey($key, $form);
     }
@@ -226,20 +226,20 @@ class DataSurfaceBlockBaseTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the plugin is listed by its surface without booting it.
+   * Tests that the plugin is listed by its structure without booting it.
    *
-   * #[UsesSurface] is copied into the plugin definition, which is
+   * #[UsesStructure] is copied into the plugin definition, which is
    * cached, so a catalogue lists the configurable plugins on a site
-   * without booting one. What each surface holds is the built surface's
+   * without booting one. What each structure holds is the built structure's
    * answer, which costs an instance and is asserted everywhere else in
    * this class.
    */
-  public function testThePluginIsListedByItsSurface(): void {
-    $plugins = $this->container->get('data_surface.surface_plugins');
+  public function testThePluginIsListedByItsStructure(): void {
+    $plugins = $this->container->get('data_surface.resource_plugins');
 
-    $this->assertContains('block:data_surface_test_block', $plugins->usedBy(TestBlockSurface::class));
-    $this->assertSame(TestBlockSurface::class, $this->container->get('plugin.manager.block')
-      ->getDefinition('data_surface_test_block')[UsesSurface::DEFINITION_KEY]);
+    $this->assertContains('block:data_surface_test_block', $plugins->usedBy(TestBlockStructure::class));
+    $this->assertSame(TestBlockStructure::class, $this->container->get('plugin.manager.block')
+      ->getDefinition('data_surface_test_block')[UsesStructure::DEFINITION_KEY]);
   }
 
   /**

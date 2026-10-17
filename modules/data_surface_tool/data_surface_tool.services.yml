@@ -1,29 +1,29 @@
 services:
   data_surface_tool.input_definitions:
-    class: Drupal\data_surface_tool\SurfaceInputDefinitions
+    class: Drupal\data_surface_tool\InputDefinitions
     arguments: ['@data_surface.options', '@string_translation']
-  # What a tool generated for one situation of one surface takes and
+  # What a tool generated for one operation of one resource takes and
   # answers with; the deriver writes it statically, the tool refines it.
-  data_surface_tool.situation_inputs:
-    class: Drupal\data_surface_tool\SituationInputs
-    arguments: ['@data_surface.surfaces', '@data_surface.situation_arguments', '@data_surface_tool.input_definitions', '@string_translation']
-  # Fills the field instance surface's settings slot from config schema
-  # for every field type no #[SurfaceVariant] fills.
+  data_surface_tool.operation_inputs:
+    class: Drupal\data_surface_tool\OperationInputs
+    arguments: ['@data_surface.resources', '@data_surface.operation_arguments', '@data_surface_tool.input_definitions', '@string_translation']
+  # Fills the field instance resource's settings slot from config schema
+  # for every field type no #[Variant] fills.
   data_surface_tool.field_settings_schema_variants:
     class: Drupal\data_surface_tool\FieldSettingsSchemaVariants
     arguments: ['@plugin.manager.field.field_type', '@config.typed', '@typed_data_manager']
     tags:
       - { name: data_surface.derived_variants }
-  # The same, for the field storage surface's settings slot, from
+  # The same, for the field storage resource's settings slot, from
   # field.storage_settings.<type>.
   data_surface_tool.field_storage_settings_schema_variants:
     class: Drupal\data_surface_tool\FieldStorageSettingsSchemaVariants
     arguments: ['@plugin.manager.field.field_type', '@config.typed', '@typed_data_manager']
     tags:
       - { name: data_surface.derived_variants }
-  # A read-only panel a situation route can name in _data_surface_panel:
-  # the contract the form's surface emits, rebuilt with the form, and what
-  # the derived tool can advertise of it.
+  # A read-only panel an operation route can name in _data_surface_panel:
+  # the contract the form's data surface emits, rebuilt with the form, and
+  # what the derived tool can advertise of it.
   data_surface_tool.contract_panel:
-    class: Drupal\data_surface_tool\SurfaceContractPanel
-    arguments: ['@data_surface.surface_registry', '@data_surface.options', '@data_surface.contract_emitter', '@plugin.manager.tool', '@tool.definition_serializer', '@string_translation']
+    class: Drupal\data_surface_tool\ContractPanel
+    arguments: ['@data_surface.resource_registry', '@data_surface.options', '@data_surface.contract_emitter', '@plugin.manager.tool', '@tool.definition_serializer', '@string_translation']

@@ -33,11 +33,11 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
  * one of these names for something else; supportsDefaultValue() says how
  * the two are told apart.
  *
- * Resolving a definition's effective default — including assembling a
- * map's default from its properties — lives here too, beside the
- * metadata it reads, so the surface value object has no public static of
- * its own and a host answering a static defaults protocol reads the same
- * rule the surface does.
+ * Resolving a definition's effective default (including assembling a
+ * map's default from its properties) lives here too, beside the
+ * metadata it reads, so the data surface value object has no public
+ * static of its own and a host answering a static defaults protocol
+ * reads the same rule the data surface does.
  */
 final class DefinitionMetadata {
 
@@ -149,8 +149,8 @@ final class DefinitionMetadata {
    * array has nothing to merge and stands on its own.
    *
    * The rule lives beside the metadata it reads rather than on the
-   * surface, because a host with a static defaults protocol has to
-   * answer from the definitions alone, without a built surface: a field
+   * data surface, because a host with a static defaults protocol has to
+   * answer from the definitions alone, without a built structure: a field
    * formatter's defaultSettings() cannot consult an instance, so it
    * reads the attribute's definitions and resolves each one here rather
    * than keeping a second copy of this rule.
@@ -308,14 +308,14 @@ final class DefinitionMetadata {
    * value, and `any` alone reads as "anything at all". The mark is what
    * lets a reader holding only the definition know it means "one of the
    * declared variants, chosen by that key" instead; the variant table is
-   * on the surface entry, which is where an emitter reads it.
+   * on the slot's Entry, which is where an emitter reads it.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The placeholder.
    * @param string $by
    *   The sibling key whose value chooses the variant.
    *
-   * @see \Drupal\data_surface\SurfaceSlot
+   * @see \Drupal\data_surface\Slot
    */
   public static function setSlot(DataDefinitionInterface $definition, string $by): void {
     static::arrayAccess($definition)->offsetSet(static::SLOT_KEY, $by);

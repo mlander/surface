@@ -25,8 +25,9 @@ schema emitter, a form builder — and the upstream ask becomes "labels on
 exactly what `Choice` accepts, down to the comparison. Labels and
 descriptions play no part in validation.
 
-Nothing in it knows about surfaces, widgets or resolvers. The resolver
-layer reads the constraint; the constraint never reads the resolver.
+Nothing in it knows about resources, structures, widgets or resolvers.
+The resolver layer reads the constraint; the constraint never reads the
+resolver.
 
 ### Two ways to write it
 
@@ -106,7 +107,7 @@ enum DemoVariant: string {
 }
 ```
 
-The surface consumes the projection, and no value is spelled out
+The structure consumes the projection, and no value is spelled out
 twice anywhere:
 
 ```php
@@ -152,11 +153,11 @@ public function applies(Constraint $constraint): bool;
 public function resolve(Constraint $constraint, DataDefinitionInterface $definition): OptionSet;
 ```
 
-Nothing about surfaces appears in either signature: a resolver is handed
-a constraint and a data definition, both core types, and answers with an
-`OptionSet` — allowed values as keys mapped to their labels, optional
-per-value descriptions, and a `CacheableMetadata` saying how long the
-answer may be reused.
+Nothing about resources or structures appears in either signature: a
+resolver is handed a constraint and a data definition, both core types,
+and answers with an `OptionSet`: allowed values as keys mapped to their
+labels, optional per-value descriptions, and a `CacheableMetadata`
+saying how long the answer may be reused.
 
 `DataSurfaceOptionsResolverBase` answers `applies()` from the declared
 constraint plugin id: the resolver serves that constraint's class and
@@ -215,10 +216,10 @@ Prefer an existence or validity constraint plus a resolver over a
 The address port is the worked example. Its countries and languages
 started as labeled choices filled from the country repository and the
 language manager, and the cost was not the code: **a definition that
-cannot be written down without services cannot sit in a surface
-class**, which holds no service. Said as the `Country` and
+cannot be written down without services cannot sit in a resource or
+structure class**, which holds no service. Said as the `Country` and
 `LanguageExists` constraints instead, the definitions became literal
-enough to sit in `AddressFieldSettingsSurface`, readable without
+enough to sit in `AddressFieldSettingsResource`, readable without
 instantiating anything, and the live lookup moved to the one place that
 already answers for freshness.
 

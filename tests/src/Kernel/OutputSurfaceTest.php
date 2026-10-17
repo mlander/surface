@@ -89,7 +89,7 @@ class OutputSurfaceTest extends DataSurfaceKernelTestBase {
    *   alterOutputs() would.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface.
+   *   The data surface.
    */
   protected function outputSurface(bool $mounted = FALSE): DataSurfaceInterface {
     $builder = $this->outputBuilder();
@@ -109,7 +109,7 @@ class OutputSurfaceTest extends DataSurfaceKernelTestBase {
    * Reads the values an output's choice constraint allows.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface to read.
+   *   The data surface to read.
    * @param string $name
    *   The output key.
    *
@@ -146,11 +146,11 @@ class OutputSurfaceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that a surface declaring no outputs answers with an empty map.
+   * Tests that a data surface declaring no outputs answers with an empty map.
    *
    * The compatibility claim, and the reason nothing had to change for
-   * the surfaces that came before this: a caller can ask any surface
-   * what it emits without asking first whether it knows.
+   * the data surfaces that came before this: a caller can ask any data
+   * surface what it emits without asking first whether it knows.
    */
   public function testSurfaceWithoutOutputsAnswersEmpty(): void {
     $surface = $this->casingVariantSurface();
@@ -194,7 +194,7 @@ class OutputSurfaceTest extends DataSurfaceKernelTestBase {
    *
    * The path a builder handed a whole set of outputs takes, which never
    * passes through the setter, so the refusal has to be asked again
-   * where the surface is assembled.
+   * where the data surface is assembled.
    */
   public function testConstructorDeclaredDefaultIsRefusedAtSeal(): void {
     $builder = new DataSurfaceBuilder(

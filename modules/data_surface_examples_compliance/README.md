@@ -1,12 +1,12 @@
 # Data Surface Examples - Compliance
 
 Example 4 of [the examples](../data_surface_examples/README.md): another
-module has a say in a surface it does not own.
+module has a say in a resource it does not own.
 
 ## What it shows
 
-One class, `SurfaceAlter\RegistrationComplianceAlter`, naming example 3's
-surface with `#[AltersSurface]`. It adds an event licence and a number
+One class, `Alter\RegistrationComplianceAlter`, naming example 3's
+resource with `#[Alters]`. It adds an event licence and a number
 of stewards, which are stored under this module's name at
 `third_party_settings.data_surface_examples_compliance` and described by
 this module's own config schema, and it rewords example 3's title label

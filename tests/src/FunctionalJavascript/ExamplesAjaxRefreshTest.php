@@ -76,7 +76,7 @@ class ExamplesAjaxRefreshTest extends ExamplesWebDriverTestBase {
     $this->assertTrue($assert->fieldExists('surface[ticket][note]')->isVisible());
     $assert->fieldNotExists('surface[ticket][price]');
     // Under the contract, what config schema says, with the ticket's
-    // row of its table: the surface's side is its full schema, which
+    // row of its table: the resource's side is its full schema, which
     // names both shapes whatever the pricing is.
     $documents = $this->todayDocuments();
     $this->assertCount(2, $documents);

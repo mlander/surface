@@ -9,14 +9,14 @@ use Drupal\Core\Action\Attribute\Action;
 use Drupal\Core\Messenger\MessengerTrait;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\data_surface\Surface\Attribute\UsesSurface;
-use Drupal\data_surface_test\Surface\TestActionSurface;
+use Drupal\data_surface\Resource\Attribute\UsesStructure;
+use Drupal\data_surface_test\Structure\TestActionStructure;
 use Drupal\data_surface\Plugin\Action\DataSurfaceActionBase;
 
 /**
- * An action that adopts surfaces and says nothing else about settings.
+ * An action that adopts structures and says nothing else about settings.
  *
- * The thinnest adoption in group A: #[UsesSurface] naming what the
+ * The thinnest adoption in group A: #[UsesStructure] naming what the
  * action accepts and the two methods the action host asks for. No
  * defaultConfiguration; and none of the three form methods that every
  * configurable action in core writes out by hand today.
@@ -25,7 +25,7 @@ use Drupal\data_surface\Plugin\Action\DataSurfaceActionBase;
   id: 'data_surface_test_action',
   label: new TranslatableMarkup('Data surface test action'),
 )]
-#[UsesSurface(TestActionSurface::class)]
+#[UsesStructure(TestActionStructure::class)]
 final class DataSurfaceTestAction extends DataSurfaceActionBase {
 
   use MessengerTrait;

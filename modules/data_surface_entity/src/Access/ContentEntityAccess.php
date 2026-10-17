@@ -9,19 +9,19 @@ use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\data_surface\Surface\SurfaceAccessInterface;
-use Drupal\data_surface\Surface\SurfaceContext;
+use Drupal\data_surface\Resource\OperationAccessInterface;
+use Drupal\data_surface\Resource\OperationContext;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Entity access, as a content entity surface's access.
+ * Entity access, as a content entity resource's access.
  *
  * Create access for the bundle when the context creates, update access
  * for the entity when it knows one: exactly what core's own form route
- * asks, so the surface never lets anyone write what core's form would
+ * asks, so the resource never lets anyone write what core's form would
  * not. Each field then answers for itself (FieldItemAccess).
  */
-final class ContentEntityAccess implements SurfaceAccessInterface, ContainerInjectionInterface {
+final class ContentEntityAccess implements OperationAccessInterface, ContainerInjectionInterface {
 
   /**
    * Constructs a ContentEntityAccess.
@@ -43,7 +43,7 @@ final class ContentEntityAccess implements SurfaceAccessInterface, ContainerInje
   /**
    * {@inheritdoc}
    */
-  public function access(SurfaceContext $context, AccountInterface $account): AccessResultInterface {
+  public function access(OperationContext $context, AccountInterface $account): AccessResultInterface {
     $entity_type_id = (string) ($context->known['entity_type'] ?? '');
     $id = $context->known['id'] ?? NULL;
     if ($entity_type_id === '' || !$this->entityTypeManager->hasDefinition($entity_type_id)) {

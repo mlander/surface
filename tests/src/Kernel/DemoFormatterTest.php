@@ -10,7 +10,7 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\Omitted;
-use Drupal\data_surface\Surface\Attribute\UsesSurface;
+use Drupal\data_surface\Resource\Attribute\UsesStructure;
 use Drupal\data_surface_demo\Plugin\Field\FieldFormatter\DataSurfaceDemoFormatter;
 use Drupal\entity_test\Entity\EntityTest;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -21,7 +21,7 @@ use PHPUnit\Framework\Attributes\Group;
  *
  * Two claims at once. The formatter writes no defaultSettings(): the
  * base class derives the static array Field UI prunes against from the
- * same definitions the surface is built from. And a module that owns
+ * same definitions the structure is built from. And a module that owns
  * neither the formatter nor its form extends the contract anyway — a
  * namespaced setting mounted at build time, and one more value
  * contributed to a key the formatter already refines, narrowed by a
@@ -73,10 +73,10 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
    * Tests that the static defaults are derived, not written by hand.
    *
    * The config_surface original spelled this array out and pinned it
-   * against the surface with a test, because the two could drift. Here
+   * against the structure with a test, because the two could drift. Here
    * there is nothing to pin: the third_party_settings key the host
    * prunes against is declared for the class, and everything else the
-   * static array says is what the built surface says.
+   * static array says is what the built structure says.
    *
    * What is deliberately not asserted is where defaultSettings() is
    * declared. A formatter that wrote the method out by hand and got the
@@ -91,7 +91,7 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
     $this->assertNull($defaults['variant']);
     $this->assertSame([], $defaults['third_party_settings']);
 
-    // They agree with what the built surface declares, apart from the
+    // They agree with what the built structure declares, apart from the
     // mounted namespace: the static array cannot see a runtime mount,
     // which is exactly why it declares the key unconditionally.
     $surface_defaults = $this->createFormatter()->getDataSurface()->getDefaultValues();
@@ -139,7 +139,7 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
       array_map('strval', $form['variant']['#options']),
     );
     $this->assertArrayHasKey('#empty_option', $form['variant']);
-    // The surface rides along for the element validate callback, which
+    // The data surface rides along for the element validate callback, which
     // is the only stage this host protocol leaves room for.
     $this->assertArrayHasKey('#data_surface', $form);
   }
@@ -181,7 +181,7 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the third party's setting joins the surface.
+   * Tests that the third party's setting joins the structure.
    */
   public function testExtrasMountsTheBadge(): void {
     $surface = $this->createFormatter()->getDataSurface();
@@ -221,7 +221,7 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
       ['star' => 'Star', 'flame' => 'Flame'],
       array_map('strval', $badge_element['#options']),
     );
-    // The mounted default lives on the surface, where every non-form
+    // The mounted default lives on the structure, where every non-form
     // consumer reads it. It does not reach a fresh settings form,
     // because the host fills the settings from its own static defaults
     // first and those declare the mounted namespace as empty — the
@@ -234,7 +234,7 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
     // So the select comes up on its empty option.
     $this->assertSame('', $fresh['third_party_settings']['data_surface_demo_extras']['badge']['#default_value']);
 
-    // The mounted value is validated by the surface like any other.
+    // The mounted value is validated by the structure like any other.
     $this->assertContains(
       'third_party_settings',
       $this->pipeline()->validate($surface, [
@@ -302,10 +302,10 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Reads the values a refined surface offers for the variant key.
+   * Reads the values a refined data surface offers for the variant key.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface to read.
+   *   The data surface to read.
    *
    * @return array
    *   The allowed values, in the order they are offered.
@@ -359,7 +359,7 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
   /**
    * Tests that the declared outputs are read and sealed.
    *
-   * The surface class says what the formatter emits in the same place,
+   * The structure class says what the formatter emits in the same place,
    * in the same vocabulary, as what it is configured with, and the
    * formatter host reads both without instantiating anything else.
    *
@@ -388,23 +388,23 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the formatter host reads the surface from the attribute.
+   * Tests that the formatter host reads the structure from the attribute.
    *
-   * The formatter is its own surface, #[UsesSurface] with no argument, so
+   * The formatter is its own structure, #[UsesStructure] with no argument, so
    * the definition carries the formatter's own class, copied in by the
-   * formatter definition alter, and the host builds the surface from that
+   * formatter definition alter, and the host builds the structure from that
    * class in its own `configure` context, under its own host id.
    */
-  public function testTheHostReadsTheSurfaceFromTheAttribute(): void {
+  public function testTheHostReadsTheStructureFromTheAttribute(): void {
     $definition = $this->container->get('plugin.manager.field.formatter')->getDefinition('data_surface_demo_string');
-    $this->assertSame(DataSurfaceDemoFormatter::class, $definition[UsesSurface::DEFINITION_KEY]);
+    $this->assertSame(DataSurfaceDemoFormatter::class, $definition[UsesStructure::DEFINITION_KEY]);
     $this->assertSame(
       ['prefix', 'casing', 'variant', 'third_party_settings'],
       $this->createFormatter()->getDataSurface()->getDefinitions()->names(),
     );
-    // The static defaults are the surface's own shape, alters left out.
+    // The static defaults are the structure's own shape, alters left out.
     $this->assertSame(
-      $this->container->get('data_surface.surfaces')->defaults(DataSurfaceDemoFormatter::class) + ['third_party_settings' => []],
+      $this->container->get('data_surface.resources')->defaults(DataSurfaceDemoFormatter::class) + ['third_party_settings' => []],
       DataSurfaceDemoFormatter::defaultSettings(),
     );
   }
@@ -414,7 +414,7 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
    *
    * The reason for declaring outputs at all: what the formatter emits
    * can be held to what it said it emits, by a test that knows nothing
-   * about this formatter beyond its surface. A generated conformance
+   * about this formatter beyond its structure. A generated conformance
    * test is this loop with the fixtures filled in.
    */
   public function testFormatValueConformsPerDelta(): void {

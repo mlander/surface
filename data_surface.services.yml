@@ -13,8 +13,8 @@ services:
     class: Drupal\data_surface\Options\DataSurfaceOptions
     arguments: ['@plugin.manager.data_surface_options_resolver', '@validation.constraint', '@logger.channel.data_surface']
   data_surface.secret_codec:
-    class: Drupal\data_surface\Target\SodiumSecretCodec
-  Drupal\data_surface\Target\SecretCodecInterface: '@data_surface.secret_codec'
+    class: Drupal\data_surface\Storage\SodiumSecretCodec
+  Drupal\data_surface\Storage\SecretCodecInterface: '@data_surface.secret_codec'
   data_surface.form_builder:
     class: Drupal\data_surface\Form\DataSurfaceFormBuilder
     arguments: ['@plugin.manager.data_surface_widget', '@data_surface.pipeline', '@element_info', '@messenger', '@data_surface.options']
@@ -22,61 +22,62 @@ services:
   logger.channel.data_surface:
     parent: logger.channel_base
     arguments: ['data_surface']
-  # Surfaces discovered in src/Surface and src/SurfaceAlter by
-  # SurfaceCollectorPass, and plugins that are their own surface, read from
-  # their definitions; and the build step that builds and seals them.
-  data_surface.surface_registry:
-    class: Drupal\data_surface\SurfaceBuild\SurfaceRegistry
-    arguments: ['%data_surface.surface_classes%', '@cache.discovery', '@data_surface.surface_plugins', '@class_resolver']
-  # A derived surface is read from site state; when its cache tags are
+  # Resources and structures discovered in src/Resource, src/Structure and
+  # src/Alter by ResourceCollectorPass, and plugins that are their own
+  # structure, read from their definitions; and the build step that builds
+  # and seals them.
+  data_surface.resource_registry:
+    class: Drupal\data_surface\ResourceBuild\ResourceRegistry
+    arguments: ['%data_surface.resource_classes%', '@cache.discovery', '@data_surface.resource_plugins', '@class_resolver']
+  # A derived resource is read from site state; when its cache tags are
   # invalidated, the registry this request already read forgets it.
-  data_surface.surface_registry_invalidator:
-    class: Drupal\data_surface\SurfaceBuild\SurfaceRegistryInvalidator
+  data_surface.resource_registry_invalidator:
+    class: Drupal\data_surface\ResourceBuild\ResourceRegistryInvalidator
     arguments: ['@service_container']
     tags:
       - { name: cache_tags_invalidator }
-  data_surface.surfaces:
-    class: Drupal\data_surface\SurfaceBuild\Surfaces
-    arguments: ['@data_surface.surface_registry', '@typed_data_manager', '@class_resolver', '@current_user', '@data_surface.situation_arguments', '@data_surface.derived_variants', '@data_surface.watched_value_check']
-  Drupal\data_surface\SurfaceBuild\SurfacesInterface: '@data_surface.surfaces'
-  # Sealed into every surface the build step makes: a watched value its
+  data_surface.resources:
+    class: Drupal\data_surface\ResourceBuild\Resources
+    arguments: ['@data_surface.resource_registry', '@typed_data_manager', '@class_resolver', '@current_user', '@data_surface.operation_arguments', '@data_surface.derived_variants', '@data_surface.watched_value_check']
+  Drupal\data_surface\ResourceBuild\ResourcesInterface: '@data_surface.resources'
+  # Sealed into every data surface the build step makes: a watched value its
   # own definition refuses is handed to no refiner.
   data_surface.watched_value_check:
     class: Drupal\data_surface\Refinement\WatchedValueCheck
     arguments: ['@typed_data_manager']
-  # What fills an open slot for the values no #[SurfaceVariant] fills:
+  # What fills an open slot for the values no #[Variant] fills:
   # every service tagged data_surface.derived_variants.
   data_surface.derived_variants:
-    class: Drupal\data_surface\SurfaceBuild\DerivedVariants
+    class: Drupal\data_surface\ResourceBuild\DerivedVariants
     arguments: [!tagged_iterator data_surface.derived_variants]
-  # A situation's arguments from a route's parameters or a tool's inputs,
+  # An operation's arguments from a route's parameters or a tool's inputs,
   # by name; an entity's id becomes the entity a parameter is typed with.
-  data_surface.situation_arguments:
-    class: Drupal\data_surface\SurfaceBuild\SituationArguments
+  data_surface.operation_arguments:
+    class: Drupal\data_surface\ResourceBuild\OperationArguments
     arguments: ['@entity_type.manager']
-  # The route access check for a route served by a situation: the
-  # situation's permission, then the surface's access class.
-  data_surface.situation_access:
-    class: Drupal\data_surface\Access\SituationAccessCheck
-    arguments: ['@data_surface.surfaces', '@data_surface.surface_registry', '@data_surface.situation_arguments']
+  # The route access check for a route served by an operation: the
+  # operation's permission, then the resource's access class.
+  data_surface.operation_access:
+    class: Drupal\data_surface\Access\OperationAccessCheck
+    arguments: ['@data_surface.resources', '@data_surface.resource_registry', '@data_surface.operation_arguments']
     tags:
-      - { name: access_check, applies_to: _data_surface_situation_access }
-  # Turns a sealed surface and its values into the served contract: JSON
+      - { name: access_check, applies_to: _data_surface_operation_access }
+  # Turns a sealed data surface and its values into the served contract: JSON
   # Schema 2020-12 with the x-surface extension, values and stale paths;
   # widget hints only when a renderer asks for them.
   data_surface.contract_emitter:
     class: Drupal\data_surface\Contract\ContractEmitter
     arguments: ['@data_surface.options', '@string_translation']
-  # Every discovered surface, its situations, alters and variants, as one
-  # array: what docs/catalogue.md is generated from.
-  data_surface.surface_catalogue:
-    class: Drupal\data_surface\SurfaceBuild\SurfaceCatalogue
-    arguments: ['@data_surface.surface_registry', '@data_surface.surfaces', '@data_surface.surface_plugins', '@data_surface.derived_variants']
-  # Which plugins name which surface with #[UsesSurface], read from the
+  # Every discovered resource and structure, its operations, alters and
+  # variants, as one array: what docs/catalogue.md is generated from.
+  data_surface.resource_catalogue:
+    class: Drupal\data_surface\ResourceBuild\ResourceCatalogue
+    arguments: ['@data_surface.resource_registry', '@data_surface.resources', '@data_surface.resource_plugins', '@data_surface.derived_variants']
+  # Which plugins name which structure with #[UsesStructure], read from the
   # definitions of every host that reads the attribute (the keys of
-  # SurfacePluginHooks::HOSTS).
-  data_surface.surface_plugins:
-    class: Drupal\data_surface\SurfaceBuild\SurfacePlugins
+  # ResourcePluginHooks::HOSTS).
+  data_surface.resource_plugins:
+    class: Drupal\data_surface\ResourceBuild\ResourcePlugins
     arguments:
       - block: '@plugin.manager.block'
         field_formatter: '@plugin.manager.field.formatter'

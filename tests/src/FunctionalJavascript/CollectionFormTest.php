@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\data_surface\FunctionalJavascript;
 
 use Drupal\FunctionalJavascriptTests\WebDriverTestBase;
-use Drupal\data_surface_surface_test\Target\CellarTarget;
+use Drupal\data_surface_surface_test\Storage\CellarStorage;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -19,7 +19,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * that shelf's height and nothing else; and the save stores the items in
  * the order the page shows them, the blank row dropped.
  *
- * @see \Drupal\data_surface_surface_test\Surface\Cellar\CellarSurface
+ * @see \Drupal\data_surface_surface_test\Resource\Cellar\CellarResource
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -45,7 +45,7 @@ class CollectionFormTest extends WebDriverTestBase {
    */
   protected function setUp(): void {
     parent::setUp();
-    $this->container->get('state')->set(CellarTarget::key('main'), [
+    $this->container->get('state')->set(CellarStorage::key('main'), [
       'larder' => 'main',
       'size' => 'large',
       'racks' => [
@@ -111,7 +111,7 @@ class CollectionFormTest extends WebDriverTestBase {
 
     $page->pressButton('Save');
     $this->assertTrue($assert_session->waitForText('The changes have been saved.'));
-    $stored = $this->container->get('state')->get(CellarTarget::key('main'));
+    $stored = $this->container->get('state')->get(CellarStorage::key('main'));
     $this->assertSame([
       ['shelf' => 'top', 'spices' => 2, 'label' => 'Spare'],
       ['shelf' => 'middle', 'spices' => 3, 'label' => 'Baking'],

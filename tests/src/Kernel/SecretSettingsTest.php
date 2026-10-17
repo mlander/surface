@@ -8,7 +8,7 @@ use Drupal\Core\Form\FormState;
 use Drupal\data_surface\Form\FieldSurfaceProviderInterface;
 use Drupal\data_surface\Pipeline\DataSurfaceResult;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
-use Drupal\data_surface\Target\SecretCodecInterface;
+use Drupal\data_surface\Storage\SecretCodecInterface;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use PHPUnit\Framework\Attributes\Group;
@@ -20,7 +20,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * The unit tests state each rule on its own; this is the one that says
  * the rules are wired to each other. One field type with one secret
  * setting and one ordinary setting beside it, submitted through the same
- * pipeline every caller uses, against the target a real field settings
+ * pipeline every caller uses, against the storage a real field settings
  * form uses. What it has to show:
  *
  * - storage holds ciphertext, so nothing that reads the field config —
@@ -33,7 +33,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * - the generated element is a password box carrying no value anywhere.
  *
  * @see \Drupal\data_surface_test\Plugin\Field\FieldType\SurfaceSecretItem
- * @see \Drupal\data_surface\Target\EncryptedSettingsShape
+ * @see \Drupal\data_surface\Storage\EncryptedSettingsShape
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -78,11 +78,11 @@ class SecretSettingsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Gets the field item, which is the surface and target provider.
+   * Gets the field item, which provides the structure and its storage.
    *
    * Rebuilt from the field's own item definition each time, exactly as
-   * the settings form's static callback does, so nothing here holds a
-   * target across a save that changed what it describes.
+   * the settings form's static callback does, so nothing here keeps a
+   * storage object across a save that changed what it describes.
    *
    * @return \Drupal\data_surface\Form\FieldSurfaceProviderInterface
    *   The field item.
@@ -95,7 +95,7 @@ class SecretSettingsTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the site's secret codec.
    *
-   * @return \Drupal\data_surface\Target\SecretCodecInterface
+   * @return \Drupal\data_surface\Storage\SecretCodecInterface
    *   The codec.
    */
   protected function codec(): SecretCodecInterface {
@@ -116,14 +116,14 @@ class SecretSettingsTest extends DataSurfaceKernelTestBase {
    * Submits input through the whole pipeline.
    *
    * @param array $input
-   *   The raw input, keyed by surface key.
+   *   The raw input, keyed by structure key.
    *
    * @return \Drupal\data_surface\Pipeline\DataSurfaceResult
    *   The result.
    */
   protected function submit(array $input): DataSurfaceResult {
     $item = $this->item();
-    $result = $this->pipeline()->submit($item->getFieldSurface(), $input, $item->getDataSurfaceTarget());
+    $result = $this->pipeline()->submit($item->getFieldSurface(), $input, $item->getDataSurfaceStorage());
     $this->assertCount(0, $result->violations);
     $this->assertTrue($result->committed);
     return $result;
@@ -149,7 +149,7 @@ class SecretSettingsTest extends DataSurfaceKernelTestBase {
     // What the pipeline is handed back is the secret itself, which is
     // what makes the next partial update legal.
     $item = $this->item();
-    $loaded = $item->getDataSurfaceTarget()->load($item->getFieldSurface());
+    $loaded = $item->getDataSurfaceStorage()->load($item->getFieldSurface());
     $this->assertSame('sk-1234', $loaded['token']);
   }
 
@@ -181,7 +181,7 @@ class SecretSettingsTest extends DataSurfaceKernelTestBase {
     $this->assertSame('sk-1234', $this->codec()->decrypt($this->storedSettings()['token']));
 
     $item = $this->item();
-    $this->assertSame('sk-1234', $item->getDataSurfaceTarget()->load($item->getFieldSurface())['token']);
+    $this->assertSame('sk-1234', $item->getDataSurfaceStorage()->load($item->getFieldSurface())['token']);
   }
 
   /**
@@ -195,7 +195,7 @@ class SecretSettingsTest extends DataSurfaceKernelTestBase {
     $this->assertNull($this->storedSettings()['token']);
 
     $item = $this->item();
-    $this->assertNull($item->getDataSurfaceTarget()->load($item->getFieldSurface())['token']);
+    $this->assertNull($item->getDataSurfaceStorage()->load($item->getFieldSurface())['token']);
   }
 
   /**
@@ -206,19 +206,19 @@ class SecretSettingsTest extends DataSurfaceKernelTestBase {
    * the next write is where the migration happens.
    */
   public function testPlaintextAlreadyInStorageIsMigrated(): void {
-    // Written behind the surface's back, which is what "before the flag"
+    // Written behind the structure's back, which is what "before the flag"
     // means: the settings the field type saved when nothing encrypted.
     $field = FieldConfig::load($this->field->id());
     $field->setSettings(['endpoint' => 'https://example.com', 'token' => 'sk-legacy'] + $field->getSettings())->save();
 
     $item = $this->item();
-    $this->assertSame('sk-legacy', $item->getDataSurfaceTarget()->load($item->getFieldSurface())['token']);
+    $this->assertSame('sk-legacy', $item->getDataSurfaceStorage()->load($item->getFieldSurface())['token']);
 
     $this->submit(['endpoint' => 'https://example.test']);
     $this->assertTrue($this->codec()->isEncrypted($this->storedSettings()['token']));
 
     $item = $this->item();
-    $this->assertSame('sk-legacy', $item->getDataSurfaceTarget()->load($item->getFieldSurface())['token']);
+    $this->assertSame('sk-legacy', $item->getDataSurfaceStorage()->load($item->getFieldSurface())['token']);
   }
 
   /**
@@ -229,7 +229,7 @@ class SecretSettingsTest extends DataSurfaceKernelTestBase {
 
     $item = $this->item();
     $surface = $item->getFieldSurface();
-    $values = $item->getDataSurfaceTarget()->load($surface);
+    $values = $item->getDataSurfaceStorage()->load($surface);
     $this->assertSame('sk-1234', $values['token']);
 
     // Built from the values that do hold the secret, which is the point:

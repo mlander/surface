@@ -17,7 +17,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * The demo block, written the way blocks were written before surfaces.
+ * The demo block, written the way blocks were written before Data Surface.
  *
  * Behaviorally identical to `data_surface_demo`: the same settings, the
  * same defaults, the same entity-type-to-bundle-to-field narrowing over

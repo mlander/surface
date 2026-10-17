@@ -13,7 +13,7 @@ use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\Session\AccountInterface;
 
 /**
- * Field access and an entity constraint, for the derived surfaces' tests.
+ * Field access and an entity constraint, for the derived resources' tests.
  */
 final class EntityTestHooks {
 

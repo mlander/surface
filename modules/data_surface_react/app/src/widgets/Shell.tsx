@@ -6,7 +6,7 @@ import { fieldId } from '../contract';
 export interface FieldProps {
   /** The key within the object it sits in. */
   name: string;
-  /** The dotted path from the top of the surface. */
+  /** The dotted path from the top of the data surface. */
   path: string;
   schema: Schema;
   value: unknown;

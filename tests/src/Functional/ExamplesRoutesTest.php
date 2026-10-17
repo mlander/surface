@@ -70,9 +70,9 @@ class ExamplesRoutesTest extends BrowserTestBase {
     $assert->pageTextContains('Example 1: declare what you accept');
     $assert->pageTextContains('Example 6: every door');
     $assert->pageTextContains('Under each example\'s form, collapsed as "Behind the scenes: the contract, as it stands", is the contract the form is built from.');
-    $assert->pageTextContains('Below it, collapsed as "Without a surface: what config schema can say", is what a client could be told about the same settings today, from config schema alone.');
+    $assert->pageTextContains('Below it, collapsed as "Without a resource: what config schema can say", is what a client could be told about the same settings today, from config schema alone.');
     $assert->pageTextContains('The decoupled page is the "In React" links above');
-    $assert->pageTextMatches('/The surface: \d+ lines of code\./');
+    $assert->pageTextMatches('/The resource: \d+ lines of code\./');
     $assert->pageTextMatches('/The classic twin, a config form: \d+ lines of code\./');
     $assert->linkByHrefExists('/surface-examples/reset');
     // Without data_surface_react the React twin is named, not linked.
@@ -88,7 +88,7 @@ class ExamplesRoutesTest extends BrowserTestBase {
     $assert->elementsCount('css', 'details.data-surface-contract-panel', 2);
     $today = $assert->elementExists('css', 'details.data-surface-today-panel');
     $this->assertNull($today->getAttribute('open'));
-    $assert->elementTextContains('css', 'details.data-surface-today-panel > summary', 'Without a surface: what config schema can say');
+    $assert->elementTextContains('css', 'details.data-surface-today-panel > summary', 'Without a resource: what config schema can say');
     $blocks = $today->findAll('css', 'pre');
     $this->assertCount(2, $blocks);
     $this->assertStringContainsString('No schema is defined for property of type', $blocks[0]->getText());

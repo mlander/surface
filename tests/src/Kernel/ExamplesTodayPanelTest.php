@@ -6,7 +6,7 @@ namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Core\Render\Element;
 use Drupal\Core\Routing\RouteObjectInterface;
-use Drupal\data_surface\Form\DataSurfaceSituationForm;
+use Drupal\data_surface\Form\DataSurfaceOperationForm;
 use Drupal\data_surface_examples\Controller\ExamplesController;
 use Drupal\data_surface_examples\ExamplePanels;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -19,7 +19,7 @@ use Symfony\Component\HttpFoundation\Request;
  *
  * Below the contract panel, collapsed: what core answers, the plain
  * mapping of the config schema, and a table setting that mapping beside
- * the surface's full schema key by key. None of the three reads a
+ * the resource's full schema key by key. None of the three reads a
  * value, so the panel is replaced with the contract panel on every
  * rebuild and says what it said.
  */
@@ -86,8 +86,8 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
     $request->attributes->set(RouteObjectInterface::ROUTE_NAME, $route_name);
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     $stack->push($request);
-    $form = $this->container->get('form_builder')->getForm(DataSurfaceSituationForm::class);
-    return $form[DataSurfaceSituationForm::SURFACE_KEY][DataSurfaceSituationForm::PANEL_KEY];
+    $form = $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class);
+    return $form[DataSurfaceOperationForm::SURFACE_KEY][DataSurfaceOperationForm::PANEL_KEY];
   }
 
   /**
@@ -97,7 +97,7 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
    *   The panel.
    *
    * @return array<string, array{0: string, 1: string}>
-   *   What config schema states and what the surface states, by key,
+   *   What config schema states and what the resource states, by key,
    *   and under "required" the last row.
    */
   protected function comparison(array $today): array {
@@ -132,7 +132,7 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
     $today = $panels[ExamplePanels::TODAY];
     $this->assertSame('details', $today['#type']);
     $this->assertFalse($today['#open']);
-    $this->assertSame('Without a surface: what config schema can say', (string) $today['#title']);
+    $this->assertSame('Without a resource: what config schema can say', (string) $today['#title']);
     $this->assertSame(['intro', 'core', 'derived', 'comparison_note', 'comparison'], Element::children($today));
     $this->assertStringContainsString('from the config schema of <code>data_surface_examples.registration_step3</code> alone', (string) $today['intro']['#markup']);
     $this->assertStringContainsString('Nothing here changes as the values change.', (string) $today['intro']['#markup']);
@@ -144,7 +144,7 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
     $this->assertSame('The most a plain mapping of config schema could say', (string) $today['derived']['#title']);
     $this->assertSame($contract->derived('data_surface_examples.registration_step3'), $this->document($today['derived']));
 
-    $this->assertSame(['Key', 'From config schema', 'From the surface'], array_map('strval', $today['comparison']['#header']));
+    $this->assertSame(['Key', 'From config schema', 'From the resource'], array_map('strval', $today['comparison']['#header']));
     $this->assertSame([
       'title' => ['title, type', 'title, type'],
       'open' => ['title, type', 'title, type, default'],
@@ -172,7 +172,7 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
       }
     }
     // Counted from the two documents: the venue's row is longer on the
-    // surface's side by the list config schema has no way to give.
+    // resource's side by the list config schema has no way to give.
     $surface = $this->document($panels[ExamplePanels::CONTRACT]['full'])['properties']['venue'];
     unset($surface['x-surface']);
     $this->assertSame(['title', 'type', 'oneOf'], array_keys($surface));
@@ -200,7 +200,7 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
    * Tests nothing in the panel follows an answer.
    *
    * The comparison is of two documents that read no value: the mapping of
-   * config schema, and the surface's full schema. So a pricing that moves
+   * config schema, and the resource's full schema. So a pricing that moves
    * the ticket, and a venue that orphans the room, leave every row and
    * both documents as they were, and so does what is stored. What follows
    * the answers is the contract panel above it.
@@ -211,12 +211,12 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
 
     $state = $this->postStep(3, ['pricing' => 'paid'] + self::SHIPPED, ['_triggering_element_name' => 'surface[pricing]']);
     $this->assertSame([], array_map('strval', $state->getErrors()));
-    $container = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY];
+    $container = $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY];
     $response = $this->ajaxResponse($state);
     // One wrapper for both panels, replaced as the contract panel was.
-    $panels = $this->wrapperSelector($container[DataSurfaceSituationForm::PANEL_KEY]);
+    $panels = $this->wrapperSelector($container[DataSurfaceOperationForm::PANEL_KEY]);
     $this->assertSame([$this->wrapperSelector($container['ticket']), $panels], $this->ajaxSelectors($response, 'replaceWith'));
-    $after = $container[DataSurfaceSituationForm::PANEL_KEY][ExamplePanels::TODAY];
+    $after = $container[DataSurfaceOperationForm::PANEL_KEY][ExamplePanels::TODAY];
     $this->assertSame([
       'title, $comment',
       'title, type, if/then on pricing (2 shapes: free has note, $ref (registration.step3.ticket.free); paid has price, currency, $ref (registration.step3.ticket.paid))',
@@ -227,12 +227,12 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
     // And as the browser is sent it.
     $markup = $this->ajaxMarkup($response, $panels);
     $this->assertStringContainsString('Behind the scenes: the contract, as it stands', $markup);
-    $this->assertStringContainsString('Without a surface: what config schema can say', $markup);
+    $this->assertStringContainsString('Without a resource: what config schema can say', $markup);
     $this->assertMatchesRegularExpression('#<tr data-today-key="ticket">(?:(?!</tr>).)*<td>title, \$comment</td>\s*<td>title, type, if/then on pricing \(2 shapes: free has note, \$ref \(registration\.step3\.ticket\.free\); paid has price, currency, \$ref \(registration\.step3\.ticket\.paid\)\)</td>#s', $markup);
     $this->assertStringContainsString('No schema is defined for property of type', $markup);
 
     $state = $this->postStep(3, ['venue' => 'harbour'] + self::SHIPPED, ['_triggering_element_name' => 'surface[venue]']);
-    $panels = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY][DataSurfaceSituationForm::PANEL_KEY];
+    $panels = $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY][DataSurfaceOperationForm::PANEL_KEY];
     $after = $panels[ExamplePanels::TODAY];
     $this->assertSame($this->comparison($before), $this->comparison($after));
     $this->assertSame($before['derived']['json']['#value'], $after['derived']['json']['#value']);
@@ -248,13 +248,13 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests example 4's module moves the surface's side only.
+   * Tests example 4's module moves the resource's side only.
    *
-   * Its keys are mounted on the surface, so the table gains their row;
+   * Its keys are mounted on the resource, so the table gains their row;
    * config schema names where they would go and cannot say what they
    * are, so the mapping is the one it was.
    */
-  public function testAnotherModulesKeysAreOnTheSurfaceSideOnly(): void {
+  public function testAnotherModulesKeysAreOnTheResourceSideOnly(): void {
     $before = $this->panelsOf(3)[ExamplePanels::TODAY];
     $this->enableModules(['data_surface_examples_compliance']);
     $today = $this->panelsOf(3)[ExamplePanels::TODAY];
@@ -273,8 +273,8 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['form', 'today'], Element::children($page));
     $this->assertSame('data_surface_examples_registration_step1_classic', $page['form']['#form_id']);
     $today = $page['today'];
-    $this->assertSame('Without a surface: what config schema can say', (string) $today['#title']);
-    // No surface on this page, so nothing to compare with.
+    $this->assertSame('Without a resource: what config schema can say', (string) $today['#title']);
+    // No resource on this page, so nothing to compare with.
     $this->assertSame(['intro', 'note', 'core', 'derived'], Element::children($today));
     $this->assertSame('<p>This form requires the event title and holds the capacity between 1 and 1000. Neither rule is in the config schema, so neither is in either document below: only the form knows them.</p>', (string) $today['note']['#markup']);
     $this->assertSame(['$comment'], array_keys($this->document($today['core'])));

@@ -12,8 +12,8 @@ use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Pipeline\UnknownKeysException;
-use Drupal\data_surface\Target\PluginConfigurationTarget;
-use Drupal\data_surface\Target\StateTarget;
+use Drupal\data_surface\Storage\PluginConfigurationStorage;
+use Drupal\data_surface\Storage\StateStorage;
 use Drupal\data_surface_test\ConfigurableHostPlugin;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
@@ -38,12 +38,12 @@ class PipelineParityTest extends DataSurfaceKernelTestBase {
   protected static $modules = ['system', 'data_surface', 'data_surface_test'];
 
   /**
-   * The state key the state target writes to.
+   * The state key the state storage writes to.
    */
   protected const STATE_KEY = 'data_surface.parity';
 
   /**
-   * Builds a surface covering every shape the coercion rules touch.
+   * Builds a data surface covering every shape the coercion rules touch.
    *
    * A string, an integer, a float, a boolean, a select with labeled
    * choices, a nested map carrying a default, and a locked key.
@@ -88,7 +88,7 @@ class PipelineParityTest extends DataSurfaceKernelTestBase {
    * The raw payload a non-form caller would send.
    *
    * Everything arrives as a string, which is what a query string, a
-   * config action, or an agent that read the surface would produce.
+   * config action, or an agent that read the data surface would produce.
    *
    * @return array
    *   The payload.
@@ -181,7 +181,7 @@ class PipelineParityTest extends DataSurfaceKernelTestBase {
     $violations = $this->pipeline()->validate($surface, $from_form);
     $this->assertSame(['title'], $violations->keys());
     $this->assertSame('', $violations->byKey('title')[0]->path);
-    // The surface's own message, translatable, rather than whichever
+    // The data surface's own message, translatable, rather than whichever
     // message a type-specific constraint would have produced.
     $this->assertSame('Title is required.', (string) $violations->byKey('title')[0]->message);
   }
@@ -191,9 +191,9 @@ class PipelineParityTest extends DataSurfaceKernelTestBase {
    */
   public function testUnknownKeysAreRefused(): void {
     $surface = $this->surface();
-    $target = new StateTarget($this->container->get('state'), self::STATE_KEY);
+    $storage = new StateStorage($this->container->get('state'), self::STATE_KEY);
 
-    $result = $this->pipeline()->submit($surface, ['title' => 'Fine', 'bogus' => 'x'], $target);
+    $result = $this->pipeline()->submit($surface, ['title' => 'Fine', 'bogus' => 'x'], $storage);
     $this->assertFalse($result->isValid());
     $this->assertSame(['bogus'], $result->violations->keys());
     $this->assertSame('Unknown key bogus.', (string) $result->violations->byKey('bogus')[0]->message);
@@ -202,9 +202,9 @@ class PipelineParityTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($result->committed);
     $this->assertNull($this->container->get('state')->get(self::STATE_KEY));
 
-    // A nested undeclared key is reported on its surface key, with the
+    // A nested undeclared key is reported on its top-level key, with the
     // rest of its path, exactly like a constraint violation inside a map.
-    $nested = $this->pipeline()->submit($surface, ['extras' => ['badge' => 'star', 'bogus' => 1]], $target);
+    $nested = $this->pipeline()->submit($surface, ['extras' => ['badge' => 'star', 'bogus' => 1]], $storage);
     $this->assertSame(['extras'], $nested->violations->keys());
     $this->assertSame('Unknown key extras.bogus.', (string) $nested->violations->byKey('extras')[0]->message);
     $this->assertSame('bogus', $nested->violations->byKey('extras')[0]->path);
@@ -222,7 +222,7 @@ class PipelineParityTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests partial input merges over the values the target holds.
+   * Tests partial input merges over the values the storage holds.
    */
   public function testPartialInputMergesOverCurrent(): void {
     $surface = $this->surface();
@@ -236,9 +236,9 @@ class PipelineParityTest extends DataSurfaceKernelTestBase {
       'extras' => ['badge' => 'star', 'weight' => 2],
       'flavor' => 'vanilla',
     ]);
-    $target = new StateTarget($state, self::STATE_KEY);
+    $storage = new StateStorage($state, self::STATE_KEY);
 
-    $result = $this->pipeline()->submit($surface, ['count' => '9', 'extras' => ['weight' => '4']], $target);
+    $result = $this->pipeline()->submit($surface, ['count' => '9', 'extras' => ['weight' => '4']], $storage);
 
     $this->assertTrue($result->isValid());
     $this->assertTrue($result->committed);
@@ -262,9 +262,9 @@ class PipelineParityTest extends DataSurfaceKernelTestBase {
   public function testDryRunPreparesWithoutCommitting(): void {
     $surface = $this->surface();
     $state = $this->container->get('state');
-    $target = new StateTarget($state, self::STATE_KEY);
+    $storage = new StateStorage($state, self::STATE_KEY);
 
-    $result = $this->pipeline()->submit($surface, $this->payload(), $target, TRUE);
+    $result = $this->pipeline()->submit($surface, $this->payload(), $storage, TRUE);
 
     $this->assertTrue($result->isValid());
     $this->assertFalse($result->committed);
@@ -275,7 +275,7 @@ class PipelineParityTest extends DataSurfaceKernelTestBase {
 
     // The same submission without the dry run writes exactly what the
     // dry run previewed.
-    $committed = $this->pipeline()->submit($surface, $this->payload(), $target);
+    $committed = $this->pipeline()->submit($surface, $this->payload(), $storage);
     $this->assertTrue($committed->committed);
     $this->assertSame($result->prepared->artifact, $state->get(self::STATE_KEY));
   }
@@ -283,16 +283,16 @@ class PipelineParityTest extends DataSurfaceKernelTestBase {
   /**
    * Tests a plugin's host-owned configuration keys survive a submit.
    */
-  public function testPluginConfigurationTargetKeepsHostKeys(): void {
+  public function testPluginConfigurationStorageKeepsHostKeys(): void {
     $surface = $this->surface();
     $plugin = new ConfigurableHostPlugin();
-    $target = new PluginConfigurationTarget($plugin);
+    $storage = new PluginConfigurationStorage($plugin);
 
-    // Loading narrows to the surface's keys, so the host's own keys
+    // Loading narrows to the data surface's keys, so the host's own keys
     // never reach accept() and cannot be refused as unknown.
-    $this->assertSame(['title' => 'Stored title', 'count' => 3], $target->load($surface));
+    $this->assertSame(['title' => 'Stored title', 'count' => 3], $storage->load($surface));
 
-    $result = $this->pipeline()->submit($surface, $this->payload(), $target);
+    $result = $this->pipeline()->submit($surface, $this->payload(), $storage);
 
     $this->assertTrue($result->isValid());
     $this->assertTrue($result->committed);

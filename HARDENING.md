@@ -281,7 +281,7 @@ packages assume earlier ones. Names refer to the findings above.
    `SettingsShapeInterface` with `AddressSettingsShape`, ids on
    elements with rebuild in the callbacks and
    `DependencySerializationTrait` as the net, reflection gone from the
-   tool locator behind `FieldSurfaceProviderInterface`, `docs/targets.md`.
+   tool locator behind `FieldSurfaceProviderInterface`, `docs/storage.md`.
    Open: `PluginConfigurationTarget` contributor dependencies (a
    `@todo` pointing at `DefinitionMap::byContributor()`), and
    `FieldSurfaceProviderInterface` sits outside the D5 prefix. (B5, S3)

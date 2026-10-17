@@ -10,7 +10,7 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\Plugin\Validation\Constraint\LabeledChoiceConstraint;
-use Drupal\data_surface\Target\SettingsShapeInterface;
+use Drupal\data_surface\Storage\SettingsShapeInterface;
 use Drupal\data_surface_test\CasingVariantRefiner;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
@@ -19,7 +19,7 @@ use PHPUnit\Framework\Attributes\Group;
  * Tests the builder: the seal guard and contributions.
  *
  * The claim these tests hold the code to is the one the module makes
- * loudest: a surface is immutable once advertised. That means the
+ * loudest: a data surface is immutable once advertised. That means the
  * builder behind it has to refuse every later change rather than
  * quietly accept one — otherwise "immutable after seal" is a convention
  * and not a contract.
@@ -49,7 +49,7 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that seal() answers with the same surface every time.
+   * Tests that seal() answers with the same data surface every time.
    */
   public function testSealIsIdempotent(): void {
     $builder = $this->builder();
@@ -86,17 +86,17 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
       catch (\LogicException $e) {
         $this->assertStringContainsString('sealed', $e->getMessage());
       }
-      // The advertised surface is what it was: nothing half-applied.
+      // The advertised data surface is what it was: nothing half-applied.
       $this->assertSame(['casing', 'extras'], $surface->getDefinitions()->names());
     }
   }
 
   /**
-   * Tests that a provider's storage shape travels with the surface.
+   * Tests that a provider's storage shape travels with the data surface.
    *
    * It is asked for by provider, survives refinement, which builds a new
-   * surface, and is refused at seal time for a provider that mounts
-   * nothing: a translation for settings the surface never describes
+   * data surface, and is refused at seal time for a provider that mounts
+   * nothing: a translation for settings the data surface never describes
    * would be applied to nothing, or to somebody else's.
    */
   public function testThirdPartyShapeTravelsWithTheSurface(): void {
@@ -117,7 +117,7 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
   /**
    * Builds a storage shape that translates nothing.
    *
-   * @return \Drupal\data_surface\Target\SettingsShapeInterface
+   * @return \Drupal\data_surface\Storage\SettingsShapeInterface
    *   The shape.
    */
   protected function shape(): SettingsShapeInterface {
@@ -152,7 +152,7 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
       ['none', 'uppercase', 'lowercase', 'sentence'],
       $surface->getDefinition('casing')->getConstraints()['Choice']['choices'],
     );
-    // And the surface knows whose values those two are, which is what
+    // And the data surface knows whose values those two are, which is what
     // lets refinement hand them to that module's refiner and nobody
     // else's.
     $this->assertSame(
@@ -226,7 +226,7 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
       $this->fail('A contributor took over one of the owner\'s values.');
     }
     catch (\LogicException $e) {
-      $this->assertStringContainsString('already contributed by the surface owner', $e->getMessage());
+      $this->assertStringContainsString('already contributed by the declaring class', $e->getMessage());
     }
 
     $surface = $builder->seal();
@@ -243,7 +243,7 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
    */
   public function testExtendChoicesRefusesAnUnknownKey(): void {
     $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('Unknown surface definition "nothing"');
+    $this->expectExceptionMessage('Unknown data surface definition "nothing"');
     $this->builder()->extendChoices('nothing', ['a'], 'other');
   }
 
@@ -307,7 +307,7 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that what the builder was told it depends on reaches the surface.
+   * Tests that the builder's dependencies reach the data surface.
    */
   public function testCacheabilityReachesTheSealedSurface(): void {
     $builder = $this->builder();

@@ -13,7 +13,7 @@ use PHPUnit\Framework\Attributes\Group;
  * Tests progressive adoption on an action, the thinnest group A host.
  *
  * An action owns no configuration keys of its own and supplies neither a
- * build nor a submit for the surface to compose with, so the base class
+ * build nor a submit for the structure to compose with, so the base class
  * is the two traits and nothing else. What that buys is asserted here:
  * a plugin holding one declaration answers for its defaults, validates
  * what it is constructed with, generates its whole form, stores what the
@@ -50,9 +50,9 @@ class DataSurfaceActionBaseTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the surface, and nothing else, declares the defaults.
+   * Tests that the structure, and nothing else, declares the defaults.
    */
-  public function testDefaultsComeFromTheSurface(): void {
+  public function testDefaultsComeFromTheStructure(): void {
     $action = $this->createAction();
 
     $this->assertSame([
@@ -69,7 +69,7 @@ class DataSurfaceActionBaseTest extends DataSurfaceKernelTestBase {
    * Tests that the values an action is constructed with are validated.
    *
    * The host's constructor calls setConfiguration(), so an action built
-   * from stored configuration is held to the surface at the moment it
+   * from stored configuration is held to the structure at the moment it
    * comes into existence rather than at the moment it runs.
    */
   public function testConstructionValidatesConfiguration(): void {
@@ -96,7 +96,7 @@ class DataSurfaceActionBaseTest extends DataSurfaceKernelTestBase {
    * refuses the invented one, because there the stored value is a
    * different thing from the submitted one.
    *
-   * Everything else the surface refuses still throws here, which is
+   * Everything else the structure refuses still throws here, which is
    * what the oversized message above pins.
    *
    * @see \Drupal\data_surface\DataSurfaceConfigurationTrait::setConfiguration()
@@ -119,7 +119,7 @@ class DataSurfaceActionBaseTest extends DataSurfaceKernelTestBase {
    *
    * @see \Drupal\Tests\data_surface\Kernel\SurfaceFormTest::testConstraintsMapToElementProperties
    */
-  public function testFormTripleComesFromTheSurface(): void {
+  public function testFormTripleComesFromTheStructure(): void {
     $action = $this->createAction(['message' => 'Saved']);
     $form_state = new FormState();
 

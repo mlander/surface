@@ -24,7 +24,7 @@ use Symfony\Component\Validator\Constraints\ChoiceValidator;
  * Because it is a Choice, every Choice-aware consumer already sees it —
  * core's own Choice reading, a schema emitter, a form builder — and the
  * upstream ask is "labels on Choice" rather than a second constraint.
- * Nothing here knows about surfaces, widgets or options resolvers; the
+ * Nothing here knows about data surfaces, widgets or options resolvers; the
  * resolver layer reads this constraint, never the other way round.
  *
  * There are two spellings, and which one is meant is decided by whether

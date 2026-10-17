@@ -16,14 +16,14 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
  * against the sibling's own refined definition, and passes a refused
  * value as if the sibling held nothing.
  *
- * It rides inside a sealed surface, which is otherwise pure data, so an
+ * It rides inside a sealed data surface, which is otherwise pure data, so an
  * implementation must serialize without its container: hold services
  * through the dependency serialization trait, as a refiner link does.
  *
  * @see docs/decisions.md#a-refiner-never-sees-an-invalid-sibling
  *
  * @internal
- *   The build step seals every surface with the module's own check.
+ *   The build step seals every data surface with the module's own check.
  */
 interface WatchedValueCheckInterface {
 

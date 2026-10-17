@@ -1,22 +1,22 @@
 # Data Surface - React
 
-A surface's form, rendered in React from a contract the module serves.
-One situation of one surface becomes four endpoints and a page:
+A resource's form, rendered in React from a contract the module serves.
+One operation of one resource becomes four endpoints and a page:
 
 | | Path | What it does |
 | --- | --- | --- |
-| Page | `GET /surface-react/{surface}/{situation}` | Mounts the React app, titled with the situation's label. |
+| Page | `GET /surface-react/{surface}/{situation}` | Mounts the React app, titled with the operation's label. |
 | Contract | `GET /surface-api/{surface}/{situation}` | The JSON contract with the values the form opens with, and the stored values' `fingerprint`. |
 | Refine | `POST /surface-api/{surface}/{situation}/refine` | The contract re-narrowed against in-progress values: the AJAX rebuild's equivalent. |
 | Validate | `POST /surface-api/{surface}/{situation}/validate` | The pipeline's dry run: `{valid, violations, stale, values, prepared}`, nothing written. |
 | Submit | `POST /surface-api/{surface}/{situation}/submit` | The write: `{committed, valid, violations, stale, outputs, contract, created}`; a refusal is 200 with `committed: false`. |
 
-`{surface}` is the `#[Surface]` id (`registration.step2`), `{situation}`
-the situation id (`configure`). A situation's parameters arrive in the
-query string by the situation method's parameter names, or in a POST
+`{surface}` is the `#[Resource]` id (`registration.step2`), `{situation}`
+the operation id (`configure`). An operation's parameters arrive in the
+query string by the operation method's parameter names, or in a POST
 body's `parameters`: `/surface-react/node.type/edit?type=article`.
-Access on all five is the situation's: its permission, then the
-surface's access class through `Surfaces::access()`, no opinion read as
+Access on all five is the operation's: its permission, then the
+resource's access class through `Resources::access()`, no opinion read as
 a refusal. The three POSTs want the session's CSRF token from
 `/session/token` in an `X-CSRF-Token` header. A submit may send back the
 contract's `fingerprint`; when it is sent and storage changed since, the
@@ -39,7 +39,7 @@ and so on.
 ## What it does and does not
 
 - **Resolves** the contract's references before drawing anything. The
-  emitter writes each part (an attached surface, a slot's variant) once,
+  emitter writes each part (an attached structure, a slot's variant) once,
   under the schema's `$defs`, and refers to it where it is used, with
   what that place says beside the reference, or composed with a
   narrowing (`allOf: [{$ref}, {narrowing}]`) where it says more
@@ -107,7 +107,7 @@ Run them on the host, not inside ddev. The library
 
 | Test | Covers |
 | --- | --- |
-| `Kernel\ServedContractTest` | The main module's emitter over examples 1 to 3, the content type surface and the demo block surface: labels, `oneOf` titles, bounds, the venue to room dependency, the slot's conditional, the locked machine name on edit, the widget hints off by default and on for this submodule's endpoint; each part defined once under `$defs` and referred to, one def per class attached twice, a site narrowing its def only where it differs, and each document's verdicts on example 3 held to the pipeline's; every schema checked by opis/json-schema (draft 2020-12) and against the vendored draft-07 meta-schema. |
+| `Kernel\ServedContractTest` | The main module's emitter over examples 1 to 3, the content type resource and the demo block structure: labels, `oneOf` titles, bounds, the venue to room dependency, the slot's conditional, the locked machine name on edit, the widget hints off by default and on for this submodule's endpoint; each part defined once under `$defs` and referred to, one def per class attached twice, a site narrowing its def only where it differs, and each document's verdicts on example 3 held to the pipeline's; every schema checked by opis/json-schema (draft 2020-12) and against the vendored draft-07 meta-schema. |
 | `Functional\ServedContractEndpointsTest` | 200 and 403, the JSON shape, refine narrowing the room by the venue, validate refusing a wrong room and a capacity over the room's and accepting a valid payload, nothing written; the landing page's React links. |
 | `Functional\ServedSubmitEndpointTest` | Submit writing example 2 and answering the fresh contract; a wrong room refused with nothing written; anonymous, token-less and malformed posts; a stale fingerprint refused with nothing written, and no fingerprint meaning the last write wins; a content type added through it answering `created` at `edit` with its `type`, then edited and deleted. |
 | `app/src/test/contract.test.ts` | The resolver: a reference with keywords beside it, an `allOf` narrowing, a def inside a def, two sites sharing one def, a recursive reference kept, the JSON Pointer escaping; example 3's served contract defining its parts once and read inline. |

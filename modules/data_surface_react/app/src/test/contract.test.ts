@@ -3,7 +3,7 @@ import { defName, inlineSchema, resolveSchema, resolveSlot, watchedPaths } from 
 import example3 from './fixtures/example3.json';
 
 // The resolver, over schemas shaped as the emitter writes them: each
-// subsurface a def under `$defs`, each site a reference beside its own
+// child a def under `$defs`, each site a reference beside its own
 // keywords, a site that says more composed with its narrowing.
 
 const contact: Schema = {

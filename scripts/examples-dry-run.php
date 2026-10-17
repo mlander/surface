@@ -7,7 +7,7 @@
  *
  * Step 5 of modules/data_surface_examples: the tool
  * data_surface:registration.step3:configure, derived from step 3's
- * surface, called with valid values, then with a capacity above the
+ * resource, called with valid values, then with a capacity above the
  * room's, then as a dry run. Discovery needs a booted kernel with the
  * examples enabled, and the one supported way to boot one is a kernel
  * test, so — exactly like scripts/generate-catalogue.php — this script

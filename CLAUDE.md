@@ -1,10 +1,11 @@
 # Data Surface — working notes
 
-A surface is an immutable, sealed group of core data definitions that one
-host declares once and every caller reads: a generated form renders it, a
-pipeline accepts and validates values against it, a target writes them to
-storage. The rule the whole module turns on is that refinement may only
-*narrow*, so what a surface advertised when sealed stays true afterwards.
+A data surface is an immutable, sealed group of core data definitions,
+built once from a resource or structure and read by every caller: a
+generated form renders it, a pipeline accepts and validates values
+against it, and storage writes them. The rule the whole module turns on
+is that refinement may only *narrow*, so what a data surface advertised
+when sealed stays true afterwards.
 
 Where to look: **`docs/`** is the current documentation, and the only place
 kept true (start at `docs/index.md`; the pattern is `docs/pattern.md`, the
@@ -14,38 +15,70 @@ build step `docs/how-it-fits.md`, every decision the pattern left open
 read them for why, never as a description of today. **`REWORK.md`** is
 the record of the rework that brought the module to the pattern.
 
+## Vocabulary
+
+- **Resource**: a thing with identity and storage that operations read
+  and write; the form, the tool and the schema are derived from it. It
+  may live in a config object, a config entity, State, a plugin's
+  settings or a content entity, and only its storage knows which (the
+  registration settings first, a content type, then a basic page,
+  `entity.content:node.page`, the same shape applied to content). One
+  with no identity keys, such as a settings object, is a singleton
+  resource. `#[Resource(id, identity:, storage:, access:)]`.
+- **Structure**: a shape with members and no identity or storage of its
+  own, held by a parent, a slot or a plugin's host.
+  `#[Structure(id, access:)]`.
+- **Operation**: a way a resource is asked for, a static `#[Operation]`
+  method returning an `OperationContext` whose `id` is the operation's.
+- **Storage**: where a resource's values live: `load()`, `prepare()`,
+  `commit()` on a `ResourceStorageInterface`.
+- **Alter**: another module's class that adds keys to a resource or
+  structure and narrows it, `#[Alters]` in `src/Alter/`.
+- **Attach**: a fixed child at a key, `attach()`.
+- **Slot**: a child a sibling key chooses, `attachBy()`.
+- **Variant**: a structure or resource that fills a slot for one value,
+  `#[Variant(of:, key:, value:)]`.
+- **Collection**: a list of child instances at a key, `attachList()`.
+- **Contract**: the JSON Schema a built resource or structure emits.
+
+"Data surface" names the project, and the sealed object the build step
+makes (`DataSurfaceInterface`); it is not a third kind.
+
 ## One spelling
 
-A surface is a class in a module's `src/Surface/` carrying `#[Surface]`,
-with a static `defineInputs()` (and, on `HasOutputsInterface`, a static
-`defineOutputs()`), static `#[RefinesInput]` methods and `#[Situation]`
-static methods; it is never instantiated. Another module changes it
-with an alter in `src/SurfaceAlter/` carrying `#[AltersSurface]`. A
-plugin names its surface with `#[UsesSurface]`, or, with no argument,
-is its own surface: the plugin class implements `SurfaceInterface`, is
-found through its plugin definition (`SurfacePlugins::ownSurfaces()`),
-gets the id `<host type>:<plugin id>` unless it carries `#[Surface]`,
-and alters name it by the plugin class (the demo formatter).
-Everything else is discovered by `SurfaceBuild\SurfaceCollectorPass` and built
-by the `data_surface.surfaces` service (`SurfacesInterface::build($surface,
+A resource is a class in a module's `src/Resource/` carrying
+`#[Resource]`, a structure one in `src/Structure/` carrying
+`#[Structure]`; the attribute decides the kind, and either directory
+works. Each has a static `defineInputs()` (and, on `HasOutputsInterface`,
+a static `defineOutputs()`), static `#[RefinesInput]` methods and
+`#[Operation]` static methods; it is never instantiated. Another module
+changes either with an alter in `src/Alter/` carrying `#[Alters]`. A
+plugin names the resource or structure it holds with `#[UsesStructure]`,
+or, with no argument, is its own structure: the plugin class implements
+`StructureInterface`, is found through its plugin definition
+(`ResourcePlugins::ownStructures()`), gets the id
+`<host type>:<plugin id>` unless it carries `#[Structure]`, and alters
+name it by the plugin class (the demo formatter). Everything else is
+discovered by `ResourceBuild\ResourceCollectorPass` and built by the
+`data_surface.resources` service (`ResourcesInterface::build($resource,
 $context)`), which writes the shape, the alters, the context and the
 bound refiners into the engine's `DataSurfaceBuilder` and seals it into a
-`DataSurfaceInterface` (`docs/surfaces.md`). The builder, the definition
+`DataSurfaceInterface` (`docs/resources.md`). The builder, the definition
 map and `DataSurfaceRefinerInterface` are internal: nothing an author
 writes touches them. There is no build event, no declaration method, no
 provider service, no policy filter and no output refiner; step 5 of
 `REWORK.md` deleted them.
 
-Every plugin host reads `#[UsesSurface]` from the plugin definition:
+Every plugin host reads `#[UsesStructure]` from the plugin definition:
 block, formatter, condition, action and field type base classes, and
 `DataSurfacePluginForm` for any configurable plugin. A host builds the
-named surface in its own verb's context (`configure`, `field_settings`),
-supplies the target (the plugin's configuration array; the field config
-for a field type) and answers static defaults from the surface's own
-shape (`SurfacesInterface::defaults()`). A target has three verbs,
-`load()`, `prepare()` (rehearse the write with storage's own checks, no
-side effects) and `commit()` of what prepare returned; a dry run stops
-after prepare and reports it.
+named class in a context of its own verb (`configure`, `field_settings`),
+supplies the storage (the plugin's configuration array; the field config
+for a field type) and answers static defaults from the class's own
+shape (`ResourcesInterface::defaults()`). A storage class has three
+verbs, `load()`, `prepare()` (rehearse the write with the store's own
+checks, no side effects) and `commit()` of what prepare returned; a dry
+run stops after prepare and reports it.
 
 Decisions live in `docs/decisions.md`: one entry per point the pattern
 did not settle, with its reason. A new undecided point is added there,
@@ -53,49 +86,54 @@ marked open, not left as a code comment; code points at an entry with
 `// Decision: see docs/decisions.md#<anchor>.` only where a reader at
 that spot needs it.
 
-Situations are what routes and tools are generated from. A route names
-`_data_surface_surface` and `_data_surface_situation` and maps its
-parameters onto the situation's by name (`SituationRoute`), gated by
-`_data_surface_situation_access`; `DataSurfaceSituationForm` serves it.
-`data_surface_tool` derives one tool per situation that can be asked
-on its own, `data_surface:<surface>:<situation>`: its surface names a
-target, no plugin uses it, and every `%key` in its permission can be
-supplied by a parameter (`SurfaceCatalogue::standalone()`), and beside
-each that changes a thing that exists a read tool,
-`data_surface:<surface>:<situation>:read`, taking the parameters and
-answering with the stored values less secrets (`SurfaceCatalogue::reads()`,
-`SurfaceSituationReadTool`). The field
+Operations are what routes and tools are generated from. A route names
+`_data_surface_resource` and `_data_surface_operation` and maps its
+parameters onto the operation's by name (`OperationRoute`), gated by
+`_data_surface_operation_access`; `DataSurfaceOperationForm` serves it.
+`data_surface_tool` derives one tool per operation that can be asked
+on its own, `data_surface:<id>:<operation>`: its resource names storage,
+no plugin uses it, and every `%key` in its permission can be supplied by
+a parameter (`ResourceCatalogue::standalone()`). Beside each such
+operation that changes a thing that exists it derives a read tool,
+`data_surface:<id>:<operation>:read`, taking the parameters and
+answering with the stored values less secrets
+(`ResourceCatalogue::reads()`, `ResourceOperationReadTool`). The field
 tools are `data_surface:field.instance:add` / `:reuse` / `:edit`; the
 hand-written `field_add` / `field_update` are gone.
-`data_surface.surface_catalogue` lists the static layer; `docs/catalogue.md`
+`data_surface.resource_catalogue` lists the static layer; `docs/catalogue.md`
 is generated from it by `scripts/generate-catalogue.php`.
 
-Subsurfaces are `attach()` (a fixed child, by class) and `attachBy()`
-(a slot a sibling chooses, always open: every `#[SurfaceVariant]` for it
-fills it, and the parent names none). Both return the map at the key,
-which the owner labels with the core setters; `describe()` is for an
-alter rewording a key it does not own. A service implementing
-`SurfaceBuild\DerivedVariantsInterface` fills a slot for the values no
-variant class fills (`data_surface_tool` derives a field type's settings,
-and its storage settings, from its config schema). A child whose shape cannot be listed at all is
-a `#[RefinesInput]` method on an `any` key returning a map.
-`attachList()` is a collection: a list of child instances, the list
-(its Count) the parent's, each item the child's, its entry a
-`SurfaceList` (`docs/surfaces.md#collections`).
+Attached structures are `attach()` (a fixed child, by class) and
+`attachBy()` (a slot a sibling chooses, always open: every `#[Variant]`
+for it fills it, and the parent names none). Both return the map at the
+key, which the owner labels with the core setters; `describe()` is for
+an alter rewording a key it does not own. A child may be a resource with
+storage of its own, an attached resource (the field's storage,
+`FieldStorageResource`). A service implementing
+`ResourceBuild\DerivedVariantsInterface` fills a slot for the values no
+variant class fills (`data_surface_tool` derives a field type's
+settings, and its storage settings, from its config schema). A child
+whose shape cannot be listed at all is a `#[RefinesInput]` method on an
+`any` key returning a map. `attachList()` is a collection: a list of
+child instances, the list (its Count) the parent's, each item the
+child's, its entry a `Collection` (`docs/resources.md#collections`).
 
 A shape that is the site's rather than the code's (one per bundle, one
-per field) is derived: a class in `src/Surface/` carrying
-`#[DerivesSurfaces(base:)]` and implementing `SurfaceDeriverInterface`
-returns `DerivedSurface` values at discovery, each `<base>:<derivative>`
-with no class (`SurfaceDefinition::$class` NULL; every caller asks by
-`name()`), its shape and situations `SurfaceCallable`s, cached under the
-tags of what it was read from. `data_surface_entity` derives a surface
-per content entity bundle and one per field, with field access as each
-field child's access (`docs/entities.md`). A child is
-built by the same build step in its own frame and sealed into the parent's entry as a `SurfaceAttachment`,
-or a `SurfaceSlot` of them; the pipeline, refinement, the form and the
-tool bridge recurse through those entries, and nothing in a parent can
-name a key inside its child. `docs/surfaces.md` has the rules.
+per field) is derived: a class in `src/Resource/` or `src/Structure/`
+carrying `#[DerivesResources(base:)]` and implementing
+`ResourceDeriverInterface` returns `DerivedResource` values at
+discovery, each `<base>:<derivative>` with no class
+(`ResourceDefinition::$class` NULL; every caller asks by `name()`), its
+shape and operations `ResourceCallable`s, cached under the tags of what
+it was read from. Its kind follows from what it names: one that names
+storage or identity keys is a resource, any other a structure.
+`data_surface_entity` derives a resource per content entity bundle
+(`entity.content:*`) and a structure per field (`field.item:*`), with
+field access as each field child's access (`docs/entities.md`). A
+child is built by the same build step in its own frame and sealed into
+the parent's entry as an `Attachment`, or a `Slot` of them; the
+pipeline, refinement, the form and the tool bridge recurse through those
+entries, and nothing in a parent can name a key inside its child. `docs/resources.md` has the rules.
 
 ## Running the suite
 
@@ -133,11 +171,11 @@ schemas with. On a site where this module is a checkout and not a
 Composer package, require both at the site root. Without them those
 tests error; they do not skip.
 
-There are no open findings. The two that stood here —
-`NodeTypeSurfaceFormTest::testAddStoresTheTypeAndItsOverrides` and
-`NodeTypeSurfaceFormTest::testDuplicateMachineNameIsRefusedOnTheTypeElement`
-— are fixed: the cosmetic layer no longer lets core's machine name
-element validate beside the surface and swallow its violation, and the
+There are no open findings. The two that stood here
+(`NodeTypeResourceFormTest::testAddStoresTheTypeAndItsOverrides` and
+`NodeTypeResourceFormTest::testDuplicateMachineNameIsRefusedOnTheTypeElement`)
+are fixed: the cosmetic layer no longer lets core's machine name
+element validate beside the data surface and swallow its violation, and the
 test drops the field definitions its own process memoized before the
 request wrote them. Both are pinned by kernel tests now. They surfaced
 only once node could be installed inside functional tests at all, which
@@ -175,7 +213,7 @@ npx --yes cspell@8 --config /tmp/merged.json --no-progress --no-summary "**"
 
 The served contract's emitter is the main module's:
 `Contract\ContractEmitter` (`data_surface.contract_emitter`) turns a
-sealed surface and its values into JSON Schema 2020-12 with an
+sealed data surface and its values into JSON Schema 2020-12 with an
 `x-surface` keyword per property, each slot an `allOf` of `if`/`then`
 on its deciding sibling. That is the schema as it stands, for one set
 of values; `emitFull()` is the second document, the full schema, which
@@ -192,8 +230,8 @@ serves it with the widget hints, through the main module's service:
 held unanswered and listed `stale`), `/validate` runs the pipeline
 dry and `/submit` writes, answering a refusal as 200 data
 (`committed: false`), a write with the rebuilt contract, and a create
-with the situation the created thing now lives at (`created`, from the
-outputs or identity, checked by building that situation). The GET
+with the operation the created thing now lives at (`created`, from the
+outputs or identity, checked by building that operation). The GET
 contract carries a `fingerprint` of the stored values; a submit that
 sends it back is refused when storage changed since, and one that sends
 none is not checked (opt-in; the app sends it).
@@ -225,17 +263,19 @@ so the rule is this sentence. `npm test` is not part of
 
 - Contracts are objects; payloads are arrays. Never pass a definition as an
   array or a value bag as an object.
-- A surface is declared in one place, its `#[Surface]` class, or the
-  plugin class that is its own surface. A plugin names it with
-  `#[UsesSurface]`; the host builds it.
-- A surface is static: `defineInputs()`, `defineOutputs()` and its
-  `#[RefinesInput]` methods are `public static`, called on the class, so
-  it has no constructor, holds no service and is never instantiated; a
-  refiner points at a list with a constraint and the options resolver
-  fetches. A static refiner is a static method, a surface's and an
-  alter's alike; only a runtime one may be an instance method. Alters,
-  targets and access classes are autowired services and may hold
-  services (`docs/decisions.md#a-surface-is-static`).
+- A resource or structure is declared in one place: its `#[Resource]`
+  or `#[Structure]` class, or the plugin class that is its own
+  structure. A plugin names it with `#[UsesStructure]`; the host builds
+  it.
+- A resource or structure is static: `defineInputs()`,
+  `defineOutputs()` and its `#[RefinesInput]` methods are `public
+  static`, called on the class, so it has no constructor, holds no
+  service and is never instantiated; a refiner points at a list with a
+  constraint and the options resolver fetches. A static refiner is a
+  static method, a resource's, a structure's and an alter's alike; only
+  a runtime one may be an instance method. Alters, storage classes and
+  access classes are autowired services and may hold services
+  (`docs/decisions.md#a-shape-is-static`).
 - A `#[RefinesInput]` method is static, a pure function of what it
   watches that the served contract runs ahead of time, unless it says
   `runtime: TRUE`: a rule no schema can state (a lookup, uniqueness),
@@ -255,13 +295,14 @@ so the rule is this sentence. `npm test` is not part of
   core data definitions are optional by default.
 - Violations are message objects end to end, from the pipeline to the form,
   never pre-rendered strings.
-- Translatable strings: static context (a surface, a static protocol
-  method, an enum, a value object's static helper) calls the global
-  `t()` with a literal string — the same lazy `TranslatableMarkup`, and
-  extractable; a container-built class of ours injects
-  `string_translation` and calls `$this->t()`; `new TranslatableMarkup`
-  appears only inside attribute arguments, where a call is not allowed.
-- No closures anywhere a form array or a surface carries — both are
+- Translatable strings: static context (a resource or structure, a
+  static protocol method, an enum, a value object's static helper) calls
+  the global `t()` with a literal string (the same lazy
+  `TranslatableMarkup`, and extractable); a container-built class of
+  ours injects `string_translation` and calls `$this->t()`; `new
+  TranslatableMarkup` appears only inside attribute arguments, where a
+  call is not allowed.
+- No closures anywhere a form array or a data surface carries: both are
   serialized. Use a service, a callable string, or a class.
 - Iteration order is load-bearing: the definition map is in declaration
   order, and `FieldToolsComparisonTest`'s drift assertion is the tripwire.
@@ -273,38 +314,48 @@ so the rule is this sentence. `npm test` is not part of
 
 ## Naming
 
-- A surface class ends in `Surface` and its `#[Surface]` id is dotted
-  (`node.type`, `field.instance`); an alter ends in `Alter`, a target in
-  `Target`, an access class in `Access`.
+- A resource class ends in `Resource`, a structure class in
+  `Structure`, and the id on either attribute is dotted (`node.type`,
+  `field.instance`); an alter ends in `Alter`, a storage class in
+  `Storage`, an access class in `Access`. A deriver is named in the
+  plural for what it derives (`ContentEntityResources`,
+  `FieldItemStructures`).
 - A class-swap adopter prefixes the swapped class with `Surface`
   (`AddressItem` → `SurfaceAddressItem`), and the hook implementation's
   docblock **must name the replacement class**, so grepping the original
   lands on the line that replaces it.
 - The catalogue lists a plugin as `<host type>:<plugin id>` —
   `block:my_teaser`, `field_type:address`.
-- A context's operation is a situation id (`add`, `edit`, `reuse`) or a
+- A context's id is an operation id (`add`, `edit`, `reuse`) or a
   host's own verb (`configure`, `field_settings`) and never carries
-  identity. Identity is the `#[Surface(identity:)]` keys the context
+  identity. Identity is the `#[Resource(identity:)]` keys the context
   knows.
 
-See `docs/declaring-a-surface.md` for all four in full.
+See `docs/declaring-a-resource.md` for all four in full.
 
 ## Where things live
 
 ```
-src/                     Surface, builder (internal), definition map, host trait.
-src/Surface/             The authoring API and attributes (Attribute/).
-src/SurfaceBuild/        Discovery pass, registry, build step, adapters,
-                         derived variants, catalogue.
-src/Hook/                #[UsesSurface] into plugin definitions.
+src/                     Data surface, builder (internal), definition map, host trait.
+src/Resource/            The authoring API and attributes (Attribute/).
+src/ResourceBuild/       Discovery pass, registry, build step, adapters,
+                         derived variants, catalogue, operation routes.
+src/Access/              The operation route's access check.
+src/Hook/                #[UsesStructure] into plugin definitions.
 src/Pipeline/            Access, accept, validate, prepare, commit; results.
-src/Target/              Where accepted values are written; storage shapes.
+src/Storage/             Where accepted values are written; settings shapes.
 src/Contract/            The served contract's emitter (JSON Schema).
-src/Form/                Form builder, host traits, the situation form.
+src/Form/                Form builder, host traits, the operation form.
 src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constraints.
 src/Options/             Option sets, the resolver plugin base and manager.
 src/Refinement/          Narrowing and choice sets.
-modules/                 Ten experimental submodules; each has its own README.
+modules/                 Eleven experimental submodules; each has its own README.
 tests/src/               Unit, Kernel, Functional, FunctionalJavascript.
-docs/ scripts/           Published documentation; check.sh and the generator.
+docs/ scripts/           Published documentation; check.sh and the generators.
 ```
+
+A module that declares its own puts resources in `src/Resource/`,
+structures in `src/Structure/`, alters in `src/Alter/`, storage classes
+in `src/Storage/` and access classes in `src/Access/`; only the first
+three are scanned, and the rest are registered because a resource or
+structure names them.

@@ -13,28 +13,28 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\data_surface\Pipeline\Omitted;
 use Drupal\data_surface\Plugin\Field\FieldFormatter\DataSurfaceFormatterBase;
 use Drupal\data_surface\Refinement\ChoiceSet;
-use Drupal\data_surface\Surface\Attribute\RefinesInput;
-use Drupal\data_surface\Surface\Attribute\UsesSurface;
-use Drupal\data_surface\Surface\HasOutputsInterface;
-use Drupal\data_surface\Surface\ShapeInterface;
-use Drupal\data_surface\Surface\SurfaceInterface;
+use Drupal\data_surface\Resource\Attribute\RefinesInput;
+use Drupal\data_surface\Resource\Attribute\UsesStructure;
+use Drupal\data_surface\Resource\HasOutputsInterface;
+use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\StructureInterface;
 use Drupal\data_surface_demo\DemoVariant;
 
 /**
- * A field formatter that is its own surface.
+ * A field formatter that is its own structure.
  *
- * #[UsesSurface] with no argument: the class declares its settings and
+ * #[UsesStructure] with no argument: the class declares its settings and
  * what it emits beside the one thing it does, showing a value. Its shape
  * and its refiner are static, so nothing constructs the formatter to ask;
- * the formatter host builds the surface from this class, renders its
+ * the formatter host builds the structure from this class, renders its
  * form, validates it and answers the static defaults from it. Its id is
  * field_formatter:data_surface_demo_string, from the plugin, and an alter
- * targets it by this class. No defaultSettings, no settingsForm, no
+ * names it by this class. No defaultSettings, no settingsForm, no
  * settingsSummary, and no render array. The classic demo writes them
  * out; see modules/data_surface_demo_classic. The demo block keeps its
- * surface in a class of its own, DemoBlockSurface, the other spelling.
+ * structure in a class of its own, DemoBlockStructure, the other spelling.
  *
- * No target and no situations: the host supplies both, and the entity
+ * No storage and no operations: the host supplies both, and the entity
  * view display it sits on is what stores the settings. Outputs are never
  * refined, so the classes the formatter emits are declared as a list of
  * class names, open, whatever variant is chosen.
@@ -47,8 +47,8 @@ use Drupal\data_surface_demo\DemoVariant;
   label: new TranslatableMarkup('Data surface demo formatter'),
   field_types: ['string'],
 )]
-#[UsesSurface]
-final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements SurfaceInterface, HasOutputsInterface {
+#[UsesStructure]
+final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements StructureInterface, HasOutputsInterface {
 
   /**
    * The prefix every variant class carries.
@@ -100,7 +100,7 @@ final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements
    *
    * A casing with no variants of its own — 'none' — leaves the list as
    * it was handed over rather than emptying it, because saying nothing
-   * is not the same as saying no. Handed only this surface's own values:
+   * is not the same as saying no. Handed only this structure's own values:
    * a value another module offered is that module's to narrow.
    */
   #[RefinesInput('variant')]

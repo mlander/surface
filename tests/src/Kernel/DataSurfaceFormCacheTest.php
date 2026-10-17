@@ -10,10 +10,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\data_surface\Target\BaseFieldOverrideTarget;
-use Drupal\data_surface\Target\CompositeTarget;
-use Drupal\data_surface\Target\FieldSettingsTarget;
-use Drupal\data_surface\Target\StateTarget;
+use Drupal\data_surface\Storage\BaseFieldOverrideStorage;
+use Drupal\data_surface\Storage\CompositeStorage;
+use Drupal\data_surface\Storage\FieldSettingsStorage;
+use Drupal\data_surface\Storage\StateStorage;
 use Drupal\data_surface_test\Plugin\Field\FieldFormatter\DataSurfaceTestFormatter;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
@@ -29,11 +29,11 @@ use PHPUnit\Framework\Attributes\Group;
  * element is built, put through serialize() and back, and the callback
  * then does its work on the far side.
  *
- * Targets are the safety net rather than the mechanism. Nothing puts one
- * on a form any more, but an adopter might, so each of them composes
- * core's dependency serialization trait and each of them is checked here
- * for coming back with the container's own services rather than with
- * dead copies of them.
+ * Storage objects are the safety net rather than the mechanism. Nothing
+ * puts one on a form any more, but an adopter might, so each of them
+ * composes core's dependency serialization trait and each of them is
+ * checked here for coming back with the container's own services rather
+ * than with dead copies of them.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -105,31 +105,31 @@ class DataSurfaceFormCacheTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that a target comes back from serialization able to work.
+   * Tests that a storage object comes back from serialization able to work.
    *
    * Not because anything puts one on a form, but because an adopter
-   * might: a target holds services, and a serialized service is a dead
+   * might: a storage object holds services, and a serialized service is a dead
    * copy of a live thing. The dependency serialization trait stores the
    * service id instead, so what comes back holds the container's own.
    */
-  public function testTargetsSurviveSerialization(): void {
+  public function testStorageSurvivesSerialization(): void {
     $surface = $this->nameSurface();
     $state = $this->container->get('state');
     $field = $this->plainField();
 
-    $state_target = new StateTarget($state, 'data_surface.form_cache');
+    $state_target = new StateStorage($state, 'data_surface.form_cache');
     $state->set('data_surface.form_cache', ['name' => 'From state']);
 
     $targets = [
       'state' => $state_target,
-      'field settings' => new FieldSettingsTarget($field),
-      'base field override' => new BaseFieldOverrideTarget(
+      'field settings' => new FieldSettingsStorage($field),
+      'base field override' => new BaseFieldOverrideStorage(
         $this->container->get('entity_field.manager'),
         'entity_test',
         'entity_test',
         ['name' => ['field' => 'name']],
       ),
-      'composite' => new CompositeTarget([[$state_target, ['name']]]),
+      'composite' => new CompositeStorage([[$state_target, ['name']]]),
     ];
 
     foreach ($targets as $description => $target) {
@@ -140,12 +140,12 @@ class DataSurfaceFormCacheTest extends DataSurfaceKernelTestBase {
       $restored = unserialize(serialize($target));
       $this->assertInstanceOf($target::class, $restored, $description);
       // Working means reading, which is the stage that needs every
-      // service the target was given.
+      // service the storage was given.
       $this->assertIsArray($restored->load($surface), $description);
     }
 
     // The service is the container's own rather than a copy: a write
-    // through the restored target is a write everything else can see.
+    // through the restored storage is a write everything else can see.
     // The form cache stores a serialized form array and restores it
     // whole, which is the thing under test, so this deliberately
     // allows every class the way core's own form cache does.
@@ -178,10 +178,10 @@ class DataSurfaceFormCacheTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Builds the one key surface every target here is read against.
+   * Builds the one key data surface every storage here is read against.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface.
+   *   The data surface.
    */
   protected function nameSurface(): DataSurfaceInterface {
     $builder = new DataSurfaceBuilder([

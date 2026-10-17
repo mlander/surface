@@ -6,7 +6,7 @@ namespace Drupal\data_surface_address;
 
 use CommerceGuys\Addressing\AddressFormat\AddressField;
 use CommerceGuys\Addressing\AddressFormat\FieldOverride;
-use Drupal\data_surface\Target\SettingsShapeInterface;
+use Drupal\data_surface\Storage\SettingsShapeInterface;
 
 /**
  * Translates address field settings between input shape and storage.
@@ -28,7 +28,7 @@ use Drupal\data_surface\Target\SettingsShapeInterface;
  * - no deprecated 'fields' key offered at all, because a caller should
  *   never be handed a key that silently overrules the one next to it.
  *
- * The round trip is exact for everything the surface describes. It is
+ * The round trip is exact for everything the resource describes. It is
  * deliberately not exact for the deprecated key: reading takes that
  * key's meaning into account, and writing always empties it.
  *
@@ -67,8 +67,8 @@ final class AddressSettingsShape implements SettingsShapeInterface {
       'langcode_override' => $values['langcode_override'] ?? NULL,
       'field_overrides' => $overrides,
       // Deprecated, and it silently wins over field_overrides whenever
-      // it is not empty. The surface does not offer it, so every write
-      // through the surface empties it.
+      // it is not empty. The resource does not offer it, so every write
+      // through the resource empties it.
       'fields' => [],
     ];
   }

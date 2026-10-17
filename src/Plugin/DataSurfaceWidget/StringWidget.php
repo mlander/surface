@@ -84,9 +84,9 @@ final class StringWidget extends DataSurfaceWidgetBase {
    *   "the stored secret is unchanged", which is a legal submission and
    *   the usual one; a browser-enforced required attribute would make
    *   every unrelated edit demand the secret be retyped. A required
-   *   secret is still required — validate() refuses a key that has never
-   *   been set and was left blank — but it is refused by the surface,
-   *   with the surface's own message, after accept() has had its say.
+   *   secret is still required (validate() refuses a key that has never
+   *   been set and was left blank), but it is refused by the data surface,
+   *   with the data surface's own message, after accept() has had its say.
    *
    * The description says what the empty box means. It says so whether or
    * not a secret is stored, because nothing here knows: the widget is

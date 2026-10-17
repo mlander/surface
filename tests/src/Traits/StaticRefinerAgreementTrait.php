@@ -15,17 +15,18 @@ use Drupal\data_surface\DataSurfaceInterface;
  * each answer down as a conditional: `if` the siblings hold these values,
  * `then` the key is its declared schema narrowed so. That is only true
  * if a static refiner is what it declares, a pure function of what it
- * watches. So, for every enumerated conditional in a surface's document,
- * this refines the surface afresh against the conditional's values, with
- * the static refiners alone (the ones a conditional states), and asserts
- * the key it answers is, keyword for keyword, the declared key with the
- * conditional's `then` laid over it. A refiner that read anything else
- * (storage, a counter, the time) answers differently and fails here.
+ * watches. So, for every enumerated conditional in a data surface's
+ * document, this refines the data surface afresh against the
+ * conditional's values, with the static refiners alone (the ones a
+ * conditional states), and asserts the key it answers is, keyword for
+ * keyword, the declared key with the conditional's `then` laid over it.
+ * A refiner that read anything else (storage, a counter, the time)
+ * answers differently and fails here.
  *
  * Both sides are described by the emitter itself
  * (ContractEmitter::describeKey()), so what is compared is what a
  * conditional says against what refinement says, not two describers.
- * Every subsurface is held to it as well, as a document of its own for
+ * Every part is held to it as well, as a document of its own for
  * any values: an attached child, each variant a slot offers, and a
  * collection's item.
  *
@@ -37,16 +38,16 @@ trait StaticRefinerAgreementTrait {
    * Asserts every enumerated conditional is what a fresh refine() answers.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface, built.
+   *   The data surface.
    * @param array|null $values
    *   The values to emit the schema for, whose conditionals hold each
    *   watched sibling that has a value at it; NULL for the full schema,
    *   which reads none and enumerates every combination.
    * @param string $label
-   *   The surface's name, for messages.
+   *   The data surface's name, for messages.
    *
    * @return int
-   *   How many conditionals were compared, subsurfaces included, so a
+   *   How many conditionals were compared, parts included, so a
    *   caller can assert the check reached something.
    */
   protected function assertStaticRefinersAgree(DataSurfaceInterface $surface, ?array $values = NULL, string $label = 'surface'): int {

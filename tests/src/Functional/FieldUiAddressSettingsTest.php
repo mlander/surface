@@ -17,13 +17,13 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * The group C exemplar, taken the whole way. A contrib field type is
  * pointed at a subclass by hook_field_info_alter() and its per instance
- * settings form is generated from a surface, while the storage shape is
+ * settings form is generated from a resource, while the storage shape is
  * unchanged. Every part of that had been checked by calling the field
- * item, the target and the shape object directly. What a browser adds is
+ * item, the storage class and the shape object directly. What a browser adds is
  * the one thing those cannot: Field UI owns the write here. It builds
  * $form['settings'], copies whatever the elements produced onto the
- * field config entity, and saves it — so the values have to have been
- * through the target's prepare() by the time the element validate
+ * field config entity, and saves it, so the values have to have been
+ * through the storage's prepare() by the time the element validate
  * callback returns, or the wrong shape is what gets stored.
  *
  * Two assertions follow from that and are the point of this test: the
@@ -95,7 +95,7 @@ class FieldUiAddressSettingsTest extends BrowserTestBase {
     $this->drupalGet(self::EDIT_PATH);
     $assert_session->statusCodeEquals(200);
 
-    // The surface's keys are Field UI's settings keys: no wrapper of the
+    // The resource's keys are Field UI's settings keys: no wrapper of the
     // module's own, so each one sits where the host stores it.
     $assert_session->fieldExists('settings[available_countries][]');
     $assert_session->fieldExists('settings[langcode_override]');
@@ -132,7 +132,7 @@ class FieldUiAddressSettingsTest extends BrowserTestBase {
     $this->assertInstanceOf(FieldConfig::class, $field);
     $settings = $field->getSettings();
     $this->assertSame(['US' => 'US', 'CA' => 'CA'], $settings['available_countries']);
-    // In the order the surface declares the properties, not the order
+    // In the order the resource declares the properties, not the order
     // the form happened to be filled in: the shape object walks the
     // accepted values, and those are keyed by the definitions.
     $this->assertSame([
@@ -143,7 +143,7 @@ class FieldUiAddressSettingsTest extends BrowserTestBase {
 
     // And the accessors the parent class already had — what the widget
     // and the formatter read settings through — answer from that storage
-    // without knowing a surface was involved.
+    // without knowing a resource was involved.
     $item = $this->container->get('typed_data_manager')->create($field->getItemDefinition());
     $this->assertSame(['US' => 'US', 'CA' => 'CA'], $item->getAvailableCountries());
     $this->assertSame([
@@ -172,8 +172,8 @@ class FieldUiAddressSettingsTest extends BrowserTestBase {
    * An empty override string makes the addressing library's
    * FieldOverrides throw, so "no override" has to be the absence of the
    * row. The form can only say it by submitting the empty choice, and
-   * the target's prepare step is the only place that can turn that into
-   * an absence — which is exactly why the transform lives there rather
+   * the storage's prepare step is the only place that can turn that into
+   * an absence, which is exactly why the transform lives there rather
    * than in a validate handler nothing but the form goes through.
    */
   public function testClearingAnOverrideRemovesIt(): void {

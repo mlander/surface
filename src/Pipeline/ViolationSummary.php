@@ -8,7 +8,7 @@ namespace Drupal\data_surface\Pipeline;
  * The one place a violation set becomes a line of exception text.
  *
  * Three exceptions carry a refusal that is really a list: the keys a
- * payload made up, the violations a target refused, the violations a
+ * payload made up, the violations a storage refused, the violations a
  * plugin's configuration broke. An exception message is a string, and
  * PHP has nowhere to put an object in one, so this is the boundary where
  * message objects are rendered — and the only one. Everywhere upstream
@@ -23,18 +23,18 @@ namespace Drupal\data_surface\Pipeline;
  * same thing, and the full list is still on the exception for a caller
  * that wants it.
  *
- * What it renders is the path and the message, and never the value.
- * Worth stating rather than leaving to be noticed, now that a surface
- * may declare a key secret: given the same reach into logs, a summary
- * that quoted the offending value would write a rejected password into
- * one. The constraint messages in play say what is wrong without
- * quoting it — "This value is too long", not the value — and a
- * constraint that did embed its own value would travel through here
- * intact, which is a reason to read a constraint before putting it on a
- * secret key rather than a reason to render messages differently.
+ * What it renders is the path and the message, and never the value. Worth
+ * stating rather than leaving to be noticed, now that a resource or
+ * structure may declare a key secret: given the same reach into logs, a
+ * summary that quoted the offending value would write a rejected password
+ * into one. The constraint messages in play say what is wrong without
+ * quoting it ("This value is too long", not the value), and a constraint
+ * that did embed its own value would travel through here intact, which is
+ * a reason to read a constraint before putting it on a secret key rather
+ * than a reason to render messages differently.
  *
  * @see \Drupal\data_surface\Pipeline\UnknownKeysException
- * @see \Drupal\data_surface\Pipeline\TargetViolationsException
+ * @see \Drupal\data_surface\Pipeline\StorageViolationsException
  * @see \Drupal\data_surface\DataSurfaceConfigurationTrait
  */
 final class ViolationSummary {
@@ -59,7 +59,7 @@ final class ViolationSummary {
   }
 
   /**
-   * Summarizes violations keyed by surface key.
+   * Summarizes violations keyed by top level key.
    *
    * @param \Drupal\data_surface\Pipeline\ViolationSet $violations
    *   The violations, as the pipeline passes them.

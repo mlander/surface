@@ -19,24 +19,25 @@ use Drupal\Core\Validation\Plugin\Validation\Constraint\ComplexDataConstraint;
 use Drupal\data_surface\Contract\ContractEmitter;
 
 /**
- * What a surface can carry of a bundle's fields, read from typed data.
+ * What a resource can carry of a bundle's fields, read from typed data.
  *
  * One place says it, for the three that need it: the field item deriver
- * (each covered field's item surface), the content entity deriver (which
- * fields a bundle's surface attaches, and which it leaves out and why),
- * and the content entity target (which properties it reads and writes).
+ * (each covered field's item structure), the content entity deriver
+ * (which fields a bundle's resource attaches, and which it leaves out and
+ * why), and the content entity storage (which properties it reads and
+ * writes).
  *
- * A field item's surface is derived from the item's property definitions:
+ * A field item's structure is derived from the item's property definitions:
  * one key per property the field type stores and a caller sets, typed as
  * the casting table can carry it (docs/semantics.md), labelled from the
  * field (one property) or the property (several), required on the main
  * property when the field is, defaulting to the field's literal default.
- * What narrows is carried where the surface has the same word for it:
+ * What narrows is carried where the shape has the same word for it:
  * the Length, Range, Regex and Choice constraints the field type and the
  * property declare, a list field's allowed values, a reference's
  * targets when they can be listed, a text field's formats. What has no
- * surface equivalent stays with the entity and is checked when the
- * target validates it, at prepare.
+ * equivalent in a shape stays with the entity and is checked when the
+ * storage validates it, at prepare.
  *
  * Decision: see docs/decisions.md#derived-then-layered.
  */
@@ -45,7 +46,7 @@ final class FieldItemDerivation {
   use StringTranslationTrait;
 
   /**
-   * The field types derived, each with its keys and their surface types.
+   * The field types derived, each with its keys and their types.
    *
    * A reference's target id is typed when the field is read: an integer
    * for an entity type whose ids are integers, a string otherwise.
@@ -78,7 +79,7 @@ final class FieldItemDerivation {
   /**
    * The constraints carried onto a key, and their options.
    *
-   * By plugin id: the ones a surface says the same way, which the
+   * By plugin id: the ones a shape says the same way, which the
    * narrowing check, the served contract and the form read.
    */
   public const CARRIED = [
@@ -124,7 +125,7 @@ final class FieldItemDerivation {
   }
 
   /**
-   * Lists the bundles a content entity surface is derived for.
+   * Lists the bundles a content entity resource is derived for.
    *
    * @return array<string, array<string, string>>
    *   Bundle labels, keyed by entity type id and bundle, for every
@@ -224,13 +225,13 @@ final class FieldItemDerivation {
   }
 
   /**
-   * Gets the keys a covered field's item surface has, and their types.
+   * Gets the keys a covered field's item structure has, and their types.
    *
    * @param \Drupal\Core\Field\FieldDefinitionInterface $field
    *   The field, of a covered type.
    *
    * @return array<string, string>
-   *   The surface data type of each key, keyed by item property name.
+   *   The Data Surface type of each key, keyed by item property name.
    */
   public function properties(FieldDefinitionInterface $field): array {
     $properties = self::COVERED[$field->getType()] ?? [];
@@ -245,7 +246,7 @@ final class FieldItemDerivation {
   }
 
   /**
-   * Derives a covered field's item surface: one definition per key.
+   * Derives a covered field's item structure: one definition per key.
    *
    * @param \Drupal\Core\Field\FieldDefinitionInterface $field
    *   The field, of a covered type.
@@ -294,7 +295,7 @@ final class FieldItemDerivation {
   }
 
   /**
-   * Says what a field's item surface could not carry.
+   * Says what a field's item structure could not carry.
    *
    * @param \Drupal\Core\Field\FieldDefinitionInterface $field
    *   The field, of a covered type.
@@ -314,7 +315,7 @@ final class FieldItemDerivation {
     }
     [, $left] = $this->itemConstraints($field);
     if ($left !== []) {
-      $notes['constraints'] = $this->t('Checked when the entity is validated, which has no surface equivalent: @constraints.', ['@constraints' => implode(', ', $left)]);
+      $notes['constraints'] = $this->t('Checked when the entity is validated, which has no equivalent in the shape: @constraints.', ['@constraints' => implode(', ', $left)]);
     }
     if ($field->getType() === 'decimal') {
       $notes['decimal'] = $this->t('A decimal travels as a float, so a value with more digits than a float holds loses them; its precision and scale are checked when the entity is validated.');
@@ -348,7 +349,7 @@ final class FieldItemDerivation {
   }
 
   /**
-   * Gets the surface data type of an entity type's id.
+   * Gets the Data Surface type of an entity type's id.
    *
    * @param string $entity_type_id
    *   The entity type id.
@@ -443,7 +444,7 @@ final class FieldItemDerivation {
    * @param string $name
    *   The property name.
    * @param string $type
-   *   The key's surface data type.
+   *   The key's Data Surface type.
    * @param array $literal
    *   The field's first literal default item.
    *
@@ -494,7 +495,7 @@ final class FieldItemDerivation {
    *
    * Asked of an item made from the field's item definition, with no
    * entity around it, which is all a field type's getConstraints() needs
-   * for the ones the surface can say; one that needs more is left to the
+   * for the ones the shape can say; one that needs more is left to the
    * entity's validation.
    *
    * @param \Drupal\Core\Field\FieldDefinitionInterface $field

@@ -14,11 +14,11 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Form\DataSurfaceFormBuilder;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
-use Drupal\data_surface\Form\DataSurfaceSituationForm;
+use Drupal\data_surface\Form\DataSurfaceOperationForm;
 use Drupal\data_surface\Pipeline\DataSurfaceResult;
 use Drupal\data_surface\Pipeline\ViolationSummary;
 use Drupal\data_surface_examples\ExampleCalls;
-use Drupal\data_surface_examples\Surface\RegistrationStep3Surface;
+use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -93,21 +93,21 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Builds step 3 in its configure situation.
+   * Builds step 3 in its configure operation.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface.
+   *   The built resource.
    */
   protected function surface(): DataSurfaceInterface {
-    $surfaces = $this->container->get('data_surface.surfaces');
-    return $surfaces->build(RegistrationStep3Surface::class, $surfaces->situation(RegistrationStep3Surface::class, 'configure'));
+    $resources = $this->container->get('data_surface.resources');
+    return $resources->build(RegistrationStep3Resource::class, $resources->operation(RegistrationStep3Resource::class, 'configure'));
   }
 
   /**
-   * Reads one of the alter's keys off a surface.
+   * Reads one of the alter's keys off a built resource.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface.
+   *   The built resource.
    * @param string $key
    *   The key, as the alter added it.
    *
@@ -156,7 +156,7 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Submits values to step 3's own target.
+   * Submits values to step 3's own storage.
    *
    * @param array $input
    *   The raw input.
@@ -167,10 +167,10 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
    *   The result.
    */
   protected function submit(array $input, bool $dry_run = FALSE): DataSurfaceResult {
-    $surfaces = $this->container->get('data_surface.surfaces');
-    $context = $surfaces->situation(RegistrationStep3Surface::class, 'configure');
-    $surface = $surfaces->build(RegistrationStep3Surface::class, $context);
-    return $this->pipeline()->submit($surface, $input, $surfaces->target(RegistrationStep3Surface::class, $context, $surface), $dry_run);
+    $resources = $this->container->get('data_surface.resources');
+    $context = $resources->operation(RegistrationStep3Resource::class, 'configure');
+    $surface = $resources->build(RegistrationStep3Resource::class, $context);
+    return $this->pipeline()->submit($surface, $input, $resources->storage(RegistrationStep3Resource::class, $context, $surface), $dry_run);
   }
 
   /**
@@ -249,8 +249,8 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
     $request->attributes->set(RouteObjectInterface::ROUTE_NAME, $route_name);
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     $this->container->get('request_stack')->push($request);
-    $form = $this->container->get('form_builder')->getForm(DataSurfaceSituationForm::class);
-    $container = $form[DataSurfaceSituationForm::SURFACE_KEY];
+    $form = $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class);
+    $container = $form[DataSurfaceOperationForm::SURFACE_KEY];
 
     // Built where it is stored: the paths every walk reads are unchanged.
     $details = $container['third_party_settings'][self::MODULE];
@@ -419,13 +419,13 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
     ];
     $state = $this->postStep(3, $surface, ['_triggering_element_name' => 'surface[third_party_settings][' . self::MODULE . '][licence]']);
     $this->assertSame([], array_map('strval', $state->getErrors()));
-    $container = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY];
+    $container = $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY];
     $stewards = $container['third_party_settings'][self::MODULE]['stewards'];
     $response = $this->ajaxResponse($state);
     $this->assertSame([
       $this->wrapperSelector($container['capacity']),
       $this->wrapperSelector($stewards),
-      $this->wrapperSelector($container[DataSurfaceSituationForm::PANEL_KEY]),
+      $this->wrapperSelector($container[DataSurfaceOperationForm::PANEL_KEY]),
     ], $this->ajaxSelectors($response, 'replaceWith'));
     $capacity = $this->ajaxMarkup($response, $this->wrapperSelector($container['capacity']));
     $this->assertStringContainsString('max="400"', $capacity);
@@ -436,12 +436,12 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
 
     $state = $this->postStep(3, ['capacity' => '20'] + $surface, ['_triggering_element_name' => 'surface[capacity]']);
     $this->assertSame([], array_map('strval', $state->getErrors()));
-    $container = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY];
+    $container = $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY];
     $stewards = $container['third_party_settings'][self::MODULE]['stewards'];
     $response = $this->ajaxResponse($state);
     $this->assertSame([
       $this->wrapperSelector($stewards),
-      $this->wrapperSelector($container[DataSurfaceSituationForm::PANEL_KEY]),
+      $this->wrapperSelector($container[DataSurfaceOperationForm::PANEL_KEY]),
     ], $this->ajaxSelectors($response, 'replaceWith'));
     $this->assertStringContainsString('At least 1 steward for 20 attendees.', $this->ajaxMarkup($response, $this->wrapperSelector($stewards)));
     // The licence triggers a rebuild and is no target, yet has a wrapper
@@ -536,13 +536,13 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
     $state = $this->postStep(3, $surface, $trigger);
     // No Form API error, or Form API would have skipped the rebuild.
     $this->assertSame([], array_map('strval', $state->getErrors()));
-    $container = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY];
+    $container = $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY];
     $licence = $container['third_party_settings'][self::MODULE]['licence'];
     $response = $this->ajaxResponse($state);
     $this->assertSame([
       $this->wrapperSelector($container['capacity']),
       $this->wrapperSelector($container['third_party_settings'][self::MODULE]['stewards']),
-      $this->wrapperSelector($container[DataSurfaceSituationForm::PANEL_KEY]),
+      $this->wrapperSelector($container[DataSurfaceOperationForm::PANEL_KEY]),
       $this->wrapperSelector($licence),
     ], $this->ajaxSelectors($response, 'replaceWith'));
 
@@ -561,7 +561,7 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
     $this->assertSame([], $this->container->get('messenger')->all());
     $said = 0;
     foreach ($response->getCommands() as $command) {
-      if (($command['selector'] ?? NULL) !== $this->wrapperSelector($container[DataSurfaceSituationForm::PANEL_KEY])) {
+      if (($command['selector'] ?? NULL) !== $this->wrapperSelector($container[DataSurfaceOperationForm::PANEL_KEY])) {
         $said += substr_count((string) ($command['data'] ?? ''), $message);
         $this->assertStringNotContainsString('is not in the right format', (string) ($command['data'] ?? ''));
       }
@@ -569,14 +569,14 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
     $this->assertSame(1, $said);
     // The panel explains the licence by the same sentence, never by its
     // pattern.
-    $panel = $this->ajaxMarkup($response, $this->wrapperSelector($container[DataSurfaceSituationForm::PANEL_KEY]));
+    $panel = $this->ajaxMarkup($response, $this->wrapperSelector($container[DataSurfaceOperationForm::PANEL_KEY]));
     $this->assertMatchesRegularExpression('#data-surface-key="' . preg_quote(self::LICENCE, '#') . '">(?:(?!</tr>).)*<td>' . preg_quote($message, '#') . '</td>#s', $panel);
 
     // Fixed, and sent with the marker the replaced licence carries.
     $surface['third_party_settings'][self::MODULE]['licence'] = '2048';
     $state = $this->postStep(3, $surface, $trigger + [DataSurfaceFormBuilderInterface::INVALID_INPUT => '1']);
     $this->assertSame([], array_map('strval', $state->getErrors()));
-    $container = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY];
+    $container = $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY];
     $licence = $container['third_party_settings'][self::MODULE]['licence'];
     $response = $this->ajaxResponse($state);
     $this->assertContains($this->wrapperSelector($licence), $this->ajaxSelectors($response, 'replaceWith'));
@@ -587,14 +587,14 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
 
     // Valid and unmarked: the licence is left where it is.
     $state = $this->postStep(3, $surface, $trigger);
-    $container = $state->getCompleteForm()[DataSurfaceSituationForm::SURFACE_KEY];
+    $container = $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY];
     $this->assertNotContains($this->wrapperSelector($container['third_party_settings'][self::MODULE]['licence']), $this->ajaxSelectors($this->ajaxResponse($state), 'replaceWith'));
   }
 
   /**
-   * Tests a full submission refuses both, each in the surface's words.
+   * Tests a full submission refuses both, each in the resource's words.
    */
-  public function testFullSubmissionRefusesBothInTheSurfaceWords(): void {
+  public function testFullSubmissionRefusesBothInTheResourceWords(): void {
     $this->actAsAnonymousAdministrator();
     $surface = [
       'title' => 'Spring meetup',

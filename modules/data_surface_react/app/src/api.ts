@@ -40,9 +40,9 @@ export function pageOf(settings: Settings, created: Created): string {
 }
 
 /**
- * The four endpoints of one situation.
+ * The four endpoints of one operation.
  *
- * The situation's parameters travel in the query string of every call
+ * The operation's parameters travel in the query string of every call
  * and in the body of the POSTs; the POSTs carry the session's CSRF token,
  * fetched once from /session/token. A submit also carries the stored
  * values' fingerprint, when it is given one.

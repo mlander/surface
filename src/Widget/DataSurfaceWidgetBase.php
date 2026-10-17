@@ -29,9 +29,9 @@ abstract class DataSurfaceWidgetBase extends PluginBase implements DataSurfaceWi
    * the options: the select comes up on its empty option, and the value
    * travels here. Read back here, by every widget, because which widget
    * reads an element back is not the same question as which widget
-   * built it. Extraction resolves widgets from the surface as
+   * built it. Extraction resolves widgets from the data surface as
    * advertised, since it has no values yet to refine with, while the
-   * form was built from the surface refined against what was stored: a
+   * form was built from the data surface refined against what was stored: a
    * key that is a plain string until a refiner narrows it into a choice
    * is built by the options widget and read back by the string one. So
    * the stash belongs to the element, not to a widget, and reading it
@@ -107,7 +107,7 @@ abstract class DataSurfaceWidgetBase extends PluginBase implements DataSurfaceWi
    * a block's settings are the common case, built with
    * SubformState::createForSubform() — would therefore have every value
    * looked up one level too deep, come back NULL, and be reported by
-   * the surface as "not configured", which for a required key is a
+   * the data surface as "not configured", which for a required key is a
    * spurious violation and for an optional one is a stored value
    * replaced by nothing. So an absolute path is read against the
    * complete form state it is absolute in.

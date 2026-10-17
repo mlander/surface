@@ -17,10 +17,10 @@ reasoning, is in `ADOPTION.md` at the module root.
 | --- | --- | --- |
 | [A](#group-a-the-plain-plugin-triple) | `ConfigurableInterface` plus the `PluginFormInterface` triple | **Built.** Three families ported. |
 | [B](#group-b-settings-protocols-with-no-hook) | A settings form the host harvests itself, with no validate or submit hook | **Built.** Formatters ported. |
-| [C](#group-c-one-plugin-two-surfaces) | Field types: two surfaces on one plugin | **Half built.** Instance settings ported; storage settings described and written by the field tools, with no Field UI host. |
+| [C](#group-c-one-plugin-two-shapes) | Field types: two shapes on one plugin | **Half built.** Instance settings ported; storage settings described and written by the field tools, with no Field UI host. |
 | [D](#group-d-multiple-named-forms) | A form class resolved per operation | **Built.** One generic form class. |
 | [E](#group-e-config-entities) | Config entity forms | **Built for one.** Node types ported. |
-| [F](#group-f-simple-config-forms) | `ConfigFormBase` with `#config_target` | **Not built.** The engine target was removed for want of an adopter. |
+| [F](#group-f-simple-config-forms) | `ConfigFormBase` with `#config_target` | **Not built.** The engine storage class was removed for want of an adopter. |
 | [G](#group-g-field-widgets-collecting-content) | A widget as the form bridge for a field item's values | **Designed, not built.** |
 | [H](#group-h-different-shape-later) | Families whose shape does not fit yet | Out of scope. |
 
@@ -28,21 +28,23 @@ reasoning, is in `ADOPTION.md` at the module root.
 
 Every built group adopts the same way, in two files:
 
-1. **The surface**, a class in the adopting module's `src/Surface/`
-   carrying `#[Surface]`: its keys in `defineInputs()`, one
+1. **The resource or structure**, a class in the adopting module's
+   `src/Resource/` or `src/Structure/`: its keys in `defineInputs()`, one
    `#[RefinesInput]` method per key whose allowed values depend on
-   another, and, when it is asked for on its own rather than through a
-   plugin, `#[Situation]` static methods, a target and an access class
-   on the attribute. See [Declaring a surface](declaring-a-surface.md).
-2. **The host**, which keeps doing what only it does — rendering,
-   evaluating, executing — and names the surface with
-   `#[UsesSurface(SomeSurface::class)]` on the plugin class, extending
+   another. A class a plugin configures carries `#[Structure]`, because
+   the plugin's host supplies the operation and the storage. A class
+   asked for on its own carries `#[Resource]`, names its storage and an
+   access class on the attribute, and declares `#[Operation]` static
+   methods. See [Declaring a resource](declaring-a-resource.md).
+2. **The host**, which keeps doing what only it does (rendering,
+   evaluating, executing) and names the structure with
+   `#[UsesStructure(SomeStructure::class)]` on the plugin class, extending
    the group's base class or using its trait. The host supplies the
-   context and the target, because only it holds the instance.
+   context and the storage, because only it holds the instance.
 
 ```php
 #[Condition(id: 'data_surface_test_condition', label: new TranslatableMarkup('Data surface test condition'))]
-#[UsesSurface(TestConditionSurface::class)]
+#[UsesStructure(TestConditionStructure::class)]
 final class DataSurfaceTestCondition extends DataSurfaceConditionBase {
 
   public function evaluate() { /* ... */ }
@@ -53,11 +55,11 @@ final class DataSurfaceTestCondition extends DataSurfaceConditionBase {
 ```
 
 A config entity or a simple config object has no plugin host. Its
-surface names its own target and access class and declares the
-situations it is asked in, and a route serves it through the generic
-situation form (Group E). A class you do not own is adopted by
-subclassing it, naming the surface on the subclass, and swapping the
-subclass in (Group C).
+resource names its own storage and access class and declares the
+operations it is asked in, and a route serves it through the generic
+operation form (Group E). A class you do not own is adopted by
+subclassing it, naming the resource or structure on the subclass, and
+swapping the subclass in (Group C).
 
 ## Group A: the plain plugin triple
 
@@ -69,21 +71,21 @@ CKEditor 5 plugins, and blocks.
 
 **Built.** `DataSurfaceConfigurationTrait` for storage and
 `DataSurfacePluginFormTrait` for the triple, both over
-`PluginConfigurationTarget`, with the three stages one level down in
+`PluginConfigurationStorage`, with the three stages one level down in
 `DataSurfaceHostFormTrait` so a host that renames them reaches the same
 bodies. Blocks, conditions and actions are ported, as
 `DataSurfaceBlockBase`, `DataSurfaceConditionBase` and
 `DataSurfaceActionBase`. The evidence for the DRY claim is the count of
 translation methods each needed: four for the block, five one-line ones
 for the condition, none at all for the action. The count tracks how much
-the host insists on doing, not what the surface layer costs.
+the host insists on doing, not what the data surface layer costs.
 
 The one cross-cutting trap is that merge semantics are not uniform:
 `ConfigurableTrait` deep-merges defaults while conditions and CKEditor 5
 shallow-merge. The pipeline defines one rule and the adapters set the
 configuration property from the accepted values rather than calling the
-host's `setConfiguration()`, so the host's merge never runs on surface
-keys. See [Generated forms](forms.md) for the rest.
+host's `setConfiguration()`, so the host's merge never runs on the
+structure's keys. See [Generated forms](forms.md) for the rest.
 
 ## Group B: settings protocols with no hook
 
@@ -92,55 +94,55 @@ itself. Field formatters and field widgets; text filters and text editors
 are close relatives with their own defaults spellings.
 
 **Built.** `DataSurfaceFormatterTrait` runs the whole pipeline in an
-`#element_validate` on the surface container, plus a static defaults shim
-reading the surface the class names. `DataSurfaceFormatterBase` is that
-trait and one line.
+`#element_validate` on the container the data surface is built into, plus
+a static defaults shim reading the structure the class names.
+`DataSurfaceFormatterBase` is that trait and one line.
 
 Two host realities it had to absorb. `defaultSettings()` is static and
-cannot consult an instance surface, so it is answered from the
-`#[UsesSurface]` attribute, which is readable off the class, through
-`SurfacesInterface::defaults()`: the surface's own shape alone. And the
-host prunes what it saves
-against that same static array — `EntityDisplayBase::setComponent()`
-intersects through `prepareConfiguration()` — so keys another module
-mounts onto the surface at build time have to appear in it too, which is
-why the shim always declares `third_party_settings`.
+cannot consult an instance's data surface, so it is answered from the
+`#[UsesStructure]` attribute, which is readable off the class, through
+`ResourcesInterface::defaults()`: the structure's own shape alone. And
+the host prunes what it saves against that same static array
+(`EntityDisplayBase::setComponent()` intersects through
+`prepareConfiguration()`), so keys another module mounts onto the
+structure at build time have to appear in it too, which is why the shim
+always declares `third_party_settings`.
 
 One known gap: the static array declares `third_party_settings` as an
 empty array, and that empty array shadows a default declared on a
 definition another module mounts at build time. The default is still on
-the surface and every non-form consumer sees it; only the form's first
+the data surface and every non-form consumer sees it; only the form's first
 render of an untouched formatter misses it.
 
-## Group C: one plugin, two surfaces
+## Group C: one plugin, two shapes
 
 Field types. `FieldItemBase` has storage settings and instance settings,
 with different signatures, and
 `storageSettingsToConfigData()` / `fieldSettingsToConfigData()` is an
-existing prepare step the target must call. `$has_data` is a refinement
+existing prepare step the storage must call. `$has_data` is a refinement
 input: lock what cannot change once data exists.
 
 This is the family the core issue calls out as "described by nothing more
 than the form".
 
-**Half built.** `DataSurfaceFieldTypeTrait` plus `FieldSettingsTarget`
+**Half built.** `DataSurfaceFieldTypeTrait` plus `FieldSettingsStorage`
 covers instance settings, and `data_surface_address` is the worked
-example — the address field type's settings declared as a surface
-class, `AddressFieldSettingsSurface`, which the swapped item class builds
-for Field UI and which fills the field instance surface's settings slot
-for the tool bridge, with the address module unmodified.
+example: the address field type's settings declared as a resource,
+`AddressFieldSettingsResource`, which the swapped item class builds for
+Field UI and which fills the field instance resource's settings slot for
+the tool bridge, with the address module unmodified.
 
 Storage settings are described but have no Field UI host.
-`FieldStorageSurface` in `data_surface_tool` fills its `settings` slot by
-field type, from a `#[SurfaceVariant]` or, for every other field type
+`FieldStorageResource` in `data_surface_tool` fills its `settings` slot by
+field type, from a `#[Variant]` or, for every other field type
 the UI offers, from `field.storage_settings.<type>` through
 `FieldStorageSettingsSchemaVariants`, so the field tools set and edit
 them: a string's `max_length` is `storage.settings.max_length` on
 `data_surface:field.instance:add`. `$has_data` is read where it bites:
-the storage's edit situation keeps cardinality from shrinking, and
-`FieldStorageTarget` refuses at prepare a settings change that alters
-the columns of a field with data. What is untouched is the field type's own
-`storageSettingsForm()`; address has no storage settings.
+`FieldStorageResource`'s edit operation keeps cardinality from
+shrinking, and `FieldStorageStorage` refuses at prepare a settings change
+that alters the columns of a field with data. What is untouched is the
+field type's own `storageSettingsForm()`; address has no storage settings.
 
 Address was chosen because its settings form has no dependent settings at
 all, so everything a caller can get wrong is meaning and shape — which is
@@ -156,13 +158,13 @@ and silently overrules another.
 types (`configure`, `state`, `transition`), icon extractors, media
 sources.
 
-**Built.** The plugin names one surface with `#[UsesSurface]`, and one
-generic `DataSurfacePluginForm` any plugin can list under any operation
-builds it in a context whose operation is the form's. No per-plugin form
-classes at all. The operation is a constructor argument, so an
-operation other than `configure` names a service id in the `forms` key
-rather than the bare class, which is how the class resolver passes the
-operation along.
+**Built.** The plugin names one structure with `#[UsesStructure]`, and
+one generic `DataSurfacePluginForm` any plugin can list under any
+operation builds it in a context whose id is the form's operation. No
+per-plugin form classes at all. The operation is a constructor argument,
+so an operation other than `configure` names a service id in the `forms`
+key rather than the bare class, which is how the class resolver passes
+the operation along.
 
 ## Group E: config entities
 
@@ -170,24 +172,24 @@ Today `EntityForm::copyFormValuesToEntity()` sets every form value on the
 entity untyped, config entities have no `validate()`, and
 `Config::save()` casts but never validates.
 
-**Built for one.** `ConfigEntityTarget` maps surface keys to entity
-properties or setter methods, applies mounted third-party settings
+**Built for one.** `ConfigEntityStorage` maps the resource's keys to
+entity properties or setter methods, applies mounted third-party settings
 through `setThirdPartySetting()`, runs typed-config validation on the
 unsaved entity's export array, and commits with `save()`.
-`data_surface_demo_node_type` is the exemplar: one surface,
-`NodeTypeSurface`, with an add and an edit situation, the machine name
-locked on edit because the edit situation knows it, and a target
-writing the node type entity plus its base field overrides; two routes
-serve it through `DataSurfaceSituationForm`, with no form class.
+`data_surface_demo_node_type` is the exemplar: one resource,
+`NodeTypeResource`, with an add and an edit operation, the machine name
+locked on edit because the edit operation knows it, and storage writing
+the node type entity plus its base field overrides; two routes
+serve it through `DataSurfaceOperationForm`, with no form class.
 
 Two things that port settled, and both generalize. Ordering is part of a
-composite's contract — a bundle-scoped target must come after the target
-that creates the bundle, and must resolve its field definitions lazily,
-because on add the bundle does not exist while values are prepared. And a
-surface key can be the identity of the thing a sibling target writes
-into, so when the bundle id is a surface value the target cannot write
-from stored state alone and builds what it writes from the accepted
-values in `prepare()`.
+composite's contract: a bundle-scoped storage class must come after the
+one that creates the bundle, and must resolve its field definitions
+lazily, because on add the bundle does not exist while values are
+prepared. And a resource's key can be the identity of the thing a sibling
+storage class writes into, so when the bundle id is a submitted value the
+storage cannot write from stored state alone and builds what it writes
+from the accepted values in `prepare()`.
 
 Next candidates: bundle entities generally, then image styles and text
 formats, which are collections of Group A plugins and prove nesting.
@@ -199,15 +201,15 @@ defaults from config, `toConfig` and `fromConfig` transforms,
 typed-config validation, violations mapped to elements. What it lacks is
 a form that is *generated* and a contract readable outside PHP.
 
-**Not built.** An engine `ConfigObjectTarget`, mirroring `ConfigTarget`
-one for one, was built and then removed, because nothing used it. A
-surface over a config object today names a target of its own, a
-`Surface\SurfaceTargetInterface` class that loads, prepares and commits
-the object; the engine target can be restored when an adopter appears,
-so that a form already carrying `#config_target` metadata and a surface
-describe the same thing. Note that
+**Not built.** An engine storage class for config objects, mirroring
+core's `ConfigTarget` one for one, was built and then removed, because
+nothing used it. A resource over a config object today names storage of
+its own, a `Resource\ResourceStorageInterface` class that loads, prepares
+and commits the object; the engine class can be restored when an adopter
+appears, so that a form already carrying `#config_target` metadata and a
+resource describe the same thing. Note that
 `ConfigFormBase::copyFormValuesToConfig()` is private static, so a
-surface-driven config form cannot extend it; it replaces it.
+generated config form cannot extend it; it replaces it.
 
 ## Group G: field widgets collecting content
 
@@ -218,19 +220,19 @@ declares `propertyDefinitions()` and constraints. What is missing is the
 refinement map and a bridge that consumes it.
 
 **Designed, not built.** The design is one generic field widget
-applicable to any field type whose item exposes a surface, with
+applicable to any field type whose item exposes a structure, with
 refinement AJAX scoped per delta, `WidgetBase` keeping the delta loop,
-and a `FieldItemTarget` whose commit is a no-op inside an entity form.
+and a `FieldItemStorage` whose commit is a no-op inside an entity form.
 
 The reason to do it is the second consumer, not the first. JSON:API and
 REST already run entity validation, but constraints that depend on
 sibling values are today either absent or hand-written validators. With a
-field item surface, the same refinement that narrows the form narrows the
+field item structure, the same refinement that narrows the form narrows the
 payload, so a decoupled client gets the same rejection with the same
 message as the form.
 
 Scope boundary: refinement within one item. Cross-delta and cross-field
-rules need an entity-level surface, which is a later design.
+rules need an entity-level resource, which is a later design.
 
 ## Group H: different shape, later
 
@@ -238,7 +240,7 @@ rules need an entity-level surface, which is a later design.
 | --- | --- |
 | Views plugins | `defineOptions()` is a definition language of its own; state is `$this->options`, forms are by reference. Worth ingesting eventually, but not an adapter job. |
 | Menu link forms | Write to the menu tree table, not config, and have their own `extractFormValues()`. |
-| Image toolkits | Write to a `system.image.<toolkit>` config object with no plugin configuration. A config object target fits once Group F exists. |
+| Image toolkits | Write to a `system.image.<toolkit>` config object with no plugin configuration. A config object storage class fits once Group F exists. |
 | Migrate | No configuration forms at all. |
 | Layout Builder inline blocks | Configuration holds a serialized content entity. |
 
@@ -262,12 +264,12 @@ prepare and commit is the callers that never render anything.
 ### The Tool API A/B
 
 `data_surface_tool` is the recorded experiment. Its field tools are
-generated from the field instance surface's situations —
-`data_surface:field.instance:add`, `:reuse` and `:edit` — and
+generated from the field instance resource's operations
+(`data_surface:field.instance:add`, `:reuse` and `:edit`), and
 `data_surface:field.instance:reuse` answers the question Tool Belt's
 `field_add` answers, adding an existing storage's field to a bundle; the
 difference is the answer to "what may the settings be?". A field type
-with a settings surface answers from it; every other field type offered
+with its own settings class answers from it; every other field type offered
 in the UI answers from its config schema, through derived variants, so
 the tools add any field the UI can.
 
@@ -275,13 +277,13 @@ Tool Belt refines `settings` from the field type's config schema, which
 for the address field type yields three types, a nested `override` key
 with nothing to put a property name in, a deprecated `fields` key offered
 as an ordinary one, and no vocabulary, labels or defaults anywhere below
-the top level. The surface-derived version gives named override
+the top level. The resource-derived version gives named override
 properties with `enum` and labels, a live country `enum`, a language
 `enum`, and no deprecated key at all.
 
 Both JSON Schema documents are printed side by side in
 `modules/data_surface_tool/COMPARISON.md`, generated by the comparison
-test rather than written by hand. The same surface that generates the
+test rather than written by hand. The same resource that generates the
 Field UI form generates the tool schema, with no second description.
 
 The Tool API gaps the bridge found — and did not work around — are listed
@@ -293,18 +295,18 @@ The field tools compare two descriptions of settings the tool's author
 knew about. `data_surface_demo_node_type_tool` compares what happens to
 settings nobody told the tool about. `data_surface_demo_extras` adds two
 review settings to every content type, once through an alter of the
-content type surface and once through an ordinary form alter on core's
+content type resource and once through an ordinary form alter on core's
 content type form. `data_surface:node.type:add`, a tool generated from
-the content type surface's add situation that names no key of a content
-type at all, advertises both — the deadline as the amount and
-unit a person says, the tags with their pattern — and holds every caller
-to them. The classic side is given the most a schema can say: the
+the content type resource's add operation that names no key of a content
+type at all, advertises both (the deadline as the amount and unit a
+person says, the tags with their pattern) and holds every caller to
+them. The classic side is given the most a schema can say: the
 deadline's config schema is an integer with its full Range, 3600 to
 2592000. That schema is accurate but does not say the integer is
 seconds, so an agent reading it alone has to infer the unit. A capable
 one will read the bounds as an hour and thirty days and guess right; the
 claim is not that it cannot, but that its guess is unverified inference,
-found right or wrong only after the value is stored, where the surface's
+found right or wrong only after the value is stored, where the resource's
 caller names the unit because it is part of the contract. Tool Belt's
 `entity_bundle_add` does not advertise the settings at all; an agent
 that already knew the key can still send them through its open
@@ -312,8 +314,8 @@ that already knew the key can still send them through its open
 Business days are the case no reading of the schema answers: both sides
 convert ten of them to twelve calendar days, 1036800 seconds, by one
 rule, while a schema-only agent's best inference, 864000, is in range,
-accepted by the classic tool, and wrong. The surface stores both through
-a storage shape the extras module hands the surface, and refuses
+accepted by the classic tool, and wrong. The resource stores both
+through a storage shape the extras module hands it, and refuses
 forty-five days on the amount, in the caller's own units.
 
 The schemas and a table of outcomes, each cell observed rather than
@@ -334,5 +336,5 @@ it by `NodeTypeToolComparisonTest`.
 5. **Field widgets collecting content**, with address-style narrowing as
    the demo, because it is the first family where the definitions already
    exist in core and the same refinement reaches JSON:API.
-6. **Config actions**, once targets exist, because it turns validation
-   from post-save rollback into a gate.
+6. **Config actions**, once a config object storage class exists,
+   because it turns validation from post-save rollback into a gate.

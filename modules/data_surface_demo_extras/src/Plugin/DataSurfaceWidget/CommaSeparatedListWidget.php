@@ -17,7 +17,7 @@ use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
  * The stock widgets render a list only as a multiple select, so a list
  * of free strings has no element, and a definition no widget claims is
  * refused when the form is built. This module mounts one on the content
- * type surface, so it brings the element with it, and claims only the
+ * type resource, so it brings the element with it, and claims only the
  * lists that ask for it through the setting below: a third party module
  * deciding how every list of strings on the site is drawn would be
  * overreach.
@@ -25,7 +25,7 @@ use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
  * Reading the text back is a change of notation and nothing else. A
  * comma and the spaces around it separate items; nothing is lowercased,
  * nothing is dropped as a duplicate, because that would be this widget
- * deciding what a tag means. The surface says what a tag may be and the
+ * deciding what a tag means. The resource says what a tag may be and the
  * pipeline holds every caller, this form included, to it.
  */
 #[DataSurfaceWidget(

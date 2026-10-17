@@ -10,13 +10,13 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\ViolationSet;
 
 /**
- * Generates, extracts, and validates Form API elements from a surface.
+ * Generates, extracts, and validates Form API elements from a data surface.
  *
- * The refinement-aware layer: the surface is refined against current
- * values before elements build, and every definition that others refine
- * against is wired to rebuild the surface container via AJAX — the
- * rendered form and the refined definitions stay in lockstep by
- * construction.
+ * The refinement-aware layer: the data surface is refined against
+ * current values before elements build, and every definition that others
+ * refine against is wired to rebuild the data surface container via
+ * AJAX, so the rendered form and the refined definitions stay in
+ * lockstep by construction.
  *
  * The form is not a value path of its own. Widgets collect the raw
  * submitted tree and the pipeline's accept() does the rest — coercion,
@@ -127,12 +127,12 @@ interface DataSurfaceFormBuilderInterface {
   public const PLACED_AFTER_KEY = '#data_surface_after';
 
   /**
-   * Builds a container of form elements for a surface.
+   * Builds a container of form elements for a data surface.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface.
+   *   The data surface.
    * @param array $values
-   *   Current values keyed by surface key (stored values overlaid with
+   *   Current values keyed by data surface key (stored values overlaid with
    *   any user input so far).
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state of the containing form.
@@ -141,7 +141,7 @@ interface DataSurfaceFormBuilderInterface {
    *
    * @return array
    *   A container render array with one widget-built element per
-   *   definition, keyed by surface key.
+   *   definition, keyed by data surface key.
    */
   public function buildSurfaceForm(DataSurfaceInterface $surface, array $values, FormStateInterface $form_state, string $wrapper_key = 'data-surface'): array;
 
@@ -163,15 +163,15 @@ interface DataSurfaceFormBuilderInterface {
    * submit and at no other time.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface, as advertised.
+   *   The data surface, as advertised.
    * @param array $stored
-   *   What the host stores for the surface's keys.
+   *   What the host stores for the data surface's keys.
    * @param array $input
    *   The in-progress input an AJAX refinement rebuild collected, keyed
-   *   by surface key.
+   *   by data surface key.
    *
    * @return string[]
-   *   The surface keys whose input is to be dropped, and, inside an
+   *   The data surface keys whose input is to be dropped, and, inside an
    *   attached child or a chosen slot variant, the dotted paths of the
    *   child's own keys its own refiners orphaned. A chain settles in one
    *   call: discarding a dependency's input invalidates whatever refines
@@ -197,30 +197,30 @@ interface DataSurfaceFormBuilderInterface {
    * discard rule reaches, in the same pass.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface, as advertised.
+   *   The data surface, as advertised.
    * @param array $stored
-   *   What the host stores for the surface's keys.
+   *   What the host stores for the data surface's keys.
    * @param array $input
-   *   The in-progress input, keyed by surface key, before anything is
+   *   The in-progress input, keyed by data surface key, before anything is
    *   discarded from it.
    *
    * @return array
-   *   The values, keyed by surface key, with STANDING_KEY when anything
+   *   The values, keyed by data surface key, with STANDING_KEY when anything
    *   was orphaned.
    */
   public function refinementOverlay(DataSurfaceInterface $surface, array $stored, array $input): array;
 
   /**
-   * Merges a surface container into a host's own form element.
+   * Merges a data surface container into a host's own form element.
    *
-   * For hosts whose protocol hands over a form fragment the surface has
-   * to live inside rather than beside — a block's settings, a
-   * formatter's settings — so the surface's keys land at the value paths
-   * the host stores them at.
+   * For hosts whose protocol hands over a form fragment the data surface
+   * has to live inside rather than beside (a block's settings, a
+   * formatter's settings), so the data surface's keys land at the value
+   * paths the host stores them at.
    *
-   * The rule: the surface fills in what the host left unsaid and
+   * The rule: the data surface fills in what the host left unsaid and
    * overwrites nothing the host said itself. #type, #tree, #attributes
-   * and #process stay the host's where the host declares them; the
+   * and #process stay the host's where the host declares them; the data
    * surface's children and its container marker are added. When the host
    * already names its element, that id becomes the AJAX wrapper.
    *
@@ -230,43 +230,44 @@ interface DataSurfaceFormBuilderInterface {
    *   The host's form fragment.
    *
    * @return array
-   *   The host's fragment with the surface merged into it.
+   *   The host's fragment with the data surface merged into it.
    */
   public function mergeSurfaceContainer(array $container, array $form): array;
 
   /**
-   * Extracts surface values from a built container via the widgets.
+   * Extracts data surface values from a built container via the widgets.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface.
+   *   The data surface.
    * @param array $container
    *   The container built by buildSurfaceForm() (or an ancestor).
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state carrying submitted values.
    * @param array $current
-   *   What the surface's keys already hold, in surface shape, read from
-   *   wherever the host stores them. Not an optimization: a form is
-   *   always a partial statement about a surface, because a key whose
-   *   element was never rendered — access denied, removed by an alter,
-   *   or below a container the host did not build — says nothing about
-   *   its value, and without the stored values to fall back on accept()
-   *   would replace every one of them with its declared default. A host
-   *   that leaves this out is telling the surface that storage is empty.
+   *   What the data surface's keys already hold, in input shape, read
+   *   from wherever the host stores them. Not an optimization: a form is
+   *   always a partial statement about a data surface, because a key
+   *   whose element was never rendered (access denied, removed by an
+   *   alter, or below a container the host did not build) says nothing
+   *   about its value, and without the stored values to fall back on
+   *   accept() would replace every one of them with its declared default.
+   *   A host that leaves this out is telling the data surface that
+   *   storage is empty.
    *
    * @return array
-   *   The accepted values keyed by surface key, in each definition's
+   *   The accepted values keyed by data surface key, in each definition's
    *   native type.
    */
   public function extractSurfaceValues(DataSurfaceInterface $surface, array $container, FormStateInterface $form_state, array $current = []): array;
 
   /**
-   * Validates extracted values against the refined surface.
+   * Validates extracted values against the refined data surface.
    *
    * Violations are flagged on the elements they belong to before this
    * answers, so a host with nothing else to do may ignore the return.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface.
+   *   The data surface.
    * @param array $values
    *   The extracted values.
    * @param array $container
@@ -274,7 +275,7 @@ interface DataSurfaceFormBuilderInterface {
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state to flag violations on.
    * @param array $current
-   *   The stored values, in surface shape — the same ones handed to
+   *   The stored values, in input shape: the same ones handed to
    *   extractSurfaceValues(). Only what a key already holds can be
    *   stale, so a host that does not pass them gets a stale value
    *   refused as an ordinary violation, which is the bug this exists
@@ -287,7 +288,7 @@ interface DataSurfaceFormBuilderInterface {
   public function validateSurfaceForm(DataSurfaceInterface $surface, array $values, array $container, FormStateInterface $form_state, array $current = []): bool;
 
   /**
-   * Attaches surface violations to the exact elements they belong to.
+   * Attaches data surface violations to the exact elements they belong to.
    *
    * A violation's message reaches setError() as the object the
    * constraint built, never as text: Form API takes a Stringable and
@@ -321,17 +322,17 @@ interface DataSurfaceFormBuilderInterface {
   /**
    * Places an element in the container that every refinement replaces.
    *
-   * For something shown inside the surface that describes it as the
-   * answers stand — the situation form's panel — and so has to follow
+   * For something shown inside the data surface that describes it as the
+   * answers stand (the operation form's panel), and so has to follow
    * every rebuild, whichever key triggered it. It gets a wrapper of its
    * own, like a refinement target's, and refreshSurface() replaces it
-   * beside the dependents. It is not a surface key: extraction reads the
-   * surface's own keys only.
+   * beside the dependents. It is not a data surface key: extraction reads
+   * the data surface's own keys only.
    *
    * @param array $container
    *   The container built by buildSurfaceForm().
    * @param string $key
-   *   The key to place the element at; never a surface key.
+   *   The key to place the element at; never a data surface key.
    * @param array $element
    *   The element.
    *
@@ -371,22 +372,22 @@ interface DataSurfaceFormBuilderInterface {
    *   The form state of the rebuild.
    *
    * @return \Drupal\Core\Ajax\AjaxResponse|array
-   *   The commands, or, as the fallback, the surface container to
+   *   The commands, or, as the fallback, the data surface container to
    *   replace (the whole form when no container is found).
    */
   public static function refreshSurface(array &$form, FormStateInterface $form_state): AjaxResponse|array;
 
   /**
-   * Locates the surface container inside whatever a host handed over.
+   * Locates the data surface container inside whatever a host handed over.
    *
    * Host protocols are inconsistent about what reaches validate and
    * submit callbacks; the wrapper marker makes the container findable
    * either way, at any nesting depth.
    *
    * Missing is fatal rather than fallible. A fallback to the whole form
-   * reads as working — extraction finds none of the surface's keys,
+   * reads as working (extraction finds none of the data surface's keys,
    * accept() is handed nothing, and every stored value quietly becomes
-   * its default — so the one case where something is genuinely wrong is
+   * its default), so the one case where something is genuinely wrong is
    * the one case that must not be survivable.
    *
    * @param array $form
@@ -406,11 +407,11 @@ interface DataSurfaceFormBuilderInterface {
    * Attached to the container by buildSurfaceForm(). Every #ajax inside
    * the container, at any depth, is limited to that element's own value
    * path, so touching a dependency judges that one answer and nothing
-   * else — not the host form around the surface, and not the dependent
-   * the change has just orphaned. And every element the AJAX callback
-   * may replace gets its wrapper, with an id derived from the
-   * container's, which is only final once a host has merged the
-   * container into its own element.
+   * else: not the host form around the data surface, and not the dependent
+   * the change has just orphaned. And every element the AJAX callback may
+   * replace gets its wrapper, with an id derived from the container's,
+   * which is only final once a host has merged the container into its own
+   * element.
    *
    * It has to be a #process callback on the container rather than a
    * property written at build time, because a container does not know
@@ -445,7 +446,7 @@ interface DataSurfaceFormBuilderInterface {
    * form: every element has its #parents, so the fieldset's inputs post
    * where its values are stored, and every walk by path below the
    * container (extraction, errors, the AJAX callback's) has found the
-   * fieldset where the surface put it.
+   * fieldset where the data surface put it.
    *
    * @param array $element
    *   The container element.

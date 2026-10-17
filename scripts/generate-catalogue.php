@@ -3,17 +3,18 @@
 
 /**
  * @file
- * Regenerates docs/catalogue.md, the catalogue of discovered surfaces.
+ * Regenerates docs/catalogue.md, listing every resource and structure.
  *
- * The catalogue lists every surface the modules in this repository
- * declare, with its identity, situations, alters and variants, as
- * SurfaceCatalogue::describe() reads them. Discovery needs a booted
- * kernel with those modules enabled, and the one supported way to boot
- * one is a kernel test, so — exactly like scripts/generate-comparison.php
- * — this script asks PHPUnit to run SurfaceCatalogueTest's drift test
- * with writing turned on. What the test writes is rendered by the
- * renderer beside this script, and what it asserts on every ordinary run
- * is that the checked-in file still matches that renderer.
+ * The catalogue lists every resource and structure the modules in this
+ * repository declare, with its kind, identity, storage, operations,
+ * alters and variants, as ResourceCatalogue::describe() reads them.
+ * Discovery needs a booted kernel with those modules enabled, and the one
+ * supported way to boot one is a kernel test, so (exactly like
+ * scripts/generate-comparison.php) this script asks PHPUnit to run
+ * ResourceCatalogueTest's drift test with writing turned on. What the
+ * test writes is rendered by the renderer beside this script, and what it
+ * asserts on every ordinary run is that the checked-in file still matches
+ * that renderer.
  *
  * Run it from anywhere inside the site:
  * @code
@@ -21,7 +22,7 @@
  * @endcode
  *
  * @see scripts/DataSurfaceCatalogueDocument.php
- * @see \Drupal\Tests\data_surface\Kernel\SurfaceCatalogueTest
+ * @see \Drupal\Tests\data_surface\Kernel\ResourceCatalogueTest
  */
 
 declare(strict_types=1);
@@ -49,7 +50,7 @@ $command = sprintf(
   escapeshellarg(getenv('SIMPLETEST_BASE_URL') ?: 'http://localhost'),
   escapeshellarg($phpunit),
   escapeshellarg('testCatalogueHasNotDrifted'),
-  escapeshellarg($module . '/tests/src/Kernel/SurfaceCatalogueTest.php'),
+  escapeshellarg($module . '/tests/src/Kernel/ResourceCatalogueTest.php'),
 );
 fwrite(STDOUT, 'Regenerating ' . DataSurfaceCatalogueDocument::PATH . " ...\n");
 passthru($command, $status);

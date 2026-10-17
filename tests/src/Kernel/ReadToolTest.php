@@ -6,8 +6,8 @@ namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\data_surface_examples\ExampleCalls;
-use Drupal\data_surface_tool\SituationInputs;
-use Drupal\data_surface_tool_test\Target\VaultTarget;
+use Drupal\data_surface_tool\OperationInputs;
+use Drupal\data_surface_tool_test\Storage\VaultStorage;
 use Drupal\node\Entity\NodeType;
 use Drupal\node\NodePreviewMode;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -22,9 +22,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 /**
  * Tests the read tool derived beside each write tool.
  *
- * Every situation that can be asked on its own and changes a thing that
- * exists has one, `data_surface:<surface>:<situation>:read`: its inputs
- * the situation's parameters, its one output `values`, what the target
+ * Every operation that can be asked on its own and changes a thing that
+ * exists has one, `data_surface:<resource>:<operation>:read`: its inputs
+ * the operation's parameters, its one output `values`, what the storage
  * loads, in the shape the write tool takes, less every secret. Its access
  * is the write tool's.
  */
@@ -113,7 +113,7 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
    *   The map.
    */
   protected function readValues(string $id): MapOutputDefinition {
-    $values = $this->definition($id)->getOutputDefinition(SituationInputs::VALUES);
+    $values = $this->definition($id)->getOutputDefinition(OperationInputs::VALUES);
     $this->assertInstanceOf(MapOutputDefinition::class, $values);
     return $values;
   }
@@ -141,7 +141,7 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
       'tool' => $tool,
       'success' => $result->isSuccess(),
       'message' => PlainTextOutput::renderFromHtml((string) $result->getMessage()),
-      'values' => $result->getContextValues()[SituationInputs::VALUES] ?? NULL,
+      'values' => $result->getContextValues()[OperationInputs::VALUES] ?? NULL,
     ];
   }
 
@@ -159,22 +159,22 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests which read tools exist: one per situation that changes a thing.
+   * Tests which read tools exist: one per operation that changes a thing.
    */
-  public function testOneReadToolPerSituationThatChangesWhatExists(): void {
+  public function testOneReadToolPerOperationThatChangesWhatExists(): void {
     $ids = array_values(array_filter(
       array_keys($this->container->get('plugin.manager.tool')->getDefinitions()),
       static fn (string $id): bool => str_starts_with($id, 'data_surface:') && str_ends_with($id, ':read'),
     ));
     sort($ids);
     $this->assertSame(self::READ_TOOLS, $ids);
-    // A situation that creates has a write tool and no read: the content
+    // An operation that creates has a write tool and no read: the content
     // type's add needs nothing and says so; the field's add leaves its
     // name to the caller, and its reuse is an add on another bundle.
     $definitions = $this->container->get('plugin.manager.tool')->getDefinitions();
-    foreach (['node.type:add', 'field.instance:add', 'field.instance:reuse'] as $situation) {
-      $this->assertArrayHasKey('data_surface:' . $situation, $definitions);
-      $this->assertArrayNotHasKey('data_surface:' . $situation . ':read', $definitions);
+    foreach (['node.type:add', 'field.instance:add', 'field.instance:reuse'] as $operation) {
+      $this->assertArrayHasKey('data_surface:' . $operation, $definitions);
+      $this->assertArrayNotHasKey('data_surface:' . $operation . ':read', $definitions);
     }
   }
 
@@ -193,7 +193,7 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
       $this->assertFalse($read->isDestructive(), $id);
       $this->assertSame([], $read->getInputDefinitionRefiners(), $id);
 
-      $own = [SituationInputs::VALUES, SituationInputs::DRY_RUN];
+      $own = [OperationInputs::VALUES, OperationInputs::DRY_RUN];
       $parameters = array_diff_key($write->getInputDefinitions(TRUE), array_flip($own));
       $inputs = $read->getInputDefinitions(TRUE);
       $this->assertSame(array_keys($parameters), array_keys($inputs), $id);
@@ -204,11 +204,11 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
         $this->assertSame((string) $parameter->getDescription(), (string) $inputs[$name]->getDescription(), $id . ' ' . $name);
       }
 
-      $this->assertSame([SituationInputs::VALUES], array_keys($read->getOutputDefinitions()), $id);
-      $values = $read->getOutputDefinition(SituationInputs::VALUES);
+      $this->assertSame([OperationInputs::VALUES], array_keys($read->getOutputDefinitions()), $id);
+      $values = $read->getOutputDefinition(OperationInputs::VALUES);
       $this->assertInstanceOf(MapOutputDefinition::class, $values, $id);
       $this->assertTrue($values->isRequired(), $id);
-      $written = $write->getInputDefinition(SituationInputs::VALUES);
+      $written = $write->getInputDefinition(OperationInputs::VALUES);
       $this->assertInstanceOf(MapInputDefinition::class, $written, $id);
       $expected = array_values(array_diff(self::properties($written), $id === 'data_surface:tool_test.vault:configure:read' ? ['token'] : []));
       $this->assertSame($expected, self::properties($values), $id);
@@ -219,7 +219,7 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
       }
     }
 
-    // The keys less the identity the situation knows: the content type's
+    // The keys less the identity the operation knows: the content type's
     // machine name, and everything that says which field it is.
     $this->assertSame(['type'], array_keys($this->definition('data_surface:node.type:edit:read')->getInputDefinitions(TRUE)));
     $this->assertNotContains('type', self::properties($this->readValues('data_surface:node.type:edit:read')));
@@ -234,7 +234,7 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
     // compliance module mounts under third_party_settings.
     $step3 = $this->definition(ExampleCalls::READ_TOOL);
     $this->assertSame([], $step3->getInputDefinitions(TRUE));
-    $values = $step3->getOutputDefinition(SituationInputs::VALUES);
+    $values = $step3->getOutputDefinition(OperationInputs::VALUES);
     $this->assertInstanceOf(MapOutputDefinition::class, $values);
     $properties = $values->getPropertyDefinitions();
     $this->assertSame([
@@ -278,7 +278,7 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
     ], $read['values']);
 
     $write = $this->runTool(ExampleCalls::TOOL, [
-      SituationInputs::VALUES => [
+      OperationInputs::VALUES => [
         'title' => 'Harbour night',
         'venue' => 'harbour',
         'room' => 'harbour_auditorium',
@@ -332,7 +332,7 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
     $read = $this->runTool('data_surface:node.type:edit:read', ['type' => 'nowhere']);
     $write = $this->runTool('data_surface:node.type:edit', [
       'type' => 'nowhere',
-      SituationInputs::VALUES => [
+      OperationInputs::VALUES => [
         'name' => 'Nowhere',
         'title_label' => 'Title',
         'preview_mode' => NodePreviewMode::Optional->value,
@@ -360,7 +360,7 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
       $this->assertNull($read['values'], $id);
     }
 
-    // The content type's situation asks for the demo's permission beside
+    // The content type's operation asks for the demo's permission beside
     // core's, so core's alone is not enough, here as for a write.
     $this->setUpCurrentUser([], ['administer content types']);
     $this->assertFalse($this->runTool('data_surface:node.type:edit:read', ['type' => 'article'])['tool']->access());
@@ -378,7 +378,7 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
    */
   public function testSecretIsNeverReturned(): void {
     $write = $this->runTool('data_surface:tool_test.vault:configure', [
-      SituationInputs::VALUES => [
+      OperationInputs::VALUES => [
         'endpoint' => 'https://vault.example.com',
         'token' => 'top-secret-token',
         'backup' => ['host' => 'backup.example.com', 'password' => 'hunter2'],
@@ -386,7 +386,7 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
     ]);
     $this->assertTrue($write['success'], $write['message']);
     // Storage holds both secrets: there is something to leave out.
-    $stored = $this->container->get('state')->get(VaultTarget::KEY);
+    $stored = $this->container->get('state')->get(VaultStorage::KEY);
     $this->assertSame('top-secret-token', $stored['token']);
     $this->assertSame('hunter2', $stored['backup']['password']);
 
@@ -400,7 +400,7 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
     $this->assertStringNotContainsString('hunter2', (string) json_encode($read['values']));
 
     // Nor is it described: the output says what is returned.
-    $values = $this->definition('data_surface:tool_test.vault:configure:read')->getOutputDefinition(SituationInputs::VALUES);
+    $values = $this->definition('data_surface:tool_test.vault:configure:read')->getOutputDefinition(OperationInputs::VALUES);
     $this->assertInstanceOf(MapOutputDefinition::class, $values);
     $this->assertSame(['endpoint', 'backup'], self::properties($values));
     $backup = $values->getPropertyDefinitions()['backup'];

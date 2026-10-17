@@ -56,8 +56,9 @@ class DemoBlockWithoutNodeTest extends DataSurfaceKernelTestBase {
 
     // The declared default is a content entity type this site has, so
     // the configuration the constructor applied is configuration the
-    // surface itself accepts — which is the property a default has to
-    // have on a plugin type that applies its defaults at construction.
+    // built structure itself accepts, which is the property a default
+    // has to have on a plugin type that applies its defaults at
+    // construction.
     $surface = $block->getDataSurface();
     $defaults = $surface->getDefaultValues();
     $this->assertSame('user', $defaults['entity_type']);

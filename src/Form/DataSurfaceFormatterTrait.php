@@ -15,51 +15,51 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DataSurfaceHostTrait;
 
 /**
- * Implements the field formatter settings protocol from a surface.
+ * Implements the field formatter settings protocol from a structure.
  *
  * The adapter for ADOPTION.md group B: host protocols that ask for a
  * settings form and then harvest the raw value tree themselves, with no
  * validate or submit hook to run the pipeline in. Field UI calls
  * settingsForm() and settingsSummary() as it always has, and this trait
- * answers from the surface. When the formatter plugin type understands
- * surfaces natively these methods are exactly the code that gets
- * deleted; the surface and #[UsesSurface] survive.
+ * answers from the structure. When the formatter plugin type understands
+ * structures natively these methods are exactly the code that gets
+ * deleted; the structure and #[UsesStructure] survive.
  *
  * Four host realities it absorbs:
  * - The $form parameter is not a fragment to merge into. Field UI hands
  *   settingsForm() the whole manage display form and places what comes
- *   back inside one row of it, so this returns only the surface's own
+ *   back inside one row of it, so this returns only the data surface's own
  *   elements, as every core formatter does. Contrast
  *   DataSurfaceHostFormTrait, where the block, condition and action
  *   protocols really do pass the host plugin's own fragment and the
- *   surface is a guest inside it.
+ *   structure is a guest inside it.
  * - There is nowhere to validate, so an #element_validate callback on
- *   the surface container extracts, validates, flags violations on their
- *   own elements, and writes the accepted values back into form state as
- *   the settings the host will copy. Unlike the proof of concept there
- *   is nothing to flatten on the way: widgets emit definition-shaped
+ *   the data surface container extracts, validates, flags violations on
+ *   their own elements, and writes the accepted values back into form
+ *   state as the settings the host will copy. Unlike the proof of concept
+ *   there is nothing to flatten on the way: widgets emit definition-shaped
  *   trees, so what extraction returns is already the settings shape.
- * - defaultSettings() is static and cannot consult an instance surface.
- *   surfaceDefaultSettings() answers it from the shape of the surface
- *   the class names with #[UsesSurface], which is static for exactly
+ * - defaultSettings() is static and cannot consult a built structure.
+ *   surfaceDefaultSettings() answers it from the shape of the structure
+ *   the class names with #[UsesStructure], which is static for exactly
  *   this reason.
  * - The host prunes settings against that static array on save:
  *   EntityDisplayBase::setComponent() runs values through the formatter
  *   manager's prepareConfiguration(), which intersects them with
- *   defaultSettings(). Keys mounted onto the surface at build time (the
- *   third_party_settings namespace) must therefore appear in the static
- *   array too, or they are silently dropped from the display — which is
- *   why surfaceDefaultSettings() always declares that key.
+ *   defaultSettings(). Keys mounted onto the data surface at build time
+ *   (the third_party_settings namespace) must therefore appear in the
+ *   static array too, or they are silently dropped from the display,
+ *   which is why surfaceDefaultSettings() always declares that key.
  *
- * Nothing but identifiers rides on the element. A surface holds its
- * refiners, and a refiner holds the surface's class or the alter its
+ * Nothing but identifiers rides on the element. A data surface holds its
+ * refiners, and a refiner holds the structure's class or the alter its
  * methods are called on, so putting one on a form array hands the form
  * cache whatever an alter holds. What the element carries instead is
  * the formatter's plugin id and the field's name, and the static
  * callback rebuilds the formatter from them: through the display the
  * host is editing when there is one, which is where the real field
  * definition lives, and otherwise through the formatter manager. See
- * docs/targets.md for the rule this is one case of.
+ * docs/storage.md for the rule this is one case of.
  */
 trait DataSurfaceFormatterTrait {
 
@@ -81,15 +81,15 @@ trait DataSurfaceFormatterTrait {
   protected const CURRENT_ELEMENT_KEY = '#data_surface_current';
 
   /**
-   * Builds the surface describing this formatter's settings.
+   * Builds the data surface describing this formatter's settings.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface.
+   *   The built structure.
    */
   abstract public function getDataSurface(): DataSurfaceInterface;
 
   /**
-   * States that a formatter has no target of its own to hand out.
+   * States that a formatter has no storage of its own to hand out.
    *
    * A formatter's settings are not the formatter's to store: they are one
    * component of an entity view display, and Field UI copies whatever
@@ -99,9 +99,9 @@ trait DataSurfaceFormatterTrait {
    * #element_validate callback and writes the accepted values back into
    * form state for the host to copy.
    *
-   * Saying so out loud is the point. A quietly useless target — the
+   * Saying so out loud is the point. A quietly useless storage (the
    * formatter's own settings array, say, thrown away with the plugin
-   * instance at the end of the request — would let a caller submit into
+   * instance at the end of the request) would let a caller submit into
    * it and be told the values were stored.
    *
    * A caller that means to write a formatter's settings writes the
@@ -113,15 +113,15 @@ trait DataSurfaceFormatterTrait {
    * @throws \LogicException
    *   Always.
    */
-  public function getDataSurfaceTarget(): never {
+  public function getDataSurfaceStorage(): never {
     throw new \LogicException(sprintf(
-      'The settings of the %s formatter are stored by the entity view display that hosts it, not by the formatter, so there is no target to hand out; write the display component instead.',
+      'The settings of the %s formatter are stored by the entity view display that hosts it, not by the formatter, so there is no storage to hand out; write the display component instead.',
       static::class,
     ));
   }
 
   /**
-   * Reads the static default settings from the surface a class names.
+   * Reads the static default settings from the structure a class names.
    *
    * @param class-string $class
    *   The fully qualified formatter class name.
@@ -131,12 +131,12 @@ trait DataSurfaceFormatterTrait {
    *   third party namespace the host prunes against.
    *
    * @throws \LogicException
-   *   When the class names no surface.
+   *   When the class names no structure.
    */
   protected static function surfaceDefaultSettings(string $class): array {
     $defaults = static::surfaceDeclaredDefaults($class);
     // Declared unconditionally: the host prunes saved settings against
-    // this array, and definitions other modules mount onto the surface
+    // this array, and definitions other modules mount onto the structure
     // at build time land under this key.
     $defaults['third_party_settings'] = [];
     return $defaults;
@@ -158,8 +158,8 @@ trait DataSurfaceFormatterTrait {
       'data-surface-' . $field_name,
     );
     // Identifiers, not objects: the static callback rebuilds the
-    // formatter, and with it the surface and its refiner, from these two
-    // strings, so the form cache only ever holds strings and arrays.
+    // formatter, and with it the data surface and its refiner, from these
+    // two strings, so the form cache only ever holds strings and arrays.
     $element[static::FORMATTER_ELEMENT_KEY] = $this->getPluginId();
     $element[static::FIELD_NAME_ELEMENT_KEY] = $field_name;
     // The stored settings ride along for the validate callback, which is
@@ -167,7 +167,7 @@ trait DataSurfaceFormatterTrait {
     // must keep what is stored rather than fall back to its default.
     $element[static::CURRENT_ELEMENT_KEY] = $stored;
     $element['#element_validate'] = [[static::class, 'validateSurfaceSettings']];
-    // Only the surface's own elements, which is what every core
+    // Only the data surface's own elements, which is what every core
     // formatter returns and what Field UI asks for. The $form parameter
     // is not a fragment to merge into: EntityDisplayFormBase hands
     // settingsForm() the whole manage display form and then places the
@@ -184,7 +184,7 @@ trait DataSurfaceFormatterTrait {
    * Element validate: the pipeline stage this host protocol has no hook for.
    *
    * @param array $element
-   *   The surface container element.
+   *   The data surface container element.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state.
    */
@@ -220,7 +220,7 @@ trait DataSurfaceFormatterTrait {
    * replaying a submission — has no such form object, so the formatter
    * is built through its plugin manager instead, with a field definition
    * carrying the field's name and nothing else. That is enough for the
-   * surface, because a formatter describes its settings from its class
+   * structure, because a formatter describes its settings from its class
    * and refines them from the submitted values; a formatter whose
    * advertisement genuinely depends on the field it formats is reachable
    * through the display form, which supplies the real definition.
@@ -254,7 +254,7 @@ trait DataSurfaceFormatterTrait {
     }
     if (!$formatter instanceof static) {
       throw new \LogicException(sprintf(
-        'The settings element names no %s formatter this request can rebuild, so its surface cannot be rebuilt to validate it.',
+        'The settings element names no %s formatter this request can rebuild, so its structure cannot be rebuilt to validate it.',
         static::class,
       ));
     }

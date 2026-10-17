@@ -13,7 +13,7 @@ use Drupal\taxonomy\Entity\Term;
 use Drupal\taxonomy\Entity\Vocabulary;
 
 /**
- * Bundles with form displays, for the derived content entity surfaces.
+ * Bundles with form displays, for the derived content entity resources.
  *
  * `page` is the worked example: a title, a required description, a body
  * with a summary and a format, publishing and authoring fields, the
@@ -25,7 +25,7 @@ use Drupal\taxonomy\Entity\Vocabulary;
 trait ContentEntityFixtureTrait {
 
   /**
-   * The modules a derived content entity surface needs, in order.
+   * The modules a derived content entity resource needs, in order.
    */
   protected const ENTITY_MODULES = [
     'system',

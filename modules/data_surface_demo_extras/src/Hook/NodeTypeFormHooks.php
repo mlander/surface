@@ -36,7 +36,7 @@ use Drupal\node\NodeTypeInterface;
  * tells it whether it was right until after the value is stored. No
  * reading of the integer says what ten business days become.
  *
- * @see \Drupal\data_surface_demo_extras\SurfaceAlter\NodeTypeAlter
+ * @see \Drupal\data_surface_demo_extras\Alter\NodeTypeAlter
  *   The same two settings, said as contract.
  */
 final class NodeTypeFormHooks {
@@ -125,7 +125,7 @@ final class NodeTypeFormHooks {
    * Element validator: turns the amount and unit into stored seconds.
    *
    * The conversion, business days included, is
-   * NodeTypeReviewSettings::seconds(), the same the surface's storage
+   * NodeTypeReviewSettings::seconds(), the same the resource's storage
    * shape uses. Refuses a deadline shorter than an hour or longer than
    * thirty days on those seconds, then replaces the pair with the one
    * integer the entity builder stores, or NULL when no amount was given.

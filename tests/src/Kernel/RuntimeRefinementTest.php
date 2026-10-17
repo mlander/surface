@@ -7,9 +7,9 @@ namespace Drupal\Tests\data_surface\Kernel;
 use Drupal\Core\Cache\Cache;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Refinement\RuntimeRefiner;
-use Drupal\data_surface\Surface\SurfaceContext;
-use Drupal\data_surface_surface_test\Surface\StockroomSurface;
-use Drupal\data_surface_test\RecordingTarget;
+use Drupal\data_surface\Resource\OperationContext;
+use Drupal\data_surface_surface_test\Structure\StockroomStructure;
+use Drupal\data_surface_test\RecordingStorage;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -24,7 +24,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * values, the pipeline and the form's discard rule hold the values to
  * both kinds alike.
  *
- * @see \Drupal\data_surface_surface_test\Surface\StockroomSurface
+ * @see \Drupal\data_surface_surface_test\Structure\StockroomStructure
  * @see docs/decisions.md#static-by-default-runtime-by-declaration
  */
 #[Group('data_surface')]
@@ -47,26 +47,26 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
    */
   protected function setUp(): void {
     parent::setUp();
-    StockroomSurface::$calls = [];
-    StockroomSurface::$closed = [];
-    StockroomSurface::$banned = [];
+    StockroomStructure::$calls = [];
+    StockroomStructure::$closed = [];
+    StockroomStructure::$banned = [];
   }
 
   /**
    * Builds the stockroom.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface, with nothing locked.
+   *   The built structure, with nothing locked.
    */
   protected function stockroom(): DataSurfaceInterface {
-    return $this->container->get('data_surface.surfaces')->build(StockroomSurface::class, new SurfaceContext('configure'));
+    return $this->container->get('data_surface.resources')->build(StockroomStructure::class, new OperationContext('configure'));
   }
 
   /**
    * Emits one of the two documents' schemas, as a client decodes it.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface.
+   *   The built structure.
    * @param array|null $values
    *   The values the schema is for, or NULL for the full schema.
    *
@@ -137,8 +137,8 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($definitions->entry('aisle')->isRefinedAtRuntime());
     // Unlike a static refiner that watches nothing, it did not run at
     // build: the tag still advertises every tag.
-    StockroomSurface::$banned = ['red'];
-    $this->assertSame(array_keys(StockroomSurface::TAGS), array_keys($this->options()->resolve($this->stockroom()->getDefinition('tag'))->options));
+    StockroomStructure::$banned = ['red'];
+    $this->assertSame(array_keys(StockroomStructure::TAGS), array_keys($this->options()->resolve($this->stockroom()->getDefinition('tag'))->options));
   }
 
   /**
@@ -154,19 +154,19 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
    */
   public function testTheEmitterNeverRunsRuntimeRefinersAhead(): void {
     $surface = $this->stockroom();
-    StockroomSurface::$closed = ['north_2'];
-    StockroomSurface::$banned = ['red'];
-    StockroomSurface::$calls = [];
+    StockroomStructure::$closed = ['north_2'];
+    StockroomStructure::$banned = ['red'];
+    StockroomStructure::$calls = [];
     $this->schema($surface);
-    $this->assertSame(['shelfInAisle' => 3], StockroomSurface::calls(), 'The full schema ran the static refiner per aisle, and again for one, and no runtime one.');
+    $this->assertSame(['shelfInAisle' => 3], StockroomStructure::calls(), 'The full schema ran the static refiner per aisle, and again for one, and no runtime one.');
 
-    StockroomSurface::$calls = [];
+    StockroomStructure::$calls = [];
     $surface->refine([]);
-    $once = StockroomSurface::calls()['allowedTag'] ?? 0;
+    $once = StockroomStructure::calls()['allowedTag'] ?? 0;
     $this->assertGreaterThan(0, $once);
-    StockroomSurface::$calls = [];
+    StockroomStructure::$calls = [];
     $schema = $this->schema($surface, []);
-    $calls = StockroomSurface::calls();
+    $calls = StockroomStructure::calls();
     $this->assertSame(3, $calls['shelfInAisle'] ?? 0);
     $this->assertArrayNotHasKey('openShelf', $calls, 'A gated runtime refiner is not run for the conditionals.');
     $this->assertSame($once, $calls['allowedTag'] ?? 0, 'The ungated one runs for the present moment only.');
@@ -187,8 +187,8 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
   public function testTheFullSchemaCarriesOnlyTheMark(): void {
     $surface = $this->stockroom();
     $before = $this->schema($surface);
-    StockroomSurface::$closed = ['north_2', 'south_1'];
-    StockroomSurface::$banned = ['red', 'blue'];
+    StockroomStructure::$closed = ['north_2', 'south_1'];
+    StockroomStructure::$banned = ['red', 'blue'];
     $after = $this->schema($surface);
     $this->assertSame(json_encode($before), json_encode($after));
 
@@ -215,8 +215,8 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
    */
   public function testTheSchemaForTheseValuesIsRefinedByBoth(): void {
     $surface = $this->stockroom();
-    StockroomSurface::$closed = ['north_2'];
-    StockroomSurface::$banned = ['red'];
+    StockroomStructure::$closed = ['north_2'];
+    StockroomStructure::$banned = ['red'];
     $values = ['aisle' => 'north', 'shelf' => 'north_1', 'tag' => 'green'];
     $schema = $this->schema($surface, $values);
     $this->assertSame(['north_1'], self::offered($schema['properties']['shelf']));
@@ -231,7 +231,7 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
     // The static refiners alone, as the engine answers them when asked.
     $static = $surface->refine($values, FALSE);
     $this->assertSame(['north_1', 'north_2'], array_keys($this->options()->resolve($static->getDefinition('shelf'))->options));
-    $this->assertSame(array_keys(StockroomSurface::TAGS), array_keys($this->options()->resolve($static->getDefinition('tag'))->options));
+    $this->assertSame(array_keys(StockroomStructure::TAGS), array_keys($this->options()->resolve($static->getDefinition('tag'))->options));
     $this->assertSame(Cache::PERMANENT, $static->getCacheMaxAge());
   }
 
@@ -240,20 +240,20 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
    */
   public function testThePipelineAppliesBoth(): void {
     $surface = $this->stockroom();
-    StockroomSurface::$closed = ['north_2'];
-    StockroomSurface::$banned = ['red'];
+    StockroomStructure::$closed = ['north_2'];
+    StockroomStructure::$banned = ['red'];
     $refused = fn (array $values): array => $this->pipeline()->validate($surface, $values)->keys();
     $this->assertSame([], $refused(['aisle' => 'north', 'shelf' => 'north_1', 'tag' => 'green']));
     $this->assertSame(['shelf'], $refused(['aisle' => 'north', 'shelf' => 'north_2']), 'A closed shelf.');
     $this->assertSame(['shelf'], $refused(['aisle' => 'north', 'shelf' => 'south_1']), 'Another aisle\'s shelf, as before.');
     $this->assertSame(['tag'], $refused(['tag' => 'red']), 'A banned tag, with nothing else answered.');
 
-    $target = new RecordingTarget('stockroom', new \ArrayObject());
-    $result = $this->pipeline()->submit($surface, ['aisle' => 'north', 'shelf' => 'north_2', 'tag' => 'red'], $target);
+    $storage = new RecordingStorage('stockroom', new \ArrayObject());
+    $result = $this->pipeline()->submit($surface, ['aisle' => 'north', 'shelf' => 'north_2', 'tag' => 'red'], $storage);
     $this->assertFalse($result->isValid());
     $this->assertSame(['shelf', 'tag'], $result->violations->keys());
-    $this->assertSame([], $target->received, 'Nothing was prepared.');
-    $written = new RecordingTarget('stockroom', new \ArrayObject());
+    $this->assertSame([], $storage->received, 'Nothing was prepared.');
+    $written = new RecordingStorage('stockroom', new \ArrayObject());
     $result = $this->pipeline()->submit($surface, ['aisle' => 'north', 'shelf' => 'north_1', 'tag' => 'green'], $written);
     $this->assertTrue($result->isValid());
     $this->assertSame('north_1', $written->received['shelf']);
@@ -276,8 +276,8 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
     $discarded = fn (array $input): array => $this->formBuilder()->discardedRefinementInput($surface, $stored, $input);
     $this->assertSame(['shelf'], $discarded(['aisle' => 'south', 'shelf' => 'north_1']));
 
-    StockroomSurface::$closed = ['south_1', 'north_1'];
-    StockroomSurface::$banned = ['red'];
+    StockroomStructure::$closed = ['south_1', 'north_1'];
+    StockroomStructure::$banned = ['red'];
     $this->assertSame(['shelf'], $discarded(['aisle' => 'south', 'shelf' => 'south_1']));
     $this->assertSame([], $discarded(['aisle' => 'south', 'shelf' => 'south_2', 'tag' => 'red']));
     $document = $this->container->get('data_surface.contract_emitter')->emit($surface, $stored, 'surface_test.stockroom')->document;

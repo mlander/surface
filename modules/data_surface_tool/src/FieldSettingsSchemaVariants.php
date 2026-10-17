@@ -16,20 +16,20 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\SurfaceBuild\DerivedVariantsInterface;
-use Drupal\data_surface_tool\Surface\FieldInstanceSurface;
+use Drupal\data_surface\ResourceBuild\DerivedVariantsInterface;
+use Drupal\data_surface_tool\Resource\FieldInstanceResource;
 
 /**
  * A field type's settings, read from its config schema, as a variant.
  *
- * Fills FieldInstanceSurface's settings slot for every field type a site
- * offers in its UI that no #[SurfaceVariant] fills, so a plain `string`
+ * Fills FieldInstanceResource's settings slot for every field type a site
+ * offers in its UI that no #[Variant] fills, so a plain `string`
  * or `integer` field can be added and edited through the derived field
  * tools as an address field can. What a caller gets is what the schema
  * says: the keys of `field.field_settings.<field type>`, their types and
  * labels, and the field type's own default settings where their type
  * fits. No vocabulary, no bounds, no refinement: a field type that wants
- * those writes a settings surface and marks it #[SurfaceVariant], and
+ * those writes a settings class and marks it #[Variant], and
  * that variant wins.
  *
  * Read through typed config, as Tool Belt's free-form field tools read
@@ -45,9 +45,9 @@ use Drupal\data_surface_tool\Surface\FieldInstanceSurface;
 class FieldSettingsSchemaVariants implements DerivedVariantsInterface {
 
   /**
-   * The surface whose slot this fills.
+   * The resource whose slot this fills.
    */
-  protected const SURFACE = FieldInstanceSurface::class;
+  protected const RESOURCE = FieldInstanceResource::class;
 
   /**
    * The config schema of a field type's settings, less the field type.
@@ -80,7 +80,7 @@ class FieldSettingsSchemaVariants implements DerivedVariantsInterface {
    * {@inheritdoc}
    */
   public function slot(): array {
-    return [static::SURFACE, 'settings'];
+    return [static::RESOURCE, 'settings'];
   }
 
   /**

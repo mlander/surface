@@ -18,11 +18,11 @@ namespace Drupal\data_surface\Pipeline;
  * NULL or the empty string, and holds a value in every other case. The
  * empty string is in there because that is what a browser submits for an
  * untouched text field, a cleared number, and an unchosen select, and
- * nothing else is, because everything else a caller can send is
- * something the caller chose: FALSE is a checkbox that is off, 0 is a
- * number, '0' is that number as a form submits it, and an empty array is
- * a list or a map with nothing in it. A surface that wants to refuse
- * those says so with a constraint.
+ * nothing else is, because everything else a caller can send is something
+ * the caller chose: FALSE is a checkbox that is off, 0 is a number, '0' is
+ * that number as a form submits it, and an empty array is a list or a map
+ * with nothing in it. A resource or structure that wants to refuse those
+ * says so with a constraint.
  *
  * @see docs/semantics.md
  */

@@ -1,9 +1,9 @@
 # Value semantics
 
-A surface says what a key may hold. This page says what happens to the
-value on its way in: when a key counts as configured, how a raw value
-becomes the type the definition declared, what "required" means, and
-what the surface refuses outright. It is the rules reference for
+A resource or structure says what a key may hold. This page says what
+happens to the value on its way in: when a key counts as configured, how
+a raw value becomes the type the definition declared, what "required"
+means, and what the data surface refuses outright. It is the rules reference for
 [the pipeline](pipeline.md), which is where the stages themselves are
 described.
 
@@ -33,9 +33,9 @@ data type.
 
 The empty string is on the "no" side only because it is the notation a
 web form has for "nothing here". Nothing else is, because everything
-else a caller can send is something the caller chose. A surface that
-wants to refuse `FALSE`, `0` or `[]` says so with a constraint of its
-own, not by hoping the pipeline reads them as absences.
+else a caller can send is something the caller chose. A resource or
+structure that wants to refuse `FALSE`, `0` or `[]` says so with a
+constraint of its own, not by hoping the pipeline reads them as absences.
 
 ## The casting table
 
@@ -95,7 +95,7 @@ said with an empty list, which is a configured value.
 
 ### Collections
 
-A collection's value ([Surfaces](surfaces.md#collections)) is a list
+A collection's value ([Collections](resources.md#collections)) is a list
 of item maps, in order: delta is position, and the keys a sender used
 are dropped. It is a list, so the list rule above holds: a list the
 input says nothing about, or sends empty (`NULL`, `''`), keeps what it
@@ -127,7 +127,8 @@ holds, and emptying it is said with `[]`.
   is refused.
 - **Locked and omitted.** A locked list keeps what is stored, each item
   read through the child, and ignores what is posted for it; an omitted
-  one is not in the surface, so a value posted for it is an unknown key.
+  one is not in the data surface, so a value posted for it is an unknown
+  key.
 
 ### Maps
 
@@ -140,8 +141,8 @@ Two consequences worth stating:
 
 - The result holds exactly the declared properties. A key that only
   storage knows about stays in storage and does not round-trip through
-  the surface, because the surface never advertised it and must not
-  become responsible for it.
+  the data surface, because the data surface never advertised it and
+  must not become responsible for it.
 - A default declared on the map itself merges *over* the defaults its
   properties declare, rather than replacing them. Naming one property's
   starting value on the map is a statement about that property, not an
@@ -156,8 +157,8 @@ value passes through as it arrived.
 
 One deliberate exception to the `''` rule, and the only one.
 
-A key declared secret — `DefinitionMetadata::setSecret()`, see
-[Declaring a surface](declaring-a-surface.md#secrets) — is a key whose
+A key declared secret (`DefinitionMetadata::setSecret()`, see
+[Declaring a resource](declaring-a-resource.md#secrets)) is a key whose
 stored value is never read back to the caller that writes it. A
 generated form therefore renders an empty password box every time, so a
 person who edits the setting *next to* the secret and saves has
@@ -195,7 +196,7 @@ Two consequences:
   what locked means.
 
 Encryption is a separate concern and lives one layer down, at the
-storage shape: see [Targets](targets.md#secrets-at-the-codec).
+storage shape: see [Storage](storage.md#secrets-at-the-codec).
 
 ## Stale values: the third state
 
@@ -270,7 +271,7 @@ Two boundaries, both deliberate:
   array and no separate notion of what is stored, so it cannot tell a
   value that went stale from a bad one a caller invented, and it keeps
   both rather than throwing. It still throws for everything else the
-  surface refuses. The write path, `submit()`, does have both and does
+  data surface refuses. The write path, `submit()`, does have both and does
   refuse the invented one.
 
 ## Shape mismatches
@@ -286,15 +287,15 @@ value that means nothing in any notation is not cast, it is refused:
 
 `accept()` throws `ShapeMismatchException`, naming the dotted path of the
 offending value and what was expected. `submit()` turns it into a
-violation on that surface key, the same way it turns an undeclared key
+violation on that key, the same way it turns an undeclared key
 into one. This is the same bargain as unknown keys: a caller that sends
 the wrong shape learns about it instead of watching the value vanish.
 
 ## Required
 
-`validate()` raises the surface's own violation, **"@label is
-required."**, when a required key is not configured. It uses the
-predicate above and nothing else, so:
+`validate()` raises its own violation, **"@label is required."**, when a
+required key is not configured. It uses the predicate above and nothing
+else, so:
 
 | Value of a required key | Result |
 | --- | --- |
@@ -306,19 +307,19 @@ predicate above and nothing else, so:
 
 That a required list or map may be empty is the deliberate reading:
 "required" says the key must be answered, not that the answer must be
-large. A surface that needs at least one item says so with a `Count`
-constraint, which then produces a message about the count rather than
-about the key being missing.
+large. A resource or structure that needs at least one item says so with
+a `Count` constraint, which then produces a message about the count
+rather than about the key being missing.
 
-The message is always the surface's own, never a type-specific one from
-a constraint, so an empty required number and an empty required string
+The message is always the data surface's own, never a type-specific one
+from a constraint, so an empty required number and an empty required string
 read alike to the person filling in the form.
 
 ## Violation messages are objects
 
-Every message in a violation is a `TranslatableMarkup` — the
+Every message in a violation is a `TranslatableMarkup` (the data
 surface's own required message, the pipeline's unknown-key and shape
-refusals, and the message a constraint or a config schema produced —
+refusals, and the message a constraint or a config schema produced),
 and it stays one the whole way out: `DataSurfaceResult`, a form error
 through `FormStateInterface::setError()`, a caller's own report.
 Placeholders are still placeholders until something renders it, so a
@@ -327,7 +328,7 @@ than escaped at build time and escaped again on the page.
 
 There are exactly three places a message becomes text, all of them
 exception messages, because PHP has nowhere to put an object in one:
-`UnknownKeysException`, `TargetViolationsException`, and the refusal
+`UnknownKeysException`, `StorageViolationsException`, and the refusal
 `DataSurfaceConfigurationTrait::setConfiguration()` throws. All three
 render through `Pipeline\ViolationSummary`, which names the first five
 entries and counts the rest; the full list is still on the exception.
@@ -343,8 +344,8 @@ resets it to the default.
 
 ### Locked and omitted children
 
-A child's access ([Surfaces](surfaces.md#child-situations)) may answer
-that its keys are shown and fixed, or not there at all.
+A child's access ([Child operations](resources.md#child-operations))
+may answer that its keys are shown and fixed, or not there at all.
 
 - **A locked child** is a locked key whose value is a map: the parent's
   key is locked, so `accept()` keeps what storage holds for the whole
@@ -357,13 +358,13 @@ that its keys are shown and fixed, or not there at all.
   as `const` (the full schema, which reads no stored value, holds none);
   the tool's `values` input marks the map and every property in it
   locked.
-- **An omitted child** is not in the built surface: no definition, no
+- **An omitted child** is not in the data surface: no definition, no
   element, no property in either contract or in the tool's `values`
   input. A value posted for it is an undeclared key, which `accept()`
-  refuses with `UnknownKeysException`, exactly as for a key the surface
-  never had. It is omitted in both directions: the read tool does not
+  refuses with `UnknownKeysException`, exactly as for a key the data
+  surface never had. It is omitted in both directions: the read tool does not
   return it, and a write leaves what storage holds under it as it was
-  (the target adapter hands that back to the parent's target, since
+  (the storage adapter hands that back to the parent's storage, since
   the caller could not have seen it).
 
 ## What each stage decides
@@ -371,10 +372,10 @@ that its keys are shown and fixed, or not there at all.
 | Stage | Decides |
 | --- | --- |
 | `accept()` | Whether a key was configured, what type its value takes, whether the shape is acceptable at all, and how input merges over what is stored. Keeps a secret key's stored value when the input says nothing. Refuses undeclared keys and shape mismatches. Needs no services. |
-| `validate()` | Whether a required key was answered, and whether the answers satisfy the constraints of the surface **refined against those same answers**. Given the stored values, it also tells a stale reference from a refusal. |
+| `validate()` | Whether a required key was answered, and whether the answers satisfy the constraints of the data surface **refined against those same answers**. Given the stored values, it also tells a stale reference from a refusal. |
 | `refine()` | Which definitions narrow, given which dependencies are configured. A dependency holding `FALSE` or `[]` is an answer and does narrow. |
-| `prepare()` / `commit()` | Nothing about values; the target's storage shape and the write. |
+| `prepare()` / `commit()` | Nothing about values; the storage shape and the write. |
 
-After `accept()`, every surface key is present and every value is either
-`NULL` or a configured value in its declared type. That is the shape
-`validate()`, a target, and any consumer can rely on.
+After `accept()`, every declared key is present and every value is
+either `NULL` or a configured value in its declared type. That is the
+shape `validate()`, the storage, and any consumer can rely on.

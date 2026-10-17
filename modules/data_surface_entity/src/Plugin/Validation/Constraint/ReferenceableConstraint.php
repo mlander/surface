@@ -14,7 +14,7 @@ use Symfony\Component\Validator\Constraint as SymfonyConstraint;
  *
  * What a reference field may hold is its selection handler's answer
  * (target bundles, access, a view), which lives in site state and may
- * depend on the account. So the item surface points at it with this
+ * depend on the account. So the item structure points at it with this
  * constraint, and the options resolver beside it lists the targets when
  * there are few enough to list; past that the key is free and only this
  * validator, asking the same handler, decides.

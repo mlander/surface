@@ -18,12 +18,12 @@ use Drupal\data_surface\Contract\SchemaResolver;
  * ConfigSchemaContract. Neither reads a value, so neither changes while
  * the form is filled in.
  *
- * Handed the full schema the surface emits for the same settings, the
+ * Handed the full schema the resource emits for the same settings, the
  * one that holds for any values, it adds a table that sets the two side
  * by side, key by key: the JSON Schema keywords each one states. That
  * table is counted from the two documents, never written down, and it is
  * static against static: neither side reads a value, so nothing in the
- * panel moves while the form is filled in. A part the surface defines
+ * panel moves while the form is filled in. A part the resource defines
  * once and refers to is counted as what the reference resolves to, and
  * the reference is named beside it.
  *
@@ -60,9 +60,9 @@ final class ConfigSchemaPanel {
    * @param string $config
    *   The config object's name.
    * @param array|null $surface
-   *   The full JSON Schema the surface emits for the same settings
+   *   The full JSON Schema the resource emits for the same settings
    *   (ContractEmitter::emitFull()), to compare with; NULL for a page
-   *   with no surface.
+   *   with no resource.
    * @param string|\Stringable|null $note
    *   A sentence to add under the first, as safe HTML; NULL for none.
    *
@@ -74,7 +74,7 @@ final class ConfigSchemaPanel {
     $panel = [
       '#type' => 'details',
       '#open' => FALSE,
-      '#title' => $this->t('Without a surface: what config schema can say'),
+      '#title' => $this->t('Without a resource: what config schema can say'),
       // The contract panel's own class, for its spacing and type sizes.
       '#attributes' => ['class' => ['data-surface-contract-panel', 'data-surface-today-panel']],
       '#attached' => ['library' => ['data_surface_tool/contract_panel']],
@@ -99,14 +99,14 @@ final class ConfigSchemaPanel {
     ];
     if ($surface !== NULL) {
       $panel['comparison_note'] = [
-        '#markup' => '<p>' . $this->t('Key by key, the JSON Schema keywords each one states: the mapping above, and the full schema the surface emits, the one that holds for any answers. Neither reads a value, so this table does not change either.') . '</p>',
+        '#markup' => '<p>' . $this->t('Key by key, the JSON Schema keywords each one states: the mapping above, and the full schema the resource emits, the one that holds for any answers. Neither reads a value, so this table does not change either.') . '</p>',
       ];
       $panel['comparison'] = [
         '#type' => 'table',
         '#header' => [
           $this->t('Key'),
           $this->t('From config schema'),
-          $this->t('From the surface'),
+          $this->t('From the resource'),
         ],
         '#rows' => $this->comparison($today['derived'], $surface),
         '#attributes' => ['class' => ['data-surface-today-comparison']],
@@ -133,12 +133,12 @@ final class ConfigSchemaPanel {
   }
 
   /**
-   * Sets two schemas side by side, one row per key the surface declares.
+   * Sets two schemas side by side, one row per key the resource declares.
    *
    * @param array $derived
    *   The schema mapped from config schema.
    * @param array $surface
-   *   The full schema the surface emits.
+   *   The full schema the resource emits.
    *
    * @return array
    *   The table rows, and a last one for `required`.
@@ -201,7 +201,7 @@ final class ConfigSchemaPanel {
    * Names the def a property refers to, so the reader sees it is one.
    *
    * @param array $schema
-   *   The property's schema, as the surface wrote it.
+   *   The property's schema, as the resource's contract wrote it.
    *
    * @return string
    *   `$ref (<id>)`, or the empty string for a property that refers to no
@@ -213,7 +213,7 @@ final class ConfigSchemaPanel {
   }
 
   /**
-   * Says what the surface states about a key as conditionals on its parent.
+   * Says what the resource states about a key as conditionals on its parent.
    *
    * A slot's shapes, one per value of the key that chooses it, and what
    * a refiner answers for each value it could be handed, are written on
@@ -223,7 +223,7 @@ final class ConfigSchemaPanel {
    * narrows the key is counted.
    *
    * @param array $surface
-   *   The full schema the surface emits.
+   *   The full schema the resource emits.
    * @param string $key
    *   The key.
    *

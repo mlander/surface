@@ -2,7 +2,7 @@
   "name": "data-surface-react",
   "private": true,
   "version": "0.0.0",
-  "description": "Renders a data surface's form from the contract data_surface_react serves.",
+  "description": "Renders a resource's operation form from the contract data_surface_react serves.",
   "license": "GPL-2.0-or-later",
   "type": "module",
   "scripts": {

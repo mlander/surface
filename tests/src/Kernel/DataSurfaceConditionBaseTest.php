@@ -52,7 +52,7 @@ class DataSurfaceConditionBaseTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the defaults are the surface's plus the host's negate.
+   * Tests that the defaults are the structure's plus the host's negate.
    */
   public function testDefaultsIncludeNegate(): void {
     $condition = $this->createCondition();
@@ -78,7 +78,7 @@ class DataSurfaceConditionBaseTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the surface's keys are validated and negate survives.
+   * Tests that the structure's keys are validated and negate survives.
    */
   public function testSetConfigurationValidatesAndKeepsNegate(): void {
     $condition = $this->createCondition();
@@ -88,7 +88,7 @@ class DataSurfaceConditionBaseTest extends DataSurfaceKernelTestBase {
     $this->assertSame(40, $configuration['threshold']);
     $this->assertTrue($configuration['negate']);
     $this->assertTrue($condition->isNegated());
-    // A declared key the caller left out falls back to the surface's
+    // A declared key the caller left out falls back to the structure's
     // default rather than to whatever was stored before.
     $this->assertSame('at_least', $configuration['mode']);
   }
@@ -119,15 +119,15 @@ class DataSurfaceConditionBaseTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the form carries the surface and the host's own element.
+   * Tests that the form carries the structure and the host's own element.
    */
-  public function testConditionFormBuildsSurfaceAndNegate(): void {
+  public function testConditionFormBuildsStructureAndNegate(): void {
     $condition = $this->createCondition();
     $condition->setConfiguration(['mode' => 'at_most', 'threshold' => 40]);
 
     $form = $condition->buildConfigurationForm([], new FormState());
 
-    // The surface's elements, with the stored values. Which element a
+    // The structure's elements, with the stored values. Which element a
     // constraint maps to is pinned once, in SurfaceFormTest.
     $this->assertArrayHasKey('mode', $form);
     $this->assertSame('at_most', $form['mode']['#default_value']);
@@ -170,7 +170,7 @@ class DataSurfaceConditionBaseTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that submit stores the surface's values and the host's negate.
+   * Tests that submit stores the structure's values and the host's negate.
    */
   public function testConditionSubmitStoresAcceptedValues(): void {
     $condition = $this->createCondition();
@@ -220,7 +220,7 @@ class DataSurfaceConditionBaseTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the summary reads its words from the surface's options.
+   * Tests that the summary reads its words from the structure's options.
    */
   public function testSummaryUsesOptionLabels(): void {
     $condition = $this->createCondition(['mode' => 'at_most', 'threshold' => 40]);

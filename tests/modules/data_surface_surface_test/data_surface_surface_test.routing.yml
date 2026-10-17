@@ -1,35 +1,35 @@
-# The larder's edit situation as a route, served by the generic form, so
+# The larder's edit operation as a route, served by the generic form, so
 # a test reads what the form draws for a child its access locked or left
 # out.
 data_surface_surface_test.larder.edit:
   path: '/surface-test/larder/{larder}'
   defaults:
-    _form: 'Drupal\data_surface\Form\DataSurfaceSituationForm'
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
     _title: 'Edit a larder'
-    _data_surface_surface: 'Drupal\data_surface_surface_test\Surface\Larder\LarderSurface'
-    _data_surface_situation: 'edit'
+    _data_surface_resource: 'Drupal\data_surface_surface_test\Resource\Larder\LarderResource'
+    _data_surface_operation: 'edit'
   requirements:
-    _data_surface_situation_access: 'TRUE'
+    _data_surface_operation_access: 'TRUE'
 
-# The larder's stock situation, which hands both racks a context whole.
+# The larder's stock operation, which hands both racks a context whole.
 data_surface_surface_test.larder.stock:
   path: '/surface-test/larder/{larder}/stock'
   defaults:
-    _form: 'Drupal\data_surface\Form\DataSurfaceSituationForm'
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
     _title: 'Stock a larder'
-    _data_surface_surface: 'Drupal\data_surface_surface_test\Surface\Larder\LarderSurface'
-    _data_surface_situation: 'stock'
+    _data_surface_resource: 'Drupal\data_surface_surface_test\Resource\Larder\LarderResource'
+    _data_surface_operation: 'stock'
   requirements:
-    _data_surface_situation_access: 'TRUE'
+    _data_surface_operation_access: 'TRUE'
 
-# The cellar's edit situation, served by the generic form: two
+# The cellar's edit operation, served by the generic form: two
 # collections, each with Add another and Remove, over AJAX.
 data_surface_surface_test.cellar.edit:
   path: '/surface-test/cellar/{larder}'
   defaults:
-    _form: 'Drupal\data_surface\Form\DataSurfaceSituationForm'
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
     _title: 'Edit a cellar'
-    _data_surface_surface: 'Drupal\data_surface_surface_test\Surface\Cellar\CellarSurface'
-    _data_surface_situation: 'edit'
+    _data_surface_resource: 'Drupal\data_surface_surface_test\Resource\Cellar\CellarResource'
+    _data_surface_operation: 'edit'
   requirements:
-    _data_surface_situation_access: 'TRUE'
+    _data_surface_operation_access: 'TRUE'

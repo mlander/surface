@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_demo_extras;
 
-use Drupal\data_surface\Target\SettingsShapeInterface;
+use Drupal\data_surface\Storage\SettingsShapeInterface;
 
 /**
  * Writes the review deadline down as seconds, and reads it back.
  *
- * The surface asks for the deadline the way a person says it, an amount
+ * The resource asks for the deadline the way a person says it, an amount
  * and a unit; the node type stores one integer of seconds, the same
  * integer core's content type form stores through this module's form
  * alter. This is the whole of the distance between the two, handed to
- * the surface at build time so that whichever target writes this
+ * the resource at build time so that whichever storage writes this
  * module's third party settings applies it, and nothing but this
  * module's namespace passes through it.
  *
@@ -24,7 +24,7 @@ use Drupal\data_surface\Target\SettingsShapeInterface;
  * duration always round-trips; the unit does not always: stored seconds
  * carry no unit, so ten business days come back as twelve days, as
  * NodeTypeReviewSettings::BUSINESS_DAYS explains. A stored value that is
- * not whole hours, which neither this surface nor the form alter writes,
+ * not whole hours, which neither this resource nor the form alter writes,
  * reads back as no amount.
  */
 final class ReviewDeadlineShape implements SettingsShapeInterface {

@@ -22,11 +22,11 @@ becomes a pass-through and no consumer changes.
 | A definition cannot declare examples | The definition array key `examples`, same pass-through | Issue drafted: example values on data definitions |
 | `Choice` holds bare values, so allowed values cannot carry meaning | `LabeledChoice`, a `Choice` subclass carrying `labels` and `descriptions` | Issue drafted: labels on `Choice` |
 | Core has existence constraints for plugins, bundles, extensions and config, but none for languages | The `LanguageExists` constraint, written in core's own style | Propose beside the ones that exist |
-| Nothing says a value is fixed in this context | Surface-level locking of the identity keys a context knows (`isLocked()`), not a definition flag | Possibly nothing needed; revisit |
+| Nothing says a value is fixed in this context | Resource-level locking of the identity keys a context knows (`isLocked()`), not a definition flag | Possibly nothing needed; revisit |
 | No `text` / multiline string type | The definition **setting** `multiline` on a `string`, which the string widget renders as a textarea | Candidate: a `text` primitive, parity with config schema's `type: text` |
 | No `patternProperties` / `additionalProperties` on maps | Not needed by current consumers; maps are closed here | [#3556242] |
 | `required` conflates non-empty, nullable and present | `NULL` and `''` are "not configured"; everything else is a value | The union/nullability architecture discussion |
-| `required` defaults differ between the definition world and the input world | Core's `DataDefinition` is optional by default. Surfaces here say which they mean rather than relying on it | None; a convention to document |
+| `required` defaults differ between the definition world and the input world | Core's `DataDefinition` is optional by default. Resources and structures here say which they mean rather than relying on it | None; a convention to document |
 
 ## Defaults and examples on definitions
 
@@ -86,15 +86,15 @@ would have needed teaching about it, one at a time.
 
 It is written to be module-agnostic for the same reason. The constraint,
 its validator and `LanguageExists` carry nothing specific to this module:
-no surface types in their signatures, options named as core would name
-them (`choices` keyed by value, `labels`, `descriptions`), messages
+no Data Surface types in their signatures, options named as core would
+name them (`choices` keyed by value, `labels`, `descriptions`), messages
 matching core's `Choice`, and no dependency on the options resolver. The
 resolver layer consumes them; they never know it exists.
 
 The same rule applies to the resolver plugin type itself. It should read
-as "options from constraints", a core-shaped service, not a surface
-feature — which is why nothing about surfaces appears in a resolver's
-signature. See [Options and resolvers](options.md).
+as "options from constraints", a core-shaped service, not a Data
+Surface feature, which is why nothing about resources or structures
+appears in a resolver's signature. See [Options and resolvers](options.md).
 
 ## LanguageExists
 
@@ -116,8 +116,8 @@ next existence constraint to propose upstream.
 `TypedDataManager::getPropertyInstance()` caches field item prototypes by
 root data type and property path, **not** by field config object. So
 asking two different unsaved `FieldConfig` objects for their first item
-hands back two clones of the first one's item — and a target built from
-the second writes to the first one's entity.
+hands back two clones of the first one's item, and the storage built
+from the second writes to the first one's entity.
 
 This is not theoretical. A tool hits it immediately, because it describes
 an unsaved field while refining its inputs and creates another while
@@ -128,7 +128,7 @@ The workaround here is to build items from
 itself and binds to itself. `DataSurfaceFieldTypeTrait` does that (and
 did `data_surface_tool`'s `FieldSurfaceLocator`, retired with the
 hand-written field tools). It is a candidate core
-issue in its own right; nothing about it is specific to surfaces.
+issue in its own right; nothing about it is specific to this module.
 
 ## Tool API: constraints matched by name, not by `instanceof`
 

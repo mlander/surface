@@ -1,6 +1,6 @@
 name: Data Surface Tool Test
 type: module
-description: 'Test support for the Tool API bridge: a surface with a target, a situation that changes what exists, and a secret at two depths, for the read tool to leave out.'
+description: 'Test support for the Tool API bridge: a resource with storage, an operation that changes what exists, and a secret at two depths, for the read tool to leave out.'
 package: Testing
 version: VERSION
 core_version_requirement: ^11.3 || ^12

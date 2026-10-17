@@ -9,11 +9,11 @@ use Drupal\Component\Plugin\PluginInspectionInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DataSurfaceHostTrait;
-use Drupal\data_surface\Pipeline\DataSurfaceTargetInterface;
-use Drupal\data_surface\Target\PluginConfigurationTarget;
+use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
+use Drupal\data_surface\Storage\PluginConfigurationStorage;
 
 /**
- * The three form stages a configurable plugin's surface goes through.
+ * The three form stages a configurable plugin's structure goes through.
  *
  * Deliberately named for what they do rather than for one host's
  * spelling of them, because hosts disagree: the plain plugin triple
@@ -31,9 +31,9 @@ use Drupal\data_surface\Target\PluginConfigurationTarget;
  * would silently replace the block form it is supposed to extend.
  *
  * Submit goes through the pipeline rather than assigning the values: the
- * plugin configuration target puts the host-owned keys back around them
+ * plugin configuration storage puts the host-owned keys back around them
  * and commits, so the storage rule lives in one place for every caller,
- * form or not. The target itself comes from getDataSurfaceTarget(),
+ * form or not. The storage itself comes from getDataSurfaceStorage(),
  * which this trait also answers, so the form path and any other caller
  * holding the plugin reach one construction rather than two.
  */
@@ -42,15 +42,15 @@ trait DataSurfaceHostFormTrait {
   use DataSurfaceHostTrait;
 
   /**
-   * Builds the surface describing the values the form collects.
+   * Builds the data surface describing the values the form collects.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface.
+   *   The built structure.
    */
   abstract public function getDataSurface(): DataSurfaceInterface;
 
   /**
-   * Gets the plugin whose configuration array the surface describes.
+   * Gets the plugin whose configuration array the structure describes.
    *
    * The adopting plugin itself in the common case; a form class serving
    * a plugin overrides this to return the plugin it was given.
@@ -69,29 +69,29 @@ trait DataSurfaceHostFormTrait {
   }
 
   /**
-   * Gets the target this host's surface values are stored through.
+   * Gets the storage this host's structure values are stored through.
    *
    * The one construction path for the plugin host family, and what the
-   * submit stage below asks rather than constructing a target of its
+   * submit stage below asks rather than constructing a storage of its
    * own: a plugin's values live in its configuration array, so the
-   * target is the plugin wrapped in a PluginConfigurationTarget. The
-   * pattern's rule: a plugin's host supplies the target, because only it
+   * storage is the plugin wrapped in a PluginConfigurationStorage. The
+   * pattern's rule: a plugin's host supplies the storage, because only it
    * holds the instance.
    *
-   * @return \Drupal\data_surface\Pipeline\DataSurfaceTargetInterface
-   *   The target.
+   * @return \Drupal\data_surface\Pipeline\DataSurfaceStorageInterface
+   *   The storage.
    */
-  public function getDataSurfaceTarget(): DataSurfaceTargetInterface {
-    return new PluginConfigurationTarget($this->surfaceConfigurable());
+  public function getDataSurfaceStorage(): DataSurfaceStorageInterface {
+    return new PluginConfigurationStorage($this->surfaceConfigurable());
   }
 
   /**
-   * Builds the surface container, with current values.
+   * Builds the data surface container, with current values.
    *
-   * Current values are the stored configuration narrowed to the
+   * Current values are the stored configuration narrowed to the data
    * surface's own keys, overlaid with whatever an in-progress AJAX
    * refinement rebuild has already collected, so the definitions refine
-   * against what the person just chose — minus whatever that choice has
+   * against what the person just chose, minus whatever that choice has
    * just orphaned, which is withdrawn rather than judged. The overlay
    * and that rule both live in surfaceFormValues(), one copy for every
    * host.
@@ -102,7 +102,7 @@ trait DataSurfaceHostFormTrait {
    *   The form state.
    *
    * @return array
-   *   The host's form with the surface container merged in.
+   *   The host's form with the data surface container merged in.
    */
   protected function buildDataSurfaceForm(array $form, FormStateInterface $form_state): array {
     $surface = $this->getDataSurface();
@@ -110,7 +110,7 @@ trait DataSurfaceHostFormTrait {
     $values = $this->surfaceFormValues($surface, $this->storedSurfaceValues($surface), $form_state);
     // Merged through the builder rather than with a plain union: the
     // host's fragment is the host's element, and a union would hand the
-    // surface's container type, attributes and tree flag to it.
+    // data surface's container type, attributes and tree flag to it.
     return $builder->mergeSurfaceContainer(
       $builder->buildSurfaceForm($surface, $values, $form_state, $this->surfaceWrapperKey()),
       $form,
@@ -118,13 +118,13 @@ trait DataSurfaceHostFormTrait {
   }
 
   /**
-   * Reads what the host stores for the surface's own keys.
+   * Reads what the host stores for the data surface's own keys.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface.
+   *   The built structure.
    *
    * @return array
-   *   The stored values, keyed by surface key.
+   *   The stored values, keyed by data surface key.
    */
   protected function storedSurfaceValues(DataSurfaceInterface $surface): array {
     return array_intersect_key(
@@ -137,7 +137,7 @@ trait DataSurfaceHostFormTrait {
    * Extracts and validates, flagging violations on their own elements.
    *
    * @param array $form
-   *   The form array carrying the surface container.
+   *   The form array carrying the data surface container.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state.
    */
@@ -161,7 +161,7 @@ trait DataSurfaceHostFormTrait {
    * host until it says otherwise — changes nothing by doing this.
    *
    * @param array $form
-   *   The form array carrying the surface container.
+   *   The form array carrying the data surface container.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state.
    */
@@ -172,12 +172,12 @@ trait DataSurfaceHostFormTrait {
     $result = $this->surfacePipeline()->submit(
       $surface,
       $values,
-      $this->getDataSurfaceTarget(),
+      $this->getDataSurfaceStorage(),
       access: $this->surfaceAccess(),
     );
     if (!$result->isValid()) {
       // Validation runs first on every host that has a validate hook, so
-      // reaching this means the storage refused what the surface
+      // reaching this means the storage refused what the data surface
       // accepted, or the host refused the write outright. Say so on the
       // elements rather than throwing from inside a submit handler; the
       // access refusal has no element of its own and becomes a form
@@ -187,7 +187,7 @@ trait DataSurfaceHostFormTrait {
   }
 
   /**
-   * The stable AJAX wrapper key for this surface's container.
+   * The stable AJAX wrapper key for this data surface's container.
    *
    * @return string
    *   An identifier unique within the page.

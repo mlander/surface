@@ -1,6 +1,6 @@
 # Outputs
 
-A surface has two halves. The definitions a host **accepts** are the
+A data surface has two halves. The definitions a host **accepts** are the
 input half, and everything else in these docs is about them. The
 definitions a host **emits** are the output half, declared in the same
 vocabulary and sealed into the same collection type, but never
@@ -11,9 +11,10 @@ $surface->getDefinitions();        // What may be sent.
 $surface->getOutputDefinitions();  // What comes back.
 ```
 
-Both are a `DefinitionMap` of `SurfaceEntry` objects. A surface that
-declares no outputs answers with an empty map, so a caller never has to
-ask whether a surface knows about outputs before asking what it emits.
+Both are a `DefinitionMap` of `Entry` objects. A data surface whose
+class declares no outputs answers with an empty map, so a caller never
+has to ask whether a data surface knows about outputs before asking what
+it emits.
 
 The boundary rule is unchanged, and it is the reason outputs are worth
 declaring at all: **contracts are objects, payloads are arrays**. What a
@@ -26,8 +27,8 @@ way.
 Beside the inputs, in the same class, on `HasOutputsInterface`:
 
 ```php
-#[UsesSurface]
-final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements SurfaceInterface, HasOutputsInterface {
+#[UsesStructure]
+final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements StructureInterface, HasOutputsInterface {
 
   public static function defineOutputs(ShapeInterface $outputs): void {
     $outputs->add('text', 'string', t('Text'))
@@ -42,9 +43,9 @@ final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements
 }
 ```
 
-The interface is optional, because most surfaces only ask, so
-`defineInputs()` reads as "what this asks for" and a surface that never
-mentions outputs answers with an empty map. Outputs take the same tool
+The interface is optional, because most resources and structures only
+ask, so `defineInputs()` reads as "what this asks for" and a class that
+never mentions outputs answers with an empty map. Outputs take the same tool
 as inputs. Inputs and outputs are separate namespaces: a key may appear
 in both with different meanings.
 
@@ -55,15 +56,14 @@ documented:
 | --- | --- | --- |
 | **Default value** | Declared, merged under stored values by `accept()`. | Refused. A default is what a value starts from when nobody sent one, and nobody sends an output. A definition carrying `default_value`, at any depth, is refused when it is added and again at seal. |
 | **Locking** | Fixes the value to what storage holds. | Refused. Locking narrows what a caller may send. |
-| **Refinement** | `#[RefinesInput]` methods narrow it against its siblings. | Refused: a `#[RefinesInput]` naming an output key is refused when the surface is built. A refinement narrows what may be sent, and nobody sends an output. |
+| **Refinement** | `#[RefinesInput]` methods narrow it against its siblings. | Refused: a `#[RefinesInput]` naming an output key is refused when the resource or structure is built. A refinement narrows what may be sent, and nobody sends an output. |
 
 An output whose shape depends on an input value would be a variant,
 declared with `attachBy()` on that input key, exactly as for an input
-slot. Outputs hold no subsurface yet: `attach()` and `attachBy()` on an
-output are refused by name, so until they can, an output that would
-vary is advertised at its widest: the demo
-formatter's `classes` is an open list of class names, whatever variant
-is chosen.
+slot. Outputs hold no attached structure yet: `attach()` and
+`attachBy()` on an output are refused by name, so until they can, an
+output that would vary is advertised at its widest: the demo formatter's
+`classes` is an open list of class names, whatever variant is chosen.
 
 ## Absent, NULL, and the Omitted sentinel
 
@@ -112,7 +112,7 @@ What it does, in order:
 3. Checks every present value against its definition's type and
    constraints, through typed data, with path-aware violations.
 
-It answers with the same `ViolationSet` of `SurfaceViolation` objects
+It answers with the same `ViolationSet` of `Violation` objects
 that `validate()` answers with, so a caller reads one shape whichever
 direction it is checking.
 
@@ -160,7 +160,7 @@ because the data step stays separately callable — by a test, by a JSON
 representation, by an agent asking what this formatter would show — and
 separately checkable against the contract.
 
-The demo formatter is the worked example: it is its own surface, and
+The demo formatter is the worked example: it is its own structure, and
 declares two outputs in its static `defineOutputs()`; it implements
 `formatValue()`, writes no render array, and emits
 `Omitted::value()` for its classes when no variant is chosen. Its
@@ -169,7 +169,7 @@ outputs are never refined.
 
 ### The tool bridge
 
-`SurfaceInputDefinitions::outputsFromSurface()` converts an output map
+`InputDefinitions::outputsFromSurface()` converts an output map
 into the Tool API's output definitions — `OutputDefinition`, and
 `ListOutputDefinition` or `MapOutputDefinition` for structure — rather
 than input definitions: an output is
@@ -186,8 +186,8 @@ inputs get. What is lost, on top of the two the inputs already lose
 - **Who contributed what.** A mounted third-party output arrives as an
   ordinary property of the `third_party_outputs` map.
 
-The tools `data_surface_tool` derives from situations answer with the
-accepted `values`, `committed`, and the surface's own outputs converted
+The tools `data_surface_tool` derives from operations answer with the
+accepted `values`, `committed`, and the resource's own outputs converted
 here; a dry run answers with what prepare rehearsed, in storage shape,
 as `prepared`.
 
@@ -195,7 +195,7 @@ as `prepared`.
 
 A module that owns neither the host nor its execution can still add to
 what the host emits, at build time: its alter implements
-`AltersOutputsInterface` beside `SurfaceAlterInterface`.
+`AltersOutputsInterface` beside `AltersInputsInterface`.
 
 ```php
 public function alterOutputs(ShapeAdditionsInterface $outputs): void {

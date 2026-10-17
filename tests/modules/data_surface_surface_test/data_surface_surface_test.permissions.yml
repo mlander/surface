@@ -1,6 +1,6 @@
 keep a larder:
   title: 'Keep a larder'
-  description: 'The larder fixture''s own situations.'
+  description: 'The larder fixture''s own operations.'
 stock spice rack:
   title: 'Stock the spice rack'
   description: 'The spice rack fixture is open: its keys may be changed.'

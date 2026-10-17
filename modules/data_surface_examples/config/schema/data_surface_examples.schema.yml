@@ -1,5 +1,5 @@
 # One config object per example, so the examples never write over each other.
-# Each says in schema what its surface says in PHP; the targets hold
+# Each says in schema what its resource says in PHP; the storage classes hold
 # every write to it in prepare(), before anything is saved.
 
 data_surface_examples.registration_step1:

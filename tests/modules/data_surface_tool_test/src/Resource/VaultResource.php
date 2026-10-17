@@ -1,0 +1,45 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\data_surface_tool_test\Resource;
+
+use Drupal\data_surface_tool_test\Structure\VaultBackupStructure;
+use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\Resource\Attribute\Operation;
+use Drupal\data_surface\Resource\Attribute\Resource;
+use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\OperationContext;
+use Drupal\data_surface\Resource\ResourceInterface;
+use Drupal\data_surface_tool_test\Storage\VaultStorage;
+
+/**
+ * Settings that always exist and hold a secret, at the top and below.
+ *
+ * A standalone operation that changes what exists, so it has a read tool,
+ * and a secret at the top and one in an attached child, which the read
+ * tool never returns.
+ */
+#[Resource('tool_test.vault', storage: VaultStorage::class)]
+final class VaultResource implements ResourceInterface {
+
+  /**
+   * Configures the vault, which always exists.
+   */
+  #[Operation('configure', label: 'Configure the vault', permission: 'administer site configuration')]
+  public static function configure(): OperationContext {
+    return new OperationContext('configure');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(ShapeInterface $inputs): void {
+    $inputs->add('endpoint', 'string', t('Endpoint'), default: '');
+    $token = $inputs->add('token', 'string', t('API key'), default: '');
+    DefinitionMetadata::setSecret($token);
+    $inputs->attach('backup', VaultBackupStructure::class)
+      ->setLabel(t('Backup'));
+  }
+
+}

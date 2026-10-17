@@ -8,10 +8,10 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\data_surface\DataSurface;
 use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Target\EncryptedSettingsShape;
-use Drupal\data_surface\Target\SecretCodecException;
-use Drupal\data_surface\Target\SettingsShapeInterface;
-use Drupal\data_surface\Target\SodiumSecretCodec;
+use Drupal\data_surface\Storage\EncryptedSettingsShape;
+use Drupal\data_surface\Storage\SecretCodecException;
+use Drupal\data_surface\Storage\SettingsShapeInterface;
+use Drupal\data_surface\Storage\SodiumSecretCodec;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -26,19 +26,19 @@ use PHPUnit\Framework\Attributes\Group;
  * enciphered on the next write rather than double-enciphered or
  * refused.
  *
- * @see \Drupal\data_surface\Target\EncryptedSettingsShape
+ * @see \Drupal\data_surface\Storage\EncryptedSettingsShape
  */
 #[Group('data_surface')]
 class EncryptedSettingsShapeTest extends UnitTestCase {
 
   /**
-   * Builds the surface the shape reads its secret keys from.
+   * Builds the data surface the shape reads its secret keys from.
    *
    * One secret key, one ordinary one beside it, because "the ordinary
    * one is untouched" is half of what is being tested.
    *
    * @return \Drupal\data_surface\DataSurface
-   *   The surface.
+   *   The data surface.
    */
   protected function surface(): DataSurface {
     $token = DataDefinition::create('string')->setLabel('API key');
@@ -52,7 +52,7 @@ class EncryptedSettingsShapeTest extends UnitTestCase {
   /**
    * Builds the codec the shape encrypts with.
    *
-   * @return \Drupal\data_surface\Target\SodiumSecretCodec
+   * @return \Drupal\data_surface\Storage\SodiumSecretCodec
    *   The codec.
    */
   protected function codec(): SodiumSecretCodec {
@@ -82,12 +82,12 @@ class EncryptedSettingsShapeTest extends UnitTestCase {
   }
 
   /**
-   * Tests that a surface with no secret gets no decorator at all.
+   * Tests that a data surface with no secret gets no decorator at all.
    *
    * The no-behavior-change rule, stated as a test: a site whose field
    * types declare no secret must not grow a layer that does nothing.
    */
-  public function testSurfaceWithoutSecretsIsNotWrapped(): void {
+  public function testDataSurfaceWithoutSecretsIsNotWrapped(): void {
     $surface = new DataSurface(DefinitionMap::fromArrays(definitions: [
       'endpoint' => DataDefinition::create('string'),
     ]));
@@ -181,7 +181,7 @@ class EncryptedSettingsShapeTest extends UnitTestCase {
   /**
    * Builds a shape that translates nothing, to be identical by identity.
    *
-   * @return \Drupal\data_surface\Target\SettingsShapeInterface
+   * @return \Drupal\data_surface\Storage\SettingsShapeInterface
    *   The shape.
    */
   protected function passThroughShape(): SettingsShapeInterface {
@@ -211,7 +211,7 @@ class EncryptedSettingsShapeTest extends UnitTestCase {
    * single-key array each: a translation that moves values without
    * looking into them.
    *
-   * @return \Drupal\data_surface\Target\SettingsShapeInterface
+   * @return \Drupal\data_surface\Storage\SettingsShapeInterface
    *   The shape.
    */
   protected function wrappingShape(): SettingsShapeInterface {

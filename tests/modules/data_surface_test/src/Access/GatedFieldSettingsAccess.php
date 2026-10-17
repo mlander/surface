@@ -8,8 +8,8 @@ use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\State\StateInterface;
-use Drupal\data_surface\Surface\SurfaceAccessInterface;
-use Drupal\data_surface\Surface\SurfaceContext;
+use Drupal\data_surface\Resource\OperationAccessInterface;
+use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface_test\Plugin\Field\FieldType\SurfaceGatedItem;
 
 /**
@@ -18,10 +18,10 @@ use Drupal\data_surface_test\Plugin\Field\FieldType\SurfaceGatedItem;
  * The refusal is switched by state rather than by a permission, because
  * a permission is exactly what the host gate already asks and the point
  * of the fixture is an answer the host gate does not have. Otherwise no
- * opinion: the field config entity, or the situation's permission, is
+ * opinion: the field config entity, or the operation's permission, is
  * the gate.
  */
-final class GatedFieldSettingsAccess implements SurfaceAccessInterface {
+final class GatedFieldSettingsAccess implements OperationAccessInterface {
 
   /**
    * Constructs a GatedFieldSettingsAccess.
@@ -36,7 +36,7 @@ final class GatedFieldSettingsAccess implements SurfaceAccessInterface {
   /**
    * {@inheritdoc}
    */
-  public function access(SurfaceContext $context, AccountInterface $account): AccessResultInterface {
+  public function access(OperationContext $context, AccountInterface $account): AccessResultInterface {
     return $this->state->get(SurfaceGatedItem::REFUSE_STATE_KEY, FALSE)
       ? AccessResult::forbidden('The gated test field type does not allow its settings to be configured.')->setCacheMaxAge(0)
       : AccessResult::neutral()->setCacheMaxAge(0);

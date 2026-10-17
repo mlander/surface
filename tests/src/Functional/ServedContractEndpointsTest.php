@@ -136,7 +136,7 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $this->assertSame(['venue'], $contract['schema']['properties']['room']['x-surface']['dependsOn']);
     $this->assertSame('riverside', $contract['values']['venue']);
 
-    // A surface or situation that names nothing is refused, and a POST
+    // A resource or operation that names nothing is refused, and a POST
     // without the session's token is refused before it is read.
     $this->drupalGet('surface-api/registration.step9/configure');
     $this->assertSession()->statusCodeEquals(403);

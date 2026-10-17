@@ -7,15 +7,15 @@ namespace Drupal\data_surface_test;
 use Drupal\Component\Plugin\ConfigurableInterface;
 
 /**
- * A configurable plugin whose configuration holds keys no surface owns.
+ * A configurable plugin whose configuration holds keys no structure owns.
  *
  * The smallest stand-in for a real plugin host: a configuration array
  * carrying the identifiers a plugin manager writes into every instance
- * alongside the values a surface describes. It exists so
- * PluginConfigurationTarget can be held to the rule that matters — a
- * surface reads and writes only the keys it declares, and the host's own
- * keys survive a submit untouched — without dragging a block, a theme
- * and a block manager into a test about one target.
+ * alongside the values a structure describes. It exists so
+ * PluginConfigurationStorage can be held to the rule that matters (a
+ * structure reads and writes only the keys it declares, and the host's
+ * own keys survive a submit untouched) without dragging a block, a
+ * theme and a block manager into a test about one storage class.
  */
 final class ConfigurableHostPlugin implements ConfigurableInterface {
 

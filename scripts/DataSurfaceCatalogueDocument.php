@@ -6,18 +6,18 @@
  *
  * Not autoloadable, like the comparison renderers beside it: it belongs
  * to the generator script, not to the module's runtime. Both
- * scripts/generate-catalogue.php and SurfaceCatalogueTest include it, so
+ * scripts/generate-catalogue.php and ResourceCatalogueTest include it, so
  * the document the script writes and the document the test asserts come
  * from one piece of code.
  *
  * @see scripts/generate-catalogue.php
- * @see \Drupal\Tests\data_surface\Kernel\SurfaceCatalogueTest
+ * @see \Drupal\Tests\data_surface\Kernel\ResourceCatalogueTest
  */
 
 declare(strict_types=1);
 
 /**
- * Renders the surface catalogue as markdown.
+ * Renders the catalogue of resources and structures as markdown.
  */
 final class DataSurfaceCatalogueDocument {
 
@@ -35,16 +35,16 @@ final class DataSurfaceCatalogueDocument {
    * Renders the catalogue.
    *
    * @param array $catalogue
-   *   What SurfaceCatalogue::describe() returns.
+   *   What ResourceCatalogue::describe() returns.
    * @param array $derivers
-   *   What SurfaceCatalogue::derivers() returns.
+   *   What ResourceCatalogue::derivers() returns.
    *
    * @return string
    *   The markdown.
    */
   public static function render(array $catalogue, array $derivers = []): string {
     $document = self::intro();
-    $document .= "| Surface | Class | Identity | Situations |\n| --- | --- | --- | --- |\n";
+    $document .= "| Resource or structure | Class | Identity | Operations |\n| --- | --- | --- | --- |\n";
     foreach ($catalogue as $surface) {
       $document .= sprintf(
         "| [`%s`](#%s) | `%s` | %s | %s |\n",
@@ -52,7 +52,7 @@ final class DataSurfaceCatalogueDocument {
         self::anchor($surface['id']),
         $surface['class'] === NULL ? 'derived' : self::short($surface['class']),
         self::codes($surface['identity']),
-        self::codes(array_column($surface['situations'], 'id')),
+        self::codes(array_column($surface['operations'], 'id')),
       );
     }
     foreach ($catalogue as $surface) {
@@ -60,26 +60,27 @@ final class DataSurfaceCatalogueDocument {
       $document .= $surface['class'] === NULL
         ? 'Derived under `' . $surface['deriver'] . '`, in `' . $surface['module'] . "`.\n\n"
         : '`' . $surface['class'] . '`, in `' . $surface['module'] . "`.\n\n";
+      $document .= '- Kind: ' . $surface['kind'] . "\n";
       $document .= '- Identity: ' . self::codes($surface['identity']) . "\n";
-      $document .= '- Target: ' . ($surface['target'] === NULL ? 'none; its host or its parent stores it' : '`' . $surface['target'] . '`') . "\n";
-      $document .= '- Access: ' . ($surface['access'] === NULL ? 'the situation\'s permission alone' : '`' . $surface['access'] . '`') . "\n";
+      $document .= '- Storage: ' . ($surface['storage'] === NULL ? 'none; its host or its parent stores it' : '`' . $surface['storage'] . '`') . "\n";
+      $document .= '- Access: ' . ($surface['access'] === NULL ? 'the operation\'s permission alone' : '`' . $surface['access'] . '`') . "\n";
       if ($surface['plugins'] !== []) {
         $document .= '- Used by: ' . self::codes($surface['plugins']) . "; configured through the plugin's host, never on its own.\n";
       }
-      if ($surface['situations'] !== []) {
-        $document .= "\n| Situation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n";
-        foreach ($surface['situations'] as $situation) {
+      if ($surface['operations'] !== []) {
+        $document .= "\n| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n";
+        foreach ($surface['operations'] as $operation) {
           $document .= sprintf(
             "| `%s` | %s | %s | %s | %s | %s | %s | `%s` (`%s`) |\n",
-            $situation['id'],
-            $situation['label'],
-            $situation['parameters'] === [] ? 'nothing' : self::codes($situation['parameters']),
-            $situation['creates'] === NULL ? 'once given what it needs' : ($situation['creates'] ? 'yes' : 'no'),
-            $situation['permission'] === NULL ? 'none' : '`' . $situation['permission'] . '`',
-            self::standalone($surface, $situation),
-            self::reads($situation),
-            self::short($situation['provider']),
-            $situation['module'],
+            $operation['id'],
+            $operation['label'],
+            $operation['parameters'] === [] ? 'nothing' : self::codes($operation['parameters']),
+            $operation['creates'] === NULL ? 'once given what it needs' : ($operation['creates'] ? 'yes' : 'no'),
+            $operation['permission'] === NULL ? 'none' : '`' . $operation['permission'] . '`',
+            self::standalone($surface, $operation),
+            self::reads($operation),
+            self::short($operation['provider']),
+            $operation['module'],
           );
         }
       }
@@ -89,7 +90,7 @@ final class DataSurfaceCatalogueDocument {
           $alter['refines'],
         );
         $document .= "\n- Altered by `" . $alter['class'] . '` (`' . $alter['module'] . '`), '
-          . ($alter['situations'] === [] ? 'in every situation' : 'in ' . self::codes($alter['situations']))
+          . ($alter['operations'] === [] ? 'in every operation' : 'in ' . self::codes($alter['operations']))
           . ($refines === [] ? '' : '; it refines ' . implode(', ', $refines)) . ".\n";
       }
       foreach ($surface['variants'] as $key => $variants) {
@@ -128,12 +129,13 @@ final class DataSurfaceCatalogueDocument {
    */
   private static function deriversIntro(): string {
     return <<<'MARKDOWN'
-A deriver makes surfaces from site state at discovery, one per bundle or
-per field, under the id `<base>:<derivative>`. Which derivatives exist
-depends on the site (its bundles, their form displays and fields), so
-this file, generated on a test site with none, lists the derivers and
-not what they derive; the catalogue service lists every derivative a
-site has, with `class` empty and `deriver` naming the base.
+A deriver makes resources or structures from site state at discovery,
+one per bundle or per field, under the id `<base>:<derivative>`. Which
+derivatives exist depends on the site (its bundles, their form displays
+and fields), so this file, generated on a test site with none, lists
+the derivers and not what they derive; the catalogue service lists
+every derivative a site has, with `class` empty and `deriver` naming
+the base.
 
 MARKDOWN;
   }
@@ -146,73 +148,74 @@ MARKDOWN;
    */
   private static function intro(): string {
     return <<<'MARKDOWN'
-# Surface catalogue
+# Catalogue
 
 Generated by `scripts/generate-catalogue.php`; do not edit by hand.
-`SurfaceCatalogueTest` asserts on every run that this file still
+`ResourceCatalogueTest` asserts on every run that this file still
 matches what that script produces.
 
-Every surface the modules in this repository declare, read from the
-static layer alone: the `#[Surface]` attribute, the `#[Situation]`
-methods and what each needs, the `#[AltersSurface]` classes and the
-`#[SurfaceVariant]` ones. A plugin that is its own surface,
-`#[UsesSurface]` with no argument, is listed by its plugin class, under
-an id from its plugin unless it carries `#[Surface]`, and is used by
-itself. Nothing here builds a surface. A situation's
-"Creates" is the one fact that is not static — it is on the context
-the situation returns — so it is known only for a situation that needs
-nothing to start from.
+Every resource and structure the modules in this repository declare,
+read from the static layer alone: the `#[Resource]` and `#[Structure]`
+attributes, the `#[Operation]` methods and what each needs, the
+`#[Alters]` classes and the `#[Variant]` ones. Each entry says its kind;
+a resource also names its storage, while a structure has none of its
+own. A plugin that is its own structure, `#[UsesStructure]` with no
+argument, is listed by its plugin class, under an id from its plugin
+unless it carries `#[Structure]`, and is used by itself. Nothing here
+builds anything. An operation's "Creates" is the one fact that is not
+static (it is on the context the operation returns), so it is known
+only for an operation that needs nothing to start from.
 
-A situation that can be asked "on its own" is also a tool,
-`data_surface:<surface>:<situation>`, when `data_surface_tool` is
-enabled: its surface names a target, no plugin's configuration is the
-surface, and every `%key` placeholder in its permission can be supplied
-by one of its parameters. A surface a plugin uses is configured through
-the plugin's host. One that can be asked on its own and changes a thing
-that exists is "read on its own" too, a read tool,
-`data_surface:<surface>:<situation>:read`: a situation that needs
+An operation that can be asked "on its own" is also a tool,
+`data_surface:<id>:<operation>`, when `data_surface_tool` is enabled:
+it belongs to a resource that names storage and is no plugin's
+configuration, and every `%key` placeholder in its permission can be
+supplied by one of its parameters. A structure a plugin uses is
+configured through the plugin's host. One that can be asked on its own
+and changes a thing that exists is "read on its own" too, a read tool,
+`data_surface:<id>:<operation>:read`: an operation that needs
 nothing says so by not creating, and one that needs a subject by naming
 one thing whole, with a single entity or with every identity key.
-`docs/surfaces.md` says how each part works.
+`docs/resources.md` says how each part works.
 
 
 MARKDOWN;
   }
 
   /**
-   * Says whether a situation can be asked on its own, and why not.
+   * Says whether an operation can be asked on its own, and why not.
    *
    * @param array $surface
-   *   The surface, as the catalogue describes it.
-   * @param array $situation
-   *   The situation, as the catalogue describes it.
+   *   The resource or structure, as the catalogue describes it.
+   * @param array $operation
+   *   The operation, as the catalogue describes it.
    *
    * @return string
    *   "yes", or "no" and the first reason.
    */
-  private static function standalone(array $surface, array $situation): string {
+  private static function standalone(array $surface, array $operation): string {
     return match (TRUE) {
-      $situation['standalone'] => 'yes',
-      $surface['target'] === NULL => 'no: no target',
+      $operation['standalone'] => 'yes',
+      $surface['storage'] === NULL => 'no: no storage',
       $surface['plugins'] !== [] => 'no: a plugin\'s',
-      default => 'no: nothing supplies ' . self::codes(array_map(static fn (string $key): string => '%' . $key, $situation['unresolvable'])),
+      default => 'no: nothing supplies ' . self::codes(array_map(static fn (string $key): string => '%' . $key, $operation['unresolvable'])),
     };
   }
 
   /**
-   * Says whether what a situation changes can be read on its own, and why not.
+   * Says whether what an operation changes can be read on its own, and why not.
    *
-   * @param array $situation
-   *   The situation, as the catalogue describes it.
+   * @param array $operation
+   *   The operation, as the catalogue describes it.
    *
    * @return string
    *   "yes", or "no" and the first reason.
    */
-  private static function reads(array $situation): string {
+  private static function reads(array $operation): string {
     return match (TRUE) {
-      $situation['reads'] => 'yes',
-      !$situation['standalone'] => 'no: not on its own',
-      $situation['creates'] === TRUE => 'no: it creates',
+      $operation['reads'] => 'yes',
+      !$operation['standalone'] => 'no: not on its own',
+      $operation['creates'] === TRUE => 'no: it creates',
       default => 'no: what it needs leaves room for a new one',
     };
   }

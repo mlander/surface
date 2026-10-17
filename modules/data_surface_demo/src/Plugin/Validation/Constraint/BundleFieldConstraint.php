@@ -21,7 +21,7 @@ use Symfony\Component\Validator\Constraint as SymfonyConstraint;
  * for the pattern's options lists until those are built.
  *
  * @see \Drupal\data_surface_demo\Plugin\DataSurfaceOptionsResolver\BundleFieldOptions
- * @see \Drupal\data_surface_demo\Surface\DemoBlockSurface::fieldOfBundle()
+ * @see \Drupal\data_surface_demo\Structure\DemoBlockStructure::fieldOfBundle()
  */
 #[Constraint(
   id: 'DataSurfaceDemoBundleField',

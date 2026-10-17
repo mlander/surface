@@ -6,48 +6,51 @@ namespace Drupal\data_surface;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\Target\SettingsShapeInterface;
+use Drupal\data_surface\Storage\SettingsShapeInterface;
 
 /**
  * A runtime description of the values something accepts.
  *
  * An ordered set of core data definitions plus a refinement map naming
- * which definitions depend on which sibling values, with surface-level
+ * which definitions depend on which sibling values, with per-key
  * locking. Built at runtime rather than read from static schema, so it
  * can carry live option lists and site-state constraints that YAML
  * cannot express.
  *
- * All of that is one DefinitionMap of SurfaceEntry objects. A second map
+ * All of that is one DefinitionMap of Entry objects. A second map
  * of the same type holds the other half of the contract: what the host's
  * execution emits, declared in the same vocabulary, never refined, and
  * checked by the pipeline's conformOutput(). The
  * rule the module holds itself to, once: contracts are objects, payloads
- * are arrays. What a surface says is read off typed objects; the values that
- * flow through accept, validate, prepare and commit are plain arrays,
- * and so is the syntax an author declares a surface in.
+ * are arrays. What a data surface says is read off typed objects; the
+ * values that flow through accept, validate, prepare and commit are plain
+ * arrays, and so is the syntax an author declares a resource or structure
+ * in.
  *
- * One surface drives everything downstream: default values, refinement,
- * form generation (through the data surface widgets), validation
- * (through the pipeline), and eventually machine-readable schema — so a
- * form and any other consumer can never disagree about what the values
- * accept.
+ * One data surface drives everything downstream: default values,
+ * refinement, form generation (through the data surface widgets),
+ * validation (through the pipeline), and eventually machine-readable
+ * schema, so a form and any other consumer can never disagree about what
+ * the values accept.
  *
- * A surface is pure data. It reaches no service and holds no behavior
+ * A data surface is pure data. It reaches no service and holds no behavior
  * beyond reading its own definitions and applying the refiners it was
  * sealed with (the #[RefinesInput] methods the build step bound), which
  * is what lets it ride along in a cached form and be read by a caller
- * that has no container. Anything needing a service —
- * validation above all — belongs to
+ * that has no container. Anything needing a service (validation above
+ * all) belongs to
  * \Drupal\data_surface\Pipeline\DataSurfacePipelineInterface.
  *
- * Surfaces are built by the build step,
- * \Drupal\data_surface\SurfaceBuild\SurfacesInterface, which seals a
- * builder; nothing else constructs one.
+ * Data surfaces are built by the build step,
+ * \Drupal\data_surface\ResourceBuild\ResourcesInterface, which seals a
+ * builder; nothing else constructs one. What it builds is a resource or
+ * a structure, so a data surface is the built resource or the built
+ * structure.
  *
- * A surface is also a cacheable dependency. What it advertises is
- * computed from live site state — option lists read from entity types,
- * languages, plugins — and from whatever the refiners that ran declared,
- * so anything that renders or stores a surface has to be able to say for
+ * A data surface is also a cacheable dependency. What it advertises is
+ * computed from live site state (option lists read from entity types,
+ * languages, plugins) and from whatever the refiners that ran declared,
+ * so anything that renders or stores a data surface has to be able to say for
  * how long, and under which conditions, that rendering holds. The rules
  * for reading it are in docs/refinement.md.
  *
@@ -59,18 +62,19 @@ use Drupal\data_surface\Target\SettingsShapeInterface;
 interface DataSurfaceInterface extends CacheableDependencyInterface {
 
   /**
-   * The contributor id standing for the surface's owner.
+   * The contributor id standing for the owner.
    *
-   * The owner is the first contributor: its definitions, its refinement
-   * map and its #[RefinesInput] methods are contribution number one, and
-   * it is held to the same rules as everybody who arrives later. The id
+   * The owner is the resource or structure that declared the shape, and
+   * the first contributor: its definitions, its refinement map and its
+   * #[RefinesInput] methods are contribution number one, and it is held
+   * to the same rules as everybody who arrives later. The id
    * is spelled so that no module can claim it, because a module name
    * never contains a '#'.
    */
   const OWNER = '#owner';
 
   /**
-   * Gets everything the surface advertises, in declaration order.
+   * Gets everything the data surface advertises, in declaration order.
    *
    * The whole contract in one object: iterate it for name => definition,
    * ask it for one entry to learn who introduced a key, whether it is
@@ -88,7 +92,7 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
    *
    * The other half of the contract, in the same vocabulary and the same
    * collection type as the inputs: one entry per output key, carrying
-   * its definition and who introduced it. A surface that declares no
+   * its definition and who introduced it. A data surface that declares no
    * outputs answers with an empty map, so nothing has to ask first.
    *
    * What differs from the input map, and why:
@@ -106,7 +110,7 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
    * emitted array against this map.
    *
    * @return \Drupal\data_surface\DefinitionMap
-   *   The output definitions; empty when the surface declares none.
+   *   The output definitions; empty when the data surface declares none.
    *
    * @see \Drupal\data_surface\Pipeline\Omitted
    * @see docs/outputs.md
@@ -114,22 +118,22 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
   public function getOutputDefinitions(): DefinitionMap;
 
   /**
-   * Gets one definition, or NULL if the surface does not declare it.
+   * Gets one definition, or NULL if the data surface does not declare it.
    *
    * Kept beside the map because reading one key by name is what most
    * host code does, and getDefinitions()->get() says the same thing
    * twice.
    *
    * @param string $name
-   *   The surface key.
+   *   The definition key.
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
-   *   The definition, or NULL when the surface declares no such key.
+   *   The definition, or NULL when the data surface declares no such key.
    */
   public function getDefinition(string $name): ?DataDefinitionInterface;
 
   /**
-   * Returns whether a key's value is fixed by the surface.
+   * Returns whether a key's value is fixed by the data surface.
    *
    * Locking is the degenerate refinement: the value space is narrowed to
    * exactly one value. That value is whatever storage already holds, and
@@ -138,7 +142,7 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
    * input.
    *
    * @param string $name
-   *   The surface key.
+   *   The definition key.
    *
    * @return bool
    *   TRUE when the key's value is fixed.
@@ -151,9 +155,9 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
    * @param string $provider
    *   The module that mounted the settings.
    *
-   * @return \Drupal\data_surface\Target\SettingsShapeInterface|null
+   * @return \Drupal\data_surface\Storage\SettingsShapeInterface|null
    *   The shape the provider declared at build time, or NULL when its
-   *   settings are stored exactly as the surface describes them.
+   *   settings are stored exactly as the data surface describes them.
    *
    * @see \Drupal\data_surface\DataSurfaceBuilderInterface::setThirdPartyShape()
    */
@@ -163,25 +167,25 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
    * Gets the default value for one key.
    *
    * @param string $name
-   *   The surface key.
+   *   The definition key.
    *
    * @return mixed
    *   The declared default, or NULL when the key declares none or the
-   *   surface does not declare the key at all.
+   *   data surface does not declare the key at all.
    */
   public function getDefault(string $name): mixed;
 
   /**
-   * Builds the default values the surface declares.
+   * Builds the default values the data surface declares.
    *
    * @return array
-   *   Defaults keyed by surface key; keys without a declared default are
+   *   Defaults keyed by definition key; keys without a declared default are
    *   present with NULL so consumers see the full shape.
    */
   public function getDefaultValues(): array;
 
   /**
-   * Returns a surface with definitions refined against known values.
+   * Returns a data surface with definitions refined against known values.
    *
    * A target refines only when every one of its dependencies holds a
    * configured value, judged by the same rule the pipeline applies
@@ -199,7 +203,7 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
    *
    * What refinement does with those values, in four lines:
    * 1. Deep-clone the advertised definition and divide its list of
-   *    allowed values into the owner's — everything nobody contributed —
+   *    allowed values into the owner's (everything nobody contributed)
    *    and one slice per contributor.
    * 2. Run the owner's refiners over the owner's slice.
    * 3. Run each contributor's refiners over that contributor's slice.
@@ -211,24 +215,24 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
    * not given. The 'any' data type is the declared escape hatch: it may
    * refine to a concrete type. A refiner that declares cacheability, by
    * implementing CacheableDependencyInterface, has it merged into the
-   * refined surface when it runs.
+   * refined data surface when it runs.
    *
    * A refiner is static or runtime ($runtime). A runtime refiner's link
    * runs in its chain like any other, and one that watches nothing runs
    * whatever the key's gate says, since it has nothing to wait for. Asked
    * for the static refiners alone, the runtime ones are left out and each
-   * key waits only for what its static refiners watch: what the surface
+   * key waits only for what its static refiners watch: what the data surface
    * can state ahead of time, which is all the served contract's full
    * schema and its enumerated conditionals may say.
    *
    * @param array $values
-   *   Values keyed by surface key.
+   *   Values keyed by definition key.
    * @param bool $runtime
    *   TRUE, the default, for what the pipeline holds the values to: every
    *   refiner. FALSE for the static refiners alone.
    *
    * @return static
-   *   A refined surface, or the same surface when nothing refines.
+   *   A refined data surface, or the same one when nothing refines.
    *
    * @throws \LogicException
    *   When a refiner returns a definition that accepts more

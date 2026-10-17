@@ -8,27 +8,27 @@ use Drupal\Core\Block\Attribute\Block;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Plugin\Block\DataSurfaceBlockBase;
-use Drupal\data_surface\Surface\Attribute\RefinesInput;
-use Drupal\data_surface\Surface\Attribute\Surface;
-use Drupal\data_surface\Surface\Attribute\UsesSurface;
-use Drupal\data_surface\Surface\ShapeInterface;
-use Drupal\data_surface\Surface\SurfaceInterface;
+use Drupal\data_surface\Resource\Attribute\RefinesInput;
+use Drupal\data_surface\Resource\Attribute\Structure;
+use Drupal\data_surface\Resource\Attribute\UsesStructure;
+use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\StructureInterface;
 
 /**
- * A block that is its own surface, and names its id with #[Surface].
+ * A block that is its own structure, and names its id with #[Structure].
  *
- * #[UsesSurface] with no argument: the shape and the refiner are static
- * methods of the block. The #[Surface] beside it gives the id, which a
- * plugin that is its own surface otherwise takes from its plugin
+ * #[UsesStructure] with no argument: the shape and the refiner are static
+ * methods of the block. The #[Structure] beside it gives the id, which a
+ * plugin that is its own structure otherwise takes from its plugin
  * definition (block:data_surface_surface_test_sticky_note).
  */
 #[Block(
   id: 'data_surface_surface_test_sticky_note',
   admin_label: new TranslatableMarkup('Sticky note (surface test)'),
 )]
-#[UsesSurface]
-#[Surface('surface_test.sticky_note')]
-final class StickyNoteBlock extends DataSurfaceBlockBase implements SurfaceInterface {
+#[UsesStructure]
+#[Structure('surface_test.sticky_note')]
+final class StickyNoteBlock extends DataSurfaceBlockBase implements StructureInterface {
 
   /**
    * {@inheritdoc}

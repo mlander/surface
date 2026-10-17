@@ -7,7 +7,7 @@ namespace Drupal\Tests\data_surface\Kernel;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
-use Drupal\data_surface_test\RecordingTarget;
+use Drupal\data_surface_test\RecordingStorage;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -16,8 +16,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * The claim being held to: one answer per operation, consulted in one
  * place, and the tri-state respected. A forbidden answer stops the run
- * before the target is read, which is what makes it a gate rather than a
- * late refusal — a caller who may not write must not be able to learn
+ * before the storage is read, which is what makes it a gate rather than a
+ * late refusal: a caller who may not write must not be able to learn
  * what storage holds by being refused. A neutral answer is no opinion
  * and must leave the run exactly as it was, which is the compatibility
  * promise for every provider that has not answered for itself. An
@@ -36,7 +36,7 @@ class PipelineAccessTest extends DataSurfaceKernelTestBase {
   protected static $modules = ['system', 'data_surface', 'data_surface_test'];
 
   /**
-   * The shared log the recording targets append their writes to.
+   * The shared log each recording storage appends its writes to.
    *
    * @var \ArrayObject<int, string>
    */
@@ -51,26 +51,26 @@ class PipelineAccessTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Builds a target that records what it was asked to do.
+   * Builds storage that records what it was asked to do.
    *
-   * @return \Drupal\data_surface_test\RecordingTarget
-   *   The target.
+   * @return \Drupal\data_surface_test\RecordingStorage
+   *   The storage.
    */
-  protected function target(): RecordingTarget {
-    return new RecordingTarget('gated', $this->log);
+  protected function storage(): RecordingStorage {
+    return new RecordingStorage('gated', $this->log);
   }
 
   /**
-   * Tests that a forbidden answer refuses before the target is read.
+   * Tests that a forbidden answer refuses before the storage is read.
    */
   public function testForbiddenRefusesBeforeLoad(): void {
     $surface = $this->casingVariantSurface();
-    $target = $this->target();
+    $storage = $this->storage();
 
     $result = $this->pipeline()->submit(
       $surface,
       ['casing' => 'uppercase'],
-      $target,
+      $storage,
       access: AccessResult::forbidden('No configuring today.'),
     );
 
@@ -78,7 +78,7 @@ class PipelineAccessTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($result->isAccessRefused());
     // The stage ran before any other: storage was never asked what it
     // holds, nothing was prepared, and nothing was written.
-    $this->assertSame(0, $target->loads);
+    $this->assertSame(0, $storage->loads);
     $this->assertSame([], $this->log->getArrayCopy());
     $this->assertNull($result->prepared);
     $this->assertFalse($result->committed);
@@ -94,7 +94,7 @@ class PipelineAccessTest extends DataSurfaceKernelTestBase {
     $result = $this->pipeline()->submit(
       $this->casingVariantSurface(),
       ['casing' => 'uppercase'],
-      $this->target(),
+      $this->storage(),
       access: AccessResult::forbidden('The gate is shut.'),
     );
 
@@ -119,7 +119,7 @@ class PipelineAccessTest extends DataSurfaceKernelTestBase {
     $result = $this->pipeline()->submit(
       $this->casingVariantSurface(),
       ['casing' => 'uppercase'],
-      $this->target(),
+      $this->storage(),
       access: AccessResult::forbidden(),
     );
 
@@ -143,7 +143,7 @@ class PipelineAccessTest extends DataSurfaceKernelTestBase {
     $result = $this->pipeline()->submit(
       $this->casingVariantSurface(),
       ['casing' => 'uppercase'],
-      $this->target(),
+      $this->storage(),
       access: $access,
     );
 
@@ -166,11 +166,11 @@ class PipelineAccessTest extends DataSurfaceKernelTestBase {
     $surface = $this->casingVariantSurface();
     $input = ['casing' => 'uppercase', 'variant' => 'bold'];
 
-    $unasked = $this->target();
+    $unasked = $this->storage();
     $baseline = $this->pipeline()->submit($surface, $input, $unasked);
-    $neutral_target = $this->target();
+    $neutral_target = $this->storage();
     $neutral = $this->pipeline()->submit($surface, $input, $neutral_target, access: AccessResult::neutral());
-    $allowed_target = $this->target();
+    $allowed_target = $this->storage();
     $allowed = $this->pipeline()->submit($surface, $input, $allowed_target, access: AccessResult::allowed());
 
     foreach ([$baseline, $neutral, $allowed] as $result) {
@@ -198,16 +198,16 @@ class PipelineAccessTest extends DataSurfaceKernelTestBase {
    * Tests that an allowed answer does not excuse an invalid value.
    *
    * Access answers who, not what: the stages after it are unchanged, so
-   * a value the surface refuses is refused for a caller who was granted
+   * a value the data surface refuses is refused for a caller who was granted
    * the operation exactly as it is for everybody else.
    */
   public function testAllowedDoesNotBypassValidation(): void {
-    $target = $this->target();
+    $storage = $this->storage();
 
     $result = $this->pipeline()->submit(
       $this->casingVariantSurface(),
       ['casing' => 'sideways'],
-      $target,
+      $storage,
       access: AccessResult::allowed(),
     );
 
