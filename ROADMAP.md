@@ -401,16 +401,16 @@ C: B changes what a schema can state, and C reads that schema. The
 renames sit in A because they are cheapest before new code exists.
 
 - **A, merge-ready:** the refinement leak; the never-stricter audit; the
-  blueprint and storage layout renames (item 4); the docs reading pass
+  blueprint and storage layout renames (item 5); the docs reading pass
   and the leftover-words decision; then merge `next` to `main`, the React
   local resolution included.
 - **B, what the contract can say:** declarative narrowing (2); ports (3);
-  named scalar shapes (5).
-- **C, access and the doors:** static and runtime access (6); operation
-  behavior facts and the tool door's refusal feedback (7).
-- **D, edges as they bite:** item 8.
-- **E, the entity side** when resumed: item 9.
-- **In parallel from now:** file the drafted core issues (item 10),
+  mixins (4); named scalar shapes (6).
+- **C, access and the doors:** static and runtime access (7); operation
+  behavior facts and the tool door's refusal feedback (8).
+- **D, edges as they bite:** item 9.
+- **E, the entity side** when resumed: item 10.
+- **In parallel from now:** file the drafted core issues (item 11),
   now including one for conditional data definitions (a complex
   definition declares `when`/`then`/`required` conditions that only
   narrow; typed data validates them, the JSON Schema normalizer emits
@@ -469,7 +469,21 @@ renames sit in A because they are cheapest before new code exists.
    wherever it is used, which a container may want to opt out of (to
    decide); a change to the structure changes every container's stored
    shape, which is Phase D with an explicit contract to diff.
-4. **Rename the builders to blueprints.** Before named scalar shapes
+4. **Mixins: a structure merged flat.** Today composition only nests
+   (attach, with its frame and wall; an alter's mount under its module's
+   name). A mixin, Smithy's word, merges a structure's members into the
+   owner's own keys: declared by the owner only (`with: [Timestamps::class]`),
+   never by an alter, since an alter's keys must live under its own name;
+   stored flat and described by the owner's config schema; emitted as
+   `allOf` of the mixin's `$ref` and the owner's properties with
+   `unevaluatedProperties`, so the def stays reusable; its refiners run
+   in the owner's frame but watch only the mixin's own members and
+   ports; its access locks or omits its members. Nest for a thing of its
+   own inside this one (a contact, a ticket); mix in for shared members
+   that are part of this thing (timestamps, ownership, publishing
+   flags), which is how an entity's base-field traits already compose
+   and what the bundle resource will want. With ports, in B.
+5. **Rename the builders to blueprints.** Before named scalar shapes
    exist, `ShapeInterface` and `ShapeAdditionsInterface`, the builders
    passed to `defineInputs()`, `defineOutputs()` and `alterInputs()`,
    become `BlueprintInterface` and `BlueprintAdditionsInterface` (decided
@@ -480,7 +494,7 @@ renames sit in A because they are cheapest before new code exists.
    `HasStorageShapeInterface::storageShape()` and `SettingsShapeInterface`,
    which describe how values are laid out in storage, take a name that
    says so (layout). Mechanical, with the snapshot.
-5. **Named scalar shapes.** The one Smithy level the pattern lacks: a
+6. **Named scalar shapes.** The one Smithy level the pattern lacks: a
    named simple shape with its traits, reused anywhere (`string Licence
    @pattern`). Today a scalar's constraints, message and description are
    written inline at each key, and core's answer, a data type plugin, is
@@ -491,7 +505,7 @@ renames sit in A because they are cheapest before new code exists.
    tighten every use on the site; a port can declare it as its type;
    and "shape" takes its Smithy place, resources, structures and named
    scalars all being shapes. Small, additive, after ports.
-6. **Static and runtime access**, the same split as refinement. Static
+7. **Static and runtime access**, the same split as refinement. Static
    access is decidable from the account alone (an operation's
    permission, a role) and is stated in the full schema and the tool
    listing for the account asking. Runtime access depends on the
@@ -504,7 +518,7 @@ renames sit in A because they are cheapest before new code exists.
    locked or omitted later. Access answers per key or structure;
    narrowing allowed values by account is a runtime refiner, not
    access.
-7. **The tool door's feedback.** Keep the listing small, as intended.
+8. **The tool door's feedback.** Keep the listing small, as intended.
    Name each dependency in the input's description. Make a refusal on a
    dependent key say what is allowed for the values sent ("room: not
    offered for Riverside Hall; choose Main hall or East room"), which
@@ -521,7 +535,7 @@ renames sit in A because they are cheapest before new code exists.
    has them; open-world is a later flag on the storage. Tool API gap to
    file: idempotence is a property of the operation kind, not the tool,
    so an edit cannot say it is idempotent while an add says it is not.
-8. **Pattern edges**, each small: a read-only operation form for the
+9. **Pattern edges**, each small: a read-only operation form for the
    top-level locked answer (today read as denied); a view-only slot
    variant (today not offered); `childrenMayAnswer()` skipping the
    build when no access class exists; a collection inside an item on
@@ -529,7 +543,7 @@ renames sit in A because they are cheapest before new code exists.
    from the read tool; `attachListBy()`; an item routed to its child's
    own storage; the phpstan rule for static refiners; the "Right now"
    wording for a key that is both narrowed and under a runtime rule.
-9. **The entity side, when resumed.** Fields as two shapes: a `field`
+10. **The entity side, when resumed.** Fields as two shapes: a `field`
    resource (identity: entity and field name; a collection of items
    with Count from cardinality; field access; a `set` operation whose
    tool shares Tool Belt's `field_set_value` contract) and a
@@ -543,7 +557,7 @@ renames sit in A because they are cheapest before new code exists.
    first alter with a storage of its own, and a placed block as a
    config entity resource whose settings are a slot keyed by plugin id
    with each plugin's structure as a variant.
-10. **The core conversation**, bottom-up: the definition-level facts
+11. **The core conversation**, bottom-up: the definition-level facts
    first (constraints to JSON Schema keywords, `refined_by` on
    definitions, a setter contract, labels on Choice; drafted), then
    operations and access for config objects framed as what entity types
