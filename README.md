@@ -264,7 +264,7 @@ Full documentation is under [`docs/`](docs/).
 | [Resources and structures](docs/resources.md) | Operations, alters, attached structures and variants, access, storage, tools, the catalogue. |
 | [Catalogue](docs/catalogue.md) | Every resource and structure the modules here declare, generated from the static layer. |
 | [The pipeline](docs/pipeline.md) | Access, accept, validate, prepare, commit; dry runs; exceptions. |
-| [Value semantics](docs/semantics.md) | Configured or not, the casting table, secrets, stale values, shape mismatches, required, locked keys. |
+| [Value semantics](docs/semantics.md) | Configured or not, the coercion table (the Tool API's), secrets, stale values, shape mismatches, required, locked keys. |
 | [Outputs](docs/outputs.md) | Declaring what a host emits, the Omitted sentinel, conformance, its two consumers, an alter's outputs. |
 | [Storage](docs/storage.md) | What storage is, prepare and commit, the six engine storage classes, config schema, settings layouts, secrets, the serialization rule. |
 | [The served contract](docs/served-contract.md) | An operation as JSON Schema with `x-surface`, its refine and validate endpoints, and the React form rendered from it. |

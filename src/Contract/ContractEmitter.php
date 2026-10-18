@@ -424,11 +424,16 @@ final class ContractEmitter {
    *   Whether the frame is a child its access locked, or is inside one:
    *   every key is then described locked (`readOnly`, `x-surface.locked`)
    *   and holds what it was given, which is what is stored.
+   * @param bool $blank
+   *   Whether the frame stands for every item of a collection rather than
+   *   one value: it is described from the locked keys the child's
+   *   operation knows alone, and a key locked only because the frame is
+   *   frozen holds no `const`, since each item holds its own.
    *
    * @return array{0: array, 1: array|\stdClass}
    *   The object schema of the frame, and its values as shown.
    */
-  protected function frame(DataSurfaceInterface $declared, array $values, string $prefix, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing = [], bool $declaring = FALSE, bool $frozen = FALSE): array {
+  protected function frame(DataSurfaceInterface $declared, array $values, string $prefix, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing = [], bool $declaring = FALSE, bool $frozen = FALSE, bool $blank = FALSE): array {
     $full = $subschemas->full;
     // Decision: see docs/decisions.md#static-by-default-runtime-by-declaration.
     // The present moment is refined by every refiner; the full schema and
@@ -461,7 +466,7 @@ final class ContractEmitter {
       }
       $depends = $advertised->dependencies($name);
       if ($entry->slot !== NULL) {
-        [$properties[$name], $shown[$name], $branches] = $this->slot($declared, $entry, $values, $prefix . $name, $owner, $cacheability, $stale, $subschemas, $standing, $declaring, $locked);
+        [$properties[$name], $shown[$name], $branches] = $this->slot($declared, $entry, $values, $prefix . $name, $owner, $cacheability, $stale, $subschemas, $standing, $declaring, $locked, $blank);
         array_push($conditions, ...$branches);
       }
       elseif ($entry->list !== NULL) {
@@ -494,10 +499,10 @@ final class ContractEmitter {
         else {
           $child = $attachment->child;
           $held = $values[$name] ?? NULL;
-          $inside = $full ? $this->known($child) : array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
+          $inside = $full || $blank ? $this->known($child) : array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
           // A child its access locked is described locked through and
           // through: every key inside it fixed to what it holds.
-          [$instance, $shown[$name]] = $this->instance($child, $key, $inside, $prefix . $name . '.', $attachment->id ?? $fallback, $cacheability, $stale, $subschemas, $standing, $locked);
+          [$instance, $shown[$name]] = $this->instance($child, $key, $inside, $prefix . $name . '.', $attachment->id ?? $fallback, $cacheability, $stale, $subschemas, $standing, $locked, $blank);
           $reference = $this->reference($key, $instance, $subschemas);
         }
         $properties[$name] = $this->describe($current->definition) + $reference;
@@ -518,8 +523,9 @@ final class ContractEmitter {
           $secret, $declaring && $entry->locked => NULL,
           $entry->locked => $declared->getDefault($name),
           // Inside a locked child, what it holds: nothing, in the full
-          // schema, which reads no stored value.
-          $frozen && $full => NULL,
+          // schema, which reads no stored value, nor for a collection's
+          // items, each of which holds its own.
+          $frozen && ($full || $blank) => NULL,
           $orphan => $standing[$prefix . $name],
           default => $values[$name] ?? $declared->getDefault($name),
         };
@@ -565,7 +571,7 @@ final class ContractEmitter {
           $properties[$name][self::EXTENSION]['runtime'] = TRUE;
         }
       }
-      if ($current->definition->isRequired()) {
+      if (static::required($current->definition)) {
         $required[] = $name;
       }
     }
@@ -592,9 +598,11 @@ final class ContractEmitter {
    * it is locked, and `x-surface.list`. Its `items` refer to the child's
    * def, as an attached child's property does, narrowed by composition
    * only where every item differs from the def (a key the child's
-   * operation locked): described from the child's locked keys alone, in
-   * both documents, so the schema says nothing one item's answers
-   * decide, and what the module states as defaults stays on the def.
+   * operation locked, a list locked whole): described from the child's
+   * locked keys alone, in both documents, so the schema says nothing one
+   * item's answers decide, and what the module states as defaults stays
+   * on the def. A locked list's items are `readOnly` and hold no
+   * `const`, since each item holds its own value.
    * Each item's values, and anything stale inside one, are read item by
    * item in the child's own frame, into `values` and `stale`, under the
    * item's delta.
@@ -646,7 +654,7 @@ final class ContractEmitter {
     }
     else {
       $ignored = [];
-      [$instance] = $this->instance($child, $key, $this->known($child), $path . '.*.', $list->item->id ?? $fallback, $cacheability, $ignored, $subschemas, [], $locked);
+      [$instance] = $this->instance($child, $key, $this->known($child), $path . '.*.', $list->item->id ?? $fallback, $cacheability, $ignored, $subschemas, [], $locked, TRUE);
       $items = $this->reference($key, $instance, $subschemas);
     }
     $definition = $current->definition;
@@ -764,16 +772,18 @@ final class ContractEmitter {
    *   The orphans of a refinement, by dotted path from the top.
    * @param bool $frozen
    *   Whether the child is locked whole, by its access or its parent's.
+   * @param bool $blank
+   *   Whether the child stands for every item of a collection.
    *
    * @return array{0: array, 1: array|\stdClass}
    *   The child's object schema here, and its values as shown.
    */
-  protected function instance(DataSurfaceInterface $child, string $key, array $values, string $prefix, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing, bool $frozen = FALSE): array {
+  protected function instance(DataSurfaceInterface $child, string $key, array $values, string $prefix, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing, bool $frozen = FALSE, bool $blank = FALSE): array {
     $def = $subschemas->get($key);
     if ($subschemas->full && $def !== NULL && !$frozen && !$this->locks($child)) {
       return [$def, new \stdClass()];
     }
-    return $this->frame($child, $values, $prefix, $owner, $cacheability, $stale, $subschemas, $standing, FALSE, $frozen);
+    return $this->frame($child, $values, $prefix, $owner, $cacheability, $stale, $subschemas, $standing, FALSE, $frozen, $blank);
   }
 
   /**
@@ -955,12 +965,15 @@ final class ContractEmitter {
    * @param bool $frozen
    *   Whether the slot is inside a child locked whole: every variant is
    *   then described locked.
+   * @param bool $blank
+   *   Whether the slot is inside a collection's items: no variant is
+   *   then chosen, and every one is described from its locked keys.
    *
    * @return array{0: array, 1: mixed, 2: array}
    *   The slot's property schema, its value as shown, and the
    *   conditionals for the parent's `allOf`.
    */
-  protected function slot(DataSurfaceInterface $declared, Entry $entry, array $values, string $path, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing = [], bool $declaring = FALSE, bool $frozen = FALSE): array {
+  protected function slot(DataSurfaceInterface $declared, Entry $entry, array $values, string $path, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing = [], bool $declaring = FALSE, bool $frozen = FALSE, bool $blank = FALSE): array {
     $full = $subschemas->full;
     $slot = $entry->slot;
     assert($slot !== NULL);
@@ -969,7 +982,7 @@ final class ContractEmitter {
     $chosen = $slot->chosen($deciding);
     $held = $values[$entry->name] ?? NULL;
     $shell = $this->describe($slot->shell);
-    $property = $shell + ['type' => $slot->shell->isRequired() ? 'object' : ['object', 'null']];
+    $property = $shell + ['type' => $this->nullable('object', $slot->shell)];
     $depends = array_values(array_unique([$slot->by, ...$entry->dependencies]));
     if ($frozen) {
       $property['readOnly'] = TRUE;
@@ -988,7 +1001,7 @@ final class ContractEmitter {
       $child = $variant->child;
       $fallback = $owner . '.' . $entry->name . '.' . $id;
       $key = $this->define($variant, $fallback, $cacheability, $subschemas);
-      $is_chosen = !$full && !$declaring && $id === $chosen;
+      $is_chosen = !$full && !$declaring && !$blank && $id === $chosen;
       if ($declaring) {
         $instance = $subschemas->get($key) ?? [];
         $reference = $this->reference($key);
@@ -996,8 +1009,8 @@ final class ContractEmitter {
       else {
         $own = $is_chosen && $slot->fits($id, $held) ? $held : [];
         $variant_stale = [];
-        $inside = $full ? $this->known($child) : array_replace($child->getDefaultValues(), $own);
-        [$instance, $variant_values] = $this->instance($child, $key, $inside, $path . '.', $variant->id ?? $fallback, $cacheability, $variant_stale, $subschemas, $is_chosen ? $standing : [], $frozen);
+        $inside = $full || $blank ? $this->known($child) : array_replace($child->getDefaultValues(), $own);
+        [$instance, $variant_values] = $this->instance($child, $key, $inside, $path . '.', $variant->id ?? $fallback, $cacheability, $variant_stale, $subschemas, $is_chosen ? $standing : [], $frozen, $blank);
         if ($is_chosen) {
           $shown = $variant_values;
           array_push($stale, ...$variant_stale);
@@ -1346,7 +1359,7 @@ final class ContractEmitter {
       foreach ($definition->getPropertyDefinitions() as $name => $property) {
         $name = (string) $name;
         [$properties[$name], $nested[$name]] = $this->property($property, $before[$name] ?? NULL, is_array($value) ? ($value[$name] ?? NULL) : NULL, $path . '.' . $name, FALSE, [], $cacheability, $stale);
-        if ($property->isRequired()) {
+        if (static::required($property)) {
           $required[] = $name;
         }
       }
@@ -1540,7 +1553,33 @@ final class ContractEmitter {
   }
 
   /**
-   * Allows null beside a type, for a key that need not hold a value.
+   * Answers whether a key is in its object's `required`.
+   *
+   * A key the resource requires must be present and not null. A secret is
+   * always optional, whatever it requires: left out or null, the stored
+   * secret stands, and a required one that was never set is refused by
+   * the pipeline as missing.
+   *
+   * Decision: see docs/decisions.md#a-secret-is-optional-never-nullable.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key.
+   *
+   * @return bool
+   *   Whether the schema requires it.
+   */
+  protected static function required(DataDefinitionInterface $definition): bool {
+    return $definition->isRequired() && !DefinitionMetadata::isSecret($definition);
+  }
+
+  /**
+   * Allows null beside a type, for an optional key a caller may clear.
+   *
+   * Null on an optional key clears it, so it is a value the key takes. A
+   * required key never takes it, and neither does a secret, which null
+   * leaves as it is and only its clear marker empties.
+   *
+   * Decision: see docs/decisions.md#absent-keeps-null-clears.
    *
    * @param string|array $type
    *   The JSON type.
@@ -1551,7 +1590,10 @@ final class ContractEmitter {
    *   The type, or the type and null.
    */
   protected function nullable(string|array $type, DataDefinitionInterface $definition): string|array {
-    return $definition->isRequired() || is_array($type) ? $type : [$type, 'null'];
+    if ($definition->isRequired() || DefinitionMetadata::isSecret($definition) || is_array($type)) {
+      return $type;
+    }
+    return [$type, 'null'];
   }
 
   /**
@@ -1670,28 +1712,21 @@ final class ContractEmitter {
    *   The Regex constraint's options.
    *
    * @return string|null
-   *   The pattern without its delimiters, or NULL when the expression
-   *   carries a modifier JSON Schema has no way to say.
+   *   The pattern without its delimiters, or NULL when it uses anything
+   *   the two engines do not read alike.
+   *
+   * @see \Drupal\data_surface\Contract\PatternTranslation
    */
   protected function pattern(array $options): ?string {
     $regex = $options['pattern'] ?? $options['value'] ?? NULL;
-    if (!is_string($regex) || strlen($regex) < 2) {
-      return NULL;
-    }
-    $end = strrpos($regex, $regex[0]);
-    if ($end === FALSE || $end === 0) {
-      return NULL;
-    }
-    // The u modifier only says the subject is UTF-8, which an ECMA
-    // pattern assumes; any other modifier changes what matches.
-    return trim(substr($regex, $end + 1), 'u') === '' ? substr($regex, 1, $end - 1) : NULL;
+    return is_string($regex) ? PatternTranslation::ecma($regex) : NULL;
   }
 
   /**
    * Spells an option set as `oneOf` entries, labels and help included.
    *
-   * A key that need not hold a value allows null besides, as its own
-   * entry with no title: the empty option is a presentation, said under
+   * A key that may be cleared allows null besides, as its own entry with
+   * no title: the empty option is a presentation, said under
    * `x-surface.emptyOption`, and never an option with a label.
    *
    * @param \Drupal\data_surface\Options\OptionSet $set
@@ -1711,7 +1746,7 @@ final class ContractEmitter {
       }
       $choices[] = $choice;
     }
-    if (!$definition->isRequired()) {
+    if (!$definition->isRequired() && !DefinitionMetadata::isSecret($definition)) {
       $choices[] = ['const' => NULL];
     }
     return $choices;

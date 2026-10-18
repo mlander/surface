@@ -511,7 +511,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $licence = ['pattern' => '/^\d{4}$/', 'message' => 'A licence number is four digits, such as 2048.'];
+    $licence = ['pattern' => '/^\d{4}$/D', 'message' => 'A licence number is four digits, such as 2048.'];
     $licence_key = $inputs->add('licence', 'string', $this->t('Event licence'))
       ->setDescription($this->t('The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.'))
       ->addConstraint('Regex', $licence);

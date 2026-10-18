@@ -235,7 +235,7 @@ class ContentEntityAccessTest extends DataSurfaceKernelTestBase {
     $value = $edit->getDefinitions()->entry('field_phone')?->attachment?->child->getDefinition('value');
     $this->assertNotNull($value);
     $this->assertSame('Digits, spaces and a leading plus.', (string) $value->getDescription());
-    $this->assertSame('/^\+?[0-9 ]+$/', $value->getConstraints()['Regex']['pattern']);
+    $this->assertSame('/^\+?[0-9 ]+$/D', $value->getConstraints()['Regex']['pattern']);
     // Its own refiner, which watches nothing, ran when it was built.
     $this->assertSame(20, $value->getConstraints()['Length']['max']);
     // The field's own facts stay derived.

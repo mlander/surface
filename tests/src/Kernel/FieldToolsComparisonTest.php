@@ -171,7 +171,7 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
    * with a sentence saying what it is, and the address settings. The
    * tools derived from the field instance resource's operations say all
    * of it, from the resource, and more: the storage's cardinality with
-   * its range, and the field name's shape.
+   * its range, and the field name's length.
    */
   public function testTheDerivedToolsSayAtLeastWhatTheRetiredOnesDid(): void {
     $add = $this->toolManager->createInstance('data_surface:field.instance:add');
@@ -189,7 +189,11 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
     // rest derived from config schema.
     $this->assertSame('address', $values['field_type']['enum'][0]);
     $this->assertContains('string', $values['field_type']['enum']);
-    $this->assertSame('^[_a-z]+[_a-z0-9]*$', $values['field_name']['pattern']);
+    // The field name's shape is a Regex with the D modifier, which the
+    // Tool API's own translation does not carry (it allows only i, m and
+    // s), so its schema leaves the pattern out and the Regex validates
+    // the call; the length is still said.
+    $this->assertArrayNotHasKey('pattern', $values['field_name']);
     $this->assertSame(32, $values['field_name']['maxLength']);
 
     $schema = $this->container->get('tool.definition_serializer')->normalizeInputSchema($this->tool(self::SURFACE_TOOL));

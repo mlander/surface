@@ -795,10 +795,16 @@ function labels(schema: Schema): Labels {
     if (!isObject(node)) {
       return;
     }
-    const option = (node['x-surface'] as Extension | undefined)?.emptyOption;
-    if (option !== undefined && node.oneOf !== undefined) {
-      const optional = (node.oneOf as Choice[]).some((choice) => choice.const === null && choice.title === undefined);
-      found[optional ? 'optional' : 'required'] ??= option.label;
+    // A frame (an object with its properties and `required`) says which
+    // of its selects are optional: those it does not require.
+    if (jsonType(node as Schema) === 'object' && isObject(node.properties)) {
+      const required = Array.isArray(node.required) ? (node.required as string[]) : [];
+      for (const [name, property] of Object.entries(node.properties)) {
+        const option = isObject(property) ? (property['x-surface'] as Extension | undefined)?.emptyOption : undefined;
+        if (option !== undefined && isObject(property) && property.oneOf !== undefined) {
+          found[required.includes(name) ? 'required' : 'optional'] ??= option.label;
+        }
+      }
     }
     Object.values(node).forEach(walk);
   };

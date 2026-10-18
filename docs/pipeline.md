@@ -135,7 +135,7 @@ It needs no services. After it runs, every declared key is present and
 every value is either `NULL` or a configured value in its declared type.
 That is the shape `validate()`, the storage and any consumer can rely on.
 
-The rules it applies — what counts as configured, the casting table, how
+The rules it applies — what counts as configured, the coercion table, how
 lists and maps merge — are [Value semantics](semantics.md), which is the
 reference for this page.
 
@@ -427,6 +427,6 @@ if (!$result->isValid()) {
 ```
 
 `'5'` arrives as a string and is stored as the integer `5`, because the
-definition says `integer` and the casting table says a numeric string
+definition says `integer` and the coercion table says a numeric string
 means the same number. That is the whole claim: the form and this call
 are the same call.

@@ -131,7 +131,7 @@ final class FieldInstanceResource implements ResourceInterface {
       ->setDescription(t('The machine name of the field storage, for example field_tags.'))
       ->addConstraint('Length', ['max' => FieldStorageConfig::NAME_MAX_LENGTH])
       ->addConstraint('Regex', [
-        'pattern' => '/^[_a-z]+[_a-z0-9]*$/',
+        'pattern' => '/^[_a-z]+[_a-z0-9]*$/D',
         'message' => 'The machine name must start with a lowercase letter or underscore, and contain only lowercase letters, numbers and underscores.',
       ]);
 

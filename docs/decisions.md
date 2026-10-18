@@ -627,7 +627,10 @@ depth, is dropped before validation, the way core drops an empty
 delta: it is a row a form added and left blank, not an answer. FALSE
 and 0 are answers. The pipeline drops it in `accept()`, so a payload and
 a form agree, and the form drops it on extraction too, to flag a later
-item's violation on the row it was drawn as. An item is accepted over
+item's violation on the row it was drawn as. Its keys are read before
+it is dropped: an unknown key in a blank item is refused by its path,
+as in any other item, never dropped silently (the never-stricter audit,
+case 2). An item is accepted over
 the child's defaults, not over what is stored at its delta, since the
 list is sent whole and an item may have moved.
 (`Collection::isEmptyItem()`, `DataSurfacePipeline::acceptCollection()`)
@@ -830,7 +833,8 @@ included, as literal tags. (`ResultReportingTrait::violationSummary()`)
 
 A derived tool's `values` property is required exactly when the resource,
 built for the operation, requires the key, whatever its default and
-whether or not the operation creates; built in a real context that
+whether or not the operation creates, except a secret, which is always
+optional ([A secret is optional, never nullable](#a-secret-is-optional-never-nullable)); built in a real context that
 changes a thing that exists, each property defaults to what its storage
 loads now (a secret to nothing). `drush tool:info` has to say what the
 resource requires and what is there. The cost is the Tool API's: it
@@ -938,7 +942,9 @@ marks the elements. (`DataSurfaceFormBuilder::flagSurfaceErrors()`,
 
 ### A Regex is explained by its message
 
-A pattern is for machines. Wherever the module explains what a key
+A pattern is for machines, and is carried only where both engines read
+it alike ([A pattern both engines read alike](#a-pattern-both-engines-read-alike));
+the message is always there. Wherever the module explains what a key
 allows (the contract panel's "Allows" column, the React app's twin of
 it), a Regex is said in its own `message`, the sentence a refusal is
 reported in, and the pattern stays in the machine schema (`pattern`,
@@ -1298,7 +1304,18 @@ nothing else.
 
 One rule holds for both: the schema is never stricter than the runtime.
 What the pipeline accepts, the schema accepts; refinement is a runtime
-guard and has the last word. Where a rule cannot be stated (a constraint
+guard and has the last word. The rule is about the **accepted
+document**: what `accept()` makes of the input, after coercion, not the
+raw input a caller sent. The Tool API is the precedent: it coerces a
+tool's inputs by a documented table first and validates after, and its
+matrix tests (`AdvertisedSchemaAcceptanceTest`, `InputCoercionMatrixTest`)
+compare the advertised schema with what a tool accepts post-coercion.
+So a form's `"50"` for an integer, an empty string, a key left out on a
+partial update, and a value posted for a locked key are notations of a
+document the schema describes, and the schema need not admit them; the
+document `accept()` makes of them, it must. A null on an optional key is
+in that document as a value (it clears the key,
+[below](#absent-keeps-null-clears)), so the schema allows it. Where a rule cannot be stated (a constraint
 with no keyword, named in `checkedOnServer`) or a dependency cannot be
 listed or would be too large (free text, a number, a key an alter
 mounted, more than the cap), the schema stays at the declared width and
@@ -1309,10 +1326,16 @@ declaration](#static-by-default-runtime-by-declaration)).
 Exactness is pursued wherever it is possible, which is what enumeration
 is for, and is the goal there, not the guarantee. For the schema as it
 stands the rule is about the values it was built for and no others.
-*Open:* the rule has not been audited against the pipeline's casting,
-its handling of unknown keys and of an untouched stale stored value, or
-the Regex translation; nor is there a test holding every accepted value
-set to the full schema across the shipped resources and structures.
+Audited on 2026-10-18 (`docs/audit-never-stricter.md`, with what each
+case became), and held by `AdvertisedSchemaAcceptanceTest`: for each
+example and fixture, a table of accepted and refused documents, each
+asserted against the pipeline and both documents with a standard
+validator, `format` not asserted and `default` not filled. Where the
+schema is exact the two agree both ways; where it is `dynamic` or
+`runtime` it may only be wider. One exception stands: a stale value is
+storage's, not an answer, and the full schema states the list as it is,
+so a stored value a static list no longer offers is kept by the
+pipeline and refused by the full schema, which reads no storage.
 (`ContractEmitter::emitFull()`, `ContractEmitter::frame()`)
 
 ### The wall is the reference boundary
@@ -1391,17 +1414,115 @@ A stale value is served as `null`, its path listed under `stale`; a
 client sends the paths back, and an empty answer at one of them stands
 for the stored value again. It is the operation form's stale marker,
 said in JSON, and it keeps a stored value off the wire whether or not a
-person may still choose it. (`ServedOperations::keepStale()`)
+person may still choose it. Without its path a null clears an
+optional key ([Absent keeps, null clears](#absent-keeps-null-clears)),
+which is why the path travels. (`ServedOperations::keepStale()`)
 
 ### Required means must hold a value
 
 A key the resource requires is in the schema's `required`, whatever its
 default: the resource's meaning, which a form's required marker shows.
-The Tool API bridge copies the same flag unchanged (see "Required is
-the resource's, and defaults are what is stored"); the served contract's
-
+As in the Tool API, `required` means present and not null and says
+nothing about size: an empty list or map is a value, and "not empty" is
+`NotBlank` or `Count`. A secret is the one exception, never in
+`required` ([A secret is optional, never nullable](#a-secret-is-optional-never-nullable)).
+The Tool API bridge copies the same flag (see "Required is the
+resource's, and defaults are what is stored"); the served contract's
 `values` always carry every key, so presence is never the question
-there. (`ContractEmitter::frame()`)
+there. (`ContractEmitter::required()`)
+
+### Absent keeps, null clears
+
+A key can be sent three things, and on an optional key they mean three
+things: left out, what it holds stands (what is stored, on an operation
+that changes what exists; the declared default, on one that creates),
+so a partial update keeps every key it leaves out; `null`, or the empty
+string a form sends for nothing, clears it, so "- None -" on an
+optional select, an emptied text box and a tool's `null` empty a key;
+a value is that value. A required key refuses `null` and `''` as
+missing. A list keeps what it holds when sent nothing and is emptied
+with `[]`; a secret keeps what it holds when sent nothing and is
+emptied with its clear marker. The schema says it: an optional key's
+type allows `null` (`["integer", "null"]`, and an optional choice's
+`oneOf` carries an untitled `{const: null}`), a required key's does
+not, and a secret's does not either, since `null` does not clear it.
+
+This parts from the Tool API, where a caller's null for an optional
+input means the default. A Tool API default is static, so a null and an
+absent key there say the same thing; an operation that edits stored
+values defaults to what is stored, so if null meant the default a
+caller could never clear a key (the base field override storage once
+skipped NULL, and an override could not be undone). The
+Tool API itself keeps an absent key and a null apart where the
+difference is a fact, for outputs (`omit_when_null`). Decided
+2026-10-18, after a first reading that collapsed null into "keep" was
+tried and reverted. (`DataSurfacePipeline::acceptKey()`,
+`ContractEmitter::nullable()`)
+
+### A secret is optional, never nullable
+
+A secret is advertised optional in both documents and the tool's
+`values`, whatever it requires, because left out or `null` it keeps
+what is stored (the codec's keep-on-empty); its type is the declared
+one, not nullable, `writeOnly`, with no default; the values a document
+carries for it are `null`, as the masking rule has always said, which a
+reader takes as the key left out. A required secret never set is still
+refused by the pipeline as missing. Before 2026-10-18 a required secret
+was in `required` and its type refused the `null` its own `values`
+carried. (`ContractEmitter::required()`, `InputDefinitions::fromDefinition()`)
+
+### One coercion table, the Tool API's
+
+The pipeline coerces input by the Tool API's table
+(`InputTypeCoercionSubscriber`): an empty string as no value on an
+optional non-string, JSON strings decoded for a map or a list, a single
+item wrapped for a list, booleans from their word and number spellings,
+booleans to `0`/`1` for an integer, bare numbers to their spelling for
+a string, integral floats and numeric strings to numbers, datetime
+strings re-emitted in the declared format, a case or whitespace near
+miss snapped onto a declared choice; only when unambiguous, the rest
+left for validation. It replaces the module's own casting table. The
+Tool API offers the table only as a final event subscriber on a tool's
+inputs, and the main module does not depend on the Tool API, so it is
+mirrored once, in `Pipeline\Coercion`, and the form door and every PHP
+caller reach it through `accept()`; the tool door runs the Tool API's
+subscriber and then the same `accept()`, and every rule is idempotent.
+Where the Tool API's code goes against its own principle the mirror
+keeps the principle: a fractional numeric string for an integer is left
+for validation, not truncated. `InputCoercionMatrixTest` holds both
+doors to the same accepted value, row by row. The audit's "a boolean
+stored for an integer" is an alignment now: `TRUE` is `1`.
+(`Pipeline\Coercion`, `DataSurfacePipeline::coerce()`)
+
+### A pattern both engines read alike
+
+A Regex is PCRE and a `pattern` is ECMA-262 (opis, in the suite, reads
+it with PCRE again). Its body is carried only when it stays inside a
+subset both read alike: literals, character classes with `\d` `\w`
+`\s`, the quantifiers `*` `+` `?` `{n,m}` (lazy or not), alternation,
+capturing, named and non-capturing groups, `^`, `$` only with the `D`
+modifier, and `\b`; the modifiers `u` and `D` are carried, since ECMA's
+`$` is already the very end, which is what `D` says. Anything else (`\A`
+`\z` `\Z` `(?i)` `(?P<` `(?>` `a++` `[[:alpha:]]` `\x{…}` `\Q…\E` `\h`
+`\R`, `.`, a negated class escape, look-around, the `x` `s` `m`
+modifiers, a `$` without `D`, an escaped delimiter that is no ECMA
+syntax character) leaves `pattern` out, which is wider, and names
+`Regex` under `checkedOnServer`; `x-surface.patternMessage` still
+carries the explanation. Never approximated. Every shipped pattern ends
+in `$`, so each gained `D`: a licence or a machine name with a trailing
+newline was never meant. One consequence outside this module: the Tool
+API's own schema leaves a pattern with a modifier out, so the derived
+tools no longer advertise the licence's. (`Contract\PatternTranslation`)
+
+### `format` is an annotation
+
+The emitter writes `format` (`email`, `uri`, `date-time`) as JSON Schema
+2020-12 defines it by default: an annotation, which a client may opt
+into asserting. Drupal's checks are not the formats' (an
+internationalized address, a URI with a space, a date with no time), so
+a client that asserts formats may refuse what the pipeline accepts; the
+suite's validator does not assert them, as a standard one does not.
+(`ContractEmitter::type()`)
 
 ### A refused submit is an answer
 

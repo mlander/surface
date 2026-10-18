@@ -131,8 +131,13 @@ loads, key by key and at every depth, and a null is a value like any
 other. Sending `{"label": "Address", "settings": {"field_overrides":
 {"organization": null}}}` to the edit tool removes that one override and
 leaves the rest alone, which is what a caller correcting one mistake
-actually wants to say. The label is there because the resource requires
-it, and the Tool API refuses a required key left out (below).
+actually wants to say. A key left out keeps what is stored; a null
+clears it ([decision](../../docs/decisions.md#absent-keeps-null-clears)).
+A secret is the one exception: it is optional, a null or a key left out
+keeps the stored secret, and only the clear marker
+(`@data_surface:clear-secret`) empties it. The label is there because
+the resource requires it, and the Tool API refuses a required key left
+out (below).
 
 ## How to try it
 

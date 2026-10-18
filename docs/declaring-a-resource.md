@@ -412,9 +412,9 @@ author does:
 | Where | What the flag does |
 | --- | --- |
 | The generated form | A `password` element, with no `#default_value`, no `#placeholder`, no `#required`, and the note "Leave blank to keep the current value." The form builder does not hand the value to the widget at all, so no stored secret reaches the render array. |
-| `accept()` | Input that holds nothing keeps the stored value instead of clearing it. See [Value semantics](semantics.md#secrets-keep-what-they-hold) for the rule and for how a caller clears one on purpose. |
+| `accept()` | Input that holds nothing keeps the stored value, required or not. See [Value semantics](semantics.md#secrets-keep-what-they-hold) for the rule and for how a caller clears one on purpose. |
 | The storage layout | `EncryptedSettingsLayout` encrypts the value on its way to storage and decrypts it on the way back. See [Storage](storage.md#secrets-at-the-codec). |
-| The tool bridge | The converted input carries no default and says "Write only" in its description. |
+| The tool bridge | The converted input is optional, carries no default and says "Write only" in its description. |
 
 A secret holds **one scalar value**. Marking a list or a map secret is
 refused where it is declared, rather than half-supported downstream: the
@@ -480,6 +480,6 @@ own message, never a type-specific one from a constraint, so an empty
 required number and an empty required string read alike to the person
 filling in the form.
 
-The full rules (what counts as configured, the casting table, shape
+The full rules (what counts as configured, the coercion table, shape
 mismatches) are in [Value semantics](semantics.md). Read that page
 before declaring a required key whose type is a list or a map.

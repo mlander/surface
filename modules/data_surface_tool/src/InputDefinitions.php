@@ -438,8 +438,11 @@ final class InputDefinitions {
     $label = $this->label($definition);
     $description = $this->description($definition);
     $constraints = $this->constraints($definition);
-    $required = $definition->isRequired();
     $secret = DefinitionMetadata::isSecret($definition);
+    // A secret is optional whatever it requires: left out or null, the
+    // stored secret stands, and the pipeline refuses one never set.
+    // Decision: see docs/decisions.md#a-secret-is-optional-never-nullable.
+    $required = $definition->isRequired() && !$secret;
     // A secret carries no default across. A default is a value the
     // advertised schema shows to every caller, and a secret's whole
     // claim is that its value is never read back; a data surface that

@@ -116,14 +116,14 @@ It answers with the same `ViolationSet` of `Violation` objects
 that `validate()` answers with, so a caller reads one shape whichever
 direction it is checking.
 
-**Nothing is cast.** Input arrives from people and payloads and is
-coerced through [the casting table](semantics.md); an output is produced
+**Nothing is coerced.** Input arrives from people and payloads and is
+coerced through [the coercion table](semantics.md#the-coercion-table); an output is produced
 by code that had the declaration in front of it, so `'2'` where an
 integer was declared is a bug in the producer and reporting it is the
 point. That is stricter than core's own `PrimitiveType` constraint,
 which asks whether a value *could be* the type, and deliberately so: the
 question here is what a consumer will actually be handed. The strict
-check covers the same types the casting table covers — integer, float,
+check covers the plain scalar types — integer, float,
 boolean, string, email, uri — and leaves everything else alone, because
 a rule this module never defined would be a guess. An integer where a
 float was declared is the one widening allowed, since every integer is

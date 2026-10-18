@@ -15,7 +15,7 @@ use Drupal\data_surface\DataSurfaceInterface;
  * partial untyped input into a complete typed value set, validate runs the
  * data surface's constraints, prepare hands the values to a storage for
  * shaping, and commit writes. The form path calls accept() through the
- * form builder rather than casting in its widgets, so the generated form
+ * form builder rather than coercing in its widgets, so the generated form
  * and a JSON payload cannot drift apart.
  *
  * Only commit has side effects, which is what makes a dry run a matter
@@ -67,17 +67,19 @@ interface DataSurfacePipelineInterface {
    *
    * Values merge in one order at every level: the data surface's declared
    * defaults, then the current stored values (so a partial update is
-   * legal), then the input, cast through each definition. Input that is
-   * not configured (NULL or the empty string) means the key holds nothing
-   * and becomes NULL, for every data type. Secret keys are the documented
-   * exception: input that is not configured keeps what they hold, because
-   * a form cannot echo a stored secret, and CLEAR_SECRET is how a caller
-   * empties one on purpose. Locked keys take what storage holds, falling
-   * back to the declared default, and ignore whatever was submitted for
-   * them. Keys the data surface does not declare are refused rather than
-   * dropped, at any depth, and so is input in a shape the definition
-   * cannot hold. The casting table and the configured/not configured rule
-   * are stated in docs/semantics.md.
+   * legal), then the input, coerced through each definition by the Tool
+   * API's coercion table. A key left out keeps what it holds; input
+   * that is not configured (NULL or the empty string) means the key holds
+   * nothing and becomes NULL, for every data type but a list, which keeps
+   * what it holds. Secret keys are the documented exception: input that
+   * is not configured keeps what they hold, because a form cannot echo a
+   * stored secret, and CLEAR_SECRET is how a caller empties one on
+   * purpose. Locked keys take
+   * what storage holds, falling back to the declared default, and ignore
+   * whatever was submitted for them. Keys the data surface does not
+   * declare are refused rather than dropped, at any depth, and so is
+   * input in a shape the definition cannot hold. The coercion table and
+   * the configured/not configured rule are stated in docs/semantics.md.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The data surface describing what the values may be.
@@ -160,8 +162,8 @@ interface DataSurfacePipelineInterface {
    * 3. Checks every key that is present against its definition's type
    *    and constraints, through typed data.
    *
-   * What it deliberately does **not** do is cast. Input arrives from
-   * people and payloads and is coerced through the casting table;
+   * What it deliberately does **not** do is coerce. Input arrives from
+   * people and payloads and is coerced through the coercion table;
    * outputs are produced by code that has the declaration in front of
    * it, so a string where an integer was declared is a bug in the
    * producer, and reporting it is the whole point.

@@ -194,6 +194,6 @@ final class NodeTypeReviewSettings {
    * sends it. No modifier, so the Tool API can advertise it as a JSON
    * Schema pattern.
    */
-  public const TAG_PATTERN = '/^[a-z0-9]+(?:[ -][a-z0-9]+)*$/';
+  public const TAG_PATTERN = '/^[a-z0-9]+(?:[ -][a-z0-9]+)*$/D';
 
 }

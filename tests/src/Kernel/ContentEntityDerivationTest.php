@@ -205,8 +205,8 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['red' => 'Red', 'blue' => 'Blue'], $constraint('field_list_string', 'value', 'LabeledChoice')['labels']);
     $this->assertSame([1, 2], $constraint('field_list_integer', 'value', 'LabeledChoice')['choices']);
     $this->assertSame(['1.5'], $constraint('field_list_float', 'value', 'LabeledChoice')['choices']);
-    $this->assertSame('/^\d{4}-\d{2}-\d{2}$/', $constraint('field_date', 'value', 'Regex')['pattern']);
-    $this->assertSame('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/', $constraint('field_datetime', 'value', 'Regex')['pattern']);
+    $this->assertSame('/^\d{4}-\d{2}-\d{2}$/D', $constraint('field_date', 'value', 'Regex')['pattern']);
+    $this->assertSame('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/D', $constraint('field_datetime', 'value', 'Regex')['pattern']);
     // Every enabled format, or the ones the field allows.
     $this->assertSame(['basic', 'plain_text', 'trusted'], $constraint('field_text', 'format', 'LabeledChoice')['choices']);
     $this->assertSame(['basic'], $constraint('field_text_long', 'format', 'LabeledChoice')['choices']);

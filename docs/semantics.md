@@ -8,12 +8,14 @@ means, and what the data surface refuses outright. It is the rules reference for
 described.
 
 Every rule here is applied in one place and only there — one predicate
-and one casting table, shared by `accept()`, `validate()` and
+and one coercion table, shared by `accept()`, `validate()` and
 `refine()` — so a form, a config action, a REST payload and an agent all
-get the same answer. The unit test
+get the same answer. The coercion table is the Tool API's, so a tool
+caller gets that answer too. The unit test
 `tests/src/Unit/DataSurfacePipelineCastingTest.php` states the same rules
-as a table of cases; if this page and that file ever disagree, the file
-is the one that runs.
+as a table of cases, and the kernel test `InputCoercionMatrixTest` holds
+the form and the tool to the same accepted value row by row; if this
+page and those files ever disagree, the files are the ones that run.
 
 ## Configured, or not
 
@@ -37,61 +39,115 @@ else a caller can send is something the caller chose. A resource or
 structure that wants to refuse `FALSE`, `0` or `[]` says so with a
 constraint of its own, not by hoping the pipeline reads them as absences.
 
-## The casting table
+### Absent, null, or a value
 
-`accept()` turns raw input into the type the definition declares. Two
-rules govern the whole table:
+A key can be sent three things, and they mean three things
+([decision](decisions.md#absent-keeps-null-clears)):
 
-1. Input that is not configured becomes `NULL`, for every data type.
-   (Lists are the one exception, below; secret keys are the other.)
-2. A cast never loses information. A notation that means the same value
-   is converted; anything else is left exactly as it arrived, so that a
-   constraint refuses it with a message about the value rather than a
-   cast quietly turning it into a different value.
+| Sent for the key | Optional key | Required key |
+| --- | --- | --- |
+| left out | what it holds stands | what it holds stands |
+| `NULL`, or `''` (a form's nothing) | **cleared**: the key holds `NULL` | `NULL`: "@label is required." |
+| a value | the value, coerced | the value, coerced |
+
+"What it holds" is what storage holds for it on an operation that
+changes something that exists, or its declared default on one that
+creates. So a partial update keeps every key it leaves out, and a key
+that is sent `null`, an emptied text box, or an optional select's
+"- None -" is cleared. Two exceptions keep what they hold when sent
+nothing: a list, which is emptied with `[]` ([Lists](#lists)), and a
+secret, which is emptied with its clear marker
+([Secrets](#secrets-keep-what-they-hold)). The schema says the same:
+an optional key's type allows `null`, a required key's and a secret's
+does not ([served contract](served-contract.md#the-schema)).
+
+This is where the module parts from the Tool API, whose rule is that a
+caller's null for an optional input means the default. A tool's
+defaults are static, so its null and its absent key say the same thing;
+an operation that edits stored values defaults to what is stored, so if
+null meant the default too a caller could never clear a key. The Tool
+API itself tells an absent key from a null where it matters, for
+outputs (`omit_when_null`).
+
+## The coercion table
+
+`accept()` turns raw input into the type the definition declares by the
+Tool API's coercion table, the one its `InputTypeCoercionSubscriber`
+applies to a tool's inputs, mirrored rule for rule in
+`Pipeline\Coercion` (the Tool API offers it only as an event on a
+tool's inputs, and this module does not depend on the Tool API). The
+tool door runs the Tool API's own subscriber and then this one, which
+changes nothing the first made. Its principle is the Tool API's:
+**coerce only when the intended value is unambiguous**, and leave
+anything doubtful exactly as it arrived, so that a constraint refuses it
+with a message about the value rather than a coercion quietly turning it
+into a different one.
+
+Input that holds nothing never reaches the table: it is read first, by
+[the rule above](#absent-null-or-a-value).
 
 | Definition type | Input | Result |
 | --- | --- | --- |
-| any type | `NULL`, `''` | `NULL` |
-| `integer` | `7` | `7` |
-| `integer` | `'7'`, `' 7 '`, `'+7'`, `'-7'`, `'007'` | the integer |
-| `integer` | `2.0`, `'2.0'` | `2` (a whole number, nothing lost) |
-| `integer` | `1.9`, `'1.9'` | unchanged — the constraint refuses it |
-| `integer` | `'seven'`, `TRUE` | unchanged |
-| `integer` | a literal beyond PHP's integer range | unchanged |
-| `float` | `1.5` | `1.5` |
-| `float` | `2`, `'2'`, `'1.5'`, `' 1.5 '`, `'1e3'` | the float |
-| `float` | `'half'`, `TRUE` | unchanged |
+| any type with a list of values | a string that matches exactly one value but for case and surrounding whitespace (`' Alpha '`) | that value (`'alpha'`) |
+| a list | a JSON string of a list (`'["a","b"]'`) | the list |
+| a list | a single item: a scalar, or one map where the items are maps | a list of that one item |
+| a map, a child | a JSON string of an object (`'{"a":1}'`) | the map |
 | `boolean` | `TRUE`, `FALSE` | itself |
-| `boolean` | `1`, `0` | `TRUE`, `FALSE` |
-| `boolean` | `'1'`, `'true'`, `'on'`, `'yes'` | `TRUE` |
-| `boolean` | `'0'`, `'false'`, `'off'`, `'no'` | `FALSE` |
+| `boolean` | `1`, `0`, `1.0`, `0.0` | `TRUE`, `FALSE` |
+| `boolean` | `'1'`, `'true'`, `'on'`, `'yes'`, any case, trimmed | `TRUE` |
+| `boolean` | `'0'`, `'false'`, `'off'`, `'no'`, any case, trimmed | `FALSE` |
 | `boolean` | any other word or number | unchanged — the constraint refuses it |
-| `string`, `email`, `uri` | any scalar | that scalar written out (`7` becomes `'7'`) |
-| `any` | anything | untouched |
+| `integer` | `7` | `7` |
+| `integer` | `'7'`, `' 7 '`, `'+7'`, `'-7'`, `'007'`, `'2.0'`, `'1e3'` | the integer |
+| `integer` | `2.0` | `2` (a whole number, nothing lost) |
+| `integer` | `TRUE`, `FALSE` | `1`, `0` |
+| `integer` | `1.9`, `'1.9'` | unchanged — the constraint refuses it |
+| `integer` | `'seven'`, a literal beyond PHP's integer range | unchanged |
+| `float` | `1.5`, `2` | itself (an integer is a float's value) |
+| `float` | `'2'`, `'1.5'`, `' 1.5 '`, `'1e3'` | the float |
+| `float` | `'half'`, `TRUE` | unchanged |
+| `string` | `7`, `1.5` | its spelling (`'7'`, `'1.5'`; a float as fixed-point, never `1.0E-7`) |
+| `string` | `TRUE`, `FALSE` | unchanged: neither `'1'` nor `'true'` is the spelling of a boolean |
+| `decimal` | `7`, `19.99` | its spelling, as for a string |
+| `email`, `uri` | anything | unchanged but for the near miss above |
+| `timestamp` | `'1700000000'`, `1700000000.0` | `1700000000` |
+| `timestamp` | a date string (`'2023-11-14T22:13:20+00:00'`) | its timestamp |
+| `datetime_iso8601` with a `DateTime` constraint | a date and time with an offset (`'2026-11-14T09:32:00-07:00'`, `Z`, fractional seconds, a space for the `T`) | the UTC storage format, `'2026-11-14T16:32:00'` |
+| `datetime_iso8601` with a `DateOnly` constraint | `'2026-11-14'` | itself |
+| `datetime_iso8601` with neither | a parsable date and time | ISO 8601 with its offset; a bare date, a number and anything unparsable unchanged |
+| `any`, a map with no declared properties | anything | untouched |
 | any other type | anything | untouched |
 
-Boolean words are matched case-insensitively and after trimming, so
-`' OFF '` is `FALSE`. `FALSE` asked for as a string writes out as the
-empty string, which holds nothing, so the key holds `NULL`.
+Two rows are narrower than the Tool API's code, on its own principle: a
+numeric string with a fraction for an integer (`'1.9'`), and for a
+timestamp, is left for the constraint where the subscriber truncates
+it, and a literal beyond PHP's integer range is left where the
+subscriber saturates it. A tool caller that sends `'1.9'` for an
+integer is answered `1` by the Tool API before the pipeline sees it
+(`InputCoercionMatrixTest::testFractionalStringForAnIntegerDivergesAtTheToolDoor()`).
 
-Types the table says nothing about — `any`, a map that declares no
-properties, a type a contributed module added — pass through untouched.
-A cast that is not defined would be a guess.
+Core's typed data check is looser than the table in a few places, so a
+value the table leaves for "the constraint" is not always refused by
+it: `TRUE` for a float or a string, and `'01'` or `'1.0'` for a
+boolean, pass core's PrimitiveType check and are stored as sent, at
+both doors alike. With the table, `TRUE` for an integer is `1`, which
+is what core's check read it as.
 
 ### Lists
 
-A list input is normalized to a clean list: keys are dropped, entries
-that hold nothing are dropped, the result is reindexed from zero, and
-each surviving item is cast through the item definition (recursing when
+A list input is normalized to a clean list: a JSON string of a list is
+read as one, a single item is wrapped, keys are dropped, entries that
+hold nothing are dropped, the result is reindexed from zero, and each
+surviving item is coerced through the item definition (recursing when
 the items are complex). So a multiple select submitting
-`['us' => 'us', 'ca' => 'ca']` and a payload sending `['us', 'ca']` mean
-the same thing.
+`['us' => 'us', 'ca' => 'ca']`, a payload sending `['us', 'ca']` and a
+lenient caller sending `'["us","ca"]'` mean the same thing.
 
-A list is the one place where input that holds nothing does not mean
-`NULL`: a form that rendered no list widget, or a payload that named no
-list, has said nothing about the list, so **what the list already holds
-stands** — the stored value, or the declared default. Emptying a list is
-said with an empty list, which is a configured value.
+A list that is sent nothing keeps what it holds, required or not: a
+form that rendered no list widget, or a payload that named no list, has
+said nothing about the list, so **what the list already holds stands** —
+the stored value, or the declared default. Emptying a list is said with
+an empty list, which is a configured value.
 
 ### Collections
 
@@ -110,9 +166,11 @@ holds, and emptying it is said with `[]`.
 - **Empty items are dropped.** An item that holds nothing at all, every
   key of it `NULL` or `''` at any depth (a row a form added and left
   blank), is dropped before validation, the way core drops an empty
-  delta. One holding `FALSE` or `0` is an answer, not empty. A form
-  drops it on extraction and remembers where each kept item was drawn,
-  so a violation about a later item is flagged on its own row.
+  delta, once its keys are read: an unknown key in a blank item is
+  refused by its path, as in any other. One holding `FALSE` or `0` is
+  an answer, not empty. A form drops it on extraction and remembers
+  where each kept item was drawn, so a violation about a later item is
+  flagged on its own row.
 - **Count is the list's, items the child's.** `validate()` holds the
   list itself to its own constraints, its `Count` as the parent's
   refiners left it, and reports them on the list's key; then each item
@@ -149,13 +207,17 @@ Two consequences worth stating:
   instruction to forget its siblings. A declared default that is not an
   array has nothing to merge into and stands on its own.
 
-A map whose input holds nothing becomes `NULL`. A complex definition
-that declares no properties describes nothing to recurse into, so its
-value passes through as it arrived.
+A map, or a property inside one, that is sent nothing holds nothing,
+`NULL`, by [the rule above](#absent-null-or-a-value); left out, it keeps
+what it holds. A complex definition that declares
+no properties describes nothing to recurse into, so its value passes
+through as it arrived.
 
 ## Secrets keep what they hold
 
-One deliberate exception to the `''` rule, and the only one.
+One deliberate exception to [the rule above](#absent-null-or-a-value):
+a secret keeps what it holds when it is sent nothing, *whether or not
+it is required*, and it is cleared by a marker instead.
 
 A key declared secret (`DefinitionMetadata::setSecret()`, see
 [Declaring a resource](declaring-a-resource.md#secrets)) is a key whose
@@ -166,14 +228,14 @@ submitted an empty secret without meaning to say anything about it at
 all. Read the ordinary way, that would empty the stored token on every
 unrelated save.
 
-So for a secret key, and only for a secret key:
+So for a secret key:
 
 | Input | Result |
 | --- | --- |
 | absent | keeps the stored value (as for every key) |
-| `NULL`, `''` | **keeps the stored value** |
+| `NULL`, `''` | **keeps the stored value**, required or not |
 | `DataSurfacePipelineInterface::CLEAR_SECRET` | `NULL` — the secret is gone |
-| anything else | the new secret, cast and validated like any string |
+| anything else | the new secret, coerced and validated like any string |
 
 `CLEAR_SECRET` is the literal `@data_surface:clear-secret`, in the same
 reserved `@` namespace as the access violation key. Clearing a secret is
@@ -190,7 +252,10 @@ Two consequences:
   the ordinary "@label is required." violation. What the keep rule
   changes is a secret that *has* been set: then an empty box is a legal
   submission, which is why the generated element carries no browser-side
-  `#required`.
+  `#required`, and why both schema documents advertise every secret as
+  optional and not nullable, its declared type, `writeOnly`, and its
+  value in `values` as `null`
+  ([decision](decisions.md#a-secret-is-optional-never-nullable)).
 - **Locked wins.** A key that is both locked and secret takes what
   storage holds and ignores the input, marker included, because that is
   what locked means.
@@ -253,9 +318,11 @@ Four consequences worth stating:
 Only an explicit new choice replaces a stale value on a form. Choosing
 the empty option of an optional select clears the key when the select
 could show what it holds; on a stale select the empty option is what
-was selected already, so it keeps. A caller with no form clears a stale
-key by sending it empty. The presentation is [the empty option
-rule](decisions.md#the-empty-option-rule).
+was selected already, so it keeps, which the stale marker (the form's
+hidden input, the contract's `stale` paths) says. A caller with no form
+keeps a stale key by leaving it out, or by sending it empty with its
+stale path, and clears it by sending it empty without one. The
+presentation is [the empty option rule](decisions.md#the-empty-option-rule).
 
 Two boundaries, both deliberate:
 
@@ -276,14 +343,17 @@ Two boundaries, both deliberate:
 
 ## Shape mismatches
 
-Casting is for values that mean the same thing in another notation. A
-value that means nothing in any notation is not cast, it is refused:
+Coercion is for values that mean the same thing in another notation. A
+value that means nothing in any notation is not coerced, it is refused:
 
 | Definition | Input | Refused as |
 | --- | --- | --- |
-| `string`, `integer`, `float`, `boolean`, `email`, `uri` | an array | `string`/`integer`/… expected |
-| a list | anything configured that is not an array | `list` expected |
-| a map with declared properties | anything configured that is not an array | `map` expected |
+| `string`, `integer`, `float`, `boolean`, `email`, `uri`, `timestamp`, `datetime_iso8601`, `decimal` | an array | `string`/`integer`/… expected |
+| a collection | anything configured that is not an array or a JSON list | `list` expected |
+| a map with declared properties, a child | anything configured that is not an array or a JSON object | `map` expected |
+
+A plain list is never a mismatch: a single item is wrapped, and the item
+is then held to the item definition.
 
 `accept()` throws `ShapeMismatchException`, naming the dotted path of the
 offending value and what was expected. `submit()` turns it into a
@@ -305,11 +375,13 @@ else, so:
 | `[]` (a required list or map) | passes |
 | anything else | passes |
 
-That a required list or map may be empty is the deliberate reading:
-"required" says the key must be answered, not that the answer must be
-large. A resource or structure that needs at least one item says so with
-a `Count` constraint, which then produces a message about the count
-rather than about the key being missing.
+"Required" means present and not null, and says nothing about size, as
+the Tool API reads it: a required list or map may be empty, and that is
+the deliberate reading, "required" says the key must be answered, not
+that the answer must be large. A resource or structure that needs at
+least one item says so with a `Count` constraint, or `NotBlank` for
+"not empty", which then produces a message about the count rather than
+about the key being missing.
 
 The message is always the data surface's own, never a type-specific one
 from a constraint, so an empty required number and an empty required string
@@ -371,11 +443,13 @@ may answer that its keys are shown and fixed, or not there at all.
 
 | Stage | Decides |
 | --- | --- |
-| `accept()` | Whether a key was configured, what type its value takes, whether the shape is acceptable at all, and how input merges over what is stored. Keeps a secret key's stored value when the input says nothing. Refuses undeclared keys and shape mismatches. Needs no services. |
+| `accept()` | Whether a key was configured, what type its value takes (the coercion table), whether the shape is acceptable at all, and how input merges over what is stored. Keeps what a key left out, a list or a secret holds; clears an optional key sent nothing. Refuses undeclared keys and shape mismatches. Asks only the options service, for the values a near miss snaps onto. |
 | `validate()` | Whether a required key was answered, and whether the answers satisfy the constraints of the data surface **refined against those same answers**. Given the stored values, it also tells a stale reference from a refusal. |
 | `refine()` | Which definitions narrow, given which dependencies are configured. A dependency holding `FALSE` or `[]` is an answer and does narrow. |
 | `prepare()` / `commit()` | Nothing about values; the storage layout and the write. |
 
 After `accept()`, every declared key is present and every value is
-either `NULL` or a configured value in its declared type. That is the
-shape `validate()`, the storage, and any consumer can rely on.
+either `NULL` or a configured value in its declared type, as far as the
+coercion table can make it one. That is the shape `validate()`, the
+storage, and any consumer can rely on, and the document the schema is
+never stricter than ([served contract](served-contract.md#never-stricter-than-the-runtime)).

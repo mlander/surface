@@ -23,7 +23,10 @@ final class TelephoneItemStructure implements FieldItemStructureInterface {
   public static function defineItem(BlueprintInterface $inputs, FieldDefinitionInterface $field): void {
     $inputs->add('value', 'string', $field->getLabel())
       ->setDescription(t('Digits, spaces and a leading plus.'))
-      ->addConstraint('Regex', ['pattern' => '/^\+?[0-9 ]+$/', 'message' => t('Use digits, spaces and a leading plus.')]);
+      ->addConstraint('Regex', [
+        'pattern' => '/^\+?[0-9 ]+$/D',
+        'message' => t('Use digits, spaces and a leading plus.'),
+      ]);
   }
 
   /**

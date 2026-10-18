@@ -37,7 +37,7 @@ leaves out and why, read from the registry.
 | Its access | the entity's: create access for the bundle on add, update access for the entity on edit |
 | Its storage | `ContentEntityStorage`, below |
 | Its outputs | `id`, the entity's id once saved |
-| A field item structure's keys | the item's property definitions the field type stores and a caller sets, typed as the casting table carries them (the table below) |
+| A field item structure's keys | the item's property definitions the field type stores and a caller sets, typed as the coercion table carries them (the table below) |
 | Each key's label | the field's, when the item has one key; the property's, when it has several |
 | Each key's description | the field's, when the item has one key |
 | Required | on the main property, when the field is required |
@@ -70,9 +70,9 @@ names it as the field.
 | `entity_reference` | `target_id` | `integer` or `string`, as the target entity type's ids are |
 
 A date travels as the string core stores, and a timestamp as the
-integer it stores, because those are the two the [casting
-table](semantics.md#the-casting-table) carries without guessing: a
-string is any scalar written out, an integer is a whole number in any
+integer it stores, because those are the two the [coercion
+table](semantics.md#the-coercion-table) carries without guessing: a
+string is a number written out, an integer is a whole number in any
 notation. An ISO date with a zone, or a timestamp given as a date,
 would be a conversion the pipeline does not make; the `Regex` says the
 form in its message, and the React app's text input and the form's

@@ -36,14 +36,30 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   use StringTranslationTrait;
 
   /**
-   * The data types the casting table has a rule for.
+   * The data types that hold one scalar.
    *
-   * Every other type — 'any', a map that declares no properties, and
-   * anything a contributed typed data plugin adds — passes through
-   * untouched, because the table has nothing to say about it and a cast
-   * it did not define would be a guess.
+   * An array for one of them is a shape mismatch, refused rather than
+   * coerced. Every other
+   * type ('any', a map that declares no properties, anything a
+   * contributed typed data plugin adds) is left alone by both, because a
+   * rule it never defined would be a guess.
    */
-  protected const CAST_TYPES = ['integer', 'float', 'boolean', 'string', 'email', 'uri'];
+  protected const SCALAR_TYPES = [
+    'integer',
+    'float',
+    'boolean',
+    'string',
+    'email',
+    'uri',
+    'timestamp',
+    'datetime_iso8601',
+    'decimal',
+  ];
+
+  /**
+   * The data types an output is held to the PHP type of.
+   */
+  protected const OUTPUT_TYPES = ['integer', 'float', 'boolean', 'string', 'email', 'uri'];
 
   /**
    * Constructs a DataSurfacePipeline.
@@ -179,10 +195,13 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         : $fallback;
     }
     if (!array_key_exists($name, $input)) {
-      // A child the input says nothing about still holds a whole
-      // value of the child's shape, the child's defaults beneath what
-      // the level already holds, so a stored value missing a key the
-      // child added since reads the way a fresh one would.
+      // A key the input leaves out keeps what it holds; null or '' sent
+      // for it is something said, and clears an optional key.
+      // Decision: see docs/decisions.md#absent-keeps-null-clears.
+      // A child the input says nothing about still holds a whole value
+      // of the child's shape, the child's defaults beneath what the
+      // level already holds, so a stored value missing a key the child
+      // added since reads the way a fresh one would.
       return $child !== NULL && is_array($fallback)
         ? $this->acceptLevel($child, [], $fallback, $path)
         : $fallback;
@@ -204,8 +223,9 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * since reads the way a fresh one would. Input for a locked list is
    * ignored, as for any locked key. Otherwise the list is the input, in
    * the input's order, its keys dropped: delta is position. An item that
-   * holds nothing at all, a row a form added and left blank, is dropped
-   * first, the way core drops an empty delta; every other item is
+   * holds nothing at all, a row a form added and left blank, is dropped,
+   * the way core drops an empty delta, once its keys are found to be the
+   * child's (an unknown key in it is refused); every other item is
    * accepted by the child in its own frame, over the child's defaults and
    * not over what is stored at the same position, since the list is sent
    * whole and an item may have moved.
@@ -249,15 +269,27 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       }
       return $held;
     }
+    // The coercion table: a JSON list read as one, and a single item map
+    // as a list of it.
+    $raw = Coercion::decoded($raw, TRUE);
+    if (is_array($raw) && static::isItem($raw, $child->getDefinitions()->names())) {
+      $raw = [$raw];
+    }
     if (!is_array($raw)) {
       throw new ShapeMismatchException($path, 'list', get_debug_type($raw));
     }
     $items = [];
     foreach (array_values($raw) as $item) {
+      $item = Coercion::decoded($item, FALSE);
+      $at = $path . '.' . count($items);
       if (Collection::isEmptyItem($item)) {
+        // A blank row is dropped, but its keys are the child's first: an
+        // unknown key in it is refused by its path, as in any other item.
+        if (is_array($item)) {
+          $this->acceptLevel($child, $item, [], $at);
+        }
         continue;
       }
-      $at = $path . '.' . count($items);
       if (!is_array($item)) {
         throw new ShapeMismatchException($at, 'map', get_debug_type($item));
       }
@@ -295,6 +327,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     if (!ValueState::isConfigured($input)) {
       return NULL;
     }
+    $input = Coercion::decoded($input, FALSE);
     if (!is_array($input)) {
       throw new ShapeMismatchException($path, 'map', get_debug_type($input));
     }
@@ -311,14 +344,12 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * Accepts one value for a key the data surface declared secret.
    *
    * The one documented exception to the rule that input holding nothing
-   * means the key holds nothing. A generated form can never echo a
-   * stored secret — that is what being secret means — so the box it
-   * renders comes up empty every time. Somebody who changes the setting
-   * beside it and saves has therefore submitted an empty secret without
-   * meaning to say anything about the secret at all, and reading that
-   * the ordinary way would empty the stored token on every save of an
-   * unrelated setting. So here, and only here, input that holds nothing
-   * means the stored value stands.
+   * means the key holds nothing: here it means the stored value stands,
+   * whether or not the key is required. A generated form can never echo
+   * a stored secret — that is what being secret means — so the box it
+   * renders comes up empty every time, and somebody who changes the
+   * setting beside it and saves has submitted an empty secret without
+   * meaning to say anything about it at all.
    *
    * Which leaves no way to remove a secret, so there is one:
    * DataSurfacePipelineInterface::CLEAR_SECRET, sent as the value, means
@@ -326,7 +357,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * out loud, by a checkbox a host renders beside the box or by an API
    * caller that names the marker.
    *
-   * Everything else about a secret is ordinary: the value is cast
+   * Everything else about a secret is ordinary: the value is coerced
    * through the same table as any other string, and validation holds it
    * to the same constraints.
    *
@@ -861,14 +892,13 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * Core's own PrimitiveType constraint asks whether a value *could be*
    * the type — a string of digits passes as an integer, and any scalar
    * passes as a string — because on the input side that is the right
-   * question: input arrives as text and the casting table converts it.
+   * question: input arrives as text and the coercion table converts it.
    * An output is produced by code with the declaration in front of it,
    * nothing converts it, and a consumer reading `integer` in the emitted
    * schema will be handed whatever the producer put there. So the
-   * question here is the strict one, and the same table of types the
-   * casting rules cover is the table this answers for; anything else —
-   * 'any', a contributed type — is left alone, because a rule it never
-   * defined would be a guess.
+   * question here is the strict one, for the types whose PHP type is
+   * plain; anything else — 'any', a contributed type — is left alone,
+   * because a rule it never defined would be a guess.
    *
    * An integer where a float was declared is the one widening allowed:
    * every integer is that float exactly, so nothing is lost and no
@@ -889,7 +919,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    */
   protected function outputTypeMismatch(DataDefinitionInterface $definition, mixed $value, string $key, string $path): ?Violation {
     $type = $definition->getDataType();
-    if (!in_array($type, self::CAST_TYPES, TRUE)) {
+    if (!in_array($type, self::OUTPUT_TYPES, TRUE)) {
       return NULL;
     }
     $holds = match ($type) {
@@ -1007,14 +1037,15 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   /**
    * Accepts one value against one definition.
    *
-   * Not-configured input means the key holds nothing, which is NULL for
-   * every type but a list, where it means the list is untouched and the
-   * fallback stands. Configured input is then placed by shape: a list
-   * normalizes to a clean list of cast items, a complex definition with
-   * declared properties merges the input over what the level already
-   * holds and recurses, and everything else goes through the casting
-   * table. A complex definition that declares no properties describes
-   * nothing to recurse into, so its value passes through untouched.
+   * Input that holds nothing (NULL, or the empty string a form sends for
+   * nothing) means the key holds nothing, NULL, for every type but a
+   * list, where what the list holds stands. Configured input is then
+   * placed by shape: a list normalizes to a clean list of coerced items,
+   * a complex definition with declared properties merges the input over
+   * what the level already holds and recurses, and everything else goes
+   * through the coercion table. A complex definition that declares no
+   * properties describes nothing to recurse into, so its value passes
+   * through untouched.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition the value belongs to.
@@ -1045,8 +1076,9 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       ? $definition->getPropertyDefinitions()
       : [];
     if ($properties === []) {
-      return $this->cast($definition, $input, $path);
+      return $this->coerce($definition, $input, $path);
     }
+    $input = Coercion::decoded($input, FALSE);
     if (!is_array($input)) {
       throw new ShapeMismatchException($path, 'map', get_debug_type($input));
     }
@@ -1072,20 +1104,41 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   }
 
   /**
+   * Answers whether an array sent for a list of maps is one item.
+   *
+   * A list's keys are dropped, whatever a sender keyed it by, so an
+   * array is one item, to be wrapped, only when it is not a list and
+   * names a key the items declare.
+   *
+   * @param array $value
+   *   The array.
+   * @param array $names
+   *   The keys an item declares.
+   *
+   * @return bool
+   *   TRUE for a single item.
+   */
+  protected static function isItem(array $value, array $names): bool {
+    return !array_is_list($value) && array_intersect_key($value, array_flip(array_map('strval', $names))) !== [];
+  }
+
+  /**
    * Accepts a list value against a list definition.
    *
    * Input reaches a list in whatever shape its sender had: a multiple
    * select submits the chosen values keyed by themselves, a payload
-   * sends a plain list, and both may carry the empty entries a form
-   * leaves behind. All of them mean the same list of items, so the keys
+   * sends a plain list or a JSON string of one, a lenient caller sends
+   * one bare item, and a form leaves empty entries behind. All of them
+   * mean the same list of items, so a JSON list is read, a single item
+   * (a scalar, or one map where the items are maps) is wrapped, the keys
    * are dropped, the not-configured entries with them, and what survives
-   * is cast through the item definition — recursing when the items are
-   * complex.
+   * is coerced through the item definition, recursing when the items
+   * are complex.
    *
-   * A list is the one place where not-configured input does not mean
-   * NULL: a form that renders no list widget, or a payload that names no
-   * list, has said nothing about the list, so what the list already
-   * holds stands.
+   * Input that holds nothing does not empty a list: a form that renders
+   * no list widget, or a payload that names no list, has said nothing
+   * about the list, so what the list already holds stands. Emptying it
+   * is said with an empty list.
    *
    * @param \Drupal\Core\TypedData\ListDataDefinitionInterface $definition
    *   The list definition.
@@ -1103,16 +1156,18 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * @throws \Drupal\data_surface\Pipeline\UnknownKeysException
    *   When an item's nested input key is not a property definition.
    * @throws \Drupal\data_surface\Pipeline\ShapeMismatchException
-   *   When configured input for a list is not an array.
+   *   When an item cannot be held by the item definition.
    */
   protected function acceptList(ListDataDefinitionInterface $definition, mixed $input, mixed $fallback, string $path): mixed {
     if (!ValueState::isConfigured($input)) {
       return $fallback;
     }
-    if (!is_array($input)) {
-      throw new ShapeMismatchException($path, 'list', get_debug_type($input));
-    }
     $item_definition = $definition->getItemDefinition();
+    $input = Coercion::decoded($input, TRUE);
+    $properties = $item_definition instanceof ComplexDataDefinitionInterface ? array_keys($item_definition->getPropertyDefinitions()) : [];
+    if (!is_array($input) || ($properties !== [] && static::isItem($input, $properties))) {
+      $input = [$input];
+    }
     $values = [];
     foreach ($input as $delta => $item) {
       // A select submits its unchosen empty option like any other value;
@@ -1126,158 +1181,44 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   }
 
   /**
-   * Casts one configured raw value to its definition's native type.
+   * Coerces one configured value that is not a structure to its type.
    *
-   * The casting table, and the only place types are converted. Its one
-   * rule is that a cast never loses information: a notation that means
-   * the same value is converted, and anything else is left exactly as it
-   * arrived so that a constraint refuses it with a message about the
-   * value rather than a cast quietly turning it into a different one.
-   * Casting a value that cannot be held at all — an array for a number —
-   * is not a conversion but a mistake, so it is refused here.
+   * The coercion table is the Tool API's, mirrored in
+   * \Drupal\data_surface\Pipeline\Coercion, and this is the only place
+   * the pipeline applies it to a scalar. A near miss snaps onto the
+   * values the key offers, read from the same options service a
+   * generated select and the tool's advertised enum read. An array for a
+   * type that holds one scalar cannot be held at all, so it is refused
+   * here rather than coerced.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition to cast through.
+   *   The definition to coerce through.
    * @param mixed $value
-   *   The raw value; always configured, since accept() coerces the rest
-   *   to NULL before reaching here.
+   *   The raw value; always configured.
    * @param string $path
    *   The dotted path of this value, for refusal reporting.
    *
    * @return mixed
-   *   The value in the definition's native type, NULL when the cast
-   *   produced a value that is itself not configured, and the value
-   *   untouched when no rule applies.
+   *   The value in the definition's type, or untouched when the table has
+   *   no unambiguous reading of it.
    *
    * @throws \Drupal\data_surface\Pipeline\ShapeMismatchException
    *   When an array arrives for a type that holds a single value.
    */
-  protected function cast(DataDefinitionInterface $definition, mixed $value, string $path): mixed {
+  protected function coerce(DataDefinitionInterface $definition, mixed $value, string $path): mixed {
     $type = $definition->getDataType();
-    if (!in_array($type, self::CAST_TYPES, TRUE)) {
-      return $value;
-    }
     if (is_array($value)) {
-      throw new ShapeMismatchException($path, $type, get_debug_type($value));
-    }
-    $cast = match ($type) {
-      'integer' => $this->castInteger($value),
-      'float' => $this->castFloat($value),
-      'boolean' => $this->castBoolean($value),
-      default => is_scalar($value) ? (string) $value : $value,
-    };
-    // A cast whose result is itself not configured — a boolean FALSE
-    // asked for as a string is the only way to get there — means the
-    // same as not configuring the key at all.
-    return ValueState::isConfigured($cast) ? $cast : NULL;
-  }
-
-  /**
-   * Casts a configured raw value to an integer.
-   *
-   * An integer literal is an integer however it is spelled, so a string
-   * of digits and a float that happens to be whole both become one. A
-   * number with a fraction does not: truncating 1.9 to 1 stores a
-   * different number than the caller sent, so it is left for the
-   * constraint to refuse. A literal too large for a PHP integer is left
-   * alone for the same reason.
-   *
-   * @param mixed $value
-   *   The raw value.
-   *
-   * @return mixed
-   *   The integer, or the value untouched when casting would lose
-   *   information.
-   */
-  protected function castInteger(mixed $value): mixed {
-    if (is_int($value)) {
-      return $value;
-    }
-    if (is_float($value)) {
-      $number = $value;
-    }
-    elseif (is_string($value)) {
-      $trimmed = trim($value);
-      if (!is_numeric($trimmed)) {
-        return $value;
+      if (in_array($type, self::SCALAR_TYPES, TRUE)) {
+        throw new ShapeMismatchException($path, $type, get_debug_type($value));
       }
-      // Adding zero yields an integer for an integer literal in range
-      // and a float for everything else, which is exactly the
-      // distinction this rule needs.
-      $number = $trimmed + 0;
-    }
-    else {
       return $value;
     }
-    if (is_int($number)) {
-      return $number;
+    $choices = [];
+    if (is_string($value) && $definition->getConstraints() !== []) {
+      $set = $this->options->resolve($definition);
+      $choices = $set === NULL ? [] : array_keys($set->options);
     }
-    $whole = is_finite($number)
-      && floor($number) === $number
-      && $number > (float) PHP_INT_MIN
-      && $number < (float) PHP_INT_MAX;
-    return $whole ? (int) $number : $value;
-  }
-
-  /**
-   * Casts a configured raw value to a float.
-   *
-   * Every number is a float without losing anything, and so is every
-   * numeric string. Nothing else is a number.
-   *
-   * @param mixed $value
-   *   The raw value.
-   *
-   * @return mixed
-   *   The float, or the value untouched when it is not a number.
-   */
-  protected function castFloat(mixed $value): mixed {
-    if (is_float($value)) {
-      return $value;
-    }
-    if (is_int($value)) {
-      return (float) $value;
-    }
-    if (is_string($value)) {
-      $trimmed = trim($value);
-      if (is_numeric($trimmed)) {
-        return (float) $trimmed;
-      }
-    }
-    return $value;
-  }
-
-  /**
-   * Casts a configured raw value to a boolean.
-   *
-   * Form API hands a checkbox back as an integer, a query string hands
-   * it back as '1' or '0', a YAML config action hands back 'yes' or
-   * 'off', and a JSON payload hands back a real boolean. All of them
-   * mean the same thing here. Anything else is left for validation to
-   * refuse rather than being folded into TRUE, which is what made the
-   * word 'off' arrive as on.
-   *
-   * @param mixed $value
-   *   The raw value.
-   *
-   * @return mixed
-   *   The boolean, or the value untouched when it spells neither.
-   */
-  protected function castBoolean(mixed $value): mixed {
-    if (is_bool($value)) {
-      return $value;
-    }
-    if ($value === 1 || $value === 0) {
-      return (bool) $value;
-    }
-    if (!is_string($value)) {
-      return $value;
-    }
-    return match (strtolower(trim($value))) {
-      '1', 'true', 'on', 'yes' => TRUE,
-      '0', 'false', 'off', 'no' => FALSE,
-      default => $value,
-    };
+    return Coercion::scalar($definition, $value, $choices);
   }
 
   /**

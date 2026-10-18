@@ -104,7 +104,6 @@ caller sends that.
                 "type": {
                     "type": "string",
                     "maxLength": 32,
-                    "pattern": "^[a-z0-9_]+$",
                     "description": "Machine name: Unique machine readable name: lowercase letters, numbers, and underscores only.",
                     "title": "Machine name"
                 },
@@ -280,7 +279,6 @@ caller sends that.
                                                 "type": "null"
                                             }
                                         ],
-                                        "pattern": "^[a-z0-9]+(?:[ -][a-z0-9]+)*$",
                                         "title": "Audience tag"
                                     },
                                     "title": "Audience tags"

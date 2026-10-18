@@ -95,8 +95,8 @@ final class FieldItemDerivation {
    * The pattern a datetime value is written in, by its datetime_type.
    */
   protected const DATE_PATTERNS = [
-    'date' => '/^\d{4}-\d{2}-\d{2}$/',
-    'datetime' => '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/',
+    'date' => '/^\d{4}-\d{2}-\d{2}$/D',
+    'datetime' => '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/D',
   ];
 
   /**

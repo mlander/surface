@@ -91,7 +91,7 @@ final class NodeTypeResource implements ResourceInterface {
       ->setRequired(TRUE)
       ->addConstraint('Length', ['max' => EntityTypeInterface::BUNDLE_MAX_LENGTH])
       ->addConstraint('Regex', [
-        'pattern' => '/^[a-z0-9_]+$/',
+        'pattern' => '/^[a-z0-9_]+$/D',
         'message' => 'The machine name must contain only lowercase letters, numbers, and underscores.',
       ]);
 

@@ -25,12 +25,12 @@ use Drupal\data_surface_surface_test\Resource\Larder\SpiceRackResource;
 use Drupal\data_surface_surface_test\Storage\CellarStorage;
 use Drupal\data_surface_tool\Plugin\tool\Tool\ResourceOperationTool;
 use Drupal\data_surface_tool\OperationInputs;
+use Drupal\Tests\data_surface\Traits\ContractValidationTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolDefinition;
 use Drupal\tool\Tool\ToolInterface;
 use Drupal\tool\TypedData\ListInputDefinition;
 use Drupal\tool\TypedData\MapInputDefinition;
-use Opis\JsonSchema\Validator;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\InputBag;
@@ -52,6 +52,7 @@ use Symfony\Component\HttpFoundation\Request;
 #[RunTestsInSeparateProcesses]
 class CollectionTest extends DataSurfaceKernelTestBase {
 
+  use ContractValidationTrait;
   use UserCreationTrait;
 
   /**
@@ -406,23 +407,6 @@ class CollectionTest extends DataSurfaceKernelTestBase {
     $context = $this->resources()->operation(CellarResource::class, 'edit', ['larder' => 'main']);
     $stored = $this->resources()->storage(CellarResource::class, $context, $surface)->load($surface);
     return $emitter->emit($surface, array_replace($surface->getDefaultValues(), $stored), 'surface_test.cellar', $operation)->document;
-  }
-
-  /**
-   * Answers whether a JSON Schema validator accepts values.
-   *
-   * @param array $schema
-   *   The schema.
-   * @param mixed $values
-   *   The values.
-   *
-   * @return bool
-   *   TRUE when they validate.
-   */
-  protected function validates(array $schema, mixed $values): bool {
-    $validator = new Validator();
-    $validator->parser()->setOption('defaultDraft', '2020-12');
-    return $validator->validate(json_decode((string) json_encode($values)), (string) json_encode($schema))->isValid();
   }
 
   /**

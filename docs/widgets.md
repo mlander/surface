@@ -110,7 +110,7 @@ pipeline's `accept()` casts it.
 This is not a division of labor for its own sake. Casting in the widgets
 is what an earlier design did, and it meant a caller that handed the
 pipeline a JSON payload rather than a form submission got no coercion at
-all and validated raw strings. With one casting table in `accept()`, a
+all and validated raw strings. With one coercion table in `accept()`, a
 generated form and a payload carrying the same strings produce the same
 values. The rules are in [Value semantics](semantics.md).
 

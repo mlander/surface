@@ -147,7 +147,9 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
     $tags = $extras[NodeTypeReviewSettings::TAGS];
     $this->assertSame('Audience tags', $tags['title']);
     $this->assertContains('array', (array) $tags['type']);
-    $this->assertSame('^[a-z0-9]+(?:[ -][a-z0-9]+)*$', $tags['items']['pattern']);
+    // A Regex with the D modifier, which the Tool API's own translation
+    // does not carry: the tag's shape is validated, not advertised.
+    $this->assertArrayNotHasKey('pattern', $tags['items']);
     $this->assertStringContainsString('each tag listed once and in lower case', $tags['description']);
 
     // Required is what the resource says, default or not: a key whose

@@ -524,3 +524,53 @@ Each is a line or two on the schema side; none is applied.
   its machine name gets past its storage's own checks (section 4 stops
   at the pipeline's verdict).
 - The form door of section 6 was read in the code, not driven.
+
+## Resolved
+
+*2026-10-18. Each case decided with the Tool API as the precedent (it
+coerces a tool's inputs by a documented table first and validates
+after, and its matrix tests compare the advertised schema with what a
+tool accepts post-coercion), and applied. `NeverStricterAuditTest` is
+gone; its pins became two matrix tests in the Tool API's shape,
+`tests/src/Kernel/Matrix/AdvertisedSchemaAcceptanceTest.php` (tables of
+accepted and refused documents for the specimen, examples 2, 3 and 4
+and the cellar, each held to the pipeline and both schemas by a
+standard validator) and `tests/src/Kernel/Matrix/InputCoercionMatrixTest.php`
+(the coercion table, row by row, at the form door and the tool door).
+The audit above is the record of what was found; this is what each case
+became.*
+
+| # | Case | Became | Where it is held |
+| --- | --- | --- | --- |
+| Scope | Raw input or accepted document | The invariant is stated on the **accepted document**: what `accept()` makes of the input after coercion ([decision](decisions.md#two-documents-never-stricter-than-the-runtime), [served contract](served-contract.md#never-stricter-than-the-runtime)) | every row of `AdvertisedSchemaAcceptanceTest` |
+| 1 | Casting | The module's casting table is replaced by the Tool API's coercion table, mirrored once in `Pipeline\Coercion` ([semantics](semantics.md#the-coercion-table), [decision](decisions.md#one-coercion-table-the-tool-apis)); the notations are the accepted document's, not the schema's | `InputCoercionMatrixTest::testBothDoorsCoerceAlike()`, `::testCoercedValuesAreFixedPoints()`, `::testBothDoorsRefuse()`; the "notations" and "as the form posts it" rows |
+| 2 | Unknown keys | Tightened: a blank collection item's keys are read before it is dropped, so an unknown key in it is refused by its path | the cellar's "an unknown key in a blank rack" row; `::testUnknownKeysAreRefusedEverywhere()` |
+| 3 | Untouched stale values | The stale path keeps reading an empty answer as the stored value; an optional stale key's `null` is a value its type allows. A kept stale value itself is storage's, the one stated exception: no schema that states the list accepts it | `::testStaleValueIsStoragesNotAnAnswer()` |
+| 4 | Regex translation | Every shipped pattern gained `D`; the translation carries `u` and `D` and a body only inside the subset both engines read alike, and leaves `pattern` out otherwise, `patternMessage` still carried ([decision](decisions.md#a-pattern-both-engines-read-alike)) | `::testRegexTranslation()` (the audit's table, asserting the new translations and verdicts) |
+| 5 | Null and the empty string | Three-way ([decision](decisions.md#absent-keeps-null-clears)): a key left out keeps what is stored (or the default, creating); `null`, or `''` for nothing, clears an optional key; a value is that value. An optional key's type allows `null` and an optional choice keeps its untitled `{const: null}`; a secret's does not. `''` is a notation of the cleared document, as case 1 | the "clears" rows of both tests; `InputCoercionMatrixTest::testAbsentKeyKeepsWhatItHolds()` |
+| 6 | Required | `required` means present and not null, nothing about size; the partial update is a notation of the accepted document. A secret is optional, never nullable, in both documents and the tool ([decision](decisions.md#a-secret-is-optional-never-nullable)). The suite's validator no longer fills defaults (`allowDefaults` off) | the "partial update" rows; `::testSecretIsOptionalNeverNullable()` |
+| 7 | Constraints with no keyword | Unchanged where it held; `PluginExists` with `allowFallback` on a fallback manager offers no list, so the schema is as wide as the validator | `::testConstraintsWithNoKeyword()` |
+| 8 | Collections | The decided drop stands; on the accepted document it holds (a blank row is not in it) | the cellar's "four racks and a blank row" row |
+| 9 | Narrowing composition | A locked list's items carry no `const`, only the lock | `::testLockedCollectionItemsCarryNoConst()` |
+| 10 | Locked keys | Neither: the posted value is a notation; the accepted document holds the locked value, which `const` states | the cellar's "a posted larder is ignored" row |
+| Outside | `format` | Stays, as an annotation per JSON Schema 2020-12; the suite's validator does not assert it ([decision](decisions.md#format-is-an-annotation)) | the "format is advisory" rows |
+| Outside | Values stored in another type | An alignment with the Tool API's table: `TRUE` for an integer is `1` now. `TRUE` for a float or a string, and `'01'` or `'1.0'` for a boolean, are left by the table and let through by core's PrimitiveType check, at both doors alike | `InputCoercionMatrixTest::testValuesTheTableLeavesAndCoreLetsThrough()` |
+
+What the decisions cost, said once:
+
+- **A required stale key** is served as `null` with its path; the schema
+  for these answers refuses that `null` (required), and it is the path
+  that lets the pipeline read the stored value.
+- **The tool door and one row of the table**: the Tool API's subscriber
+  truncates a fractional numeric string for an integer (`'1.9'` to `1`)
+  before the pipeline sees it; the form door refuses it
+  (`InputCoercionMatrixTest::testFractionalStringForAnIntegerDivergesAtTheToolDoor()`).
+- **The Tool API's own schema** leaves a pattern with the `D` modifier
+  out (its translation allows only `i`, `m` and `s`), so the derived
+  tools no longer advertise the shipped patterns; the Regex still
+  validates every call.
+- **A first reading of case 5**, that `null` and `''` keep what is
+  stored as the Tool API's "null means the default" does, was applied
+  and reverted the same day: it left no way to clear an optional key
+  (an address override, an optional select). The decision says why the
+  module parts from the Tool API there.

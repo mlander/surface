@@ -21,8 +21,9 @@ use Drupal\data_surface_surface_test\Structure\Crate\CrateStructure;
 use Drupal\data_surface_surface_test\Structure\Cupboard\CupboardStructure;
 use Drupal\data_surface_surface_test\Resource\Pantry\PantryResource;
 use Drupal\node\Entity\NodeType;
+use Drupal\Tests\data_surface\Traits\ContractValidationTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
-use Opis\JsonSchema\Validator;
+use Opis\JsonSchema\CompliantValidator;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -51,6 +52,7 @@ use Symfony\Component\HttpFoundation\Request;
 #[RunTestsInSeparateProcesses]
 class ServedContractTest extends DataSurfaceKernelTestBase {
 
+  use ContractValidationTrait;
   use UserCreationTrait;
 
   /**
@@ -184,26 +186,6 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Validates values against a contract's schema with opis/json-schema.
-   *
-   * @param array $schema
-   *   The schema.
-   * @param mixed $values
-   *   The values.
-   *
-   * @return bool
-   *   Whether they are valid.
-   */
-  protected function validates(array $schema, mixed $values): bool {
-    $validator = new Validator();
-    $validator->parser()->setOption('defaultDraft', '2020-12');
-    return $validator->validate(
-      json_decode((string) json_encode($values)),
-      (string) json_encode($schema),
-    )->isValid();
-  }
-
-  /**
    * Holds a schema document to the vendored draft-07 meta-schema.
    *
    * @param array $schema
@@ -212,7 +194,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
   protected function assertWellFormed(array $schema): void {
     $meta = DRUPAL_ROOT . '/../vendor/justinrainbow/json-schema/dist/schema/json-schema-draft-07.json';
     $this->assertFileExists($meta);
-    $validator = new Validator();
+    $validator = new CompliantValidator();
     $result = $validator->validate(json_decode((string) json_encode($schema)), (string) file_get_contents($meta));
     $this->assertTrue($result->isValid(), 'The schema is a well-formed schema document.');
   }
@@ -396,7 +378,9 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $paid_values = ['pricing' => 'paid', 'ticket' => ['price' => 12.5, 'currency' => 'EUR']] + $contract['values'];
     $this->assertTrue($this->validates($schema, $paid_values), 'A paid ticket fits the paid conditional.');
     $this->assertFalse($this->validates($schema, ['pricing' => 'paid'] + $contract['values']), 'A free ticket does not fit the paid conditional.');
-    $this->assertFalse($this->validates($schema, ['contact' => ['email' => 'nobody', 'phone' => '']] + $contract['values']));
+    // `format` is advisory: a standard validator does not assert it, and
+    // the pipeline's own Email check is the one that refuses this.
+    $this->assertTrue($this->validates($schema, ['contact' => ['email' => 'nobody', 'phone' => '']] + $contract['values']));
 
     // Choosing paid resolves the slot to the paid ticket, from its defaults.
     $chosen = $this->contract('registration.step3', 'configure', [], ['pricing' => 'paid']);
@@ -1361,7 +1345,8 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
       'paid, nothing to pay' => [['ticket' => ['price' => 0, 'currency' => 'EUR']] + $paid, FALSE, FALSE, FALSE],
       'paid, a currency not offered' => [['ticket' => ['price' => 5, 'currency' => 'JPY']] + $paid, FALSE, FALSE, FALSE],
       'free, the paid ticket' => [['ticket' => ['price' => 5, 'currency' => 'EUR']], FALSE, FALSE, FALSE],
-      'a contact address that is none' => [['contact' => ['email' => 'nobody', 'phone' => '']], FALSE, FALSE, FALSE],
+      // `format` is advisory: the pipeline's Email check refuses it.
+      'a contact address that is none' => [['contact' => ['email' => 'nobody', 'phone' => '']], FALSE, TRUE, TRUE],
       'a contact with no address' => [['contact' => ['email' => NULL, 'phone' => '555']], FALSE, FALSE, FALSE],
       'a contact key nobody declares' => [['contact' => ['fax' => '1'] + self::EVENT['contact']], FALSE, FALSE, FALSE],
       'another venue\'s room' => [['room' => 'library_reading'], FALSE, FALSE, FALSE],

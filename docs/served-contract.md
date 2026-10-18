@@ -91,12 +91,52 @@ The emitter writes two documents from one data surface, by one code path.
   `GET .../schema` serves it, with the widget hints; the contract panel
   shows it.
 
+### Never stricter than the runtime
+
 Neither is ever stricter than the pipeline
-([decision](decisions.md#two-documents-never-stricter-than-the-runtime)).
-Where a rule has no JSON Schema keyword, a dependency is free text or
-too large to list, or a refiner is declared runtime, the schema stays at
-the declared width and says so (`checkedOnServer`, `dynamic`,
-`runtime`); the pipeline's refinement is the guard with the last word.
+([decision](decisions.md#two-documents-never-stricter-than-the-runtime)),
+and the rule is about the **accepted document**: what `accept()` makes
+of the input after coercion, not the raw input. That is the Tool API's
+shape: it coerces a tool's inputs by a documented table first and
+validates after, and its matrix tests compare the advertised schema
+with what the tool accepts post-coercion. So a form's `"50"` for an
+integer, `""` for nothing, a partial update and a value posted for a
+locked key are notations the pipeline reads ([semantics](semantics.md#the-coercion-table))
+and the schema need not admit; the document they become, it does.
+
+- **A `null` on an optional key is a value.** Left out, an optional key
+  keeps what it holds; `null` clears it
+  ([semantics](semantics.md#absent-null-or-a-value)), so its type
+  allows `null`. A secret is the one optional key whose type does not:
+  `null` does not clear it, its marker does. The contract's `values`
+  carry every key, a secret as `null` because it is masked; read
+  against the schema, that one `null` is the key left out.
+- **`format` is advisory.** `format` is written as JSON Schema 2020-12
+  defines it, an annotation a client may opt into asserting
+  ([decision](decisions.md#format-is-an-annotation)). Drupal's checks
+  are not the formats': an address with a non-ASCII local part, or a
+  URI with a space, is accepted by the pipeline and refused by a client
+  that asserts `format`.
+- **`default` is an annotation too.** A validator that fills a missing
+  key from its `default` before reading `required` (opis's
+  `allowDefaults`) is not reading the schema as a standard one does;
+  the suite does not.
+- **Where the schema cannot say a rule it stays wide.** Where a rule
+  has no JSON Schema keyword, a dependency is free text or too large to
+  list, or a refiner is declared runtime, the schema stays at the
+  declared width and says so (`checkedOnServer`, `dynamic`, `runtime`);
+  the pipeline's refinement is the guard with the last word. A Regex
+  whose body uses anything the two engines do not read alike carries no
+  `pattern` at all ([decision](decisions.md#a-pattern-both-engines-read-alike)).
+- **A stale value is storage's.** The full schema reads no storage, so a
+  stored value a static list no longer offers, which the pipeline keeps
+  stale, is outside it.
+
+`AdvertisedSchemaAcceptanceTest` holds this for every example and the
+test fixtures: each accepted document is accepted by both documents and
+each refused one refused, both ways where the schema is exact and one
+way where it is `dynamic` or `runtime`, by a standard validator
+(`format` not asserted, no defaults filled).
 
 ### Three markers
 
@@ -140,7 +180,7 @@ Example 2's full schema, abbreviated:
 | `situation` | The operation's id, or `null` for a resource or structure asked for in no operation. |
 | `label` | The operation's label. |
 | `schema` | JSON Schema 2020-12 for the inputs, `x-surface` on every property. |
-| `values` | The values the schema describes now: what storage holds over the declared defaults (which carry an operation's starting values and known identity), with any in-progress answers over that. Every key is present. A secret is `null`; a stale value is `null`. |
+| `values` | The values the schema describes now: what storage holds over the declared defaults (which carry an operation's starting values and known identity), with any in-progress answers over that. Every key is present. A secret is `null` (masked: read as the key left out); a stale value is `null`, its path in `stale`. |
 | `stale` | The dotted paths shown on the empty option in place of a stored value. |
 | `outputs` | The output schema, when the resource or structure declares outputs. |
 | `fingerprint` | On the GET and in a submit's answer: a keyed hash of the stored values the document was built from, for a submit to send back ([the fingerprint rule](#the-fingerprint-rule)); `null` for a resource or structure with no storage. Not on a refine. |
@@ -157,14 +197,14 @@ each written once, as a def under `$defs`, and referred to
 | The declaration says | The schema says |
 | --- | --- |
 | label, description | `title`, `description` |
-| `string`, `email`, `uri`, `integer`, `float`, `boolean` | `type` (`format: email` / `uri` for those types); an optional key also allows `null` |
-| `setRequired(TRUE)` | the key in `required`. Its meaning here: it must hold a value. The contract's `values` always carry every key, so presence is never the question. |
+| `string`, `email`, `uri`, `integer`, `float`, `boolean` | `type` (`format: email` / `uri` for those types, advisory); an optional key also allows `null`, which clears it (a secret does not) |
+| `setRequired(TRUE)` | the key in `required`: present and not null, nothing about size. The contract's `values` always carry every key, so presence is never the question. |
 | a declared default, examples | `default`, `examples` |
 | `Range` | `minimum`, `maximum` |
 | `Length` | `minLength`, `maxLength` |
 | `Count` | `minItems`, `maxItems` |
-| `Regex` | `pattern` (`not: {pattern}` for `match: false`); a modifier ECMA has no word for leaves it to the server |
-| `Email` | `format: email` |
+| `Regex` | `pattern` (`not: {pattern}` for `match: false`), carried only when its body stays inside the subset both engines read alike and its modifiers are `u` and `D`; otherwise left to the server ([decision](decisions.md#a-pattern-both-engines-read-alike)) |
+| `Email` | `format: email`, advisory |
 | `NotBlank` | `minLength: 1` |
 | any list of allowed values | `oneOf: [{const, title, description?}]`, read from the options service, so the labels travel; never `enum`. An optional key adds an untitled `{const: null}`. |
 | a map | a nested object |
@@ -173,7 +213,7 @@ each written once, as a def under `$defs`, and referred to
 | a collection | `type: array`, `items` a reference to the child's def, narrowed by composition only where every item differs from it (a key the child's operation locked, a locked list), `minItems` and `maxItems` from its Count as the parent's refiners left it, and `x-surface.list: true` ([below](#collections)) |
 | a locked key | `readOnly: true` and `const` of the value the operation knows |
 | a child its access locked | `readOnly: true` on the part, and on every key inside it with `const` of what is stored (none in the full schema); an omitted child is not there at all ([Three answers](resources.md#three-answers)) |
-| a secret | `writeOnly: true`, no default, no value |
+| a secret | `writeOnly: true`, its declared type, never in `required` (left out or `null`, the stored secret stands), no default, `null` in `values` ([decision](decisions.md#a-secret-is-optional-never-nullable)) |
 | any other constraint | named in `x-surface.checkedOnServer`: the schema is not the whole story, ask `/validate` |
 
 ### `x-surface`
@@ -352,7 +392,8 @@ size, how many racks fit.
 ```
 
 A list locked by its access is `readOnly`, and its items narrow the def
-by composition, every key inside them `readOnly`.
+by composition, every key inside them `readOnly` and none holding a
+`const`: each item holds its own value, which is in `values`.
 
 ### A slot is a conditional
 

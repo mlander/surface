@@ -49,6 +49,7 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
     'data_surface:registration.step1:configure:read',
     'data_surface:registration.step2:configure:read',
     'data_surface:registration.step3:configure:read',
+    'data_surface:tool_test.specimen:configure:read',
     'data_surface:tool_test.vault:configure:read',
   ];
 
