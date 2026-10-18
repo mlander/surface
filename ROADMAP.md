@@ -387,6 +387,87 @@ to.
    (`docs/served-contract.md`). Writes since: `/submit`, with `created`
    for an operation that creates and an opt-in stored-values fingerprint.
 
+## Next, ranked (2026-10-18)
+
+What makes the pattern better from here, in the order it pays off. The
+developer-facing side on `next` (reusable subschemas, static and runtime
+refinement with its enforcement, child operations with three-way access,
+collections, the vocabulary) is complete as scoped; the entity side is
+tabled until the user resumes it.
+
+1. **Make `next` trustworthy, then merge it to `main`.**
+   - The refinement leak: one call to the registration tool changes the
+     verdict of the next call in the same process (a capacity of 50 is
+     refused after an 80, with the stewards rule from the 80). Separate
+     requests are fine. Suspect the definition of an alter's mounted key
+     being shared between builds. The one known bug on the branch.
+   - The "never stricter than the runtime" audit, deferred for the demo:
+     the form posts `"50"` as text where the schema says integer; the
+     schema refuses unknown keys, and whether the pipeline does is
+     unchecked; an untouched stale stored value is accepted while the
+     full schema's list refuses it; a Regex translated from PCRE to ECMA
+     may refuse what the original accepts. Each is a schema to widen or
+     a runtime to tighten, decided case by case.
+   - A reading pass over the docs and decisions after the rename, then
+     the leftover old words in one decision: module name and
+     namespaces, the `data_surface.` service prefix, route names and
+     paths, the `x-surface` keyword, the `surface[...]` form key, the
+     React app's internal names, the `DataSurface*` engine prefix.
+2. **Declarative narrowing** (Phase C). An author states a condition
+   instead of coding it, for example "a licence is present", and the
+   emitter writes it as a conditional without executing anything. Keys
+   move from `dynamic` to `enumerated`; the compliance capacity is the
+   first case. The static/runtime split made this possible.
+3. **Static and runtime access**, the same split as refinement. Static
+   access is decidable from the account alone (an operation's
+   permission, a role) and is stated in the full schema and the tool
+   listing for the account asking. Runtime access depends on the
+   subject or on values ("may edit this node", field permissions' "edit
+   own") and is applied only once the subject is known. The kind is
+   read from the answer's cacheability, which Drupal already requires
+   to be honest: permission or role contexts only, no entity tags, no
+   per-user context, means static. The full schema marks a key under
+   runtime access (`x-surface.access: "runtime"`) as one that may be
+   locked or omitted later. Access answers per key or structure;
+   narrowing allowed values by account is a runtime refiner, not
+   access.
+4. **The tool door's feedback.** Keep the listing small, as intended.
+   Name each dependency in the input's description. Make a refusal on a
+   dependent key say what is allowed for the values sent ("room: not
+   offered for Riverside Hall; choose Main hall or East room"), which
+   means narrowing the `values` map from its own partial value in the
+   tool bridge. One retry per dependent key is the target. Applies to
+   ECA and MCP alike.
+5. **Pattern edges**, each small: a read-only operation form for the
+   top-level locked answer (today read as denied); a view-only slot
+   variant (today not offered); `childrenMayAnswer()` skipping the
+   build when no access class exists; a collection inside an item on
+   the form; a secret inside a collection item hiding the whole list
+   from the read tool; `attachListBy()`; an item routed to its child's
+   own storage; the phpstan rule for static refiners; the "Right now"
+   wording for a key that is both narrowed and under a runtime rule.
+6. **The entity side, when resumed.** Fields as two shapes: a `field`
+   resource (identity: entity and field name; a collection of items
+   with Count from cardinality; field access; a `set` operation whose
+   tool shares Tool Belt's `field_set_value` contract) and a
+   `field.item` structure (no identity; entity, field name and delta
+   from its container; shape derived at build from the known field).
+   Unit 4's per-field-per-bundle derivatives collapse into these. Then
+   multi-value fields through collections, the form display as the
+   cosmetic layer (a single-value field drawn as one element, not a
+   fieldset; timestamps and references drawn as such), address as the
+   first override (country narrows subdivisions), path alias as the
+   first alter with a storage of its own, and a placed block as a
+   config entity resource whose settings are a slot keyed by plugin id
+   with each plugin's structure as a variant.
+7. **The core conversation**, bottom-up: the definition-level facts
+   first (constraints to JSON Schema keywords, `refined_by` on
+   definitions, a setter contract, labels on Choice; drafted), then
+   operations and access for config objects framed as what entity types
+   already have, then third-party settings for simple config, and Form
+   API last. `docs/core-gaps.md` and the proposal document are to be
+   rewritten in the new vocabulary to carry it.
+
 ## Rejected, on the record
 
 So they are not re-proposed: imperative input-mutation hooks before
