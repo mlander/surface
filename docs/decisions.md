@@ -392,6 +392,46 @@ worth a rule once there are third-party refiners to hold to it.
 (`RefinesInput`, `Resources::bindRefiners()`, `RuntimeRefiner`,
 `ContractEmitter::frame()`, `ContractEmitter::enumerate()`)
 
+### A definition is validated as itself
+
+Refinement makes a new definition for every set of values, and nothing
+it hands out is shared: two builds, or two refinements of one, never
+hold the same object. Typed data shared them anyway. Core builds a map's
+properties and a list's items from a prototype it keeps for the rest of
+the process, keyed by the root's type and settings and the property's
+path, and never by the definition it is asked about, so the first
+definition validated at a path judged every later one. The compliance
+alter's stewards, a property of the mount, were held to the first
+call's minimum by every later call: after a capacity of 80 a capacity
+of 50 was refused, and after 50 a capacity of 80 was written with one
+steward. A top-level key never showed it, because the root is made from
+the definition handed in; nor did a label or a description, which only
+the leaked definition carried and no message reads. It reached across
+resources too: two shapes with a map key of one name shared its
+properties' rules.
+
+Every place the module turns a definition into typed data, the
+pipeline's validation of inputs, collections and outputs, and the
+watched value check, goes through `DefinitionTypedData::create()`,
+which hands core a copy of the root carrying a digest of what the
+definition says that validation reads, its type, class, required,
+settings and constraints at every depth, among its settings (a list's
+goes on its item, which is what core keys a list by). Labels and
+descriptions are left out of the digest on purpose: no violation reads
+them, and a refiner writes the values it was handed into a description,
+which would give core one prototype per distinct value. Definitions
+that validate alike share prototypes and ones that do not never do; the
+definition handed in is not touched.
+Clearing core's cache before each validation, as the Tool API does,
+would work too, but reaches into a protected property and throws away
+every other caller's prototypes. The cost is that a long process keeps
+one set of prototypes per distinct set of rules it validated, which is
+bounded by what the refiners can narrow to, not by the values they
+were handed. *Changed after the compliance
+example's stewards were found leaking between tool calls in one
+process; see `docs/core-gaps.md`.* (`DefinitionTypedData`,
+`DataSurfacePipeline`, `Refinement\WatchedValueCheck`)
+
 ## Alters
 
 ### Where an alter's keys live

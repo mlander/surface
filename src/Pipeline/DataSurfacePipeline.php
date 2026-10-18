@@ -17,6 +17,7 @@ use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\data_surface\DataSurfaceAccess;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\DefinitionTypedData;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Entry;
 use Drupal\data_surface\Collection;
@@ -424,7 +425,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         }
         continue;
       }
-      $typed_data = $this->typedDataManager->create($definition, $value, $name);
+      $typed_data = DefinitionTypedData::create($this->typedDataManager, $definition, $value, $name);
       $refusals = [];
       foreach ($typed_data->validate() as $violation) {
         $path = (string) $violation->getPropertyPath();
@@ -594,7 +595,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       $own->addConstraint((string) $constraint, $options);
     }
     $errors = [];
-    foreach ($this->typedDataManager->create($own, $items, $name)->validate() as $violation) {
+    foreach (DefinitionTypedData::create($this->typedDataManager, $own, $items, $name)->validate() as $violation) {
       $errors[] = new Violation($name, (string) $violation->getPropertyPath(), $violation->getMessage());
     }
     $stored = is_array($current) ? array_values($current) : [];
@@ -763,7 +764,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         // shape refusal has not already said more precisely.
         continue;
       }
-      $typed_data = $this->typedDataManager->create($definition, $output[$name], $name);
+      $typed_data = DefinitionTypedData::create($this->typedDataManager, $definition, $output[$name], $name);
       foreach ($typed_data->validate() as $violation) {
         $errors[] = new Violation($name, (string) $violation->getPropertyPath(), $violation->getMessage());
       }

@@ -130,6 +130,18 @@ did `data_surface_tool`'s `FieldSurfaceLocator`, retired with the
 hand-written field tools). It is a candidate core
 issue in its own right; nothing about it is specific to this module.
 
+The same cache has a second face. A refined definition differs from the
+one before it only in what it narrowed, at the same paths under a root
+of the same type, so the first one validated in a process judged every
+later one's map properties and list items. The module hands core a copy
+of each root carrying a digest of the definition in its settings, so
+the key names the definition (`DefinitionTypedData`,
+`decisions.md#a-definition-is-validated-as-itself`). The Tool API meets
+it as well and clears the cache through reflection before validating a
+map or a list; core issue
+[#3616328](https://www.drupal.org/project/drupal/issues/3616328) is
+about it.
+
 ## Tool API: constraints matched by name, not by `instanceof`
 
 `ContextDefinitionNormalizer::applyConstraintSchema()` reads exactly two

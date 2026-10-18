@@ -7,6 +7,7 @@ namespace Drupal\data_surface\Refinement;
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
+use Drupal\data_surface\DefinitionTypedData;
 
 /**
  * The module's watched value check: the definition's own constraints.
@@ -36,7 +37,7 @@ final class WatchedValueCheck implements WatchedValueCheckInterface {
    */
   public function admits(DataDefinitionInterface $definition, mixed $value): bool {
     try {
-      return $this->typedDataManager->create($definition, $value)->validate()->count() === 0;
+      return DefinitionTypedData::create($this->typedDataManager, $definition, $value)->validate()->count() === 0;
     }
     catch (\InvalidArgumentException) {
       // Typed data refuses a value it cannot hold at all, a string for a
