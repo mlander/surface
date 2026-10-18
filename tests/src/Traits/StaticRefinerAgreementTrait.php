@@ -69,16 +69,32 @@ trait StaticRefinerAgreementTrait {
 
     $compared = 0;
     foreach ($schema['allOf'] ?? [] as $condition) {
+      foreach ($condition['then']['required'] ?? [] as $key) {
+        // Required here and only here: the key applies, and requires.
+        $entry = $definitions->entry((string) $key);
+        $this->assertNotNull($entry, sprintf('%s requires "%s", which it does not declare.', $label, $key));
+        $combination = array_map(static fn (array $value): mixed => $value['const'], $condition['if']['properties']);
+        $refined = $surface->refine(array_replace($known, $combination), FALSE)->getDefinition((string) $key) ?? $entry->definition;
+        $this->assertTrue($refined->isRequired() && $emitter->describeKey($entry, $refined) !== FALSE, sprintf('In %s, "%s" for %s is not required where the contract says.', $label, $key, json_encode($combination)));
+        $compared++;
+      }
       foreach ($condition['then']['properties'] ?? [] as $key => $narrowed) {
         // A slot's conditional names its variant; only an enumerated
         // key's is a refiner's answer written down.
-        if (($schema['properties'][$key]['x-surface']['enumerated'] ?? FALSE) !== TRUE) {
+        if (($schema['properties'][$key]['x-surface']['enumerated'] ?? FALSE) !== TRUE || isset($narrowed['x-surface']['variant'])) {
           continue;
         }
         $entry = $definitions->entry((string) $key);
         $this->assertNotNull($entry, sprintf('%s states "%s", which it does not declare.', $label, $key));
         $combination = array_map(static fn (array $value): mixed => $value['const'], $condition['if']['properties']);
         $refined = $surface->refine(array_replace($known, $combination), FALSE)->getDefinition((string) $key) ?? $entry->definition;
+        if ($narrowed === FALSE || $entry->isNested()) {
+          // A key ruled out is `false`; a key holding a child is stated
+          // only where it does not apply.
+          $this->assertSame($narrowed === FALSE, $emitter->describeKey($entry, $refined) === FALSE, sprintf('In %s, "%s" for %s does not apply exactly where the contract says.', $label, $key, json_encode($combination)));
+          $compared++;
+          continue;
+        }
         $this->assertEquals(
           self::laidOver(self::decoded($emitter->describeKey($entry)), $narrowed),
           self::decoded($emitter->describeKey($entry, $refined)),
@@ -115,7 +131,8 @@ trait StaticRefinerAgreementTrait {
    * Lays a conditional's `then` for a key over the key's declared schema.
    *
    * A conditional says only what changed, and a map's properties one by
-   * one; every other keyword it states replaces the declared one.
+   * one, `false` for one that does not apply; every other keyword it
+   * states replaces the declared one.
    *
    * @param array $base
    *   The key's declared schema.
@@ -129,6 +146,15 @@ trait StaticRefinerAgreementTrait {
     foreach ($narrowed as $keyword => $value) {
       if ($keyword === 'properties' && is_array($value)) {
         foreach ($value as $name => $property) {
+          if ($property === FALSE) {
+            // Ruled out here: not there, so not required either.
+            unset($base['properties'][$name]);
+            $base['required'] = array_values(array_diff($base['required'] ?? [], [$name]));
+            if ($base['required'] === []) {
+              unset($base['required']);
+            }
+            continue;
+          }
           $base['properties'][$name] = self::laidOver($base['properties'][$name] ?? [], $property);
         }
         continue;

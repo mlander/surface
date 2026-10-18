@@ -140,6 +140,11 @@ final class InputDefinitions {
     $definitions = $surface->getDefinitions();
     foreach ($definitions->entries() as $name => $entry) {
       $property = $this->fromEntry($entry);
+      // A key a refiner may rule out is required only where it applies,
+      // which a listing cannot say: optional here, and the pipeline asks
+      // for it where it applies.
+      // Decision: see docs/decisions.md#a-key-that-does-not-apply.
+      static::optionalWhereRuledOut($property, $entry->mayNotApply());
       if ($definitions->isLocked($name)) {
         // A locked key has exactly one legal value, and the Tool
         // API has the same idea for a whole input. It has no effect on a
@@ -159,6 +164,26 @@ final class InputDefinitions {
       default_value: $default_value,
       property_definitions: $properties,
     );
+  }
+
+  /**
+   * Makes an input optional wherever a refiner may rule it out.
+   *
+   * @param \Drupal\tool\TypedData\InputDefinitionInterface $input
+   *   The converted key; changed in place.
+   * @param string[] $paths
+   *   Where: the key itself as '', or a property's dotted path below it.
+   */
+  protected static function optionalWhereRuledOut(InputDefinitionInterface $input, array $paths): void {
+    foreach ($paths as $path) {
+      $target = $input;
+      foreach ($path === '' ? [] : explode('.', $path) as $property) {
+        $target = $target instanceof MapInputDefinition ? $target->getPropertyDefinition($property) : NULL;
+      }
+      if ($target instanceof InputDefinitionInterface) {
+        $target->setRequired(FALSE);
+      }
+    }
   }
 
   /**

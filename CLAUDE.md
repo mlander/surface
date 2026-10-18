@@ -302,9 +302,11 @@ so the rule is this sentence. `npm test` is not part of
   with the container guarded (`Refinement\StaticRefinerContainer`) and the
   emitter asks it twice; `StaticRefinerAgreementTrait` holds conditionals
   to a fresh `refine()` (`docs/refinement.md#enforcing-the-kind`).
-- `#[RefinesInput]` methods narrow a definition; an alter adds keys and,
-  with `extendChoices()`, offers more values on a fixed choice list (the
-  one widening verb). Nothing removes a key or a value: a remove-only
+- `#[RefinesInput]` methods narrow a definition, or answer that the key
+  does not apply, `DoesNotApply::here()`, which the return type then
+  names (`docs/decisions.md#a-key-that-does-not-apply`); an alter adds
+  keys and, with `extendChoices()`, offers more values on a fixed choice
+  list (the one widening verb). Nothing removes a key or a value: a remove-only
   policy is a later concept (`ROADMAP.md`).
 - Requiredness appears only when it says something: `setRequired(TRUE)` on
   the keys that must be configured, nothing at all on the rest, because

@@ -13,12 +13,14 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\data_surface\DataSurfaceAccess;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\DefinitionTypedData;
 use Drupal\data_surface\Options\DataSurfaceOptions;
+use Drupal\data_surface\Refinement\DoesNotApply;
 use Drupal\data_surface\Entry;
 use Drupal\data_surface\Collection;
 
@@ -141,7 +143,113 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     foreach ($slots as $entry) {
       $values[$entry->name] = $this->acceptKey($surface, $entry, $input, $current, $prefix, $values);
     }
+    return $this->withoutWhatDoesNotApply($surface, $values, $input, $current);
+  }
+
+  /**
+   * Leaves out of the accepted document what does not apply to it.
+   *
+   * A key a refiner ruled out for these values is read as left out: what
+   * it holds stands, in storage, and the document says nothing about it.
+   * A value sent for it other than what it holds stays, for validate()
+   * to refuse; one that holds nothing (null, or a form's empty string)
+   * or what it holds already says nothing, and goes. The same inside a
+   * map, for a key an alter mounted.
+   *
+   * Decision: see docs/decisions.md#a-key-that-does-not-apply.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface describing this level.
+   * @param array $values
+   *   The accepted values of this level, every key present.
+   * @param array $input
+   *   The raw input for this level.
+   * @param array $current
+   *   What this level already holds.
+   *
+   * @return array
+   *   The accepted values, less what does not apply and was not sent.
+   */
+  protected function withoutWhatDoesNotApply(DataSurfaceInterface $surface, array $values, array $input, array $current): array {
+    $refined = $surface->refine($values);
+    if ($refined === $surface) {
+      return $values;
+    }
+    $defaults = NULL;
+    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+      $name = (string) $name;
+      $definition = $refined->getDefinition($name);
+      $paths = DoesNotApply::marks($definition) ? [''] : ($definition === NULL ? [] : DoesNotApply::inside($definition));
+      foreach ($paths as $path) {
+        $parents = $path === '' ? [$name] : [$name, ...explode('.', $path)];
+        $defaults ??= $surface->getDefaultValues();
+        $fallback = NestedArray::keyExists($current, $parents)
+          ? NestedArray::getValue($current, $parents)
+          : NestedArray::getValue($defaults, $parents);
+        $sent = NestedArray::keyExists($input, $parents) ? NestedArray::getValue($input, $parents) : NULL;
+        if (!ValueState::isConfigured($sent) || NestedArray::getValue($values, $parents) == $fallback) {
+          NestedArray::unsetValue($values, $parents);
+        }
+      }
+    }
     return $values;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function kept(DataSurfaceInterface $surface, array $values, array $current): array {
+    $kept = [];
+    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+      $name = (string) $name;
+      if (!array_key_exists($name, $values)) {
+        if (array_key_exists($name, $current)) {
+          $kept[$name] = $current[$name];
+        }
+        continue;
+      }
+      $kept[$name] = $values[$name];
+      if (!is_array($values[$name]) || !is_array($current[$name] ?? NULL) || $entry->list !== NULL) {
+        continue;
+      }
+      $child = $entry->childFor($values);
+      $kept[$name] = $child !== NULL
+        ? $this->kept($child, $values[$name], $current[$name])
+        : static::keptInMap($entry->definition, $values[$name], $current[$name]);
+    }
+    return $kept + $values;
+  }
+
+  /**
+   * Puts back what storage holds under a map's properties left out.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The map, as declared.
+   * @param array $value
+   *   The accepted map.
+   * @param array $stored
+   *   What storage holds for it.
+   *
+   * @return array
+   *   The map to write.
+   */
+  protected static function keptInMap(DataDefinitionInterface $definition, array $value, array $stored): array {
+    if (!$definition instanceof ComplexDataDefinitionInterface || $definition instanceof ListDataDefinitionInterface) {
+      return $value;
+    }
+    $kept = [];
+    foreach ($definition->getPropertyDefinitions() as $property => $property_definition) {
+      if (!array_key_exists($property, $value)) {
+        if (array_key_exists($property, $stored)) {
+          $kept[$property] = $stored[$property];
+        }
+        continue;
+      }
+      $kept[$property] = is_array($value[$property]) && is_array($stored[$property] ?? NULL)
+        ? static::keptInMap($property_definition, $value[$property], $stored[$property])
+        : $value[$property];
+    }
+    return $kept + $value;
   }
 
   /**
@@ -415,6 +523,28 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       $name = (string) $name;
       $definition = $entry->definition;
       $value = $values[$name] ?? NULL;
+      if (DoesNotApply::marks($definition)) {
+        // Nothing about a key that does not apply is required or held to
+        // a rule; a value sent for it other than what it holds is refused.
+        // Decision: see docs/decisions.md#a-key-that-does-not-apply.
+        if (array_key_exists($name, $values) && ValueState::isConfigured($value) && !(array_key_exists($name, $current) && $current[$name] == $value)) {
+          $errors[] = new Violation($name, '', $this->doesNotApply($surface, $refined, $name, '', $values));
+        }
+        continue;
+      }
+      $ruled_out = DoesNotApply::inside($definition);
+      if ($ruled_out !== []) {
+        foreach ($ruled_out as $path) {
+          $parents = explode('.', $path);
+          $held = is_array($value) ? NestedArray::getValue($value, $parents) : NULL;
+          $stored = is_array($current[$name] ?? NULL) && NestedArray::keyExists($current[$name], $parents) ? NestedArray::getValue($current[$name], $parents) : NULL;
+          if (ValueState::isConfigured($held) && $held != $stored) {
+            $errors[] = new Violation($name, $path, $this->doesNotApply($surface, $refined, $name, $path, $values));
+          }
+        }
+        $definition = static::withoutRuledOut($definition);
+        $value = is_array($value) ? static::valueWithout($value, $ruled_out) : $value;
+      }
       // Decision: see docs/decisions.md#required-inside-a-plain-map.
       $missing = $entry->attachment === NULL && $entry->slot === NULL
         ? $this->missingInMap($definition, is_array($value) ? $value : [])
@@ -543,6 +673,95 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       }
     }
     return $refusals;
+  }
+
+  /**
+   * Says that a key does not apply, and what it depends on.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface as declared.
+   * @param \Drupal\data_surface\DataSurfaceInterface $refined
+   *   The same, refined against the values.
+   * @param string $name
+   *   The key.
+   * @param string $path
+   *   The property path below it, for a key an alter mounted; '' for the
+   *   key itself.
+   * @param array $values
+   *   The values of the key's level.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   "Send day does not apply when Frequency is Monthly."
+   */
+  protected function doesNotApply(DataSurfaceInterface $surface, DataSurfaceInterface $refined, string $name, string $path, array $values): TranslatableMarkup {
+    $parents = $path === '' ? [$name] : [$name, ...explode('.', $path)];
+    $entry = $refined->getDefinitions()->entry($name);
+    $dependencies = $path === '' ? ($entry->dependencies ?? []) : ($entry->paths[$path] ?? $entry->dependencies ?? []);
+    if ($entry?->slot !== NULL) {
+      // What chooses a slot's variant is not what rules the slot out.
+      $dependencies = array_values(array_diff($dependencies, [$entry->slot->by]));
+    }
+    $label = static::definitionAt($surface, $parents)?->getLabel() ?? end($parents);
+    $conditions = [];
+    foreach ($dependencies as $dependency) {
+      $at = explode('.', $dependency);
+      $watched = static::definitionAt($refined, $at);
+      $held = NestedArray::getValue($values, $at);
+      $set = $watched === NULL || !is_scalar($held) ? NULL : $this->options->resolve($watched);
+      $shown = match (TRUE) {
+        !ValueState::isConfigured($held) => $this->t('empty'),
+        $set !== NULL && isset($set->options[$held]) => $set->options[$held],
+        is_bool($held) => $held ? $this->t('on') : $this->t('off'),
+        is_scalar($held) => (string) $held,
+        default => $this->t('what it holds'),
+      };
+      $conditions[] = $this->t('@key is @value', ['@key' => $watched?->getLabel() ?? $dependency, '@value' => $shown]);
+    }
+    if ($conditions === []) {
+      return $this->t('@label does not apply.', ['@label' => $label]);
+    }
+    return $this->t('@label does not apply when @conditions.', [
+      '@label' => $label,
+      '@conditions' => implode(' ' . $this->t('and') . ' ', array_map('strval', $conditions)),
+    ]);
+  }
+
+  /**
+   * Copies a map's definition without the properties ruled out.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The map, refined.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface
+   *   A copy holding only what applies.
+   */
+  protected static function withoutRuledOut(DataDefinitionInterface $definition): DataDefinitionInterface {
+    if (!$definition instanceof MapDataDefinition) {
+      return $definition;
+    }
+    $copy = clone $definition;
+    foreach ($copy->getPropertyDefinitions() as $property => $property_definition) {
+      $copy->setPropertyDefinition((string) $property, DoesNotApply::marks($property_definition) ? NULL : static::withoutRuledOut($property_definition));
+    }
+    return $copy;
+  }
+
+  /**
+   * Copies a map's value without the properties at some paths.
+   *
+   * @param array $value
+   *   The map.
+   * @param string[] $paths
+   *   Dotted paths below it.
+   *
+   * @return array
+   *   The map less those properties.
+   */
+  protected static function valueWithout(array $value, array $paths): array {
+    foreach ($paths as $path) {
+      NestedArray::unsetValue($value, explode('.', $path));
+    }
+    return $value;
   }
 
   /**
@@ -1094,7 +1313,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       return new DataSurfaceResult($values, $violations, access: $access);
     }
     try {
-      $prepared = $this->prepare($surface, $values, $storage);
+      $prepared = $this->prepare($surface, $this->kept($surface, $values, $current), $storage);
     }
     catch (StorageViolationsException $e) {
       return new DataSurfaceResult($values, $e->getViolations(), access: $access);

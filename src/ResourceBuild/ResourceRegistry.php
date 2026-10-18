@@ -10,6 +10,7 @@ use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\data_surface\Hook\ResourcePluginHooks;
 use Drupal\data_surface\Resource\Attribute\Alters;
 use Drupal\data_surface\Resource\Attribute\DerivesResources;
+use Drupal\data_surface\Refinement\DoesNotApply;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
@@ -676,6 +677,7 @@ final class ResourceRegistry {
           takesDefinition: $parameters !== [],
           isStatic: $method->isStatic(),
           runtime: $refines->runtime,
+          mayNotApply: DoesNotApply::isDeclaredBy($method),
         );
       }
     }

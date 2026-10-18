@@ -626,9 +626,11 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that an empty option set is not rendered as an empty select.
+   * Tests that an empty option set is a select offering nothing.
+   *
+   * Decision: see docs/decisions.md#a-key-that-does-not-apply.
    */
-  public function testEmptyOptionSetFallsThroughToTheNextWidget(): void {
+  public function testEmptyOptionSetIsSelectOfNothing(): void {
     $surface = new DataSurface(
       DefinitionMap::fromArrays(
         definitions: [
@@ -642,11 +644,13 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
 
     $form = $this->formBuilder()->buildSurfaceForm($surface, [], new FormState());
 
-    // A required select with nothing in it cannot be satisfied at all.
-    // The options widget declines, the string widget serves the key, and
-    // the constraint keeps refusing values on its own terms.
-    $this->assertSame('textfield', $form['badge']['#type']);
-    $this->assertArrayNotHasKey('#options', $form['badge']);
+    // A list of nothing is still a list: a select whose empty option is
+    // all it offers, never a text field to type a value no list allows.
+    // The constraint refuses any value; a key that does not apply at all
+    // says DoesNotApply, and is not drawn.
+    $this->assertSame('select', $form['badge']['#type']);
+    $this->assertSame([], $form['badge']['#options']);
+    $this->assertSame('- Select -', (string) $form['badge']['#empty_option']);
   }
 
   /**

@@ -45,3 +45,15 @@ data_surface_resource_test.digest:
     _data_surface_operation: 'configure'
   requirements:
     _data_surface_operation_access: 'TRUE'
+
+# The bulletin's one operation, served by the generic form: a send day
+# that is drawn only while the bulletin goes out weekly.
+data_surface_resource_test.bulletin:
+  path: '/surface-test/bulletin'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Configure the bulletin'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Bulletin\BulletinResource'
+    _data_surface_operation: 'configure'
+  requirements:
+    _data_surface_operation_access: 'TRUE'

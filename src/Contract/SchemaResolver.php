@@ -242,6 +242,12 @@ final class SchemaResolver {
         $added = array_filter($value, static fn (mixed $entry): bool => !in_array($entry, $before, FALSE));
         $base[$keyword] = [...$before, ...array_values($added)];
       }
+      elseif ($keyword === ContractEmitter::EXTENSION && is_array($before) && is_array($value) && isset($before['doesNotApply']) && !isset($value['doesNotApply'])) {
+        // What a site says about its key replaces what the def said, but
+        // not which keys of the child do not apply here.
+        // Decision: see docs/decisions.md#a-key-that-does-not-apply.
+        $base[$keyword] = $value + ['doesNotApply' => $before['doesNotApply']];
+      }
       else {
         $base[$keyword] = $value;
       }

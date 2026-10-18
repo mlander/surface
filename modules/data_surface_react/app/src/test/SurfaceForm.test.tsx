@@ -10,6 +10,7 @@ import example3 from './fixtures/example3.json';
 import narrowed2 from './fixtures/refine-example2.json';
 import narrowed3 from './fixtures/refine-example3.json';
 import compliance from './fixtures/refine-example3-compliance.json';
+import bulletin from './fixtures/refine-bulletin.json';
 
 // One integration test over a mocked server: the contracts are what the
 // module's emitter wrote for examples 2 and 3 (ServedContractTest's
@@ -539,6 +540,26 @@ describe('narrowing here, from the full schema', () => {
     await userEvent.type(await screen.findByLabelText(/Event licence/), '2');
     expect(narrowingLine()).toBe('Asked the server: capacity depends on a dynamic rule.');
     await waitFor(() => expect(refines(calls)).toHaveLength(1));
+  });
+
+  it('drops a key that does not apply, sends nothing for it, and requires it again where it applies', async () => {
+    const { calls, fetcher } = recordedServer(bulletin as unknown as Recorded, 'resource_test.bulletin', {
+      '/surface-api/resource_test.bulletin/configure/submit': () => ({ committed: false, valid: false, violations: [], stale: [], outputs: {}, contract: null, created: null }),
+    });
+    const submits = () => calls.filter((call) => call.url.endsWith('/submit'));
+    render(<SurfaceForm settings={{ ...settings, surface: 'resource_test.bulletin' }} fetcher={fetcher} refineDelay={0} />);
+    expect(await screen.findByLabelText(/Send day/)).toBeRequired();
+    await userEvent.selectOptions(screen.getByLabelText(/Frequency/), 'Monthly');
+    expect(screen.queryByLabelText(/Send day/)).not.toBeInTheDocument();
+    expect(narrowingLine()).toBe('Narrowed here: send_day.');
+    await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    await waitFor(() => expect(submits()).toHaveLength(1));
+    expect(JSON.parse(String(submits()[0].init?.body)).values).toEqual({ frequency: 'monthly' });
+
+    await userEvent.selectOptions(screen.getByLabelText(/Frequency/), 'Weekly');
+    expect(screen.getByLabelText(/Send day/)).toHaveDisplayValue('Friday');
+    expect(screen.getByLabelText(/Send day/)).toBeRequired();
+    expect(refines(calls)).toHaveLength(0);
   });
 
   it('narrows example 3 without compliance here, venue and room alike', async () => {

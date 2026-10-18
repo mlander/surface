@@ -250,7 +250,10 @@ container's is. They are placed by the container's `#process`, since
 the container's id is only final once a host has merged it. A slot whose
 deciding key chose nothing renders as its wrapper and nothing else, so
 the rebuild that chooses a variant has a place to put it; extraction
-reads nothing from it.
+reads nothing from it. A key that does not apply to the values the form
+is drawn for is the same: no element, not disabled and not hidden, only
+its wrapper, so the rebuild that makes it apply puts it there
+([Refinement](refinement.md#when-a-key-does-not-apply)).
 
 Each trigger carries, under `TRIGGER_KEY`, its own path below the
 container and the dotted paths it replaces. The dependency edges are

@@ -193,7 +193,7 @@ still refuses invalid values when they are validated.
 | Plugin id | Constraint | Values from | Labels from | Cacheability |
 | --- | --- | --- | --- | --- |
 | `labeled_choice` | `LabeledChoice` | its `choices` | its `labels`, falling back to the value | permanent |
-| `choice` | `Choice` | its `choices` | the value itself | permanent |
+| `choice` | `Choice` | its `choices`, an empty list being a list of nothing (one resolved at validation names none) | the value itself | permanent |
 | `plugin_exists` | `PluginExists` | the named manager's definitions, filtered by `interface` when the constraint sets one | array key, then public property, then `getLabel()`/`getAdminLabel()` | the manager's own, when it is a `CacheableDependencyInterface` |
 | `entity_bundle_exists` | `EntityBundleExists` | bundle info for the constraint's `entityTypeId` | bundle labels | tag `entity_bundles` |
 | `language_exists` | `LanguageExists` | the language manager; locked languages only when `allowLocked` is set | language names | tag `config:configurable_language_list` |

@@ -70,17 +70,18 @@ final class OptionsWidget extends DataSurfaceWidgetBase implements ContainerFact
   /**
    * {@inheritdoc}
    *
-   * An empty set is not the same as a set of no interest: a resolver
-   * that answered with zero values would render a select with nothing
-   * in it, and a required one would then be impossible to satisfy. So
-   * this widget declines, the next widget serves the definition as a
-   * free input, and the constraint that produced the empty set still
-   * refuses every value at validation — the person is told why rather
-   * than handed a control that cannot be used.
+   * An empty set is a list too: a refiner that narrowed it to nothing, or
+   * a resolver that found nothing, still says the value is one of a list,
+   * and the list offers none. So the key is a select offering its empty
+   * option alone, and the constraint refuses any value. Served as a free
+   * text input, as it once was, it showed what was stored as something to
+   * edit, on a field that could accept nothing. A key that does not apply
+   * at all is said with DoesNotApply, and is not drawn.
+   *
+   * Decision: see docs/decisions.md#a-key-that-does-not-apply.
    */
   public function isApplicable(DataDefinitionInterface $definition): bool {
-    $set = $this->optionSet($definition);
-    return $set !== NULL && $set->options !== [];
+    return $this->optionSet($definition) !== NULL;
   }
 
   /**

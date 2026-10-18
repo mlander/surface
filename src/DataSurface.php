@@ -13,6 +13,7 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\data_surface\Refinement\ChoiceSet;
+use Drupal\data_surface\Refinement\DoesNotApply;
 use Drupal\data_surface\Refinement\Narrowing;
 use Drupal\data_surface\Refinement\RuntimeRefiner;
 use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
@@ -201,7 +202,7 @@ final class DataSurface implements DataSurfaceInterface {
     if (!$refines && !$this->definitions->hasNested()) {
       return $this;
     }
-    if (!$refines || $this->watchedValueCheck === NULL) {
+    if (!$refines) {
       return $this->refineAgainst($values, $values, $runtime);
     }
     // Decision: see docs/decisions.md#a-refiner-never-sees-an-invalid-sibling.
@@ -209,7 +210,7 @@ final class DataSurface implements DataSurfaceInterface {
     $graph = $this->definitions->refinementPaths();
     do {
       $refined = $this->refineAgainst($values, $admitted, $runtime);
-      $refused = $this->refusedWatchedValues($refined, $admitted);
+      $refused = $this->watchedValueCheck === NULL ? [] : $this->refusedWatchedValues($refined, $admitted);
       // Only the refusals nothing refused stands upstream of are final:
       // withholding a venue moves the room's definition, and the room is
       // judged again against that, not against what the venue made it.
@@ -217,11 +218,48 @@ final class DataSurface implements DataSurfaceInterface {
         $refused,
         static fn (string $path): bool => array_intersect(static::upstreamOf($path, $graph), $refused) === [],
       );
+      if ($withheld === []) {
+        // Once every refusal is settled: a key that does not apply holds
+        // nothing a refiner may see, whatever is stored under it.
+        // Decision: see docs/decisions.md#a-key-that-does-not-apply.
+        $withheld = $this->ruledOutWatchedValues($refined, $admitted);
+      }
       foreach ($withheld as $path) {
         NestedArray::setValue($admitted, explode('.', $path), NULL, TRUE);
       }
     } while ($withheld !== []);
     return $refined;
+  }
+
+  /**
+   * Lists the watched keys that do not apply but still hold a value.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $refined
+   *   The data surface refined against the admitted values.
+   * @param array $admitted
+   *   The values a refiner is handed so far.
+   *
+   * @return string[]
+   *   The keys, or a mounted key's dotted path, to withhold.
+   */
+  protected function ruledOutWatchedValues(DataSurfaceInterface $refined, array $admitted): array {
+    $ruled = [];
+    foreach ($this->definitions->refinementDependencies() as $path) {
+      $parents = explode('.', $path);
+      if (!ValueState::isConfigured(NestedArray::getValue($admitted, $parents))) {
+        continue;
+      }
+      $definition = $refined->getDefinition((string) array_shift($parents));
+      $marked = DoesNotApply::marks($definition);
+      foreach ($parents as $property) {
+        $definition = $definition instanceof ComplexDataDefinitionInterface ? $definition->getPropertyDefinition($property) : NULL;
+        $marked = $marked || DoesNotApply::marks($definition);
+      }
+      if ($marked) {
+        $ruled[] = $path;
+      }
+    }
+    return $ruled;
   }
 
   /**
@@ -249,9 +287,18 @@ final class DataSurface implements DataSurfaceInterface {
     $changed = FALSE;
     foreach ($this->definitions->entries() as $entry) {
       if ($entry->isNested()) {
+        // Whether the key applies is the parent's to say; what it holds,
+        // the child's. Decision: see
+        // docs/decisions.md#a-key-that-does-not-apply.
+        $ruled = $refines ? $this->ruledOut($entry, $admitted, $runtime, $cacheability) : NULL;
+        if ($ruled !== NULL) {
+          $definitions = $definitions->with($entry->withDefinition($ruled));
+          $changed = TRUE;
+          continue;
+        }
         // An attached structure is refined by its child, in the child's
-        // frame, and by nothing in the parent: no parent refiner can name
-        // it.
+        // frame, and by nothing else in the parent: no parent refiner can
+        // narrow into it.
         $resolved = $this->refineNested($entry, $values, $cacheability, $runtime);
         if ($resolved !== NULL) {
           $definitions = $definitions->with($entry->withDefinition($resolved));
@@ -262,25 +309,11 @@ final class DataSurface implements DataSurfaceInterface {
       if (!$refines) {
         continue;
       }
-      $dependencies = $runtime ? $entry->dependencies : $entry->staticDependencies();
-      $dependency_values = $dependencies === [] ? NULL : $this->dependencyValues($dependencies, $admitted);
-      if ($dependency_values === NULL) {
-        // Gated, or watching nothing: only a runtime link that watches
-        // nothing has nothing to wait for.
-        $chains = $runtime ? $this->chainsFor($entry, TRUE, TRUE) : [];
-        if ($chains === []) {
-          continue;
-        }
-        $dependency_values = [];
+      $refined = $this->refinedEntry($entry, $admitted, $runtime, $cacheability);
+      if ($refined === NULL) {
+        continue;
       }
-      else {
-        $chains = $this->chainsFor($entry, $runtime);
-        if ($chains === [] && $entry->contributions === []) {
-          continue;
-        }
-      }
-      $refined = $this->unionOfContributions($entry, $chains, $dependency_values, $cacheability);
-      if ($entry->list !== NULL) {
+      if ($entry->list !== NULL && !DoesNotApply::marks($refined)) {
         static::assertItemsUntouched($entry, $refined);
       }
       $definitions = $definitions->with($entry->withDefinition($refined));
@@ -289,6 +322,86 @@ final class DataSurface implements DataSurfaceInterface {
     return $changed
       ? new self($definitions, $cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck)
       : $this;
+  }
+
+  /**
+   * Runs one key's refiners, if its gate is open.
+   *
+   * @param \Drupal\data_surface\Entry $entry
+   *   The key, as advertised.
+   * @param array $admitted
+   *   The values a refiner may be handed.
+   * @param bool $runtime
+   *   Whether the runtime refiners run too.
+   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
+   *   Collects what the refiners that run declare they depend on.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
+   *   The refined definition, or NULL when nothing ran.
+   */
+  protected function refinedEntry(Entry $entry, array $admitted, bool $runtime, CacheableMetadata $cacheability): ?DataDefinitionInterface {
+    $dependencies = $runtime ? $entry->dependencies : $entry->staticDependencies();
+    $dependency_values = $dependencies === [] ? NULL : $this->dependencyValues($dependencies, $admitted);
+    if ($dependency_values === NULL) {
+      // Gated, or watching nothing: only a runtime link that watches
+      // nothing has nothing to wait for.
+      $chains = $runtime ? $this->chainsFor($entry, TRUE, TRUE) : [];
+      if ($chains === []) {
+        return NULL;
+      }
+      $dependency_values = [];
+    }
+    else {
+      $chains = $this->chainsFor($entry, $runtime);
+      if ($chains === [] && $entry->contributions === []) {
+        return NULL;
+      }
+    }
+    return $this->unionOfContributions($entry, $chains, $dependency_values, $cacheability);
+  }
+
+  /**
+   * Asks a parent's refiners of a key holding a child whether it applies.
+   *
+   * The one answer a parent may give about such a key: it does not
+   * apply. Anything else it hands back must be what it was handed, since
+   * what the child holds is the child's to narrow.
+   *
+   * @param \Drupal\data_surface\Entry $entry
+   *   The attached key or slot, as advertised.
+   * @param array $admitted
+   *   The values a refiner may be handed.
+   * @param bool $runtime
+   *   Whether the runtime refiners run too.
+   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
+   *   Collects what the refiners that run declare they depend on.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
+   *   The key, marked, when it does not apply; NULL when it does.
+   *
+   * @throws \LogicException
+   *   When a refiner narrowed into the child.
+   */
+  protected function ruledOut(Entry $entry, array $admitted, bool $runtime, CacheableMetadata $cacheability): ?DataDefinitionInterface {
+    if ($entry->refiners === []) {
+      return NULL;
+    }
+    $answer = $this->refinedEntry($entry, $admitted, $runtime, $cacheability);
+    if ($answer === NULL) {
+      return NULL;
+    }
+    if (DoesNotApply::marks($answer)) {
+      return $answer;
+    }
+    $narrowed = Narrowing::narrowed($entry->definition, $answer);
+    if ($narrowed !== NULL) {
+      throw new \LogicException(sprintf(
+        'Refining "%s", which holds a child, %s. A parent may only answer that a key holding a child does not apply; what the child holds is the child\'s to narrow.',
+        $entry->name,
+        $narrowed,
+      ));
+    }
+    return NULL;
   }
 
   /**
@@ -596,7 +709,9 @@ final class DataSurface implements DataSurfaceInterface {
     if (isset($chains[self::OWNER])) {
       $owner = $this->runChain($target, self::OWNER, $chains[self::OWNER], $owner, $values, $cacheability);
     }
-    if ($advertised_set === NULL) {
+    if ($advertised_set === NULL || DoesNotApply::marks($owner)) {
+      // Whether the key applies is the owner's to say, as everything but
+      // its values is: ruled out, no contribution brings it back.
       // A key that advertises no list of values has no space to divide,
       // so it cannot be contributed to and the owner's answer stands.
       return $owner;
@@ -612,7 +727,8 @@ final class DataSurface implements DataSurfaceInterface {
       if (isset($chains[$contributor])) {
         $definition = $this->runChain($target, $contributor, $chains[$contributor], $definition, $values, $cacheability);
       }
-      $narrowed = ChoiceSet::ofConstraint($definition, $advertised_set->constraint);
+      // A contribution ruled out offers none of its values.
+      $narrowed = DoesNotApply::marks($definition) ? NULL : ChoiceSet::ofConstraint($definition, $advertised_set->constraint);
       if ($narrowed !== NULL) {
         $values_union = array_merge($values_union, $narrowed->values);
         $labels += $narrowed->labels;
@@ -652,6 +768,10 @@ final class DataSurface implements DataSurfaceInterface {
       ? 'the declaring class'
       : sprintf('the %s contribution', $contributor);
     foreach ($chain as $link) {
+      if (DoesNotApply::marks($definition)) {
+        // Nothing is narrower than a key that does not apply.
+        break;
+      }
       // The link is handed a copy and the original is kept as the
       // pre-image. A refiner is expected to mutate what it is given and
       // hand it back, and an object compared with itself has of course

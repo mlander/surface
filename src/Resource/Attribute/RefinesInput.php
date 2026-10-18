@@ -35,8 +35,15 @@ namespace Drupal\data_surface\Resource\Attribute;
  * bool parameter as TRUE.
  *
  * It returns the definition, tightened with plain core API; the
- * framework checks the result is narrower. Found on the resource's or
- * structure's own class and on any class carrying #[Alters] for it.
+ * framework checks the result is narrower. Or it answers that the key
+ * does not apply to these values, the narrowest answer, with
+ * DoesNotApply::here(), which its return type then names:
+ *   public static function sendDayOnlyWhenWeekly(
+ *     DataDefinitionInterface $send_day, string $frequency,
+ *   ): DataDefinitionInterface|DoesNotApply
+ * See docs/decisions.md#a-key-that-does-not-apply. Found on the
+ * resource's or structure's own class and on any class carrying
+ * #[Alters] for it.
  *
  * A refiner is one of two kinds, and says which:
  *

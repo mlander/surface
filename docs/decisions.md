@@ -536,6 +536,110 @@ example's stewards were found leaking between tool calls in one
 process; see `docs/core-gaps.md`.* (`DefinitionTypedData`,
 `DataSurfacePipeline`, `Refinement\WatchedValueCheck`)
 
+### A key that does not apply
+
+A refiner says a key does not apply to the values it watches by
+returning `DoesNotApply::here()`, from a method whose return type names
+it: `: DataDefinitionInterface|DoesNotApply`. It is the narrowest answer
+there is, so it is a refiner's answer like any other, not a second
+concept: gated, enumerated, held to the narrowing check (nothing is
+narrower, and a key ruled out may not be made to apply again), and
+static or runtime by the same declaration and the same three layers of
+enforcement. The engine marks the definition it was handed and calls
+nothing after it. A key, a key an alter mounted (inside its mount), an
+attached child's key and a slot's key are ruled out the same way; a
+parent's refiner of a key holding a child may give this answer and no
+other, since what the child holds is the child's to narrow.
+
+Three spellings were weighed. A marker set on the definition the refiner
+returns is what the engine does inside, but as the author's spelling it
+is invisible until the refiner runs, and the full schema and the tool's
+listing must know before anything runs which keys may not apply, or a
+`dynamic` or `runtime` key required in them would be stricter than the
+pipeline. A blueprint declaration, `add(..., appliesWhen:)`, is
+declarative narrowing ([ROADMAP](../ROADMAP.md) item 3), a second idea,
+which cannot state a runtime rule and would need its own enumeration. The
+sentinel in the return type is both an answer and a declaration: the
+signature already declares what a refiner watches, and now whether it
+may rule its key out, so the build reads it by reflection (a method that
+answers it without declaring it is refused) and the enumeration states
+it as it states any static answer. Each door:
+
+- **Form.** No element at all, not disabled and not hidden; only its
+  wrapper, for the AJAX rebuild that makes it apply.
+- **Values.** Read as left out: left out, `null`, the empty string or
+  exactly what it holds is accepted, and the accepted document leaves
+  the key out; any other value is refused, "Send day does not apply when
+  Frequency is Monthly.", naming what it depends on as
+  [a refusal names what it depends on](#a-refusal-names-what-it-depends-on)
+  does. Refused rather than ignored, as an unknown key is refused,
+  because a caller who sends a value that means nothing learns so
+  instead of watching it vanish, and because both documents refuse it.
+  `null` is accepted and does not clear: a key that does not apply has
+  nothing to clear, and `null` and the empty string are notations of
+  nothing, as a form's `"50"` is a notation of a number. What it holds
+  already is accepted because a full submission, a plugin loading its
+  configuration, or a client sending back what it read, carries it
+  unchanged, and the stale rule draws the same line: what is stored was
+  not chosen by the caller. Nothing about the key is required or
+  validated.
+- **Storage.** It keeps what it holds. Monthly, then weekly again, the
+  send day survives: no value is silently lost, the rule Phase B item 10
+  set against pruning. `submit()` hands storage the stored value back
+  (`DataSurfacePipelineInterface::kept()`), so a storage that writes its
+  whole object keeps it too, and a plugin host loading its
+  configuration keeps it. The cost is a value in storage nobody can see
+  while the key does not apply: the read tool and the contract's
+  `values` leave it out.
+- **The read tool and the schema for these answers.** The key is not in
+  `properties`, `required` or `values`. The frame says
+  `x-surface.doesNotApply: {key: [what it depends on]}`, so a client
+  with no full schema still refines when one of those changes.
+- **The full schema.** Under each conditional whose values rule it out,
+  `then: {properties: {key: false}}`; the key leaves the frame's
+  `required`, and each conditional where it applies and is required says
+  `then: {required: [key]}` (with `properties: {key: {...}}` beside it
+  when it narrows too). This is a conditional `required`, which closes
+  the fresh-eyes log's entry 19: a refiner that makes an optional key
+  required for some values is stated the same way. `false` was chosen
+  over `type: null`: the schema for these answers leaves the key out
+  under `additionalProperties: false`, which refuses it present, and
+  `false` says the same, so the two documents say one thing; `type:
+  null` would admit a `null` the accepted document never holds, and read
+  as a key whose value is `null`, which clears. A `dynamic` or `runtime`
+  key whose refiner may rule it out is in no `required`, since nothing
+  says where it applies. The tool's listing makes it optional for the
+  same reason, and the pipeline asks for it where it applies.
+- **React.** The page narrows it from the full schema: a met `false`
+  drops the field and what it sends, a met `required` requires it again,
+  and a key that did not apply when the page was loaded, whose stored
+  value the page was never handed, is asked of `/refine`.
+
+A list narrowed to nothing is not a key that does not apply. It renders
+as a select offering its empty option alone, the constraint refuses any
+value, and both documents state `oneOf: [{const: null}]`, which a
+required key's type refuses too. Refusing it at build was weighed and
+dropped: a refiner's answer exists only for values, at refinement, and an
+options resolver may find nothing on a site (no bundles yet), so a
+refusal would break a page for site state. The text field it fell
+through to before showed what was stored as something to edit, on a
+field that could accept nothing. An empty `Choice` is now such a list
+too, which is what a slot nothing fills gives its deciding key.
+
+A slot that does not apply is drawn as nothing, as one whose deciding
+key chose nothing is; its variants' conditionals are not written in the
+schema for these answers, and the full schema states it `false` beside
+them. An empty variant is a different answer: the slot applies and has
+nothing to say, its value an empty map.
+
+Open: inside a collection's item a key that does not apply is not put
+back from storage, since an item is accepted over the child's defaults
+and sent whole; and a map whose every key is ruled out is an empty PHP
+array in the accepted document, which a JSON encoder writes as `[]`.
+(`Refinement\DoesNotApply`, `RefinesInputRefiner::invoke()`,
+`DataSurface::refineAgainst()`, `DataSurfacePipeline::accept()`,
+`ContractEmitter::enumerate()`, `narrow()` in `app/src/contract.ts`)
+
 ## Alters
 
 ### Where an alter's keys live
@@ -665,7 +769,9 @@ class of its own, and a declared variant always wins.
 ### A parent watching a child
 
 A parent's refiner that watches the whole key a child is attached at is
-refused, as is one that refines it. The pattern says a parent cannot
+refused, as is one that refines it, unless all it may answer is that
+the key [does not apply](#a-key-that-does-not-apply), which is the
+parent's to say about a key it owns. The pattern says a parent cannot
 refine into a
 child and a child cannot read a parent's value; refusing the watch too
 makes the wall hold both ways. (`Resources::assertWalled()`)
@@ -680,8 +786,9 @@ by another variant does not fit it and goes, as between any two
 variants. The map widget serves any complex definition and answers an
 empty one with `[]`: a map that declares nothing can hold nothing, and
 before this the form threw for want of a widget. A key that does not
-apply at all, rather than applying with nothing to say, is ROADMAP item
-2. (`MapWidget`, `Field.tsx`)
+apply at all, rather than applying with nothing to say, is
+[a key that does not apply](#a-key-that-does-not-apply).
+(`MapWidget`, `Field.tsx`)
 
 ### Outputs hold no children
 

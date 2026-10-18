@@ -208,6 +208,31 @@ interface DataSurfacePipelineInterface {
   public function prepare(DataSurfaceInterface $surface, array $values, DataSurfaceStorageInterface $storage): PreparedValues;
 
   /**
+   * Puts back what storage holds under the keys that do not apply.
+   *
+   * The accepted document leaves out a key a refiner ruled out for its
+   * values, and storage keeps what it holds there, so the key holds it
+   * again when it applies: a weekly send day survives a month of monthly
+   * sends. submit() hands storage the document with what is kept put
+   * back, so a storage that writes its whole object from what it is
+   * handed keeps it too; a host loading a plugin's configuration does
+   * the same.
+   *
+   * Decision: see docs/decisions.md#a-key-that-does-not-apply.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface describing the values.
+   * @param array $values
+   *   The accepted values.
+   * @param array $current
+   *   What storage holds.
+   *
+   * @return array
+   *   The values, each key left out put back from what storage holds.
+   */
+  public function kept(DataSurfaceInterface $surface, array $values, array $current): array;
+
+  /**
    * Writes a prepared artifact through its storage.
    *
    * @param \Drupal\data_surface\Pipeline\PreparedValues $prepared

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\data_surface\Refinement\ApplicabilityInterface;
 use Drupal\data_surface\Refinement\RuntimeRefiner;
 
 /**
@@ -155,6 +156,38 @@ final class Entry {
       }
     }
     return FALSE;
+  }
+
+  /**
+   * Lists where a refiner of this key may answer that it does not apply.
+   *
+   * Read from the refiners' declarations, not from running them, so it
+   * holds for any values: what is stated ahead of time (the full schema,
+   * the tool's listing) leaves each of them out of `required`.
+   *
+   * Decision: see docs/decisions.md#a-key-that-does-not-apply.
+   *
+   * @param bool|null $runtime
+   *   TRUE for its runtime refiners only, FALSE for its static ones only,
+   *   NULL for both.
+   *
+   * @return string[]
+   *   '' for the key itself, and the dotted path below it of each mounted
+   *   property that may be ruled out; empty when nothing may be.
+   */
+  public function mayNotApply(?bool $runtime = NULL): array {
+    $paths = [];
+    foreach ($this->refiners as $chain) {
+      foreach ($chain as $link) {
+        if ($runtime !== NULL && $runtime !== $link instanceof RuntimeRefiner) {
+          continue;
+        }
+        if ($link instanceof ApplicabilityInterface) {
+          array_push($paths, ...$link->mayNotApply($this->name));
+        }
+      }
+    }
+    return array_values(array_unique($paths));
   }
 
   /**

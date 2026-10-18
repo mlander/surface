@@ -131,9 +131,14 @@ default, and ignore whatever was submitted for them. Keys the data
 surface does not declare are refused rather than dropped, at any depth,
 and so is input in a shape the definition cannot hold.
 
-It needs no services. After it runs, every declared key is present and
-every value is either `NULL` or a configured value in its declared type.
-That is the shape `validate()`, the storage and any consumer can rely on.
+It needs no services. After it runs, every declared key is present but
+one a refiner answered [does not apply](refinement.md#when-a-key-does-not-apply)
+to these values, and every value is either `NULL` or a configured value
+in its declared type. That is the shape `validate()`, the storage and
+any consumer can rely on. A key that does not apply is left out when it
+was sent nothing or what it holds, and stays, for `validate()` to refuse,
+when it was sent anything else; `submit()` hands storage what it holds
+there (`kept()`), so it survives until it applies again.
 
 The rules it applies (what counts as configured, the coercion table, how
 lists and maps merge) are [Value semantics](semantics.md), which is the

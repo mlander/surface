@@ -35,11 +35,16 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
  * | Removing a constraint | refused |
  * | Replacing the options of any other constraint | refused |
  * | Adding or removing a map property | refused |
+ * | Answering that the key does not apply | narrowest |
+ * | Making a key that did not apply apply again | refused |
  * | Any of the above inside a map property or a list item | as above |
  *
- * The last row is the conservative half: two Regex patterns cannot be
- * compared for containment, so replacing one is refused rather than
- * guessed at. A refiner that has to swap such a constraint says so by
+ * A key ruled out (DoesNotApply) accepts nothing at all, so nothing is
+ * compared after it; one that was ruled out stays so.
+ *
+ * The replaced-options row is the conservative half: two Regex patterns
+ * cannot be compared for containment, so replacing one is refused rather
+ * than guessed at. A refiner that has to swap such a constraint says so by
  * advertising the narrower one in the first place.
  *
  * 'any' is the declared escape hatch: it advertises nothing, so every
@@ -137,6 +142,13 @@ final class Narrowing {
    *   What widened, in words, or NULL.
    */
   protected static function widening(DataDefinitionInterface $before, DataDefinitionInterface $after): ?string {
+    // Decision: see docs/decisions.md#a-key-that-does-not-apply.
+    if (DoesNotApply::marks($after)) {
+      return NULL;
+    }
+    if (DoesNotApply::marks($before)) {
+      return 'a key that did not apply was made to apply';
+    }
     if ($before->getDataType() === 'any' || self::isDerivative($before->getDataType(), $after->getDataType())) {
       // Advertised as anything, or as the base of what it became, so the
       // shape it becomes is no wider; only its own flag and constraints

@@ -267,7 +267,8 @@ which serves the real contract.
     relevance predicate means the key contributes nothing to prepare
     and commit and stored values stand (never pruned: the no-silent-
     loss rule holds against both Laravel's `exclude_unless` and the
-    clean rooms' `when`-pruning, which we reject).
+    clean rooms' `when`-pruning, which we reject). Landed 2026-10-18
+    as a refiner's answer, "This key does not apply" (Next, item 2).
 11. **Stale values: stash, warn, never reset** (decided 2026-09-16
     after the owner hit it live; supersedes the earlier
     reset-versus-keep policy menu, deleting the per-edge knob).
@@ -420,7 +421,7 @@ renames sit in A because they are cheapest before new code exists.
   overriding the rule's own message; and a slot variant with no keys
   must not crash the form (HTTP 500, "No data surface widget serves the
   map data type").
-- **B, what the contract can say:** inapplicable keys (2); declarative
+- **B, what the contract can say:** inapplicable keys (2, done); declarative
   narrowing (3); ports (4); mixins (5); named scalar shapes (7).
 - **C, access and the doors:** static and runtime access (8); operation
   behavior facts and the tool door's refusal feedback (9).
@@ -485,18 +486,22 @@ renames sit in A because they are cheapest before new code exists.
      permission (12), a refusal a refiner caused names the keys it
      depends on (15), and the README's "never contradicted" says what
      only the runtime settles (17).
-2. **"This key does not apply"**, found by the fresh-eyes run: a send
-   day that only applies when the frequency is weekly has no good
-   spelling. Narrowing it to no values turns its select into a text
-   field holding the stored value, and Save refuses it; a slot with an
-   empty variant crashes the form. Make inapplicability first class: a
-   refiner may answer that a key does not apply for these values, which
-   drops it from the form, clears or nulls it in the values, emits it as
-   `type: null` (or leaves it out of `required`) under the matching
-   conditional in both documents, and lets `required` itself be
-   conditional (`dependentRequired`), which the full schema's
-   conditionals leave out today. Phase B item 10 (relevance shapes the
-   payload) is the older note of the same idea.
+2. **"This key does not apply"**: DONE 2026-10-18
+   (`docs/decisions.md#a-key-that-does-not-apply`). Found by the
+   fresh-eyes run: a send day that only applies when the frequency is
+   weekly had no good spelling. A refiner now answers
+   `DoesNotApply::here()`, declared in its return type, for a key, a
+   mounted key, an attached child's key or a slot's key: the form draws
+   no element, the pipeline reads it as left out and refuses any other
+   value sent for it, naming what it depends on, storage keeps what it
+   holds, the read tool and the schema for these answers leave it out,
+   and the full schema states it `false` under the conditional that
+   rules it out and its `required` conditionally (a `then` may carry
+   `required` now, fresh-eyes entry 19); the React page narrows it from
+   the full schema. A list narrowed to nothing is a select offering
+   nothing, never a text field. Phase B item 10 (relevance shapes the
+   payload) is the older note of the same idea, and its no-silent-loss
+   rule is the one kept.
 3. **Declarative narrowing** (Phase C). An author states a condition
    instead of coding it, for example "a licence is present", and the
    emitter writes it as a conditional without executing anything. Keys

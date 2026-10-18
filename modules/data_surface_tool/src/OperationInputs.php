@@ -10,6 +10,7 @@ use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Resource\OperationContext;
+use Drupal\data_surface\Refinement\DoesNotApply;
 use Drupal\data_surface\ResourceBuild\OperationArguments;
 use Drupal\data_surface\ResourceBuild\OperationDefinition;
 use Drupal\data_surface\ResourceBuild\OperationParameter;
@@ -229,6 +230,10 @@ final class OperationInputs {
    */
   public function stored(ResourceDefinition $resource, DataSurfaceInterface $built, OperationContext $context): array {
     $stored = $this->resources->storage($resource->name(), $context, $built)->load($built);
+    // What does not apply to what is stored is not read back, as the
+    // schema for those values leaves it out; storage still keeps it.
+    // Decision: see docs/decisions.md#a-key-that-does-not-apply.
+    $stored = DoesNotApply::leftOut($built, $stored);
     $stored = array_diff_key($stored, array_flip($this->knownIdentity($resource, $context)));
     return $this->inputDefinitions->withoutSecrets($stored, $this->inputDefinitions->secrets($built));
   }

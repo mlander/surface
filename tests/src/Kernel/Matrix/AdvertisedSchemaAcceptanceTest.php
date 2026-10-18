@@ -15,8 +15,10 @@ use Drupal\data_surface\Pipeline\UnknownKeysException;
 use Drupal\data_surface\Pipeline\VariantMismatchException;
 use Drupal\data_surface\Storage\StateStorage;
 use Drupal\data_surface_examples_compliance\Alter\RegistrationComplianceAlter;
+use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface_resource_test\Resource\Cellar\CellarResource;
 use Drupal\data_surface_resource_test\Storage\CellarStorage;
+use Drupal\data_surface_resource_test\Structure\Notice\NoticeStructure;
 use Drupal\Tests\data_surface\Kernel\DataSurfaceKernelTestBase;
 use Drupal\Tests\data_surface\Traits\ContractValidationTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -31,9 +33,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * example resource and the test fixtures (every scalar type, a list and a
  * map on the specimen, a slot and an attached part on example 3, a
  * runtime refiner and a mounted key on example 4, collections on the
- * cellar), a table of documents the pipeline accepts and documents it
- * refuses. Each row is asserted three times: against the pipeline
- * (accept(), then validate() over what is stored), against the full
+ * cellar, keys that do not apply on the bulletin and the notice), a table
+ * of documents the pipeline accepts and documents it refuses. Each row is
+ * asserted three times: against the pipeline (accept(), then validate()
+ * over what is stored), against the full
  * schema (emitFull()) and against the schema for these answers (emit(),
  * built for the document), with a standard validator that asserts no
  * `format` and fills no `default`.
@@ -407,6 +410,66 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'an unknown key in a blank rack' => [['racks' => [['brand' => ''], $rack]], FALSE],
       'a shelf in inches over 80' => [['shelves' => [['unit' => 'in', 'height' => 81]]], FALSE],
     ]);
+  }
+
+  /**
+   * The bulletin: a send day that applies only weekly, required then.
+   *
+   * Left out, null or as stored, a key that does not apply is accepted
+   * and kept; any other value is refused, by the pipeline and by both
+   * documents, which state it `false` (the full schema) or leave it out
+   * (the schema for these answers), and require it only where it applies.
+   */
+  public function testBulletin(): void {
+    $this->installConfig(['data_surface_resource_test']);
+    $this->assertTable('resource_test.bulletin', $this->build('resource_test.bulletin'), $this->stored('resource_test.bulletin'), [
+      'as stored' => [[], TRUE],
+      'weekly, another day' => [['send_day' => 'monday'], TRUE],
+      'monthly, the send day left out' => [['frequency' => 'monthly'], TRUE],
+      'monthly, the send day null' => [['frequency' => 'monthly', 'send_day' => NULL], TRUE],
+      'monthly, the send day as a form posts nothing' => [['frequency' => 'monthly', 'send_day' => ''], TRUE],
+      'monthly, the send day as stored' => [['frequency' => 'monthly', 'send_day' => 'friday'], TRUE],
+      'monthly, a send day' => [['frequency' => 'monthly', 'send_day' => 'monday'], FALSE],
+      'weekly, the send day null' => [['send_day' => NULL], FALSE],
+      'weekly, a day not offered' => [['send_day' => 'sunday'], FALSE],
+    ]);
+  }
+
+  /**
+   * The notice: an attached child, a slot and a mounted key, ruled out.
+   */
+  public function testNotice(): void {
+    $notice = $this->container->get('data_surface.resources')->build(NoticeStructure::class, new OperationContext('configure'));
+    $stored = [
+      'channel' => 'post',
+      'cadence' => 'weekly',
+      'address' => ['street' => 'Main street'],
+      'schedule' => ['day' => 'friday'],
+      'third_party_settings' => ['data_surface_resource_test' => ['signature' => 'Ada', 'footer' => 'Sent by post']],
+    ];
+    $this->assertTable('resource_test.notice', $notice, $stored, [
+      'by post, as stored' => [[], TRUE],
+      'by email' => [['channel' => 'email'], TRUE],
+      'by email, another day' => [['channel' => 'email', 'schedule' => ['day' => 'monday']], TRUE],
+      'by post, the schedule null' => [['schedule' => NULL], TRUE],
+      'by post, a schedule' => [['schedule' => ['day' => 'monday']], FALSE],
+      'by post, a signature' => [self::signed('Bea'), FALSE],
+      'by email, an address' => [['channel' => 'email', 'address' => ['street' => 'Side street']], FALSE],
+      'by email, the signature null' => [['channel' => 'email'] + self::signed(NULL), FALSE],
+    ]);
+  }
+
+  /**
+   * The notice's mounted signature, as sent.
+   *
+   * @param string|null $signature
+   *   The signature.
+   *
+   * @return array
+   *   The values.
+   */
+  protected static function signed(?string $signature): array {
+    return ['third_party_settings' => ['data_surface_resource_test' => ['signature' => $signature]]];
   }
 
   /**

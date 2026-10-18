@@ -3,6 +3,7 @@ import { inlineSchema, narrow, narrowingStatus, setAt } from '../contract';
 import example2 from './fixtures/refine-example2.json';
 import example3 from './fixtures/refine-example3.json';
 import compliance from './fixtures/refine-example3-compliance.json';
+import bulletin from './fixtures/refine-bulletin.json';
 
 // The page's narrowing held to the server's. Each fixture is what
 // ResourceApiController answered, as uid 1 after the examples were reset:
@@ -84,6 +85,36 @@ describe('narrowing here agrees with /refine', () => {
       { key: 'capacity', marker: 'dynamic' },
       'local',
     ]);
+  });
+});
+
+describe('a key that does not apply', () => {
+  const recorded = bulletin as unknown as Recorded;
+  const full = inlineSchema(recorded.schema.schema);
+
+  it('on the bulletin: the send day is dropped monthly and back weekly, required again, narrowed here', () => {
+    play(recorded, ['local', 'local', 'local', 'local']);
+  });
+
+  it('is dropped from the form and from what is sent, and required where it applies', () => {
+    const weekly = served(recorded.contract);
+    const monthly = narrow({ full, previous: weekly, stored: weekly.values, values: { ...weekly.values, frequency: 'monthly' }, stale: [], changed: 'frequency' });
+    expect(monthly.local).toBe(true);
+    if (!monthly.local) {
+      return;
+    }
+    expect(Object.keys(monthly.settled.schema.properties ?? {})).toEqual(['frequency']);
+    expect(monthly.settled.schema.required).toEqual(['frequency']);
+    expect(monthly.settled.values).toEqual({ frequency: 'monthly' });
+    const again = narrow({ full, previous: monthly.settled, stored: weekly.values, values: { ...monthly.settled.values, frequency: 'weekly' }, stale: [], changed: 'frequency' });
+    expect(again.local && again.settled.schema.required).toEqual(['frequency', 'send_day']);
+    expect(again.local && again.settled.values).toEqual({ frequency: 'weekly', send_day: 'friday' });
+  });
+
+  it('asks the server what it holds when it did not apply as the page was loaded', () => {
+    // Loaded monthly: the send day stored under it was never handed over.
+    const monthly = served(recorded.steps[0].answer);
+    expect(narrow({ full, previous: monthly, stored: monthly.values, values: { ...monthly.values, frequency: 'weekly' }, stale: [], changed: 'frequency' })).toEqual({ local: false, key: 'send_day', marker: 'stored' });
   });
 });
 

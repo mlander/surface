@@ -12,6 +12,7 @@ page needs nothing else. Read a row only when its question is yours.
 | **1** Storage, `ConfigObjectStorage` | Where do its values live? | A settings page: subclass `ConfigObjectStorage`, name the config object, done. |
 | **1** `defineInputs()` and `add()` | What keys does it take, of what type, allowing what (a constraint), defaulting to what? | Never. |
 | Refiner, `#[RefinesInput]` | Do one key's allowed values depend on another key's value? ([Your second resource](second-resource.md)) | Every key stands alone. |
+| A key that does not apply, `DoesNotApply::here()` | Does a key mean nothing for some values of another, as a send day for a monthly bulletin? ([Refinement](refinement.md#when-a-key-does-not-apply)) | Every key applies, whatever the others hold. |
 | Runtime refiner, `runtime: TRUE` | Does a rule read site state or do a lookup no schema can state, such as uniqueness? | The rule depends only on the values it watches. |
 | Identity and known keys | Is there more than one of it, each with a machine name or id? | It is a singleton, as a settings page is. |
 | Operation context options (`creates`, `known`, `withConstraint()`, `withStarting()`) | Does an operation create, know part of the identity, or narrow by where it is asked? | It is one `new OperationContext('configure')`. |

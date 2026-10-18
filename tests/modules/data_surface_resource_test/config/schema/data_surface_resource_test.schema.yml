@@ -28,3 +28,15 @@ data_surface_resource_test.digest.schedule.weekly:
     send_day:
       type: string
       label: 'Send day'
+
+# The bulletin fixture: a send day that applies only to a weekly bulletin.
+data_surface_resource_test.bulletin:
+  type: config_object
+  label: 'Bulletin'
+  mapping:
+    frequency:
+      type: string
+      label: 'Frequency'
+    send_day:
+      type: string
+      label: 'Send day'

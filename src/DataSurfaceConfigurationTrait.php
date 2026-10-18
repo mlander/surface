@@ -167,7 +167,10 @@ trait DataSurfaceConfigurationTrait {
       // message is a string and has nowhere to put an object.
       throw new \InvalidArgumentException('Invalid configuration: ' . ViolationSummary::fromViolations($violations));
     }
-    $this->configuration = $values + array_diff_key($configuration, $definitions);
+    // A key that does not apply is left out of what accept() made of the
+    // configuration, and kept as it was saved.
+    // Decision: see docs/decisions.md#a-key-that-does-not-apply.
+    $this->configuration = $pipeline->kept($surface, $values, $configuration) + array_diff_key($configuration, $definitions);
     return $this;
   }
 

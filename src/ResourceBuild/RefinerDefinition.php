@@ -38,6 +38,9 @@ final class RefinerDefinition {
    * @param bool $runtime
    *   Whether the attribute declares it a runtime refiner: one whose
    *   answer nothing may compute ahead of time.
+   * @param bool $mayNotApply
+   *   Whether its return type names DoesNotApply: it may answer that the
+   *   key does not apply.
    */
   public function __construct(
     public readonly string $class,
@@ -48,6 +51,7 @@ final class RefinerDefinition {
     public readonly bool $takesDefinition,
     public readonly bool $isStatic = FALSE,
     public readonly bool $runtime = FALSE,
+    public readonly bool $mayNotApply = FALSE,
   ) {}
 
   /**

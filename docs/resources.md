@@ -781,7 +781,9 @@ What that means, end to end:
   child cannot watch its parent's keys. The one door is the context: a
   parent hands a child what it needs as identity, the way the field
   instance resource's operations tell its settings which field they
-  belong to.
+  belong to. The key a child sits at is the parent's own, so a parent's
+  refiner may say it [does not apply](refinement.md#when-a-key-does-not-apply),
+  and nothing else about it.
 - **A slot** is advertised as an `any` placeholder marked as a slot
   (`DefinitionMetadata::slotOf()`) while its deciding key holds
   nothing, and as exactly the chosen variant's map once it does, or

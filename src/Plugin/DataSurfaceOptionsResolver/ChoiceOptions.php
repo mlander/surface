@@ -34,7 +34,9 @@ final class ChoiceOptions extends DataSurfaceOptionsResolverBase {
   public function applies(Constraint $constraint): bool {
     // A Choice whose values are resolved at validation time, as the
     // AllowedValues subclass does from the data object, names no list
-    // that a definition alone can read.
+    // that a definition alone can read. One that names an empty list
+    // names a list of nothing, which is a select offering nothing.
+    // Decision: see docs/decisions.md#a-key-that-does-not-apply.
     //
     // A labeled choice is a Choice too, and would be read here as a list
     // without meaning. Its own resolver knows the labels, so this one
@@ -42,7 +44,7 @@ final class ChoiceOptions extends DataSurfaceOptionsResolverBase {
     return parent::applies($constraint)
       && $constraint instanceof Choice
       && !$constraint instanceof LabeledChoiceConstraint
-      && !empty($constraint->choices);
+      && is_array($constraint->choices);
   }
 
   /**

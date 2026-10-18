@@ -127,6 +127,16 @@ interface DataSurfaceFormBuilderInterface {
   public const PLACED_AFTER_KEY = '#data_surface_after';
 
   /**
+   * Render key marking an element drawn as nothing but its wrapper.
+   *
+   * A slot nothing has chosen, or a key that does not apply to the values
+   * it is drawn for: no element is offered, so nothing is read back from
+   * it, and the wrapper is where a rebuild puts the element once there is
+   * one.
+   */
+  public const PLACEHOLDER_KEY = '#data_surface_placeholder';
+
+  /**
    * Builds a container of form elements for a data surface.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface

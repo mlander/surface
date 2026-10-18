@@ -36,7 +36,7 @@ use Drupal\data_surface\DataSurfaceRefinerInterface;
  *
  * @internal
  */
-final class RuntimeRefiner implements DataSurfaceRefinerInterface, CacheableDependencyInterface {
+final class RuntimeRefiner implements DataSurfaceRefinerInterface, CacheableDependencyInterface, ApplicabilityInterface {
 
   /**
    * Constructs a RuntimeRefiner.
@@ -59,6 +59,13 @@ final class RuntimeRefiner implements DataSurfaceRefinerInterface, CacheableDepe
    */
   public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
     return $this->link->refineDataDefinition($name, $definition, $values);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function mayNotApply(string $name): array {
+    return $this->link instanceof ApplicabilityInterface ? $this->link->mayNotApply($name) : [];
   }
 
   /**

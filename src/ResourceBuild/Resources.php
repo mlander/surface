@@ -1039,6 +1039,10 @@ final class Resources implements ResourcesInterface {
       static::assertNotWatchingForeignMount($definition, $refiner, $input_keys, $mounted, $mountedBy);
       // Decision: see docs/decisions.md#count-is-the-parents.
       $refinable = $own ? [...$input_keys, $refiner->key] : [...$input_keys, ...$lists];
+      if ($refiner->mayNotApply) {
+        // Decision: see docs/decisions.md#a-key-that-does-not-apply.
+        array_push($refinable, ...$attached);
+      }
       static::assertRefinable($definition, $refiner, $refinable, $output_keys, [...$input_keys, ...$mounted]);
       // Decision: see docs/decisions.md#an-alter-watches-its-own-mounted-key.
       $watched = static::mountedWatches($definition, $refiner, $input_keys, $module, $mounted);
@@ -1249,9 +1253,10 @@ final class Resources implements ResourcesInterface {
    *
    * The pattern's wall between a parent and its child, in both
    * directions. A parent's method may neither refine a key holding a
-   * child (the child refines its own keys, in its own frame) nor watch
-   * one; a child's method may not watch its parent's keys, because a
-   * child sees only its context. The one door is the context: a parent
+   * child (the child refines its own keys, in its own frame), except to
+   * answer that the key does not apply, nor watch one; a child's method
+   * may not watch its parent's keys, because a child sees only its
+   * context. The one door is the context: a parent
    * hands a child what it needs as identity with withChild().
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
@@ -1272,9 +1277,12 @@ final class Resources implements ResourcesInterface {
    *   Naming the method and the key it reached for.
    */
   protected static function assertWalled(ResourceDefinition $definition, RefinerDefinition $refiner, array $input_keys, array $attached, ?array $parent, array $lists = []): void {
-    if (in_array($refiner->key, $attached, TRUE)) {
+    // Whether the key applies at all is the parent's to say, since the
+    // parent owns the key; what the child holds is the child's.
+    // Decision: see docs/decisions.md#a-key-that-does-not-apply.
+    if (in_array($refiner->key, $attached, TRUE) && !$refiner->mayNotApply) {
       throw new \LogicException(sprintf(
-        '%s refines "%s", which holds a child in %s. A child is refined by its own #[RefinesInput] methods, in its own frame; a parent cannot refine into it.',
+        '%s refines "%s", which holds a child in %s. A child is refined by its own #[RefinesInput] methods, in its own frame; a parent cannot refine into it, and may only answer that the key does not apply, with a method declaring `: DataDefinitionInterface|DoesNotApply`.',
         $refiner->describe(),
         $refiner->key,
         $definition->id,

@@ -69,6 +69,24 @@ null meant the default too a caller could never clear a key. The Tool
 API itself tells an absent key from a null where it matters, for
 outputs (`omit_when_null`).
 
+### A key that does not apply
+
+A refiner may answer that a key does not apply to the values it watches
+([Refinement](refinement.md#when-a-key-does-not-apply)): a send day for
+a monthly bulletin. Such a key is read as left out, whatever it is sent:
+
+| Sent for a key that does not apply | Result |
+| --- | --- |
+| left out | what it holds stands, in storage; the accepted document leaves the key out |
+| `NULL`, or `''` | the same: nothing said, nothing to clear |
+| exactly what it holds | the same |
+| any other value | refused: "Send day does not apply when Frequency is Monthly." |
+
+Nothing about it is required, and nothing about it is validated. Storage
+keeps what it holds, so the key holds it again when it applies: a weekly
+send day survives a month of monthly sends
+([decision](decisions.md#a-key-that-does-not-apply)).
+
 ## The coercion table
 
 `accept()` turns raw input into the type the definition declares by the
@@ -463,13 +481,14 @@ may answer that its keys are shown and fixed, or not there at all.
 
 | Stage | Decides |
 | --- | --- |
-| `accept()` | Whether a key was configured, what type its value takes (the coercion table), whether the shape is acceptable at all, and how input merges over what is stored. Keeps what a key left out, a list or a secret holds; clears an optional key sent nothing. Refuses undeclared keys and shape mismatches. Asks only the options service, for the values a near miss snaps onto. |
-| `validate()` | Whether a required key was answered, and whether the answers satisfy the constraints of the data surface **refined against those same answers**. Given the stored values, it also tells a stale reference from a refusal. |
+| `accept()` | Whether a key was configured, what type its value takes (the coercion table), whether the shape is acceptable at all, and how input merges over what is stored. Keeps what a key left out, a list or a secret holds; clears an optional key sent nothing. Leaves out a key that does not apply to what it accepted, unless it was sent another value. Refuses undeclared keys and shape mismatches. Asks only the options service, for the values a near miss snaps onto. |
+| `validate()` | Whether a required key was answered, and whether the answers satisfy the constraints of the data surface **refined against those same answers**. Given the stored values, it also tells a stale reference from a refusal, and refuses a value sent for a key that does not apply. |
 | `refine()` | Which definitions narrow, given which dependencies are configured. A dependency holding `FALSE` or `[]` is an answer and does narrow. |
 | `prepare()` / `commit()` | Nothing about values; the storage layout and the write. |
 
-After `accept()`, every declared key is present and every value is
-either `NULL` or a configured value in its declared type, as far as the
+After `accept()`, every declared key is present but one that
+[does not apply](#a-key-that-does-not-apply), and every value is either
+`NULL` or a configured value in its declared type, as far as the
 coercion table can make it one. That is the shape `validate()`, the
 storage, and any consumer can rely on, and the document the schema is
 never stricter than ([served contract](served-contract.md#never-stricter-than-the-runtime)).

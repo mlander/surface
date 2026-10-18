@@ -243,6 +243,63 @@ fills from storage, say. What they make is the honest spelling the easy
 one: a refiner that needs anything but its arguments is a runtime
 refiner, said on the method.
 
+## When a key does not apply
+
+Narrowing says which values a key allows. Sometimes the answer is that
+the key has no business being there at all: a send day for a bulletin
+that goes out monthly. A refiner says so by answering
+`DoesNotApply::here()`, from a method whose return type names it:
+
+```php
+use Drupal\data_surface\Refinement\DoesNotApply;
+
+#[RefinesInput('send_day')]
+public static function sendDayOnlyWhenWeekly(DataDefinitionInterface $send_day, string $frequency): DataDefinitionInterface|DoesNotApply {
+  return $frequency === 'weekly' ? $send_day : DoesNotApply::here();
+}
+```
+
+That is the bulletin of the test module, `resource_test.bulletin`. Its
+`defineInputs()` declares `send_day` as everything it may ever be, a
+required choice of three days, and the refiner says where it applies.
+
+- **It is the narrowest answer**, and nothing else changes: the method is
+  gated on what it watches, static unless it declares `runtime: TRUE`,
+  held to the same enforcement, and enumerated by the served contract
+  like any static refiner. Once a key does not apply, nothing after it
+  runs, and nothing may make it apply again.
+- **The return type is the declaration.** `DataDefinitionInterface|DoesNotApply`
+  tells the build, the full schema and the tool before anything runs that
+  the key may be ruled out, which is how they keep it out of `required`
+  where they cannot say where it applies. A method that answers it
+  without declaring it is refused.
+- **Any key**: a key of the class's own, a key an alter mounted (the
+  alter's refiner on its own key), and the key an attached child or a
+  slot sits at. A parent's refiner of a key holding a child may only
+  answer that it does not apply; anything else it hands back must be
+  what it was handed.
+
+What each door does with it, for a monthly bulletin with `friday`
+stored:
+
+| Door | Does |
+| --- | --- |
+| The form | Draws no element for it, not even a disabled one; changing the frequency to weekly brings it back over AJAX, showing `friday`, required. |
+| The pipeline | Reads it as left out. Left out, `null`, `''` or `friday` is accepted; any other day is refused: "Send day does not apply when Frequency is Monthly." Nothing about it is required. |
+| Storage | Keeps `friday`, so the bulletin sent weekly again sends on Friday. |
+| The read tool | Leaves it out of `values`. |
+| The tool | Lists it as optional, since a listing cannot say where it applies; the pipeline asks for it where it does. |
+| The schema for these answers | Leaves it out of `properties`, `required` and `values`, and names it under the frame's `x-surface.doesNotApply` with what it depends on. |
+| The full schema | `false` under the monthly conditional, and `required` under the weekly one: `{"if": {...weekly...}, "then": {"required": ["send_day"]}}`. |
+| React | Drops the field when the frequency moves to monthly, and brings it back, required, with no request. |
+
+A key that does not apply is not a key narrowed to no values. A list
+narrowed to nothing (the extras' ribbon slice below, were it the whole
+key) is a select offering nothing, and refuses every value; it applies,
+and nothing it could hold is allowed. Nor is it an empty variant, which
+applies and has nothing to say. The decision, and why each door does
+what it does: [A key that does not apply](decisions.md#a-key-that-does-not-apply).
+
 ## The narrowing table
 
 Every refiner link, and every constraint an operation adds, is checked
@@ -268,6 +325,8 @@ than a refused refinement.
 | Adding values to a list of allowed values | **refused** |
 | Replacing the options of any other constraint | **refused** |
 | Adding or removing a map property | **refused** |
+| Answering that the key does not apply (`DoesNotApply::here()`) | narrowest: nothing is compared after it |
+| Making a key that did not apply apply again | **refused** |
 | Any of the above, inside a map property or a list item | as above |
 
 A derivative is narrower because every value of `entity:node` is a value
@@ -436,17 +495,6 @@ contract all see the same five values, narrowed the same way.
 
 ## Where this does not reach yet
 
-- **A key that does not apply.** The ribbon's slice is narrowed to
-  nothing, and that is fine: the union still offers the owner's values.
-  Narrowing a whole key to nothing is not: the options widget claims a
-  key only while its list is non-empty ([Widgets](widgets.md#the-stock-widgets)),
-  so the select becomes a text field holding the stored value, which
-  Save then refuses as not a valid choice. Until a refiner can say that
-  a key does not apply ([ROADMAP](../ROADMAP.md), "This key does not
-  apply"), spell "only when weekly" as a
-  slot on the deciding key whose other variants declare no keys: an
-  empty variant renders as nothing and its value is an empty map
-  ([Children](resources.md#children)).
 - **Nested keys.** A refiner refines a whole key. There is no dotted
   path to refine one property inside a map on its own; the method
   refining the map narrows the property inside what it returns, and

@@ -25,6 +25,7 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\Refinement\DoesNotApply;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Pipeline\ValueState;
@@ -68,11 +69,6 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    * Filled by placeRefreshed().
    */
   protected const REFRESHED_KEY = '#data_surface_refreshed';
-
-  /**
-   * Render key marking a slot rendered as nothing but its wrapper.
-   */
-  protected const PLACEHOLDER_KEY = '#data_surface_placeholder';
 
   /**
    * Where a refinement request holds the violations on its trigger.
@@ -199,6 +195,14 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     $container['#pre_render'] = $this->surfacePreRender('container');
     $definitions = $surface->getDefinitions();
     foreach ($definitions as $name => $definition) {
+      if (DoesNotApply::marks($definition)) {
+        // Not rendered at all, not disabled and not hidden: the key does
+        // not apply to these values, so there is nothing to answer. Its
+        // wrapper alone is drawn, for the rebuild that makes it apply.
+        // Decision: see docs/decisions.md#a-key-that-does-not-apply.
+        $container[$name] = ['#markup' => '', self::PLACEHOLDER_KEY => TRUE];
+        continue;
+      }
       $list = $definitions->entry($name)?->list;
       if ($list !== NULL && $definition instanceof ListDataDefinitionInterface) {
         // Decision: see docs/decisions.md#a-list-of-child-invocations.
@@ -1413,8 +1417,9 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    */
   protected function extractKey(string $name, ?DataDefinitionInterface $definition, array $container, FormStateInterface $form_state): array {
     if ($definition === NULL || !isset($container[$name]) || !is_array($container[$name]) || !empty($container[$name][self::PLACEHOLDER_KEY])) {
-      // A placeholder is a slot's wrapper and nothing else: no element
-      // was offered, so the key has said nothing.
+      // A placeholder is a wrapper and nothing else (a slot nothing
+      // chose, a key that does not apply): no element was offered, so the
+      // key has said nothing.
       return [];
     }
     return [

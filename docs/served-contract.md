@@ -131,6 +131,12 @@ and the schema need not admit; the document they become, it does.
 - **A stale value is storage's.** The full schema reads no storage, so a
   stored value a static list no longer offers, which the pipeline keeps
   stale, is outside it.
+- **A key that does not apply is not in the document.** The pipeline
+  reads it as left out, so the accepted document has no such key, and
+  both documents refuse it present (`false`, or no property under
+  `additionalProperties: false`). A `null` or `''` sent for it is a
+  notation of nothing the pipeline reads, as `"50"` is of a number; a
+  value is refused at both ends.
 
 `AdvertisedSchemaAcceptanceTest` holds this for every example and the
 test fixtures: each accepted document is accepted by both documents and
@@ -211,7 +217,7 @@ each written once, as a def under `$defs`, and referred to
 | `Regex` | `pattern` (`not: {pattern}` for `match: false`), carried only when its body stays inside the subset both engines read alike and its modifiers are `u` and `D`; otherwise left to the server ([decision](decisions.md#a-pattern-both-engines-read-alike)) |
 | `Email` | `format: email`, advisory |
 | `NotBlank` | `minLength: 1` |
-| any list of allowed values | `oneOf: [{const, title, description?}]`, read from the options service, so the labels travel; never `enum`. An optional key adds an untitled `{const: null}`. |
+| any list of allowed values | `oneOf: [{const, title, description?}]`, read from the options service, so the labels travel; never `enum`. An optional key adds an untitled `{const: null}`, and so does a list of no values, which a required key's type then refuses too: nothing is allowed. |
 | a map | a nested object |
 | an attached part | a reference to its def under `$defs`, beside its label ([reusable subschemas](#reusable-subschemas)) |
 | a list | `type: array`, `items` |
@@ -219,6 +225,7 @@ each written once, as a def under `$defs`, and referred to
 | a locked key | `readOnly: true` and `const` of the value the operation knows |
 | a child its access locked | `readOnly: true` on the part, and on every key inside it with `const` of what is stored (none in the full schema); an omitted child is not there at all ([Three answers](resources.md#three-answers)) |
 | a secret | `writeOnly: true`, its declared type, never in `required` (left out or `null`, the stored secret stands), no default, `null` in `values` ([decision](decisions.md#a-secret-is-optional-never-nullable)) |
+| a key a refiner answers [does not apply](refinement.md#when-a-key-does-not-apply) for these values | no property, not in `required`, not in `values`; the frame's own `x-surface.doesNotApply` names it with what it depends on. In the full schema, `false` under each conditional that rules it out, and `required` under each where it applies and is required ([decision](decisions.md#a-key-that-does-not-apply)) |
 | any other constraint | named in `x-surface.checkedOnServer`: the schema is not the whole story, ask `/validate` |
 
 ### `x-surface`
@@ -242,6 +249,7 @@ each written once, as a def under `$defs`, and referred to
 | `dynamic` | Only when `true`: the key's static refiners have nothing to refine against yet, and what they would answer cannot be listed (a watched key with no list of values, or too many combinations). Static by declaration, not captured here: the schema is the unrefined, looser one, wider than the pipeline and never narrower ([decision](decisions.md#two-documents-never-stricter-than-the-runtime)); refine when a `dependsOn` key changes. In [the full schema](#two-documents) every key that cannot be listed carries it. |
 | `list` | Only when `true`, on a collection: an array whose every item is a child, its `items` a reference to the child's def. A renderer draws each item as that def's fieldset, adds and removes items within `minItems` and `maxItems`, and reads `dependsOn` inside each item under its delta (`shelves.1.unit`). |
 | `runtime` | Only when `true`: a runtime refiner narrows the key too, by a rule no schema can state ([three markers](#three-markers)). Never in a conditional and never in the full schema; the schema for these answers is refined by it for its values. Written beside `enumerated` or `dynamic` when the key has static refiners as well. |
+| `doesNotApply` | On an object, the top or a child's frame, never on a property: the keys of it a refiner answered [do not apply](refinement.md#when-a-key-does-not-apply) to these values, each with the keys it depends on, `{"send_day": ["frequency"]}`. They are no properties of it; a client refines when one of those changes. |
 
 ### Reusable subschemas
 
@@ -481,10 +489,18 @@ no `/refine` round trip.
   that differ from the unrefined schema (the narrowed `oneOf`, a lower
   `maximum`, the description naming the reason); a map's properties are
   compared one by one. A combination that changes nothing writes no
-  conditional. A `then` does not yet state a conditional `required`: a
-  refiner that makes a key required for some values is checked by the
-  pipeline, and the schema leaves the key optional for them
-  ([ROADMAP](../ROADMAP.md), "This key does not apply").
+  conditional.
+- **Where it does not apply, and where it is required.** A combination
+  for which a refiner answers that the key
+  [does not apply](refinement.md#when-a-key-does-not-apply) writes
+  `false` for it (`{"properties": {"send_day": false}}`, inside a map
+  for a key an alter mounted). A key ruled out for some combination is
+  not in the frame's `required`; a combination where it applies and is
+  required writes `required` beside its narrowing, `{"required":
+  ["send_day"]}`, and so does one for which a refiner makes an optional
+  key required. A `dynamic` or `runtime` key whose refiner may rule it
+  out, as its return type says, is in no `required`: nothing states
+  where it applies.
 - **Inside a child too.** Each frame is described the same way, so
   a slot's variant enumerates its own keys inside the variant's schema,
   under the slot's conditional. A child's frame starts from the
@@ -575,7 +591,8 @@ What the emitter's `widget`, when asked for, mirrors is
 
 | Definition | Form API element | `x-surface.widget` | React component |
 | --- | --- | --- | --- |
-| any key whose constraints resolve to a non-empty list | `select`, empty option by the rule | `select` | `SelectField` |
+| any key whose constraints resolve to a list, an empty one included | `select`, empty option by the rule | `select` | `SelectField` |
+| a key that does not apply | nothing but its wrapper | (no property) | nothing |
 | a list of such values | `select` `#multiple` | `select`, `multiple: true` | `MultipleSelectField` |
 | — (never emitted) | — | `radios` | `RadiosField` |
 | a map with properties, an attached part | `details` | `fieldset` | `FieldsetField` |
@@ -800,6 +817,12 @@ itself. The rule, as `data_surface_react` applies it:
   conditionals, held to what those keys still offer, while one holds
   nothing. A slot is its chosen variant's def; a part is its def,
   described for its values.
+- **Drop what does not apply.** A conditional whose `if` the values meet
+  and whose `then` says `false` for a key leaves the key out of the form,
+  of what is sent and of `required`; one that says `required` requires
+  it. A key that did not apply when the page was loaded, and applies
+  now, holds what is stored, which the page was never handed, so the
+  page asks `/refine` for it.
 - **Settle as `/refine` does.** The answer must be the server's, so the
   client mirrors the [discard rule](#the-endpoints): an answer the new
   choices orphan is dropped and falls back to what is stored; a stored

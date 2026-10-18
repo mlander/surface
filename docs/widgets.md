@@ -63,7 +63,7 @@ function my_module_data_surface_widget_info_alter(array &$definitions): void {
 
 | Widget | Weight | Applies to |
 | --- | --- | --- |
-| `options` | -10 | Any definition whose constraints resolve to a non-empty list of allowed values. See [Options and resolvers](options.md). |
+| `options` | -10 | Any definition whose constraints resolve to a list of allowed values, an empty one included. See [Options and resolvers](options.md). |
 | `map` | 5 | A `ComplexDataDefinitionInterface`. One that declares no property, such as a slot variant for a choice with nothing more to say, renders as an empty container and answers an empty map. |
 | `string` | 10 | `string`, `email`, `uri`. |
 | `number` | 10 | `integer`, `float`. |
@@ -75,14 +75,14 @@ than a text field; the map widget comes next, so a complex definition
 that also resolves to options is still a select; and the per-type widgets
 are the fallback.
 
-The options widget claims a key only while its list is **non-empty**. A
-refiner that narrows a list to nothing (`'choices' => []`) therefore
-turns the key's select into a text field holding the stored value, which
-then fails as "not a valid choice" on a field that offers none. Until a
-refiner can say a key does not apply ([ROADMAP](../ROADMAP.md), "This key
-does not apply"), spell "only when" as a slot whose other variants
-declare no keys: an empty variant renders as nothing, and its value is an
-empty map ([Children](resources.md#children)).
+The options widget claims a key whose list is **empty** too. A refiner
+that narrows a list to nothing (`'choices' => []`), or a resolver that
+finds nothing on a site, leaves a select offering its empty option and
+nothing else, and the constraint refuses any value: a list of nothing is
+still a list, never a text field to type into. A key that does not
+apply at all is not narrowed to nothing: its refiner answers
+`DoesNotApply::here()`, and no element is drawn for it
+([Refinement](refinement.md#when-a-key-does-not-apply)).
 
 What the stock widgets do beyond the obvious: defaults populate at every
 depth, and constraint options reach the element, so the browser enforces

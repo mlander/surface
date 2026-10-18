@@ -186,7 +186,15 @@ export function SurfaceForm({
   // The contract defines each part once and refers to it; the form reads
   // every key inline, resolved once per contract or narrowing, not once
   // per render.
-  const watched = useMemo(() => (schema === null ? new Set<string>() : watchedPaths(schema, values)), [schema, values]);
+  // The full schema's too: a key that does not apply now is no property
+  // of the form's schema, and what it depends on still moves it.
+  const watched = useMemo(() => {
+    const paths = schema === null ? new Set<string>() : watchedPaths(schema, values);
+    if (full !== null) {
+      watchedPaths(full, values).forEach((path) => paths.add(path));
+    }
+    return paths;
+  }, [schema, full, values]);
 
   const onChange = useCallback(
     (path: string, value: unknown) => {

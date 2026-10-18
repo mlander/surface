@@ -9,6 +9,8 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DataSurfaceRefinerInterface;
+use Drupal\data_surface\Refinement\ApplicabilityInterface;
+use Drupal\data_surface\Refinement\DoesNotApply;
 use Drupal\data_surface\Refinement\StaticRefinerContainer;
 
 /**
@@ -62,9 +64,15 @@ use Drupal\data_surface\Refinement\StaticRefinerContainer;
  * the same way, read at its dotted path, `third_party_settings.<module>.
  * <key>`, which is the name the engine knows the dependency by.
  *
+ * A method that answers DoesNotApply::here() rules the key out: the link
+ * hands back the definition it was handed, marked, and calls none of the
+ * key's methods after it, since nothing is narrower. Only a method that
+ * names DoesNotApply in its return type may answer it, so what may be
+ * ruled out is known before anything runs (mayNotApply()).
+ *
  * @internal
  */
-final class RefinesInputRefiner implements DataSurfaceRefinerInterface {
+final class RefinesInputRefiner implements DataSurfaceRefinerInterface, ApplicabilityInterface {
 
   use DependencySerializationTrait;
 
@@ -133,9 +141,25 @@ final class RefinesInputRefiner implements DataSurfaceRefinerInterface {
       return $this->refineMounted($definition, $values);
     }
     foreach ($this->bindings[$name] ?? [] as $refiner) {
+      if (DoesNotApply::marks($definition)) {
+        break;
+      }
       $definition = $this->invoke($refiner, $definition, $values);
     }
     return $definition;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function mayNotApply(string $name): array {
+    $paths = [];
+    foreach ($this->bindings[$name] ?? [] as $refiner) {
+      if ($refiner->mayNotApply) {
+        $paths[] = $name === self::MOUNT && $this->module !== NULL ? $this->module . '.' . $refiner->key : '';
+      }
+    }
+    return array_values(array_unique($paths));
   }
 
   /**
@@ -158,7 +182,7 @@ final class RefinesInputRefiner implements DataSurfaceRefinerInterface {
     }
     foreach ($this->bindings[self::MOUNT] ?? [] as $refiner) {
       $key = $own->getPropertyDefinition($refiner->key);
-      if ($key !== NULL) {
+      if ($key !== NULL && !DoesNotApply::marks($key)) {
         $own->setPropertyDefinition($refiner->key, $this->invoke($refiner, $key, $values));
       }
     }
@@ -177,10 +201,12 @@ final class RefinesInputRefiner implements DataSurfaceRefinerInterface {
    *   path; every watched key is present.
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface
-   *   What the method returned.
+   *   What the method returned; the definition handed over, marked, when
+   *   it answered that the key does not apply.
    *
    * @throws \LogicException
-   *   When the method returned something other than a definition.
+   *   When the method returned something other than a definition or
+   *   DoesNotApply, or DoesNotApply without declaring it.
    */
   public function invoke(RefinerDefinition $refiner, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
     $arguments = [$definition];
@@ -196,9 +222,19 @@ final class RefinesInputRefiner implements DataSurfaceRefinerInterface {
     $guarded = FALSE;
     assert(StaticRefinerContainer::asserting($guarded));
     $refined = $guarded && !$refiner->runtime ? StaticRefinerContainer::guard($refiner->describe(), $call) : $call();
+    if ($refined instanceof DoesNotApply) {
+      if (!$refiner->mayNotApply) {
+        throw new \LogicException(sprintf(
+          '%s answered DoesNotApply::here() without naming DoesNotApply in its return type. Declare it, `: DataDefinitionInterface|DoesNotApply`, so the schema and the tool know ahead of time that the key may not apply.',
+          $refiner->describe(),
+        ));
+      }
+      // Decision: see docs/decisions.md#a-key-that-does-not-apply.
+      return DoesNotApply::marked($definition);
+    }
     if (!$refined instanceof DataDefinitionInterface) {
       throw new \LogicException(sprintf(
-        '%s returned %s; a #[RefinesInput] method returns the definition it was handed, tightened.',
+        '%s returned %s; a #[RefinesInput] method returns the definition it was handed, tightened, or DoesNotApply::here().',
         $refiner->describe(),
         get_debug_type($refined),
       ));

@@ -13,6 +13,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Attribute\DataSurfaceWidget;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
+use Drupal\data_surface\Refinement\DoesNotApply;
 use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
 use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -98,6 +99,12 @@ final class MapWidget extends DataSurfaceWidgetBase implements ContainerFactoryP
       $element['#required'] = TRUE;
     }
     foreach ($definition->getPropertyDefinitions() as $property_name => $property_definition) {
+      if (DoesNotApply::marks($property_definition)) {
+        // A key an alter mounted that does not apply: its wrapper alone.
+        // Decision: see docs/decisions.md#a-key-that-does-not-apply.
+        $element[$property_name] = ['#markup' => '', DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY => TRUE];
+        continue;
+      }
       $element[$property_name] = $this->widgetManager
         ->getWidgetFor($property_definition)
         ->buildElement($property_definition, is_array($value) ? ($value[$property_name] ?? NULL) : NULL);
@@ -119,7 +126,7 @@ final class MapWidget extends DataSurfaceWidgetBase implements ContainerFactoryP
       // it. Collecting it anyway would read NULL out of form state and
       // write that NULL over a stored value, which is the same rule the
       // top level already applies to whole keys.
-      if (!isset($element[$property_name]) || !is_array($element[$property_name])) {
+      if (!isset($element[$property_name]) || !is_array($element[$property_name]) || !empty($element[$property_name][DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {
         continue;
       }
       // A rendered property is collected empty or not: what an empty
