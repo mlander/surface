@@ -823,7 +823,10 @@ you do. An element validates before any form level handler, and a form
 state keeps only the first error set on an element, so a check that came
 with the element answers first and the data surface's own violation
 (the one that names the value that was refused) is dropped in silence. The demo
-does exactly this where it borrows core's machine name element.
+does exactly this where it borrows core's machine name element, and the
+stock number widget does the same for core's number element, whose own
+`#min` and `#max` check would otherwise answer before a `Range` and its
+message ([decision](decisions.md#an-element-hints-and-the-rule-speaks)).
 
 `data_surface_demo_node_type` is the worked example: two routes and a
 cosmetics service holding core's vertical tabs, the machine name's

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_tool\Plugin\tool\Tool;
 
-use Drupal\Component\Plugin\Discovery\CachedDiscoveryInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\ResourceBuild\StorageAdapter;
@@ -70,17 +69,11 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
   protected DataSurfacePipelineInterface $pipeline;
 
   /**
-   * The tool plugin manager, whose cached definitions a write can outdate.
-   */
-  protected CachedDiscoveryInterface $toolManager;
-
-  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
     $instance = parent::create($container, $configuration, $plugin_id, $plugin_definition);
     $instance->pipeline = $container->get('data_surface.pipeline');
-    $instance->toolManager = $container->get('plugin.manager.tool');
     return $instance;
   }
 
@@ -135,11 +128,6 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
       return ExecutableResult::failure($this->t('The values were refused: @violations', [
         '@violations' => $this->violationSummary($result->violations),
       ]));
-    }
-    if ($result->committed && $operation->needsNothing() && !$context->creates) {
-      // This tool's own definition defaults its values to what was stored
-      // when it was derived, and that has just changed.
-      $this->toolManager->clearCachedDefinitions();
     }
     $outputs = $result->committed && $storage instanceof StorageAdapter
       ? $storage->outputs($built, $result->values)

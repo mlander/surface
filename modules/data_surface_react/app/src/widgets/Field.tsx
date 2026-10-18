@@ -199,11 +199,13 @@ export function FieldsetField(props: FieldProps): JSX.Element {
 /**
  * A slot: the fieldset of the variant its deciding key chose, read from
  * the parent's conditionals, and nothing at all while nothing is chosen,
- * as the form builder renders no element for an unresolved slot.
+ * as the form builder renders no element for an unresolved slot. A
+ * variant that declares no keys (a choice with nothing more to say) is
+ * drawn as nothing too, as the form builder draws it.
  */
 export function SlotField(props: FieldProps): JSX.Element | null {
   const variant = props.parent === undefined ? null : resolveSlot(props.parent, props.name, props.parentValues ?? {});
-  if (variant === null) {
+  if (variant === null || Object.keys(variant.properties ?? {}).length === 0) {
     return null;
   }
   return <FieldsetField {...props} schema={variant} />;

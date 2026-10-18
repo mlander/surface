@@ -48,10 +48,21 @@ drush pm:install data_surface
 See [docs/installation.md](docs/installation.md) for the optional Address
 and Tool integrations and the submodules.
 
-## Quick start
+## Your first resource
 
-Declare the structure as a class, name it on the plugin whose values it
-describes, and delete the form code:
+Most first projects are a settings page. [Your first
+resource](docs/first-resource.md) builds one, its form, its tool and its
+schema, from a resource class, an operation, a storage and `add()`, and
+nothing else; [Your second resource](docs/second-resource.md) adds one
+key that depends on another. Their code is the shipped module
+`data_surface_first`. Every other idea is in [Concepts](docs/concepts.md),
+with the question that makes you need it.
+
+## Quick start: a plugin's settings
+
+A block, a formatter or a condition has settings but no storage of its
+own. Declare the structure as a class, name it on the plugin whose values
+it describes, and delete the form code:
 
 ```php
 #[Structure('block.my_teaser')]
@@ -229,6 +240,10 @@ their configuration may change without a deprecation path.
   generated comparison between `data_surface:node.type:add`, the tool
   derived from the content type resource, and Tool Belt's bundle tool and
   core's form, once another module has extended content types.
+- **Data Surface - Your first resource** (`data_surface_first`): the
+  code of the pages "Your first resource" and "Your second resource", a
+  newsletter settings page and a store location, held to the pages by a
+  test.
 - **Data Surface Examples** (`data_surface_examples`): one resource
   that grows, one idea per example, at `/surface-examples`: each
   example a form beside the contract it emits, a classic twin for
@@ -254,6 +269,9 @@ Full documentation is under [`docs/`](docs/).
 
 | Page | What it covers |
 | --- | --- |
+| [Your first resource](docs/first-resource.md) | A settings page from a resource, an operation, a storage and `add()`: the whole module, pinned to `data_surface_first`. |
+| [Your second resource](docs/second-resource.md) | One key whose allowed values depend on another's, with one refiner. |
+| [Concepts](docs/concepts.md) | Every concept, the question that makes you need it, and when to skip it. |
 | [Home](docs/index.md) | What a resource and a structure are, and where each concept lives in the code. |
 | [One resource, every door](docs/every-door/index.html) | An interactive 3D model: a resource, its attached structures and an alter, the doors that read its contract, and the same inputs as they are written today. Open the file in a browser. |
 | [The pattern](docs/pattern.md) | What an author writes, where it goes, and why it is shaped that way. |
@@ -266,7 +284,7 @@ Full documentation is under [`docs/`](docs/).
 | [The pipeline](docs/pipeline.md) | Access, accept, validate, prepare, commit; dry runs; exceptions. |
 | [Value semantics](docs/semantics.md) | Configured or not, the coercion table (the Tool API's), secrets, stale values, shape mismatches, required, locked keys. |
 | [Outputs](docs/outputs.md) | Declaring what a host emits, the Omitted sentinel, conformance, its two consumers, an alter's outputs. |
-| [Storage](docs/storage.md) | What storage is, prepare and commit, the six engine storage classes, config schema, settings layouts, secrets, the serialization rule. |
+| [Storage](docs/storage.md) | What storage is, prepare and commit, the seven engine storage classes (a simple config object first), config schema, settings layouts, secrets, the serialization rule. |
 | [The served contract](docs/served-contract.md) | An operation as JSON Schema with `x-surface`, its refine and validate endpoints, and the React form rendered from it. |
 | [Generated forms](docs/forms.md) | Host families, the merge rule, AJAX, extraction, stale values, the operation form with its panel and cosmetic seam. |
 | [Widgets](docs/widgets.md) | The widget plugin type, and writing one. |

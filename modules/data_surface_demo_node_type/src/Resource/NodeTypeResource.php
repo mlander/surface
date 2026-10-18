@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface_demo_node_type\Resource;
 
 use Drupal\Core\Entity\EntityTypeInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
@@ -60,7 +61,7 @@ final class NodeTypeResource implements ResourceInterface {
    * only: that is where you are, not what was entered, so the operation
    * narrows the key rather than a refiner.
    */
-  #[Operation('add', label: 'Add a content type', permission: self::PERMISSION)]
+  #[Operation('add', label: new TranslatableMarkup('Add a content type'), permission: self::PERMISSION)]
   public static function add(): OperationContext {
     return (new OperationContext('add', creates: TRUE))
       ->withConstraint('type', 'DataSurfaceUniqueNodeType');
@@ -69,7 +70,7 @@ final class NodeTypeResource implements ResourceInterface {
   /**
    * Edits a content type. Its machine name is known, so it is locked.
    */
-  #[Operation('edit', label: 'Edit a content type', permission: self::PERMISSION)]
+  #[Operation('edit', label: new TranslatableMarkup('Edit a content type'), permission: self::PERMISSION)]
   public static function edit(NodeTypeInterface $type): OperationContext {
     return new OperationContext('edit', known: ['type' => $type->id()]);
   }

@@ -134,7 +134,7 @@ final class RegistrationStep1Resource implements ResourceInterface {
   /**
    * Configures the registration settings, which always exist.
    */
-  #[Operation('configure', label: 'Configure registration', permission: 'administer site configuration')]
+  #[Operation('configure', label: new TranslatableMarkup('Configure registration'), permission: 'administer site configuration')]
   public static function configure(): OperationContext {
     return new OperationContext('configure');
   }
@@ -235,7 +235,7 @@ final class RegistrationStep2Resource implements ResourceInterface {
   /**
    * Configures the registration settings, which always exist.
    */
-  #[Operation('configure', label: 'Configure registration', permission: 'administer site configuration')]
+  #[Operation('configure', label: new TranslatableMarkup('Configure registration'), permission: 'administer site configuration')]
   public static function configure(): OperationContext {
     return new OperationContext('configure');
   }
@@ -320,7 +320,7 @@ final class RegistrationStep3Resource implements ResourceInterface {
   /**
    * Configures the registration settings, which always exist.
    */
-  #[Operation('configure', label: 'Configure registration', permission: 'administer site configuration')]
+  #[Operation('configure', label: new TranslatableMarkup('Configure registration'), permission: 'administer site configuration')]
   public static function configure(): OperationContext {
     return new OperationContext('configure');
   }
@@ -673,7 +673,9 @@ drush tool:run data_surface:registration.step3:configure --uid=1 --input='{"valu
 
 `--uid=1` because `tool:run` runs as anonymous unless told otherwise,
 and the operation asks for "administer site configuration", for a read
-as for a write. The dry run
+as for a write. `tool:info` lists no defaults: configuring changes what
+exists, a key left out keeps its current value, and the description
+names the read tool, the second command, for what that value is. The dry run
 is a second input, which `tool:run` reads as `name=value` and decodes as
 JSON, so `true` is a boolean.
 

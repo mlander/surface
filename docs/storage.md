@@ -7,14 +7,115 @@ submitting, and what lets one storage class serve both the operation
 that adds a thing and the operation that edits it.
 
 This page is about the second half: a resource's own storage and the
-engine's six storage classes, the prepare-versus-commit split, dry runs,
+engine's seven storage classes, the prepare-versus-commit split, dry runs,
 what may ride on a form, and the one small interface storage uses when
 the input layout and the storage layout differ. [The pipeline](pipeline.md)
 is the other half, and the stage names below are its.
 
+A settings page needs none of this page but the next section: its
+resource names a subclass of `ConfigObjectStorage` and is done ([A
+simple config object](#a-simple-config-object), and [Your first
+resource](first-resource.md) for the whole module).
+
+## A simple config object
+
+The most common resource is a settings page, kept in one simple config
+object. The engine's `ConfigObjectStorage` stores it; a module names its
+object on a subclass, in its `src/Storage/`, and the resource names the
+subclass:
+
+```php
+final class NewsletterStorage extends ConfigObjectStorage {
+
+  public const CONFIG = 'data_surface_first.newsletter';
+
+}
+```
+
+```php
+#[Resource('first.newsletter', storage: NewsletterStorage::class)]
+```
+
+The subclass is autowired as a service when the resource is discovered,
+so it is the whole of the storage code. What it does:
+
+- **`load()`** reads the object, less `_core` and `langcode`, which are
+  the storage's.
+- **`prepare()`** lays the values over what is stored and validates the
+  *whole* object against its config schema, so a type that resolves
+  through a sibling (`[%parent.pricing]`), or a translatable string that
+  needs a language code, is judged as it will be stored. Violations are
+  filed under the keys being written; one under a key nobody writes is
+  not this write's problem ([below](#config-schema-and-whose-violation-it-is)).
+  It writes nothing, and a dry run reports what it returns: the values,
+  plus the language code when one is stored.
+- **`commit()`** writes what `prepare()` returned.
+- **The language code** follows core's rule: present exactly when the
+  schema holds a translatable value (`label`, `text`). The storage keeps
+  the stored one, or the site's default language when none is stored,
+  and removes one the schema does not ask for. A resource never declares
+  `langcode` or `_core`.
+- **The object must exist**, from the module's `config/install`, and a
+  config schema must describe it: a missing schema is a `\LogicException`
+  naming the object, since the storage exists to hold values to it.
+
+The values are stored as the resource accepted them, key for key: an
+attached structure is the map at its key, and a slot's variant the map
+its deciding key chose.
+
+### Keys another module mounts
+
+An alter's keys are mounted under `third_party_settings.<module>`
+([Alters](resources.md#alters)), and on a simple config object core
+describes no such key: the owner declares it, and each module that
+mounts there describes its own part. The convention is the one the
+examples use, a sequence whose type is named by the module key:
+
+```yaml
+# The owner, in its config/schema/<owner>.schema.yml:
+my_module.settings:
+  type: config_object
+  mapping:
+    # ... the resource's own keys ...
+    third_party_settings:
+      type: sequence
+      label: 'Third party settings'
+      requiredKey: false
+      sequence:
+        type: my_module.settings.third_party.[%key]
+
+# The module that mounts, in its config/schema/<module>.schema.yml:
+my_module.settings.third_party.other_module:
+  type: mapping
+  label: 'Other module settings'
+  mapping:
+    licence:
+      type: string
+      label: 'Event licence'
+```
+
+Config validation lets data no schema describes through without a word,
+so `ConfigObjectStorage` checks the mounts itself: a module whose
+settings resolve to no type is refused under `third_party_settings`,
+naming the module; an owner that declares no `third_party_settings` at
+all is refused by the schema under that key. `data_surface_examples`
+declares `data_surface_examples.registration.third_party.[%key]` and
+`data_surface_examples_compliance` its part.
+
 ## What storage is
 
-Three methods, `Drupal\data_surface\Pipeline\DataSurfaceStorageInterface`:
+Two interfaces with the same three verbs. A resource's own storage class
+implements the second, and nothing an author writes implements the
+first:
+
+- `Drupal\data_surface\Pipeline\DataSurfaceStorageInterface`, what the
+  pipeline writes to, over the data surface. The engine's storage
+  classes below implement it, all but `ConfigObjectStorage`, and
+  `StorageAdapter` adapts a resource's storage to it.
+- `Drupal\data_surface\Resource\ResourceStorageInterface`, what
+  `#[Resource(storage:)]` names, over the context.
+
+The pipeline's:
 
 | Method | Does | Writes? |
 | --- | --- | --- |
@@ -158,10 +259,11 @@ held to the schema, is as far as a dry run goes; a resource's storage
 class returns that clone's exported array from `prepare()`, which is
 what a derived tool's dry run reports as `prepared`.
 
-## The six engine storage classes
+## The seven engine storage classes
 
 | Storage | Destination | Artifact | Used by |
 | --- | --- | --- | --- |
+| `ConfigObjectStorage` | One simple config object, named by a subclass. A `ResourceStorageInterface`, named by a resource. | The values to write, plus the language code when the schema asks for one. | the examples, `data_surface_first` |
 | `StateStorage` | One State key. | The accepted values. | the demo form |
 | `ConfigEntityStorage` | One config entity's properties, plus core's third party settings. | An unsaved clone of the entity. | no shipped resource yet |
 | `FieldSettingsStorage` | One field instance's settings. | The settings array. | the field type host |
@@ -169,11 +271,9 @@ what a derived tool's dry run reports as `prepared`.
 | `PluginConfigurationStorage` | A plugin's configuration array. | The complete configuration. | the plugin hosts |
 | `CompositeStorage` | Several of the above, in order. | One prepared set per child. | no shipped resource yet |
 
-A config object storage class, mirroring core's `ConfigTarget`, was
-removed for having no adopter; a resource whose values are a simple
-config object writes it in a storage class of its own, held to the
-schema with `SchemaViolations`, until enough of them share the
-translation to name it again.
+`ConfigObjectStorage` came back once every settings resource had
+written the same class: the examples' three, and the one the first
+fresh-eyes reader had to write ([the log](fresh-eyes-2026-10-18.md)).
 
 A few things each of them is opinionated about:
 
@@ -222,6 +322,14 @@ Every storage class that writes config holds its artifact to the config
 schema, through `SchemaViolations`, and reports what it says in the
 same `ViolationSet` the resource's own constraints answer with, filed
 under the input key that owns the path.
+
+Which data to hand it is the whole thing as it will be stored: the
+written values laid over the stored object, with its language code when
+it has one. Handed only the keys being written, a schema cannot resolve
+a type named by a sibling, and core's "must specify a language code"
+check, which sits at the root, never sees the object it is about. The
+paths are the keys being written, so the report is about this write.
+`ConfigObjectStorage` does exactly that.
 
 Only the paths the storage writes are reported. A schema validates the
 whole object, so a config object carrying a violation under a key the
@@ -406,15 +514,36 @@ those is the one each class documents: hand it an object you own.
 ## Writing a storage class
 
 Worth having when a destination is reached more than once, or when the
-translation between input layout and storage layout is worth a name. The
-checklist:
+translation between input layout and storage layout is worth a name. A
+simple config object needs none: subclass `ConfigObjectStorage`.
 
-1. `load()` reads in input layout and returns an empty array when
+A resource's storage class, a `ResourceStorageInterface` named by
+`#[Resource(storage:)]`:
+
+1. `load($context)` reads by the identity the context knows, in input
+   layout, and returns an empty array when nothing is stored (and for a
+   context that creates).
+2. `prepare($context, $values)` writes nothing, touches nothing the
+   caller handed over, holds what it would store to every check the store
+   makes (the config schema through `SchemaViolations`, on the whole
+   object), throws `StorageViolationsException` with violations filed
+   under input keys, and returns what `commit()` will write.
+3. `commit($context, $prepared)` writes exactly what `prepare()`
+   returned.
+4. It is an autowired service, so it takes services in its constructor;
+   container-built, it translates with `$this->t()`.
+5. Compose `DependencySerializationTrait`, and hold no closures.
+
+An engine storage class, a `DataSurfaceStorageInterface` the pipeline
+writes to directly:
+
+1. `load($surface)` reads in input layout and returns an empty array when
    nothing is stored.
-2. `prepare()` writes nothing, touches nothing the caller handed over,
-   and puts everything a commit needs into the artifact.
-3. `commit()` stores the artifact it is given, and refuses an artifact
-   that did not come from this storage.
+2. `prepare($surface, $values)` writes nothing, touches nothing the
+   caller handed over, and puts everything a commit needs into the
+   `PreparedValues` artifact.
+3. `commit($prepared)` stores the artifact it is given, and refuses an
+   artifact that did not come from this storage.
 4. Declare any dependencies the artifact carries in the `PreparedValues`,
    in the shape `calculateDependencies()` collects them.
 5. Compose `DependencySerializationTrait`, and hold no closures.

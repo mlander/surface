@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_examples\Resource;
 
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface_examples\Structure\ContactStructure;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
@@ -30,7 +31,7 @@ final class RegistrationStep3Resource implements ResourceInterface {
   /**
    * Configures the registration settings, which always exist.
    */
-  #[Operation('configure', label: 'Configure registration', permission: 'administer site configuration')]
+  #[Operation('configure', label: new TranslatableMarkup('Configure registration'), permission: 'administer site configuration')]
   public static function configure(): OperationContext {
     return new OperationContext('configure');
   }

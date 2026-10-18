@@ -133,36 +133,33 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
    *
    * Configuring the registration needs nothing, so the static definition
    * is the resource built in its real context: every key required exactly
-   * when the built resource requires it, though the settings always exist, and
-   * every key defaulting to what is stored now. After a write through the
-   * tool, the definition says what was written.
+   * when the built resource requires it, though the settings always
+   * exist. It changes what exists, so it lists no default at any depth: a
+   * listing is cached by clients, a key left out keeps its current value,
+   * and the description names the read tool that returns those. A write
+   * through the tool leaves the definition as it was.
    */
-  public function testDefinitionIsWhatTheResourceRequiresAndWhatIsStored(): void {
+  public function testDefinitionIsWhatTheResourceRequiresAndListsNoStoredValue(): void {
     $manager = $this->container->get('plugin.manager.tool');
     $manager->clearCachedDefinitions();
-    $values = $manager->getDefinition(ExampleCalls::TOOL)->getInputDefinition(OperationInputs::VALUES);
+    $definition = $manager->getDefinition(ExampleCalls::TOOL);
+    $values = $definition->getInputDefinition(OperationInputs::VALUES);
     $this->assertInstanceOf(MapInputDefinition::class, $values);
     $this->assertTrue($values->isRequired());
     $properties = $values->getPropertyDefinitions();
     $required = array_keys(array_filter($properties, static fn ($property): bool => $property->isRequired()));
     $this->assertSame(['title', 'venue', 'room', 'pricing'], $required);
 
-    // The stored values, not the declared ones: the installed title, not
-    // none; the installed contact, key by key.
-    $this->assertSame('Spring meetup', $properties['title']->getDefaultValue());
-    $this->assertSame(50, $properties['capacity']->getDefaultValue());
-    $this->assertTrue($properties['open']->getDefaultValue());
-    $this->assertSame('riverside', $properties['venue']->getDefaultValue());
-    $this->assertSame('riverside_main', $properties['room']->getDefaultValue());
-    $this->assertSame('free', $properties['pricing']->getDefaultValue());
+    // Neither the stored values nor the declared ones: the declared
+    // capacity of 50 is no more what a key left out becomes than the
+    // installed title is.
+    $this->assertSame([], $this->defaults($values));
+    $this->assertStringContainsString('A key left out keeps its current value; ' . ExampleCalls::READ_TOOL . ' returns the current values.', (string) $definition->getDescription());
     $contact = $properties['contact'];
     $this->assertInstanceOf(MapInputDefinition::class, $contact);
     $this->assertFalse($contact->isRequired());
     $this->assertTrue($contact->getPropertyDefinitions()['email']->isRequired());
-    $this->assertSame('events@example.com', $contact->getPropertyDefinitions()['email']->getDefaultValue());
 
-    // A write through the tool outdates the definition, and the next
-    // read says what was written.
     $tool = $manager->createInstance(ExampleCalls::TOOL);
     $tool->setInputValue(OperationInputs::VALUES, [
       'title' => 'Summer meetup',
@@ -172,8 +169,32 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
     ]);
     $tool->execute();
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResult()->getMessage());
-    $properties = $manager->getDefinition(ExampleCalls::TOOL)->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions();
-    $this->assertSame('Summer meetup', $properties['title']->getDefaultValue());
+    $this->assertSame([], $this->defaults($manager->getDefinition(ExampleCalls::TOOL)->getInputDefinition(OperationInputs::VALUES)));
+    $this->assertSame('Summer meetup', $this->config('data_surface_examples.registration_step3')->get('title'), 'What the read tool would return.');
+  }
+
+  /**
+   * Lists every default a map's properties carry, at any depth.
+   *
+   * @param \Drupal\tool\TypedData\MapInputDefinition $map
+   *   The map.
+   * @param string $prefix
+   *   The path above it.
+   *
+   * @return array<string, mixed>
+   *   Dotted path => default, for each property that has one.
+   */
+  protected function defaults(MapInputDefinition $map, string $prefix = ''): array {
+    $defaults = [];
+    foreach ($map->getPropertyDefinitions() as $name => $property) {
+      if ($property->getDefaultValue() !== NULL) {
+        $defaults[$prefix . $name] = $property->getDefaultValue();
+      }
+      if ($property instanceof MapInputDefinition) {
+        $defaults += $this->defaults($property, $prefix . $name . '.');
+      }
+    }
+    return $defaults;
   }
 
   /**

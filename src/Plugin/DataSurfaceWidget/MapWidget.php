@@ -18,12 +18,17 @@ use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Recursive container for complex definitions with declared properties.
+ * Recursive container for complex definitions.
  *
  * Children are keyed by property name directly — no wrapper nesting —
  * and each property's current value reaches its child widget, so stored
  * nested values populate at every depth (the adapter-era MapAdapter
  * discarded them, which read as "the value did not save").
+ *
+ * A map that declares no properties, such as a slot variant for a choice
+ * with nothing more to say (a daily digest has no send day), holds
+ * nothing: it renders as an empty container, with no title around
+ * nothing, and answers an empty map.
  */
 #[DataSurfaceWidget(
   id: 'map',
@@ -55,8 +60,7 @@ final class MapWidget extends DataSurfaceWidgetBase implements ContainerFactoryP
    * {@inheritdoc}
    */
   public function isApplicable(DataDefinitionInterface $definition): bool {
-    return $definition instanceof ComplexDataDefinitionInterface
-      && $definition->getPropertyDefinitions() !== [];
+    return $definition instanceof ComplexDataDefinitionInterface;
   }
 
   /**
@@ -64,6 +68,11 @@ final class MapWidget extends DataSurfaceWidgetBase implements ContainerFactoryP
    */
   public function buildElement(DataDefinitionInterface $definition, mixed $value): array {
     assert($definition instanceof ComplexDataDefinitionInterface);
+    if ($definition->getPropertyDefinitions() === []) {
+      // Nothing to fill in, so nothing to draw; the container is still
+      // there for a rebuild to replace when another variant is chosen.
+      return ['#type' => 'container'];
+    }
     // A map that only groups the maps inside it, each its own details,
     // has nothing of its own to title, so nothing is drawn around them.
     $element = DefinitionMetadata::isGrouping($definition) ? ['#type' => 'container'] : [

@@ -149,11 +149,15 @@ drush tool:list
 
 `drush tool:info data_surface:field.instance:reuse` prints the input
 definitions. Every key in `values` is required exactly when the resource
-requires it, on an edit as on an add; a tool for an operation that needs
-nothing and changes what exists, such as
-`data_surface:registration.step3:configure`, defaults each key to what
-is stored now, and a tool that needs a subject does the same once its
-parameters name one. The `values` input's `settings` carry every field type's
+requires it, on an edit as on an add. A tool for an operation that
+creates lists the declared defaults; one for an operation that changes
+what exists, such as `data_surface:registration.step3:configure` or
+`data_surface:field.instance:edit`, lists no default at all, because a
+listing is cached by its clients and a key left out keeps its current
+value: its description says so and names the read tool, which returns
+the current values. Once a tool that needs a subject has its
+parameters, its refined `values` defaults each key to what is stored
+now, for that one call. The `values` input's `settings` carry every field type's
 settings until the storage is known, and refine into the address
 settings once `storage` names an address storage. Compare with
 `drush tool:info tool_belt:field_add` on the same site, or read
@@ -173,7 +177,8 @@ enabled, at `/surface-api/{surface}/{situation}`
 ## The read tool
 
 A caller that wants to change a thing usually wants to see it first,
-and a write tool's `values` defaults are not a read. So every operation
+and a listing is not a read: a write tool for a thing that exists lists
+no defaults. So every operation
 that can be asked on its own and changes a thing that exists has a read
 tool beside its write tool, derived by the same deriver under the same
 base plugin id:
@@ -259,7 +264,7 @@ The routes of `data_surface_examples` name it.
 | `Kernel\OperationToolsTest` | The generated tools: which exist, the two derivation rules, what they advertise, refinement to the thing a parameter names, execution, dry run, access, the storage tool's has-data constraint. |
 | `Kernel\ResourceCatalogueTest` | The catalogue read from the static layer, and `docs/catalogue.md` against it, where each derived slot is listed. |
 | `Kernel\ExamplesStepsTest` | The contract panel: its rows as the answers narrow them, the contract's slot conditionals, and the tool's schema below them. |
-| `Kernel\ExamplesToolTest` | `data_surface:registration.step3:configure`: the example calls, its definition (required as the resource says, defaulting to what is stored, and current again after a write), and a partial update the Tool API refuses. |
+| `Kernel\ExamplesToolTest` | `data_surface:registration.step3:configure`: the example calls, its definition (required as the resource says, no default at any depth, the read tool named in its description, and the same after a write), and a partial update the Tool API refuses. |
 | `Kernel\ReadToolTest` | The read tools: one per operation that changes a thing that exists and none for one that creates, a read operation taking exactly the parameters, an output map of the write tool's keys, step 3's stored values with the compliance module's mounted keys before and after a write, the content type read by its type, an unknown parameter failing as for the write tool, access as the write tool's, and a secret never returned. |
 | `Kernel\DerivedToolDefinitionsTest` | Tool Explorer showing every derived tool, read tools included, and installing a module deriving its tools. |
 
@@ -311,8 +316,9 @@ changing the Tool API.
   statement is carried anyway.
 - **A required map property's default is not honoured.** A resource's
   required key must hold a value, which a default or a stored value
-  can supply; the bridge says `required` as the resource does, and puts
-  what is stored in each property's `default`. But
+  can supply; the bridge says `required` as the resource does, and, once
+  a tool's parameters name what it edits, puts what is stored in each
+  property's `default`. But
   `TypedInputsTrait::validateInputValue()` refuses a required property
   the payload leaves out ("This property is required.") whatever its
   default, and the `!isset($default_value) && isRequired()` check that

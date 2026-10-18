@@ -47,10 +47,10 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * mistake does not take every other tool down with it; building that
  * resource reports it by name.
  *
- * An operation that needs nothing and changes a thing that exists is
- * described in its real context, its values defaulting to what is stored
- * when the definitions are derived; they are cached, so the tool clears
- * them after it writes.
+ * An operation that needs nothing is described in its real context. One
+ * that changes a thing that exists lists no defaults: a key left out keeps
+ * its current value, which its read tool returns, and the definitions are
+ * cached, so a stored value listed here would go stale unseen.
  *
  * An operation that changes a thing that exists has a read tool beside
  * its write tool, `<resource id>:<operation id>:read`, of the class

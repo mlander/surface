@@ -9,3 +9,41 @@ config_test.dynamic.*.third_party.data_surface_target_test:
     note:
       type: string
       label: 'Note'
+
+# Two simple config objects for ConfigObjectStorage: one holding a
+# translatable value, so core asks for a language code, and one holding
+# none. The first mounts other modules' settings the way a settings
+# resource does: a sequence whose type is named by the module key, each
+# module declaring its own part.
+data_surface_target_test.translatable:
+  type: config_object
+  label: 'Translatable settings'
+  mapping:
+    greeting:
+      type: label
+      label: 'Greeting'
+    limit:
+      type: integer
+      label: 'Limit'
+    third_party_settings:
+      type: sequence
+      label: 'Third party settings'
+      requiredKey: false
+      sequence:
+        type: data_surface_target_test.translatable.third_party.[%key]
+
+data_surface_target_test.translatable.third_party.data_surface_target_test:
+  type: mapping
+  label: 'Data surface target test settings'
+  mapping:
+    note:
+      type: string
+      label: 'Note'
+
+data_surface_target_test.plain:
+  type: config_object
+  label: 'Plain settings'
+  mapping:
+    limit:
+      type: integer
+      label: 'Limit'

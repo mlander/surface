@@ -12,6 +12,15 @@ accept right now, on this site, for this thing) and get the same answer.
 | **Owner**, a `#[Resource]` or `#[Structure]` class in `src/Resource/` or `src/Structure/`, or a plugin that is its own structure | `static defineInputs($inputs)`, optionally `static defineOutputs($outputs)` | static `#[RefinesInput('key')]` methods |
 | **Another module**, an `#[Alters]` class in `src/Alter/` | `alterInputs($inputs)`, optionally `alterOutputs($outputs)` | `#[RefinesInput('key')]` methods |
 
+**Start with [Your first resource](first-resource.md).** A settings page
+needs four things: a resource class, an operation on it, a storage class
+for its config object, and its keys declared with `add()`; plus the
+route, the permission and the config schema any Drupal settings page
+has. Nothing else on this page is needed for it. [Your second
+resource](second-resource.md) adds one key that depends on another, and
+[Concepts](concepts.md) lists every other idea with the question that
+makes you need it.
+
 [The pattern](pattern.md) is the whole of what an author writes, and
 why; [How it fits](how-it-fits.md) follows one request through the
 build step. The rest of this page is the module around it.
@@ -139,6 +148,9 @@ hand.
 
 ## Where to start
 
+- **Writing your first resource**: [Your first
+  resource](first-resource.md), then [Your second
+  resource](second-resource.md) and [Concepts](concepts.md).
 - **Learning the pattern**: [The pattern](pattern.md), then [How it
   fits](how-it-fits.md); [Decisions](decisions.md) for the points it
   left open and how they were settled.
@@ -168,6 +180,6 @@ hand.
 The module ships no resources of its own on a production site. It
 provides the model, the pipeline, the two plugin types and the host
 adoption layer; resources and structures come from the modules that
-declare them. Ten experimental submodules demonstrate the model and
+declare them. Twelve experimental submodules demonstrate the model and
 double as the fixtures the tests run against: see
 [Installation](installation.md).

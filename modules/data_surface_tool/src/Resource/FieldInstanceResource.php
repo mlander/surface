@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface_tool\Resource;
 
 use Drupal\Core\Entity\FieldableEntityInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\data_surface\Resource\Attribute\Operation;
@@ -56,7 +57,7 @@ final class FieldInstanceResource implements ResourceInterface {
   /**
    * Adds a field to a bundle, with a storage of its own.
    */
-  #[Operation('add', label: 'Add a field to a bundle', permission: 'administer %entity_type_id fields')]
+  #[Operation('add', label: new TranslatableMarkup('Add a field to a bundle'), permission: 'administer %entity_type_id fields')]
   public static function add(string $entity_type_id, string $bundle): OperationContext {
     return self::handSettingsTheField(new OperationContext('add', creates: TRUE, known: [
       'entity_type_id' => $entity_type_id,
@@ -70,7 +71,7 @@ final class FieldInstanceResource implements ResourceInterface {
    * An add for the field, an edit for its storage: parent and child see
    * different operations.
    */
-  #[Operation('reuse', label: 'Add an existing field to another bundle', permission: 'administer %entity_type_id fields')]
+  #[Operation('reuse', label: new TranslatableMarkup('Add an existing field to another bundle'), permission: 'administer %entity_type_id fields')]
   public static function reuse(FieldStorageConfigInterface $storage, string $bundle): OperationContext {
     return self::handSettingsTheField(self::add($storage->getTargetEntityTypeId(), $bundle)
       ->withId('reuse')
@@ -81,7 +82,7 @@ final class FieldInstanceResource implements ResourceInterface {
   /**
    * Edits a field. Everything that says which field it is, is known.
    */
-  #[Operation('edit', label: 'Edit a field', permission: 'administer %entity_type_id fields')]
+  #[Operation('edit', label: new TranslatableMarkup('Edit a field'), permission: 'administer %entity_type_id fields')]
   public static function edit(FieldConfigInterface $field): OperationContext {
     $storage = $field->getFieldStorageDefinition();
     assert($storage instanceof FieldStorageConfigInterface);

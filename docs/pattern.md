@@ -109,7 +109,10 @@ method.
   static, so the language holds them to that: the build step calls them
   on the class and never makes an instance. The owner gets
   `BlueprintInterface`; an alter gets `BlueprintAdditionsInterface`, which is
-  the same minus `attachBy()`. An alter can add keys, reword a label or
+  the same minus `attachBy()`, and whose `attach()` and `attachList()`
+  refuse by name for now: an alter's keys are mounted under its module,
+  and a child inside a mount is not built
+  ([decision](decisions.md#an-alter-cannot-attach)). An alter can add keys, reword a label or
   description with `describe()` (and, on its own mount, say where its
   fieldset is drawn), and offer more values on a fixed choice list with
   `extendChoices()`. It cannot remove a key or change its type. Inputs

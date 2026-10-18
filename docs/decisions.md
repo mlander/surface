@@ -584,6 +584,19 @@ refine into a
 child and a child cannot read a parent's value; refusing the watch too
 makes the wall hold both ways. (`Resources::assertWalled()`)
 
+### An empty variant is an empty map
+
+A slot variant may declare no keys, the spelling of "this choice has
+nothing more to say". It renders as nothing (an empty container on the
+form, nothing on the React page), its value is an empty map, and both
+contracts and the tool state an object with no properties; a value left
+by another variant does not fit it and goes, as between any two
+variants. The map widget serves any complex definition and answers an
+empty one with `[]`: a map that declares nothing can hold nothing, and
+before this the form threw for want of a widget. A key that does not
+apply at all, rather than applying with nothing to say, is ROADMAP item
+2. (`MapWidget`, `Field.tsx`)
+
 ### Outputs hold no children
 
 `attach()` and `attachBy()` on outputs are refused. The pattern lets an
@@ -665,6 +678,30 @@ An attached child is committed before its parent, a slot's variant
 after. An attached child is a part the parent is built on (a field's
 storage); a variant lives on what the parent writes (a field's
 settings). (`StorageAdapter::commit()`)
+
+### A config object is named on a subclass
+
+`ConfigObjectStorage` is abstract, and a module names its config object
+in a subclass's `CONFIG` constant, the way the examples' storage classes
+did before it existed. A storage class is an autowired service, one per
+class, so it cannot be handed a name per resource; an argument on
+`#[Resource]` would put a storage detail on the resource, which the
+pattern keeps out of it. The subclass is three lines, and it is where a
+settings resource's storage grows if it needs to. (`ConfigObjectStorage`)
+
+### The whole object is checked
+
+`ConfigObjectStorage::prepare()` validates the written values laid over
+the stored object, not the written keys alone, with violations filed
+under the keys being written. A type that resolves through a sibling and
+core's language code rule, which is checked at the root, only judge the
+object whole. It owns `langcode` by core's rule (present exactly when the
+schema has a translatable value) and `_core`. A module's mounted
+settings that resolve to no schema type are refused, since config
+validation lets data no schema describes through silently. A config object with
+no schema at all is a `\LogicException`, not a violation: it is the
+developer's to fix, before any person sees the form.
+(`ConfigObjectStorage::prepare()`, `ConfigObjectStorage::mountsWithoutSchema()`)
 
 ### Who produces outputs
 
@@ -821,6 +858,18 @@ supply is no tool: it could never be allowed. `field.storage`'s `add`
 is only ever a field's child. (`ResourceOperationToolDeriver`,
 `ResourceCatalogue::standalone()`)
 
+### A Symfony placeholder is filled in when shown
+
+A constraint message written with Symfony's `{{ max }}` is filled in
+where the violation is made into the module's own (`ViolationMessage`
+wraps it), and respelled `%max` where a constraint is copied into a tool
+input, whose validator is core's translator. Core's translator turns the
+`{{ max }}` parameter into `%max` and leaves the message alone, so a
+custom message reached the person with the braces in it; rewriting the
+message at declaration would change what the author wrote and what a
+translator matches on, and the wrapper keeps the original translatable
+string. (`Pipeline\ViolationMessage`, `InputDefinitions::constraints()`)
+
 ### A violation summary is plain text
 
 A derived tool's refusal names each violation with its message rendered
@@ -829,23 +878,35 @@ line is escaped there, so a message's own placeholder markup (Range's
 `<em class="placeholder">`) would otherwise reach the caller, Drush
 included, as literal tags. (`ResultReportingTrait::violationSummary()`)
 
-### Required is the resource's, and defaults are what is stored
+### Required is the resource's, and a listing carries no stored value
 
 A derived tool's `values` property is required exactly when the resource,
 built for the operation, requires the key, whatever its default and
 whether or not the operation creates, except a secret, which is always
-optional ([A secret is optional, never nullable](#a-secret-is-optional-never-nullable)); built in a real context that
-changes a thing that exists, each property defaults to what its storage
-loads now (a secret to nothing). `drush tool:info` has to say what the
-resource requires and what is there. The cost is the Tool API's: it
-refuses a required map property a payload leaves out, default or not
-(`TypedInputsTrait::validateInputValue()`), so an edit sends every
-required key. An operation that needs a subject keeps declared defaults
-until its parameters refine it. A static definition is cached, so its
-stored defaults are as of the last discovery; a write through the tool
-clears it, a write by any other path shows at the next cache rebuild.
-(`OperationInputs::values()`, `InputDefinitions::withStored()`,
-`ResourceOperationTool::doExecute()`)
+optional ([A secret is optional, never nullable](#a-secret-is-optional-never-nullable)).
+What a property defaults to in the tool's static definition, its
+listing, depends on whether the operation creates. One that creates
+lists the declared defaults, which are what a key left out becomes. One
+that changes a thing that exists lists none, at any depth, and its
+description says that a key left out keeps its current value and names
+the read tool that returns the current values.
+
+Why (decided 2026-10-18, replacing "defaults are what is stored"): a
+listing is a discovery channel that clients cache, `tools/list` in MCP
+among them, so a stored value in it is as of the last discovery and goes
+stale unseen, and a default on an edit says what a key left out becomes,
+which is not what happens: it keeps what is stored. The read tool is
+the per-request answer to "what is there". Once an operation's
+parameters arrive, the refined `values`, which no client caches, still
+defaults each property to what its storage loads now, and the schema
+for these answers keeps current values in `values`; the full schema
+keeps declared defaults. Updates stay a patch. The cost is the Tool
+API's: it refuses a required map property a payload leaves out, default
+or not (`TypedInputsTrait::validateInputValue()`), so an edit sends
+every required key. A write through the tool no longer clears the
+definition cache, since nothing in the listing changed.
+(`OperationInputs::declaredValues()`, `OperationInputs::values()`,
+`InputDefinitions::withoutDefaults()`, `InputDefinitions::withStored()`)
 
 ### Which operations read
 
@@ -939,6 +1000,21 @@ either. The data surface's message wins when both have one. On a full
 submission nothing changes: core prints every error at the top and
 marks the elements. (`DataSurfaceFormBuilder::flagSurfaceErrors()`,
 `DataSurfaceFormBuilder::refreshSurface()`, `Hook\InlineErrorHooks`)
+
+### An element hints and the rule speaks
+
+A stock widget puts what a constraint allows on its element as a hint
+(`#min`, `#max`, `#maxlength`), and the number widget clears core's
+`#element_validate`, so the pipeline's violation is the one message a
+refusal shows. Core's number element checks `#min`, `#max` and `#step`
+before any form level handler, a form keeps the first error per
+element, and its wording ("must be lower than or equal to 1000")
+replaced the rule's own message, a refiner's `notInRangeMessage`
+included; the tool and the served contract said the rule's. Mapping the
+element's error back to the rule's message would keep two checks that
+can disagree; one check is the module's whole case. The email and url
+elements keep their validation for now: it also trims the value, which
+the pipeline does not. (`NumberWidget::buildElement()`)
 
 ### A Regex is explained by its message
 
@@ -1226,7 +1302,7 @@ not built yet, and no core constraint names a bundle's fields.
 ### What the examples are made of
 
 Each example of `data_surface_examples` keeps its settings in a config
-object of its own and names a storage subclass of `RegistrationStorage`
+object of its own and names a subclass of `ConfigObjectStorage`
 that says which; an example's resource repeats the previous example's
 keys rather than extending its class, so each example reads alone on
 screen. The machine names keep the word step (`registration_step2`,
@@ -1426,8 +1502,8 @@ As in the Tool API, `required` means present and not null and says
 nothing about size: an empty list or map is a value, and "not empty" is
 `NotBlank` or `Count`. A secret is the one exception, never in
 `required` ([A secret is optional, never nullable](#a-secret-is-optional-never-nullable)).
-The Tool API bridge copies the same flag (see "Required is the
-resource's, and defaults are what is stored"); the served contract's
+The Tool API bridge copies the same flag ([Required is the resource's,
+and a listing carries no stored value](#required-is-the-resources-and-a-listing-carries-no-stored-value)); the served contract's
 `values` always carry every key, so presence is never the question
 there. (`ContractEmitter::required()`)
 

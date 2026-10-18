@@ -25,6 +25,9 @@ plugins:
 
 nav:
   - Home: index.md
+  - Your first resource: first-resource.md
+  - Your second resource: second-resource.md
+  - Concepts: concepts.md
   - Installation: installation.md
   - The pattern: pattern.md
   - How it fits: how-it-fits.md

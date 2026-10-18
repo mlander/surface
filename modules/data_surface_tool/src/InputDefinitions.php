@@ -14,6 +14,7 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Options\DataSurfaceOptions;
+use Drupal\data_surface\Pipeline\ViolationMessage;
 use Drupal\data_surface\Entry;
 use Drupal\data_surface\Slot;
 use Drupal\tool\TypedData\InputDefinition;
@@ -536,6 +537,33 @@ final class InputDefinitions {
   }
 
   /**
+   * Takes every default off a map's properties, at any depth.
+   *
+   * For the static listing of an operation that changes a thing that
+   * exists: a key left out keeps what is stored, so a default there would
+   * say what does not happen. A list's items keep theirs, since a new
+   * item has nothing stored.
+   *
+   * @param \Drupal\tool\TypedData\MapInputDefinition $map
+   *   The map, changed in place.
+   *
+   * @return \Drupal\tool\TypedData\MapInputDefinition
+   *   The same map.
+   */
+  public function withoutDefaults(MapInputDefinition $map): MapInputDefinition {
+    foreach ($map->getPropertyDefinitions() as $property) {
+      if (!$property instanceof InputDefinitionInterface) {
+        continue;
+      }
+      $property->setDefaultValue(NULL);
+      if ($property instanceof MapInputDefinition) {
+        $this->withoutDefaults($property);
+      }
+    }
+    return $map;
+  }
+
+  /**
    * Finds every key a data surface marks secret, at any depth.
    *
    * A secret is a scalar key of its own (DefinitionMetadata::setSecret()
@@ -765,7 +793,10 @@ final class InputDefinitions {
    *
    * Every option value is then made a scalar (scalarOptions() says how
    * and why), so a LabeledChoice's labels travel as the strings they
-   * read as rather than as TranslatableMarkup.
+   * read as rather than as TranslatableMarkup. A message option written
+   * with Symfony's `{{ max }}` is respelled `%max`, which is what core's
+   * translator fills in, so the Tool API's own refusal shows the number
+   * as the pipeline's does (ViolationMessage).
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition to read.
@@ -786,6 +817,11 @@ final class InputDefinitions {
     }
     foreach ($constraints as $name => $options) {
       $constraints[$name] = $this->scalarOptions($options, (string) $name);
+      foreach ($constraints[$name] as $option => $value) {
+        if (is_string($value) && preg_match('/message$/i', (string) $option)) {
+          $constraints[$name][$option] = ViolationMessage::drupalPlaceholders($value);
+        }
+      }
     }
     return $constraints;
   }

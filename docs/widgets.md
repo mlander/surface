@@ -64,7 +64,7 @@ function my_module_data_surface_widget_info_alter(array &$definitions): void {
 | Widget | Weight | Applies to |
 | --- | --- | --- |
 | `options` | -10 | Any definition whose constraints resolve to a non-empty list of allowed values. See [Options and resolvers](options.md). |
-| `map` | 5 | A `ComplexDataDefinitionInterface` that declares at least one property. |
+| `map` | 5 | A `ComplexDataDefinitionInterface`. One that declares no property, such as a slot variant for a choice with nothing more to say, renders as an empty container and answers an empty map. |
 | `string` | 10 | `string`, `email`, `uri`. |
 | `number` | 10 | `integer`, `float`. |
 | `boolean` | 10 | `boolean`. |
@@ -75,11 +75,24 @@ than a text field; the map widget comes next, so a complex definition
 that also resolves to options is still a select; and the per-type widgets
 are the fallback.
 
+The options widget claims a key only while its list is **non-empty**. A
+refiner that narrows a list to nothing (`'choices' => []`) therefore
+turns the key's select into a text field holding the stored value, which
+then fails as "not a valid choice" on a field that offers none. Until a
+refiner can say a key does not apply ([ROADMAP](../ROADMAP.md), "This key
+does not apply"), spell "only when" as a slot whose other variants
+declare no keys: an empty variant renders as nothing, and its value is an
+empty map ([Children](resources.md#children)).
+
 What the stock widgets do beyond the obvious: defaults populate at every
 depth, and constraint options reach the element, so the browser enforces
 what the definition declares. `Length`'s `max` becomes `#maxlength` on
 the string widget and `Range`'s `min` and `max` become `#min` and `#max`
-on the number widget. A select offers an empty option by [the empty
+on the number widget. Those are hints for the browser, not checks: the
+number widget clears core's `#element_validate`, whose own wording ("must
+be lower than or equal to") would otherwise replace the rule's message,
+so a refusal says what the `Range`, and any message a refiner gave it,
+says ([decision](decisions.md#an-element-hints-and-the-rule-speaks)). A select offers an empty option by [the empty
 option rule](decisions.md#the-empty-option-rule): always when optional,
 and when required only while no valid choice is selected. The string
 widget picks its element type from the definition — `textarea` when the

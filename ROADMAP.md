@@ -405,7 +405,11 @@ renames sit in A because they are cheapest before new code exists.
   and the leftover-words decision; then merge `next` to `main`, the React
   local resolution included.
 - **A, from the first fresh-eyes run (2026-10-18, `docs/fresh-eyes-2026-10-18.md`),
-  before the merge:** ship a storage class for a simple config object
+  before the merge** — DONE 2026-10-18: `ConfigObjectStorage`, the pinned
+  pages `docs/first-resource.md` and `docs/second-resource.md` on
+  `data_surface_first`, `docs/concepts.md`, the guesses documented where
+  the log asked, the two contradictions, the three bugs, and defaults
+  out of the tool listing (item 9). As planned: ship a storage class for a simple config object
   (the most common case has none; the docs only say it was removed);
   a settings-page recipe at the top of the README, which becomes the
   pinned "Your first resource" page; document the permissions file and
@@ -578,7 +582,8 @@ renames sit in A because they are cheapest before new code exists.
    means narrowing the `values` map from its own partial value in the
    tool bridge. One retry per dependent key is the target. Applies to
    ECA and MCP alike.
-   Defaults in the listing (decided 2026-10-18): a tool listing is
+   Defaults in the listing (decided 2026-10-18, DONE 2026-10-18,
+   `docs/decisions.md#required-is-the-resources-and-a-listing-carries-no-stored-value`): a tool listing is
    cached by clients and is a discovery channel, so it stops carrying
    current stored values as `default`. A create operation lists the
    declared defaults; an edit operation lists none and says in its
@@ -629,7 +634,10 @@ renames sit in A because they are cheapest before new code exists.
 13. **Confidence in the direction.** The two risks the design carries
     are weight and the untested half, so these are gates every later
     item is held to, with the evidence each produces.
-    - **A concept budget, with a page that enforces it.** A doc page,
+    - **A concept budget, with a page that enforces it.** (The page and
+      the inventory exist: `docs/first-resource.md`, pinned to
+      `data_surface_first` by `FirstResourceDocsTest`, and
+      `docs/concepts.md`.) A doc page,
       "Your first resource", that writes a working resource using only
       resource, operation, storage and `add()`, and nothing else, with a
       drift test that pins its code. Every item in B and C must leave

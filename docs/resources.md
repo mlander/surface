@@ -159,6 +159,13 @@ already known, and that is a **context**, an `OperationContext`:
   `#[Operation]`, each returning a context whose id is the operation's
   id. What an operation needs is its own signature: a route or a tool
   supplies its parameters by name.
+- The context is `new OperationContext($id, creates: FALSE, known: [])`:
+  its id, whether it creates the thing, and the identity keys it knows,
+  each with its value. A singleton's one operation returns
+  `new OperationContext('configure')`; the id is the operation's own
+  and has nothing to do with the plugin hosts' `configure` verb, which
+  no operation declares. `withConstraint()`, `withStarting()` and
+  `withChild()` return a copy that says more.
 - Another module adds an operation with
   `#[Operation('clone', of: SomeResource::class)]` on a static method in
   its `src/Alter/`. Two declarations of one id are refused, naming both.
@@ -180,14 +187,14 @@ The content type resource is the worked example:
 )]
 final class NodeTypeResource implements ResourceInterface {
 
-  #[Operation('add', label: 'Add a content type', permission: self::PERMISSION)]
+  #[Operation('add', label: new TranslatableMarkup('Add a content type'), permission: self::PERMISSION)]
   public static function add(): OperationContext {
     // Unique on add only: that is where you are, not what was entered.
     return (new OperationContext('add', creates: TRUE))
       ->withConstraint('type', 'DataSurfaceUniqueNodeType');
   }
 
-  #[Operation('edit', label: 'Edit a content type', permission: self::PERMISSION)]
+  #[Operation('edit', label: new TranslatableMarkup('Edit a content type'), permission: self::PERMISSION)]
   public static function edit(NodeTypeInterface $type): OperationContext {
     return new OperationContext('edit', known: ['type' => $type->id()]);
   }
@@ -260,7 +267,12 @@ Two tiers, and alters never touch either:
   static part, answerable with nothing loaded. A `%key` in it is filled
   from the identity the context knows
   (`administer %entity_type_id fields`); a placeholder the context does
-  not know is refused.
+  not know is refused. The permission is the module's own, declared in
+  its `MODULE.permissions.yml` as any permission is (or one another
+  module declares, such as `administer site configuration`); an
+  operation names it and declares nothing. A route serving the operation
+  asks for this answer with the requirement
+  `_data_surface_operation_access: 'TRUE'`, and the tool asks the same.
 - **The access class**, `access:` on `#[Resource]` or `#[Structure]`,
   an `OperationAccessInterface` that may hold services, asked only once
   the permission allows: what depends on the thing itself.
@@ -386,13 +398,17 @@ own is a tool, `data_surface:<resource id>:<operation id>`, derived by
   with its label, meaning and allowed values), then `values`, the
   resource's keys less the identity keys the operation knows, then
   `dry_run`. A key the resource requires is required in `values`,
-  whatever the operation, and for an operation that needs nothing and
-  does not create, each key's default is the value stored now. The
-  definition is static, which is what operations make possible: an
+  whatever the operation. An operation that creates lists the declared
+  defaults; one that changes a thing that exists lists none, and its
+  description says that a key left out keeps its current value and
+  names the read tool, since a listing is cached by its clients
+  ([decision](decisions.md#required-is-the-resources-and-a-listing-carries-no-stored-value)).
+  The definition is static, which is what operations make possible: an
   operation that needs nothing is the exact contract before anyone
   calls, and one that needs an existing thing refines `values` to its
-  real context (a field's settings become its type's) through the Tool
-  API's own input refiners once its parameters arrive.
+  real context (a field's settings become its type's, each key
+  defaulting to what is stored now) through the Tool API's own input
+  refiners once its parameters arrive.
 - **Access** is the operation's, decisively, then a slot variant its
   locked deciding key chose may refuse through its own access class.
 - **Execution** is the operation, the build, and one pipeline submit to
@@ -593,6 +609,14 @@ owner's methods never see them, and what is offered is the union.
 `DemoFormatterAlter` offers a ribbon variant on the demo formatter and
 keeps it to upper case.
 
+Mounted keys need config schema, since the owner's storage holds every
+write to it. On a config entity core describes
+`third_party_settings.<module>` already, and the mounting module declares
+its part as for any third-party setting. On a simple config object the
+owner declares `third_party_settings` as a sequence typed by the module
+key, and the mounting module declares its part; `ConfigObjectStorage`
+refuses a mount no schema describes ([Storage](storage.md#keys-another-module-mounts)).
+
 `DemoBlockAlter` in the demo extras module does all three things an
 alter can: it adds a badge, rewords the headline's help text with
 `describe()`, and caps the number of items while the block is a grid.
@@ -689,6 +713,12 @@ own, as a field's storage is.
   it, and the sibling's allowed values become exactly the values the
   variants fill. A new variant brings itself and the parent never
   changes.
+- A variant may declare no keys: a choice with nothing more to say (a
+  daily digest has no send day, a weekly one does). It renders as
+  nothing on the form and the React page, its value is an empty map, and
+  both contracts and the tool state it as an object with no properties.
+  `DigestResource` in the surface test module is the fixture; one class
+  per value, since `#[Variant]` names one value.
 
 The demo block's presentation is a slot its two presentation structures
 fill; the field instance resource attaches its storage, a resource of

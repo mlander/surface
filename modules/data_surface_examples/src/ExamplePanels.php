@@ -9,7 +9,7 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Form\DataSurfaceFormPanelInterface;
 use Drupal\data_surface\ResourceBuild\OperationRoute;
 use Drupal\data_surface\ResourceBuild\ResourceRegistry;
-use Drupal\data_surface_examples\Storage\RegistrationStorage;
+use Drupal\data_surface\Storage\ConfigObjectStorage;
 
 /**
  * The two panels under an example's form: the contract, and today.
@@ -69,7 +69,7 @@ final class ExamplePanels implements DataSurfaceFormPanelInterface {
     ];
     $definition = $this->registry->getDefinition($served->resource);
     $storage = (string) $definition->storage;
-    if (is_a($storage, RegistrationStorage::class, TRUE)) {
+    if (is_a($storage, ConfigObjectStorage::class, TRUE)) {
       // The full schema the contract panel shows, asked for again rather
       // than read back out of its render array: static against static.
       $full = $this->emitter->emitFull($declared, $definition->id, $served->operation->id, $served->operation->label);

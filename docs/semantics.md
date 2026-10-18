@@ -398,6 +398,18 @@ Placeholders are still placeholders until something renders it, so a
 value that contains markup is escaped once, by whoever prints it, rather
 than escaped at build time and escaped again on the page.
 
+A constraint message may spell its placeholders Symfony's way,
+`At most {{ max }} recipients per send.`, as a custom
+`notInRangeMessage` usually is, or Drupal's, `%max`, as core's own
+constraints do. Core's validator translator fills in only Drupal's, so
+the pipeline wraps a message holding a Symfony placeholder in
+`Pipeline\ViolationMessage`, which fills each one in, escaped and
+emphasized as `%max` would be, when the message is rendered: the form,
+the tool's refusal and the served contract all print the number. The
+tool's input definitions carry the constraint across respelled `%max`,
+so the Tool API's own check, which runs before the pipeline, says the
+same.
+
 There are exactly three places a message becomes text, all of them
 exception messages, because PHP has nowhere to put an object in one:
 `UnknownKeysException`, `StorageViolationsException`, and the refusal

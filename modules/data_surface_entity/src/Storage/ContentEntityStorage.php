@@ -13,6 +13,7 @@ use Drupal\Core\Entity\RevisionLogInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\data_surface\Pipeline\Violation;
+use Drupal\data_surface\Pipeline\ViolationMessage;
 use Drupal\data_surface\Pipeline\StorageViolationsException;
 use Drupal\data_surface\Pipeline\ViolationSet;
 use Drupal\data_surface\Resource\OperationContext;
@@ -166,7 +167,7 @@ final class ContentEntityStorage implements ResourceStorageInterface, ContainerI
     $violations->filterByFields(array_diff(array_keys($entity->getFieldDefinitions()), array_keys($fields)));
     $refused = [];
     foreach ($violations as $violation) {
-      $refused[] = static::violation($violation->getPropertyPath(), $violation->getMessage());
+      $refused[] = static::violation($violation->getPropertyPath(), ViolationMessage::of($violation));
     }
     if ($refused !== []) {
       throw new StorageViolationsException(new ViolationSet($refused));

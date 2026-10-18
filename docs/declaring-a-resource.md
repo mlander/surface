@@ -80,7 +80,10 @@ outputs, which the demo formatter declares; the test module's
   method.
 - **`add()` takes name, type and label** and returns the core
   definition, so the rest is plain core API: `setRequired()`,
-  `setDescription()`, `addConstraint()`, `setSetting()`.
+  `setDescription()`, `addConstraint()`, `setSetting()`. The label is
+  the one every door shows: the form element's title, the tool's
+  property label, the schema's `title`; the description is the text
+  under the element and the property's description.
   `addDefinition()` is the long form, for a map or a list. The label is
   `t('...')` with a literal string; see [Translatable
   strings](#translatable-strings).
@@ -425,20 +428,19 @@ advertised. Declare the secret as a key of its own.
 Secret and locked may coexist, and mean different things: locked says
 input cannot move the value, secret says the value is never read back.
 
-### What phase B will emit
+### What the schema says
 
-Nothing emits a schema yet. When the schema emitter lands, two flags
-already on the contract map onto JSON Schema keywords, and the mapping is
-recorded here so it is not reinvented:
+The served contract ([The served contract](served-contract.md)) states
+both flags with JSON Schema's own keywords:
 
 | Flag | Keyword |
 | --- | --- |
-| `secret` | `writeOnly` |
-| locked | `readOnly` |
+| `secret` | `writeOnly: true`, never in `required`, no default |
+| locked | `readOnly: true`, with `x-surface.locked` |
 
-Until then the bridges say it in prose: a locked key carries "Fixed for
-this operation." in its form description and the Tool API's own locked
-flag, and a secret key carries the write-only note.
+The other doors say it in their own terms: a locked key carries "Fixed
+for this operation." in its form description and the Tool API's own
+locked flag, and a secret key carries the write-only note.
 
 ### What the flag does not do
 

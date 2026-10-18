@@ -15,6 +15,7 @@ use Drupal\data_surface\ResourceBuild\OperationDefinition;
 use Drupal\data_surface\ResourceBuild\OperationParameter;
 use Drupal\data_surface\ResourceBuild\ResourceDefinition;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
+use Drupal\data_surface_tool\Plugin\tool\Tool\ResourceOperationReadTool;
 use Drupal\tool\TypedData\InputDefinition;
 use Drupal\tool\TypedData\InputDefinitionInterface;
 use Drupal\tool\TypedData\MapInputDefinition;
@@ -54,15 +55,23 @@ use Drupal\tool\TypedData\OutputDefinition;
  *
  * Every property of `values` is required exactly when the resource, built
  * for that operation, requires it, whether the operation creates or not.
- * Built in a real context that changes a thing that exists, each
- * property's default is what the storage loads for it now, falling back
- * to the declared default, so a caller reads what is there; the static
- * definition of an operation that needs a subject has no subject to load,
- * so it keeps the declared defaults until the parameters arrive.
+ * What a property defaults to depends on whether the operation creates.
+ * One that creates lists the declared defaults, which are what a key left
+ * out becomes. One that changes a thing that exists lists none in its
+ * static definition, which clients cache as a discovery channel: a key
+ * left out keeps its current value, and its description names the read
+ * tool that returns the current values. Once its parameters arrive, the
+ * refined `values` (values()) defaults each property to what the storage
+ * loads now, for that one request.
  */
 final class OperationInputs {
 
   use StringTranslationTrait;
+
+  /**
+   * The base plugin id every derived tool's id starts with.
+   */
+  public const TOOL = 'data_surface';
 
   /**
    * The input carrying the resource's values.
@@ -134,7 +143,7 @@ final class OperationInputs {
   public function inputs(ResourceDefinition $surface, OperationDefinition $operation): array {
     $neutral = $this->neutral($surface, $operation);
     $inputs = $this->parameterInputs($surface, $operation, $neutral);
-    $inputs[self::VALUES] = $this->declaredValues($surface, $operation, $neutral, TRUE);
+    $inputs[self::VALUES] = $this->declaredValues($surface, $operation, $neutral);
     $inputs[self::DRY_RUN] = new InputDefinition(
       data_type: 'boolean',
       label: $this->t('Dry run'),
@@ -192,7 +201,7 @@ final class OperationInputs {
     $built = $neutral ?? $this->resources->build($surface->name(), $this->resources->operation($surface->name(), $operation->id));
     return [
       self::VALUES => $this->inputDefinitions->outputFromInput(
-        $this->declaredValues($surface, $operation, $neutral, FALSE),
+        $this->declaredValues($surface, $operation, $neutral),
         $this->inputDefinitions->secrets($built),
         $this->t('Stored values'),
         $this->t('What is stored now, as the @surface resource describes it: every key the operation does not already know, including those other modules add, in the shape the write tool takes. A key storage holds nothing for is absent, and a secret is never returned.', ['@surface' => $surface->id]),
@@ -245,7 +254,7 @@ final class OperationInputs {
   public function values(ResourceDefinition $surface, DataSurfaceInterface $built, OperationContext $context): MapInputDefinition {
     $map = $this->map($surface, $built, $this->knownIdentity($surface, $context));
     if (!$context->creates) {
-      // Decision: see docs/decisions.md#required-is-the-resources-and-defaults-are-what-is-stored.
+      // Decision: see docs/decisions.md#required-is-the-resources-and-a-listing-carries-no-stored-value.
       $this->inputDefinitions->withStored($map, $built, $this->resources->storage($surface->name(), $context, $built)->load($built));
     }
     return $map;
@@ -254,6 +263,11 @@ final class OperationInputs {
   /**
    * Gets the `values` map a tool's static definition declares.
    *
+   * An operation that creates lists the declared defaults; one that
+   * changes a thing that exists lists none, at any depth, since a key left
+   * out keeps what is stored rather than taking a default, and a listing
+   * is cached where a stored value would go stale unseen.
+   *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $surface
    *   The resource.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
@@ -261,22 +275,47 @@ final class OperationInputs {
    * @param \Drupal\data_surface\DataSurfaceInterface|null $neutral
    *   The resource built in a context that knows nothing, for an operation
    *   that needs a subject.
-   * @param bool $stored
-   *   Whether an operation that needs nothing and changes a thing that
-   *   exists defaults each property to what is stored; an output carries
-   *   no default, so the read tool does not load.
    *
    * @return \Drupal\tool\TypedData\MapInputDefinition
    *   The map.
    */
-  protected function declaredValues(ResourceDefinition $surface, OperationDefinition $operation, ?DataSurfaceInterface $neutral, bool $stored): MapInputDefinition {
+  protected function declaredValues(ResourceDefinition $surface, OperationDefinition $operation, ?DataSurfaceInterface $neutral): MapInputDefinition {
     if ($operation->needsNothing()) {
       $context = $this->resources->operation($surface->name(), $operation->id);
-      $built = $this->resources->build($surface->name(), $context);
-      return $stored ? $this->values($surface, $built, $context) : $this->map($surface, $built, $this->knownIdentity($surface, $context));
+      $map = $this->map($surface, $this->resources->build($surface->name(), $context), $this->knownIdentity($surface, $context));
     }
-    // Decision: see docs/decisions.md#identity-before-the-parameters.
-    return $this->map($surface, $neutral ?? $this->resources->build($surface->name(), new OperationContext($operation->id)), $this->suppliedIdentity($surface, $operation));
+    else {
+      // Decision: see docs/decisions.md#identity-before-the-parameters.
+      $map = $this->map($surface, $neutral ?? $this->resources->build($surface->name(), new OperationContext($operation->id)), $this->suppliedIdentity($surface, $operation));
+    }
+    if ($this->changesWhatExists($surface, $operation)) {
+      // Decision: see docs/decisions.md#required-is-the-resources-and-a-listing-carries-no-stored-value.
+      $this->inputDefinitions->withoutDefaults($map);
+    }
+    return $map;
+  }
+
+  /**
+   * Answers whether an operation changes a thing that exists.
+   *
+   * The same reading the catalogue's reads() makes for an operation that
+   * can be asked on its own: one that needs nothing, by its context not
+   * creating; one that needs a subject, by its parameters naming one
+   * thing whole.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $surface
+   *   The resource.
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   *
+   * @return bool
+   *   TRUE when a key left out keeps what is stored.
+   */
+  public function changesWhatExists(ResourceDefinition $surface, OperationDefinition $operation): bool {
+    if (!$operation->needsNothing()) {
+      return $operation->namesOneThing($surface->identity);
+    }
+    return !$this->resources->operation($surface->name(), $operation->id)->creates;
   }
 
   /**
@@ -412,6 +451,15 @@ final class OperationInputs {
    *   The description.
    */
   public function description(ResourceDefinition $surface, OperationDefinition $operation): TranslatableMarkup {
+    if ($this->changesWhatExists($surface, $operation)) {
+      return $this->t('@label: the "@operation" operation of the @surface resource. @needs The values input is the resource itself, less what the operation already knows: every setting it takes, including those other modules add, with its label, its meaning and the values it allows. A key left out keeps its current value; @read returns the current values.', [
+        '@label' => (string) $operation->label,
+        '@operation' => $operation->id,
+        '@surface' => $surface->id,
+        '@needs' => $this->needs($operation),
+        '@read' => self::TOOL . ':' . $surface->id . ':' . $operation->id . ResourceOperationReadTool::SUFFIX,
+      ]);
+    }
     return $this->t('@label: the "@operation" operation of the @surface resource. @needs The values input is the resource itself, less what the operation already knows: every setting it takes, including those other modules add, with its label, its meaning and the values it allows.', [
       '@label' => (string) $operation->label,
       '@operation' => $operation->id,

@@ -1,0 +1,9 @@
+name: Data Surface - Your first resource
+type: module
+description: 'The code of the docs page "Your first resource": a newsletter settings page, its form, its tool and its schema, from one resource class. And "Your second resource", a store location whose region depends on its country.'
+package: Data Surface
+lifecycle: experimental
+lifecycle_link: 'https://git.drupalcode.org/project/data_surface/-/blob/1.0.x/README.md#experimental-submodules'
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - data_surface:data_surface

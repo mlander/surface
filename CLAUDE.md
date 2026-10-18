@@ -166,7 +166,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 browser would look for the site in its own container; leave the base URL
 to the environment.
 
-The baseline as of this writing: **751 tests, 7745 assertions, 0 errors,
+The baseline as of this writing: **1011 tests, 12187 assertions, 0 errors,
 0 failures**. The test and assertion counts drift upward as work lands
 and are not the thing to check. **No test may error and no test may
 fail**, the browser tests included; any error or failure is a real
@@ -358,7 +358,7 @@ src/Form/                Form builder, host traits, the operation form.
 src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constraints.
 src/Options/             Option sets, the resolver plugin base and manager.
 src/Refinement/          Narrowing and choice sets.
-modules/                 Eleven experimental submodules; each has its own README.
+modules/                 Twelve experimental submodules; each has its own README.
 tests/src/               Unit, Kernel, Functional, FunctionalJavascript.
 docs/ scripts/           Published documentation; check.sh and the generators.
 ```

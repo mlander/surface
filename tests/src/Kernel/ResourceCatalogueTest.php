@@ -52,6 +52,7 @@ class ResourceCatalogueTest extends DataSurfaceKernelTestBase {
     'data_surface_examples',
     'data_surface_examples_compliance',
     'data_surface_entity',
+    'data_surface_first',
   ];
 
   /**
@@ -85,6 +86,8 @@ class ResourceCatalogueTest extends DataSurfaceKernelTestBase {
       'field.settings.address',
       'field.storage',
       'field_formatter:data_surface_demo_string',
+      'first.newsletter',
+      'first.store',
       'node.type',
       'registration.contact',
       'registration.step1',

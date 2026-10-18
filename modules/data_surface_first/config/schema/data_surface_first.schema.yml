@@ -1,0 +1,27 @@
+data_surface_first.newsletter:
+  type: config_object
+  label: 'Newsletter settings'
+  mapping:
+    sender_name:
+      type: string
+      label: 'Sender name'
+    sender_email:
+      type: email
+      label: 'Sender email'
+    frequency:
+      type: string
+      label: 'Frequency'
+    max_recipients:
+      type: integer
+      label: 'Maximum recipients per send'
+
+data_surface_first.store:
+  type: config_object
+  label: 'Store location'
+  mapping:
+    country:
+      type: string
+      label: 'Country'
+    region:
+      type: string
+      label: 'Region'

@@ -111,12 +111,12 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  *
  *   public const PERMISSION = 'administer things';
  *
- *   #[Operation('add', label: 'Add a thing', permission: self::PERMISSION)]
+ *   #[Operation('add', label: new TranslatableMarkup('Add a thing'), permission: self::PERMISSION)]
  *   public static function add(): OperationContext {
  *     return new OperationContext('add', creates: TRUE);
  *   }
  *
- *   #[Operation('edit', label: 'Edit a thing', permission: self::PERMISSION)]
+ *   #[Operation('edit', label: new TranslatableMarkup('Edit a thing'), permission: self::PERMISSION)]
  *   public static function edit(ExampleInterface $thing): OperationContext {
  *     return new OperationContext('edit', known: ['id' => $thing->id()]);
  *   }

@@ -468,8 +468,9 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         // it here would render its placeholders once, as plain text, and
         // whatever reads the violation afterwards would escape that text
         // a second time; a form error, a tool result and a log line each
-        // render it themselves, at their own boundary.
-        $refusals[] = new Violation($name, $path, $violation->getMessage());
+        // render it themselves, at their own boundary. A Symfony
+        // placeholder core's translator leaves in it is filled in then.
+        $refusals[] = new Violation($name, $path, ViolationMessage::of($violation));
       }
       foreach ($missing as $path => $label) {
         $refusals[] = new Violation($name, $path, $this->t('@label is required.', ['@label' => $label]));
@@ -627,7 +628,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     }
     $errors = [];
     foreach (DefinitionTypedData::create($this->typedDataManager, $own, $items, $name)->validate() as $violation) {
-      $errors[] = new Violation($name, (string) $violation->getPropertyPath(), $violation->getMessage());
+      $errors[] = new Violation($name, (string) $violation->getPropertyPath(), ViolationMessage::of($violation));
     }
     $stored = is_array($current) ? array_values($current) : [];
     $child = $list->child();
@@ -797,7 +798,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       }
       $typed_data = DefinitionTypedData::create($this->typedDataManager, $definition, $output[$name], $name);
       foreach ($typed_data->validate() as $violation) {
-        $errors[] = new Violation($name, (string) $violation->getPropertyPath(), $violation->getMessage());
+        $errors[] = new Violation($name, (string) $violation->getPropertyPath(), ViolationMessage::of($violation));
       }
     }
     return new ViolationSet($errors);

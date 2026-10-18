@@ -37,6 +37,8 @@ one thing whole, with a single entity or with every identity key.
 | [`field.settings.address`](#fieldsettingsaddress) | `AddressFieldSettingsResource` | none | none |
 | [`field.storage`](#fieldstorage) | `FieldStorageResource` | `field_type` | `add`, `edit` |
 | [`field_formatter:data_surface_demo_string`](#field_formatterdata_surface_demo_string) | `DataSurfaceDemoFormatter` | none | none |
+| [`first.newsletter`](#firstnewsletter) | `NewsletterResource` | none | `configure` |
+| [`first.store`](#firststore) | `StoreResource` | none | `configure` |
 | [`node.type`](#nodetype) | `NodeTypeResource` | `type` | `add`, `edit` |
 | [`registration.contact`](#registrationcontact) | `ContactStructure` | none | none |
 | [`registration.step1`](#registrationstep1) | `RegistrationStep1Resource` | none | `configure` |
@@ -133,6 +135,32 @@ one thing whole, with a single entity or with every identity key.
 - Used by: `field_formatter:data_surface_demo_string`; configured through the plugin's host, never on its own.
 
 - Altered by `Drupal\data_surface_demo_extras\Alter\DemoFormatterAlter` (`data_surface_demo_extras`), in every operation; it refines `variant` (watching `casing`).
+
+## first.newsletter
+
+`Drupal\data_surface_first\Resource\NewsletterResource`, in `data_surface_first`.
+
+- Kind: resource
+- Identity: none
+- Storage: `Drupal\data_surface_first\Storage\NewsletterStorage`
+- Access: the operation's permission alone
+
+| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure the newsletter | nothing | no | `administer data_surface_first` | yes | yes | `NewsletterResource::configure()` (`data_surface_first`) |
+
+## first.store
+
+`Drupal\data_surface_first\Resource\StoreResource`, in `data_surface_first`.
+
+- Kind: resource
+- Identity: none
+- Storage: `Drupal\data_surface_first\Storage\StoreStorage`
+- Access: the operation's permission alone
+
+| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure the store location | nothing | no | `administer data_surface_first` | yes | yes | `StoreResource::configure()` (`data_surface_first`) |
 
 ## node.type
 

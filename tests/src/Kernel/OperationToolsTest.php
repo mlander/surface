@@ -178,8 +178,13 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($values->getPropertyDefinitions()['title_label']->isRequired());
     $this->assertFalse($values->getPropertyDefinitions()['description']->isRequired());
     $this->assertTrue($values->isRequired());
-    // With no content type named yet, the defaults are the declared ones.
-    $this->assertSame('Title', $values->getPropertyDefinitions()['title_label']->getDefaultValue());
+    // Editing changes what exists, so the listing carries no default,
+    // declared or stored: a key left out keeps its current value.
+    $this->assertNull($values->getPropertyDefinitions()['title_label']->getDefaultValue());
+    $this->assertStringContainsString('A key left out keeps its current value; data_surface:node.type:edit:read returns the current values.', (string) $edit->getDescription());
+    // Adding one creates, so it lists the declared defaults.
+    $this->assertSame('Title', $add->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['title_label']->getDefaultValue());
+    $this->assertStringNotContainsString('keeps its current value', (string) $add->getDescription());
     $this->assertSame([OperationInputs::VALUES => ['type']], $edit->getInputDefinitionRefiners());
 
     // A field: add takes the entity type and bundle, reuse a storage and

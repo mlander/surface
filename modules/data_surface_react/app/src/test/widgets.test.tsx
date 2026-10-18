@@ -420,6 +420,27 @@ describe('fieldset, slot and list', () => {
     expect(screen.getByLabelText(/Price/)).toBeRequired();
   });
 
+  it('renders nothing for a variant that declares no keys, and the other variants as they are', async () => {
+    const schedule: Schema = { title: 'Schedule', type: ['object', 'null'], 'x-surface': x('slot', { by: 'frequency', variants: ['daily', 'weekly'], dependsOn: ['frequency'] }) };
+    const frequency: Schema = { title: 'Frequency', type: 'string', oneOf: [{ const: 'daily', title: 'Daily' }, { const: 'weekly', title: 'Weekly' }], 'x-surface': x('select') };
+    const days: Schema['allOf'] = [
+      {
+        if: { properties: { frequency: { const: 'daily' } }, required: ['frequency'] },
+        then: { properties: { schedule: { title: 'Daily schedule', type: 'object', 'x-surface': x('fieldset') } } },
+      },
+      {
+        if: { properties: { frequency: { const: 'weekly' } }, required: ['frequency'] },
+        then: { properties: { schedule: { title: 'Weekly schedule', type: 'object', properties: { send_day: { title: 'Send day', type: 'string', 'x-surface': x('text') } }, 'x-surface': x('fieldset') } } },
+      },
+    ];
+    render(<Form schema={object({ frequency, schedule }, ['frequency'], days)} initial={{ frequency: 'daily', schedule: {} }} />);
+    expect(screen.queryByRole('group')).not.toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText(/Frequency/), 'Weekly');
+    expect(screen.getByRole('group', { name: 'Weekly schedule' })).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText(/Frequency/), 'Daily');
+    expect(screen.queryByRole('group')).not.toBeInTheDocument();
+  });
+
   it('renders nothing for a slot nothing has chosen', () => {
     render(<Form schema={object({ pricing, ticket: ticketSlot }, [], branches)} initial={{ pricing: null, ticket: null }} />);
     expect(screen.queryByRole('group', { name: 'Ticket' })).not.toBeInTheDocument();

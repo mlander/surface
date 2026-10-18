@@ -33,3 +33,15 @@ data_surface_surface_test.cellar.edit:
     _data_surface_operation: 'edit'
   requirements:
     _data_surface_operation_access: 'TRUE'
+
+# The digest's one operation, served by the generic form: a slot two of
+# whose variants declare no keys.
+data_surface_surface_test.digest:
+  path: '/surface-test/digest'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Configure the digest'
+    _data_surface_resource: 'Drupal\data_surface_surface_test\Resource\Digest\DigestResource'
+    _data_surface_operation: 'configure'
+  requirements:
+    _data_surface_operation_access: 'TRUE'

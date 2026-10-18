@@ -436,6 +436,16 @@ contract all see the same five values, narrowed the same way.
 
 ## Where this does not reach yet
 
+- **A key that does not apply.** The ribbon's slice is narrowed to
+  nothing, and that is fine: the union still offers the owner's values.
+  Narrowing a whole key to nothing is not: the options widget claims a
+  key only while its list is non-empty ([Widgets](widgets.md#the-stock-widgets)),
+  so the select becomes a text field holding the stored value, which
+  Save then refuses as not a valid choice. Until a refiner can say that
+  a key does not apply (ROADMAP item 2), spell "only when weekly" as a
+  slot on the deciding key whose other variants declare no keys: an
+  empty variant renders as nothing and its value is an empty map
+  ([Children](resources.md#children)).
 - **Nested keys.** A refiner refines a whole key. There is no dotted
   path to refine one property inside a map on its own; the method
   refining the map narrows the property inside what it returns, and
