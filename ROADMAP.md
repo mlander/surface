@@ -438,6 +438,14 @@ tabled until the user resumes it.
    of a fixed kind, a port being a live sibling value. Rewording an
    owner's label or tightening an owner's key directly stays an
    alter's own business, as glue for one owner.
+   Reuse from another module follows: the reusing module attaches the
+   structure and wires its ports; the structure brings its refiners,
+   access class and operations and keeps its def id in the contract;
+   storage is the container's (its config schema describes the keys, and
+   it depends on the structure's module); alters on the structure apply
+   wherever it is used, which a container may want to opt out of (to
+   decide); a change to the structure changes every container's stored
+   shape, which is Phase D with an explicit contract to diff.
 4. **Static and runtime access**, the same split as refinement. Static
    access is decidable from the account alone (an operation's
    permission, a role) and is stated in the full schema and the tool
