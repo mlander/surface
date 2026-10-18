@@ -438,6 +438,26 @@ renames sit in A because they are cheapest before new code exists.
      refused after an 80, with the stewards rule from the 80). Separate
      requests are fine. Suspect the definition of an alter's mounted key
      being shared between builds. The one known bug on the branch.
+   - The audit's fixes, decided 2026-10-18 with the Tool API as the
+     precedent (it coerces first by a documented table, validates after,
+     and its matrix tests check the advertised schema against what the
+     tool accepts post-coercion): the invariant's scope is the accepted
+     document; `required` means present and not null and says nothing
+     about size; on an optional key null, absent and '' all mean "the
+     stored value or default stands", and the schema advertises such a
+     key as optional without null in its type (so a stale key allowing
+     null is the same rule, not a special case); a secret is optional,
+     absent or null meaning keep what is stored, its type not nullable;
+     the casting table is replaced by the Tool API's coercions, called
+     where the module can and mirrored on the form door, which makes
+     the "boolean stored as integer" finding an alignment rather than a
+     bug; shipped regexes gain `D` and translation carries only a safe
+     subset of pattern syntax, else omits `pattern`; a locked list's
+     items carry no `const`; blank collection items have their keys
+     checked before they are dropped; `format` stays, as an annotation
+     per the spec, with the test validator configured so; the audit's
+     one-off pins become matrix tests in the Tool API's shape (advertised
+     schema acceptance, input coercion).
    - The "never stricter than the runtime" audit, deferred for the demo:
      the form posts `"50"` as text where the schema says integer; the
      schema refuses unknown keys, and whether the pipeline does is
