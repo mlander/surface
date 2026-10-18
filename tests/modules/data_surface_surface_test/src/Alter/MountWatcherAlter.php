@@ -7,7 +7,7 @@ namespace Drupal\data_surface_surface_test\Alter;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Resource\Attribute\Alters;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
-use Drupal\data_surface\Resource\ShapeAdditionsInterface;
+use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
 use Drupal\data_surface\Resource\AltersInputsInterface;
 use Drupal\data_surface_surface_test\Structure\MountWatcherStructure;
 
@@ -23,7 +23,7 @@ final class MountWatcherAlter implements AltersInputsInterface {
   /**
    * {@inheritdoc}
    */
-  public function alterInputs(ShapeAdditionsInterface $inputs): void {
+  public function alterInputs(BlueprintAdditionsInterface $inputs): void {
     $inputs->add('kind', 'string', 'Kind');
     $inputs->add('detail', 'string', 'Detail');
   }

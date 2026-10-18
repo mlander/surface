@@ -9,7 +9,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_tool\Access\FieldInstanceAccess;
@@ -113,7 +113,7 @@ final class FieldInstanceResource implements ResourceInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     // Which field this is.
     $inputs->add('entity_type_id', 'string', t('Entity type'))->setRequired(TRUE)
       ->setDescription(t('The machine name of the entity type the field is on.'))

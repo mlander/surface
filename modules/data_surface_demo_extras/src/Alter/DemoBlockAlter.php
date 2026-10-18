@@ -9,7 +9,7 @@ use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Resource\Attribute\Alters;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
-use Drupal\data_surface\Resource\ShapeAdditionsInterface;
+use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
 use Drupal\data_surface\Resource\AltersInputsInterface;
 use Drupal\data_surface_demo\Structure\DemoBlockStructure;
 
@@ -62,7 +62,7 @@ final class DemoBlockAlter implements AltersInputsInterface {
   /**
    * {@inheritdoc}
    */
-  public function alterInputs(ShapeAdditionsInterface $inputs): void {
+  public function alterInputs(BlueprintAdditionsInterface $inputs): void {
     $inputs->add('badge', 'string', $this->t('Badge'), default: 'star')
       ->setDescription($this->t('A badge rendered beside the headline.'))
       ->addConstraint('LabeledChoice', [

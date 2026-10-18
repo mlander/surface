@@ -367,7 +367,7 @@ final class BaseFieldOverrideStorage implements DataSurfaceStorageInterface {
    *   The accepted value.
    *
    * @return mixed
-   *   The value in storage shape, comparable with read().
+   *   The value in storage layout, comparable with read().
    */
   protected function shape(FieldDefinitionInterface $field, string $property, mixed $value): mixed {
     if ($property === self::LABEL) {

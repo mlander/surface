@@ -18,7 +18,7 @@ use Drupal\Core\DependencyInjection\ClassResolverInterface;
  * a closure would not.
  *
  * What the caller supplies comes first and the bound arguments after:
- * a shape method is `defineInputs(ShapeInterface $inputs, string
+ * a shape method is `defineInputs(BlueprintInterface $inputs, string
  * $entity_type, string $bundle)`, an operation `add(array $arguments,
  * string $entity_type, string $bundle)`. A static method is called on the
  * class; an instance method on the class resolver's instance of it, so

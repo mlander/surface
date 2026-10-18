@@ -8,7 +8,7 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\data_surface\Resource\Attribute\Structure;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\StructureInterface;
 
 /**
@@ -31,7 +31,7 @@ final class ServiceReadingStructure implements StructureInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('kind', 'string', 'Kind')->addConstraint('Choice', ['choices' => ['short', 'long']]);
     $inputs->add('shelf', 'string', 'Shelf');
     $inputs->add('name', 'string', 'Name');

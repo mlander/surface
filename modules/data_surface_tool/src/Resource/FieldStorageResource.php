@@ -6,7 +6,7 @@ namespace Drupal\data_surface_tool\Resource;
 
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_tool\Storage\FieldStorageStorage;
@@ -89,7 +89,7 @@ final class FieldStorageResource implements ResourceInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     // Which storage this is, beyond what the field hands it.
     $inputs->add('field_type', 'string', t('Field type'))
       ->setDescription(t("The field type, which decides what the storage settings are. The same as the field's."));

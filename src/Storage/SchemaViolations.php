@@ -45,7 +45,7 @@ final class SchemaViolations {
    *   The config name whose schema describes the data, such as
    *   'system.site' or 'config_test.dynamic.example'.
    * @param array $data
-   *   The data in storage shape: a config object's raw data, or a config
+   *   The data in storage layout: a config object's raw data, or a config
    *   entity's exported array.
    * @param array<string, string> $paths
    *   Config property path => data surface key, for naming violations.
@@ -72,7 +72,7 @@ final class SchemaViolations {
    * @param string $schema_name
    *   The config name whose schema describes the data.
    * @param array $data
-   *   The data in storage shape.
+   *   The data in storage layout.
    * @param array<string, string> $paths
    *   Config property path => data surface key, for naming violations.
    * @param bool $mapped_only

@@ -10,10 +10,10 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 
 /**
- * What anyone may do to a shape: add to it.
+ * What anyone may do to a blueprint: add to it.
  *
  * Handed to alterInputs() and alterOutputs(). The owner gets
- * ShapeInterface, which adds attachBy().
+ * BlueprintInterface, which adds attachBy().
  *
  * Neither the owner nor an alter may add a key twice: adding is never
  * replacing, so nothing an owner declared can be changed by adding. The
@@ -23,7 +23,7 @@ use Drupal\Core\TypedData\MapDataDefinition;
  * widening an alter may make is extendChoices(): more values on a list
  * the owner declared, answered for by the alter.
  */
-interface ShapeAdditionsInterface {
+interface BlueprintAdditionsInterface {
 
   /**
    * Adds a key: name, type, label.
@@ -43,7 +43,7 @@ interface ShapeAdditionsInterface {
    *   say by default.
    *
    * @return \Drupal\Core\TypedData\DataDefinition
-   *   The definition, already part of the shape.
+   *   The definition, already part of the blueprint.
    */
   public function add(string $key, string $type, string|\Stringable $label, mixed $default = NULL): DataDefinition;
 
@@ -79,12 +79,12 @@ interface ShapeAdditionsInterface {
    * `third_party_settings.<module>` of the module calling it. Its keys
    * are stored and posted under that path whatever is said here; $after
    * says where the fieldset holding them is drawn: directly after that
-   * key of the owner's shape, on a generated form and in a renderer of
+   * key of the owner's blueprint, on a generated form and in a renderer of
    * the served contract (`x-surface.after`), rather than last, among the
    * other modules' fieldsets.
    *
    * @param string $key
-   *   The key: an owner's key by its name, this shape's own key by its
+   *   The key: an owner's key by its name, this blueprint's own key by its
    *   name, or another alter's key by its mounted path,
    *   `third_party_settings.<module>.<key>` (for an output,
    *   `third_party_outputs.<module>.<key>`). A module's mount itself,
@@ -97,7 +97,7 @@ interface ShapeAdditionsInterface {
    *   The new description, or NULL to leave it.
    * @param string|null $after
    *   For the calling alter's own input mount only: a top-level key of
-   *   the owner's shape, a plain key or an attached part, to draw the
+   *   the owner's blueprint, a plain key or an attached part, to draw the
    *   mount's fieldset directly after. NULL leaves it where it is.
    *
    * @return $this
@@ -105,7 +105,7 @@ interface ShapeAdditionsInterface {
    * @throws \LogicException
    *   When no declared key answers to that name; and, with $after, when
    *   the key is not the calling alter's own input mount, or $after names
-   *   no top-level key of the owner's shape.
+   *   no top-level key of the owner's blueprint.
    */
   public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL): static;
 
@@ -131,7 +131,7 @@ interface ShapeAdditionsInterface {
    *   The child's class.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
-   *   The map at the key, already part of the shape.
+   *   The map at the key, already part of the blueprint.
    *
    * @throws \LogicException
    *   When the key is already declared, or (for an alter, or for
@@ -173,7 +173,7 @@ interface ShapeAdditionsInterface {
    *   The most items, or NULL for unlimited.
    *
    * @return \Drupal\Core\TypedData\ListDataDefinition
-   *   The list at the key, already part of the shape.
+   *   The list at the key, already part of the blueprint.
    *
    * @throws \LogicException
    *   When the key is already declared, or (for an alter, or for
@@ -202,7 +202,7 @@ interface ShapeAdditionsInterface {
    * @return $this
    *
    * @throws \LogicException
-   *   For the owner's own shape, which lists its values in the key's
+   *   For the owner's own blueprint, which lists its values in the key's
    *   constraint, and for outputs, which nobody sends.
    * @throws \InvalidArgumentException
    *   When the key declares no list of allowed values, or already offers

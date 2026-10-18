@@ -38,7 +38,7 @@ use PHPUnit\Framework\Attributes\Group;
  * tool contributes nothing of its own to the settings. The field type's
  * settings resource says what the values may be, the pipeline accepts,
  * validates, prepares and commits them, and the tool is the caller. So a
- * valid payload reaches storage in the shape the field type reads back,
+ * valid payload reaches storage in the layout the field type reads back,
  * an invalid one is refused with the path that names it and leaves
  * nothing behind, and a partial edit changes only the keys it carries —
  * including clearing one by sending it as null, which is the thing a
@@ -229,13 +229,13 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that a valid payload reaches storage in the storage shape.
+   * Tests that a valid payload reaches storage in the storage layout.
    *
    * The settings are written by the address settings resource's own
    * storage, after the field's, and the field is placed on the bundle's
    * default form and view displays as Field UI places a new field.
    */
-  public function testReuseStoresTheStorageShape(): void {
+  public function testReuseStoresTheStorageLayout(): void {
     $tool = $this->addField();
 
     $result = $tool->getResult();

@@ -7,7 +7,7 @@ namespace Drupal\data_surface_surface_test\Structure\Broken;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\data_surface\Resource\Attribute\Structure;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\StructureInterface;
 use Drupal\data_surface_surface_test\Resource\Larder\SpiceRackResource;
 
@@ -23,7 +23,7 @@ final class WatchesListStructure implements StructureInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('note', 'string', 'Note');
     $inputs->attachList('racks', SpiceRackResource::class);
   }

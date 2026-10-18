@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface_surface_test\OutsideDiscovery;
 
 use Drupal\data_surface\Resource\Attribute\Structure;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 
 /**
  * Carries #[Structure] with an instance defineInputs().
@@ -22,10 +22,10 @@ final class InstanceShapeStructure {
   /**
    * Not static, which a shape has to be.
    *
-   * @param \Drupal\data_surface\Resource\ShapeInterface $inputs
-   *   The input shape to fill.
+   * @param \Drupal\data_surface\Resource\BlueprintInterface $inputs
+   *   The input blueprint to fill.
    */
-  public function defineInputs(ShapeInterface $inputs): void {
+  public function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('name', 'string', 'Name');
   }
 

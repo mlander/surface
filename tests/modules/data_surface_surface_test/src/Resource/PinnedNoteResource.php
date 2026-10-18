@@ -6,7 +6,7 @@ namespace Drupal\data_surface_surface_test\Resource;
 
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_surface_test\Storage\PinnedNoteStorage;
@@ -32,7 +32,7 @@ final class PinnedNoteResource implements ResourceInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('note', 'string', t('Note'), default: 'Pinned')->setRequired(TRUE);
   }
 

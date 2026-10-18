@@ -6,7 +6,7 @@ namespace Drupal\data_surface_test\Structure;
 
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Resource\Attribute\Structure;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\StructureInterface;
 
 /**
@@ -21,7 +21,7 @@ final class TestActionStructure implements StructureInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $message = $inputs->add('message', 'string', t('Message'), default: 'Done')
       ->setDescription(t('Shown to the person the action runs for.'))
       ->setRequired(TRUE)

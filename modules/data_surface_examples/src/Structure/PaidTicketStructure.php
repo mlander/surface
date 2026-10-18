@@ -7,7 +7,7 @@ namespace Drupal\data_surface_examples\Structure;
 use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
 use Drupal\data_surface\Resource\Attribute\Structure;
 use Drupal\data_surface\Resource\Attribute\Variant;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\StructureInterface;
 
 /**
@@ -23,7 +23,7 @@ final class PaidTicketStructure implements StructureInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('price', 'float', t('Price'))
       ->setRequired(TRUE)
       ->addConstraint('Range', ['min' => 0.01]);

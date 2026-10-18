@@ -6,7 +6,7 @@ namespace Drupal\data_surface_tool_test\Structure;
 
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Resource\Attribute\Structure;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\StructureInterface;
 
 /**
@@ -20,7 +20,7 @@ final class VaultBackupStructure implements StructureInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('host', 'string', t('Host'), default: '');
     $password = $inputs->add('password', 'string', t('Password'), default: '');
     DefinitionMetadata::setSecret($password);

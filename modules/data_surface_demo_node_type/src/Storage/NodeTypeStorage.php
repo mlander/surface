@@ -31,8 +31,8 @@ use Drupal\node\NodeTypeInterface;
  *
  * - The node type config entity, for the keys it owns, and for the
  *   third party settings another module mounted on the resource, which
- *   arrive here under third_party_settings.<module> in the shape they
- *   are stored in (a contributor's storage shape has already been
+ *   arrive here under third_party_settings.<module> in the layout they
+ *   are stored in (a contributor's storage layout has already been
  *   applied by the time they arrive) and are written with
  *   setThirdPartySetting(), where core keeps them.
  * - Base field overrides on the bundle, for the title label and the three

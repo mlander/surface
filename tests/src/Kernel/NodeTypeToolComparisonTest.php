@@ -212,7 +212,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
    *
    * One week, said as an amount and a unit, is stored as the seconds the
    * classic form stores, and reads back as one week: the conversion is
-   * the extras module's storage shape, applied by the storage.
+   * the extras module's storage layout, applied by the storage.
    */
   public function testResourceToolStoresTheExtension(): void {
     $one_week = $this->extras($this->deadline(1, 'weeks'), ['news', 'sports']);

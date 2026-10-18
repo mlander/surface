@@ -14,7 +14,7 @@ use Drupal\Core\TypedData\MapDataDefinition;
  * refined, which the framework refuses when sealing rather than with a
  * separate type.
  */
-interface ShapeInterface extends ShapeAdditionsInterface {
+interface BlueprintInterface extends BlueprintAdditionsInterface {
 
   /**
    * A slot: a structure whose shape one sibling INPUT key chooses.

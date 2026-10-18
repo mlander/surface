@@ -7,7 +7,7 @@ namespace Drupal\data_surface_surface_test\Resource\Pantry;
 use Drupal\data_surface_surface_test\Structure\Pantry\ShelfStructure;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_surface_test\Storage\PantryStorage;
@@ -44,7 +44,7 @@ final class PantryResource implements ResourceInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('pantry', 'string', 'Pantry')->setRequired(TRUE);
     $inputs->add('kind', 'string', 'Kind', default: 'jar')
       ->addConstraint('Choice', ['choices' => ['jar', 'tin', 'sack']]);

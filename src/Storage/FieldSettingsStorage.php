@@ -18,31 +18,31 @@ use Drupal\data_surface\Pipeline\PreparedValues;
  * a field config entity and are described today by nothing more than the
  * form that collects them.
  *
- * The optional shape is the point of the class. A field type's stored
- * settings are routinely not the shape a person or an agent should be
+ * The optional layout is the point of the class. A field type's stored
+ * settings are routinely not the layout a person or an agent should be
  * asked for: the address field type stores its countries as a map of
  * each code to itself, wraps every field override in a single-key array,
  * and keeps a deprecated key that silently wins over the current one.
  * Those transforms exist already, scattered between a form's validate
  * handler and the item class's accessors. Given to this storage as a
- * SettingsShapeInterface they are one named object with one name on each
- * direction, which is what lets the resource describe the input shape
- * rather than the storage shape.
+ * SettingsLayoutInterface they are one named object with one name on each
+ * direction, which is what lets the resource describe the input layout
+ * rather than the storage layout.
  *
  * Preparing touches nothing: the artifact is a plain settings array, so
  * a dry run leaves the field config exactly as it found it, and the form
  * path can take the artifact and hand it to Field UI to copy onto the
  * entity rather than saving behind the form's back.
  *
- * Encryption rides that same shape. A data surface that declares a
- * secret key has its shape wrapped in an EncryptedSettingsShape before
+ * Encryption rides that same layout. A data surface that declares a
+ * secret key has its layout wrapped in an EncryptedSettingsLayout before
  * either direction runs, so the field's stored settings hold ciphertext
  * and the pipeline is handed plaintext, which is what makes a partial
  * update of the settings beside a secret leave the secret intact. A data
  * surface with no secret key is not wrapped and nothing about it changes.
  *
- * @see \Drupal\data_surface\Storage\SettingsShapeInterface
- * @see \Drupal\data_surface\Storage\EncryptedSettingsShape
+ * @see \Drupal\data_surface\Storage\SettingsLayoutInterface
+ * @see \Drupal\data_surface\Storage\EncryptedSettingsLayout
  * @see docs/storage.md
  */
 final class FieldSettingsStorage implements DataSurfaceStorageInterface {
@@ -59,9 +59,9 @@ final class FieldSettingsStorage implements DataSurfaceStorageInterface {
    *
    * @param \Drupal\Core\Field\FieldConfigInterface $field
    *   The field config entity whose settings the data surface describes.
-   * @param \Drupal\data_surface\Storage\SettingsShapeInterface|null $shape
-   *   The translation between input shape and storage shape. Omitted
-   *   when the input shape is the storage shape.
+   * @param \Drupal\data_surface\Storage\SettingsLayoutInterface|null $layout
+   *   The translation between input layout and storage layout. Omitted
+   *   when the input layout is the storage layout.
    * @param \Drupal\data_surface\Storage\SecretCodecInterface|null $codec
    *   The codec a data surface's secret keys are encrypted with. Omitted,
    *   as every host but a test omits it, means the site's own codec
@@ -71,7 +71,7 @@ final class FieldSettingsStorage implements DataSurfaceStorageInterface {
    */
   public function __construct(
     protected readonly FieldConfigInterface $field,
-    protected readonly ?SettingsShapeInterface $shape = NULL,
+    protected readonly ?SettingsLayoutInterface $layout = NULL,
     protected readonly ?SecretCodecInterface $codec = NULL,
   ) {
   }
@@ -81,16 +81,16 @@ final class FieldSettingsStorage implements DataSurfaceStorageInterface {
    */
   public function load(DataSurfaceInterface $surface): array {
     $settings = $this->field->getSettings();
-    $shape = $this->shapeFor($surface);
-    return $shape === NULL ? $settings : $shape->fromStorage($settings);
+    $layout = $this->layoutFor($surface);
+    return $layout === NULL ? $settings : $layout->fromStorage($settings);
   }
 
   /**
    * {@inheritdoc}
    */
   public function prepare(DataSurfaceInterface $surface, array $values): PreparedValues {
-    $shape = $this->shapeFor($surface);
-    $settings = $shape === NULL ? $values : $shape->toStorage($values);
+    $layout = $this->layoutFor($surface);
+    $settings = $layout === NULL ? $values : $layout->toStorage($values);
     // Every key the data surface owns is produced by the transform, so
     // what the stored settings still hold beyond that is by definition not
     // the data surface's business: a setting some other code wrote, or a
@@ -99,24 +99,24 @@ final class FieldSettingsStorage implements DataSurfaceStorageInterface {
   }
 
   /**
-   * Gets the shape to translate through, encryption included.
+   * Gets the layout to translate through, encryption included.
    *
    * The data surface is what says which keys are secret, and a storage is
    * handed the data surface on both of the calls that translate, so this
    * is where the two meet. A data surface that declares no secret key
-   * gets the shape it was constructed with, unchanged and unwrapped.
+   * gets the layout it was constructed with, unchanged and unwrapped.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The data surface being read or written.
    *
-   * @return \Drupal\data_surface\Storage\SettingsShapeInterface|null
-   *   The shape, or NULL when there is nothing to translate.
+   * @return \Drupal\data_surface\Storage\SettingsLayoutInterface|null
+   *   The layout, or NULL when there is nothing to translate.
    */
-  protected function shapeFor(DataSurfaceInterface $surface): ?SettingsShapeInterface {
+  protected function layoutFor(DataSurfaceInterface $surface): ?SettingsLayoutInterface {
     $codec = $this->secretCodec();
     return $codec === NULL
-      ? $this->shape
-      : EncryptedSettingsShape::forSurface($surface, $codec, $this->shape);
+      ? $this->layout
+      : EncryptedSettingsLayout::forSurface($surface, $codec, $this->layout);
   }
 
   /**

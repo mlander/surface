@@ -13,7 +13,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Resource\Attribute\Alters;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
-use Drupal\data_surface\Resource\ShapeAdditionsInterface;
+use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
 use Drupal\data_surface\Resource\AltersInputsInterface;
 use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
 
@@ -54,7 +54,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
   /**
    * {@inheritdoc}
    */
-  public function alterInputs(ShapeAdditionsInterface $inputs): void {
+  public function alterInputs(BlueprintAdditionsInterface $inputs): void {
     $licence = ['pattern' => '/^\d{4}$/', 'message' => 'A licence number is four digits, such as 2048.'];
     $licence_key = $inputs->add('licence', 'string', $this->t('Event licence'))
       ->setDescription($this->t('The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.'))

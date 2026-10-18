@@ -17,7 +17,7 @@ use Drupal\data_surface\Resource\ResourceCallable;
  * plugin that is its own structure, whose id its plugin definition gives
  * unless it carries #[Structure] as well. A derived resource has no
  * class: a deriver made it from facts known only at run time, so it
- * carries the methods that fill its shape instead, and the base id it
+ * carries the methods that fill its blueprint instead, and the base id it
  * was derived under. Everything else is the same for both, and every
  * caller asks for either by name() (its class, or a derived resource's
  * id), which is what the registry is keyed by.
@@ -71,9 +71,9 @@ final class ResourceDefinition {
    *   Classes marked #[Variant] for a slot here, keyed by slot
    *   key, then by the deciding value.
    * @param \Drupal\data_surface\Resource\ResourceCallable|null $inputs
-   *   For a derived resource, what fills its input shape.
+   *   For a derived resource, what fills its input blueprint.
    * @param \Drupal\data_surface\Resource\ResourceCallable|null $outputs
-   *   For a derived resource, what fills its output shape, if it has one.
+   *   For a derived resource, what fills its output blueprint, if it has one.
    * @param string|null $base
    *   For a derived resource, the base id it was derived under.
    * @param class-string|null $deriver

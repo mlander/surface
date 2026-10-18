@@ -6,7 +6,7 @@ namespace Drupal\data_surface_surface_test\Resource\Larder;
 
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_surface_test\Storage\LarderStorage;
@@ -69,7 +69,7 @@ final class LarderResource implements ResourceInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('larder', 'string', 'Larder')->setRequired(TRUE);
     $inputs->add('note', 'string', 'Note');
     $inputs->attach('rack', SpiceRackResource::class)->setLabel('Spice rack');

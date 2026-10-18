@@ -6,7 +6,7 @@ namespace Drupal\data_surface;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\Storage\SettingsShapeInterface;
+use Drupal\data_surface\Storage\SettingsLayoutInterface;
 
 /**
  * A runtime description of the values something accepts.
@@ -155,13 +155,13 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
    * @param string $provider
    *   The module that mounted the settings.
    *
-   * @return \Drupal\data_surface\Storage\SettingsShapeInterface|null
-   *   The shape the provider declared at build time, or NULL when its
+   * @return \Drupal\data_surface\Storage\SettingsLayoutInterface|null
+   *   The layout the provider declared at build time, or NULL when its
    *   settings are stored exactly as the data surface describes them.
    *
-   * @see \Drupal\data_surface\DataSurfaceBuilderInterface::setThirdPartyShape()
+   * @see \Drupal\data_surface\DataSurfaceBuilderInterface::setThirdPartyLayout()
    */
-  public function getThirdPartyShape(string $provider): ?SettingsShapeInterface;
+  public function getThirdPartyLayout(string $provider): ?SettingsLayoutInterface;
 
   /**
    * Gets the default value for one key.

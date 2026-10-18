@@ -529,7 +529,9 @@ renames sit in A because they are cheapest before new code exists.
    that are part of this thing (timestamps, ownership, publishing
    flags), which is how an entity's base-field traits already compose
    and what the bundle resource will want. With ports, in B.
-6. **Rename the builders to blueprints.** Before named scalar shapes
+6. **Rename the builders to blueprints.** DONE 2026-10-18 (`BlueprintInterface`,
+   `BlueprintAdditionsInterface`, `SettingsLayoutInterface`,
+   `HasStorageLayoutInterface::storageLayout()`). Before named scalar shapes
    exist, `ShapeInterface` and `ShapeAdditionsInterface`, the builders
    passed to `defineInputs()`, `defineOutputs()` and `alterInputs()`,
    become `BlueprintInterface` and `BlueprintAdditionsInterface` (decided

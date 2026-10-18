@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface_surface_test\Resource\Cupboard;
 
 use Drupal\data_surface\Resource\Attribute\Resource;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\ResourceInterface;
 
 /**
@@ -17,7 +17,7 @@ final class BinResource implements ResourceInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('bin', 'string', 'Bin')
       ->setRequired(TRUE);
     $inputs->add('size', 'integer', 'Size', default: 5)

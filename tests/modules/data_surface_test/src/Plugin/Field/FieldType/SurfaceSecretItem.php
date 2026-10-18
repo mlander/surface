@@ -23,7 +23,7 @@ use Drupal\data_surface_test\Structure\SecretFieldSettingsStructure;
  * turns the keep rule from a nicety into a requirement.
  *
  * Everything about it is otherwise stock: the plain settings storage,
- * with no shape of its own, so the encryption the test sees is the
+ * with no layout of its own, so the encryption the test sees is the
  * generic wiring in FieldSettingsStorage and not something this fixture
  * arranged.
  *

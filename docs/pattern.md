@@ -88,7 +88,7 @@ modules/data_surface_demo_node_type/src/
 modules/data_surface_demo_extras/src/
   Alter/DemoBlockAlter.php            adds a key, rewords one, narrows one
   Alter/DemoFormatterAlter.php        offers one more value on a fixed list
-  Alter/NodeTypeAlter.php             adds keys stored in another shape
+  Alter/NodeTypeAlter.php             adds keys stored in another layout
 ```
 
 ## The pattern
@@ -104,11 +104,11 @@ method.
 | **Owner** | `static defineInputs($inputs)`, optionally `static defineOutputs($outputs)` | static `#[RefinesInput('key')]` methods |
 | **Another module** | `alterInputs($inputs)`, optionally `alterOutputs($outputs)` | `#[RefinesInput('key')]` methods |
 
-- **The shape methods get a shape to fill, and nothing else**: no
+- **The shape methods get a blueprint to fill, and nothing else**: no
   values, no context, no services. On a resource or structure they are
   static, so the language holds them to that: the build step calls them
   on the class and never makes an instance. The owner gets
-  `ShapeInterface`; an alter gets `ShapeAdditionsInterface`, which is
+  `BlueprintInterface`; an alter gets `BlueprintAdditionsInterface`, which is
   the same minus `attachBy()`. An alter can add keys, reword a label or
   description with `describe()` (and, on its own mount, say where its
   fieldset is drawn), and offer more values on a fixed choice list with
@@ -148,7 +148,7 @@ method.
 )]
 final class FieldInstanceResource implements ResourceInterface {
 
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     // Which field this is.
     $inputs->add('entity_type_id', 'string', t('Entity type'))->setRequired(TRUE);
     $inputs->add('bundle', 'string', t('Bundle'))->setRequired(TRUE);
@@ -368,7 +368,7 @@ can say who alters a class without running anything.
 #[Alters(DemoBlockStructure::class)]
 final class DemoBlockAlter implements AltersInputsInterface {
 
-  public function alterInputs(ShapeAdditionsInterface $inputs): void {
+  public function alterInputs(BlueprintAdditionsInterface $inputs): void {
     $inputs->add('badge', 'string', $this->t('Badge'), default: 'star');
     $inputs->describe('headline', description: $this->t('Shown above the featured content, beside its badge.'));
   }
@@ -449,7 +449,7 @@ never allow.
 ## Outputs
 
 A resource or structure that answers with something implements
-`HasOutputsInterface`: `defineOutputs()` takes the same shape as inputs,
+`HasOutputsInterface`: `defineOutputs()` takes the same blueprint as inputs,
 so `defineInputs()` reads as "what this asks for" and most classes never
 mention outputs. Outputs are never refined: a refinement narrows what
 may be sent, and nobody sends an output. A resource's output values are
@@ -486,9 +486,9 @@ it.
 #[UsesStructure]
 final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements StructureInterface, HasOutputsInterface {
 
-  public static function defineInputs(ShapeInterface $inputs): void { /* prefix, casing, variant */ }
+  public static function defineInputs(BlueprintInterface $inputs): void { /* prefix, casing, variant */ }
 
-  public static function defineOutputs(ShapeInterface $outputs): void { /* text, classes */ }
+  public static function defineOutputs(BlueprintInterface $outputs): void { /* text, classes */ }
 
   #[RefinesInput('variant')]
   public static function variantsOfCasing(DataDefinitionInterface $variant, string $casing): DataDefinitionInterface { /* ... */ }

@@ -158,7 +158,7 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
     // not offered at all.
     $this->assertArrayNotHasKey('fields', $schema['properties']);
     // Neither is the single-key wrapper the field type stores each
-    // override in; that is storage shape, and the storage class owns it.
+    // override in; that is storage layout, and the storage class owns it.
     $this->assertArrayNotHasKey('override', $overrides['givenName']);
     $this->assertArrayNotHasKey('items', $schema['properties']['field_overrides']);
   }
@@ -226,7 +226,7 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
     // overrides, not even for which properties may be overridden.
     $this->assertArrayNotHasKey('enum', $schema['properties']['available_countries']['items']);
     $this->assertArrayNotHasKey('enum', $schema['properties']['langcode_override']);
-    // The overrides arrive as the serialized storage shape, an array of
+    // The overrides arrive as the serialized storage layout, an array of
     // single-key objects with no key to put a property name in, so the
     // one thing a caller most needs to say cannot be said at all.
     $this->assertArrayHasKey('items', $schema['properties']['field_overrides']);

@@ -12,9 +12,9 @@ interface AltersOutputsInterface {
   /**
    * Adds outputs to the resource or structure named on #[Alters].
    *
-   * @param \Drupal\data_surface\Resource\ShapeAdditionsInterface $outputs
-   *   The output shape, add-only.
+   * @param \Drupal\data_surface\Resource\BlueprintAdditionsInterface $outputs
+   *   The output blueprint, add-only.
    */
-  public function alterOutputs(ShapeAdditionsInterface $outputs): void;
+  public function alterOutputs(BlueprintAdditionsInterface $outputs): void;
 
 }

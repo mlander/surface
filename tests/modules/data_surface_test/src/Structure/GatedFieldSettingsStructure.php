@@ -6,7 +6,7 @@ namespace Drupal\data_surface_test\Structure;
 
 use Drupal\data_surface\Resource\Attribute\Structure;
 use Drupal\data_surface\Resource\Attribute\Variant;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\StructureInterface;
 use Drupal\data_surface_test\Access\GatedFieldSettingsAccess;
 use Drupal\data_surface_tool\Resource\FieldInstanceResource;
@@ -36,7 +36,7 @@ final class GatedFieldSettingsStructure implements StructureInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('note', 'string', t('Note'))
       ->setDescription(t('A note stored with this field instance.'));
   }

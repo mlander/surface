@@ -161,7 +161,7 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
       $this->container->get('cache.discovery'),
     );
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage(InstanceShapeStructure::class . ' carries #[Structure] and declares defineInputs() as an instance method. A shape is a property of its class and takes nothing but the shape to fill: declare it `public static function defineInputs(ShapeInterface $inputs): void`, and implement Drupal\data_surface\Resource\StructureInterface.');
+    $this->expectExceptionMessage(InstanceShapeStructure::class . ' carries #[Structure] and declares defineInputs() as an instance method. A shape is a property of its class and takes nothing but the blueprint to fill: declare it `public static function defineInputs(BlueprintInterface $inputs): void`, and implement Drupal\data_surface\Resource\StructureInterface.');
     $registry->getDefinitions();
   }
 

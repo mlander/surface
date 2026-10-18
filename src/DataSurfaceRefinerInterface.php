@@ -36,8 +36,8 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
  * its metadata merged into the refined data surface whenever it runs.
  * RefinesInputRefiner does not: a static #[RefinesInput] method calls no
  * service and is a pure function of the siblings it watches, so the site
- * state a refined key depends on is said by the shape
- * (ShapeInterface::addCacheableDependency()) and by the options resolver
+ * state a refined key depends on is said by the blueprint
+ * (BlueprintInterface::addCacheableDependency()) and by the options resolver
  * that fetches the list a constraint points at. RuntimeRefiner does, and
  * says max-age 0: a runtime method reads what the data surface does not
  * describe.

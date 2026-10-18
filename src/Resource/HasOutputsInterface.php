@@ -26,11 +26,11 @@ interface HasOutputsInterface {
    * Shape of what the resource or structure answers with.
    *
    * Static, like DefinesInputsInterface::defineInputs(), and for the same
-   * reason: a shape takes nothing but the shape to fill.
+   * reason: a shape takes nothing but the blueprint to fill.
    *
-   * @param \Drupal\data_surface\Resource\ShapeInterface $outputs
-   *   The output shape to fill.
+   * @param \Drupal\data_surface\Resource\BlueprintInterface $outputs
+   *   The output blueprint to fill.
    */
-  public static function defineOutputs(ShapeInterface $outputs): void;
+  public static function defineOutputs(BlueprintInterface $outputs): void;
 
 }

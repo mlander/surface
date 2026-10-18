@@ -66,7 +66,7 @@ class DataSurfaceConditionBaseTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the stored shape keeps core's leading plugin ID.
+   * Tests that the stored layout keeps core's leading plugin ID.
    */
   public function testGetConfigurationKeepsIdFirst(): void {
     $configuration = $this->createCondition()->getConfiguration();

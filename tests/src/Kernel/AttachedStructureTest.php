@@ -15,8 +15,8 @@ use Drupal\data_surface\Pipeline\PreparedValues;
 use Drupal\data_surface\Pipeline\VariantMismatchException;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Attachment;
-use Drupal\data_surface\ResourceBuild\ResourceShape;
-use Drupal\data_surface\ResourceBuild\ResourceShapeAdditions;
+use Drupal\data_surface\ResourceBuild\ResourceBlueprint;
+use Drupal\data_surface\ResourceBuild\ResourceBlueprintAdditions;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface_surface_test\Structure\Pantry\JarStructure;
 use Drupal\data_surface_surface_test\Resource\Pantry\LabelResource;
@@ -281,9 +281,9 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
       ->setLabel('Limit')
       ->setRequired(TRUE)
       ->addConstraint('Range', ['max' => 5]));
-    $first = new ResourceShapeAdditions($builder, $typed_data, 'first_module');
+    $first = new ResourceBlueprintAdditions($builder, $typed_data, 'first_module');
     $first->add('badge', 'string', 'Badge');
-    $second = new ResourceShapeAdditions($builder, $typed_data, 'second_module');
+    $second = new ResourceBlueprintAdditions($builder, $typed_data, 'second_module');
 
     // An owner's key, by name: wording only.
     $second->describe('limit', label: 'How many', description: 'At most five.');
@@ -318,8 +318,8 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
   public function testDescribeTitlesEachModuleMount(): void {
     $builder = new DataSurfaceBuilder();
     $typed_data = $this->container->get('typed_data_manager');
-    $first = new ResourceShapeAdditions($builder, $typed_data, 'first_module');
-    $second = new ResourceShapeAdditions($builder, $typed_data, 'data_surface_surface_test');
+    $first = new ResourceBlueprintAdditions($builder, $typed_data, 'first_module');
+    $second = new ResourceBlueprintAdditions($builder, $typed_data, 'data_surface_surface_test');
     $first->add('badge', 'string', 'Badge');
     $second->add('ribbon', 'string', 'Ribbon');
     $first->describe('third_party_settings.first_module', label: 'Badges', description: 'How the title is decorated.');
@@ -338,7 +338,7 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
     // more: no "settings" after it.
     $this->assertSame('Data Surface Surface Test', (string) $mount->getPropertyDefinition('data_surface_surface_test')->getLabel());
 
-    $third = new ResourceShapeAdditions(new DataSurfaceBuilder(), $typed_data, 'third_module');
+    $third = new ResourceBlueprintAdditions(new DataSurfaceBuilder(), $typed_data, 'third_module');
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('describe() was asked to reword the input "third_party_settings.third_module", which nothing has declared.');
     $third->describe('third_party_settings.third_module', label: 'Too soon');
@@ -349,17 +349,17 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
    *
    * Placement says where one module's fieldset is drawn, so only that
    * module's alter says it, of its own input mount, after a top-level
-   * key of the owner's shape. Every other use is refused, naming why.
+   * key of the owner's blueprint. Every other use is refused, naming why.
    */
   public function testDescribePlacesOnlyItsOwnMount(): void {
     $typed_data = $this->container->get('typed_data_manager');
     $builder = new DataSurfaceBuilder();
-    $owner = new ResourceShape($builder, $typed_data);
+    $owner = new ResourceBlueprint($builder, $typed_data);
     $owner->add('title', 'string', 'Title');
     $owner->add('capacity', 'integer', 'Capacity');
-    $first = new ResourceShapeAdditions($builder, $typed_data, 'first_module');
-    $second = new ResourceShapeAdditions($builder, $typed_data, 'second_module');
-    $outputs = new ResourceShapeAdditions($builder, $typed_data, 'first_module', TRUE);
+    $first = new ResourceBlueprintAdditions($builder, $typed_data, 'first_module');
+    $second = new ResourceBlueprintAdditions($builder, $typed_data, 'second_module');
+    $outputs = new ResourceBlueprintAdditions($builder, $typed_data, 'first_module', TRUE);
     $first->add('badge', 'string', 'Badge');
     $second->add('ribbon', 'string', 'Ribbon');
     $outputs->add('shown', 'string', 'Shown');
@@ -395,7 +395,7 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
       // or after another alter's key.
       [
         $first, 'third_party_settings.first_module', 'missing',
-        'describe() was asked to place third_party_settings.first_module after "missing", which is no top-level key of the owner\'s shape.',
+        'describe() was asked to place third_party_settings.first_module after "missing", which is no top-level key of the owner\'s blueprint.',
       ],
       [
         $first, 'third_party_settings.first_module', 'third_party_settings',
@@ -403,9 +403,9 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
       ],
       [$first, 'third_party_settings.first_module', 'badge', 'after "badge", which is no top-level key'],
     ];
-    foreach ($refusals as [$shape, $key, $after, $message]) {
+    foreach ($refusals as [$blueprint, $key, $after, $message]) {
       try {
-        $shape->describe($key, after: $after);
+        $blueprint->describe($key, after: $after);
         $this->fail(sprintf('Refused: %s', $message));
       }
       catch (\LogicException $e) {

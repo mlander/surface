@@ -10,7 +10,7 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\Plugin\Validation\Constraint\LabeledChoiceConstraint;
-use Drupal\data_surface\Storage\SettingsShapeInterface;
+use Drupal\data_surface\Storage\SettingsLayoutInterface;
 use Drupal\data_surface_test\CasingVariantRefiner;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
@@ -70,7 +70,7 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
       'lock' => static fn (DataSurfaceBuilderInterface $b) => $b->lock('casing'),
       'extendChoices' => static fn (DataSurfaceBuilderInterface $b) => $b->extendChoices('casing', ['lowercase'], 'other'),
       'setThirdPartyDefinition' => static fn (DataSurfaceBuilderInterface $b) => $b->setThirdPartyDefinition('other', 'badge', clone $definition),
-      'setThirdPartyShape' => fn (DataSurfaceBuilderInterface $b) => $b->setThirdPartyShape('other', $this->shape()),
+      'setThirdPartyLayout' => fn (DataSurfaceBuilderInterface $b) => $b->setThirdPartyLayout('other', $this->layout()),
       'addRefinement' => static fn (DataSurfaceBuilderInterface $b) => $b->addRefinement('casing', ['extras']),
       'addRefiner' => static fn (DataSurfaceBuilderInterface $b) => $b->addRefiner('casing', new CasingVariantRefiner()),
       'addCacheableDependency' => static fn (DataSurfaceBuilderInterface $b) => $b->addCacheableDependency(new CacheableMetadata()),
@@ -92,36 +92,36 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that a provider's storage shape travels with the data surface.
+   * Tests that a provider's storage layout travels with the data surface.
    *
    * It is asked for by provider, survives refinement, which builds a new
    * data surface, and is refused at seal time for a provider that mounts
    * nothing: a translation for settings the data surface never describes
    * would be applied to nothing, or to somebody else's.
    */
-  public function testThirdPartyShapeTravelsWithTheSurface(): void {
-    $shape = $this->shape();
+  public function testThirdPartyLayoutTravelsWithTheSurface(): void {
+    $layout = $this->layout();
     $builder = $this->builder()
       ->setThirdPartyDefinition('other', 'badge', DataDefinition::create('string'))
-      ->setThirdPartyShape('other', $shape);
+      ->setThirdPartyLayout('other', $layout);
     $surface = $builder->seal();
-    $this->assertSame($shape, $surface->getThirdPartyShape('other'));
-    $this->assertNull($surface->getThirdPartyShape('data_surface_test'));
-    $this->assertSame($shape, $surface->refine(['casing' => 'uppercase'])->getThirdPartyShape('other'));
+    $this->assertSame($layout, $surface->getThirdPartyLayout('other'));
+    $this->assertNull($surface->getThirdPartyLayout('data_surface_test'));
+    $this->assertSame($layout, $surface->refine(['casing' => 'uppercase'])->getThirdPartyLayout('other'));
 
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('mount nothing');
-    $this->builder()->setThirdPartyShape('nobody', $this->shape())->seal();
+    $this->builder()->setThirdPartyLayout('nobody', $this->layout())->seal();
   }
 
   /**
-   * Builds a storage shape that translates nothing.
+   * Builds a storage layout that translates nothing.
    *
-   * @return \Drupal\data_surface\Storage\SettingsShapeInterface
-   *   The shape.
+   * @return \Drupal\data_surface\Storage\SettingsLayoutInterface
+   *   The layout.
    */
-  protected function shape(): SettingsShapeInterface {
-    return new class() implements SettingsShapeInterface {
+  protected function layout(): SettingsLayoutInterface {
+    return new class() implements SettingsLayoutInterface {
 
       /**
        * {@inheritdoc}

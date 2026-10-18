@@ -9,7 +9,7 @@ use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\HasOutputsInterface;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_surface_test\Access\RecipeAccess;
@@ -59,7 +59,7 @@ final class RecipeResource implements ResourceInterface, HasOutputsInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('kitchen', 'string', 'Kitchen')->setRequired(TRUE);
     $inputs->add('name', 'string', 'Name')->setRequired(TRUE);
     $inputs->add('course', 'string', 'Course', default: 'main')
@@ -74,7 +74,7 @@ final class RecipeResource implements ResourceInterface, HasOutputsInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineOutputs(ShapeInterface $outputs): void {
+  public static function defineOutputs(BlueprintInterface $outputs): void {
     $outputs->add('id', 'string', 'Recipe id');
   }
 

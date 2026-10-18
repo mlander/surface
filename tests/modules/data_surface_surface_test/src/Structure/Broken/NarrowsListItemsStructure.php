@@ -8,7 +8,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\data_surface\Resource\Attribute\Structure;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\StructureInterface;
 use Drupal\data_surface_surface_test\Resource\Larder\SpiceRackResource;
 
@@ -25,7 +25,7 @@ final class NarrowsListItemsStructure implements StructureInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('size', 'string', 'Size');
     $inputs->attachList('racks', SpiceRackResource::class);
   }

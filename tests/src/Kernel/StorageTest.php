@@ -101,7 +101,7 @@ class StorageTest extends DataSurfaceKernelTestBase {
    * Builds the same data surface with a third party's setting mounted.
    *
    * The mount is what turns into a 'third_party_settings' map holding
-   * one map per provider, which is the shape the entity already stores
+   * one map per provider, which is the layout the entity already stores
    * third party settings in.
    */
   protected function mountedSurface(): DataSurfaceInterface {

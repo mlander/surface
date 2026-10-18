@@ -327,7 +327,7 @@ function compliance_form_alter(&$form, $form_state, $form_id) {
     surface: `#[Resource('registration.step3', storage: RegistrationStep3Storage::class)]
 final class RegistrationStep3Resource implements ResourceInterface {
 
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('title', 'string', t('Event title'))
       ->setRequired(TRUE);
     $inputs->add('venue', 'string', t('Venue'))
@@ -361,7 +361,7 @@ public static function roomInVenue(
     alter: `#[Alters(RegistrationStep3Resource::class)]
 final class RegistrationComplianceAlter implements AltersInputsInterface {
 
-  public function alterInputs(ShapeAdditionsInterface $inputs): void {
+  public function alterInputs(BlueprintAdditionsInterface $inputs): void {
     $inputs->add('licence', 'string', $this->t('Event licence'));
     $inputs->add('stewards', 'integer', $this->t('Stewards'), default: 1);
     $inputs->describe(
@@ -410,7 +410,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
       sample: "defaults:\n  _form: DataSurfaceOperationForm\n  _data_surface_resource: RegistrationStep3Resource\n  _data_surface_operation: configure" },
     { id: 'plugin', name: 'Plugin forms', tier: 2, ang: 151, via: 'form', shipped: true,
       body: 'A formatter, a block or any plugin with settings names a structure, or is one. Its configuration form is drawn from it.',
-      sample: "#[UsesStructure]\nfinal class DataSurfaceDemoFormatter extends FormatterBase {\n  public static function defineInputs(ShapeInterface $inputs): void {}\n}" },
+      sample: "#[UsesStructure]\nfinal class DataSurfaceDemoFormatter extends FormatterBase {\n  public static function defineInputs(BlueprintInterface $inputs): void {}\n}" },
     { id: 'headless', name: 'Headless', tier: 2, ang: 119, via: 'schema', shipped: true,
       body: 'A React app that knows nothing about this resource draws it from the schema: selects from oneOf, slots from if / then, order and grouping from the x-surface hints.',
       sample: "/surface-react/registration.step3/configure" },

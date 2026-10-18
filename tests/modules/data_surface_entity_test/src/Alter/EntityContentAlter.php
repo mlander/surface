@@ -6,7 +6,7 @@ namespace Drupal\data_surface_entity_test\Alter;
 
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\data_surface\Resource\Attribute\Alters;
-use Drupal\data_surface\Resource\ShapeAdditionsInterface;
+use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
 use Drupal\data_surface\Resource\AltersInputsInterface;
 
 /**
@@ -20,7 +20,7 @@ final class EntityContentAlter implements AltersInputsInterface {
   /**
    * {@inheritdoc}
    */
-  public function alterInputs(ShapeAdditionsInterface $inputs): void {
+  public function alterInputs(BlueprintAdditionsInterface $inputs): void {
     $inputs->add('reviewer_note', 'string', $this->t('Reviewer note'));
   }
 

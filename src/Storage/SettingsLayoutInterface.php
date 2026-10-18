@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface\Storage;
 
 /**
- * Translates between a data surface's input shape and a storage shape.
+ * Translates between a data surface's input layout and a storage layout.
  *
  * A data surface describes what a caller should be asked for, and storage
  * holds whatever it has always held. The two are routinely not the same:
@@ -23,20 +23,20 @@ namespace Drupal\data_surface\Storage;
  * object is honestly serializable, which a closure is not and a callable
  * typed 'mixed' only is by convention.
  *
- * An implementation must be pure shape. It may not consult services, the
+ * An implementation must be pure layout. It may not consult services, the
  * current user, or the site: it describes how one set of values is
  * written down, and the same values must translate the same way for a
  * form, a kernel test, a config action and an agent.
  *
  * The two methods are expected to round-trip: fromStorage(toStorage($v))
  * should return $v for every value set the data surface accepts. Where it
- * cannot (a storage shape that loses a distinction the data surface
+ * cannot (a storage layout that loses a distinction the data surface
  * makes), the implementation says so in its own documentation.
  *
  * @see \Drupal\data_surface\Storage\FieldSettingsStorage
  * @see docs/storage.md
  */
-interface SettingsShapeInterface {
+interface SettingsLayoutInterface {
 
   /**
    * Turns accepted values into the settings storage holds.
@@ -45,7 +45,7 @@ interface SettingsShapeInterface {
    *   The accepted values, keyed by data surface key.
    *
    * @return array
-   *   The settings in storage shape.
+   *   The settings in storage layout.
    */
   public function toStorage(array $values): array;
 
@@ -56,7 +56,7 @@ interface SettingsShapeInterface {
    *   The stored settings.
    *
    * @return array
-   *   The settings in input shape, keyed by data surface key.
+   *   The settings in input layout, keyed by data surface key.
    */
   public function fromStorage(array $settings): array;
 

@@ -14,13 +14,13 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Refinement\ChoiceSet;
 use Drupal\data_surface\Refinement\Narrowing;
 use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
-use Drupal\data_surface\Storage\SettingsShapeInterface;
+use Drupal\data_surface\Storage\SettingsLayoutInterface;
 
 /**
  * The mutable stage a data surface passes through before it is sealed.
  *
  * Internal to the build step: Resources fills one per resource or
- * structure it builds, through the shape adapters an author's
+ * structure it builds, through the blueprint adapters an author's
  * defineInputs() and an alter's alterInputs() are handed, and seals it.
  * Nothing else constructs one outside the engine's own tests.
  *
@@ -90,9 +90,9 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * How each provider's mounted settings are written down, by provider.
    *
-   * @var array<string, \Drupal\data_surface\Storage\SettingsShapeInterface>
+   * @var array<string, \Drupal\data_surface\Storage\SettingsLayoutInterface>
    */
-  protected array $thirdPartyShapes = [];
+  protected array $thirdPartyLayouts = [];
 
   /**
    * Children fixed at a key, keyed by definition key.
@@ -256,9 +256,9 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * {@inheritdoc}
    */
-  public function setThirdPartyShape(string $provider, SettingsShapeInterface $shape): static {
+  public function setThirdPartyLayout(string $provider, SettingsLayoutInterface $layout): static {
     $this->assertMutable();
-    $this->thirdPartyShapes[$provider] = $shape;
+    $this->thirdPartyLayouts[$provider] = $layout;
     return $this;
   }
 
@@ -503,10 +503,10 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
       return $this->sealed;
     }
     $this->assertNoRefinementCycle();
-    $unmounted = array_diff_key($this->thirdPartyShapes, $this->thirdParty);
+    $unmounted = array_diff_key($this->thirdPartyLayouts, $this->thirdParty);
     if ($unmounted !== []) {
       throw new \LogicException(sprintf(
-        'A storage shape was given for the third-party settings of %s, which mount nothing on this data surface.',
+        'A storage layout was given for the third-party settings of %s, which mount nothing on this data surface.',
         implode(', ', array_keys($unmounted)),
       ));
     }
@@ -556,7 +556,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
       ),
       $this->cacheability,
       DefinitionMap::fromArrays(definitions: $outputs),
-      $this->thirdPartyShapes,
+      $this->thirdPartyLayouts,
       $this->watchedValueCheck,
     );
   }

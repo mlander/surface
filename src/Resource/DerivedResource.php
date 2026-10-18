@@ -8,7 +8,7 @@ namespace Drupal\data_surface\Resource;
  * One resource or structure a deriver makes, from facts known at run time.
  *
  * Everything a class says with its class and attributes, said as values:
- * the shape is a method that fills a ShapeInterface (so it stays
+ * the shape is a method that fills a BlueprintInterface (so it stays
  * value-independent, as defineInputs() is), the operations are
  * DerivedOperation values, the refiners are the static #[RefinesInput]
  * methods of the classes it names, and the storage and access class are
@@ -30,7 +30,7 @@ final class DerivedResource {
    * Constructs a DerivedResource.
    *
    * @param \Drupal\data_surface\Resource\ResourceCallable $inputs
-   *   What fills the input shape: called with the ShapeInterface first.
+   *   What fills the input blueprint: called with the BlueprintInterface first.
    * @param string[] $identity
    *   The identity keys, as on #[Resource(identity:)].
    * @param \Drupal\data_surface\Resource\DerivedOperation[] $operations
@@ -45,7 +45,7 @@ final class DerivedResource {
    * @param class-string<\Drupal\data_surface\Resource\OperationAccessInterface>|null $access
    *   The run-time part of access, built the same way, or NULL.
    * @param \Drupal\data_surface\Resource\ResourceCallable|null $outputs
-   *   What fills the output shape, or NULL for none.
+   *   What fills the output blueprint, or NULL for none.
    * @param string|\Stringable|null $label
    *   What it is, for people.
    * @param string|\Stringable|null $description

@@ -38,7 +38,7 @@ use Drupal\data_surface\DataSurfaceHostTrait;
  *   their own elements, and writes the accepted values back into form
  *   state as the settings the host will copy. Unlike the proof of concept
  *   there is nothing to flatten on the way: widgets emit definition-shaped
- *   trees, so what extraction returns is already the settings shape.
+ *   trees, so what extraction returns is already the settings layout.
  * - defaultSettings() is static and cannot consult a built structure.
  *   surfaceDefaultSettings() answers it from the shape of the structure
  *   the class names with #[UsesStructure], which is static for exactly

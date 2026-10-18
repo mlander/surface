@@ -23,7 +23,7 @@ use Drupal\data_surface\Entry;
  * The context is bound here, once, so the pipeline's submit() path
  * reaches the storage unchanged: load narrows what the storage returns
  * to the data surface's own keys; prepare hands the storage the accepted
- * values, in the shape a contributor's settings are stored in, and wraps
+ * values, in the layout a contributor's settings are stored in, and wraps
  * the array it rehearses in PreparedValues, so a dry run reports it and
  * a refusal from storage arrives as the pipeline's own violations;
  * commit hands the storage that same array back, with the context it
@@ -39,13 +39,13 @@ use Drupal\data_surface\Entry;
  * CompositeStorage: a composite hands each child only the keys it claims,
  * and a slot's child needs its sibling to know which variant it is.
  *
- * A storage shape an alter hands the build for the keys it mounts
- * (HasStorageShapeInterface) is applied here, to that module's namespace
+ * A storage layout an alter hands the build for the keys it mounts
+ * (HasStorageLayoutInterface) is applied here, to that module's namespace
  * under `third_party_settings` and nothing else: fromStorage() on what
  * the storage loads, toStorage() in prepare. So the storage reads and
- * writes a contributor's settings in the shape they are stored in, and
+ * writes a contributor's settings in the layout they are stored in, and
  * never has to know the contributor exists, the way the engine's own
- * ConfigEntityStorage applies the same shape.
+ * ConfigEntityStorage applies the same layout.
  *
  * @internal
  */
@@ -94,7 +94,7 @@ final class StorageAdapter implements DataSurfaceStorageInterface {
    * {@inheritdoc}
    */
   public function load(DataSurfaceInterface $surface): array {
-    $values = self::shapeThirdParty($surface, array_intersect_key($this->storage->load($this->context), $surface->getDefinitions()->toArray()), FALSE);
+    $values = self::applyThirdPartyLayouts($surface, array_intersect_key($this->storage->load($this->context), $surface->getDefinitions()->toArray()), FALSE);
     foreach ($this->routes as $key => $routes) {
       $entry = $surface->getDefinitions()->entry($key);
       $id = $entry === NULL ? NULL : $this->routeOf($entry, $values + $surface->getDefaultValues());
@@ -117,7 +117,7 @@ final class StorageAdapter implements DataSurfaceStorageInterface {
    * {@inheritdoc}
    *
    * The storage's own prepare(), over this level's own values in the
-   * shape they are stored in, plus what it holds under a child the
+   * layout they are stored in, plus what it holds under a child the
    * caller could not see, then each routed child's, in the child's
    * context plus this level's identity, so a child of something being
    * created can rehearse against what it will belong to. Everything
@@ -126,7 +126,7 @@ final class StorageAdapter implements DataSurfaceStorageInterface {
    * at, the way the pipeline files a child's own.
    */
   public function prepare(DataSurfaceInterface $surface, array $values): PreparedValues {
-    $own = self::shapeThirdParty($surface, $values, TRUE);
+    $own = self::applyThirdPartyLayouts($surface, $values, TRUE);
     if ($this->omitted !== []) {
       // Decision: see docs/decisions.md#omitted-is-omitted-both-ways.
       $stored = $this->storage->load($this->context);
@@ -226,7 +226,7 @@ final class StorageAdapter implements DataSurfaceStorageInterface {
    *   What prepare() returned.
    *
    * @return array
-   *   The rehearsed storage shapes.
+   *   The rehearsed storage layouts.
    */
   public function preview(PreparedValues $prepared): array {
     $artifact = $prepared->artifact;
@@ -348,27 +348,27 @@ final class StorageAdapter implements DataSurfaceStorageInterface {
   }
 
   /**
-   * Applies the data surface's storage shapes to mounted settings.
+   * Applies the data surface's storage layouts to mounted settings.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The data surface, which carries each contributor's storage shape.
+   *   The data surface, which carries each contributor's storage layout.
    * @param array $values
    *   Values of its level.
    * @param bool $to_storage
-   *   TRUE to turn them into the stored shape, FALSE to read them back.
+   *   TRUE to turn them into the stored layout, FALSE to read them back.
    *
    * @return array
-   *   The values, each shaped module's settings translated and nothing
-   *   else touched.
+   *   The values, the settings of each module with a layout translated
+   *   and nothing else touched.
    */
-  protected static function shapeThirdParty(DataSurfaceInterface $surface, array $values, bool $to_storage): array {
+  protected static function applyThirdPartyLayouts(DataSurfaceInterface $surface, array $values, bool $to_storage): array {
     if (!is_array($values[self::THIRD_PARTY] ?? NULL)) {
       return $values;
     }
     foreach ($values[self::THIRD_PARTY] as $module => $settings) {
-      $shape = $surface->getThirdPartyShape((string) $module);
-      if ($shape !== NULL && is_array($settings)) {
-        $values[self::THIRD_PARTY][$module] = $to_storage ? $shape->toStorage($settings) : $shape->fromStorage($settings);
+      $layout = $surface->getThirdPartyLayout((string) $module);
+      if ($layout !== NULL && is_array($settings)) {
+        $values[self::THIRD_PARTY][$module] = $to_storage ? $layout->toStorage($settings) : $layout->fromStorage($settings);
       }
     }
     return $values;

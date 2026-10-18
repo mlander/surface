@@ -8,7 +8,7 @@ use Drupal\data_surface_tool_test\Structure\VaultBackupStructure;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_tool_test\Storage\VaultStorage;
@@ -34,7 +34,7 @@ final class VaultResource implements ResourceInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('endpoint', 'string', t('Endpoint'), default: '');
     $token = $inputs->add('token', 'string', t('API key'), default: '');
     DefinitionMetadata::setSecret($token);

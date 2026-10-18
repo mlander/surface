@@ -6,7 +6,7 @@ namespace Drupal\data_surface_surface_test\Structure\Broken;
 
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Structure;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\StructureInterface;
 use Drupal\data_surface_surface_test\Resource\Larder\SpiceRackResource;
@@ -28,7 +28,7 @@ final class MisnamingLarderStructure implements StructureInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->attach('rack', SpiceRackResource::class);
   }
 

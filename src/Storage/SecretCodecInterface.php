@@ -31,7 +31,7 @@ namespace Drupal\data_surface\Storage;
  *   needing the key.
  *
  * @see \Drupal\data_surface\Storage\SodiumSecretCodec
- * @see \Drupal\data_surface\Storage\EncryptedSettingsShape
+ * @see \Drupal\data_surface\Storage\EncryptedSettingsLayout
  * @see docs/storage.md
  */
 interface SecretCodecInterface {
@@ -70,7 +70,7 @@ interface SecretCodecInterface {
    *
    * The question a migration asks: a value that answers FALSE is
    * plaintext written before the key was declared secret, which the
-   * shape hands to the pipeline as it is and encrypts on the next write.
+   * layout hands to the pipeline as it is and encrypts on the next write.
    *
    * @param string $value
    *   The stored value.

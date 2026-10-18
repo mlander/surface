@@ -12,7 +12,7 @@ use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\data_surface\Resource\Attribute\DerivesResources;
 use Drupal\data_surface\Resource\DerivedOperation;
 use Drupal\data_surface\Resource\DerivedResource;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\ResourceCallable;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceDeriverInterface;
@@ -110,8 +110,8 @@ final class ContentEntityResources implements ResourceDeriverInterface {
   /**
    * Fills one bundle's shape: its identity, then one child per field.
    *
-   * @param \Drupal\data_surface\Resource\ShapeInterface $inputs
-   *   The shape.
+   * @param \Drupal\data_surface\Resource\BlueprintInterface $inputs
+   *   The blueprint to fill.
    * @param string $entity_type_id
    *   The entity type id.
    * @param string $bundle
@@ -121,7 +121,7 @@ final class ContentEntityResources implements ResourceDeriverInterface {
    *   found them, so the parent attaches exactly the fields its children
    *   were derived for.
    */
-  public function defineInputs(ShapeInterface $inputs, string $entity_type_id, string $bundle, array $overridden = []): void {
+  public function defineInputs(BlueprintInterface $inputs, string $entity_type_id, string $bundle, array $overridden = []): void {
     $entity_type = $this->entityTypeManager->getDefinition($entity_type_id);
     $inputs->add('entity_type', 'string', $this->t('Entity type'))->setRequired(TRUE);
     $inputs->add('bundle', 'string', $entity_type->getBundleLabel() ?: $this->t('Bundle'))->setRequired(TRUE);
@@ -140,14 +140,14 @@ final class ContentEntityResources implements ResourceDeriverInterface {
   /**
    * Says what a write answers with: the entity's id, once it has one.
    *
-   * @param \Drupal\data_surface\Resource\ShapeInterface $outputs
-   *   The output shape.
+   * @param \Drupal\data_surface\Resource\BlueprintInterface $outputs
+   *   The output blueprint.
    * @param string $entity_type_id
    *   The entity type id.
    * @param string $bundle
    *   The bundle.
    */
-  public function defineOutputs(ShapeInterface $outputs, string $entity_type_id, string $bundle): void {
+  public function defineOutputs(BlueprintInterface $outputs, string $entity_type_id, string $bundle): void {
     $outputs->add('id', $this->derivation->idType($entity_type_id), $this->t('ID'))
       ->setDescription($this->t('The id of the @entity_type written, which a new one has only once it is saved.', [
         '@entity_type' => $this->entityTypeManager->getDefinition($entity_type_id)->getSingularLabel(),

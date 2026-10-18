@@ -29,7 +29,7 @@ interface DefinesInputsInterface {
   /**
    * Shape. Keys, types, labels, defaults, and the structures attached.
    *
-   * Takes nothing but the shape to fill: no values, no context, no
+   * Takes nothing but the blueprint to fill: no values, no context, no
    * services, and static, so the language holds it to that. A shape is
    * the same wherever it is asked for; what differs per operation is
    * applied afterwards by the framework. Anything that reads another
@@ -39,9 +39,9 @@ interface DefinesInputsInterface {
    * translation service to be injected into, and t() returns the same
    * lazy TranslatableMarkup, which string extraction finds.
    *
-   * @param \Drupal\data_surface\Resource\ShapeInterface $inputs
-   *   The input shape to fill.
+   * @param \Drupal\data_surface\Resource\BlueprintInterface $inputs
+   *   The input blueprint to fill.
    */
-  public static function defineInputs(ShapeInterface $inputs): void;
+  public static function defineInputs(BlueprintInterface $inputs): void;
 
 }

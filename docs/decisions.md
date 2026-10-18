@@ -82,6 +82,24 @@ resource with no storage should be a structure whose identity its parent
 hands it, which would need identity on a structure.
 (`ResourceRegistry::discover()`, `Resources::storage()`)
 
+### Blueprints and layouts
+
+What `defineInputs()`, `defineOutputs()`, `alterInputs()` and
+`alterOutputs()` are handed is a **blueprint**: `BlueprintInterface` for
+the owner, `BlueprintAdditionsInterface`, add-only, for an alter. It is
+the thing a resource or structure declares its members into, as a
+migration declares a table's columns into the table's blueprint. It was
+called a shape, but in Smithy a shape is a named type, and the builder
+its members are declared into is not one; a named scalar shape, a
+`#[Shape]` class reused at many keys, will be, and the two must never
+share a name. How accepted values are laid out in storage, where that
+differs from how they are asked for, is a **layout**:
+`SettingsLayoutInterface`, and `HasStorageLayoutInterface::storageLayout()`
+for an alter's mount. "Shape" stays in prose for the general idea of what
+a thing takes, a resource's shape or the shape of a value, and in code
+is reserved for named scalar shapes. (`ResourceBlueprint`,
+`ResourceBlueprintAdditions`, `BlueprintAdapterBase`)
+
 ## Authoring
 
 ### A shape is static
@@ -311,13 +329,13 @@ without ever being able to take another module's away.
 
 ### Cacheability on the shape
 
-`ShapeInterface::addCacheableDependency()` lets the owner's shape say
+`BlueprintInterface::addCacheableDependency()` lets the owner's blueprint say
 what site state it read; the data surface carries it. An alter cannot,
 because what it adds reaches no further than the owner's keys, and a
 static refiner cannot, because it calls no service. A runtime refiner
 does read site state, and says nothing of what: its link is max-age 0
 (see [Static by default, runtime by declaration](#static-by-default-runtime-by-declaration)).
-(`ResourceShape`)
+(`ResourceBlueprint`)
 
 ### Static by default, runtime by declaration
 
@@ -440,14 +458,14 @@ An alter's key is mounted at `third_party_settings.<module>.<key>`
 (outputs: `third_party_outputs.<module>.<key>`), not beside the
 owner's. The owner's storage and schema then never have to know a
 contributor's keys, which is how core keeps third-party settings.
-(`ResourceShapeAdditions`)
+(`ResourceBlueprintAdditions`)
 
 ### An alter cannot attach
 
 `attach()` on an alter is refused. An alter's keys are mounted under
 its module, and an attached structure inside that mount is not built
 yet.
-(`ResourceShapeAdditions::attach()`)
+(`ResourceBlueprintAdditions::attach()`)
 
 ### An alter refines its own mounted key
 
@@ -489,10 +507,10 @@ of which this is the one case the third-party mount needs.*
 (`Resources::assertNotWatchingForeignMount()`, `Resources::mountedWatches()`,
 `DataSurface::dependencyValues()`, `DataSurfaceBuilder::edgesOf()`)
 
-### A storage shape for a mount
+### A storage layout for a mount
 
-An alter whose keys are asked for in one shape and stored in another
-implements `HasStorageShapeInterface`; its shape applies to its own
+An alter whose keys are asked for in one layout and stored in another
+implements `HasStorageLayoutInterface`; its layout applies to its own
 module's mount and nothing else. The alter does not own the storage, so
 it hands the translation to the data surface, and the composed storage
 applies it. (`Resources::buildResource()`, `StorageAdapter`)
@@ -514,7 +532,7 @@ mounted key an alter made required would otherwise never be refused.
 
 Where an alter's fieldset is drawn is said once, by the alter, on its
 own mount: `describe('third_party_settings.<module>', after: '<key>')`,
-naming a top-level key of the owner's shape. It is recorded on the
+naming a top-level key of the owner's blueprint. It is recorded on the
 mount's definition (`DefinitionMetadata::setPlacedAfter()`), so every
 door reads the same declaration: the generated form draws the details
 there, the served contract says `x-surface.after` and the React app
@@ -529,7 +547,7 @@ The form moves the details at render time (`#pre_render`), after Form
 API is done with the array, so no walk by path changes. Only the
 calling alter's own input mount may be placed; an output mount is never
 drawn, and `after:` on it is refused rather than ignored, so a mistake
-shows. (`ShapeAdapterBase::assertPlaceable()`,
+shows. (`BlueprintAdapterBase::assertPlaceable()`,
 `DataSurfaceFormBuilder::placeMounts()`)
 
 ### Adding a key twice
@@ -537,7 +555,7 @@ shows. (`ShapeAdapterBase::assertPlaceable()`,
 Declaring a key that is already declared is refused, for owner and
 alter alike, and `add()` with a NULL default means "no default", not a
 declared NULL. A second `add()` silently replacing the first would be
-an alter changing the owner's key. (`ShapeAdapterBase::add()`)
+an alter changing the owner's key. (`BlueprintAdapterBase::add()`)
 
 ## Attached structures
 
@@ -570,7 +588,7 @@ makes the wall hold both ways. (`Resources::assertWalled()`)
 
 `attach()` and `attachBy()` on outputs are refused. The pattern lets an
 output vary by an input that way, but the engine's output map has no
-children yet. (`ShapeAdapterBase`)
+children yet. (`BlueprintAdapterBase`)
 
 ## Collections
 
@@ -1039,7 +1057,7 @@ A resource or structure whose shape is the site's (one per bundle, one
 per field) is made by a deriver at discovery, `#[DerivesResources]` on a class
 implementing `ResourceDeriverInterface`, and cached with the rest of
 discovery under the cache tags of what it was read from. Not a context
-handed to `defineInputs()`: the shape takes nothing but the shape, so
+handed to `defineInputs()`: the shape takes nothing but the blueprint, so
 that it is the same wherever it is asked for and a static tool
 definition, a catalogue and the full schema can describe it before
 anyone calls; a shape that read a bundle from its context would be a
@@ -1057,7 +1075,7 @@ access. (`ResourceRegistry::derive()`, `ResourceRegistryInvalidator`)
 A derived resource or structure is a `ResourceDefinition` like any
 other, with `class` NULL and what a class would have said carried
 instead: the methods
-that fill its shapes (`ResourceCallable`, a class, a method and the bound
+that fill its blueprints (`ResourceCallable`, a class, a method and the bound
 arguments), the base it was derived under and its deriver, a label, a
 description, notes on what the derivation could not carry, and its
 cache tags. Not a sibling class behind a shared interface: every caller
@@ -1065,7 +1083,7 @@ of the registry reads the same fields of either, and two classes would
 have doubled every signature that takes a definition for no difference
 any caller acts on. Every caller asks for a definition by `name()`, its
 class or, for a derived one, its id, which is what the registry is
-keyed by; the build step fills a derived shape through its callable and
+keyed by; the build step fills a derived resource's blueprints through its callable and
 calls a class's static methods otherwise, and that is the whole
 branch. A callable is a class, a method and plain values, so a derived
 definition survives the discovery cache, and the refiners bound from it
@@ -1073,7 +1091,7 @@ survive a cached form, where a closure would not. A static callable
 method is called on the class; an instance method on the class
 resolver's instance, so a deriver's own methods may read site state,
 which is what a derived shape is for. (`ResourceDefinition::name()`,
-`Resources::defineShape()`, `Resources::operation()`)
+`Resources::fillBlueprints()`, `Resources::operation()`)
 
 ### The id shape
 
@@ -1151,7 +1169,7 @@ invalidator in `data_surface_tool`.
 *Open.* An alter may add keys to every content entity resource, and they
 are built, validated and offered like any mounted key, but a content
 entity has nowhere to keep `third_party_settings`, so its storage does
-not keep them. A storage shape that maps a mount onto fields would be
+not keep them. A storage layout that maps a mount onto fields would be
 the place to say where they go.
 
 ## Plugins

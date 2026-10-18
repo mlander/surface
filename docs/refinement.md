@@ -48,7 +48,7 @@ An alter contributes in `alterInputs()`:
 #[Alters(DataSurfaceDemoFormatter::class)]
 final class DemoFormatterAlter implements AltersInputsInterface {
 
-  public function alterInputs(ShapeAdditionsInterface $inputs): void {
+  public function alterInputs(BlueprintAdditionsInterface $inputs): void {
     $inputs->add('badge', 'string', $this->t('Badge'), default: 'star');
     $inputs->extendChoices('variant', [self::RIBBON => $this->t('Ribbon')]);
   }
@@ -335,7 +335,7 @@ that rendering holds. A data surface is therefore a
 `CacheableDependencyInterface`, and there are three places metadata
 enters it:
 
-- **The shape.** `ShapeInterface::addCacheableDependency()` in
+- **The shape.** `BlueprintInterface::addCacheableDependency()` in
   `defineInputs()`, for anything the definitions themselves were read
   from: a key offered only while a module is installed, a label read
   from configuration.
@@ -398,7 +398,7 @@ a fifth value, and a refiner of its own for it:
 #[Alters(DataSurfaceDemoFormatter::class)]
 final class DemoFormatterAlter implements AltersInputsInterface {
 
-  public function alterInputs(ShapeAdditionsInterface $inputs): void {
+  public function alterInputs(BlueprintAdditionsInterface $inputs): void {
     $inputs->extendChoices('variant', [self::RIBBON => $this->t('Ribbon')]);
   }
 

@@ -10,7 +10,7 @@ use Drupal\data_surface\Form\FieldSurfaceProviderInterface;
 use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
 use Drupal\data_surface\Resource\Attribute\UsesStructure;
 use Drupal\data_surface\Storage\FieldSettingsStorage;
-use Drupal\data_surface_address\AddressSettingsShape;
+use Drupal\data_surface_address\AddressSettingsLayout;
 use Drupal\data_surface_address\Resource\AddressFieldSettingsResource;
 
 /**
@@ -34,8 +34,8 @@ use Drupal\data_surface_address\Resource\AddressFieldSettingsResource;
  * and the item supplies the storage, because only the item holds the
  * field config entity Field UI is editing, unsaved changes and all.
  *
- * The distance between the resource's input shape and the stored shape
- * is AddressSettingsShape, handed to the field settings storage here and
+ * The distance between the resource's input layout and the stored layout
+ * is AddressSettingsLayout, handed to the field settings storage here and
  * used by the resource's own storage, AddressFieldSettingsStorage, for
  * callers that address the field by its identity instead.
  *
@@ -52,12 +52,12 @@ class SurfaceAddressItem extends AddressItem implements FieldSurfaceProviderInte
   /**
    * {@inheritdoc}
    *
-   * The storage carries the shape, which is what lets the resource
-   * describe the input shape while the field goes on storing exactly
+   * The storage carries the layout, which is what lets the resource
+   * describe the input layout while the field goes on storing exactly
    * what it always stored.
    */
   public function getDataSurfaceStorage(): DataSurfaceStorageInterface {
-    return new FieldSettingsStorage($this->settingsFieldConfig(), new AddressSettingsShape());
+    return new FieldSettingsStorage($this->settingsFieldConfig(), new AddressSettingsLayout());
   }
 
 }

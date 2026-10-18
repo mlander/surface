@@ -6,10 +6,10 @@ namespace Drupal\data_surface_address;
 
 use CommerceGuys\Addressing\AddressFormat\AddressField;
 use CommerceGuys\Addressing\AddressFormat\FieldOverride;
-use Drupal\data_surface\Storage\SettingsShapeInterface;
+use Drupal\data_surface\Storage\SettingsLayoutInterface;
 
 /**
- * Translates address field settings between input shape and storage.
+ * Translates address field settings between input layout and storage.
  *
  * The distance between what an address field stores and what a person or
  * an agent should be asked for is the whole reason this class exists,
@@ -35,7 +35,7 @@ use Drupal\data_surface\Storage\SettingsShapeInterface;
  * Stateless, as the interface requires: it consults no services and no
  * site state, so one instance can serve every field of the type.
  */
-final class AddressSettingsShape implements SettingsShapeInterface {
+final class AddressSettingsLayout implements SettingsLayoutInterface {
 
   /**
    * {@inheritdoc}

@@ -12,7 +12,7 @@ use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DefinitionMetadata;
 
 /**
- * An alter's shape: keys are mounted under the alter's module.
+ * An alter's blueprint: keys are mounted under the alter's module.
  *
  * The pattern draws an alter's key beside the owner's. The engine keeps
  * every contribution in the contributor's own namespace instead
@@ -27,19 +27,19 @@ use Drupal\data_surface\DefinitionMetadata;
  *
  * @internal
  */
-final class ResourceShapeAdditions extends ShapeAdapterBase {
+final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
 
   /**
-   * Constructs an alter's shape.
+   * Constructs an alter's blueprint.
    *
    * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
-   *   The engine's builder the shape fills.
+   *   The engine's builder the blueprint fills.
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typed_data_manager
    *   The typed data manager.
    * @param string $provider
    *   The module the alter is in, which its keys are mounted under.
    * @param bool $outputs
-   *   TRUE when this shape describes outputs rather than inputs.
+   *   TRUE when this blueprint describes outputs rather than inputs.
    */
   public function __construct(
     DataSurfaceBuilderInterface $builder,
@@ -117,7 +117,7 @@ final class ResourceShapeAdditions extends ShapeAdapterBase {
   /**
    * {@inheritdoc}
    *
-   * This shape's own keys answer by their plain name first: they live in
+   * This blueprint's own keys answer by their plain name first: they live in
    * this module's namespace, where another declaration of the same name
    * could not collide with them.
    */
@@ -154,7 +154,7 @@ final class ResourceShapeAdditions extends ShapeAdapterBase {
    * {@inheritdoc}
    */
   protected function isDeclared(string $key): bool {
-    // The provider's namespace is this shape's alone, so the keys it has
+    // The provider's namespace is this blueprint's alone, so the keys it has
     // added are the whole answer.
     return FALSE;
   }

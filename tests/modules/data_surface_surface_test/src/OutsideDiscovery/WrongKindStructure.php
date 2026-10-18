@@ -6,7 +6,7 @@ namespace Drupal\data_surface_surface_test\OutsideDiscovery;
 
 use Drupal\data_surface\Resource\Attribute\Structure;
 use Drupal\data_surface\Resource\ResourceInterface;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 
 /**
  * Carries #[Structure] and implements the other kind's interface.
@@ -22,7 +22,7 @@ final class WrongKindStructure implements ResourceInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('name', 'string', 'Name');
   }
 

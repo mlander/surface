@@ -33,7 +33,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * - the generated element is a password box carrying no value anywhere.
  *
  * @see \Drupal\data_surface_test\Plugin\Field\FieldType\SurfaceSecretItem
- * @see \Drupal\data_surface\Storage\EncryptedSettingsShape
+ * @see \Drupal\data_surface\Storage\EncryptedSettingsLayout
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -103,7 +103,7 @@ class SecretSettingsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Reads what the field config actually stores, with no shape in front.
+   * Reads what the field config actually stores, with no layout in front.
    *
    * @return array
    *   The stored settings.

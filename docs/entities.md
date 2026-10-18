@@ -94,7 +94,7 @@ them; `/surface-entity` lists them. On this site's basic page that is
 Where the derivation is thin, a module writes a field type's item
 structure by hand: a class in its `src/Structure/` carrying
 `#[FieldItemStructure(type: 'telephone')]` and implementing
-`FieldItemStructureInterface`, whose static `defineItem(ShapeInterface
+`FieldItemStructureInterface`, whose static `defineItem(BlueprintInterface
 $inputs, FieldDefinitionInterface $field)` fills the shape, and whose
 own static `#[RefinesInput]` methods refine it. It replaces the
 derivation for every field of that type; the field's label, operations

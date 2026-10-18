@@ -67,7 +67,7 @@ it, and the block's host stores it.
 #[Structure('block.data_surface_demo')]
 final class DemoBlockStructure implements StructureInterface {
 
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('entity_type', 'string', t('Entity type'), default: 'user')
       ->setRequired(TRUE)
       ->addConstraint('PluginExists', [
@@ -95,11 +95,11 @@ final class DemoBlockStructure implements StructureInterface {
 }
 ```
 
-- **The shape methods get a shape to fill, and nothing else**: no
+- **The shape methods get a blueprint to fill, and nothing else**: no
   values, no context, no services. The owner's are static, so the
   language holds them to that; the build step calls them on the class
-  and never makes an instance. The owner gets `ShapeInterface`; an
-  alter gets `ShapeAdditionsInterface`, which can add but not change or
+  and never makes an instance. The owner gets `BlueprintInterface`; an
+  alter gets `BlueprintAdditionsInterface`, which can add but not change or
   remove what the owner declared. Adding a key twice is refused. The
   one change anyone may make to a key already declared is `describe()`:
   its label and description, which change nothing about what is
@@ -318,8 +318,8 @@ it along the tree:
   since it lives on what the parent writes.
 - A child without storage, every structure among them, is stored by its
   parent under its key.
-- An alter whose keys are asked for in one shape and stored in another
-  implements `HasStorageShapeInterface`. Its shape is applied to that
+- An alter whose keys are asked for in one layout and stored in another
+  implements `HasStorageLayoutInterface`. Its layout is applied to that
   module's mount, `third_party_settings.<module>`, and nothing else:
   `toStorage()` before the storage class prepares, `fromStorage()` after
   it reads. `NodeTypeAlter` in the extras module asks for a review
@@ -329,7 +329,7 @@ it along the tree:
 ## Prepare
 
 `prepare(OperationContext $context, array $values): array` rehearses the
-write. It builds what `commit()` would store, in storage's own shape,
+write. It builds what `commit()` would store, in storage's own layout,
 holds it to every check storage itself would make (the config schema,
 which for a config entity is also its entity validation) and has no
 side effects. It returns that array, and `commit(OperationContext
@@ -361,7 +361,7 @@ $context, array $prepared)` writes exactly it.
   field's, and, once the field has data, a settings change that would
   alter its database columns, which the SQL storage would otherwise
   throw on at save. `AddressFieldSettingsStorage` holds the settings, in
-  the shape the field stores, to `field.field_settings.address`.
+  the layout the field stores, to `field.field_settings.address`.
 - What a prepare returns is what is stored: the node type's prepared
   array is the config the commit writes, uuid included.
 
@@ -482,9 +482,9 @@ or, with no argument, the plugin class itself, which implements
 #[UsesStructure]
 final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements StructureInterface, HasOutputsInterface {
 
-  public static function defineInputs(ShapeInterface $inputs): void { /* ... */ }
+  public static function defineInputs(BlueprintInterface $inputs): void { /* ... */ }
 
-  public static function defineOutputs(ShapeInterface $outputs): void { /* ... */ }
+  public static function defineOutputs(BlueprintInterface $outputs): void { /* ... */ }
 
   #[RefinesInput('variant')]
   public static function variantsOfCasing(DataDefinitionInterface $variant, string $casing): DataDefinitionInterface { /* ... */ }
@@ -601,7 +601,7 @@ alter can: it adds a badge, rewords the headline's help text with
 #[Alters(DemoBlockStructure::class)]
 final class DemoBlockAlter implements AltersInputsInterface {
 
-  public function alterInputs(ShapeAdditionsInterface $inputs): void {
+  public function alterInputs(BlueprintAdditionsInterface $inputs): void {
     $inputs->add('badge', 'string', $this->t('Badge'), default: 'star');
     $inputs->describe('headline', description: $this->t('Shown above the featured content, beside its badge.'));
   }
@@ -625,7 +625,7 @@ only groups them, so a form and the served contract draw nothing for it
 
 On its own mount, and only there, an alter may also say where that
 fieldset is drawn, with `after:`, naming a top-level key of the owner's
-shape, a plain key or an attached part. The fieldset is then drawn
+blueprint, a plain key or an attached part. The fieldset is then drawn
 directly after that key instead of last, among the other modules'. The
 examples' compliance alter ends with
 
@@ -642,7 +642,7 @@ API see no change, and the served contract says it with one keyword,
 ([Decisions](decisions.md#placement-is-a-describe-option)). `after:` on
 anything but the calling alter's own input mount (an owner's key,
 another module's mount, an output mount, which is never drawn) is
-refused, as is a key the owner's shape does not declare at its top
+refused, as is a key the owner's blueprint does not declare at its top
 level.
 
 Nothing an alter does removes: it cannot take a key or a value away
@@ -999,7 +999,7 @@ final class ContentEntityResources implements ResourceDeriverInterface {
     return $derivatives;
   }
 
-  public function defineInputs(ShapeInterface $inputs, string $entity_type_id, string $bundle): void { /* ... */ }
+  public function defineInputs(BlueprintInterface $inputs, string $entity_type_id, string $bundle): void { /* ... */ }
 
 }
 ```
@@ -1015,7 +1015,7 @@ final class ContentEntityResources implements ResourceDeriverInterface {
   structure, which its parent stores (a content entity's field). Its id
   is `<base>:<derivative>`; the derivative holds no colon. Its shape is
   a `ResourceCallable`, a class, a method and the bound arguments that
-  say which derivative it is, called with the shape first:
+  say which derivative it is, called with the blueprint first:
   value-independent, as `defineInputs()` is, and serializable, as a
   closure is not. A static method is called on the class, an instance
   method on the class resolver's instance, so a deriver's own methods

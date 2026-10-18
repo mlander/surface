@@ -121,7 +121,7 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  *     return new OperationContext('edit', known: ['id' => $thing->id()]);
  *   }
  *
- *   public static function defineInputs(ShapeInterface $inputs): void {
+ *   public static function defineInputs(BlueprintInterface $inputs): void {
  *     $inputs->add('id', 'string', t('Machine name'))
  *       ->setRequired(TRUE);
  *     $inputs->add('entity_type', 'string', t('Entity type'), default: 'user')
@@ -182,7 +182,7 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  * #[UsesStructure]
  * final class ExampleBlock extends DataSurfaceBlockBase implements StructureInterface {
  *
- *   public static function defineInputs(ShapeInterface $inputs): void {
+ *   public static function defineInputs(BlueprintInterface $inputs): void {
  *     $inputs->add('headline', 'string', t('Headline'), default: 'News');
  *   }
  *
@@ -200,7 +200,7 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  *
  * @see \Drupal\data_surface\Resource\ResourceInterface
  * @see \Drupal\data_surface\Resource\StructureInterface
- * @see \Drupal\data_surface\Resource\ShapeInterface
+ * @see \Drupal\data_surface\Resource\BlueprintInterface
  * @see \Drupal\data_surface\ResourceBuild\ResourcesInterface
  * @see \Drupal\data_surface\Form\DataSurfaceOperationForm
  * @see docs/declaring-a-resource.md
@@ -247,7 +247,7 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  *
  *   use StringTranslationTrait;
  *
- *   public function alterInputs(ShapeAdditionsInterface $inputs): void {
+ *   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
  *     $inputs->add('badge', 'string', $this->t('Badge'), default: 'star')
  *       ->addConstraint('LabeledChoice', [
  *         'choices' => [
@@ -274,13 +274,13 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  * The same move on the other half of the contract is alterOutputs(), on
  * \Drupal\data_surface\Resource\AltersOutputsInterface: an output the alter
  * adds lands at third_party_outputs.<module>.<key>. An alter whose keys
- * are asked for in one shape and stored in another implements
- * \Drupal\data_surface\Resource\HasStorageShapeInterface. Another module's
+ * are asked for in one layout and stored in another implements
+ * \Drupal\data_surface\Resource\HasStorageLayoutInterface. Another module's
  * operation for a resource is a static method carrying #[Operation] with
  * of: naming the resource, in that module's src/Alter/.
  *
  * @see \Drupal\data_surface\Resource\AltersInputsInterface
- * @see \Drupal\data_surface\Resource\ShapeAdditionsInterface
+ * @see \Drupal\data_surface\Resource\BlueprintAdditionsInterface
  * @see docs/refinement.md
  * @see docs/resources.md
  * @}

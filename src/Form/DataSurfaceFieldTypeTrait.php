@@ -41,7 +41,7 @@ use Drupal\data_surface\Storage\FieldSettingsStorage;
  *   data surface container is the whole pipeline: it extracts, validates,
  *   flags violations on their own elements, and writes the result into
  *   form state.
- * - What it writes is the STORAGE shape, not the input shape. Field UI
+ * - What it writes is the STORAGE layout, not the input layout. Field UI
  *   builds $form['settings'] with #tree and merges the field type's
  *   elements into it flat, then copyFormValuesToEntity() copies the
  *   'settings' value onto the field config entity and saves it. So the
@@ -101,9 +101,9 @@ trait DataSurfaceFieldTypeTrait {
   /**
    * Gets the storage the field settings are read from and written to.
    *
-   * The default is the plain settings storage: the input shape is the
-   * storage shape. A field type whose storage shape differs overrides
-   * this and hands the storage a SettingsShapeInterface, which is where
+   * The default is the plain settings storage: the input layout is the
+   * storage layout. A field type whose storage layout differs overrides
+   * this and hands the storage a SettingsLayoutInterface, which is where
    * the transform becomes visible.
    *
    * @return \Drupal\data_surface\Pipeline\DataSurfaceStorageInterface
@@ -210,7 +210,7 @@ trait DataSurfaceFieldTypeTrait {
     $surface = $this->getFieldSurface();
     $storage = $this->getDataSurfaceStorage();
     // Current values come through the storage, so the form shows the
-    // input shape of what is stored rather than the storage shape, and
+    // input layout of what is stored rather than the storage layout, and
     // an in-progress refinement rebuild overlays what was just chosen.
     $stored = array_intersect_key($storage->load($surface), $surface->getDefinitions()->toArray());
     $values = $this->surfaceFormValues($surface, $stored, $form_state);
@@ -268,7 +268,7 @@ trait DataSurfaceFieldTypeTrait {
       return;
     }
     // The host copies what it finds here straight onto the field config
-    // entity, so this is the storage shape, not the input shape.
+    // entity, so this is the storage layout, not the input layout.
     $form_state->setValueForElement($element, $prepared->artifact);
   }
 

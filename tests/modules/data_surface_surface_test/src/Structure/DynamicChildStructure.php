@@ -9,7 +9,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\data_surface\Resource\Attribute\Structure;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\StructureInterface;
 
 /**
@@ -25,7 +25,7 @@ final class DynamicChildStructure implements StructureInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('kind', 'string', 'Kind')->addConstraint('Choice', ['choices' => ['box', 'tube']]);
     $inputs->add('detail', 'any', 'Detail');
   }

@@ -8,7 +8,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_surface_test\Resource\Larder\SpiceRackResource;
@@ -51,7 +51,7 @@ final class CellarResource implements ResourceInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('larder', 'string', 'Larder')->setRequired(TRUE);
     $inputs->add('size', 'string', 'Size', default: 'large')
       ->addConstraint('Choice', ['choices' => ['small', 'large']]);

@@ -23,7 +23,7 @@ Every plugin family names its structure class the same way, with
 | Conditions | `Plugin\Condition\DataSurfaceConditionBase` | `#[UsesStructure]`, `evaluate()` and `summary()`. |
 | Actions | `Plugin\Action\DataSurfaceActionBase` | `#[UsesStructure]`, `execute()` and `access()`. |
 | Field formatters | `Plugin\Field\FieldFormatter\DataSurfaceFormatterBase` | `#[UsesStructure]`, `formatValue()` or `viewElements()`. |
-| Field types | `Form\DataSurfaceFieldTypeTrait` on the item class, implementing `Form\FieldSurfaceProviderInterface` | `#[UsesStructure]` and a one-line `defaultFieldSettings()`; `getDataSurfaceStorage()` only when the storage shape differs from the input shape. The structure is built in the `field_settings` context. |
+| Field types | `Form\DataSurfaceFieldTypeTrait` on the item class, implementing `Form\FieldSurfaceProviderInterface` | `#[UsesStructure]` and a one-line `defaultFieldSettings()`; `getDataSurfaceStorage()` only when the storage layout differs from the input layout. The structure is built in the `field_settings` context. |
 | Any plugin resolving a form class per operation | `Form\DataSurfacePluginForm` | Nothing but `#[UsesStructure]`: list the class under a `forms` key. It is named per operation, so it settles the context's id at construction. |
 | A resource's operation served at a route | `Form\DataSurfaceOperationForm` | Nothing but routing, and a cosmetic layer if the page needs one. |
 | A standalone form of your own | Nothing | Build the container, call `submit()`. |
@@ -446,7 +446,7 @@ refuses a valid save that moves a parent and its dependent together
 ## Current values on extraction
 
 `extractSurfaceValues()` takes a `$current` argument: what the data
-surface's keys already hold, in input shape, read from wherever the host
+surface's keys already hold, in input layout, read from wherever the host
 stores them. **A host that leaves it out is telling the data surface that
 storage is empty.**
 
@@ -673,7 +673,7 @@ and writes the accepted values back into form state as the settings the
 host will copy.
 
 For a field type there is one sharper twist: what it writes back is the
-**storage** shape, not the input shape, because Field UI copies the
+**storage** layout, not the input layout, because Field UI copies the
 `settings` value straight onto the field config entity and saves it. So
 the values have to have been through the storage's `prepare()` by the
 time validation ends, and the storage's `commit()` is deliberately not

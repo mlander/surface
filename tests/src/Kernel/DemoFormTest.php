@@ -16,7 +16,7 @@ use PHPUnit\Framework\Attributes\Group;
  * The form repeats none of the block's declaration (it reads the
  * plugin's contract through the block manager) and it writes none of
  * the block's storage: the same structure is committed to State because
- * the storage class owns the storage shape and the structure never hears
+ * the storage class owns the storage layout and the structure never hears
  * about it.
  */
 #[Group('data_surface')]

@@ -196,7 +196,7 @@ Two consequences:
   what locked means.
 
 Encryption is a separate concern and lives one layer down, at the
-storage shape: see [Storage](storage.md#secrets-at-the-codec).
+storage layout: see [Storage](storage.md#secrets-at-the-codec).
 
 ## Stale values: the third state
 
@@ -374,7 +374,7 @@ may answer that its keys are shown and fixed, or not there at all.
 | `accept()` | Whether a key was configured, what type its value takes, whether the shape is acceptable at all, and how input merges over what is stored. Keeps a secret key's stored value when the input says nothing. Refuses undeclared keys and shape mismatches. Needs no services. |
 | `validate()` | Whether a required key was answered, and whether the answers satisfy the constraints of the data surface **refined against those same answers**. Given the stored values, it also tells a stale reference from a refusal. |
 | `refine()` | Which definitions narrow, given which dependencies are configured. A dependency holding `FALSE` or `[]` is an answer and does narrow. |
-| `prepare()` / `commit()` | Nothing about values; the storage shape and the write. |
+| `prepare()` / `commit()` | Nothing about values; the storage layout and the write. |
 
 After `accept()`, every declared key is present and every value is
 either `NULL` or a configured value in its declared type. That is the

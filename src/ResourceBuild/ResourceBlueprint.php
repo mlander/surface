@@ -8,10 +8,10 @@ use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 
 /**
- * The owner's shape: keys land at the top of the data surface.
+ * The owner's blueprint: keys land at the top of the data surface.
  *
  * An input goes through setDefinition() and its default through
  * setDefault(); an output goes through setOutputDefinition(), and a
@@ -20,10 +20,10 @@ use Drupal\data_surface\Resource\ShapeInterface;
  *
  * @internal
  */
-final class ResourceShape extends ShapeAdapterBase implements ShapeInterface {
+final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintInterface {
 
   /**
-   * The slots declared through this shape, keyed by key.
+   * The slots declared through this blueprint, keyed by key.
    *
    * @var array<string, string>
    */
@@ -47,7 +47,7 @@ final class ResourceShape extends ShapeAdapterBase implements ShapeInterface {
   }
 
   /**
-   * Gets the slots declared through this shape.
+   * Gets the slots declared through this blueprint.
    *
    * @return array<string, string>
    *   The deciding key of each slot, keyed by key, in declaration order.

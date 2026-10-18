@@ -9,7 +9,7 @@ that adds a thing and the operation that edits it.
 This page is about the second half: a resource's own storage and the
 engine's six storage classes, the prepare-versus-commit split, dry runs,
 what may ride on a form, and the one small interface storage uses when
-the input shape and the storage shape differ. [The pipeline](pipeline.md)
+the input layout and the storage layout differ. [The pipeline](pipeline.md)
 is the other half, and the stage names below are its.
 
 ## What storage is
@@ -18,8 +18,8 @@ Three methods, `Drupal\data_surface\Pipeline\DataSurfaceStorageInterface`:
 
 | Method | Does | Writes? |
 | --- | --- | --- |
-| `load($surface)` | Reads what is stored, in input shape. | no |
-| `prepare($surface, $values)` | Turns accepted values into the storage shape and hands back a `PreparedValues`. | no |
+| `load($surface)` | Reads what is stored, in input layout. | no |
+| `prepare($surface, $values)` | Turns accepted values into the storage layout and hands back a `PreparedValues`. | no |
 | `commit($prepared)` | Stores the artifact. | yes |
 
 The data surface is an argument rather than something the storage
@@ -76,7 +76,7 @@ host holds the instance its values belong to. The host supplies it:
 | Host family | Answers with |
 | --- | --- |
 | Any configurable plugin (block, condition, action) | `PluginConfigurationStorage` over itself, from `DataSurfaceHostFormTrait`: the one construction path for the family, which the form submit asks for rather than building inline. |
-| Field types | `FieldSettingsStorage` over the field config entity the item is bound to, from `DataSurfaceFieldTypeTrait`. A field type whose storage shape differs overrides `getDataSurfaceStorage()` and hands `FieldSettingsStorage` a shape. |
+| Field types | `FieldSettingsStorage` over the field config entity the item is bound to, from `DataSurfaceFieldTypeTrait`. A field type whose storage layout differs overrides `getDataSurfaceStorage()` and hands `FieldSettingsStorage` a layout. |
 | Field formatters | Nothing: they throw. |
 
 ### The refusal, and why it is a refusal
@@ -238,48 +238,48 @@ SchemaViolations::collect($typed_config, $name, $data, $paths, FALSE);
 Config with no schema at all is not an error. Plenty of config still has
 none, and storage that insisted would be unusable there.
 
-## SettingsShapeInterface
+## SettingsLayoutInterface
 
-`Drupal\data_surface\Storage\SettingsShapeInterface` has two methods,
+`Drupal\data_surface\Storage\SettingsLayoutInterface` has two methods,
 `toStorage(array $values): array` and `fromStorage(array $settings):
 array`. `FieldSettingsStorage` takes one, optionally; without one the
-input shape is the storage shape. It is also where encryption sits,
+input layout is the storage layout. It is also where encryption sits,
 below.
 
-It exists because storage shapes are frequently not the shape a person
+It exists because storage layouts are frequently not the layout a person
 or an agent should be asked for. The address field type stores its
 countries as a map of each code to itself, wraps every field override in
 a single-key array, and keeps a deprecated key that silently wins over
 the current one. That translation already exists today, half of it in a
 settings form's validate handler and half in the item class's accessors,
 which is exactly why only a form can write those settings correctly.
-`AddressSettingsShape` is the same translation with a name, so a form, a
+`AddressSettingsLayout` is the same translation with a name, so a form, a
 kernel test, a config action and an agent all go through it.
 
-An implementation must be pure shape: no services, no current user, no
+An implementation must be pure layout: no services, no current user, no
 site state. The two halves are expected to round-trip, and where they
 cannot the implementation says so in its own documentation.
 
-### A shape for settings another module mounted
+### A layout for settings another module mounted
 
-An alter that adds keys may ask for a value in one shape and store it
+An alter that adds keys may ask for a value in one layout and store it
 in another. It does not own the storage, so it hands the translation to
 the data surface instead, by implementing
-`HasStorageShapeInterface`, whose `storageShape()` returns a
-`SettingsShapeInterface`.
+`HasStorageLayoutInterface`, whose `storageLayout()` returns a
+`SettingsLayoutInterface`.
 
-The sealed data surface carries the shape, refinement keeps it, and
-`getThirdPartyShape($module)` answers it. It is applied to that
+The sealed data surface carries the layout, refinement keeps it, and
+`getThirdPartyLayout($module)` answers it. It is applied to that
 module's mount, `third_party_settings.<module>`, and nothing else:
 `toStorage()` before the storage prepares, so storage's own checks judge
-what will actually be stored; `fromStorage()` after it loads. The shape
+what will actually be stored; `fromStorage()` after it loads. The layout
 sees only that module's own settings, keyed by the keys it mounted. A
-shape for a module that mounts nothing is refused.
+layout for a module that mounts nothing is refused.
 
 `data_surface_demo_extras` is the worked example: `NodeTypeAlter` asks
 for a content type's review deadline as an amount and a unit, and its
-`ReviewDeadlineShape` stores seconds, through `NodeTypeStorage`, which
-knows nothing about it. `StorageAdapter` applies the shape for a
+`ReviewDeadlineLayout` stores seconds, through `NodeTypeStorage`, which
+knows nothing about it. `StorageAdapter` applies the layout for a
 resource's own storage class; of the engine's storage classes, only
 `ConfigEntityStorage` writes third party settings, so it is the only one
 that reads it.
@@ -294,7 +294,7 @@ never reaches storage from any caller. Two small pieces do it:
 | Piece | What it is |
 | --- | --- |
 | `SecretCodecInterface` | `encrypt()`, `decrypt()`, `isEncrypted()`. A service, so a deployment can replace it. |
-| `EncryptedSettingsShape` | A `SettingsShapeInterface` decorator that wraps another shape, or none, and enciphers the secret keys of the data surface it was made for. |
+| `EncryptedSettingsLayout` | A `SettingsLayoutInterface` decorator that wraps another layout, or none, and enciphers the secret keys of the data surface it was made for. |
 
 The shipped codec, `SodiumSecretCodec`, is a **reference
 implementation**: libsodium's `crypto_secretbox` with a fresh random
@@ -309,34 +309,34 @@ no structure, no storage class, no form. The envelope is
 ciphertext, and the prefix is what lets a migration tell ciphertext from
 plaintext.
 
-The decorator works in **input shape**: it encrypts before the inner
-shape runs on the way in and decrypts after the inner shape has run on
-the way out. That order is what lets it compose with any shape. The
-secret flag is declared on the resource or structure, so input shape is
-the only place the keys can be named, and an inner shape then carries
+The decorator works in **input layout**: it encrypts before the inner
+layout runs on the way in and decrypts after the inner layout has run on
+the way out. That order is what lets it compose with any layout. The
+secret flag is declared on the resource or structure, so input layout is
+the only place the keys can be named, and an inner layout then carries
 an opaque string exactly as it carried the plaintext. The one thing an
-inner shape may not do is look *into* a secret value, since by then it
+inner layout may not do is look *into* a secret value, since by then it
 is ciphertext.
 
 It takes its key list at construction rather than reading a data
-surface at call time, because a shape has no data surface and is not
-going to get one: `SettingsShapeInterface` is pure shape, built once and
+surface at call time, because a layout has no data surface and is not
+going to get one: `SettingsLayoutInterface` is pure layout, built once and
 reused for every instance of a field type.
-`EncryptedSettingsShape::forSurface()` is the one line that reads the
-flags off a data surface and hands back the inner shape unchanged when
+`EncryptedSettingsLayout::forSurface()` is the one line that reads the
+flags off a data surface and hands back the inner layout unchanged when
 there are none.
 
 ### What is wired, and what is not
 
 `FieldSettingsStorage` composes the decorator itself. It is handed the
-data surface on both calls that translate, so it wraps its shape when
+data surface on both calls that translate, so it wraps its layout when
 the data surface declares a secret key and the codec service is
 available, and leaves everything else exactly as it was.
 
 **The other storage classes do not, and that is the honest state of
 it.** The state storage, the config entity storage, the base field
 override storage and the plugin configuration storage write values that
-never pass through a `SettingsShapeInterface`, so there is nowhere for
+never pass through a `SettingsLayoutInterface`, so there is nowhere for
 the decorator to sit. Generalizing it to a decorator around any storage
 class is the follow-up, and it is not a rename: storage that writes
 config holds its artifact to the config schema, which would be
@@ -406,10 +406,10 @@ those is the one each class documents: hand it an object you own.
 ## Writing a storage class
 
 Worth having when a destination is reached more than once, or when the
-translation between input shape and storage shape is worth a name. The
+translation between input layout and storage layout is worth a name. The
 checklist:
 
-1. `load()` reads in input shape and returns an empty array when
+1. `load()` reads in input layout and returns an empty array when
    nothing is stored.
 2. `prepare()` writes nothing, touches nothing the caller handed over,
    and puts everything a commit needs into the artifact.

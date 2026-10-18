@@ -39,13 +39,13 @@ use Drupal\data_surface\Pipeline\PreparedValues;
  * it. A data surface built with
  * DataSurfaceBuilder::setThirdPartyDefinition() grows a
  * 'third_party_settings' map holding one map per provider, which is the
- * exact shape setThirdPartySetting() stores, so the values a module
+ * exact layout setThirdPartySetting() stores, so the values a module
  * added at build time are written through the same interface core has
  * always offered and nothing has to know they came from a data surface.
  *
- * A provider that asks for its settings in one shape and stores them in
- * another says so at build time with setThirdPartyShape(), and this
- * storage applies that shape to that provider's namespace and nothing
+ * A provider that asks for its settings in one layout and stores them in
+ * another says so at build time with setThirdPartyLayout(), and this
+ * storage applies that layout to that provider's namespace and nothing
  * else: toStorage() before the settings are set on the entity, so the
  * schema check below judges what will actually be stored, and
  * fromStorage() when they are read back. The owner who built this storage
@@ -223,18 +223,18 @@ final class ConfigEntityStorage implements DataSurfaceStorageInterface {
    * Reads every provider's third party settings off the entity.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The data surface, which carries each provider's storage shape.
+   *   The data surface, which carries each provider's storage layout.
    *
    * @return array<string, array>
-   *   Provider => setting key => value, in the shape the data surface
+   *   Provider => setting key => value, in the layout the data surface
    *   describes; empty when the entity carries none.
    */
   protected function loadThirdParty(DataSurfaceInterface $surface): array {
     $settings = [];
     foreach ($this->entity->getThirdPartyProviders() as $provider) {
       $stored = $this->entity->getThirdPartySettings($provider);
-      $shape = $surface->getThirdPartyShape($provider);
-      $settings[$provider] = $shape === NULL ? $stored : $shape->fromStorage($stored);
+      $layout = $surface->getThirdPartyLayout($provider);
+      $settings[$provider] = $layout === NULL ? $stored : $layout->fromStorage($stored);
     }
     return $settings;
   }
@@ -243,7 +243,7 @@ final class ConfigEntityStorage implements DataSurfaceStorageInterface {
    * Writes the third party mount onto an entity, provider by provider.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The data surface, which carries each provider's storage shape.
+   *   The data surface, which carries each provider's storage layout.
    * @param \Drupal\Core\Config\Entity\ConfigEntityInterface $entity
    *   The entity being shaped, which is the clone, never the original.
    * @param mixed $value
@@ -259,9 +259,9 @@ final class ConfigEntityStorage implements DataSurfaceStorageInterface {
       if (!is_array($settings)) {
         continue;
       }
-      $shape = $surface->getThirdPartyShape((string) $provider);
-      if ($shape !== NULL) {
-        $settings = $shape->toStorage($settings);
+      $layout = $surface->getThirdPartyLayout((string) $provider);
+      if ($layout !== NULL) {
+        $settings = $layout->toStorage($settings);
       }
       foreach ($settings as $key => $setting) {
         $entity->setThirdPartySetting((string) $provider, (string) $key, $setting);

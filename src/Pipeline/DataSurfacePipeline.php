@@ -677,7 +677,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * @param string $name
    *   The key.
    * @param array $current
-   *   The stored values, in input shape.
+   *   The stored values, in input layout.
    * @param string[] $dependencies
    *   The keys the key refines against.
    * @param array $values

@@ -52,19 +52,19 @@ DataSurfaceInterface`, in `Resources::buildResource()`:
 build(FieldInstanceResource::class, $context):
 
   1. the owner's shape, asked of the class: no instance is ever made
-       $class::defineInputs(new ResourceShape($builder))          <- no context: the
-       $class::defineOutputs(new ResourceShape($builder, TRUE))      same everywhere
-     ResourceShape writes straight into a fresh DataSurfaceBuilder,
+       $class::defineInputs(new ResourceBlueprint($builder))          <- no context: the
+       $class::defineOutputs(new ResourceBlueprint($builder, TRUE))      same everywhere
+     ResourceBlueprint writes straight into a fresh DataSurfaceBuilder,
      the engine's internal builder. $class is the #[Resource] or
      #[Structure] class, or the plugin class of a plugin that is its
      own structure
 
   2. the alters #[Alters] names for this class, skipping one
      whose operations leave this context's id out:
-       $alter->alterInputs(new ResourceShapeAdditions($builder, $module))
+       $alter->alterInputs(new ResourceBlueprintAdditions($builder, $module))
        $alter->alterOutputs(...)                    <- if it has outputs
-       $alter->storageShape()                       <- if HasStorageShapeInterface
-     ResourceShapeAdditions mounts what it adds at
+       $alter->storageLayout()                       <- if HasStorageLayoutInterface
+     ResourceBlueprintAdditions mounts what it adds at
      third_party_settings.<module>
 
   3. the checks on the shape: every identity key is a declared input,
@@ -253,6 +253,6 @@ resource or a key.
   which thing.
 
 - **Never read by a shape or a refiner.** The shape methods take a
-  shape, refiners take the values they name. State such as "this field
+  blueprint, refiners take the values they name. State such as "this field
   has data" is narrowing the operation imposes, applied once at build.
 - **Never** a bag of submitted values.

@@ -35,7 +35,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * base field overrides behind it, loading by the identity the context
  * knows; NodeTypeAccess answers what the operation's permission cannot.
  * The extras module's review settings arrive through NodeTypeAlter, and
- * are stored as seconds through the storage shape it hands the resource.
+ * are stored as seconds through the storage layout it hands the resource.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -302,14 +302,14 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests a dry run: the prepared storage shape, and nothing written.
+   * Tests a dry run: the prepared storage layout, and nothing written.
    *
    * Prepare rehearses the write: the node type's exported array, as
    * config storage would be handed it, and one exported override per base
    * field that would move — the title label and promote here, and not
    * status, whose default did not move.
    */
-  public function testDryRunReturnsThePreparedStorageShapeAndWritesNothing(): void {
+  public function testDryRunReturnsThePreparedStorageLayoutAndWritesNothing(): void {
     [$surface, $storage] = $this->served(NodeTypeResource::add());
     $result = $this->submit($surface, $storage, [
       'name' => 'Dry run',
@@ -394,11 +394,11 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
    *
    * Mounted under the extras module's name, asked for as an amount and a
    * unit, and stored as the seconds the extras module's schema says,
-   * through the storage shape the alter hands the resource; read back,
+   * through the storage layout the alter hands the resource; read back,
    * one week is one week again. The storage writes and reads the seconds
    * without knowing the extras module exists.
    */
-  public function testAlterStoresTheReviewSettingsInTheirOwnShape(): void {
+  public function testAlterStoresTheReviewSettingsInTheirOwnLayout(): void {
     $extras = 'data_surface_demo_extras';
     [$surface, $storage] = $this->served(NodeTypeResource::add());
     $mount = $surface->getDefinition('third_party_settings');
@@ -406,7 +406,7 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
     $module = $mount->getPropertyDefinition($extras);
     $this->assertInstanceOf(ComplexDataDefinitionInterface::class, $module);
     $this->assertSame('Review deadline', (string) $module->getPropertyDefinition(NodeTypeReviewSettings::DEADLINE)?->getLabel());
-    $this->assertNotNull($surface->getThirdPartyShape($extras));
+    $this->assertNotNull($surface->getThirdPartyLayout($extras));
 
     $week = [NodeTypeReviewSettings::AMOUNT => 1, NodeTypeReviewSettings::UNIT => 'weeks'];
     $result = $this->submit($surface, $storage, [

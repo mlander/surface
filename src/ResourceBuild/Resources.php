@@ -20,7 +20,7 @@ use Drupal\data_surface\Refinement\RuntimeRefiner;
 use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
 use Drupal\data_surface\Resource\AltersOutputsInterface;
 use Drupal\data_surface\Resource\HasOutputsInterface;
-use Drupal\data_surface\Resource\HasStorageShapeInterface;
+use Drupal\data_surface\Resource\HasStorageLayoutInterface;
 use Drupal\data_surface\Resource\AccessAnswer;
 use Drupal\data_surface\Resource\OperationAccessInterface;
 use Drupal\data_surface\Resource\AltersInputsInterface;
@@ -38,14 +38,14 @@ use Drupal\data_surface\Collection;
  * are built alike; only the storage step tells them apart):
  *
  * 1. The owner's shape. defineInputs() and, for a class with outputs,
- *    defineOutputs(), called on the class, each over a ResourceShape that
+ *    defineOutputs(), called on the class, each over a ResourceBlueprint that
  *    writes straight into a fresh DataSurfaceBuilder. Neither kind is
  *    ever instantiated: its shape and its refiners are static, so the
  *    class may as well be a plugin's, as it is for a plugin that is its
  *    own structure.
  * 2. The alters #[Alters] names for this class, in discovery order,
  *    skipping one whose operations leave this context's id out:
- *    alterInputs() and alterOutputs() over a ResourceShapeAdditions,
+ *    alterInputs() and alterOutputs() over a ResourceBlueprintAdditions,
  *    which mounts what they add under the alter's module.
  * 3. The seal-time checks on the shape: every identity key is a declared
  *    input, and no operation id is provided twice.
@@ -146,9 +146,9 @@ final class Resources implements ResourcesInterface {
     $this->registry->getOperations($definition->name());
 
     $builder = (new DataSurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
-    $inputs = new ResourceShape($builder, $this->typedDataManager);
-    $outputs = new ResourceShape($builder, $this->typedDataManager, TRUE);
-    $this->defineShape($definition, $inputs, $outputs);
+    $inputs = new ResourceBlueprint($builder, $this->typedDataManager);
+    $outputs = new ResourceBlueprint($builder, $this->typedDataManager, TRUE);
+    $this->fillBlueprints($definition, $inputs, $outputs);
 
     // The owner's own refiners first, one link per class they are on:
     // the owner's class itself, or the classes a deriver named.
@@ -165,13 +165,13 @@ final class Resources implements ResourcesInterface {
       }
       $instance = $this->classResolver->getInstanceFromDefinition($alter->class);
       if ($instance instanceof AltersInputsInterface) {
-        $instance->alterInputs($additions[$alter->module][0] ??= new ResourceShapeAdditions($builder, $this->typedDataManager, $alter->module));
+        $instance->alterInputs($additions[$alter->module][0] ??= new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module));
       }
       if ($instance instanceof AltersOutputsInterface) {
-        $instance->alterOutputs($additions[$alter->module][1] ??= new ResourceShapeAdditions($builder, $this->typedDataManager, $alter->module, TRUE));
+        $instance->alterOutputs($additions[$alter->module][1] ??= new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, TRUE));
       }
-      if ($instance instanceof HasStorageShapeInterface) {
-        $builder->setThirdPartyShape($alter->module, $instance->storageShape());
+      if ($instance instanceof HasStorageLayoutInterface) {
+        $builder->setThirdPartyLayout($alter->module, $instance->storageLayout());
       }
       $links[] = [$instance, $alter->refiners, $alter->module];
     }
@@ -209,8 +209,8 @@ final class Resources implements ResourcesInterface {
     // What each module mounted, so an alter's method may watch its own
     // module's keys and is told so when it names another's.
     $mounted_by = [];
-    foreach ($additions as $contributor => $shapes) {
-      foreach (isset($shapes[0]) ? $shapes[0]->keys() : [] as $key) {
+    foreach ($additions as $contributor => $blueprints) {
+      foreach (isset($blueprints[0]) ? $blueprints[0]->keys() : [] as $key) {
         $mounted_by[$key][] = (string) $contributor;
       }
     }
@@ -554,8 +554,8 @@ final class Resources implements ResourcesInterface {
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure with the slots.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceShape $inputs
-   *   The owner's input shape.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
+   *   The owner's input blueprint.
    * @param string[] $input_keys
    *   The owner's plain input keys.
    *
@@ -565,7 +565,7 @@ final class Resources implements ResourcesInterface {
    * @throws \LogicException
    *   When a deciding key is not a plain input of the owner.
    */
-  protected function slotsOf(ResourceDefinition $definition, ResourceShape $inputs, array $input_keys): array {
+  protected function slotsOf(ResourceDefinition $definition, ResourceBlueprint $inputs, array $input_keys): array {
     $slots = [];
     foreach ($inputs->slots() as $key => $by) {
       if (!in_array($by, $input_keys, TRUE)) {
@@ -802,7 +802,7 @@ final class Resources implements ResourcesInterface {
    */
   public function defaults(string $resource): array {
     $builder = new DataSurfaceBuilder();
-    $this->defineShape($this->registry->getDefinition($resource), new ResourceShape($builder, $this->typedDataManager));
+    $this->fillBlueprints($this->registry->getDefinition($resource), new ResourceBlueprint($builder, $this->typedDataManager));
     return $builder->seal()->getDefaultValues();
   }
 
@@ -866,7 +866,7 @@ final class Resources implements ResourcesInterface {
   /**
    * Lists the children the build left out, which the parent stores.
    *
-   * The keys the owner's shape attaches a child or a collection at that
+   * The keys the owner's blueprint attaches a child or a collection at that
    * the built resource does not carry: only a child's access omits a key.
    * The storage keeps what it holds under each, since the caller could
    * not see it.
@@ -880,10 +880,10 @@ final class Resources implements ResourcesInterface {
    *   The omitted keys.
    */
   protected function omittedKeys(ResourceDefinition $definition, DataSurfaceInterface $built): array {
-    $shape = new ResourceShape(new DataSurfaceBuilder(), $this->typedDataManager);
-    $this->defineShape($definition, $shape);
+    $blueprint = new ResourceBlueprint(new DataSurfaceBuilder(), $this->typedDataManager);
+    $this->fillBlueprints($definition, $blueprint);
     return array_values(array_filter(
-      [...array_keys($shape->attachments()), ...array_keys($shape->lists())],
+      [...array_keys($blueprint->attachments()), ...array_keys($blueprint->lists())],
       static fn (string $key): bool => $built->getDefinitions()->entry($key) === NULL,
     ));
   }
@@ -1396,20 +1396,20 @@ final class Resources implements ResourcesInterface {
   }
 
   /**
-   * Fills a shape, from its class or from what derived it.
+   * Fills a blueprint, from its class or from what derived it.
    *
    * A class's defineInputs() and defineOutputs() are called on the
    * class; a derived resource's shape methods are the ones its deriver
-   * named, handed the shape first.
+   * named, handed the blueprint first.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceShape $inputs
-   *   The input shape.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceShape|null $outputs
-   *   The output shape, or NULL when only the inputs are wanted.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
+   *   The input blueprint.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint|null $outputs
+   *   The output blueprint, or NULL when only the inputs are wanted.
    */
-  protected function defineShape(ResourceDefinition $definition, ResourceShape $inputs, ?ResourceShape $outputs = NULL): void {
+  protected function fillBlueprints(ResourceDefinition $definition, ResourceBlueprint $inputs, ?ResourceBlueprint $outputs = NULL): void {
     if ($definition->isDerived()) {
       // Decision: see docs/decisions.md#a-derived-resource-has-no-class.
       $definition->inputs?->call($this->classResolver, $inputs);

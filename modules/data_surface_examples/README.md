@@ -142,7 +142,7 @@ final class RegistrationStep1Resource implements ResourceInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('title', 'string', t('Event title'))
       ->setRequired(TRUE);
     $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
@@ -243,7 +243,7 @@ final class RegistrationStep2Resource implements ResourceInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('title', 'string', t('Event title'))
       ->setRequired(TRUE);
     $inputs->add('open', 'boolean', t('Registration open'), default: TRUE);
@@ -328,7 +328,7 @@ final class RegistrationStep3Resource implements ResourceInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('title', 'string', t('Event title'))
       ->setRequired(TRUE);
     $inputs->add('open', 'boolean', t('Registration open'), default: TRUE);
@@ -388,7 +388,7 @@ final class FreeTicketStructure implements StructureInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('note', 'string', t('Note'))
       ->setDescription(t('Shown beside the register button, for example "Donations welcome".'));
   }
@@ -406,7 +406,7 @@ final class PaidTicketStructure implements StructureInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('price', 'float', t('Price'))
       ->setRequired(TRUE)
       ->addConstraint('Range', ['min' => 0.01]);
@@ -429,7 +429,7 @@ final class ContactStructure implements StructureInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('email', 'email', t('Email'))
       ->setRequired(TRUE);
     $inputs->add('phone', 'string', t('Phone'));
@@ -510,7 +510,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
   /**
    * {@inheritdoc}
    */
-  public function alterInputs(ShapeAdditionsInterface $inputs): void {
+  public function alterInputs(BlueprintAdditionsInterface $inputs): void {
     $licence = ['pattern' => '/^\d{4}$/', 'message' => 'A licence number is four digits, such as 2048.'];
     $licence_key = $inputs->add('licence', 'string', $this->t('Event licence'))
       ->setDescription($this->t('The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.'))

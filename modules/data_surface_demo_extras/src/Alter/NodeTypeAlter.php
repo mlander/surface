@@ -11,13 +11,13 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Resource\Attribute\Alters;
-use Drupal\data_surface\Resource\HasStorageShapeInterface;
-use Drupal\data_surface\Resource\ShapeAdditionsInterface;
+use Drupal\data_surface\Resource\HasStorageLayoutInterface;
+use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
 use Drupal\data_surface\Resource\AltersInputsInterface;
-use Drupal\data_surface\Storage\SettingsShapeInterface;
+use Drupal\data_surface\Storage\SettingsLayoutInterface;
 use Drupal\data_surface_demo_extras\NodeTypeReviewSettings;
 use Drupal\data_surface_demo_extras\Plugin\DataSurfaceWidget\CommaSeparatedListWidget;
-use Drupal\data_surface_demo_extras\ReviewDeadlineShape;
+use Drupal\data_surface_demo_extras\ReviewDeadlineLayout;
 use Drupal\data_surface_demo_node_type\Resource\NodeTypeResource;
 
 /**
@@ -31,7 +31,7 @@ use Drupal\data_surface_demo_node_type\Resource\NodeTypeResource;
  *
  * - The deadline is asked for the way a person says it, an amount and a
  *   unit, and stored as the seconds the classic form stores. The
- *   conversion is this alter's storage shape, ReviewDeadlineShape, which
+ *   conversion is this alter's storage layout, ReviewDeadlineLayout, which
  *   the build hands the resource for this module's mount and the storage
  *   adapter applies to it and nothing else: the content type's storage
  *   reads and writes the seconds. The classic form does the same
@@ -62,7 +62,7 @@ use Drupal\data_surface_demo_node_type\Resource\NodeTypeResource;
  * @see \Drupal\data_surface_demo_extras\Hook\NodeTypeFormHooks
  */
 #[Alters(NodeTypeResource::class)]
-final class NodeTypeAlter implements AltersInputsInterface, HasStorageShapeInterface {
+final class NodeTypeAlter implements AltersInputsInterface, HasStorageLayoutInterface {
 
   use StringTranslationTrait;
 
@@ -79,7 +79,7 @@ final class NodeTypeAlter implements AltersInputsInterface, HasStorageShapeInter
   /**
    * {@inheritdoc}
    */
-  public function alterInputs(ShapeAdditionsInterface $inputs): void {
+  public function alterInputs(BlueprintAdditionsInterface $inputs): void {
     $unit = DataDefinition::create('string')
       ->setLabel($this->t('Unit'))
       ->addConstraint('LabeledChoice', [
@@ -121,8 +121,8 @@ final class NodeTypeAlter implements AltersInputsInterface, HasStorageShapeInter
    * The deadline is stored as seconds, and read back in the largest
    * fixed unit that divides them.
    */
-  public function storageShape(): SettingsShapeInterface {
-    return new ReviewDeadlineShape();
+  public function storageLayout(): SettingsLayoutInterface {
+    return new ReviewDeadlineLayout();
   }
 
 }

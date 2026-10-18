@@ -126,7 +126,7 @@ final class NodeTypeFormHooks {
    *
    * The conversion, business days included, is
    * NodeTypeReviewSettings::seconds(), the same the resource's storage
-   * shape uses. Refuses a deadline shorter than an hour or longer than
+   * layout uses. Refuses a deadline shorter than an hour or longer than
    * thirty days on those seconds, then replaces the pair with the one
    * integer the entity builder stores, or NULL when no amount was given.
    *
@@ -155,7 +155,7 @@ final class NodeTypeFormHooks {
    *
    * Splits on commas, trims, lower cases and drops empty entries and
    * repeats, then refuses a tag that is still not one a content type can
-   * carry. What reaches the entity builder is the stored shape.
+   * carry. What reaches the entity builder is the stored layout.
    *
    * @param array $element
    *   The tags element.

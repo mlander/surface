@@ -12,8 +12,8 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Resource\Attribute\UsesStructure;
 use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\ResourceBuild\ResourceShape;
-use Drupal\data_surface\ResourceBuild\ResourceShapeAdditions;
+use Drupal\data_surface\ResourceBuild\ResourceBlueprint;
+use Drupal\data_surface\ResourceBuild\ResourceBlueprintAdditions;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface_demo\Plugin\Block\DataSurfaceDemoBlock;
 use Drupal\data_surface_demo\Structure\DemoBlockStructure;
@@ -387,7 +387,7 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
    */
   public function testAttachIsTheOwnersInputVerbForNow(): void {
     $builder = new DataSurfaceBuilder();
-    $outputs = new ResourceShape($builder, $this->container->get('typed_data_manager'), TRUE);
+    $outputs = new ResourceBlueprint($builder, $this->container->get('typed_data_manager'), TRUE);
     try {
       $outputs->attach('storage', RecipeResource::class);
       $this->fail('An output attached a child.');
@@ -395,7 +395,7 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
     catch (\LogicException $e) {
       $this->assertStringContainsString('outputs do not hold attached structures yet', $e->getMessage());
     }
-    $additions = new ResourceShapeAdditions($builder, $this->container->get('typed_data_manager'), 'data_surface_surface_test');
+    $additions = new ResourceBlueprintAdditions($builder, $this->container->get('typed_data_manager'), 'data_surface_surface_test');
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('an attached structure inside that mount is not built');
     $additions->attach('storage', RecipeResource::class);
@@ -405,11 +405,11 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
    * Tests that adding a key twice is refused rather than replacing it.
    */
   public function testAddingIsNeverReplacing(): void {
-    $shape = new ResourceShape(new DataSurfaceBuilder(), $this->container->get('typed_data_manager'));
-    $shape->add('name', 'string', 'Name');
+    $blueprint = new ResourceBlueprint(new DataSurfaceBuilder(), $this->container->get('typed_data_manager'));
+    $blueprint->add('name', 'string', 'Name');
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('The input "name" was already added to this shape.');
-    $shape->add('name', 'string', 'Other name');
+    $this->expectExceptionMessage('The input "name" was already added to this blueprint.');
+    $blueprint->add('name', 'string', 'Other name');
   }
 
   /**

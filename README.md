@@ -57,7 +57,7 @@ describes, and delete the form code:
 #[Structure('block.my_teaser')]
 final class TeaserBlockStructure implements StructureInterface {
 
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('headline', 'string', t('Headline'), default: 'Featured content')
       ->setRequired(TRUE)
       ->addConstraint('Length', ['max' => 50]);
@@ -141,8 +141,8 @@ The module uses these twelve words in exactly one sense each.
   that validates a value and the list that is offered as form options are
   the same list, derived rather than repeated.
 - **Storage**: where accepted values are written, and the place that
-  knows the distance between the shape a resource describes and the
-  shape the store wants. A resource names its storage class, a
+  knows the distance between the layout a resource describes and the
+  layout the store wants. A resource names its storage class, a
   `ResourceStorageInterface` with `load()`, `prepare()` (rehearse the
   write, no side effects) and `commit()`; a plugin's host supplies one of
   the engine's (plugin configuration, field settings) for what it holds.
@@ -266,7 +266,7 @@ Full documentation is under [`docs/`](docs/).
 | [The pipeline](docs/pipeline.md) | Access, accept, validate, prepare, commit; dry runs; exceptions. |
 | [Value semantics](docs/semantics.md) | Configured or not, the casting table, secrets, stale values, shape mismatches, required, locked keys. |
 | [Outputs](docs/outputs.md) | Declaring what a host emits, the Omitted sentinel, conformance, its two consumers, an alter's outputs. |
-| [Storage](docs/storage.md) | What storage is, prepare and commit, the six engine storage classes, config schema, settings shapes, secrets, the serialization rule. |
+| [Storage](docs/storage.md) | What storage is, prepare and commit, the six engine storage classes, config schema, settings layouts, secrets, the serialization rule. |
 | [The served contract](docs/served-contract.md) | An operation as JSON Schema with `x-surface`, its refine and validate endpoints, and the React form rendered from it. |
 | [Generated forms](docs/forms.md) | Host families, the merge rule, AJAX, extraction, stale values, the operation form with its panel and cosmetic seam. |
 | [Widgets](docs/widgets.md) | The widget plugin type, and writing one. |

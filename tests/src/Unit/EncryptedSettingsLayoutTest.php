@@ -8,31 +8,31 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\data_surface\DataSurface;
 use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Storage\EncryptedSettingsShape;
+use Drupal\data_surface\Storage\EncryptedSettingsLayout;
 use Drupal\data_surface\Storage\SecretCodecException;
-use Drupal\data_surface\Storage\SettingsShapeInterface;
+use Drupal\data_surface\Storage\SettingsLayoutInterface;
 use Drupal\data_surface\Storage\SodiumSecretCodec;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * Tests the shape decorator that keeps plaintext out of storage.
+ * Tests the layout decorator that keeps plaintext out of storage.
  *
  * What it has to prove is narrow and load-bearing: the declared secret
  * is enciphered and everything beside it is not touched at all, the
  * round trip is exact so a partial update can leave a secret alone, an
- * inner shape still gets to do its own translation, and a value written
+ * inner layout still gets to do its own translation, and a value written
  * before the key was declared secret is recognized as plaintext and
  * enciphered on the next write rather than double-enciphered or
  * refused.
  *
- * @see \Drupal\data_surface\Storage\EncryptedSettingsShape
+ * @see \Drupal\data_surface\Storage\EncryptedSettingsLayout
  */
 #[Group('data_surface')]
-class EncryptedSettingsShapeTest extends UnitTestCase {
+class EncryptedSettingsLayoutTest extends UnitTestCase {
 
   /**
-   * Builds the data surface the shape reads its secret keys from.
+   * Builds the data surface the layout reads its secret keys from.
    *
    * One secret key, one ordinary one beside it, because "the ordinary
    * one is untouched" is half of what is being tested.
@@ -50,7 +50,7 @@ class EncryptedSettingsShapeTest extends UnitTestCase {
   }
 
   /**
-   * Builds the codec the shape encrypts with.
+   * Builds the codec the layout encrypts with.
    *
    * @return \Drupal\data_surface\Storage\SodiumSecretCodec
    *   The codec.
@@ -64,10 +64,10 @@ class EncryptedSettingsShapeTest extends UnitTestCase {
    */
   public function testSecretKeysAreEncrypted(): void {
     $codec = $this->codec();
-    $shape = EncryptedSettingsShape::forSurface($this->surface(), $codec);
-    $this->assertInstanceOf(EncryptedSettingsShape::class, $shape);
+    $layout = EncryptedSettingsLayout::forSurface($this->surface(), $codec);
+    $this->assertInstanceOf(EncryptedSettingsLayout::class, $layout);
 
-    $stored = $shape->toStorage(['endpoint' => 'https://example.com', 'token' => 'sk-1234']);
+    $stored = $layout->toStorage(['endpoint' => 'https://example.com', 'token' => 'sk-1234']);
 
     $this->assertSame('https://example.com', $stored['endpoint']);
     $this->assertNotSame('sk-1234', $stored['token']);
@@ -77,7 +77,7 @@ class EncryptedSettingsShapeTest extends UnitTestCase {
     // partial update of the endpoint leave the token intact.
     $this->assertSame(
       ['endpoint' => 'https://example.com', 'token' => 'sk-1234'],
-      $shape->fromStorage($stored),
+      $layout->fromStorage($stored),
     );
   }
 
@@ -91,24 +91,24 @@ class EncryptedSettingsShapeTest extends UnitTestCase {
     $surface = new DataSurface(DefinitionMap::fromArrays(definitions: [
       'endpoint' => DataDefinition::create('string'),
     ]));
-    $inner = $this->passThroughShape();
+    $inner = $this->passThroughLayout();
 
-    $this->assertNull(EncryptedSettingsShape::forSurface($surface, $this->codec()));
-    $this->assertSame($inner, EncryptedSettingsShape::forSurface($surface, $this->codec(), $inner));
-    $this->assertSame(['token'], EncryptedSettingsShape::secretKeys($this->surface()));
+    $this->assertNull(EncryptedSettingsLayout::forSurface($surface, $this->codec()));
+    $this->assertSame($inner, EncryptedSettingsLayout::forSurface($surface, $this->codec(), $inner));
+    $this->assertSame(['token'], EncryptedSettingsLayout::secretKeys($this->surface()));
   }
 
   /**
    * Tests that nothing is enciphered when there is no secret to keep.
    */
   public function testEmptyValuesAreStoredAsThemselves(): void {
-    $shape = EncryptedSettingsShape::forSurface($this->surface(), $this->codec());
+    $layout = EncryptedSettingsLayout::forSurface($this->surface(), $this->codec());
 
-    $this->assertSame(['token' => NULL], $shape->toStorage(['token' => NULL]));
-    $this->assertSame(['token' => ''], $shape->toStorage(['token' => '']));
+    $this->assertSame(['token' => NULL], $layout->toStorage(['token' => NULL]));
+    $this->assertSame(['token' => ''], $layout->toStorage(['token' => '']));
     // A key the values do not carry is not invented.
-    $this->assertSame(['endpoint' => 'https://example.com'], $shape->toStorage(['endpoint' => 'https://example.com']));
-    $this->assertSame(['token' => NULL], $shape->fromStorage(['token' => NULL]));
+    $this->assertSame(['endpoint' => 'https://example.com'], $layout->toStorage(['endpoint' => 'https://example.com']));
+    $this->assertSame(['token' => NULL], $layout->fromStorage(['token' => NULL]));
   }
 
   /**
@@ -120,14 +120,14 @@ class EncryptedSettingsShapeTest extends UnitTestCase {
    */
   public function testPreexistingPlaintextIsDetected(): void {
     $codec = $this->codec();
-    $shape = EncryptedSettingsShape::forSurface($this->surface(), $codec);
+    $layout = EncryptedSettingsLayout::forSurface($this->surface(), $codec);
 
-    $values = $shape->fromStorage(['endpoint' => 'https://example.com', 'token' => 'sk-legacy']);
+    $values = $layout->fromStorage(['endpoint' => 'https://example.com', 'token' => 'sk-legacy']);
     $this->assertSame('sk-legacy', $values['token']);
 
-    $stored = $shape->toStorage($values);
+    $stored = $layout->toStorage($values);
     $this->assertTrue($codec->isEncrypted($stored['token']));
-    $this->assertSame('sk-legacy', $shape->fromStorage($stored)['token']);
+    $this->assertSame('sk-legacy', $layout->fromStorage($stored)['token']);
   }
 
   /**
@@ -135,32 +135,32 @@ class EncryptedSettingsShapeTest extends UnitTestCase {
    */
   public function testCiphertextIsNotDoubleEncrypted(): void {
     $codec = $this->codec();
-    $shape = EncryptedSettingsShape::forSurface($this->surface(), $codec);
+    $layout = EncryptedSettingsLayout::forSurface($this->surface(), $codec);
     $ciphertext = $codec->encrypt('sk-1234');
 
-    $this->assertSame($ciphertext, $shape->toStorage(['token' => $ciphertext])['token']);
+    $this->assertSame($ciphertext, $layout->toStorage(['token' => $ciphertext])['token']);
   }
 
   /**
-   * Tests that the inner shape's own translation still happens.
+   * Tests that the inner layout's own translation still happens.
    *
-   * Encryption goes on first and comes off last, so the inner shape
+   * Encryption goes on first and comes off last, so the inner layout
    * moves an opaque string around exactly as it moved the plaintext.
    */
-  public function testInnerShapeStillTranslates(): void {
+  public function testInnerLayoutStillTranslates(): void {
     $codec = $this->codec();
-    $shape = EncryptedSettingsShape::forSurface($this->surface(), $codec, $this->wrappingShape());
-    $this->assertInstanceOf(EncryptedSettingsShape::class, $shape);
+    $layout = EncryptedSettingsLayout::forSurface($this->surface(), $codec, $this->wrappingLayout());
+    $this->assertInstanceOf(EncryptedSettingsLayout::class, $layout);
 
-    $stored = $shape->toStorage(['endpoint' => 'https://example.com', 'token' => 'sk-1234']);
+    $stored = $layout->toStorage(['endpoint' => 'https://example.com', 'token' => 'sk-1234']);
 
-    // The inner shape's wrapping is intact, and what it wrapped is
+    // The inner layout's wrapping is intact, and what it wrapped is
     // ciphertext.
     $this->assertSame(['value' => 'https://example.com'], $stored['endpoint']);
     $this->assertTrue($codec->isEncrypted($stored['token']['value']));
     $this->assertSame(
       ['endpoint' => 'https://example.com', 'token' => 'sk-1234'],
-      $shape->fromStorage($stored),
+      $layout->fromStorage($stored),
     );
   }
 
@@ -171,21 +171,21 @@ class EncryptedSettingsShapeTest extends UnitTestCase {
    * exactly the silent failure the flag exists to prevent.
    */
   public function testNonStringSecretIsRefused(): void {
-    $shape = EncryptedSettingsShape::forSurface($this->surface(), $this->codec());
+    $layout = EncryptedSettingsLayout::forSurface($this->surface(), $this->codec());
 
     $this->expectException(SecretCodecException::class);
     $this->expectExceptionMessage('"token"');
-    $shape->toStorage(['token' => ['sk-1234']]);
+    $layout->toStorage(['token' => ['sk-1234']]);
   }
 
   /**
-   * Builds a shape that translates nothing, to be identical by identity.
+   * Builds a layout that translates nothing, to be identical by identity.
    *
-   * @return \Drupal\data_surface\Storage\SettingsShapeInterface
-   *   The shape.
+   * @return \Drupal\data_surface\Storage\SettingsLayoutInterface
+   *   The layout.
    */
-  protected function passThroughShape(): SettingsShapeInterface {
-    return new class implements SettingsShapeInterface {
+  protected function passThroughLayout(): SettingsLayoutInterface {
+    return new class implements SettingsLayoutInterface {
 
       /**
        * {@inheritdoc}
@@ -205,17 +205,17 @@ class EncryptedSettingsShapeTest extends UnitTestCase {
   }
 
   /**
-   * Builds a shape that wraps every value the way a real one might.
+   * Builds a layout that wraps every value the way a real one might.
    *
    * Modelled on the address field's overrides, which storage keeps in a
    * single-key array each: a translation that moves values without
    * looking into them.
    *
-   * @return \Drupal\data_surface\Storage\SettingsShapeInterface
-   *   The shape.
+   * @return \Drupal\data_surface\Storage\SettingsLayoutInterface
+   *   The layout.
    */
-  protected function wrappingShape(): SettingsShapeInterface {
-    return new class implements SettingsShapeInterface {
+  protected function wrappingLayout(): SettingsLayoutInterface {
+    return new class implements SettingsLayoutInterface {
 
       /**
        * {@inheritdoc}

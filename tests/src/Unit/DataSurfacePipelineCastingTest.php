@@ -83,7 +83,7 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
    * @param mixed $input
    *   The raw input.
    * @param array $current
-   *   The stored values, in input shape.
+   *   The stored values, in input layout.
    *
    * @return mixed
    *   The accepted value of the key.

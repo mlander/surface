@@ -18,7 +18,7 @@ use Drupal\data_surface\DataSurfaceInterface;
 interface DataSurfaceStorageInterface {
 
   /**
-   * Reads the stored values in input shape.
+   * Reads the stored values in input layout.
    *
    * The 'current' argument of the pipeline's accept(), which is what
    * makes a partial update legal.
@@ -40,7 +40,7 @@ interface DataSurfaceStorageInterface {
   public function load(DataSurfaceInterface $surface): array;
 
   /**
-   * Turns accepted values into this storage's own shape.
+   * Turns accepted values into this storage's own layout.
    *
    * Writes nothing.
    *

@@ -84,7 +84,7 @@ interface DataSurfacePipelineInterface {
    * @param array $input
    *   Raw input keyed by data surface key; may be partial.
    * @param array $current
-   *   The stored values, in input shape.
+   *   The stored values, in input layout.
    *
    * @return array
    *   The accepted values: every data surface key present, each in its
@@ -130,7 +130,7 @@ interface DataSurfacePipelineInterface {
    * @param array $values
    *   The accepted values.
    * @param array $current
-   *   The stored values, in input shape; what a key already holds is
+   *   The stored values, in input layout; what a key already holds is
    *   the only thing that can be stale. The default says nothing is
    *   stored, so nothing can be stale, which is right for a caller
    *   validating values that are not on their way to storage at all.
@@ -195,7 +195,7 @@ interface DataSurfacePipelineInterface {
    * @param array $values
    *   The accepted, validated values.
    * @param \Drupal\data_surface\Pipeline\DataSurfaceStorageInterface $storage
-   *   The storage that owns the storage shape.
+   *   The storage that owns the storage layout.
    *
    * @return \Drupal\data_surface\Pipeline\PreparedValues
    *   The prepared artifact.

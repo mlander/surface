@@ -7,7 +7,7 @@ namespace Drupal\data_surface_test\Structure;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\data_surface\Resource\Attribute\Structure;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\StructureInterface;
 
 /**
@@ -46,7 +46,7 @@ final class ChainBlockStructure implements StructureInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('tier_one', 'string', t('Tier one'), default: 'a')
       ->addConstraint('Choice', ['choices' => array_keys(self::SECOND)]);
     $inputs->add('tier_two', 'string', t('Tier two'));

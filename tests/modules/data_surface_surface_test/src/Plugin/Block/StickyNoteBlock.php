@@ -11,7 +11,7 @@ use Drupal\data_surface\Plugin\Block\DataSurfaceBlockBase;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\data_surface\Resource\Attribute\Structure;
 use Drupal\data_surface\Resource\Attribute\UsesStructure;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\StructureInterface;
 
 /**
@@ -33,7 +33,7 @@ final class StickyNoteBlock extends DataSurfaceBlockBase implements StructureInt
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('color', 'string', t('Color'), default: 'yellow')
       ->setRequired(TRUE)
       ->addConstraint('Choice', ['choices' => ['yellow', 'pink']]);

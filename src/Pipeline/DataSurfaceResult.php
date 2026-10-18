@@ -21,7 +21,7 @@ final class DataSurfaceResult {
    * Constructs a DataSurfaceResult.
    *
    * @param array $values
-   *   The accepted values in input shape; the input as far as it got
+   *   The accepted values in input layout; the input as far as it got
    *   when a stage refused it.
    * @param \Drupal\data_surface\Pipeline\ViolationSet $violations
    *   Everything the run refused, exactly as

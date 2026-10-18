@@ -7,7 +7,7 @@ namespace Drupal\data_surface_demo_node_type\Resource;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_demo_node_type\Access\NodeTypeAccess;
@@ -80,7 +80,7 @@ final class NodeTypeResource implements ResourceInterface {
    * Ordered as core's NodeTypeForm presents them; the form's cosmetic
    * grouping relies on this order within each group.
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     // Which content type this is.
     $inputs->add('name', 'string', t('Name'))
       ->setDescription(t('The human readable name for this content type.'))

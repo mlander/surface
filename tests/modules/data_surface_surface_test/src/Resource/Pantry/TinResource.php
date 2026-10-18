@@ -6,7 +6,7 @@ namespace Drupal\data_surface_surface_test\Resource\Pantry;
 
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\Attribute\Variant;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_surface_test\Storage\PantryTinStorage;
 
@@ -20,7 +20,7 @@ final class TinResource implements ResourceInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('opener', 'boolean', 'Needs an opener', default: FALSE);
     $inputs->add('volume', 'integer', 'Volume', default: 400)->setRequired(TRUE);
   }

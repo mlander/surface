@@ -6,7 +6,7 @@ namespace Drupal\data_surface_surface_test\Resource\Larder;
 
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_surface_test\Access\SpiceRackAccess;
@@ -58,7 +58,7 @@ final class SpiceRackResource implements ResourceInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('shelf', 'string', 'Shelf', default: 'middle');
     $inputs->add('spices', 'integer', 'Spices', default: 3)
       ->addConstraint('Range', ['min' => 0, 'max' => 40]);

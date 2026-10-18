@@ -11,12 +11,12 @@ use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Resource\ShapeAdditionsInterface;
+use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
 
 /**
- * What every shape does: add, over the engine's builder.
+ * What every blueprint does: add, over the engine's builder.
  *
- * The two shapes differ only in where an added key lands, which is the
+ * The two blueprints differ only in where an added key lands, which is the
  * one method each implements. Everything else (creating the definition
  * from a type name, refusing a key added twice, rewording a key,
  * recording a child for the build step to build) is said here once.
@@ -28,39 +28,39 @@ use Drupal\data_surface\Resource\ShapeAdditionsInterface;
  *
  * @internal
  */
-abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
+abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
 
   /**
-   * The keys added through this shape, in order.
+   * The keys added through this blueprint, in order.
    *
    * @var string[]
    */
   protected array $keys = [];
 
   /**
-   * The children attached through this shape, keyed by key.
+   * The children attached through this blueprint, keyed by key.
    *
    * @var array<string, class-string>
    */
   protected array $attachments = [];
 
   /**
-   * The collections attached through this shape, keyed by key.
+   * The collections attached through this blueprint, keyed by key.
    *
    * @var array<string, string>
    */
   protected array $lists = [];
 
   /**
-   * Constructs a shape over a builder.
+   * Constructs a blueprint over a builder.
    *
    * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
-   *   The engine's builder the shape fills.
+   *   The engine's builder the blueprint fills.
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
    *   The typed data manager, which turns a type name into the right
    *   definition class: a 'map' is a MapDataDefinition, not a plain one.
    * @param bool $outputs
-   *   TRUE when this shape describes outputs rather than inputs.
+   *   TRUE when this blueprint describes outputs rather than inputs.
    */
   public function __construct(
     protected readonly DataSurfaceBuilderInterface $builder,
@@ -92,7 +92,7 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
   public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): static {
     if (in_array($key, $this->declared(), TRUE) || $this->isDeclared($key)) {
       throw new \LogicException(sprintf(
-        'The %s "%s" was already added to this shape. Adding is never replacing: what one declaration said, another may not change.',
+        'The %s "%s" was already added to this blueprint. Adding is never replacing: what one declaration said, another may not change.',
         $this->outputs ? 'output' : 'input',
         $key,
       ));
@@ -128,7 +128,7 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
     }
     if (in_array($key, $this->declared(), TRUE) || $this->isDeclared($key)) {
       throw new \LogicException(sprintf(
-        'The input "%s" was already added to this shape. Adding is never replacing: what one declaration said, another may not change.',
+        'The input "%s" was already added to this blueprint. Adding is never replacing: what one declaration said, another may not change.',
         $key,
       ));
     }
@@ -145,12 +145,12 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
   /**
    * {@inheritdoc}
    *
-   * The owner's shape lists its own values in the key's constraint, so
-   * only an alter's shape offers more.
+   * The owner's blueprint lists its own values in the key's constraint, so
+   * only an alter's blueprint offers more.
    */
   public function extendChoices(string $key, array $choices): static {
     throw new \LogicException(sprintf(
-      'extendChoices() was asked to widen "%s" from the owner\'s own shape. An owner lists its own values in the key\'s constraint; extendChoices() is how an alter offers more.',
+      'extendChoices() was asked to widen "%s" from the owner\'s own blueprint. An owner lists its own values in the key\'s constraint; extendChoices() is how an alter offers more.',
       $key,
     ));
   }
@@ -162,7 +162,7 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
     $definition = $this->find($key);
     if ($definition === NULL) {
       throw new \LogicException(sprintf(
-        'describe() was asked to reword the %1$s "%2$s", which nothing has declared. A key is described by its name when its owner declared it or this shape added it, and by its mounted path, %3$s.<module>.<key>, when another alter did; a module\'s mount is %3$s.<module>, once the module has added a key.',
+        'describe() was asked to reword the %1$s "%2$s", which nothing has declared. A key is described by its name when its owner declared it or this blueprint added it, and by its mounted path, %3$s.<module>.<key>, when another alter did; a module\'s mount is %3$s.<module>, once the module has added a key.',
         $this->outputs ? 'output' : 'input',
         $key,
         $this->outputs ? DataSurfaceBuilderInterface::THIRD_PARTY_OUTPUTS : 'third_party_settings',
@@ -191,7 +191,7 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
    *
    * A placement says where one module's fieldset is drawn, so it is the
    * module's own to make, of its own input mount, and it names a key the
-   * fieldset can be drawn beside: a top-level key of the owner's shape.
+   * fieldset can be drawn beside: a top-level key of the owner's blueprint.
    * Outputs are never drawn, so they have nowhere to be placed.
    *
    * @param string $key
@@ -200,8 +200,8 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
    *   The key the mount is to be drawn after.
    *
    * @throws \LogicException
-   *   When the key is not this shape's own input mount, or $after is not
-   *   a top-level key of the owner's shape.
+   *   When the key is not this blueprint's own input mount, or $after is not
+   *   a top-level key of the owner's blueprint.
    */
   protected function assertPlaceable(string $key, string $after): void {
     $mount = $this->ownMount();
@@ -219,7 +219,7 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
     }
     if ($after === 'third_party_settings' || $this->builder->getDefinition($after) === NULL) {
       throw new \LogicException(sprintf(
-        'describe() was asked to place %s after "%s", which is no top-level key of the owner\'s shape. A mount is drawn after a plain key or an attached part the owner declared.',
+        'describe() was asked to place %s after "%s", which is no top-level key of the owner\'s blueprint. A mount is drawn after a plain key or an attached part the owner declared.',
         $key,
         $after,
       ));
@@ -227,10 +227,10 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
   }
 
   /**
-   * Gets the path of this shape's own input mount, if it has one.
+   * Gets the path of this blueprint's own input mount, if it has one.
    *
    * @return string|null
-   *   `third_party_settings.<module>` for an alter's shape, NULL for the
+   *   `third_party_settings.<module>` for an alter's blueprint, NULL for the
    *   owner's, which mounts nothing.
    */
   protected function ownMount(): ?string {
@@ -238,10 +238,10 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
   }
 
   /**
-   * Gets the plain keys added through this shape, in order.
+   * Gets the plain keys added through this blueprint, in order.
    *
    * Keys holding a child are not among them: they are attachments(), and
-   * the slots of the owner's shape.
+   * the slots of the owner's blueprint.
    *
    * @return string[]
    *   The keys.
@@ -251,7 +251,7 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
   }
 
   /**
-   * Gets the children attached through this shape.
+   * Gets the children attached through this blueprint.
    *
    * @return array<string, class-string>
    *   The child classes, keyed by key, in declaration order.
@@ -261,7 +261,7 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
   }
 
   /**
-   * Gets the collections attached through this shape.
+   * Gets the collections attached through this blueprint.
    *
    * @return array<string, string>
    *   The child each item is, by name, keyed by key, in declaration
@@ -272,7 +272,7 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
   }
 
   /**
-   * Gets every key this shape declared, children included.
+   * Gets every key this blueprint declared, children included.
    *
    * @return string[]
    *   The keys.
@@ -299,7 +299,7 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
    *   The map at the key.
    *
    * @throws \LogicException
-   *   When the key is taken, or this shape cannot hold a child.
+   *   When the key is taken, or this blueprint cannot hold a child.
    */
   protected function reserveSubsurface(string $verb, string $key): MapDataDefinition {
     if ($this->outputs) {
@@ -307,7 +307,7 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
     }
     if (in_array($key, $this->declared(), TRUE) || $this->isDeclared($key)) {
       throw new \LogicException(sprintf(
-        'The input "%s" was already added to this shape. Adding is never replacing: what one declaration said, another may not change.',
+        'The input "%s" was already added to this blueprint. Adding is never replacing: what one declaration said, another may not change.',
         $key,
       ));
     }
@@ -343,7 +343,7 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
   }
 
   /**
-   * Puts one added definition where this shape's keys live.
+   * Puts one added definition where this blueprint's keys live.
    *
    * @param string $key
    *   The key.
@@ -355,7 +355,7 @@ abstract class ShapeAdapterBase implements ShapeAdditionsInterface {
   abstract protected function declare(string $key, DataDefinitionInterface $definition, mixed $default): void;
 
   /**
-   * Answers whether a key is already where this shape would put it.
+   * Answers whether a key is already where this blueprint would put it.
    *
    * @param string $key
    *   The key.

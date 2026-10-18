@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface_surface_test\Alter;
 
 use Drupal\data_surface\Resource\Attribute\Alters;
-use Drupal\data_surface\Resource\ShapeAdditionsInterface;
+use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
 use Drupal\data_surface\Resource\AltersInputsInterface;
 use Drupal\data_surface_surface_test\Resource\Larder\SpiceRackResource;
 
@@ -21,7 +21,7 @@ final class RestockRackAlter implements AltersInputsInterface {
   /**
    * {@inheritdoc}
    */
-  public function alterInputs(ShapeAdditionsInterface $inputs): void {
+  public function alterInputs(BlueprintAdditionsInterface $inputs): void {
     $inputs->add('supplier', 'string', 'Supplier');
   }
 

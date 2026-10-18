@@ -28,7 +28,7 @@ use PHPUnit\Framework\Attributes\Group;
  *
  * The exemplar from ADOPTION.md group C. What has to hold is that the
  * settings are described rather than merely collected, that the
- * description is the input shape while the storage shape is unchanged,
+ * description is the input layout while the storage layout is unchanged,
  * and that the distance between the two lives in the storage's prepare
  * step where every caller goes through it: a form, a payload, a test.
  */
@@ -255,7 +255,7 @@ class AddressFieldResourceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that loading flattens the storage shape into the input shape.
+   * Tests that loading flattens the storage layout into the input layout.
    */
   public function testLoadFlattensStoredSettings(): void {
     $this->field->setSettings([
@@ -301,9 +301,9 @@ class AddressFieldResourceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests a payload storing the shape the address field expects.
+   * Tests a payload storing the layout the address field expects.
    */
-  public function testSubmitStoresTheStorageShape(): void {
+  public function testSubmitStoresTheStorageLayout(): void {
     $result = $this->pipeline()->submit(
       $this->surface(),
       [

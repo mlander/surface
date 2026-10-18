@@ -16,7 +16,7 @@ use Drupal\data_surface\Refinement\ChoiceSet;
 use Drupal\data_surface\Refinement\Narrowing;
 use Drupal\data_surface\Refinement\RuntimeRefiner;
 use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
-use Drupal\data_surface\Storage\SettingsShapeInterface;
+use Drupal\data_surface\Storage\SettingsLayoutInterface;
 
 /**
  * The immutable data surface a builder seals.
@@ -34,7 +34,7 @@ use Drupal\data_surface\Storage\SettingsShapeInterface;
  * Entry inside the DefinitionMap, so there are no parallel arrays
  * left to fall out of step. The outputs are a second map of the same
  * type, read the same way and never refined. What is not per key (the
- * cacheability of the whole data surface and the storage shapes of what
+ * cacheability of the whole data surface and the storage layouts of what
  * alters mounted) stays here.
  *
  * Default values live on the definitions themselves, read through
@@ -67,7 +67,7 @@ final class DataSurface implements DataSurfaceInterface {
    *   What the host's execution emits: one entry per output key, in
    *   declaration order, carrying the definition and the contributor.
    *   Empty for a data surface that declares no outputs.
-   * @param array<string, \Drupal\data_surface\Storage\SettingsShapeInterface> $thirdPartyShapes
+   * @param array<string, \Drupal\data_surface\Storage\SettingsLayoutInterface> $thirdPartyLayouts
    *   How each provider's mounted third-party settings are stored, by
    *   provider; a provider not listed stores them as described.
    * @param \Drupal\data_surface\Refinement\WatchedValueCheckInterface|null $watchedValueCheck
@@ -86,7 +86,7 @@ final class DataSurface implements DataSurfaceInterface {
     protected readonly DefinitionMap $definitions,
     protected readonly CacheableMetadata $cacheability = new CacheableMetadata(),
     protected readonly DefinitionMap $outputs = new DefinitionMap([]),
-    protected readonly array $thirdPartyShapes = [],
+    protected readonly array $thirdPartyLayouts = [],
     protected readonly ?WatchedValueCheckInterface $watchedValueCheck = NULL,
   ) {
   }
@@ -94,8 +94,8 @@ final class DataSurface implements DataSurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function getThirdPartyShape(string $provider): ?SettingsShapeInterface {
-    return $this->thirdPartyShapes[$provider] ?? NULL;
+  public function getThirdPartyLayout(string $provider): ?SettingsLayoutInterface {
+    return $this->thirdPartyLayouts[$provider] ?? NULL;
   }
 
   /**
@@ -287,7 +287,7 @@ final class DataSurface implements DataSurfaceInterface {
       $changed = TRUE;
     }
     return $changed
-      ? new self($definitions, $cacheability, $this->outputs, $this->thirdPartyShapes, $this->watchedValueCheck)
+      ? new self($definitions, $cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck)
       : $this;
   }
 

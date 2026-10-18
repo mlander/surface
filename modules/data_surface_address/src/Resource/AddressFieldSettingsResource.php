@@ -11,7 +11,7 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\Attribute\Variant;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_address\Storage\AddressFieldSettingsStorage;
 use Drupal\data_surface_tool\Resource\FieldInstanceResource;
@@ -20,14 +20,14 @@ use Drupal\data_surface_tool\Resource\FieldInstanceResource;
  * Settings only an address field has: the address field's settings slot.
  *
  * The three settings the address module stores per field instance, in
- * the input shape a caller sends rather than the shape the field stores:
+ * the input layout a caller sends rather than the layout the field stores:
  * - a list of country codes, not the map of each code to itself a
  *   multi-select happens to submit;
  * - one optional override per address field, not a single-key array
  *   wrapped around each one;
  * - no deprecated 'fields' key at all, because a caller should never be
  *   offered a key that silently overrules the one next to it.
- * The storage is where the two shapes meet, through AddressSettingsShape.
+ * The storage is where the two layouts meet, through AddressSettingsLayout.
  *
  * #[Variant] fills the field instance resource's open settings
  * slot for the address field type, so the field resource never names
@@ -50,7 +50,7 @@ final class AddressFieldSettingsResource implements ResourceInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     // The item says what one country code is, and the Country constraint
     // is the whole of that. Core takes a list's item definition in the
     // constructor rather than through a setter, so the list is built

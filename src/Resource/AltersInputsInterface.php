@@ -23,9 +23,9 @@ interface AltersInputsInterface {
   /**
    * Adds inputs to the resource or structure named on #[Alters].
    *
-   * @param \Drupal\data_surface\Resource\ShapeAdditionsInterface $inputs
-   *   The input shape, add-only.
+   * @param \Drupal\data_surface\Resource\BlueprintAdditionsInterface $inputs
+   *   The input blueprint, add-only.
    */
-  public function alterInputs(ShapeAdditionsInterface $inputs): void;
+  public function alterInputs(BlueprintAdditionsInterface $inputs): void;
 
 }

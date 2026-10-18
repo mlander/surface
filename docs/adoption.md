@@ -315,7 +315,7 @@ Business days are the case no reading of the schema answers: both sides
 convert ten of them to twelve calendar days, 1036800 seconds, by one
 rule, while a schema-only agent's best inference, 864000, is in range,
 accepted by the classic tool, and wrong. The resource stores both
-through a storage shape the extras module hands it, and refuses
+through a storage layout the extras module hands it, and refuses
 forty-five days on the amount, in the caller's own units.
 
 The schemas and a table of outcomes, each cell observed rather than

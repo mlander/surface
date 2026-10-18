@@ -19,7 +19,7 @@ use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
  * data surface and its storage. This interface is what the callback
  * checks the rebuilt item against, and what lets a field type supply a
  * storage of its own (SurfaceAddressItem hands the field settings
- * storage its storage shape).
+ * storage its storage layout).
  *
  * DataSurfaceFieldTypeTrait implements all three methods; a field item
  * using it declares that it implements this interface.

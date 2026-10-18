@@ -121,7 +121,7 @@ thing, so it was written to be:
   agent asked for ten business days has no unit to find; its best
   inference, ten days in seconds, 864000, is plausible, inside the
   Range, accepted by the classic tool, and not what the form stores.
-- **The tags' schema says the stored shape and nothing more.** A
+- **The tags' schema says the stored layout and nothing more.** A
   sequence of strings. What a tag may look like, and the split, trim,
   lower casing and de-duplication, live in the form, which is the
   realistic common case.
@@ -148,9 +148,9 @@ thing, so it was written to be:
 
 The resource asks for the deadline the way a person says it, an amount
 and a unit, and stores the seconds core's form stores. The conversion is
-`ReviewDeadlineShape`, a `SettingsShapeInterface` the extras module's
+`ReviewDeadlineLayout`, a `SettingsLayoutInterface` the extras module's
 alter, `NodeTypeAlter`, hands the resource by implementing
-`HasStorageShapeInterface`. The built resource carries it, and the
+`HasStorageLayoutInterface`. The built resource carries it, and the
 storage adapter applies it to that module's settings and nothing else:
 `toStorage()` before `NodeTypeStorage` writes them, `fromStorage()` after
 it reads them, so an edit reads 604800 back as one week. Business days
@@ -191,8 +191,8 @@ the same message a tool caller gets.
 
 | Test | Covers |
 | --- | --- |
-| `Kernel\NodeTypeToolComparisonTest` | The advertised schema, the stored schema, the tool naming no key, storage and read-back through the storage shape, refusals with paths, dry runs, what Tool Belt advertises and stores, the classic form for a person, the resource's form with the extension, and `COMPARISON.md`. |
-| `Kernel\DataSurfaceBuilderTest` | A third-party storage shape travels with the resource, through refinement, and is refused for a module that mounts nothing. |
+| `Kernel\NodeTypeToolComparisonTest` | The advertised schema, the stored schema, the tool naming no key, storage and read-back through the storage layout, refusals with paths, dry runs, what Tool Belt advertises and stores, the classic form for a person, the resource's form with the extension, and `COMPARISON.md`. |
+| `Kernel\DataSurfaceBuilderTest` | A third-party storage layout travels with the resource, through refinement, and is refused for a module that mounts nothing. |
 
 ## Tool API limitations found
 

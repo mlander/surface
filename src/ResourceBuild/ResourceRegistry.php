@@ -593,7 +593,7 @@ final class ResourceRegistry {
     foreach (['defineInputs' => $interface, 'defineOutputs' => HasOutputsInterface::class] as $method => $needed) {
       if ($class->hasMethod($method) && !$class->getMethod($method)->isStatic()) {
         throw new \LogicException(sprintf(
-          '%s %s and declares %s() as an instance method. A shape is a property of its class and takes nothing but the shape to fill: declare it `public static function %s(ShapeInterface $%s): void`, and implement %s.',
+          '%s %s and declares %s() as an instance method. A shape is a property of its class and takes nothing but the blueprint to fill: declare it `public static function %s(BlueprintInterface $%s): void`, and implement %s.',
           $class->getName(),
           $how,
           $method,

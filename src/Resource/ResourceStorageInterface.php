@@ -42,7 +42,7 @@ interface ResourceStorageInterface {
   /**
    * Rehearses the write without performing it.
    *
-   * Builds what commit() would store, in storage's own shape, and holds
+   * Builds what commit() would store, in storage's own layout, and holds
    * it to every check storage would make (config schema, entity
    * constraints). Must have no side effects: nothing saved, nothing
    * cached that a later load would read.
@@ -53,7 +53,7 @@ interface ResourceStorageInterface {
    *   The accepted, validated, canonical values, keyed by input key.
    *
    * @return array
-   *   What commit() would store, in storage's own shape. A dry run
+   *   What commit() would store, in storage's own layout. A dry run
    *   reports it as it is.
    *
    * @throws \Drupal\data_surface\Pipeline\StorageViolationsException

@@ -180,7 +180,7 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
     $field = $this->reloadField();
     $this->assertNotNull($field);
     $this->assertSame('Address', $field->getLabel());
-    // Stored in the field's own shape, by the address settings' storage class.
+    // Stored in the field's own layout, by the address settings' storage class.
     $this->assertSame(['US' => 'US', 'CA' => 'CA'], $field->getSettings()['available_countries']);
     $this->assertSame(['organization' => ['override' => 'hidden']], $field->getSettings()['field_overrides']);
     $this->assertSame([], $field->getSettings()['fields']);

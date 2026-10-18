@@ -285,7 +285,7 @@ class DataSurfaceOperationForm extends FormBase {
   }
 
   /**
-   * Reads what the storage already holds, in input shape.
+   * Reads what the storage already holds, in input layout.
    *
    * Narrowed to the built resource's own keys, because a storage may
    * legitimately hand back more than the resource declares: a destination

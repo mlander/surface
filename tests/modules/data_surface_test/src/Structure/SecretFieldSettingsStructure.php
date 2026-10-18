@@ -6,7 +6,7 @@ namespace Drupal\data_surface_test\Structure;
 
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Resource\Attribute\Structure;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\StructureInterface;
 
 /**
@@ -26,7 +26,7 @@ final class SecretFieldSettingsStructure implements StructureInterface {
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('endpoint', 'string', t('Endpoint'), default: '')
       ->setDescription(t('Where this field sends its values.'));
     $token = $inputs->add('token', 'string', t('API key'), default: '')

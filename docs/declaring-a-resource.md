@@ -23,7 +23,7 @@ from them.
 #[Structure('block.data_surface_demo')]
 final class DemoBlockStructure implements StructureInterface {
 
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $headline = $inputs->add('headline', 'string', t('Headline'), default: 'Featured content')
       ->setDescription(t('Shown above the featured content.'))
       ->setRequired(TRUE)
@@ -57,7 +57,7 @@ part of a resource or structure has one home:
 | What | Where |
 | --- | --- |
 | Its id, and which keys say which thing it is | `#[Resource('id', identity: [...])]`; a structure has an id and no identity, `#[Structure('id')]` |
-| Its keys: type, label, default, constraints | `static defineInputs(ShapeInterface $inputs)` |
+| Its keys: type, label, default, constraints | `static defineInputs(BlueprintInterface $inputs)` |
 | What it emits | `static defineOutputs()`, on `HasOutputsInterface`; see [Outputs](outputs.md) |
 | A key whose allowed values depend on another key's value | a static `#[RefinesInput('key')]` method |
 | How much is already known: add, edit, reuse | `#[Operation]` static methods returning an `OperationContext` |
@@ -110,7 +110,7 @@ resolvers](options.md).
 
 A shape that does depend on site state (a key offered only while a
 module is installed, a label read from configuration) says so with
-`ShapeInterface::addCacheableDependency()`, so a form rendered from it
+`BlueprintInterface::addCacheableDependency()`, so a form rendered from it
 is cached no longer than its shape holds.
 
 ## On a plugin
@@ -158,7 +158,7 @@ static methods a structure class has, beside the plugin's own code:
 #[UsesStructure]
 final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements StructureInterface, HasOutputsInterface {
 
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('prefix', 'string', t('Prefix'))
       ->setDescription(t('Text placed before each value.'))
       ->addConstraint('Length', ['max' => 10]);
@@ -203,9 +203,9 @@ class SurfaceGatedItem extends StringItem implements FieldSurfaceProviderInterfa
 }
 ```
 
-A field type whose storage shape differs from the shape a caller is
+A field type whose storage layout differs from the layout a caller is
 asked for overrides `getDataSurfaceStorage()` and hands
-`FieldSettingsStorage` a shape, as `SurfaceAddressItem` does.
+`FieldSettingsStorage` a layout, as `SurfaceAddressItem` does.
 
 What a host supplies, and why the structure does not:
 
@@ -320,7 +320,7 @@ method is static and calls `t()`.
 
 Core's `MapDataDefinition` takes only its own definition array in its
 constructor and gains its property definitions through a setter. Set
-them on the definition before handing it to the shape, with the core
+them on the definition before handing it to the blueprint, with the core
 setter:
 
 ```php
@@ -413,7 +413,7 @@ author does:
 | --- | --- |
 | The generated form | A `password` element, with no `#default_value`, no `#placeholder`, no `#required`, and the note "Leave blank to keep the current value." The form builder does not hand the value to the widget at all, so no stored secret reaches the render array. |
 | `accept()` | Input that holds nothing keeps the stored value instead of clearing it. See [Value semantics](semantics.md#secrets-keep-what-they-hold) for the rule and for how a caller clears one on purpose. |
-| The storage shape | `EncryptedSettingsShape` encrypts the value on its way to storage and decrypts it on the way back. See [Storage](storage.md#secrets-at-the-codec). |
+| The storage layout | `EncryptedSettingsLayout` encrypts the value on its way to storage and decrypts it on the way back. See [Storage](storage.md#secrets-at-the-codec). |
 | The tool bridge | The converted input carries no default and says "Write only" in its description. |
 
 A secret holds **one scalar value**. Marking a list or a map secret is

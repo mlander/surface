@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface_entity\Structure;
 
 use Drupal\Core\Field\FieldDefinitionInterface;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 
 /**
  * A field item's shape written by hand, for one field type.
@@ -25,11 +25,11 @@ interface FieldItemStructureInterface {
    * handed the field definition because one class serves every field of
    * its type, each with its own label and settings.
    *
-   * @param \Drupal\data_surface\Resource\ShapeInterface $inputs
-   *   The shape to fill.
+   * @param \Drupal\data_surface\Resource\BlueprintInterface $inputs
+   *   The blueprint to fill.
    * @param \Drupal\Core\Field\FieldDefinitionInterface $field
    *   The field.
    */
-  public static function defineItem(ShapeInterface $inputs, FieldDefinitionInterface $field): void;
+  public static function defineItem(BlueprintInterface $inputs, FieldDefinitionInterface $field): void;
 
 }

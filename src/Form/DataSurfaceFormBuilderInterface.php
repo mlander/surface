@@ -244,7 +244,7 @@ interface DataSurfaceFormBuilderInterface {
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state carrying submitted values.
    * @param array $current
-   *   What the data surface's keys already hold, in input shape, read
+   *   What the data surface's keys already hold, in input layout, read
    *   from wherever the host stores them. Not an optimization: a form is
    *   always a partial statement about a data surface, because a key
    *   whose element was never rendered (access denied, removed by an
@@ -275,7 +275,7 @@ interface DataSurfaceFormBuilderInterface {
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state to flag violations on.
    * @param array $current
-   *   The stored values, in input shape: the same ones handed to
+   *   The stored values, in input layout: the same ones handed to
    *   extractSurfaceValues(). Only what a key already holds can be
    *   stale, so a host that does not pass them gets a stale value
    *   refused as an ordinary violation, which is the bug this exists

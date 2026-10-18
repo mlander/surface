@@ -30,7 +30,7 @@ Beside the inputs, in the same class, on `HasOutputsInterface`:
 #[UsesStructure]
 final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements StructureInterface, HasOutputsInterface {
 
-  public static function defineOutputs(ShapeInterface $outputs): void {
+  public static function defineOutputs(BlueprintInterface $outputs): void {
     $outputs->add('text', 'string', t('Text'))
       ->setDescription(t('The field value, prefixed and cased as the settings ask.'))
       ->setRequired(TRUE);
@@ -188,7 +188,7 @@ inputs get. What is lost, on top of the two the inputs already lose
 
 The tools `data_surface_tool` derives from operations answer with the
 accepted `values`, `committed`, and the resource's own outputs converted
-here; a dry run answers with what prepare rehearsed, in storage shape,
+here; a dry run answers with what prepare rehearsed, in storage layout,
 as `prepared`.
 
 ## Contributing an output
@@ -198,7 +198,7 @@ what the host emits, at build time: its alter implements
 `AltersOutputsInterface` beside `AltersInputsInterface`.
 
 ```php
-public function alterOutputs(ShapeAdditionsInterface $outputs): void {
+public function alterOutputs(BlueprintAdditionsInterface $outputs): void {
   $outputs->add('badge', 'string', $this->t('Badge'));
 }
 ```

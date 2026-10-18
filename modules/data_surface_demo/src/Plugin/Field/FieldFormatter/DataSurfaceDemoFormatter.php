@@ -16,7 +16,7 @@ use Drupal\data_surface\Refinement\ChoiceSet;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\data_surface\Resource\Attribute\UsesStructure;
 use Drupal\data_surface\Resource\HasOutputsInterface;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\StructureInterface;
 use Drupal\data_surface_demo\DemoVariant;
 
@@ -58,7 +58,7 @@ final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements
   /**
    * {@inheritdoc}
    */
-  public static function defineInputs(ShapeInterface $inputs): void {
+  public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('prefix', 'string', t('Prefix'))
       ->setDescription(t('Text placed before each value.'))
       ->addConstraint('Length', ['max' => 10]);
@@ -82,7 +82,7 @@ final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements
   /**
    * {@inheritdoc}
    */
-  public static function defineOutputs(ShapeInterface $outputs): void {
+  public static function defineOutputs(BlueprintInterface $outputs): void {
     $outputs->add('text', 'string', t('Text'))
       ->setDescription(t('The field value, prefixed and cased as the settings ask.'))
       ->setRequired(TRUE);

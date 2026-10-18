@@ -8,7 +8,7 @@ use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
-use Drupal\data_surface\Storage\SettingsShapeInterface;
+use Drupal\data_surface\Storage\SettingsLayoutInterface;
 
 /**
  * The mutable stage a data surface passes through before it is sealed.
@@ -16,7 +16,7 @@ use Drupal\data_surface\Storage\SettingsShapeInterface;
  * The engine under the build step. Resources writes an owner's shape, its
  * alters' additions, the context and the bound #[RefinesInput] methods
  * into one of these, then seals it; nothing an author writes holds one.
- * ShapeInterface and ShapeAdditionsInterface are the author's view of
+ * BlueprintInterface and BlueprintAdditionsInterface are the author's view of
  * it, and each of their verbs lands on a method here.
  *
  * Every addition is a contribution recorded under the name of whoever
@@ -135,7 +135,7 @@ interface DataSurfaceBuilderInterface {
    *
    * @throws \LogicException
    *   When the builder is already sealed, or the key is not an attached
-   *   child or a collection reserved by the shape.
+   *   child or a collection reserved by the blueprint.
    */
   public function omit(string $name): static;
 
@@ -186,7 +186,7 @@ interface DataSurfaceBuilderInterface {
   /**
    * Mounts a third-party definition under the provider's namespace.
    *
-   * Mirrors core's third-party settings storage shape: the sealed
+   * Mirrors core's third-party settings storage layout: the sealed
    * data surface gains a 'third_party_settings' map with one map per
    * provider, so values land at third_party_settings.<provider>.<key>:
    * advertised, validated, and machine-visible, unlike the form-alter
@@ -214,23 +214,23 @@ interface DataSurfaceBuilderInterface {
   /**
    * Says how a provider's mounted settings are written down.
    *
-   * A contributor may ask a caller for a value in one shape and store it
+   * A contributor may ask a caller for a value in one layout and store it
    * in another: a duration asked for as an amount and a unit and stored
    * as a number of seconds. The owner's storage cannot know that, and the
    * contributor does not build the storage, so the translation travels on
    * the data surface: storage that writes third-party settings applies the
-   * provider's shape to that provider's namespace, toStorage() on the
+   * provider's layout to that provider's namespace, toStorage() on the
    * way in and fromStorage() on the way out, and to nothing else.
    *
-   * The shape sees the provider's settings only, keyed by the keys the
-   * provider mounted, and must be pure (the SettingsShapeInterface
+   * The layout sees the provider's settings only, keyed by the keys the
+   * provider mounted, and must be pure (the SettingsLayoutInterface
    * contract), because the data surface carrying it is serialized with every
    * form that renders it.
    *
    * @param string $provider
-   *   The module whose mounted settings the shape translates. It must
+   *   The module whose mounted settings the layout translates. It must
    *   mount at least one definition before the data surface is sealed.
-   * @param \Drupal\data_surface\Storage\SettingsShapeInterface $shape
+   * @param \Drupal\data_surface\Storage\SettingsLayoutInterface $layout
    *   The translation.
    *
    * @return $this
@@ -240,7 +240,7 @@ interface DataSurfaceBuilderInterface {
    *
    * @see \Drupal\data_surface\Storage\ConfigEntityStorage
    */
-  public function setThirdPartyShape(string $provider, SettingsShapeInterface $shape): static;
+  public function setThirdPartyLayout(string $provider, SettingsLayoutInterface $layout): static;
 
   /**
    * Gives the sealed data surface the check its watched values pass.

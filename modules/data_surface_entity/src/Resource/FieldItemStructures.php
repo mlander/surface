@@ -11,7 +11,7 @@ use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\data_surface\Resource\Attribute\DerivesResources;
 use Drupal\data_surface\Resource\DerivedOperation;
 use Drupal\data_surface\Resource\DerivedResource;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\ResourceCallable;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceDeriverInterface;
@@ -105,8 +105,8 @@ final class FieldItemStructures implements ResourceDeriverInterface {
   /**
    * Fills one field item's shape.
    *
-   * @param \Drupal\data_surface\Resource\ShapeInterface $inputs
-   *   The shape.
+   * @param \Drupal\data_surface\Resource\BlueprintInterface $inputs
+   *   The blueprint to fill.
    * @param string $entity_type_id
    *   The entity type id.
    * @param string $bundle
@@ -116,7 +116,7 @@ final class FieldItemStructures implements ResourceDeriverInterface {
    * @param class-string<\Drupal\data_surface_entity\Structure\FieldItemStructureInterface>|null $override
    *   The class written by hand for the field's type, or NULL.
    */
-  public function defineInputs(ShapeInterface $inputs, string $entity_type_id, string $bundle, string $field_name, ?string $override = NULL): void {
+  public function defineInputs(BlueprintInterface $inputs, string $entity_type_id, string $bundle, string $field_name, ?string $override = NULL): void {
     $field = $this->entityFieldManager->getFieldDefinitions($entity_type_id, $bundle)[$field_name] ?? NULL;
     if ($field === NULL) {
       return;

@@ -8,7 +8,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Resource\AltersOutputsInterface;
 use Drupal\data_surface\Resource\Attribute\Alters;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
-use Drupal\data_surface\Resource\ShapeAdditionsInterface;
+use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
 use Drupal\data_surface\Resource\AltersInputsInterface;
 use Drupal\data_surface_surface_test\Resource\RecipeResource;
 
@@ -21,14 +21,14 @@ final class RecipeAlter implements AltersInputsInterface, AltersOutputsInterface
   /**
    * {@inheritdoc}
    */
-  public function alterInputs(ShapeAdditionsInterface $inputs): void {
+  public function alterInputs(BlueprintAdditionsInterface $inputs): void {
     $inputs->add('garnish', 'string', 'Garnish', default: 'parsley');
   }
 
   /**
    * {@inheritdoc}
    */
-  public function alterOutputs(ShapeAdditionsInterface $outputs): void {
+  public function alterOutputs(BlueprintAdditionsInterface $outputs): void {
     $outputs->add('plated', 'boolean', 'Plated');
   }
 

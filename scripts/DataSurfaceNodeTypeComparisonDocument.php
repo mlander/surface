@@ -111,7 +111,7 @@ the same rules:
   a person for an amount and a unit, hours, days, weeks or business
   days, and turns the pair into seconds in its element validator. The
   resource asks for the same amount and unit, and the same conversion is
-  a storage shape the extras module's alter hands the resource, applied
+  a storage layout the extras module's alter hands the resource, applied
   to that module's settings, and nothing else, before the content type's
   storage writes them and after it reads them. Business days follow one
   rule on both sides: counted from the start of a Monday, N business

@@ -30,8 +30,15 @@ the record of the rework that brought the module to the pattern.
   `#[Structure(id, access:)]`.
 - **Operation**: a way a resource is asked for, a static `#[Operation]`
   method returning an `OperationContext` whose `id` is the operation's.
+- **Blueprint**: what a resource or structure declares its members
+  into, handed to `defineInputs()` and `defineOutputs()`
+  (`BlueprintInterface`); an alter gets the add-only
+  `BlueprintAdditionsInterface`.
 - **Storage**: where a resource's values live: `load()`, `prepare()`,
   `commit()` on a `ResourceStorageInterface`.
+- **Layout**: how a storage lays accepted values out where that differs
+  from how they are asked for, `SettingsLayoutInterface`; an alter hands
+  one for its mount with `HasStorageLayoutInterface::storageLayout()`.
 - **Alter**: another module's class that adds keys to a resource or
   structure and narrows it, `#[Alters]` in `src/Alter/`.
 - **Attach**: a fixed child at a key, `attach()`.
@@ -42,7 +49,9 @@ the record of the rework that brought the module to the pattern.
 - **Contract**: the JSON Schema a built resource or structure emits.
 
 "Data surface" names the project, and the sealed object the build step
-makes (`DataSurfaceInterface`); it is not a third kind.
+makes (`DataSurfaceInterface`); it is not a third kind. "Shape" is the
+general idea of what a thing takes, and in code is reserved for named
+scalar shapes; it never names the blueprint or the layout.
 
 ## One spelling
 
@@ -343,7 +352,7 @@ src/ResourceBuild/       Discovery pass, registry, build step, adapters,
 src/Access/              The operation route's access check.
 src/Hook/                #[UsesStructure] into plugin definitions.
 src/Pipeline/            Access, accept, validate, prepare, commit; results.
-src/Storage/             Where accepted values are written; settings shapes.
+src/Storage/             Where accepted values are written; settings layouts.
 src/Contract/            The served contract's emitter (JSON Schema).
 src/Form/                Form builder, host traits, the operation form.
 src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constraints.
