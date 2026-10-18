@@ -446,12 +446,14 @@ tabled until the user resumes it.
    wherever it is used, which a container may want to opt out of (to
    decide); a change to the structure changes every container's stored
    shape, which is Phase D with an explicit contract to diff.
-4. **Rename the builders to members.** Before named scalar shapes exist,
-   `ShapeInterface` and `ShapeAdditionsInterface`, the builders passed
-   to `defineInputs()`, `defineOutputs()` and `alterInputs()`, become
-   `MembersInterface` and `MemberAdditionsInterface` (Smithy: a
-   structure's fields are its members), so that a `#[Shape]` class and
-   the thing you declare members into never share a name. Also
+4. **Rename the builders to blueprints.** Before named scalar shapes
+   exist, `ShapeInterface` and `ShapeAdditionsInterface`, the builders
+   passed to `defineInputs()`, `defineOutputs()` and `alterInputs()`,
+   become `BlueprintInterface` and `BlueprintAdditionsInterface` (decided
+   2026-10-18 over "members" and "builder": a blueprint is the thing you
+   declare members into, as in a migration's table blueprint), so that a
+   `#[Shape]` class and the thing you declare into never share a name.
+   The members a blueprint holds keep Smithy's word in prose. Also
    `HasStorageShapeInterface::storageShape()` and `SettingsShapeInterface`,
    which describe how values are laid out in storage, take a name that
    says so (layout). Mechanical, with the snapshot.
