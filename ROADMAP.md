@@ -451,8 +451,10 @@ tabled until the user resumes it.
    to `defineInputs()`, `defineOutputs()` and `alterInputs()`, become
    `MembersInterface` and `MemberAdditionsInterface` (Smithy: a
    structure's fields are its members), so that a `#[Shape]` class and
-   the thing you declare members into never share a name. Mechanical,
-   with the snapshot.
+   the thing you declare members into never share a name. Also
+   `HasStorageShapeInterface::storageShape()` and `SettingsShapeInterface`,
+   which describe how values are laid out in storage, take a name that
+   says so (layout). Mechanical, with the snapshot.
 5. **Named scalar shapes.** The one Smithy level the pattern lacks: a
    named simple shape with its traits, reused anywhere (`string Licence
    @pattern`). Today a scalar's constraints, message and description are
