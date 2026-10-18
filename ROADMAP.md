@@ -433,12 +433,16 @@ renames sit in A because they are cheapest before new code exists.
   above.
 
 1. **Make `next` trustworthy, then merge it to `main`.**
-   - The refinement leak: one call to the registration tool changes the
+   - The refinement leak, DONE 2026-10-18 (bc0e1b1, core's typed data
+     prototype cache keyed without the definition): one call to the registration tool changes the
      verdict of the next call in the same process (a capacity of 50 is
      refused after an 80, with the stewards rule from the 80). Separate
      requests are fine. Suspect the definition of an alter's mounted key
      being shared between builds. The one known bug on the branch.
-   - The audit's fixes, decided 2026-10-18 with the Tool API as the
+   - The audit's fixes, DONE 2026-10-18 (e1abf5b, with one change to the
+     rule below: on an optional key absent keeps, null or '' clears, a
+     value replaces, and the schema keeps null in such a key's type; see
+     "Absent keeps, null clears" in the decisions). Decided with the Tool API as the
      precedent (it coerces first by a documented table, validates after,
      and its matrix tests check the advertised schema against what the
      tool accepts post-coercion): the invariant's scope is the accepted
@@ -458,7 +462,8 @@ renames sit in A because they are cheapest before new code exists.
      per the spec, with the test validator configured so; the audit's
      one-off pins become matrix tests in the Tool API's shape (advertised
      schema acceptance, input coercion).
-   - The "never stricter than the runtime" audit, deferred for the demo:
+   - The "never stricter than the runtime" audit, DONE 2026-10-18 (3d43d8f,
+     `docs/audit-never-stricter.md`), deferred for the demo:
      the form posts `"50"` as text where the schema says integer; the
      schema refuses unknown keys, and whether the pipeline does is
      unchecked; an untouched stale stored value is accepted while the
