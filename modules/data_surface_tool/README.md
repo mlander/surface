@@ -164,14 +164,14 @@ settings once `storage` names an address storage. Compare with
 [`COMPARISON.md`](COMPARISON.md), which has both.
 
 `tool:info` shows the Tool API's rendering of an operation, not the
-resource's whole contract. The Tool API cannot say a shape chosen by a
+resource's whole contract. The Tool API cannot say a structure chosen by a
 sibling key, so a slot is flattened to one map: the variant the stored
 values choose (example 3's ticket, as the free ticket while `pricing`
 is `free`), or every variant's keys with none required before anything
 chooses. The full contract, each slot an `if`/`then` per variant on the
 key that chooses it, is the main module's `data_surface.contract_emitter`:
 see it in the contract panel below, or, with `data_surface_react`
-enabled, at `/surface-api/{surface}/{situation}`
+enabled, at `/surface-api/{resource}/{operation}`
 ([`docs/served-contract.md`](../../docs/served-contract.md)).
 
 ## The read tool
@@ -266,7 +266,7 @@ The routes of `data_surface_examples` name it.
 | `Kernel\ExamplesStepsTest` | The contract panel: its rows as the answers narrow them, the contract's slot conditionals, and the tool's schema below them. |
 | `Kernel\ExamplesToolTest` | `data_surface:registration.step3:configure`: the example calls, its definition (required as the resource says, no default at any depth, the read tool named in its description, and the same after a write), and a partial update the Tool API refuses. |
 | `Kernel\ReadToolTest` | The read tools: one per operation that changes a thing that exists and none for one that creates, a read operation taking exactly the parameters, an output map of the write tool's keys, step 3's stored values with the compliance module's mounted keys before and after a write, the content type read by its type, an unknown parameter failing as for the write tool, access as the write tool's, and a secret never returned. |
-| `Kernel\DerivedToolDefinitionsTest` | Tool Explorer showing every derived tool, read tools included, and installing a module deriving its tools. |
+| `Kernel\DerivedToolDefinitionsTest` | Tool Explorer showing every derived tool, read tools included, installing a module deriving its tools, and each tool declaring its operation's permission unless it has a placeholder. |
 
 ## Who may run them
 
@@ -279,6 +279,18 @@ storage, then the access class of the settings variant the field type
 chose, which may refuse (the gated test field type does). A field or
 storage that does not exist builds no context, and is refused without
 saying why.
+
+The operation's permission is also the tool's declared permission
+(`ToolDefinition::getPermission()`), so `tool:info` prints it and the
+Tool API checks it before reading any input, when it is one permission
+as written: `data_surface:node.type:add` declares the node type demo's
+permission. A permission with a `%key` placeholder, as the field tools'
+`administer %entity_type_id fields`, names a different permission for
+each call, and the Tool API has no slot for one that depends on the
+input: such a tool declares none, `tool:info` prints "Permission:
+None", and the tool's own access, which fills the placeholder from the
+parameters, is the only check
+(`ResourceOperationToolDeriver::declaredPermission()`).
 
 The tool asks again inside `doExecute()`. `ToolInterface::execute()`
 runs no access check of its own, so a caller reaching a tool directly
@@ -333,6 +345,13 @@ changing the Tool API.
   value is refused by `getExecutableValues()` and the tool's own pipeline
   never sees it. The refusal is still path aware, in the Tool API's
   spelling rather than the pipeline's.
+- **A declared permission cannot depend on the input.**
+  `ToolDefinition::setPermission()` takes one route-style string, checked
+  before any input is read, so a permission named from what a call is
+  about (`administer %entity_type_id fields`) has nowhere to go: those
+  tools declare none, and `tool:info` prints "Permission: None" for a
+  tool its own `checkAccess()` gates. A permission callback, or
+  placeholders filled from named inputs, would let them say it.
 
 ## Note for core
 

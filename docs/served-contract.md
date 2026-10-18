@@ -42,12 +42,12 @@ JSON Schema cannot say them. This one can.
   say": the same settings described from config schema alone, set
   beside the full schema key by key
   (`modules/data_surface_examples/README.md`).
-- **Over HTTP.** `GET /surface-api/{surface}/{situation}`, the
+- **Over HTTP.** `GET /surface-api/{resource}/{operation}`, the
   resource's id and the operation's id, with `data_surface_react`
   enabled: the whole document, widget hints included. The full schema is
-  `GET /surface-api/{surface}/{situation}/schema` beside it.
+  `GET /surface-api/{resource}/{operation}/schema` beside it.
 - **Not `drush tool:info`.** That prints the Tool API's rendering of the
-  derived tool, which cannot say a shape keyed by a sibling: a slot is
+  derived tool, which cannot say keys a sibling chooses: a slot is
   flattened to one map, the variant the stored values choose, or every
   variant's keys with none required before anything chooses
   ([resources](resources.md), "Emission"). The `allOf` of `if`/`then`
@@ -97,7 +97,7 @@ Neither is ever stricter than the pipeline
 ([decision](decisions.md#two-documents-never-stricter-than-the-runtime)),
 and the rule is about the **accepted document**: what `accept()` makes
 of the input after coercion, not the raw input. That is the Tool API's
-shape: it coerces a tool's inputs by a documented table first and
+model: it coerces a tool's inputs by a documented table first and
 validates after, and its matrix tests compare the advertised schema
 with what the tool accepts post-coercion. So a form's `"50"` for an
 integer, `""` for nothing, a partial update and a value posted for a
@@ -185,6 +185,11 @@ Example 2's full schema, abbreviated:
 | `outputs` | The output schema, when the resource or structure declares outputs. |
 | `fingerprint` | On the GET and in a submit's answer: a keyed hash of the stored values the document was built from, for a submit to send back ([the fingerprint rule](#the-fingerprint-rule)); `null` for a resource or structure with no storage. Not on a refine. |
 | `discarded` | On a refine only: the keys whose answer the new choices orphaned. |
+
+`surface` and `situation`, like the `x-surface` keyword, are wire
+names: they keep the spelling clients already read. `surface` holds the
+resource's id and `situation` the operation's id; `created` uses the
+same two keys.
 
 ### The schema
 
@@ -380,7 +385,7 @@ size, how many racks fit.
 "racks": {
   "title": "Spice racks", "description": "One rack to four.",
   "type": ["array", "null"],
-  "items": {"$ref": "#/$defs/surface_test.larder.rack"},
+  "items": {"$ref": "#/$defs/resource_test.larder.rack"},
   "minItems": 1, "maxItems": 4,
   "x-surface": {"widget": "list", "locked": false, "dependsOn": ["size"], "list": true, "enumerated": true}
 },
@@ -397,10 +402,10 @@ by composition, every key inside them `readOnly` and none holding a
 
 ### A slot is a conditional
 
-A slot's own property fixes no shape. Each variant is a `then` on the
+A slot's own property fixes no keys. Each variant is a `then` on the
 parent, under an `if` naming the deciding key's value as a `const`, so a
 validator applies exactly the chosen variant's rules and a renderer reads
-the shape the current value selects. The `then` refers to the variant's
+the variant the current value selects. The `then` refers to the variant's
 def ([above](#reusable-subschemas)), beside the slot's label. There is no
 OpenAPI `discriminator` beside it: OpenAPI's names a property inside the
 object whose alternatives it picks, and a slot's deciding key is a
@@ -476,7 +481,10 @@ no `/refine` round trip.
   that differ from the unrefined schema (the narrowed `oneOf`, a lower
   `maximum`, the description naming the reason); a map's properties are
   compared one by one. A combination that changes nothing writes no
-  conditional.
+  conditional. A `then` does not yet state a conditional `required`: a
+  refiner that makes a key required for some values is checked by the
+  pipeline, and the schema leaves the key optional for them
+  ([ROADMAP](../ROADMAP.md), "This key does not apply").
 - **Inside a child too.** Each frame is described the same way, so
   a slot's variant enumerates its own keys inside the variant's schema,
   under the slot's conditional. A child's frame starts from the
@@ -597,12 +605,12 @@ operation or parameter that names nothing is refused. The POSTs require
 a 400: the access check reads the operation from the query string alone
 when it cannot read the body, and the controller refuses the body.
 
-**`GET /surface-api/{surface}/{situation}`**, `{surface}` the
-resource's id and `{situation}` the operation's id, answers the document
+**`GET /surface-api/{resource}/{operation}`**, `{resource}` the
+resource's id and `{operation}` the operation's id, answers the document
 for the values the operation form would open with, and their
 `fingerprint`.
 
-**`GET /surface-api/{surface}/{situation}/schema`** answers
+**`GET /surface-api/{resource}/{operation}/schema`** answers
 [the full schema](#two-documents) for the operation, with the widget
 hints: `surface`, `situation`, `label`, `schema` and, when declared,
 `outputs`; no `values`, `stale` or `fingerprint`. It reads no value, so
@@ -630,8 +638,8 @@ computes, the same way:
 The document is emitted from the form's own overlay,
 `refinementOverlay()`, settled to [the same fixed point](forms.md#the-in-form-half-discarding-orphaned-input)
 the AJAX rebuild reaches. A key that falls back to a stored value the
-edit itself orphaned — a dependency moved away from what is stored, and
-the new answer no longer offers the stored value — is an **orphan**: it
+edit itself orphaned (a dependency moved away from what is stored, and
+the new answer no longer offers the stored value) is an **orphan**: it
 is held unanswered, so nothing below it is refined against the value it
 stands for, and it is listed in `stale` with `x-surface.stale: true` and
 a `null` value, whatever its widget. `discarded` names the inputs
@@ -654,7 +662,7 @@ room left stale after its venue moved is refused. It answers:
 ```json
 {
   "valid": false,
-  "violations": [{"path": "capacity", "message": "This value should be between 1 and 150."}],
+  "violations": [{"path": "capacity", "message": "This value should be between 1 and 150. This depends on Room."}],
   "stale": [],
   "values": {...},
   "prepared": null
@@ -693,7 +701,7 @@ A refused example 2, the library's garden room sent with the harbour:
 ```json
 {
   "committed": false, "valid": false,
-  "violations": [{"path": "room", "message": "The value you selected is not a valid choice."}],
+  "violations": [{"path": "room", "message": "The value you selected is not a valid choice. This depends on Venue."}],
   "stale": [], "outputs": {}, "contract": null, "created": null
 }
 ```

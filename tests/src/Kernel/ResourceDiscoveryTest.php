@@ -11,17 +11,17 @@ use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface_demo\Plugin\Block\DataSurfaceDemoBlock;
 use Drupal\data_surface_demo\Structure\DemoBlockStructure;
 use Drupal\data_surface_demo_extras\Alter\DemoBlockAlter;
-use Drupal\data_surface_surface_test\Access\RecipeAccess;
-use Drupal\data_surface_surface_test\OutsideDiscovery\BothKindsShape;
-use Drupal\data_surface_surface_test\OutsideDiscovery\HomelessResource;
-use Drupal\data_surface_surface_test\OutsideDiscovery\InstanceShapeStructure;
-use Drupal\data_surface_surface_test\OutsideDiscovery\WrongKindStructure;
-use Drupal\data_surface_surface_test\Plugin\Block\StickyNoteBlock;
-use Drupal\data_surface_surface_test\Structure\HerbGarnishStructure;
-use Drupal\data_surface_surface_test\Resource\RecipeResource;
-use Drupal\data_surface_surface_test\Alter\EditOnlyRecipeAlter;
-use Drupal\data_surface_surface_test\Alter\RecipeAlter;
-use Drupal\data_surface_surface_test\Storage\RecipeStorage;
+use Drupal\data_surface_resource_test\Access\RecipeAccess;
+use Drupal\data_surface_resource_test\OutsideDiscovery\BothKindsClass;
+use Drupal\data_surface_resource_test\OutsideDiscovery\HomelessResource;
+use Drupal\data_surface_resource_test\OutsideDiscovery\InstanceDefineInputsStructure;
+use Drupal\data_surface_resource_test\OutsideDiscovery\WrongKindStructure;
+use Drupal\data_surface_resource_test\Plugin\Block\StickyNoteBlock;
+use Drupal\data_surface_resource_test\Structure\HerbGarnishStructure;
+use Drupal\data_surface_resource_test\Resource\RecipeResource;
+use Drupal\data_surface_resource_test\Alter\EditOnlyRecipeAlter;
+use Drupal\data_surface_resource_test\Alter\RecipeAlter;
+use Drupal\data_surface_resource_test\Storage\RecipeStorage;
 use Drupal\node\Entity\NodeType;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -50,7 +50,7 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
     'data_surface',
     'data_surface_demo',
     'data_surface_demo_extras',
-    'data_surface_surface_test',
+    'data_surface_resource_test',
   ];
 
   /**
@@ -148,20 +148,20 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that a structure whose shape method is not static is refused.
+   * Tests that a structure whose defineInputs() is not static is refused.
    *
    * PHP refuses a class implementing DefinesInputsInterface with an instance
    * defineInputs() before discovery could, so the class that reaches
    * discovery with one has left the interface off; it is named for what
    * it is rather than only for the missing interface.
    */
-  public function testAnInstanceShapeIsRefused(): void {
+  public function testAnInstanceDefineInputsIsRefused(): void {
     $registry = new ResourceRegistry(
-      ['resources' => [InstanceShapeStructure::class => 'data_surface_surface_test']],
+      ['resources' => [InstanceDefineInputsStructure::class => 'data_surface_resource_test']],
       $this->container->get('cache.discovery'),
     );
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage(InstanceShapeStructure::class . ' carries #[Structure] and declares defineInputs() as an instance method. A shape is a property of its class and takes nothing but the blueprint to fill: declare it `public static function defineInputs(BlueprintInterface $inputs): void`, and implement Drupal\data_surface\Resource\StructureInterface.');
+    $this->expectExceptionMessage(InstanceDefineInputsStructure::class . ' carries #[Structure] and declares defineInputs() as an instance method. What a class declares belongs to the class, and the method takes nothing but the blueprint to fill: declare it `public static function defineInputs(BlueprintInterface $inputs): void`, and implement Drupal\data_surface\Resource\StructureInterface.');
     $registry->getDefinitions();
   }
 
@@ -173,10 +173,10 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
    */
   public function testClassIsOneKind(): void {
     foreach ([
-      BothKindsShape::class => BothKindsShape::class . ' carries both #[Resource] and #[Structure].',
+      BothKindsClass::class => BothKindsClass::class . ' carries both #[Resource] and #[Structure].',
       WrongKindStructure::class => WrongKindStructure::class . ' carries #[Structure] but does not implement Drupal\data_surface\Resource\StructureInterface.',
     ] as $class => $message) {
-      $registry = new ResourceRegistry(['resources' => [$class => 'data_surface_surface_test']], $this->container->get('cache.discovery'));
+      $registry = new ResourceRegistry(['resources' => [$class => 'data_surface_resource_test']], $this->container->get('cache.discovery'));
       try {
         $registry->getDefinitions();
         $this->fail($class . ' was not refused.');
@@ -192,7 +192,7 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
    */
   public function testResourceHasStorageOrHost(): void {
     $registry = new ResourceRegistry(
-      ['resources' => [HomelessResource::class => 'data_surface_surface_test']],
+      ['resources' => [HomelessResource::class => 'data_surface_resource_test']],
       $this->container->get('cache.discovery'),
     );
     $this->expectException(\LogicException::class);

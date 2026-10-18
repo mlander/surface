@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface\Resource\Attribute;
 
 /**
- * Names a structure: a shape with members, held by something else.
+ * Names a structure: a group of keys held by something else.
  *
  * A structure has no identity and no storage of its own. It is attached
  * to a parent, fills a slot as a variant, or is the configuration of the

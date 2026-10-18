@@ -44,7 +44,7 @@ abstract class ResourceOperationToolBase extends ToolBase {
   /**
    * What discovery found.
    */
-  protected ResourceRegistry $surfaceRegistry;
+  protected ResourceRegistry $resourceRegistry;
 
   /**
    * What the tool takes and answers with.
@@ -57,7 +57,7 @@ abstract class ResourceOperationToolBase extends ToolBase {
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
     $instance = parent::create($container, $configuration, $plugin_id, $plugin_definition);
     $instance->resources = $container->get('data_surface.resources');
-    $instance->surfaceRegistry = $container->get('data_surface.resource_registry');
+    $instance->resourceRegistry = $container->get('data_surface.resource_registry');
     $instance->operationInputs = $container->get('data_surface_tool.operation_inputs');
     return $instance;
   }
@@ -67,8 +67,8 @@ abstract class ResourceOperationToolBase extends ToolBase {
    */
   protected function checkAccess(array $values, AccountInterface $account, $return_as_object = FALSE): bool|AccessResultInterface {
     try {
-      [$surface, , $context] = $this->operation($values);
-      $result = $this->operationAccess($surface, $context, $account);
+      [$resource, , $context] = $this->operation($values);
+      $result = $this->operationAccess($resource, $context, $account);
     }
     catch (\InvalidArgumentException $e) {
       $result = AccessResult::forbidden($e->getMessage());
@@ -98,21 +98,21 @@ abstract class ResourceOperationToolBase extends ToolBase {
     if ($separator === FALSE) {
       throw new \LogicException(sprintf('The %s tool is not one of the derived resource tools.', $this->getPluginId()));
     }
-    $surface = $this->surfaceRegistry->getDefinition(substr($derivative, 0, $separator));
-    $operation = $this->surfaceRegistry->getOperation($surface->name(), substr($derivative, $separator + 1));
+    $resource = $this->resourceRegistry->getDefinition(substr($derivative, 0, $separator));
+    $operation = $this->resourceRegistry->getOperation($resource->name(), substr($derivative, $separator + 1));
     $arguments = [];
     foreach ($operation->parameters as $parameter) {
       if (($values[$parameter->name] ?? NULL) !== NULL) {
         $arguments[$parameter->name] = $values[$parameter->name];
       }
     }
-    return [$surface, $operation, $this->resources->operation($surface->name(), $operation->id, $arguments)];
+    return [$resource, $operation, $this->resources->operation($resource->name(), $operation->id, $arguments)];
   }
 
   /**
    * Answers access for an operation's context, decisively.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $surface
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
    * @param \Drupal\data_surface\Resource\OperationContext $context
    *   The context.
@@ -122,9 +122,9 @@ abstract class ResourceOperationToolBase extends ToolBase {
    * @return \Drupal\Core\Access\AccessResultInterface
    *   Allowed or forbidden, never neutral.
    */
-  protected function operationAccess(ResourceDefinition $surface, OperationContext $context, AccountInterface $account): AccessResultInterface {
+  protected function operationAccess(ResourceDefinition $resource, OperationContext $context, AccountInterface $account): AccessResultInterface {
     return DataSurfaceAccess::decisive(
-      $this->resources->access($surface->name(), $context, $account),
+      $this->resources->access($resource->name(), $context, $account),
       'The operation\'s permission and the resource\'s own access both have to allow this.',
     );
   }

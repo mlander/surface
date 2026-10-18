@@ -25,7 +25,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * A content entity, as a content entity resource's storage.
  *
- * Load reads the entity the context names into the resource's shape: its
+ * Load reads the entity the context names into the resource's keys: its
  * identity, and each carried field's first item, property by property.
  * Prepare sets the accepted values on an entity, a new one of the bundle
  * or a fresh copy of the stored one (never the object anyone else holds),
@@ -227,7 +227,7 @@ final class ContentEntityStorage implements ResourceStorageInterface, ContainerI
   }
 
   /**
-   * Reads one field's first item in the item structure's shape.
+   * Reads one field's first item as the item structure's keys.
    *
    * @param \Drupal\Core\Field\FieldDefinitionInterface $field
    *   The field.

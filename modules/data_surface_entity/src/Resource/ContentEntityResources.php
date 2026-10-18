@@ -29,7 +29,7 @@ use Drupal\data_surface_entity\Storage\ContentEntityStorage;
  * identity is the entity type, the bundle and the entity's id; its two
  * operations are `add`, which knows the entity type and the bundle (and
  * that there is no id yet), and `edit`, which takes the entity as `id`.
- * Its shape is one child per field the bundle's default form display
+ * Its keys are one child per field the bundle's default form display
  * shows, in the display's order, each the field's item structure
  * (FieldItemStructures), invoked through the item's operation of the same
  * name, so each field answers for itself whether this account may change
@@ -108,7 +108,7 @@ final class ContentEntityResources implements ResourceDeriverInterface {
   }
 
   /**
-   * Fills one bundle's shape: its identity, then one child per field.
+   * Fills one bundle's blueprint: its identity, then one child per field.
    *
    * @param \Drupal\data_surface\Resource\BlueprintInterface $inputs
    *   The blueprint to fill.

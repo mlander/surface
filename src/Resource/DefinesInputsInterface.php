@@ -9,13 +9,13 @@ namespace Drupal\data_surface\Resource;
  *
  * A class implements one of the two kinds, ResourceInterface or
  * StructureInterface, and carries the attribute of its kind; this is
- * what the build step and every caller that only needs the shape ask
- * for. How the values tighten each other is beside the shape, one
+ * what the build step and every caller that only needs the keys ask
+ * for. How the values tighten each other is beside the keys, one
  * #[RefinesInput] method per refined key, so the class is the whole
  * contract. One that also answers with something adds
  * HasOutputsInterface.
  *
- * Neither kind is ever instantiated. A shape is a property of the class,
+ * Neither kind is ever instantiated. Its keys are a property of the class,
  * so defineInputs() is static and the build step calls it on the class;
  * its #[RefinesInput] methods are static too, and what rides along in a
  * cached form is the class name, not an object. That is also what lets
@@ -27,11 +27,11 @@ namespace Drupal\data_surface\Resource;
 interface DefinesInputsInterface {
 
   /**
-   * Shape. Keys, types, labels, defaults, and the structures attached.
+   * Inputs. Keys, types, labels, defaults, and the structures attached.
    *
    * Takes nothing but the blueprint to fill: no values, no context, no
-   * services, and static, so the language holds it to that. A shape is
-   * the same wherever it is asked for; what differs per operation is
+   * services, and static, so the language holds it to that. The keys are
+   * the same wherever they are asked for; what differs per operation is
    * applied afterwards by the framework. Anything that reads another
    * key's value is refinement, and is a #[RefinesInput] method.
    *

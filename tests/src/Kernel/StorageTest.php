@@ -41,18 +41,18 @@ class StorageTest extends DataSurfaceKernelTestBase {
     'system',
     'config_test',
     'data_surface',
-    'data_surface_target_test',
+    'data_surface_storage_test',
   ];
 
   /**
    * The state key the state storage writes to.
    */
-  protected const STATE_KEY = 'data_surface.targets';
+  protected const STATE_KEY = 'data_surface.storage_test';
 
   /**
    * The state key a second state storage writes to.
    */
-  protected const OTHER_STATE_KEY = 'data_surface.targets_other';
+  protected const OTHER_STATE_KEY = 'data_surface.storage_test_other';
 
   /**
    * {@inheritdoc}
@@ -107,7 +107,7 @@ class StorageTest extends DataSurfaceKernelTestBase {
   protected function mountedSurface(): DataSurfaceInterface {
     $builder = $this->entityBuilder();
     $builder->setThirdPartyDefinition(
-      'data_surface_target_test',
+      'data_surface_storage_test',
       'note',
       DataDefinition::create('string')->setLabel('Note'),
       'nothing yet',
@@ -155,21 +155,21 @@ class StorageTest extends DataSurfaceKernelTestBase {
     $surface = $this->entitySurface();
     $entity = $this->testEntity('surface_one');
     $map = ['label', 'weight', 'style'];
-    $target = new ConfigEntityStorage($entity, $map, $this->typedConfig());
+    $resource_storage = new ConfigEntityStorage($entity, $map, $this->typedConfig());
 
     // What the storage reads off a brand new entity is what the pipeline
     // merges the input over, which is why the placeholder label is not
     // the data surface's default here.
     $this->assertSame(
       ['label' => 'Placeholder', 'weight' => 0, 'style' => NULL],
-      $target->load($surface),
+      $resource_storage->load($surface),
     );
 
     $result = $this->pipeline()->submit($surface, [
       'label' => 'First label',
       'weight' => '3',
       'style' => 'wide',
-    ], $target);
+    ], $resource_storage);
 
     $this->assertTrue($result->isValid());
     $this->assertTrue($result->committed);
@@ -187,8 +187,8 @@ class StorageTest extends DataSurfaceKernelTestBase {
     $this->assertSame('wide', $saved->get('style'));
 
     // A partial update over the saved entity leaves the rest alone.
-    $update_target = new ConfigEntityStorage($saved, $map, $this->typedConfig());
-    $updated = $this->pipeline()->submit($surface, ['weight' => '9'], $update_target);
+    $update_storage = new ConfigEntityStorage($saved, $map, $this->typedConfig());
+    $updated = $this->pipeline()->submit($surface, ['weight' => '9'], $update_storage);
     $this->assertTrue($updated->isValid());
     $storage->resetCache();
     $reloaded = $storage->load('surface_one');
@@ -211,41 +211,41 @@ class StorageTest extends DataSurfaceKernelTestBase {
     $surface = $this->mountedSurface();
     $entity = $this->testEntity('surface_two');
     $map = ['label', 'weight', 'style', 'third_party_settings'];
-    $target = new ConfigEntityStorage($entity, $map, $this->typedConfig());
+    $resource_storage = new ConfigEntityStorage($entity, $map, $this->typedConfig());
 
     $result = $this->pipeline()->submit($surface, [
       'label' => 'Second label',
       'weight' => '1',
-      'third_party_settings' => ['data_surface_target_test' => ['note' => 'Written by a third party']],
-    ], $target);
+      'third_party_settings' => ['data_surface_storage_test' => ['note' => 'Written by a third party']],
+    ], $resource_storage);
 
     $this->assertTrue($result->isValid());
     $this->assertTrue($result->committed);
     // Storing a third party's settings is what makes the entity depend
     // on that third party, and the storage hands the answer back rather
     // than leaving the caller to ask the entity again.
-    $this->assertSame(['module' => ['data_surface_target_test']], $result->prepared->dependencies);
+    $this->assertSame(['module' => ['data_surface_storage_test']], $result->prepared->dependencies);
 
     $storage = $this->container->get('entity_type.manager')->getStorage('config_test');
     $storage->resetCache();
     $saved = $storage->load('surface_two');
-    $this->assertSame('Written by a third party', $saved->getThirdPartySetting('data_surface_target_test', 'note'));
+    $this->assertSame('Written by a third party', $saved->getThirdPartySetting('data_surface_storage_test', 'note'));
 
     // Loading the saved entity gives the data surface's shape back, mount and
     // all, so a partial update leaves the third party's settings alone.
-    $update_target = new ConfigEntityStorage($saved, $map, $this->typedConfig());
+    $update_storage = new ConfigEntityStorage($saved, $map, $this->typedConfig());
     $this->assertSame([
       'label' => 'Second label',
       'weight' => 1,
       'style' => NULL,
-      'third_party_settings' => ['data_surface_target_test' => ['note' => 'Written by a third party']],
-    ], $update_target->load($surface));
+      'third_party_settings' => ['data_surface_storage_test' => ['note' => 'Written by a third party']],
+    ], $update_storage->load($surface));
 
-    $this->pipeline()->submit($surface, ['weight' => '5'], $update_target);
+    $this->pipeline()->submit($surface, ['weight' => '5'], $update_storage);
     $storage->resetCache();
     $reloaded = $storage->load('surface_two');
     $this->assertSame(5, $reloaded->get('weight'));
-    $this->assertSame('Written by a third party', $reloaded->getThirdPartySetting('data_surface_target_test', 'note'));
+    $this->assertSame('Written by a third party', $reloaded->getThirdPartySetting('data_surface_storage_test', 'note'));
   }
 
   /**
@@ -255,12 +255,12 @@ class StorageTest extends DataSurfaceKernelTestBase {
     $surface = $this->entitySurface();
     $entity = $this->testEntity('surface_three');
     $map = ['label', 'weight', 'style'];
-    $target = new ConfigEntityStorage($entity, $map, $this->typedConfig());
+    $resource_storage = new ConfigEntityStorage($entity, $map, $this->typedConfig());
     $values = $this->pipeline()->accept($surface, ['label' => "Two\nlines", 'weight' => '0']);
     $this->assertCount(0, $this->pipeline()->validate($surface, $values));
 
     try {
-      $this->pipeline()->prepare($surface, $values, $target);
+      $this->pipeline()->prepare($surface, $values, $resource_storage);
       $this->fail('Expected a StorageViolationsException.');
     }
     catch (StorageViolationsException $e) {
@@ -293,13 +293,13 @@ class StorageTest extends DataSurfaceKernelTestBase {
     $surface = $this->entitySurface();
     $entity = $this->testEntity('surface_dry_run');
     $entity->set('weight', 7);
-    $target = new ConfigEntityStorage($entity, ['label', 'weight', 'style'], $this->typedConfig());
+    $resource_storage = new ConfigEntityStorage($entity, ['label', 'weight', 'style'], $this->typedConfig());
 
     $result = $this->pipeline()->submit($surface, [
       'label' => 'Rehearsed',
       'weight' => '42',
       'style' => 'wide',
-    ], $target, TRUE);
+    ], $resource_storage, TRUE);
 
     $this->assertTrue($result->isValid());
     $this->assertFalse($result->committed);
@@ -325,11 +325,11 @@ class StorageTest extends DataSurfaceKernelTestBase {
   public function testConfigEntitySchemaRefusalLeavesTheCallersEntityAlone(): void {
     $surface = $this->entitySurface();
     $entity = $this->testEntity('surface_refused');
-    $target = new ConfigEntityStorage($entity, ['label', 'weight', 'style'], $this->typedConfig());
+    $resource_storage = new ConfigEntityStorage($entity, ['label', 'weight', 'style'], $this->typedConfig());
     $values = $this->pipeline()->accept($surface, ['label' => "Two\nlines", 'style' => 'wide']);
 
     try {
-      $this->pipeline()->prepare($surface, $values, $target);
+      $this->pipeline()->prepare($surface, $values, $resource_storage);
       $this->fail('Expected a StorageViolationsException.');
     }
     catch (StorageViolationsException) {
@@ -360,9 +360,9 @@ class StorageTest extends DataSurfaceKernelTestBase {
     $entity = $this->testEntity('surface_foreign');
     // The entity's label is a label, and a label may not span lines.
     $entity->set('label', "Two\nlines");
-    $target = new ConfigEntityStorage($entity, ['style'], $this->typedConfig());
+    $resource_storage = new ConfigEntityStorage($entity, ['style'], $this->typedConfig());
 
-    $result = $this->pipeline()->submit($surface, ['style' => 'wide'], $target);
+    $result = $this->pipeline()->submit($surface, ['style' => 'wide'], $resource_storage);
 
     $this->assertCount(0, $result->violations);
     $this->assertTrue($result->committed);
@@ -396,13 +396,13 @@ class StorageTest extends DataSurfaceKernelTestBase {
     $builder->setDefault('protected_property', 'unset');
     $surface = $builder->seal();
     $entity = $this->testEntity('surface_method');
-    $target = new ConfigEntityStorage(
+    $resource_storage = new ConfigEntityStorage(
       $entity,
       ['protected_property' => [ConfigEntityStorage::METHOD => 'setProtectedProperty']],
       $this->typedConfig(),
     );
 
-    $result = $this->pipeline()->submit($surface, ['protected_property' => 'Through a setter'], $target);
+    $result = $this->pipeline()->submit($surface, ['protected_property' => 'Through a setter'], $resource_storage);
 
     $this->assertTrue($result->committed);
     $storage = $this->container->get('entity_type.manager')->getStorage('config_test');
@@ -425,12 +425,12 @@ class StorageTest extends DataSurfaceKernelTestBase {
    */
   public function testConfigEntityReadsBackAfterCommit(): void {
     $surface = $this->entitySurface();
-    $target = new ConfigEntityStorage($this->testEntity('surface_read_back'), ['label', 'weight', 'style'], $this->typedConfig());
+    $resource_storage = new ConfigEntityStorage($this->testEntity('surface_read_back'), ['label', 'weight', 'style'], $this->typedConfig());
 
-    $this->pipeline()->submit($surface, ['label' => 'Written', 'weight' => '6'], $target);
+    $this->pipeline()->submit($surface, ['label' => 'Written', 'weight' => '6'], $resource_storage);
 
-    $this->assertSame('Written', $target->load($surface)['label']);
-    $this->assertSame(6, $target->load($surface)['weight']);
+    $this->assertSame('Written', $resource_storage->load($surface)['label']);
+    $this->assertSame(6, $resource_storage->load($surface)['weight']);
   }
 
   /**

@@ -19,28 +19,28 @@ use Drupal\data_surface_demo\Plugin\Block\DataSurfaceDemoBlock;
 use Drupal\data_surface_demo\Structure\DemoBlockStructure;
 use Drupal\data_surface_demo\Structure\GridPresentationStructure;
 use Drupal\data_surface_demo\Structure\ListPresentationStructure;
-use Drupal\data_surface_surface_test\Structure\Broken\AttachingStructure;
-use Drupal\data_surface_surface_test\Structure\Broken\NosyChildStructure;
-use Drupal\data_surface_surface_test\Structure\Broken\NosyParentStructure;
-use Drupal\data_surface_surface_test\Structure\Broken\RefinesAttachedStructure;
-use Drupal\data_surface_surface_test\Structure\Broken\SelfAttachingStructure;
-use Drupal\data_surface_surface_test\Structure\Broken\UnofferedVariantStructure;
-use Drupal\data_surface_surface_test\Structure\Broken\WatchesAttachedStructure;
-use Drupal\data_surface_surface_test\Structure\Broken\ClashingOperationStructure;
-use Drupal\data_surface_surface_test\Structure\Broken\InstanceAlterRefinerStructure;
-use Drupal\data_surface_surface_test\Structure\Broken\InstanceRefinerStructure;
-use Drupal\data_surface_surface_test\Structure\Broken\RefinesOutputStructure;
-use Drupal\data_surface_surface_test\Resource\Broken\UndeclaredIdentityResource;
-use Drupal\data_surface_surface_test\Structure\Broken\StrictMountWatcherStructure;
-use Drupal\data_surface_surface_test\Structure\Broken\WatchesMismatchStructure;
-use Drupal\data_surface_surface_test\Alter\InstanceRefinerAlter;
-use Drupal\data_surface_surface_test\Alter\StrictMountWatcherAlter;
-use Drupal\data_surface_surface_test\Structure\Broken\WatchesUndeclaredStructure;
-use Drupal\data_surface_surface_test\Structure\Broken\WideningRefinerStructure;
-use Drupal\data_surface_surface_test\Structure\DynamicChildStructure;
-use Drupal\data_surface_surface_test\Structure\MountWatcherStructure;
-use Drupal\data_surface_surface_test\Resource\RecipeResource;
-use Drupal\data_surface_surface_test\Storage\RecipeStorage;
+use Drupal\data_surface_resource_test\Structure\Broken\AttachingStructure;
+use Drupal\data_surface_resource_test\Structure\Broken\NosyChildStructure;
+use Drupal\data_surface_resource_test\Structure\Broken\NosyParentStructure;
+use Drupal\data_surface_resource_test\Structure\Broken\RefinesAttachedStructure;
+use Drupal\data_surface_resource_test\Structure\Broken\SelfAttachingStructure;
+use Drupal\data_surface_resource_test\Structure\Broken\UnofferedVariantStructure;
+use Drupal\data_surface_resource_test\Structure\Broken\WatchesAttachedStructure;
+use Drupal\data_surface_resource_test\Structure\Broken\ClashingOperationStructure;
+use Drupal\data_surface_resource_test\Structure\Broken\InstanceAlterRefinerStructure;
+use Drupal\data_surface_resource_test\Structure\Broken\InstanceRefinerStructure;
+use Drupal\data_surface_resource_test\Structure\Broken\RefinesOutputStructure;
+use Drupal\data_surface_resource_test\Resource\Broken\UndeclaredIdentityResource;
+use Drupal\data_surface_resource_test\Structure\Broken\StrictMountWatcherStructure;
+use Drupal\data_surface_resource_test\Structure\Broken\WatchesMismatchStructure;
+use Drupal\data_surface_resource_test\Alter\InstanceRefinerAlter;
+use Drupal\data_surface_resource_test\Alter\StrictMountWatcherAlter;
+use Drupal\data_surface_resource_test\Structure\Broken\WatchesUndeclaredStructure;
+use Drupal\data_surface_resource_test\Structure\Broken\WideningRefinerStructure;
+use Drupal\data_surface_resource_test\Structure\DynamicChildStructure;
+use Drupal\data_surface_resource_test\Structure\MountWatcherStructure;
+use Drupal\data_surface_resource_test\Resource\RecipeResource;
+use Drupal\data_surface_resource_test\Storage\RecipeStorage;
 use Drupal\data_surface_test\Alter\ForeignMountWatcherAlter;
 use Drupal\node\Entity\NodeType;
 use Drupal\Tests\data_surface\Kernel\Fixture\CountingResources;
@@ -72,7 +72,7 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
     'text',
     'data_surface',
     'data_surface_demo',
-    'data_surface_surface_test',
+    'data_surface_resource_test',
   ];
 
   /**
@@ -170,7 +170,7 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
     $this->assertSame('main', $add->getDefault('kitchen'));
     $this->assertFalse($add->isLocked('name'));
 
-    $edit = $this->resources()->buildOperation('surface_test.recipe', 'edit', ['kitchen' => 'main', 'name' => 'stew']);
+    $edit = $this->resources()->buildOperation('resource_test.recipe', 'edit', ['kitchen' => 'main', 'name' => 'stew']);
     $this->assertTrue($edit->isLocked('kitchen'));
     $this->assertTrue($edit->isLocked('name'));
     $this->assertSame('stew', $edit->getDefault('name'));
@@ -281,19 +281,19 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
     return [
       'identity never declared' => [
         UndeclaredIdentityResource::class,
-        'The surface_test.broken.identity resource (' . UndeclaredIdentityResource::class . ') names "ghost" as an identity key in #[Resource(identity:)], but its shape never declares that input.',
+        'The resource_test.broken.identity resource (' . UndeclaredIdentityResource::class . ') names "ghost" as an identity key in #[Resource(identity:)], but its shape never declares that input.',
       ],
       'watched key not declared' => [
         WatchesUndeclaredStructure::class,
-        WatchesUndeclaredStructure::class . '::nameOfGhost() watches "ghost", which surface_test.broken.watches_undeclared does not declare as an input.',
+        WatchesUndeclaredStructure::class . '::nameOfGhost() watches "ghost", which resource_test.broken.watches_undeclared does not declare as an input.',
       ],
       'refines an output' => [
         RefinesOutputStructure::class,
-        RefinesOutputStructure::class . '::totalOfCount() refines "total", which is an output of surface_test.broken.refines_output.',
+        RefinesOutputStructure::class . '::totalOfCount() refines "total", which is an output of resource_test.broken.refines_output.',
       ],
       'an alter watches a key it mounted, not taking NULL' => [
         StrictMountWatcherStructure::class,
-        StrictMountWatcherAlter::class . '::sizeOfKind() watches "kind", a key its alter mounted on surface_test.broken.strict_mount_watcher, which is handed as it stands and is NULL until answered: declare $kind nullable.',
+        StrictMountWatcherAlter::class . '::sizeOfKind() watches "kind", a key its alter mounted on resource_test.broken.strict_mount_watcher, which is handed as it stands and is NULL until answered: declare $kind nullable.',
       ],
       'watches out of step with the parameters' => [
         WatchesMismatchStructure::class,
@@ -301,7 +301,7 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
       ],
       'two providers of one operation' => [
         ClashingOperationStructure::class,
-        'surface_test.broken.clashing_operation has two operations with the id "open", from ' . ClashingOperationStructure::class . '::open() in data_surface_surface_test and from Drupal\data_surface_surface_test\Alter\ClashingOperations::open() in data_surface_surface_test.',
+        'resource_test.broken.clashing_operation has two operations with the id "open", from ' . ClashingOperationStructure::class . '::open() in data_surface_resource_test and from Drupal\data_surface_resource_test\Alter\ClashingOperations::open() in data_surface_resource_test.',
       ],
       'a refiner that watches nothing widens' => [
         WideningRefinerStructure::class,
@@ -309,15 +309,15 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
       ],
       'a parent refines its attached structure' => [
         RefinesAttachedStructure::class,
-        RefinesAttachedStructure::class . '::intoTheShelf() refines "shelf", which holds a child in surface_test.broken.refines_subsurface.',
+        RefinesAttachedStructure::class . '::intoTheShelf() refines "shelf", which holds a child in resource_test.broken.refines_child.',
       ],
       'a parent watches its attached structure' => [
         WatchesAttachedStructure::class,
-        WatchesAttachedStructure::class . '::noteForShelf() watches "shelf", which holds a child in surface_test.broken.watches_subsurface.',
+        WatchesAttachedStructure::class . '::noteForShelf() watches "shelf", which holds a child in resource_test.broken.watches_child.',
       ],
       'a child watches its parent' => [
         NosyParentStructure::class,
-        NosyChildStructure::class . '::heightInPantry() watches "pantry", which is a key of surface_test.broken.nosy_parent, the parent this one is attached inside at "nosy".',
+        NosyChildStructure::class . '::heightInPantry() watches "pantry", which is a key of resource_test.broken.nosy_parent, the parent this one is attached inside at "nosy".',
       ],
       'a variant its deciding key cannot choose' => [
         UnofferedVariantStructure::class,
@@ -325,15 +325,15 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
       ],
       'an owner refiner that is an instance method' => [
         InstanceRefinerStructure::class,
-        InstanceRefinerStructure::class . '::nameOfKind() is a #[RefinesInput] method of surface_test.broken.instance_refiner and is not static.',
+        InstanceRefinerStructure::class . '::nameOfKind() is a #[RefinesInput] method of resource_test.broken.instance_refiner and is not static.',
       ],
       'an alter refiner that is an instance method and not runtime' => [
         InstanceAlterRefinerStructure::class,
-        InstanceRefinerAlter::class . '::nameOfKind() is an instance method of an alter of surface_test.broken.instance_alter_refiner and does not declare runtime: TRUE.',
+        InstanceRefinerAlter::class . '::nameOfKind() is an instance method of an alter of resource_test.broken.instance_alter_refiner and does not declare runtime: TRUE.',
       ],
       'a structure inside itself' => [
         SelfAttachingStructure::class,
-        'surface_test.broken.self_attaching is attached inside itself, through surface_test.broken.self_attaching.again',
+        'resource_test.broken.self_attaching is attached inside itself, through resource_test.broken.self_attaching.again',
       ],
     ];
   }
@@ -346,23 +346,23 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
    * watched by an alter of another module, is refused.
    */
   public function testAnAlterWatchesOnlyTheKeysItMounted(): void {
-    $kind = 'third_party_settings.data_surface_surface_test.kind';
+    $kind = 'third_party_settings.data_surface_resource_test.kind';
     $surface = $this->resources()->build(MountWatcherStructure::class, new OperationContext('configure'));
     $definitions = $surface->getDefinitions();
     $this->assertSame(['size' => [$kind], 'third_party_settings' => [$kind]], $definitions->refinements());
-    $this->assertSame(['size' => [$kind], 'third_party_settings.data_surface_surface_test.detail' => [$kind]], $definitions->refinementPaths());
+    $this->assertSame(['size' => [$kind], 'third_party_settings.data_surface_resource_test.detail' => [$kind]], $definitions->refinementPaths());
 
     // Unanswered, the kind holds nothing back: it is handed as NULL.
     $detail = fn (array $values): array => $this->mounted($surface->refine($values)->getDefinition('third_party_settings'))['detail']->getConstraints();
     $this->assertSame(['max' => 10], $detail([])['Length']);
-    $with = ['third_party_settings' => ['data_surface_surface_test' => ['kind' => 'large']]];
+    $with = ['third_party_settings' => ['data_surface_resource_test' => ['kind' => 'large']]];
     $this->assertArrayNotHasKey('Length', $detail($with));
     $this->assertSame(['max' => 100], $surface->refine($with)->getDefinition('size')->getConstraints()['Range']);
     $this->assertArrayNotHasKey('Range', $surface->refine([])->getDefinition('size')->getConstraints());
 
     $this->enableModules(['data_surface_test']);
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage(ForeignMountWatcherAlter::class . '::noteOfKind() watches "kind", a key the data_surface_surface_test module mounted on surface_test.mount_watcher. An alter may watch the keys it mounted itself and the owner\'s, never another module\'s.');
+    $this->expectExceptionMessage(ForeignMountWatcherAlter::class . '::noteOfKind() watches "kind", a key the data_surface_resource_test module mounted on resource_test.mount_watcher. An alter may watch the keys it mounted itself and the owner\'s, never another module\'s.');
     $this->container->get('data_surface.resources')->build(MountWatcherStructure::class, new OperationContext('configure'));
   }
 
@@ -395,7 +395,7 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
     catch (\LogicException $e) {
       $this->assertStringContainsString('outputs do not hold attached structures yet', $e->getMessage());
     }
-    $additions = new ResourceBlueprintAdditions($builder, $this->container->get('typed_data_manager'), 'data_surface_surface_test');
+    $additions = new ResourceBlueprintAdditions($builder, $this->container->get('typed_data_manager'), 'data_surface_resource_test');
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('an attached structure inside that mount is not built');
     $additions->attach('storage', RecipeResource::class);
@@ -418,7 +418,7 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
   public function testAltersApply(): void {
     $add = $this->resources()->buildOperation(RecipeResource::class, 'add', ['main']);
     $this->assertSame(['garnish'], array_keys($this->mounted($add->getDefinition('third_party_settings'))));
-    $this->assertSame('parsley', $add->getDefaultValues()['third_party_settings']['data_surface_surface_test']['garnish']);
+    $this->assertSame('parsley', $add->getDefaultValues()['third_party_settings']['data_surface_resource_test']['garnish']);
     $outputs = $add->getOutputDefinitions()->toArray();
     $this->assertSame(['id', 'third_party_outputs'], array_keys($outputs));
     $this->assertSame(['plated'], array_keys($this->mounted($outputs['third_party_outputs'])));
@@ -435,7 +435,7 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
   public function testOperations(): void {
     $operations = $this->container->get('data_surface.resource_registry')->getOperations(RecipeResource::class);
     $this->assertSame(['add', 'edit', 'clone', 'mislabeled'], array_keys($operations));
-    $this->assertSame('data_surface_surface_test', $operations['clone']->module);
+    $this->assertSame('data_surface_resource_test', $operations['clone']->module);
 
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('returned a context whose id is "add"');
@@ -506,7 +506,7 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
    */
   protected function mounted(?DataDefinitionInterface $map): array {
     $this->assertInstanceOf(MapDataDefinition::class, $map);
-    $provider = $map->getPropertyDefinition('data_surface_surface_test');
+    $provider = $map->getPropertyDefinition('data_surface_resource_test');
     $this->assertInstanceOf(MapDataDefinition::class, $provider);
     return $provider->getPropertyDefinitions();
   }

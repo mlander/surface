@@ -77,7 +77,7 @@ class ExamplesAjaxRefreshTest extends ExamplesWebDriverTestBase {
     $assert->fieldNotExists('surface[ticket][price]');
     // Under the contract, what config schema says, with the ticket's
     // row of its table: the resource's side is its full schema, which
-    // names both shapes whatever the pricing is.
+    // names both variants whatever the pricing is.
     $documents = $this->todayDocuments();
     $this->assertCount(2, $documents);
     $this->assertStringContainsString('No schema is defined for property of type', $documents[0]);
@@ -85,7 +85,7 @@ class ExamplesAjaxRefreshTest extends ExamplesWebDriverTestBase {
     $this->assertSame([
       'ticket',
       'title, $comment',
-      'title, type, if/then on pricing (2 shapes: free has note, $ref (registration.step3.ticket.free); paid has price, currency, $ref (registration.step3.ticket.paid))',
+      'title, type, if/then on pricing (2 variants: free has note, $ref (registration.step3.ticket.free); paid has price, currency, $ref (registration.step3.ticket.paid))',
     ], $this->todayRow('ticket'));
     $this->assertSame([
       'room',
@@ -112,7 +112,7 @@ class ExamplesAjaxRefreshTest extends ExamplesWebDriverTestBase {
     $this->assertSame([
       'ticket',
       'title, $comment',
-      'title, type, if/then on pricing (2 shapes: free has note, $ref (registration.step3.ticket.free); paid has price, currency, $ref (registration.step3.ticket.paid))',
+      'title, type, if/then on pricing (2 variants: free has note, $ref (registration.step3.ticket.free); paid has price, currency, $ref (registration.step3.ticket.paid))',
     ], $this->todayRow('ticket'));
     $this->assertSame($documents, $this->todayDocuments());
     $assert->elementsCount('css', 'details.data-surface-today-panel', 1);

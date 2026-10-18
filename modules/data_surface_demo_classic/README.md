@@ -66,7 +66,7 @@ Five of those rows are worth a sentence.
   because outputs are never refined. It was two files, the plugin and a
   structure class it named, until a plugin could be its own structure. The
   merge saved 21 lines, 9 of them code, all of it the second file's own
-  scaffolding; what the shape says did not change.
+  scaffolding; what the declaration says did not change.
 - The **config schema** is *longer* on the Data Surface side, not shorter.
   Both versions hand-maintain a schema file; the Data Surface one also
   declares the `third_party_settings` namespace other modules mount into,
@@ -91,8 +91,8 @@ Five of those rows are worth a sentence.
 
 Line counts are a proxy. What actually costs an author is the number of
 separate mechanisms they have to know about, get right, and keep in step
-with each other. Counted from the same files. What each plugin *does* —
-the block's `build()`, the formatter's showing step — is one method on
+with each other. Counted from the same files. What each plugin *does*
+(the block's `build()`, the formatter's showing step) is one method on
 each side and is left out of both columns, because it is the part neither
 approach changes.
 
@@ -124,14 +124,14 @@ approach changes.
 | Vocabulary lists kept in step | 4 | 1 |
 | Default values written out | 3 | 0 |
 | Settings summary assembled by hand | 1 | 0 |
-| Structure shape, on the plugin itself (settings and outputs together) | 0 | 1 |
+| Structure declaration, on the plugin itself (settings and outputs together) | 0 | 1 |
 | Refiner methods | 0 | 1 |
 | Config schema files | 1 | 1 |
 | **Distinct mechanisms in play** | **8** | **4** |
 
 Nine against five on the block, eight against four on the formatter. The
-mechanisms the classic version sheds — form elements, AJAX, storage,
-defaults, validation — are also the ones that have to agree with each
+mechanisms the classic version sheds (form elements, AJAX, storage,
+defaults, validation) are also the ones that have to agree with each
 other, and nothing checks that they do: a key added to
 `defaultConfiguration()` and forgotten in `blockForm()` can never be
 set, one added to `blockForm()` and forgotten in the schema

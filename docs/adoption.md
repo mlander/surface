@@ -17,10 +17,10 @@ reasoning, is in `ADOPTION.md` at the module root.
 | --- | --- | --- |
 | [A](#group-a-the-plain-plugin-triple) | `ConfigurableInterface` plus the `PluginFormInterface` triple | **Built.** Three families ported. |
 | [B](#group-b-settings-protocols-with-no-hook) | A settings form the host harvests itself, with no validate or submit hook | **Built.** Formatters ported. |
-| [C](#group-c-one-plugin-two-shapes) | Field types: two shapes on one plugin | **Half built.** Instance settings ported; storage settings described and written by the field tools, with no Field UI host. |
+| [C](#group-c-one-plugin-two-sets-of-settings) | Field types: storage and instance settings on one plugin | **Half built.** Instance settings ported; storage settings described and written by the field tools, with no Field UI host. |
 | [D](#group-d-multiple-named-forms) | A form class resolved per operation | **Built.** One generic form class. |
 | [E](#group-e-config-entities) | Config entity forms | **Built for one.** Node types ported. |
-| [F](#group-f-simple-config-forms) | `ConfigFormBase` with `#config_target` | **Not built.** The engine storage class was removed for want of an adopter. |
+| [F](#group-f-simple-config-forms) | `ConfigFormBase` with `#config_target` | **Storage built.** `ConfigObjectStorage`; no core form ported, and `#config_target` is not read. |
 | [G](#group-g-field-widgets-collecting-content) | A widget as the form bridge for a field item's values | **Designed, not built.** |
 | [H](#group-h-different-shape-later) | Families whose shape does not fit yet | Out of scope. |
 
@@ -101,7 +101,7 @@ a static defaults shim reading the structure the class names.
 Two host realities it had to absorb. `defaultSettings()` is static and
 cannot consult an instance's data surface, so it is answered from the
 `#[UsesStructure]` attribute, which is readable off the class, through
-`ResourcesInterface::defaults()`: the structure's own shape alone. And
+`ResourcesInterface::defaults()`: the structure's own declaration alone. And
 the host prunes what it saves against that same static array
 (`EntityDisplayBase::setComponent()` intersects through
 `prepareConfiguration()`), so keys another module mounts onto the
@@ -114,7 +114,7 @@ definition another module mounts at build time. The default is still on
 the data surface and every non-form consumer sees it; only the form's first
 render of an untouched formatter misses it.
 
-## Group C: one plugin, two shapes
+## Group C: one plugin, two sets of settings
 
 Field types. `FieldItemBase` has storage settings and instance settings,
 with different signatures, and
@@ -145,7 +145,7 @@ that alters the columns of a field with data. What is untouched is the
 field type's own `storageSettingsForm()`; address has no storage settings.
 
 Address was chosen because its settings form has no dependent settings at
-all, so everything a caller can get wrong is meaning and shape — which is
+all, so everything a caller can get wrong is meaning and shape, which is
 exactly what the config schema for `field.field_settings.address` cannot
 say. It gives three types, a nested `override` key with no vocabulary, no
 labels, no defaults, and no hint that one of its four keys is deprecated
@@ -175,11 +175,13 @@ entity untyped, config entities have no `validate()`, and
 **Built for one.** `ConfigEntityStorage` maps the resource's keys to
 entity properties or setter methods, applies mounted third-party settings
 through `setThirdPartySetting()`, runs typed-config validation on the
-unsaved entity's export array, and commits with `save()`.
-`data_surface_demo_node_type` is the exemplar: one resource,
-`NodeTypeResource`, with an add and an edit operation, the machine name
-locked on edit because the edit operation knows it, and storage writing
-the node type entity plus its base field overrides; two routes
+unsaved entity's export array, and commits with `save()`; no shipped
+resource uses it yet. `data_surface_demo_node_type` is the exemplar: one
+resource, `NodeTypeResource`, with an add and an edit operation, the
+machine name locked on edit because the edit operation knows it, and a
+storage class of its own, `NodeTypeStorage`, writing the node type entity
+plus its base field overrides (through the engine's
+`BaseFieldOverrideStorage`); two routes
 serve it through `DataSurfaceOperationForm`, with no form class.
 
 Two things that port settled, and both generalize. Ordering is part of a
@@ -201,13 +203,17 @@ defaults from config, `toConfig` and `fromConfig` transforms,
 typed-config validation, violations mapped to elements. What it lacks is
 a form that is *generated* and a contract readable outside PHP.
 
-**Not built.** An engine storage class for config objects, mirroring
-core's `ConfigTarget` one for one, was built and then removed, because
-nothing used it. A resource over a config object today names storage of
-its own, a `Resource\ResourceStorageInterface` class that loads, prepares
-and commits the object; the engine class can be restored when an adopter
-appears, so that a form already carrying `#config_target` metadata and a
-resource describe the same thing. Note that
+**Storage built, no core form ported.** `ConfigObjectStorage` keeps a
+singleton resource's values in one simple config object, which a
+subclass names: prepare lays the values over what is stored and
+validates the whole object against its config schema, and commit writes
+it. `data_surface_first` and the examples use it
+([Storage](storage.md#a-simple-config-object)). An earlier engine class
+mirroring core's `ConfigTarget` was removed for want of an adopter; this
+one came back once every settings resource had written the same class.
+It does not read `#config_target` metadata or its `toConfig` and
+`fromConfig` transforms, so a form already carrying them and a resource
+do not yet describe the same thing. Note that
 `ConfigFormBase::copyFormValuesToConfig()` is private static, so a
 generated config form cannot extend it; it replaces it.
 
@@ -232,7 +238,9 @@ payload, so a decoupled client gets the same rejection with the same
 message as the form.
 
 Scope boundary: refinement within one item. Cross-delta and cross-field
-rules need an entity-level resource, which is a later design.
+rules need an entity-level resource, which `data_surface_entity` now
+derives ([Content entities](entities.md)); no field refines another there
+yet.
 
 ## Group H: different shape, later
 
@@ -240,7 +248,7 @@ rules need an entity-level resource, which is a later design.
 | --- | --- |
 | Views plugins | `defineOptions()` is a definition language of its own; state is `$this->options`, forms are by reference. Worth ingesting eventually, but not an adapter job. |
 | Menu link forms | Write to the menu tree table, not config, and have their own `extractFormValues()`. |
-| Image toolkits | Write to a `system.image.<toolkit>` config object with no plugin configuration. A config object storage class fits once Group F exists. |
+| Image toolkits | Write to a `system.image.<toolkit>` config object with no plugin configuration. `ConfigObjectStorage` (Group F) fits; not ported. |
 | Migrate | No configuration forms at all. |
 | Layout Builder inline blocks | Configuration holds a serialized content entity. |
 
@@ -251,7 +259,7 @@ prepare and commit is the callers that never render anything.
 
 - **Config actions and recipes.** Core validates config actions only
   after the write, and only when the schema is marked
-  `FullyValidatable` — whose validator is a no-op. A `dataSurface` config
+  `FullyValidatable`, whose validator is a no-op. A `dataSurface` config
   action would run `submit()`, so validation happens before the write,
   with the same messages a form shows, and `${input}` placeholders flow
   through `accept()`.
@@ -286,7 +294,7 @@ Both JSON Schema documents are printed side by side in
 test rather than written by hand. The same resource that generates the
 Field UI form generates the tool schema, with no second description.
 
-The Tool API gaps the bridge found — and did not work around — are listed
+The Tool API gaps the bridge found, and did not work around, are listed
 in that submodule's README and summarized in [Core gaps](core-gaps.md).
 
 ### A setting another module added
@@ -336,5 +344,5 @@ it by `NodeTypeToolComparisonTest`.
 5. **Field widgets collecting content**, with address-style narrowing as
    the demo, because it is the first family where the definitions already
    exist in core and the same refinement reaches JSON:API.
-6. **Config actions**, once a config object storage class exists,
+6. **Config actions**, now that a config object storage class exists,
    because it turns validation from post-save rollback into a gate.

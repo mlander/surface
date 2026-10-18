@@ -12,8 +12,8 @@ generated form; the address module is not modified.
 
 Four pieces:
 
-- `Resource\AddressFieldSettingsResource`: the definitions, in the new
-  spelling: a class with a static `defineInputs()` and no services. The country
+- `Resource\AddressFieldSettingsResource`: the definitions, a class
+  with a static `defineInputs()` and no services. The country
   list and the language list are not in it: the items carry the address
   module's `Country` constraint and the `LanguageExists` constraint, and
   `CountryOptions` and `LanguageExistsOptions` resolve them live. It is

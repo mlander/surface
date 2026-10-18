@@ -1,8 +1,8 @@
 # Data Surface Demo Extras
 
 What a third-party module can do to another module's contract without
-touching a form — and, for content types, the same extension written
-both ways, so the two can be compared.
+touching a form (and, for content types, the same extension written
+both ways, so the two can be compared).
 
 ## What it shows
 
@@ -12,7 +12,7 @@ both ways, so the two can be compared.
   form-alter era gave an element no machine could see.
 - It contributes one more value, `ribbon`, to the formatter's `variant`
   key, with `extendChoices()`, and narrows it with a `#[RefinesInput]`
-  method of its own to say when that value is offered — here, only in
+  method of its own to say when that value is offered: here, only in
   upper case.
 
 Both live in one alter, `Alter\DemoFormatterAlter`,
@@ -71,7 +71,7 @@ of audience tags.
   `#[Alters(NodeTypeResource::class)]`: discovery finds it, and
   skips it on a site without the node type demo, so nothing here
   depends on that module. The deadline is asked for as an amount and a
-  unit — hours, days, weeks or business days — with a constraint on the
+  unit (hours, days, weeks or business days) with a constraint on the
   pair that refuses anything past thirty days on the amount, and
   `ReviewDeadlineLayout` turns the pair into seconds and back; the alter
   hands it to the resource by implementing `HasStorageLayoutInterface`,
@@ -85,10 +85,10 @@ of audience tags.
   an amount and a unit select whose `#element_validate` turns them into
   seconds and checks the range, an `#element_validate` that splits,
   trims, lower cases and de-duplicates the typed tags, and an
-  `#entity_builders` callback — what `menu_ui` does to the same form.
+  `#entity_builders` callback: what `menu_ui` does to the same form.
 
-The config schema is accurate and complete for the deadline — an
-integer with a Range of 3600 to 2592000 — so the classic side is not
+The config schema is accurate and complete for the deadline (an
+integer with a Range of 3600 to 2592000), so the classic side is not
 short of validation. What it does not carry is the unit, and how an
 amount of hours, days, weeks or business days becomes the integer: that
 lives in the form, and a reader of the schema alone has to infer it.

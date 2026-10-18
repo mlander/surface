@@ -475,10 +475,16 @@ renames sit in A because they are cheapest before new code exists.
      may refuse what the original accepts. Each is a schema to widen or
      a runtime to tighten, decided case by case.
    - A reading pass over the docs and decisions after the rename, then
-     the leftover old words in one decision: module name and
+     the leftover old words in one decision, DONE 2026-10-18
+     (`docs/decisions.md#the-product-keeps-its-name`): module name and
      namespaces, the `data_surface.` service prefix, route names and
      paths, the `x-surface` keyword, the `surface[...]` form key, the
-     React app's internal names, the `DataSurface*` engine prefix.
+     React app's internal names, the `DataSurface*` engine prefix keep
+     the word; concept names in code took the new one. With it, three
+     fresh-eyes entries: a derived tool declares its operation's
+     permission (12), a refusal a refiner caused names the keys it
+     depends on (15), and the README's "never contradicted" says what
+     only the runtime settles (17).
 2. **"This key does not apply"**, found by the fresh-eyes run: a send
    day that only applies when the frequency is weekly has no good
    spelling. Narrowing it to no values turns its select into a text
@@ -506,7 +512,7 @@ renames sit in A because they are cheapest before new code exists.
    port; the container wires each port to one of its keys when it
    attaches the structure (`attach('compliance', Compliance::class,
    reads: ['capacity' => 'seats'])`), whether the container is a
-   resource or an alter. Consequences: an alter's shape must be able to
+   resource or an alter. Consequences: an alter's blueprint must be able to
    `attach()` and `attachList()` under its mount, so an alter becomes
    an adapter that attaches a reusable structure and wires it; a
    port-dependent conditional is emitted at the site on the parent's
@@ -523,7 +529,7 @@ renames sit in A because they are cheapest before new code exists.
    it depends on the structure's module); alters on the structure apply
    wherever it is used, which a container may want to opt out of (to
    decide); a change to the structure changes every container's stored
-   shape, which is Phase D with an explicit contract to diff.
+   layout, which is Phase D with an explicit contract to diff.
 5. **Mixins: a structure merged flat.** Today composition only nests
    (attach, with its frame and wall; an alter's mount under its module's
    name). A mixin, Smithy's word, merges a structure's members into the
@@ -609,12 +615,12 @@ renames sit in A because they are cheapest before new code exists.
    from the read tool; `attachListBy()`; an item routed to its child's
    own storage; the phpstan rule for static refiners; the "Right now"
    wording for a key that is both narrowed and under a runtime rule.
-11. **The entity side, when resumed.** Fields as two shapes: a `field`
+11. **The entity side, when resumed.** Fields as two kinds: a `field`
    resource (identity: entity and field name; a collection of items
    with Count from cardinality; field access; a `set` operation whose
    tool shares Tool Belt's `field_set_value` contract) and a
    `field.item` structure (no identity; entity, field name and delta
-   from its container; shape derived at build from the known field).
+   from its container; keys derived at build from the known field).
    Unit 4's per-field-per-bundle derivatives collapse into these. Then
    multi-value fields through collections, the form display as the
    cosmetic layer (a single-value field drawn as one element, not a

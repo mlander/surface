@@ -5,7 +5,7 @@ Three parties, in order:
 | Party | Does | Knows |
 | --- | --- | --- |
 | **Caller** (a route's form, a tool, a plugin host, a test) | builds a context, asks for the built resource or structure, then uses it | where it is |
-| **Framework** (`Resources`, the service `data_surface.resources`) | runs the shape methods, applies alters, applies the context, binds refiners, builds children, seals | everything |
+| **Framework** (`Resources`, the service `data_surface.resources`) | runs `defineInputs()` and `defineOutputs()`, applies alters, applies the context, binds refiners, builds children, seals | everything |
 | **Resource** or **structure**, and its **alters** | declare | nothing about the caller |
 
 The context is how the caller tells the framework where it is. The
@@ -38,7 +38,7 @@ class whose `defineInputs()` or `defineOutputs()` is not static.
 A class carrying `#[DerivesResources]` is a deriver, registered as an
 autowired service; the registry asks it for its resources and
 structures here, and reads each into a definition with no class,
-`<base>:<derivative>`, whose shape and operations are methods the
+`<base>:<derivative>`, whose inputs and operations are methods the
 deriver names. The cache entry carries the tags each derivative was
 read from, so a saved field or form display clears it ([Derived
 resources](resources.md#derived-resources)).
@@ -51,7 +51,7 @@ DataSurfaceInterface`, in `Resources::buildResource()`:
 ```
 build(FieldInstanceResource::class, $context):
 
-  1. the owner's shape, asked of the class: no instance is ever made
+  1. the owner's blueprint, filled by the class: no instance is ever made
        $class::defineInputs(new ResourceBlueprint($builder))          <- no context: the
        $class::defineOutputs(new ResourceBlueprint($builder, TRUE))      same everywhere
      ResourceBlueprint writes straight into a fresh DataSurfaceBuilder,
@@ -67,7 +67,7 @@ build(FieldInstanceResource::class, $context):
      ResourceBlueprintAdditions mounts what it adds at
      third_party_settings.<module>
 
-  3. the checks on the shape: every identity key is a declared input,
+  3. the checks on the blueprint: every identity key is a declared input,
      no operation id is provided twice, no class is attached inside
      itself, every slot is chosen by a plain input
 
@@ -77,7 +77,7 @@ build(FieldInstanceResource::class, $context):
        each identity key it knows becomes that key's default, locked
 
   5. the refiners (bindRefiners), owner's first, then each alter's:
-       each #[RefinesInput] method checked against the shape and the wall,
+       each #[RefinesInput] method checked against the declared keys and the wall,
          the owner's checked static, and an alter's static unless it
          declares runtime
        the keys it watches become refinement edges; a key its alter
@@ -107,7 +107,7 @@ build(FieldInstanceResource::class, $context):
 ```
 
 Nothing is cached across builds: a build describes live site state,
-and what that state is, a shape says with `addCacheableDependency()`.
+and what that state is, a blueprint says with `addCacheableDependency()`.
 
 The rest of the framework, beside the build:
 
@@ -222,7 +222,7 @@ plugin's configuration, or the field config Field UI is editing),
 because only it holds the instance, and asks access of the structure's
 access class alone. A plugin protocol that asks a class for its
 defaults statically gets `ResourcesInterface::defaults()`: the owner's
-shape alone, with no alter and no context.
+blueprint alone, with no alter and no context.
 
 ## Tools, derived
 
@@ -252,7 +252,7 @@ resource or a key.
   operation's permission, and by storage and access classes to know
   which thing.
 
-- **Never read by a shape or a refiner.** The shape methods take a
-  blueprint, refiners take the values they name. State such as "this field
+- **Never read by `defineInputs()` or a refiner.** `defineInputs()` and
+  `defineOutputs()` take a blueprint, refiners take the values they name. State such as "this field
   has data" is narrowing the operation imposes, applied once at build.
 - **Never** a bag of submitted values.

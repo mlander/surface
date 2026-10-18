@@ -33,7 +33,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * {@inheritdoc}
    */
   public function attachBy(string $key, string $by): MapDataDefinition {
-    $shell = $this->reserveSubsurface('attachBy', $key);
+    $shell = $this->reserveChild('attachBy', $key);
     $this->slots[$key] = $by;
     return $shell;
   }

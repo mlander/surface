@@ -93,8 +93,8 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
       return $definition;
     }
     try {
-      [$surface, , $context] = $this->operation($values);
-      return $this->operationInputs->values($surface, $this->resources->build($surface->name(), $context), $context);
+      [$resource, , $context] = $this->operation($values);
+      return $this->operationInputs->values($resource, $this->resources->build($resource->name(), $context), $context);
     }
     catch (\InvalidArgumentException) {
       return $definition;
@@ -105,17 +105,17 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
    * {@inheritdoc}
    */
   protected function doExecute(array $values): ExecutableResult {
-    [$surface, $operation, $context] = $this->operation($values);
+    [$resource, $operation, $context] = $this->operation($values);
     // Asked again here, not only in checkAccess(): execute() is callable
     // from PHP without an access check, and this is the method that
     // writes. The same answer travels into the pipeline, which stops
     // before reading storage when it is a refusal.
-    $access = $this->operationAccess($surface, $context, $this->currentUser);
+    $access = $this->operationAccess($resource, $context, $this->currentUser);
     if (!$access->isAllowed()) {
       return ExecutableResult::failure($this->t('You do not have permission to do this.'));
     }
-    $built = $this->resources->build($surface->name(), $context);
-    $storage = $this->resources->storage($surface->name(), $context, $built);
+    $built = $this->resources->build($resource->name(), $context);
+    $storage = $this->resources->storage($resource->name(), $context, $built);
     $input = $values[OperationInputs::VALUES] ?? [];
     $result = $this->pipeline->submit(
       $built,

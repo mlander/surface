@@ -39,7 +39,7 @@ final class ResourceDefinition {
   public const RESOURCE = 'resource';
 
   /**
-   * The kind of a shape held by something else, with no storage of its own.
+   * The kind held by something else, with no storage of its own.
    */
   public const STRUCTURE = 'structure';
 

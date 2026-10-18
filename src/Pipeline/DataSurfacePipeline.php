@@ -484,9 +484,84 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         $errors[] = $this->staleViolation($definition, $value, $name);
         continue;
       }
-      $errors = array_merge($errors, $refusals);
+      $errors = array_merge($errors, $this->namingWhatItDependsOn($refusals, $surface, $refined, $name));
     }
     return $errors;
+  }
+
+  /**
+   * Adds to a narrowed key's refusals which siblings narrowed it.
+   *
+   * A refusal a refiner caused, such as too few stewards for the capacity
+   * given, is about a value the caller may not have touched: the key it
+   * names is the one to fix, but the reason is a sibling. A refusal gets
+   * a second sentence naming the keys its refiners watch, and only
+   * when the refiners changed the refused key's constraints for these
+   * values; a refusal by a rule the key declared itself is left as it is.
+   * A key an alter mounted is refined one property at a time, so its
+   * refusals are matched to the property each is about.
+   *
+   * @param \Drupal\data_surface\Pipeline\Violation[] $refusals
+   *   The key's refusals.
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface as declared.
+   * @param \Drupal\data_surface\DataSurfaceInterface $refined
+   *   The same, refined against the values.
+   * @param string $name
+   *   The key.
+   *
+   * @return \Drupal\data_surface\Pipeline\Violation[]
+   *   The refusals, each naming what it depends on where that applies.
+   */
+  protected function namingWhatItDependsOn(array $refusals, DataSurfaceInterface $surface, DataSurfaceInterface $refined, string $name): array {
+    $entry = $refined->getDefinitions()->entry($name);
+    if ($refusals === [] || $entry === NULL || $entry->dependencies === []) {
+      return $refusals;
+    }
+    $targets = $entry->paths === [] ? ['' => $entry->dependencies] : $entry->paths;
+    foreach ($refusals as $index => $refusal) {
+      foreach ($targets as $path => $dependencies) {
+        $path = (string) $path;
+        if ($path !== '' && $refusal->path !== $path && !str_starts_with($refusal->path, $path . '.')) {
+          continue;
+        }
+        $parents = $path === '' ? [$name] : [$name, ...explode('.', $path)];
+        $declared = static::definitionAt($surface, $parents);
+        $narrowed = static::definitionAt($refined, $parents);
+        if ($declared === NULL || $narrowed === NULL || json_encode($declared->getConstraints()) === json_encode($narrowed->getConstraints())) {
+          continue;
+        }
+        $labels = array_map(
+          static fn (string $dependency): string => (string) (static::definitionAt($refined, explode('.', $dependency))?->getLabel() ?? $dependency),
+          $dependencies,
+        );
+        $refusals[$index] = new Violation($refusal->key, $refusal->path, $this->t('@message This depends on @keys.', [
+          '@message' => $refusal->message,
+          '@keys' => implode(', ', $labels),
+        ]));
+        break;
+      }
+    }
+    return $refusals;
+  }
+
+  /**
+   * Finds the definition at a key, or at a property path inside it.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface.
+   * @param string[] $parents
+   *   The key, then the property names below it.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
+   *   The definition, or NULL when the path names none.
+   */
+  protected static function definitionAt(DataSurfaceInterface $surface, array $parents): ?DataDefinitionInterface {
+    $definition = $surface->getDefinition((string) array_shift($parents));
+    foreach ($parents as $property) {
+      $definition = $definition instanceof ComplexDataDefinitionInterface ? $definition->getPropertyDefinition($property) : NULL;
+    }
+    return $definition;
   }
 
   /**

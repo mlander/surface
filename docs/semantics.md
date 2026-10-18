@@ -7,9 +7,9 @@ means, and what the data surface refuses outright. It is the rules reference for
 [the pipeline](pipeline.md), which is where the stages themselves are
 described.
 
-Every rule here is applied in one place and only there — one predicate
+Every rule here is applied in one place and only there (one predicate
 and one coercion table, shared by `accept()`, `validate()` and
-`refine()` — so a form, a config action, a REST payload and an agent all
+`refine()`), so a form, a config action, a REST payload and an agent all
 get the same answer. The coercion table is the Tool API's, so a tool
 caller gets that answer too. The unit test
 `tests/src/Unit/DataSurfacePipelineCastingTest.php` states the same rules
@@ -96,12 +96,12 @@ Input that holds nothing never reaches the table: it is read first, by
 | `boolean` | `1`, `0`, `1.0`, `0.0` | `TRUE`, `FALSE` |
 | `boolean` | `'1'`, `'true'`, `'on'`, `'yes'`, any case, trimmed | `TRUE` |
 | `boolean` | `'0'`, `'false'`, `'off'`, `'no'`, any case, trimmed | `FALSE` |
-| `boolean` | any other word or number | unchanged — the constraint refuses it |
+| `boolean` | any other word or number | unchanged: the constraint refuses it |
 | `integer` | `7` | `7` |
 | `integer` | `'7'`, `' 7 '`, `'+7'`, `'-7'`, `'007'`, `'2.0'`, `'1e3'` | the integer |
 | `integer` | `2.0` | `2` (a whole number, nothing lost) |
 | `integer` | `TRUE`, `FALSE` | `1`, `0` |
-| `integer` | `1.9`, `'1.9'` | unchanged — the constraint refuses it |
+| `integer` | `1.9`, `'1.9'` | unchanged: the constraint refuses it |
 | `integer` | `'seven'`, a literal beyond PHP's integer range | unchanged |
 | `float` | `1.5`, `2` | itself (an integer is a float's value) |
 | `float` | `'2'`, `'1.5'`, `' 1.5 '`, `'1e3'` | the float |
@@ -145,7 +145,7 @@ lenient caller sending `'["us","ca"]'` mean the same thing.
 
 A list that is sent nothing keeps what it holds, required or not: a
 form that rendered no list widget, or a payload that named no list, has
-said nothing about the list, so **what the list already holds stands** —
+said nothing about the list, so **what the list already holds stands**:
 the stored value, or the declared default. Emptying a list is said with
 an empty list, which is a configured value.
 
@@ -234,7 +234,7 @@ So for a secret key:
 | --- | --- |
 | absent | keeps the stored value (as for every key) |
 | `NULL`, `''` | **keeps the stored value**, required or not |
-| `DataSurfacePipelineInterface::CLEAR_SECRET` | `NULL` — the secret is gone |
+| `DataSurfacePipelineInterface::CLEAR_SECRET` | `NULL`: the secret is gone |
 | anything else | the new secret, coerced and validated like any string |
 
 `CLEAR_SECRET` is the literal `@data_surface:clear-secret`, in the same
@@ -267,7 +267,7 @@ storage layout: see [Storage](storage.md#secrets-at-the-codec).
 
 A key can be in three states, not two. It can be unanswered, it can hold
 an answer, and it can hold an answer that **was** true and is not any
-more — a bundle that was deleted, a plugin whose module was uninstalled,
+more: a bundle that was deleted, a plugin whose module was uninstalled,
 a value a refinement has since narrowed away. The third state is not
 something any caller did, and that is what the rules turn on.
 
@@ -277,7 +277,7 @@ A value is **stale** when all four of these hold at once:
 | --- | --- |
 | It is exactly what storage holds for that key | A value that differs was chosen by whoever sent it, so it is refused however far outside the list it falls. This is the whole line between "re-choose this" and "that is not a valid answer". |
 | Every key it refines against also holds exactly what storage holds | A run that moves a dependency is what narrowed the list away from the stored value: a venue moved, and the room stored under the old venue is sent back. That refusal is about this run's own answers, not about the site, so it blocks. |
-| The key offers a list of values at all | Read from the options service — the same list a generated select renders. A key with no list has no membership to have fallen out of. |
+| The key offers a list of values at all | Read from the options service: the same list a generated select renders. A key with no list has no membership to have fallen out of. |
 | The value is not in that list | If it is, the refusal came from some other constraint, and that is an ordinary refusal of a value the key still offers. |
 
 Then:
@@ -306,8 +306,8 @@ Four consequences worth stating:
   a hidden input the container posts beside them
   (`DataSurfaceFormBuilderInterface::STALE_MARKER_KEY`).
 - **Stale never blocks.** A run that found only stale entries is valid,
-  commits, and carries the stale references on its result — see
-  [the pipeline](pipeline.md#stale-never-blocks). A new value outside
+  commits, and carries the stale references on its result (see
+  [the pipeline](pipeline.md#stale-never-blocks)). A new value outside
   the list is still a hard violation.
 - **Required splits.** Never set plus required is the ordinary required
   violation, and on a form a required select left on its empty option
@@ -333,8 +333,8 @@ Two boundaries, both deliberate:
   refused as it always was. A collection is covered, inside each item,
   since each item is its own frame ([Collections](#collections)).
 - **`setConfiguration()` keeps what it is given.** A plugin's
-  `setConfiguration()` is the load path — every host calls it from
-  inside its own constructor with what the site saved — and it has one
+  `setConfiguration()` is the load path (every host calls it from
+  inside its own constructor with what the site saved), and it has one
   array and no separate notion of what is stored, so it cannot tell a
   value that went stale from a bad one a caller invented, and it keeps
   both rather than throwing. It still throws for everything else the
@@ -370,7 +370,7 @@ else, so:
 | Value of a required key | Result |
 | --- | --- |
 | `NULL`, `''` | violation: "@label is required." |
-| `FALSE` | passes — then held to its own constraints |
+| `FALSE` | passes, then held to its own constraints |
 | `0`, `'0'` | passes |
 | `[]` (a required list or map) | passes |
 | anything else | passes |
@@ -410,6 +410,14 @@ tool's input definitions carry the constraint across respelled `%max`,
 so the Tool API's own check, which runs before the pipeline, says the
 same.
 
+A refusal a refiner caused names what it depends on, in a second
+sentence: too few stewards for example 4's capacity reads "This value
+should be 3 or more. This depends on Capacity." The pipeline adds it
+where the refused key, or the mounted property the refusal is about, is
+watched by a refiner and the refiners changed its constraints for these
+values; a rule the key declared itself says nothing more
+([decision](decisions.md#a-refusal-names-what-it-depends-on)).
+
 There are exactly three places a message becomes text, all of them
 exception messages, because PHP has nowhere to put an object in one:
 `UnknownKeysException`, `StorageViolationsException`, and the refusal
@@ -422,7 +430,7 @@ entries and counts the rest; the full list is still on the exception.
 A locked key is the degenerate refinement: its value space is narrowed
 to exactly one value. That value is **whatever storage already holds**,
 and the declared default only for a key storage has never held. Input
-for a locked key is ignored — it is not an error, just not a way to move
+for a locked key is ignored: it is not an error, just not a way to move
 the value. This is why editing an entity whose id is locked no longer
 resets it to the default.
 

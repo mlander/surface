@@ -25,7 +25,7 @@ the record of the rework that brought the module to the pattern.
   `entity.content:node.page`, the same shape applied to content). One
   with no identity keys, such as a settings object, is a singleton
   resource. `#[Resource(id, identity:, storage:, access:)]`.
-- **Structure**: a shape with members and no identity or storage of its
+- **Structure**: a group of keys with no identity or storage of its
   own, held by a parent, a slot or a plugin's host.
   `#[Structure(id, access:)]`.
 - **Operation**: a way a resource is asked for, a static `#[Operation]`
@@ -51,7 +51,12 @@ the record of the rework that brought the module to the pattern.
 "Data surface" names the project, and the sealed object the build step
 makes (`DataSurfaceInterface`); it is not a third kind. "Shape" is the
 general idea of what a thing takes, and in code is reserved for named
-scalar shapes; it never names the blueprint or the layout.
+scalar shapes; it never names the blueprint or the layout. Product names
+and on-the-wire identifiers keep the word surface (module, namespaces,
+services, routes and paths, `x-surface`, the contract's `surface` and
+`situation` keys, the `surface[...]` form key, React, the `DataSurface*`
+engine, tool ids); every concept name uses the new word
+(`docs/decisions.md#the-product-keeps-its-name`).
 
 ## One spelling
 
@@ -70,7 +75,7 @@ or, with no argument, is its own structure: the plugin class implements
 name it by the plugin class (the demo formatter). Everything else is
 discovered by `ResourceBuild\ResourceCollectorPass` and built by the
 `data_surface.resources` service (`ResourcesInterface::build($resource,
-$context)`), which writes the shape, the alters, the context and the
+$context)`), which writes the blueprint, the alters, the context and the
 bound refiners into the engine's `DataSurfaceBuilder` and seals it into a
 `DataSurfaceInterface` (`docs/resources.md`). The builder, the definition
 map and `DataSurfaceRefinerInterface` are internal: nothing an author
@@ -84,7 +89,7 @@ block, formatter, condition, action and field type base classes, and
 named class in a context of its own verb (`configure`, `field_settings`),
 supplies the storage (the plugin's configuration array; the field config
 for a field type) and answers static defaults from the class's own
-shape (`ResourcesInterface::defaults()`). A storage class has three
+declaration (`ResourcesInterface::defaults()`). A storage class has three
 verbs, `load()`, `prepare()` (rehearse the write with the store's own
 checks, no side effects) and `commit()` of what prepare returned; a dry
 run stops after prepare and reports it.
@@ -106,7 +111,9 @@ a parameter (`ResourceCatalogue::standalone()`). Beside each such
 operation that changes a thing that exists it derives a read tool,
 `data_surface:<id>:<operation>:read`, taking the parameters and
 answering with the stored values less secrets
-(`ResourceCatalogue::reads()`, `ResourceOperationReadTool`). The field
+(`ResourceCatalogue::reads()`, `ResourceOperationReadTool`). Both declare
+the operation's permission to the Tool API, unless it has a `%key`
+(`ResourceOperationToolDeriver::declaredPermission()`). The field
 tools are `data_surface:field.instance:add` / `:reuse` / `:edit`; the
 hand-written `field_add` / `field_update` are gone.
 `data_surface.resource_catalogue` lists the static layer; `docs/catalogue.md`
@@ -122,18 +129,18 @@ storage of its own, an attached resource (the field's storage,
 `ResourceBuild\DerivedVariantsInterface` fills a slot for the values no
 variant class fills (`data_surface_tool` derives a field type's
 settings, and its storage settings, from its config schema). A child
-whose shape cannot be listed at all is a `#[RefinesInput]` method on an
+whose keys cannot be listed at all is a `#[RefinesInput]` method on an
 `any` key returning a map. `attachList()` is a collection: a list of
 child instances, the list (its Count) the parent's, each item the
 child's, its entry a `Collection` (`docs/resources.md#collections`).
 
-A shape that is the site's rather than the code's (one per bundle, one
-per field) is derived: a class in `src/Resource/` or `src/Structure/`
+A resource or structure whose keys are the site's rather than the
+code's (one per bundle, one per field) is derived: a class in `src/Resource/` or `src/Structure/`
 carrying `#[DerivesResources(base:)]` and implementing
 `ResourceDeriverInterface` returns `DerivedResource` values at
 discovery, each `<base>:<derivative>` with no class
 (`ResourceDefinition::$class` NULL; every caller asks by `name()`), its
-shape and operations `ResourceCallable`s, cached under the tags of what
+inputs and operations `ResourceCallable`s, cached under the tags of what
 it was read from. Its kind follows from what it names: one that names
 storage or identity keys is a resource, any other a structure.
 `data_surface_entity` derives a resource per content entity bundle
@@ -166,7 +173,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 browser would look for the site in its own container; leave the base URL
 to the environment.
 
-The baseline as of this writing: **1011 tests, 12187 assertions, 0 errors,
+The baseline as of this writing: **1013 tests, 12211 assertions, 0 errors,
 0 failures**. The test and assertion counts drift upward as work lands
 and are not the thing to check. **No test may error and no test may
 fail**, the browser tests included; any error or failure is a real
@@ -234,7 +241,7 @@ It names no widget unless asked
 it without, beside what the Tool API can advertise (which flattens a
 slot, and is what `tool:info` prints). `modules/data_surface_react`
 serves it with the widget hints, through the main module's service:
-`/surface-api/{surface}/{situation}` serves it, `/refine` re-narrows it
+`/surface-api/{resource}/{operation}` serves it, `/refine` re-narrows it
 (the AJAX rebuild's equivalent, emitted from the form builder's `refinementOverlay()`, so an orphan is
 held unanswered and listed `stale`), `/validate` runs the pipeline
 dry and `/submit` writes, answering a refusal as 200 data
@@ -244,7 +251,7 @@ outputs or identity, checked by building that operation). The GET
 contract carries a `fingerprint` of the stored values; a submit that
 sends it back is refused when storage changed since, and one that sends
 none is not checked (opt-in; the app sends it).
-`/surface-react/{surface}/{situation}` renders it with a React app.
+`/surface-react/{resource}/{operation}` renders it with a React app.
 `docs/served-contract.md` has the format, with children and slot variants
 as `$defs` that the properties reference; `docs/decisions.md` (Served
 contract) has the points it settled.
@@ -284,7 +291,7 @@ so the rule is this sentence. `npm test` is not part of
   static method, a resource's, a structure's and an alter's alike; only
   a runtime one may be an instance method. Alters, storage classes and
   access classes are autowired services and may hold services
-  (`docs/decisions.md#a-shape-is-static`).
+  (`docs/decisions.md#a-resource-or-structure-is-static`).
 - A `#[RefinesInput]` method is static, a pure function of what it
   watches that the served contract runs ahead of time, unless it says
   `runtime: TRUE`: a rule no schema can state (a lookup, uniqueness),

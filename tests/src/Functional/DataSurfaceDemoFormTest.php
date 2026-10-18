@@ -11,7 +11,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 /**
  * Tests the standalone demo form through a browser.
  *
- * The third host shape, and the one with no plugin behind it: an
+ * The third kind of host, and the one with no plugin behind it: an
  * ordinary FormBase that reads a structure off a block plugin and commits
  * it to State. The kernel test drives buildForm() and submitForm()
  * directly, which is enough to check the delegation and nothing else.

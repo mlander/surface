@@ -17,7 +17,7 @@ identity is the entity type, the bundle and the id, and whose storage is
 the content entity. Nothing in a resource's class says which of these
 it is; its storage class does.
 
-A structure is the other kind: a shape with members and no identity or
+A structure is the other kind: a group of keys with no identity or
 storage of its own, held by a parent, a slot or a plugin's host.
 
 This page is the pattern: what an author writes, where it goes, and why
@@ -44,7 +44,7 @@ All three are scanned in every enabled module, the way core scans
 `src/Hook`, so nothing is registered by hand. A class carrying
 `#[Resource]` or `#[Structure]` is found in either of the first two: the
 attribute decides the kind, and the directory is for the reader. A
-resource or structure is never instantiated: its shape and its refiners
+resource or structure is never instantiated: its `defineInputs()` and its refiners
 are static methods, asked of the class. An alter is registered as an
 autowired service and may hold services. A plugin may also be its own
 structure, with the same static methods on the plugin class; it is found
@@ -94,17 +94,17 @@ modules/data_surface_demo_extras/src/
 ## The pattern
 
 A resource or structure is a class with one static method that declares
-its shape, and one named static method per key whose allowed values
+its members, and one named static method per key whose allowed values
 depend on another key. An alter is a class with the same two jobs and a
-narrower tool; it is a service, so its shape method is an instance
+narrower tool; it is a service, so its `alterInputs()` is an instance
 method.
 
-| | Shape | Values |
+| | Blueprint | Values |
 | --- | --- | --- |
 | **Owner** | `static defineInputs($inputs)`, optionally `static defineOutputs($outputs)` | static `#[RefinesInput('key')]` methods |
 | **Another module** | `alterInputs($inputs)`, optionally `alterOutputs($outputs)` | `#[RefinesInput('key')]` methods |
 
-- **The shape methods get a blueprint to fill, and nothing else**: no
+- **`defineInputs()` and `alterInputs()` get a blueprint to fill, and nothing else**: no
   values, no context, no services. On a resource or structure they are
   static, so the language holds them to that: the build step calls them
   on the class and never makes an instance. The owner gets
@@ -186,7 +186,7 @@ below.)
 ## Reading a class
 
 - **Everything on it is static.** `defineInputs()`, `defineOutputs()`,
-  every `#[RefinesInput]` method and every `#[Operation]`. Shape is a
+  every `#[RefinesInput]` method and every `#[Operation]`. What it declares is a
   property of the class: nothing it says takes a value, a context or a
   service, and a static method cannot reach for one. No constructor, no
   properties, no `$this`.
@@ -221,7 +221,7 @@ below.)
 ## Children
 
 A resource or structure attaches others at a key. Each child is its own
-class, with its own shape and refiners, and alters can reach it alone.
+class, with its own keys and refiners, and alters can reach it alone.
 A child is usually a structure; it may be a resource with storage of its
 own, as the field's storage is.
 
@@ -273,7 +273,7 @@ the chosen child's map once the deciding key has a value: an ordinary
 refinement under the rule that `any` may become anything narrower, not
 a new mechanism.
 
-**The escape hatch.** A child whose shape cannot be listed at all is
+**The escape hatch.** A child whose keys cannot be listed at all is
 the one case for a `#[RefinesInput]` method on an `any` key returning
 the narrower definition itself, a map included. No verb is needed;
 the test module's `DynamicChildStructure` is the example.
@@ -287,7 +287,7 @@ to. That keeps every child buildable and testable on its own.
 ## Operations: add, reuse, edit
 
 A resource never mentions add or edit. The difference between them is
-not shape. It is how much is already known.
+not which keys there are. It is how much is already known.
 
 - `#[Resource(identity: [...])]` names the **identity keys**: the input
   keys that say which thing this is. An identity key is settable until
@@ -336,7 +336,7 @@ key stays open, and it is still the same resource.
 ## Allowed values
 
 A key says what it allows on its own definition, as a constraint. The
-shape has no verb for options.
+blueprint has no verb for options.
 
 | The list is | Constraint | Example |
 | --- | --- | --- |
@@ -416,7 +416,7 @@ verbs:
   storage would make (the config schema, a field type the storage could
   not take, a schema change a field with data could not take) and no
   side effects, and returns what would be stored, in storage's own
-  shape. A dry run stops here and reports it.
+  layout. A dry run stops here and reports it.
 - `commit($context, $prepared)` writes what prepare returned.
 
 Whether to create or update is the context's `creates`. Storage composes
@@ -480,7 +480,7 @@ final class DataSurfaceDemoBlock extends DataSurfaceBlockBase {
 
 **The plugin is its own structure.** `#[UsesStructure]` with no
 argument, and the plugin implements `StructureInterface`: its static
-shape and refiners sit beside the code that uses the values, and the
+`defineInputs()` and refiners sit beside the code that uses the values, and the
 host builds the data surface from the plugin class without constructing
 it.
 

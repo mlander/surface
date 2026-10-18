@@ -9,7 +9,7 @@ use Drupal\Core\DependencyInjection\ClassResolverInterface;
 /**
  * A method a derived resource is built through, with what it is bound to.
  *
- * A class-based resource is its class: its shape and its operations are
+ * A class-based resource is its class: its inputs and its operations are
  * methods the build step finds by attribute. A derived resource has no
  * class of its own, so its deriver names each method instead, with the
  * arguments that say which derivative it is (an entity type and a
@@ -18,7 +18,7 @@ use Drupal\Core\DependencyInjection\ClassResolverInterface;
  * a closure would not.
  *
  * What the caller supplies comes first and the bound arguments after:
- * a shape method is `defineInputs(BlueprintInterface $inputs, string
+ * an inputs method is `defineInputs(BlueprintInterface $inputs, string
  * $entity_type, string $bundle)`, an operation `add(array $arguments,
  * string $entity_type, string $bundle)`. A static method is called on the
  * class; an instance method on the class resolver's instance of it, so

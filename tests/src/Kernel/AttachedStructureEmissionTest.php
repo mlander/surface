@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface_surface_test\Resource\Pantry\PantryResource;
+use Drupal\data_surface_resource_test\Resource\Pantry\PantryResource;
 use Drupal\tool\TypedData\InputDefinitionInterface;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -36,7 +36,7 @@ class AttachedStructureEmissionTest extends DataSurfaceKernelTestBase {
     'tool',
     'data_surface',
     'data_surface_tool',
-    'data_surface_surface_test',
+    'data_surface_resource_test',
   ];
 
   /**

@@ -107,9 +107,9 @@ final class OperationRoute {
    */
   public static function fromRouteMatch(RouteMatchInterface $route_match, ResourceRegistry $registry, OperationArguments $arguments, ResourcesInterface $resources): self {
     $route = $route_match->getRouteObject();
-    $surface = (string) ($route?->getDefault(self::RESOURCE) ?? '');
+    $route_resource = (string) ($route?->getDefault(self::RESOURCE) ?? '');
     $id = (string) ($route?->getDefault(self::OPERATION) ?? '');
-    if ($surface === '' || $id === '') {
+    if ($route_resource === '' || $id === '') {
       throw new \LogicException(sprintf(
         'The %s route is served by an operation and has to name the resource in "%s" and the operation in "%s".',
         (string) $route_match->getRouteName(),
@@ -117,7 +117,7 @@ final class OperationRoute {
         self::OPERATION,
       ));
     }
-    $class = $registry->getDefinition($surface)->name();
+    $class = $registry->getDefinition($route_resource)->name();
     $operation = $registry->getOperation($class, $id);
     $given = $arguments->fromRoute($operation, $route_match);
     $subject = NULL;

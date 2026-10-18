@@ -13,14 +13,14 @@ use Drupal\data_surface\Pipeline\UnknownKeysException;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\ResourceBuild\Resources;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
-use Drupal\data_surface_surface_test\Structure\Broken\MisnamingLarderStructure;
-use Drupal\data_surface_surface_test\Structure\Broken\TwoDefaultsStructure;
-use Drupal\data_surface_surface_test\Resource\Larder\LarderResource;
-use Drupal\data_surface_surface_test\Resource\Larder\SpiceRackResource;
-use Drupal\data_surface_surface_test\Resource\Pantry\LabelResource;
-use Drupal\data_surface_surface_test\Resource\Pantry\PantryResource;
-use Drupal\data_surface_surface_test\Structure\Pantry\ShelfStructure;
-use Drupal\data_surface_surface_test\Storage\LarderStorage;
+use Drupal\data_surface_resource_test\Structure\Broken\MisnamingLarderStructure;
+use Drupal\data_surface_resource_test\Structure\Broken\TwoDefaultsStructure;
+use Drupal\data_surface_resource_test\Resource\Larder\LarderResource;
+use Drupal\data_surface_resource_test\Resource\Larder\SpiceRackResource;
+use Drupal\data_surface_resource_test\Resource\Pantry\LabelResource;
+use Drupal\data_surface_resource_test\Resource\Pantry\PantryResource;
+use Drupal\data_surface_resource_test\Structure\Pantry\ShelfStructure;
+use Drupal\data_surface_resource_test\Storage\LarderStorage;
 use Drupal\data_surface_tool\Plugin\tool\Tool\ResourceOperationTool;
 use Drupal\data_surface_tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -49,8 +49,8 @@ use Symfony\Component\HttpFoundation\Request;
  * contracts, the operation form, the write tool's `values` input, the
  * read tool, the pipeline, and what the larder's storage is left holding.
  *
- * @see \Drupal\data_surface_surface_test\Resource\Larder\LarderResource
- * @see \Drupal\data_surface_surface_test\Access\SpiceRackAccess
+ * @see \Drupal\data_surface_resource_test\Resource\Larder\LarderResource
+ * @see \Drupal\data_surface_resource_test\Access\SpiceRackAccess
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -61,12 +61,12 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
   /**
    * The write tool for the larder's edit operation.
    */
-  protected const TOOL = 'data_surface:surface_test.larder:edit';
+  protected const TOOL = 'data_surface:resource_test.larder:edit';
 
   /**
    * The read tool beside it.
    */
-  protected const READ_TOOL = 'data_surface:surface_test.larder:edit:read';
+  protected const READ_TOOL = 'data_surface:resource_test.larder:edit:read';
 
   /**
    * What the larder holds before each test.
@@ -79,7 +79,7 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
       'shelf' => 'top',
       'spices' => 2,
       'label' => 'Spare',
-      'third_party_settings' => ['data_surface_surface_test' => ['supplier' => 'Acme']],
+      'third_party_settings' => ['data_surface_resource_test' => ['supplier' => 'Acme']],
     ],
   ];
 
@@ -94,7 +94,7 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
     'tool',
     'data_surface',
     'data_surface_tool',
-    'data_surface_surface_test',
+    'data_surface_resource_test',
   ];
 
   /**
@@ -181,11 +181,11 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
   protected function contract(DataSurfaceInterface $surface, bool $full = FALSE, string $operation = 'edit'): mixed {
     $emitter = $this->container->get('data_surface.contract_emitter');
     if ($full) {
-      return $emitter->emitFull($surface, 'surface_test.larder', $operation);
+      return $emitter->emitFull($surface, 'resource_test.larder', $operation);
     }
     $context = $this->resources()->operation(LarderResource::class, $operation, ['larder' => 'main']);
     $stored = $this->resources()->storage(LarderResource::class, $context, $surface)->load($surface);
-    return $emitter->emit($surface, array_replace($surface->getDefaultValues(), $stored), 'surface_test.larder', $operation);
+    return $emitter->emit($surface, array_replace($surface->getDefaultValues(), $stored), 'resource_test.larder', $operation);
   }
 
   /**
@@ -198,7 +198,7 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
    *   The resource's part of the built form.
    */
   protected function form(string $operation = 'edit'): array {
-    $name = 'data_surface_surface_test.larder.' . $operation;
+    $name = 'data_surface_resource_test.larder.' . $operation;
     $route = $this->container->get('router.route_provider')->getRouteByName($name);
     $stack = $this->container->get('request_stack');
     $request = Request::create($operation === 'edit' ? '/surface-test/larder/main' : '/surface-test/larder/main/' . $operation);
@@ -329,7 +329,7 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
         $key,
       );
     }
-    $this->assertNotContains('user.permissions', $emitter->emit($pantry, [], 'surface_test.pantry')->getCacheContexts());
+    $this->assertNotContains('user.permissions', $emitter->emit($pantry, [], 'resource_test.pantry')->getCacheContexts());
   }
 
   /**
@@ -591,11 +591,11 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
       $this->fail('Two default operations were accepted.');
     }
     catch (\LogicException $e) {
-      $this->assertStringStartsWith('surface_test.broken.two_defaults marks two operations the default, "first" from ' . TwoDefaultsStructure::class . '::first() in data_surface_surface_test and "second" from ' . TwoDefaultsStructure::class . '::second()', $e->getMessage());
+      $this->assertStringStartsWith('resource_test.broken.two_defaults marks two operations the default, "first" from ' . TwoDefaultsStructure::class . '::first() in data_surface_resource_test and "second" from ' . TwoDefaultsStructure::class . '::second()', $e->getMessage());
     }
 
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('surface_test.broken.misnaming_larder, in its "clean" context, names the "dust" operation for its "rack" child, which surface_test.larder.rack does not declare; it declares edit, browse, restock.');
+    $this->expectExceptionMessage('resource_test.broken.misnaming_larder, in its "clean" context, names the "dust" operation for its "rack" child, which resource_test.larder.rack does not declare; it declares edit, browse, restock.');
     $this->resources()->buildOperation(MisnamingLarderStructure::class, 'clean');
   }
 

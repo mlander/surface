@@ -40,8 +40,8 @@ use Drupal\data_surface\Collection;
  * 1. The owner's shape. defineInputs() and, for a class with outputs,
  *    defineOutputs(), called on the class, each over a ResourceBlueprint that
  *    writes straight into a fresh DataSurfaceBuilder. Neither kind is
- *    ever instantiated: its shape and its refiners are static, so the
- *    class may as well be a plugin's, as it is for a plugin that is its
+ *    ever instantiated: its declarations and its refiners are static, so
+ *    the class may as well be a plugin's, as it is for a plugin that is its
  *    own structure.
  * 2. The alters #[Alters] names for this class, in discovery order,
  *    skipping one whose operations leave this context's id out:
@@ -1122,7 +1122,7 @@ final class Resources implements ResourcesInterface {
   protected static function assertStaticOnResource(ResourceDefinition $definition, RefinerDefinition $refiner, ?string $module): void {
     if ($module === NULL && !$refiner->isStatic) {
       throw new \LogicException(sprintf(
-        '%s is a #[RefinesInput] method of %s and is not static. A resource or structure is never instantiated, so its refiners are static, like its shape; only an alter\'s runtime refiner may be an instance method, because an alter is a service.',
+        '%s is a #[RefinesInput] method of %s and is not static. A resource or structure is never instantiated, so its refiners are static, like its defineInputs(); only an alter\'s runtime refiner may be an instance method, because an alter is a service.',
         $refiner->describe(),
         $definition->id,
       ));
@@ -1399,7 +1399,7 @@ final class Resources implements ResourcesInterface {
    * Fills a blueprint, from its class or from what derived it.
    *
    * A class's defineInputs() and defineOutputs() are called on the
-   * class; a derived resource's shape methods are the ones its deriver
+   * class; a derived resource's are the callables its deriver
    * named, handed the blueprint first.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
@@ -1418,7 +1418,7 @@ final class Resources implements ResourcesInterface {
       }
       return;
     }
-    // Decision: see docs/decisions.md#a-shape-is-static.
+    // Decision: see docs/decisions.md#a-resource-or-structure-is-static.
     $owner = static::resourceClass($definition);
     $owner::defineInputs($inputs);
     if ($outputs !== NULL && is_subclass_of($owner, HasOutputsInterface::class)) {

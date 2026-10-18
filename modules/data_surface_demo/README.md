@@ -43,7 +43,7 @@ sit in the same file as `formatValue()`, the one thing it does. The
 structure's id comes from the plugin, `field_formatter:data_surface_demo_string`,
 and the extras module's alter names the formatter class.
 `defaultSettings()` is not written here: the
-base class reads the structure's own shape, `third_party_settings`
+base class reads the structure's own declaration, `third_party_settings`
 included, so settings other modules mount at build time survive the
 display save. Outputs are never refined, so the class list it emits is
 advertised open whatever variant is chosen.

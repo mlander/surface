@@ -272,12 +272,12 @@ final class ExamplesController extends ControllerBase {
    */
   protected function react(string $resource): array|TranslatableMarkup {
     if (!$this->moduleHandler()->moduleExists(self::REACT)) {
-      return $this->t('In React at /surface-react/@surface/configure, once @module is enabled.', [
-        '@surface' => $resource,
+      return $this->t('In React at /surface-react/@resource/configure, once @module is enabled.', [
+        '@resource' => $resource,
         '@module' => self::REACT,
       ]);
     }
-    $url = Url::fromRoute('data_surface_react.page', ['surface' => $resource, 'situation' => 'configure']);
+    $url = Url::fromRoute('data_surface_react.page', ['resource' => $resource, 'operation' => 'configure']);
     return Link::fromTextAndUrl($this->t('In React: @path', ['@path' => $url->toString()]), $url)->toRenderable();
   }
 

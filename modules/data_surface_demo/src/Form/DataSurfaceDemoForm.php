@@ -24,7 +24,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * would do. And a structure is independent of where its values are kept:
  * the same structure the block commits into its configuration array is
  * committed here into State, because the storage, not the structure,
- * owns the shape the values are kept in.
+ * owns the layout the values are kept in.
  *
  * Build, validate and submit are three delegations. The host trait
  * supplies the pipeline, the form builder and the in-progress AJAX input

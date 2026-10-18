@@ -38,6 +38,6 @@ page needs nothing else. Read a row only when its question is yours.
 | Pipeline, dry run | Do I submit values from my own code? ([The pipeline](pipeline.md)) | The form and the tool submit for you. |
 | Data surface | Do I call the build or the pipeline myself? | You write resources: the build is the module's. |
 | Child operations, `withChild()` | Should a parent's operation hand a child a context of its own, or invoke the child's operation? | No child has storage of its own. |
-| Derived resource, `#[DerivesResources]` | Is the shape the site's (one per bundle, one per field), not the code's? | Your class says the whole shape. |
+| Derived resource, `#[DerivesResources]` | Are the keys the site's (one per bundle, one per field), not the code's? | Your class says every key. |
 | Derived variants | Can a slot's variants be read from a description that exists, such as config schema? | Each variant is a class. |
 | Catalogue | What resources and operations does this site have? ([Catalogue](catalogue.md)) | You know your own. |

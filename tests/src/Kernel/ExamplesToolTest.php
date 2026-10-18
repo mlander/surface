@@ -102,7 +102,7 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($results['valid']['outputs'][OperationInputs::COMMITTED]);
 
     $this->assertFalse($results['over_capacity']['success']);
-    $this->assertSame('The values were refused: capacity: This value should be between 1 and 30.', $results['over_capacity']['message']);
+    $this->assertSame('The values were refused: capacity: This value should be between 1 and 30. This depends on Room.', $results['over_capacity']['message']);
 
     $this->assertTrue($results['dry_run']['success'], $results['dry_run']['message']);
     $this->assertSame('Dry run of Configure registration: the values were accepted and prepared, and nothing was written.', $results['dry_run']['message']);

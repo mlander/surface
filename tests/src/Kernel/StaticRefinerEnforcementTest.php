@@ -11,10 +11,10 @@ use Drupal\data_surface_demo\Structure\DemoBlockStructure;
 use Drupal\data_surface_examples\Resource\RegistrationStep2Resource;
 use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
 use Drupal\data_surface_examples_compliance\Alter\RegistrationComplianceAlter;
-use Drupal\data_surface_surface_test\Structure\Broken\FickleStructure;
-use Drupal\data_surface_surface_test\Structure\Broken\ServiceReadingStructure;
-use Drupal\data_surface_surface_test\Structure\Crate\CrateStructure;
-use Drupal\data_surface_surface_test\Structure\StockroomStructure;
+use Drupal\data_surface_resource_test\Structure\Broken\FickleStructure;
+use Drupal\data_surface_resource_test\Structure\Broken\ServiceReadingStructure;
+use Drupal\data_surface_resource_test\Structure\Crate\CrateStructure;
+use Drupal\data_surface_resource_test\Structure\StockroomStructure;
 use Drupal\node\Entity\NodeType;
 use Drupal\Tests\data_surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -58,7 +58,7 @@ class StaticRefinerEnforcementTest extends DataSurfaceKernelTestBase {
     'data_surface',
     'data_surface_tool',
     'data_surface_test',
-    'data_surface_surface_test',
+    'data_surface_resource_test',
     'data_surface_examples',
     'data_surface_demo',
   ];
@@ -158,7 +158,7 @@ class StaticRefinerEnforcementTest extends DataSurfaceKernelTestBase {
     $surface = $this->configure(FickleStructure::class);
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('The refiner ' . FickleStructure::class . '::sizeOfKind() is declared static but answered differently when run again, for "size" with {"kind":"small"}');
-    $this->container->get('data_surface.contract_emitter')->emitFull($surface, 'surface_test.broken.fickle');
+    $this->container->get('data_surface.contract_emitter')->emitFull($surface, 'resource_test.broken.fickle');
   }
 
   /**
@@ -172,7 +172,7 @@ class StaticRefinerEnforcementTest extends DataSurfaceKernelTestBase {
     $surface = $this->configure(FickleStructure::class);
     ini_set('zend.assertions', '0');
     try {
-      $this->assertStaticRefinersAgree($surface, NULL, 'surface_test.broken.fickle');
+      $this->assertStaticRefinersAgree($surface, NULL, 'resource_test.broken.fickle');
       $failed = FALSE;
     }
     catch (\Throwable $e) {

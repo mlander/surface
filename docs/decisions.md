@@ -27,7 +27,7 @@ name no identity keys: a resource with no identifiers, such as a
 settings object, is a singleton resource. A content type is a config
 entity whose identity is its machine name, and a basic page,
 `entity.content:node.page`, is the same shape applied to content. A
-**structure** is a shape with members and no identity or storage of its
+**structure** is a group of keys with no identity or storage of its
 own: it is attached to a parent, fills a slot as a variant, or is the
 configuration of the plugin that names it (`#[Structure(id, access:)]`,
 `StructureInterface`). Both extend `DefinesInputsInterface`, whose static
@@ -61,13 +61,99 @@ attribute has no such arguments. A derived resource is of the kind its
 values say: storage or identity makes it a resource (a content entity
 bundle), neither a structure (one of its fields, stored by the entity).
 
-The project keeps its name, Data Surface, and the engine keeps the name
-of what it seals (`DataSurfaceInterface`, a *data surface*); the served
-contract keeps its `surface` and `situation` keys and its `x-surface`
-keyword, and the URL paths their `{surface}` and `{situation}`
-parameters, because clients already read them; tool ids are unchanged.
+Which names kept the old word is the next entry,
+[The product keeps its name](#the-product-keeps-its-name).
 (`ResourceRegistry::assertResourceClass()`, `ResourceRegistry::discover()`,
 `ResourceCollectorPass`, `DerivedResource::kind()`)
+
+### The product keeps its name
+
+The product is Data Surface. A name that is the product's, or that is
+on the wire, keeps the word surface; a name for a concept uses the
+concept's word. Renaming a product name tells a reader nothing the docs
+do not, and breaks every site, client and tool that reads it. Renaming
+a concept name costs only this repository, and an old concept word left
+in code teaches the wrong model.
+
+These keep the word, as product names or on-the-wire identifiers:
+
+- the module and submodule machine names and PHP namespaces
+  (`data_surface`, `Drupal\data_surface\...`), the test modules'
+  `data_surface_` prefix, the project name, the `data_surface.` service
+  prefix, the logger channel and cache ids;
+- route names, the route keys (`_data_surface_resource`,
+  `_data_surface_operation`, `_data_surface_operation_access`,
+  `_data_surface_panel`, `_data_surface_cosmetics`,
+  `_data_surface_react_access`) and URL paths (`/surface-api/...`,
+  `/surface-react/...`, `/surface-examples/...`);
+- config names and State keys;
+- the served contract's `x-surface` keyword, its `surface` and
+  `situation` keys (the resource's id and the operation's id, in the
+  document and in `created`), and the React page's `drupalSettings`
+  keys, because clients already read them;
+- the `surface[...]` form key;
+- the React app's identifiers (`SurfaceForm`, `surface` in its
+  settings);
+- the engine: what the build step seals is a *data surface*
+  (`DataSurfaceInterface`), and the classes around it keep the name
+  (`DataSurfaceBuilder`, `DataSurfacePipeline`, `DataSurfaceFormBuilder`,
+  `DataSurfaceOperationForm`, the `DataSurface*` host bases and plugin
+  types), as do the hosts' `surface*()` methods (`surfaceAccess()`,
+  `buildSurfaceForm()`), named so beside core's methods of the same
+  verb;
+- tool ids, `data_surface:<id>:<operation>`;
+- the `Surface` prefix of a class-swap adopter (`SurfaceAddressItem`).
+
+Everything that names a concept uses the new word: resource, structure,
+operation, storage, blueprint, layout, child. In prose, "the surface"
+for a resource or a structure is wrong; "data surface" is the sealed
+object and nothing else; "shape" is the general idea of what a thing
+takes, never the blueprint, the layout or a synonym for a resource.
+
+Renamed under this decision (2026-10-18), URL paths and wire formats
+unchanged:
+
+- the React routes' placeholders, `{surface}` and `{situation}`, are
+  `{resource}` and `{operation}`, with the controllers' arguments, the
+  access check's raw parameters and the examples' links;
+- a variable holding a `ResourceDefinition` is `$resource`, not
+  `$surface` (the tool bridge, the catalogue and its script), as is the
+  tool base's `$resourceRegistry`, and a translatable placeholder
+  `@surface` is `@resource` (or `@child` for a collection's item);
+- `BlueprintAdapterBase::reserveSubsurface()` is `reserveChild()`, and
+  `ResourceCollectorPass::SHAPES` is `DECLARATIONS`;
+- the test modules `data_surface_target_test` and
+  `data_surface_surface_test` are `data_surface_storage_test` and
+  `data_surface_resource_test`, their ids `resource_test.*`; the
+  fixtures `BothKindsShape` and `InstanceShapeStructure` are
+  `BothKindsClass` and `InstanceDefineInputsStructure`;
+  `OutputSurfaceTest` is `OutputsTest`; test variables and methods
+  that said target or shape for storage or a blueprint say storage or
+  build;
+- the examples' config schema panel counts a slot's variants, not its
+  shapes;
+- the decisions "A shape is static" and "Cacheability on the shape" are
+  [A resource or structure is static](#a-resource-or-structure-is-static)
+  and [Cacheability on the blueprint](#cacheability-on-the-blueprint).
+
+Deferred:
+
+- `ShapeMismatchException` and the pipeline's shape mismatch methods
+  use "shape" for the form a value arrives in (a list where a string
+  was wanted), the general sense, against the rule that code keeps the
+  word for named scalar shapes. Renaming them (to a type mismatch)
+  touches the pipeline's public exceptions, two pages and their tests;
+  it waits for named scalar shapes, which give the word its code
+  meaning (`ROADMAP.md`, item 7).
+- The contract's `surface` and `situation` keys: renaming them is a
+  wire change, so it waits for a version of the contract.
+- The resource test module's `/surface-test/...` paths and the entity
+  test module's "bypass surface entity test field access" permission:
+  only tests read them, and URL paths and permission names follow the
+  product rule above.
+- Dated records (`REWORK.md`, `PLAN.md`, `ADOPTION.md`, `HARDENING.md`,
+  the fresh-eyes log, the never-stricter audit) keep the words of their
+  day.
 
 ### A resource has storage or a host
 
@@ -102,12 +188,12 @@ is reserved for named scalar shapes. (`ResourceBlueprint`,
 
 ## Authoring
 
-### A shape is static
+### A resource or structure is static
 
 `DefinesInputsInterface::defineInputs()` and `HasOutputsInterface::defineOutputs()`
 are `public static`, and the build step calls them on the class, never
 on an instance; a resource's or structure's `#[RefinesInput]` methods
-are static too, and one that is not is refused when it is built. Shape is a
+are static too, and one that is not is refused when it is built. What it declares is a
 property of the class: it takes no values, no context and no services,
 and static enforces that by the language rather than by a docblock. It
 also lets a plugin class be its own structure without anything
@@ -129,7 +215,7 @@ one that dropped the interface to get one past the compiler.
 `ResourceRegistry::assertResourceClass()`)
 
 Translatable strings in static context use the global `t()`: a
-resource's or structure's shape, refiners and operations, an alter's
+resource's or structure's `defineInputs()`, refiners and operations, an alter's
 static refiners (with `PluralTranslatableMarkup` for a plural), a
 plugin's static
 protocol methods, an enum's labels, a value object's static helper.
@@ -151,7 +237,7 @@ injecting `string_translation` and calling `$this->t()`.
 Every `Resources::build()` builds afresh; the pattern's "cache by
 (id, context)" is not done. A build describes live site
 state, and a cache keyed by context alone would serve a stale one; what
-that state is, a shape says with `addCacheableDependency()`, for a
+that state is, a blueprint says with `addCacheableDependency()`, for a
 caller that caches. *Not from a code comment; the build step's
 docblock states it.*
 
@@ -327,7 +413,7 @@ chain per contribution, so an alter can tighten the owner's values
 without ever being able to take another module's away.
 (`Resources::bindRefiners()`)
 
-### Cacheability on the shape
+### Cacheability on the blueprint
 
 `BlueprintInterface::addCacheableDependency()` lets the owner's blueprint say
 what site state it read; the data surface carries it. An alter cannot,
@@ -425,7 +511,7 @@ of 50 was refused, and after 50 a capacity of 80 was written with one
 steward. A top-level key never showed it, because the root is made from
 the definition handed in; nor did a label or a description, which only
 the leaked definition carried and no message reads. It reached across
-resources too: two shapes with a map key of one name shared its
+resources too: two classes with a map key of one name shared its
 properties' rules.
 
 Every place the module turns a definition into typed data, the
@@ -462,10 +548,10 @@ contributor's keys, which is how core keeps third-party settings.
 
 ### An alter cannot attach
 
-`attach()` on an alter is refused. An alter's keys are mounted under
-its module, and an attached structure inside that mount is not built
-yet.
-(`ResourceBlueprintAdditions::attach()`)
+`attach()` and `attachList()` on an alter are refused. An alter's keys
+are mounted under its module, and an attached structure or a collection
+inside that mount is not built yet.
+(`ResourceBlueprintAdditions::attach()`, `ResourceBlueprintAdditions::attachList()`)
 
 ### An alter refines its own mounted key
 
@@ -572,7 +658,7 @@ A value no `#[Variant]` class fills may get a variant derived
 from a description that already exists, through a
 `DerivedVariantsInterface` service: a field type's config schema fills
 the field's settings slot and the storage's. A derived
-variant is a shape with no class, so no alter, refiner, storage or access
+variant is a child with no class, so no alter, refiner, storage or access
 class of its own, and a declared variant always wins.
 (`Resources::buildResource()`)
 
@@ -611,7 +697,7 @@ A collection (`attachList()`) is a list of child invocations: every
 item is the child, built once for the list in the context its
 operation resolves, as `attach()` builds its child, and refined,
 accepted and validated by the child in its own frame, each item's
-context knowing its `delta`. Built once because a shape cannot depend
+context knowing its `delta`. Built once because a blueprint cannot depend
 on a value, and how many items there are is a value; the frames differ
 only in the values they are handed and their position. The entry
 carries a `Collection` rather than an attachment, so the key is the
@@ -782,7 +868,7 @@ locked answer at the top is a refusal, the reading that writes nothing.
 A slot's variant invoked through an operation whose access is not open is
 dropped from the slot, so its deciding value can no longer be chosen,
 and no derived variant is put in its place. The engine has no lock per
-variant, and offering a value whose shape could not be changed is the
+variant, and offering a value whose keys could not be changed is the
 same as not offering it. *Open:* a locked variant shown read-only.
 (`Resources::buildResource()`)
 
@@ -869,6 +955,19 @@ custom message reached the person with the braces in it; rewriting the
 message at declaration would change what the author wrote and what a
 translator matches on, and the wrapper keeps the original translatable
 string. (`Pipeline\ViolationMessage`, `InputDefinitions::constraints()`)
+
+### A refusal names what it depends on
+
+When the refiners changed a key's constraints for the values given, a
+refusal of that key gets a second sentence naming every key its
+refiners watch, by label: "This depends on Capacity." The caller who
+sent stewards and no capacity learns which sibling to change, which the
+key's own message cannot say. Every watched key is named, held or not,
+because a refiner that watches a nullable value (the licence) narrows
+when it holds nothing; a refusal by a rule the key declared itself is
+left alone, and the contracts are unchanged: this is the message, not
+the schema. A refused mounted key is matched to the property its
+refusal is about. (`DataSurfacePipeline::namingWhatItDependsOn()`)
 
 ### A violation summary is plain text
 
@@ -1052,7 +1151,7 @@ the stash model under them is unchanged:
    is selected: nothing stored and no declared default, or a stored
    value no longer offered. A stored value still offered, or a declared
    default the list offers, is a valid choice, and no empty option is
-   shown: the shape's author chose the default.
+   shown: the key's author chose the default.
 3. On first entry a required select comes up on the empty option, and
    a save leaving it there is refused with the key's own required
    message ("@label is required."), set as the element's
@@ -1103,7 +1202,7 @@ that use a structure without instantiating any. (`ResourcePluginHooks`)
 A subclass inherits its parent's `#[UsesStructure]`; the nearest class
 naming one wins. A subclassed block keeps its parent's form, as it
 would with `blockForm()`. A subclass of a plugin that is its own
-structure is its own structure in turn, inheriting the static shape, so an
+structure is its own structure in turn, inheriting its static methods, so an
 alter of the parent's class does not reach it.
 (`ResourcePluginHooks::usedStructureOf()`)
 
@@ -1121,7 +1220,7 @@ catalogue's name for the plugin, unless the class also carries
 `#[Structure]`, whose id and access then apply; a class
 several plugins share (a deriver's derivatives) is one structure, named
 after the first of them in sorted order. The catalogue lists it as used
-by that same plugin, and an alter targets it by the plugin class. The
+by that same plugin, and an alter names it by the plugin class. The
 registry's cache id hashes the plugin-own list beside the compiler
 pass's, so a plugin more or less is a different entry. The compiler
 pass never sees such a class, so an access class it names is
@@ -1135,15 +1234,15 @@ the two spellings sit side by side.
 
 ### Derived definitions at discovery
 
-A resource or structure whose shape is the site's (one per bundle, one
+A resource or structure whose keys are the site's (one per bundle, one
 per field) is made by a deriver at discovery, `#[DerivesResources]` on a class
 implementing `ResourceDeriverInterface`, and cached with the rest of
 discovery under the cache tags of what it was read from. Not a context
-handed to `defineInputs()`: the shape takes nothing but the blueprint, so
-that it is the same wherever it is asked for and a static tool
+handed to `defineInputs()`: it takes nothing but the blueprint, so
+that what it declares is the same wherever it is asked for and a static tool
 definition, a catalogue and the full schema can describe it before
-anyone calls; a shape that read a bundle from its context would be a
-different shape in every context, with one id. And not one class per
+anyone calls; a `defineInputs()` that read a bundle from its context would
+declare different keys in every context, with one id. And not one class per
 bundle: a bundle is site configuration, made and deleted in the UI, and
 a class per bundle would be code generated from config, out of date the
 moment a field is added. The plugin system settled the same question
@@ -1172,7 +1271,7 @@ definition survives the discovery cache, and the refiners bound from it
 survive a cached form, where a closure would not. A static callable
 method is called on the class; an instance method on the class
 resolver's instance, so a deriver's own methods may read site state,
-which is what a derived shape is for. (`ResourceDefinition::name()`,
+which is what a derived resource is for. (`ResourceDefinition::name()`,
 `Resources::fillBlueprints()`, `Resources::operation()`)
 
 ### The id shape
@@ -1185,7 +1284,7 @@ the tool reads the operation off the last colon, so a derivative with
 a colon of its own would be misread, and is refused. The MCP bridge
 mangles tool ids, so the derivative adds one colon, between base and
 derivative, and dots inside it, which ids already have; a route
-parameter, `/surface-react/{surface}`, takes a colon as it is. An alter names one derivative by its id or
+parameter, `/surface-react/{resource}`, takes a colon as it is. An alter names one derivative by its id or
 every derivative of a deriver by its base, `#[Alters('entity.content')]`.
 A string that names no resource, structure or base is skipped, as a class from a
 module that is off is skipped, so a mistyped id passes silently where a
@@ -1196,14 +1295,14 @@ mistyped class does not. (`ResourceRegistry::discover()`)
 A field item's structure is derived from the item's typed data, since a
 field type already says what its item holds, and layered with what
 typed data does not say: the field's label and description, required
-on the main property, the literal default, the constraints a shape
+on the main property, the literal default, the constraints a structure
 can state (`Length`, `Range`, `Regex`, `Choice`) and what the settings
 narrow (a list's allowed values, a text field's formats, a reference's
-targets, a date's form). What typed data says that a shape cannot
+targets, a date's form). What typed data says that a structure cannot
 (`LinkType`, `ValidReference`) is left to the entity's own validation
 at prepare, whose violations land on the key. A field type whose
 derivation is thin is written by hand, `#[FieldItemStructure(type:)]`, and
-replaces the shape and its refiners only: the field's label, operations
+replaces the derived keys and their refiners only: the field's label, operations
 and access stay derived, because they are the field's, not its type's.
 (`FieldItemDerivation`, `FieldItemStructures`)
 
@@ -1228,8 +1327,8 @@ definition asks in the real context. (`FieldItemAccess`)
 ### The content entity storage
 
 `ContentEntityStorage` is `data_surface_entity`'s, not one of the
-engine's storage classes: what it reads and writes is the field item
-derivation's shape (a child per field, a key per property), which the
+engine's storage classes: what it reads and writes is what the field item
+derivation declares (a child per field, a key per property), which the
 engine does not own, and it reads the derivation to know which fields
 those are. It maps an entity violation to a key by its property path,
 the delta dropped, and one about the whole entity to `@entity`; it
@@ -1284,7 +1383,7 @@ The fix is a host supplying its subform's parents to
 ### Static defaults
 
 A plugin protocol that asks a class for its defaults statically
-(`defaultSettings()`, `defaultFieldSettings()`) gets the owner's shape
+(`defaultSettings()`, `defaultFieldSettings()`) gets the owner's blueprint
 alone, sealed on the spot: no alter, no context. There is no instance
 and no context to build with, and alters' keys are mounted where those
 protocols do not look. (`ResourcesInterface::defaults()`)
@@ -1472,7 +1571,7 @@ Above it the key is `dynamic`. A key watching free text, a number, a
 boolean or a key an alter mounted stays `dynamic` whatever the count:
 its domain is not a list, so there is nothing to enumerate, and
 inventing one (sampling numbers, guessing at a licence) would state a
-rule the shape never made. Such a key keeps `dependsOn`, and a client
+rule the refiners never made. Such a key keeps `dependsOn`, and a client
 asks `/refine` when a watched key changes, as before.
 (`ContractEmitter::enumerate()`)
 

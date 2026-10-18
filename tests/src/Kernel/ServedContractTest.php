@@ -17,9 +17,9 @@ use Drupal\data_surface\Attachment;
 use Drupal\data_surface_demo\Structure\DemoBlockStructure;
 use Drupal\data_surface_examples\Venues;
 use Drupal\data_surface_react\Controller\ResourceApiController;
-use Drupal\data_surface_surface_test\Structure\Crate\CrateStructure;
-use Drupal\data_surface_surface_test\Structure\Cupboard\CupboardStructure;
-use Drupal\data_surface_surface_test\Resource\Pantry\PantryResource;
+use Drupal\data_surface_resource_test\Structure\Crate\CrateStructure;
+use Drupal\data_surface_resource_test\Structure\Cupboard\CupboardStructure;
+use Drupal\data_surface_resource_test\Resource\Pantry\PantryResource;
 use Drupal\node\Entity\NodeType;
 use Drupal\Tests\data_surface\Traits\ContractValidationTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -30,7 +30,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * Tests the served contract the main module emits, over five shapes.
+ * Tests the served contract the main module emits, over five builds.
  *
  * Examples 1 to 3, the content type resource in both its operations, and
  * the demo block's structure built the way its host builds it. What is
@@ -773,9 +773,9 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
 
     // The fruit has no default, so the crate's layers are enumerated in
     // the fruit variant's own schema, under its conditional.
-    $this->enableModules(['data_surface_surface_test']);
+    $this->enableModules(['data_surface_resource_test']);
     $surface = $this->container->get('data_surface.resources')->build(CrateStructure::class, new OperationContext('configure'));
-    [$contract] = $this->staticContract($surface, 'surface_test.crate');
+    [$contract] = $this->staticContract($surface, 'resource_test.crate');
     $schema = $contract['schema'];
     $this->assertWellFormed($schema);
     $fruit = $this->variant($schema, 'contents', 'fruit', 'contents_settings');
@@ -934,10 +934,10 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($this->validates($schema, ['venue' => 'library'] + $stored['values']), 'What can be listed is still held: the main hall is not the library\'s.');
 
     // A child whose unit defaults to `cm` is not described for `cm`.
-    $this->enableModules(['data_surface_surface_test']);
+    $this->enableModules(['data_surface_resource_test']);
     $pantry = $this->container->get('data_surface.resources')->build(PantryResource::class, PantryResource::add());
     $emitter = $this->container->get('data_surface.contract_emitter');
-    $document = json_decode((string) json_encode($emitter->emitFull($pantry, 'surface_test.pantry')->document['schema']), TRUE);
+    $document = json_decode((string) json_encode($emitter->emitFull($pantry, 'resource_test.pantry')->document['schema']), TRUE);
     $shelf = SchemaResolver::inline($document['properties']['shelf'], $document);
     $this->assertSame(['locked' => FALSE, 'dependsOn' => ['unit'], 'enumerated' => TRUE], $shelf['properties']['height']['x-surface']);
     $this->assertArrayNotHasKey('maximum', $shelf['properties']['height']);
@@ -949,8 +949,8 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     // The schema for its default answers has the default's ceiling: the
     // shelf's def states the conditionals, the shelf here narrows it to
     // what its own values chose.
-    $document = json_decode((string) json_encode($emitter->emit($pantry, $pantry->getDefaultValues(), 'surface_test.pantry')->document['schema']), TRUE);
-    $this->assertSame('#/$defs/surface_test.pantry.shelf', $document['properties']['shelf']['allOf'][0]['$ref']);
+    $document = json_decode((string) json_encode($emitter->emit($pantry, $pantry->getDefaultValues(), 'resource_test.pantry')->document['schema']), TRUE);
+    $this->assertSame('#/$defs/resource_test.pantry.shelf', $document['properties']['shelf']['allOf'][0]['$ref']);
     $this->assertSame(200, $document['properties']['shelf']['allOf'][1]['properties']['height']['maximum']);
     $now = SchemaResolver::inline($document['properties']['shelf'], $document);
     $this->assertSame(200, $now['properties']['height']['maximum']);
@@ -1123,32 +1123,32 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    * holding it to the child's schema written out inline.
    */
   public function testOneDefPerChildClass(): void {
-    $this->enableModules(['data_surface_surface_test']);
+    $this->enableModules(['data_surface_resource_test']);
     $context = (new OperationContext('edit'))->withChild('left', new OperationContext('edit', known: ['bin' => 'left']));
     $cupboard = $this->container->get('data_surface.resources')->build(CupboardStructure::class, $context);
     $emitter = $this->container->get('data_surface.contract_emitter');
-    $full = json_decode((string) json_encode($emitter->emitFull($cupboard, 'surface_test.cupboard')->document['schema']), TRUE);
+    $full = json_decode((string) json_encode($emitter->emitFull($cupboard, 'resource_test.cupboard')->document['schema']), TRUE);
     $this->assertWellFormed($full);
-    $this->assertSame(['surface_test.pantry.shelf', 'surface_test.cupboard.bin'], array_keys($full['$defs']));
-    $shelf = '#/$defs/surface_test.pantry.shelf';
-    $bin = '#/$defs/surface_test.cupboard.bin';
+    $this->assertSame(['resource_test.pantry.shelf', 'resource_test.cupboard.bin'], array_keys($full['$defs']));
+    $shelf = '#/$defs/resource_test.pantry.shelf';
+    $bin = '#/$defs/resource_test.cupboard.bin';
     $this->assertSame(['title' => 'Upper shelf', '$ref' => $shelf], array_diff_key($full['properties']['upper'], ['x-surface' => TRUE]));
     $this->assertSame(['title' => 'Lower shelf', '$ref' => $shelf], array_diff_key($full['properties']['lower'], ['x-surface' => TRUE]));
     $this->assertSame(['title' => 'Right bin', '$ref' => $bin], array_diff_key($full['properties']['right'], ['x-surface' => TRUE]));
 
     // The shelf's own conditionals, its alter's key and its alter's words.
-    $def = $full['$defs']['surface_test.pantry.shelf'];
+    $def = $full['$defs']['resource_test.pantry.shelf'];
     $ceilings = [];
     foreach ($this->branches($def, 'height') as [$when, $then]) {
       $ceilings[$when['unit']] = $then;
     }
     $this->assertSame(['cm' => ['maximum' => 200], 'in' => ['maximum' => 80]], $ceilings);
     $this->assertSame('Measured inside.', $def['properties']['height']['description']);
-    $this->assertArrayHasKey('sturdy', $def['properties']['third_party_settings']['properties']['data_surface_surface_test']['properties']);
+    $this->assertArrayHasKey('sturdy', $def['properties']['third_party_settings']['properties']['data_surface_resource_test']['properties']);
 
     // The bin as declared, which no context has locked; the left bin's
     // lock is its site's.
-    $declared = $full['$defs']['surface_test.cupboard.bin']['properties']['bin'];
+    $declared = $full['$defs']['resource_test.cupboard.bin']['properties']['bin'];
     $this->assertFalse($declared['x-surface']['locked']);
     $this->assertSame([], array_intersect_key($declared, ['readOnly' => TRUE, 'const' => TRUE, 'default' => TRUE]));
     $this->assertSame([
@@ -1171,9 +1171,9 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     // one def.
     $values = $cupboard->getDefaultValues();
     $values['right']['bin'] = 'right';
-    $these = json_decode((string) json_encode($emitter->emit($cupboard, $values, 'surface_test.cupboard')->document['schema']), TRUE);
+    $these = json_decode((string) json_encode($emitter->emit($cupboard, $values, 'resource_test.cupboard')->document['schema']), TRUE);
     $this->assertWellFormed($these);
-    $this->assertSame(['surface_test.pantry.shelf', 'surface_test.cupboard.bin'], array_keys($these['$defs']));
+    $this->assertSame(['resource_test.pantry.shelf', 'resource_test.cupboard.bin'], array_keys($these['$defs']));
     foreach (['upper', 'lower'] as $key) {
       [$reference, $narrowing] = $these['properties'][$key]['allOf'];
       $this->assertSame(['$ref' => $shelf], $reference);
@@ -1202,7 +1202,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
       $this->assertSame($verdict, $this->validates(SchemaResolver::inline($full), $answers), 'The full schema inline, case ' . $i);
       // The schema for the answers it was emitted for: the shelf's unit as
       // given, the ceiling it chose with it.
-      $emitted = json_decode((string) json_encode($emitter->emit($cupboard, $answers, 'surface_test.cupboard')->document['schema']), TRUE);
+      $emitted = json_decode((string) json_encode($emitter->emit($cupboard, $answers, 'resource_test.cupboard')->document['schema']), TRUE);
       $this->assertSame($verdict, $this->validates($emitted, $answers), 'The schema for these answers, case ' . $i);
       $this->assertSame($verdict, $this->validates(SchemaResolver::inline($emitted), $answers), 'The schema for these answers inline, case ' . $i);
       if ($i !== 5) {

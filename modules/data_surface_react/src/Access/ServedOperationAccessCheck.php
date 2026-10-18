@@ -66,14 +66,14 @@ final class ServedOperationAccessCheck implements AccessInterface {
     if ($request === NULL) {
       return AccessResult::forbidden('No request to read the operation from.');
     }
-    $surface = (string) $route_match->getRawParameter('surface');
-    $operation = (string) $route_match->getRawParameter('situation');
+    $resource = (string) $route_match->getRawParameter('resource');
+    $operation = (string) $route_match->getRawParameter('operation');
     try {
       try {
-        $served = $this->servedOperations->fromRequest($surface, $operation, $request);
+        $served = $this->servedOperations->fromRequest($resource, $operation, $request);
       }
       catch (BadRequestHttpException) {
-        $served = $this->servedOperations->fromRequest($surface, $operation, $request, FALSE);
+        $served = $this->servedOperations->fromRequest($resource, $operation, $request, FALSE);
       }
     }
     catch (\InvalidArgumentException $e) {

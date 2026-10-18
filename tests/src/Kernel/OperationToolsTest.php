@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\data_surface_demo_node_type\Storage\NodeTypeStorage;
-use Drupal\data_surface_surface_test\Resource\PinnedNoteResource;
+use Drupal\data_surface_resource_test\Resource\PinnedNoteResource;
 use Drupal\data_surface_tool\OperationInputs;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
@@ -138,12 +138,12 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
    * with storage that no plugin uses, beside it, is a tool.
    */
   public function testPluginResourceIsNoTool(): void {
-    $this->enableModules(['data_surface_surface_test']);
+    $this->enableModules(['data_surface_resource_test']);
     $this->container->get('plugin.manager.tool')->clearCachedDefinitions();
     $definitions = $this->container->get('plugin.manager.tool')->getDefinitions();
-    $this->assertSame(['block:data_surface_surface_test_pinned_note'], $this->container->get('data_surface.resource_plugins')->usedBy(PinnedNoteResource::class));
+    $this->assertSame(['block:data_surface_resource_test_pinned_note'], $this->container->get('data_surface.resource_plugins')->usedBy(PinnedNoteResource::class));
     $this->assertArrayNotHasKey('data_surface:test.pinned_note:pin', $definitions);
-    $this->assertArrayHasKey('data_surface:surface_test.pantry:add', $definitions);
+    $this->assertArrayHasKey('data_surface:resource_test.pantry:add', $definitions);
   }
 
   /**

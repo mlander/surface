@@ -8,7 +8,7 @@ use Drupal\Core\Cache\Cache;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Refinement\RuntimeRefiner;
 use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface_surface_test\Structure\StockroomStructure;
+use Drupal\data_surface_resource_test\Structure\StockroomStructure;
 use Drupal\data_surface_test\RecordingStorage;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -24,7 +24,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * values, the pipeline and the form's discard rule hold the values to
  * both kinds alike.
  *
- * @see \Drupal\data_surface_surface_test\Structure\StockroomStructure
+ * @see \Drupal\data_surface_resource_test\Structure\StockroomStructure
  * @see docs/decisions.md#static-by-default-runtime-by-declaration
  */
 #[Group('data_surface')]
@@ -39,7 +39,7 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
     'user',
     'data_surface',
     'data_surface_test',
-    'data_surface_surface_test',
+    'data_surface_resource_test',
   ];
 
   /**
@@ -75,7 +75,7 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
    */
   protected function schema(DataSurfaceInterface $surface, ?array $values = NULL): array {
     $emitter = $this->container->get('data_surface.contract_emitter');
-    $served = $values === NULL ? $emitter->emitFull($surface, 'surface_test.stockroom') : $emitter->emit($surface, $values, 'surface_test.stockroom');
+    $served = $values === NULL ? $emitter->emitFull($surface, 'resource_test.stockroom') : $emitter->emit($surface, $values, 'resource_test.stockroom');
     return json_decode((string) json_encode($served->document['schema']), TRUE);
   }
 
@@ -202,7 +202,7 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
     // Nothing the runtime refiners said made it in: no description, and
     // the document did not become uncacheable for having been asked.
     $this->assertArrayNotHasKey('description', $after['properties']['shelf']);
-    $full = $this->container->get('data_surface.contract_emitter')->emitFull($surface, 'surface_test.stockroom');
+    $full = $this->container->get('data_surface.contract_emitter')->emitFull($surface, 'resource_test.stockroom');
     $this->assertSame(Cache::PERMANENT, $full->getCacheMaxAge());
   }
 
@@ -225,7 +225,7 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($schema['properties']['shelf']['x-surface']['runtime']);
     $this->assertArrayNotHasKey('enumerated', $schema['properties']['shelf']['x-surface'], 'Refined for the values, so nothing is enumerated.');
     $this->assertTrue($schema['properties']['tag']['x-surface']['refined']);
-    $served = $this->container->get('data_surface.contract_emitter')->emit($surface, $values, 'surface_test.stockroom');
+    $served = $this->container->get('data_surface.contract_emitter')->emit($surface, $values, 'resource_test.stockroom');
     $this->assertSame(0, $served->getCacheMaxAge());
 
     // The static refiners alone, as the engine answers them when asked.
@@ -280,7 +280,7 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
     StockroomStructure::$banned = ['red'];
     $this->assertSame(['shelf'], $discarded(['aisle' => 'south', 'shelf' => 'south_1']));
     $this->assertSame([], $discarded(['aisle' => 'south', 'shelf' => 'south_2', 'tag' => 'red']));
-    $document = $this->container->get('data_surface.contract_emitter')->emit($surface, $stored, 'surface_test.stockroom')->document;
+    $document = $this->container->get('data_surface.contract_emitter')->emit($surface, $stored, 'resource_test.stockroom')->document;
     $this->assertSame(['shelf', 'tag'], $document['stale']);
     $this->assertSame([NULL, NULL], [$document['values']['shelf'], $document['values']['tag']]);
   }

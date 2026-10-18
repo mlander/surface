@@ -7,7 +7,7 @@ namespace Drupal\Tests\data_surface\Kernel;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface_surface_test\Resource\Digest\DigestResource;
+use Drupal\data_surface_resource_test\Resource\Digest\DigestResource;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -38,13 +38,13 @@ class EmptyVariantTest extends DataSurfaceKernelTestBase {
     'tool',
     'data_surface',
     'data_surface_tool',
-    'data_surface_surface_test',
+    'data_surface_resource_test',
   ];
 
   /**
    * The digest's config object.
    */
-  protected const CONFIG = 'data_surface_surface_test.digest';
+  protected const CONFIG = 'data_surface_resource_test.digest';
 
   /**
    * {@inheritdoc}
@@ -52,7 +52,7 @@ class EmptyVariantTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_surface_test']);
+    $this->installConfig(['data_surface_resource_test']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
@@ -78,7 +78,7 @@ class EmptyVariantTest extends DataSurfaceKernelTestBase {
    *   The form and its state.
    */
   protected function form(?array $values = NULL): array {
-    $route_name = 'data_surface_surface_test.digest';
+    $route_name = 'data_surface_resource_test.digest';
     $route = $this->container->get('router.route_provider')->getRouteByName($route_name);
     $stack = $this->container->get('request_stack');
     $request = Request::create($route->getPath());
@@ -123,21 +123,21 @@ class EmptyVariantTest extends DataSurfaceKernelTestBase {
     [$built] = $this->digest();
     $emitter = $this->container->get('data_surface.contract_emitter');
 
-    $answers = $emitter->emit($built, ['frequency' => 'daily', 'schedule' => []], 'surface_test.digest', 'configure')->document['schema'];
+    $answers = $emitter->emit($built, ['frequency' => 'daily', 'schedule' => []], 'resource_test.digest', 'configure')->document['schema'];
     $this->assertContains('object', (array) $answers['properties']['schedule']['type']);
     $this->assertSame('daily', $answers['properties']['schedule']['x-surface']['chosen']);
     $this->assertArrayNotHasKey('properties', $answers['properties']['schedule'], 'Nothing to answer.');
 
-    $full = json_encode($emitter->emitFull($built, 'surface_test.digest', 'configure')->document['schema']);
-    $this->assertStringContainsString('surface_test.digest.daily', $full);
-    $this->assertStringContainsString('surface_test.digest.weekly', $full);
+    $full = json_encode($emitter->emitFull($built, 'resource_test.digest', 'configure')->document['schema']);
+    $this->assertStringContainsString('resource_test.digest.daily', $full);
+    $this->assertStringContainsString('resource_test.digest.weekly', $full);
   }
 
   /**
    * Tests the tool and the pipeline accept an empty variant.
    */
   public function testTheToolAcceptsAnEmptyVariant(): void {
-    $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:surface_test.digest:configure');
+    $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:resource_test.digest:configure');
     $tool->setInputValue('values', ['frequency' => 'daily', 'schedule' => []]);
     $tool->execute();
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResult()->getMessage());

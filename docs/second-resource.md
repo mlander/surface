@@ -193,7 +193,7 @@ the method below it:
   ```
 
   ```
-  Failed: The values were refused: region: The value you selected is not a valid choice.
+  Failed: The values were refused: region: The value you selected is not a valid choice. This depends on Country.
   ```
 
   ```

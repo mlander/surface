@@ -8,8 +8,8 @@ namespace Drupal\data_surface\Resource;
  * One resource or structure a deriver makes, from facts known at run time.
  *
  * Everything a class says with its class and attributes, said as values:
- * the shape is a method that fills a BlueprintInterface (so it stays
- * value-independent, as defineInputs() is), the operations are
+ * the inputs come from a method that fills a BlueprintInterface (so they
+ * stay value-independent, as defineInputs() is), the operations are
  * DerivedOperation values, the refiners are the static #[RefinesInput]
  * methods of the classes it names, and the storage and access class are
  * named as on #[Resource]. Its kind follows from what it names: storage

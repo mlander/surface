@@ -9,7 +9,7 @@ operations: `add()` knows nothing, so the machine name is open and
 carries a service-backed uniqueness constraint the operation adds;
 `edit(NodeTypeInterface $type)` knows the machine name, so it is
 locked: still advertised, narrowed to the one value it has. Add and
-edit are not two shapes, they are how much is known.
+edit are not two resources: they are how much is known.
 
 `Storage\NodeTypeStorage` loads by the machine name the context knows and
 creates or updates by whether it creates. It writes the node type
@@ -75,7 +75,7 @@ grant more than core's form grants.
 way in is open on this site at all. It is marked `restrict access: true`
 and it is granted *in addition to*, never instead of, the content type
 permission: holding it alone opens nothing, because entity access still
-refuses. That is the point of it — installing a demo module should not
+refuses. That is the point of it: installing a demo module should not
 silently hand everyone who already administers content types a second,
 separately written form to do it through.
 

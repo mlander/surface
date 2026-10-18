@@ -1,10 +1,10 @@
 # Resources and structures as classes
 
 A resource or structure is a class of its own: one static method that
-declares its shape, and one named static method per key whose allowed
+declares its keys, and one named static method per key whose allowed
 values depend on another key. A resource is a thing with identity and
-storage that operations read and write; a structure is a shape with
-members that something else holds. Other modules change either with
+storage that operations read and write; a structure is a group of
+keys that something else holds. Other modules change either with
 classes of their own, and nothing is registered by hand. The build step,
 `data_surface.resources`, turns the class and a context into a sealed
 `DataSurfaceInterface`, which the pipeline, forms, widgets and storage
@@ -28,7 +28,7 @@ module the way core scans `src/Hook`:
   is a resource, and one carrying `#[Structure]` is a structure. The
   attribute decides the kind, not the directory: either directory
   works, and the two are read as one list. Neither kind is ever
-  instantiated: its shape and refiners are static, called on the class,
+  instantiated: its declaration and refiners are static, called on the class,
   so it has no constructor and holds no service.
 - A plugin carrying `#[UsesStructure]` with no argument is its own
   structure, found through its plugin definition rather than a
@@ -54,7 +54,7 @@ The API is in `Drupal\data_surface\Resource`; the attributes in
 
 ## The pattern
 
-| | Shape | Values |
+| | Blueprint | Values |
 | --- | --- | --- |
 | **Owner** | `static defineInputs($inputs)`, optionally `static defineOutputs($outputs)` | static `#[RefinesInput('key')]` methods |
 | **Another module** | `alterInputs($inputs)`, optionally `alterOutputs($outputs)` | `#[RefinesInput('key')]` methods |
@@ -95,7 +95,7 @@ final class DemoBlockStructure implements StructureInterface {
 }
 ```
 
-- **The shape methods get a blueprint to fill, and nothing else**: no
+- **`defineInputs()` and `alterInputs()` get a blueprint to fill, and nothing else**: no
   values, no context, no services. The owner's are static, so the
   language holds them to that; the build step calls them on the class
   and never makes an instance. The owner gets `BlueprintInterface`; an
@@ -133,7 +133,7 @@ final class DemoBlockStructure implements StructureInterface {
 
 ## Reading a class
 
-- Everything on it is static: shape, refiners, operations. No
+- Everything on it is static: `defineInputs()`, refiners, operations. No
   constructor, no properties, no `$this`.
 - `defineInputs()` is a flat list. No `if`, no loop.
 - Name, type and label sit on one line.
@@ -513,7 +513,7 @@ final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements
 A plugin that is its own structure is found through the plugin
 definitions (`ResourcePlugins::ownStructures()`), not a directory, and
 discovery holds it to the same rules: it implements
-`StructureInterface`, its shape and refiners are static. Its id is
+`StructureInterface`, its declaration and refiners are static. Its id is
 `<host type>:<plugin id>`, `field_formatter:data_surface_demo_string`,
 unless the class also carries `#[Structure]`, whose id and access class
 then apply. The catalogue lists it as used by that same plugin, and an
@@ -563,7 +563,7 @@ by.
 - **Static defaults.** A formatter's `defaultSettings()` and a field
   type's `defaultFieldSettings()` are asked of the class, so they read
   the attribute off the class and take `ResourcesInterface::defaults()`:
-  the structure's own shape alone, no alter, context or refiner.
+  the structure's own declaration alone, no alter, context or refiner.
 - **Access.** A field type's host asks the field config entity, then
   the structure's access class, which may refuse. The gated test field
   type refuses that way, in Field UI and in the derived field tools
@@ -677,8 +677,8 @@ concept, not a verb here.
 
 Each refusal names the class and method at fault:
 
-- an identity key the shape never declares;
-- a `#[RefinesInput]` naming a key the shape does not declare, or an
+- an identity key the class never declares;
+- a `#[RefinesInput]` naming a key the class does not declare, or an
   output key;
 - a watched sibling that is not a declared input;
 - a `watches:` list that does not match the parameters, in order;
@@ -701,7 +701,7 @@ Each refusal names the class and method at fault:
 ## Children
 
 A resource or structure attaches others at a key. Each child is its own
-class, with its own shape and refiners, and alters can reach it alone.
+class, with its own keys and refiners, and alters can reach it alone.
 A child is usually a structure; it may be a resource with storage of its
 own, as a field's storage is.
 
@@ -717,7 +717,7 @@ own, as a field's storage is.
   daily digest has no send day, a weekly one does). It renders as
   nothing on the form and the React page, its value is an empty map, and
   both contracts and the tool state it as an object with no properties.
-  `DigestResource` in the surface test module is the fixture; one class
+  `DigestResource` in the resource test module is the fixture; one class
   per value, since `#[Variant]` names one value.
 
 The demo block's presentation is a slot its two presentation structures
@@ -766,7 +766,7 @@ one says.
 What that means, end to end:
 
 - **A child is built by the same build step**, after its parent's
-  context is applied: its own shape, its own alters, its own refiners.
+  context is applied: its own keys, its own alters, its own refiners.
   It is invoked through one of its own operations when one applies
   ([Child operations](#child-operations)), and otherwise sees the
   context the parent's context hands it with `withChild()`, or the
@@ -912,7 +912,7 @@ values no `#[Variant]` fills:
 
 The build step seals each value's definitions into a child beside the
 declared ones, and from there it is advertised, refined, accepted and
-emitted the same way. A derived variant is a shape and nothing else: no
+emitted the same way. A derived variant is its definitions and nothing else: no
 class, no alters, no refiners, no storage and no access class, so it is
 stored by its parent under the slot's key. A declared variant always
 wins over a derived one for the same value.
@@ -934,7 +934,7 @@ derived ones come from.
 ### A child that cannot be listed
 
 A slot covers a child chosen from a set of values someone can name. A
-child whose shape cannot be enumerated at all is the one case for a
+child whose keys cannot be enumerated at all is the one case for a
 `#[RefinesInput]` method on an `any` key that returns the narrower
 definition itself, a map included. No verb is needed for it: `any` may
 become anything narrower, and the method is an ordinary refiner.
@@ -999,8 +999,8 @@ parent's own. A list whose every item chooses its own child,
 
 ## Derived resources
 
-A resource or structure is a class because its shape is a property of
-the class. Some shapes are a property of the site instead: one per
+A resource or structure is a class because its keys are a property of
+the class. Some resources take their keys from the site instead: one per
 bundle, one per field, read from field definitions and form displays
 that change while the code does not. A deriver makes those, the way a
 plugin deriver makes plugin derivatives.
@@ -1043,7 +1043,7 @@ final class ContentEntityResources implements ResourceDeriverInterface {
   attribute and the class say, said as values. Its kind follows from
   what it names: storage or identity makes it a resource, neither a
   structure, which its parent stores (a content entity's field). Its id
-  is `<base>:<derivative>`; the derivative holds no colon. Its shape is
+  is `<base>:<derivative>`; the derivative holds no colon. Its inputs are
   a `ResourceCallable`, a class, a method and the bound arguments that
   say which derivative it is, called with the blueprint first:
   value-independent, as `defineInputs()` is, and serializable, as a

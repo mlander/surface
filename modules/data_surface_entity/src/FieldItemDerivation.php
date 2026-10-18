@@ -32,11 +32,11 @@ use Drupal\data_surface\Contract\ContractEmitter;
  * the casting table can carry it (docs/semantics.md), labelled from the
  * field (one property) or the property (several), required on the main
  * property when the field is, defaulting to the field's literal default.
- * What narrows is carried where the shape has the same word for it:
+ * What narrows is carried where a definition has the same word for it:
  * the Length, Range, Regex and Choice constraints the field type and the
  * property declare, a list field's allowed values, a reference's
  * targets when they can be listed, a text field's formats. What has no
- * equivalent in a shape stays with the entity and is checked when the
+ * equivalent in a definition stays with the entity and is checked when the
  * storage validates it, at prepare.
  *
  * Decision: see docs/decisions.md#derived-then-layered.
@@ -79,7 +79,7 @@ final class FieldItemDerivation {
   /**
    * The constraints carried onto a key, and their options.
    *
-   * By plugin id: the ones a shape says the same way, which the
+   * By plugin id: the ones a definition says the same way, which the
    * narrowing check, the served contract and the form read.
    */
   public const CARRIED = [
@@ -315,7 +315,7 @@ final class FieldItemDerivation {
     }
     [, $left] = $this->itemConstraints($field);
     if ($left !== []) {
-      $notes['constraints'] = $this->t('Checked when the entity is validated, which has no equivalent in the shape: @constraints.', ['@constraints' => implode(', ', $left)]);
+      $notes['constraints'] = $this->t('Checked when the entity is validated, which has no equivalent in the structure: @constraints.', ['@constraints' => implode(', ', $left)]);
     }
     if ($field->getType() === 'decimal') {
       $notes['decimal'] = $this->t('A decimal travels as a float, so a value with more digits than a float holds loses them; its precision and scale are checked when the entity is validated.');
@@ -495,7 +495,7 @@ final class FieldItemDerivation {
    *
    * Asked of an item made from the field's item definition, with no
    * entity around it, which is all a field type's getConstraints() needs
-   * for the ones the shape can say; one that needs more is left to the
+   * for the ones a definition can say; one that needs more is left to the
    * entity's validation.
    *
    * @param \Drupal\Core\Field\FieldDefinitionInterface $field

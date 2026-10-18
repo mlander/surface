@@ -45,31 +45,31 @@ final class DataSurfaceCatalogueDocument {
   public static function render(array $catalogue, array $derivers = []): string {
     $document = self::intro();
     $document .= "| Resource or structure | Class | Identity | Operations |\n| --- | --- | --- | --- |\n";
-    foreach ($catalogue as $surface) {
+    foreach ($catalogue as $resource) {
       $document .= sprintf(
         "| [`%s`](#%s) | `%s` | %s | %s |\n",
-        $surface['id'],
-        self::anchor($surface['id']),
-        $surface['class'] === NULL ? 'derived' : self::short($surface['class']),
-        self::codes($surface['identity']),
-        self::codes(array_column($surface['operations'], 'id')),
+        $resource['id'],
+        self::anchor($resource['id']),
+        $resource['class'] === NULL ? 'derived' : self::short($resource['class']),
+        self::codes($resource['identity']),
+        self::codes(array_column($resource['operations'], 'id')),
       );
     }
-    foreach ($catalogue as $surface) {
-      $document .= "\n## " . $surface['id'] . "\n\n";
-      $document .= $surface['class'] === NULL
-        ? 'Derived under `' . $surface['deriver'] . '`, in `' . $surface['module'] . "`.\n\n"
-        : '`' . $surface['class'] . '`, in `' . $surface['module'] . "`.\n\n";
-      $document .= '- Kind: ' . $surface['kind'] . "\n";
-      $document .= '- Identity: ' . self::codes($surface['identity']) . "\n";
-      $document .= '- Storage: ' . ($surface['storage'] === NULL ? 'none; its host or its parent stores it' : '`' . $surface['storage'] . '`') . "\n";
-      $document .= '- Access: ' . ($surface['access'] === NULL ? 'the operation\'s permission alone' : '`' . $surface['access'] . '`') . "\n";
-      if ($surface['plugins'] !== []) {
-        $document .= '- Used by: ' . self::codes($surface['plugins']) . "; configured through the plugin's host, never on its own.\n";
+    foreach ($catalogue as $resource) {
+      $document .= "\n## " . $resource['id'] . "\n\n";
+      $document .= $resource['class'] === NULL
+        ? 'Derived under `' . $resource['deriver'] . '`, in `' . $resource['module'] . "`.\n\n"
+        : '`' . $resource['class'] . '`, in `' . $resource['module'] . "`.\n\n";
+      $document .= '- Kind: ' . $resource['kind'] . "\n";
+      $document .= '- Identity: ' . self::codes($resource['identity']) . "\n";
+      $document .= '- Storage: ' . ($resource['storage'] === NULL ? 'none; its host or its parent stores it' : '`' . $resource['storage'] . '`') . "\n";
+      $document .= '- Access: ' . ($resource['access'] === NULL ? 'the operation\'s permission alone' : '`' . $resource['access'] . '`') . "\n";
+      if ($resource['plugins'] !== []) {
+        $document .= '- Used by: ' . self::codes($resource['plugins']) . "; configured through the plugin's host, never on its own.\n";
       }
-      if ($surface['operations'] !== []) {
+      if ($resource['operations'] !== []) {
         $document .= "\n| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n";
-        foreach ($surface['operations'] as $operation) {
+        foreach ($resource['operations'] as $operation) {
           $document .= sprintf(
             "| `%s` | %s | %s | %s | %s | %s | %s | `%s` (`%s`) |\n",
             $operation['id'],
@@ -77,14 +77,14 @@ final class DataSurfaceCatalogueDocument {
             $operation['parameters'] === [] ? 'nothing' : self::codes($operation['parameters']),
             $operation['creates'] === NULL ? 'once given what it needs' : ($operation['creates'] ? 'yes' : 'no'),
             $operation['permission'] === NULL ? 'none' : '`' . $operation['permission'] . '`',
-            self::standalone($surface, $operation),
+            self::standalone($resource, $operation),
             self::reads($operation),
             self::short($operation['provider']),
             $operation['module'],
           );
         }
       }
-      foreach ($surface['alters'] as $alter) {
+      foreach ($resource['alters'] as $alter) {
         $refines = array_map(
           static fn (array $refiner): string => '`' . $refiner['key'] . '`' . ($refiner['watches'] === [] ? '' : ' (watching ' . self::codes($refiner['watches']) . ')') . ($refiner['runtime'] ? ' at runtime' : ''),
           $alter['refines'],
@@ -93,7 +93,7 @@ final class DataSurfaceCatalogueDocument {
           . ($alter['operations'] === [] ? 'in every operation' : 'in ' . self::codes($alter['operations']))
           . ($refines === [] ? '' : '; it refines ' . implode(', ', $refines)) . ".\n";
       }
-      foreach ($surface['variants'] as $key => $variants) {
+      foreach ($resource['variants'] as $key => $variants) {
         $document .= "\n- Slot `" . $key . '` is filled by: ';
         $filled = [];
         foreach ($variants as $value => $class) {
@@ -101,7 +101,7 @@ final class DataSurfaceCatalogueDocument {
         }
         $document .= implode(', ', $filled) . ".\n";
       }
-      foreach ($surface['derived'] as $key => $source) {
+      foreach ($resource['derived'] as $key => $source) {
         $document .= "\n- Slot `" . $key . '` is filled, for every other value, by variants derived from ' . $source . ".\n";
       }
     }
@@ -185,7 +185,7 @@ MARKDOWN;
   /**
    * Says whether an operation can be asked on its own, and why not.
    *
-   * @param array $surface
+   * @param array $resource
    *   The resource or structure, as the catalogue describes it.
    * @param array $operation
    *   The operation, as the catalogue describes it.
@@ -193,11 +193,11 @@ MARKDOWN;
    * @return string
    *   "yes", or "no" and the first reason.
    */
-  private static function standalone(array $surface, array $operation): string {
+  private static function standalone(array $resource, array $operation): string {
     return match (TRUE) {
       $operation['standalone'] => 'yes',
-      $surface['storage'] === NULL => 'no: no storage',
-      $surface['plugins'] !== [] => 'no: a plugin\'s',
+      $resource['storage'] === NULL => 'no: no storage',
+      $resource['plugins'] !== [] => 'no: a plugin\'s',
       default => 'no: nothing supplies ' . self::codes(array_map(static fn (string $key): string => '%' . $key, $operation['unresolvable'])),
     };
   }

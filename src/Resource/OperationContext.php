@@ -10,8 +10,9 @@ namespace Drupal\data_surface\Resource;
  * Built by an #[Operation] method, so the ways a resource is asked for
  * sit beside its identity keys; a host builds one for its own verb
  * (`configure`), which is no declared operation. Its id is the
- * operation's id. No shape method receives it. The framework applies it,
- * once, when the resource or structure is built:
+ * operation's id. Neither defineInputs() nor defineOutputs() receives
+ * it. The framework applies it, once, when the resource or structure is
+ * built:
  *   - each identity key it knows is locked to that value;
  *   - each constraint it carries narrows that key;
  *   - each starting value is the initial value, when it creates;

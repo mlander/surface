@@ -19,7 +19,7 @@ use Drupal\node\NodeTypeInterface;
 /**
  * A content type: what core's content type form asks for, as a resource.
  *
- * Add and edit are not two shapes. They are how much is already known:
+ * Add and edit are not two resources. They are how much is already known:
  *
  * @code
  *                               add                      edit

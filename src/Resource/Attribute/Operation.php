@@ -32,7 +32,7 @@ final class Operation {
    *
    * @param string $id
    *   Machine name, unique within the resource or structure. Becomes the
-   *   context's id. A clash between two providers is a build error naming
+   *   context's id. A clash between two modules is a build error naming
    *   both.
    * @param string|\Stringable $label
    *   For people and for tool descriptions.

@@ -99,7 +99,7 @@ value resolves, and this reads none.
   `title, type` beside `title, type, oneOf (3)`, the room `title, type`
   beside `title, type, oneOf (6), if/then on venue (3 cases)`, the
   ticket `title, $comment` beside
-  `title, type, if/then on pricing (2 shapes: free has note, $ref (registration.step3.ticket.free); paid has price, currency, $ref (registration.step3.ticket.paid))`,
+  `title, type, if/then on pricing (2 variants: free has note, $ref (registration.step3.ticket.free); paid has price, currency, $ref (registration.step3.ticket.paid))`,
   the contact `title, type, properties, additionalProperties` beside
   `title, type, properties, additionalProperties, required, $ref (registration.contact)`,
   and the last row lists what is required: "not stated" beside
@@ -647,7 +647,7 @@ Success: Configure registration: the values were accepted and written.
   committed: true
 
 2. A capacity above the room's
-Failed: The values were refused: capacity: This value should be between 1 and 30.
+Failed: The values were refused: capacity: This value should be between 1 and 30. This depends on Room.
 
 3. A dry run
 Success: Dry run of Configure registration: the values were accepted and prepared, and nothing was written.
@@ -747,7 +747,7 @@ Drush commands are checked against `ExampleCalls`.
 | `Kernel\ExamplesComplianceTest` | Example 4: the alter's keys and label; its keys in one fieldset titled "Compliance", drawn between the capacity and the pricing; the capacity capped at a hundred without a licence and the room's limit with one; the licence's pattern; the stewards' minimum following the capacity; what the licence and the capacity replace on the form; a room closed in State left out, said in the room's help, and refused on submit; example 5's calls unchanged. |
 | `Kernel\StaticRefinerEnforcementTest` | Examples 2 and 3, without example 4 and with it: every conditional the served contract enumerates, in the full schema and in the schema for no values and for the defaults, is what refining afresh for its values answers. |
 | `Kernel\ExamplesToolTest` | Example 5: the three calls and their answers; what the script prints. |
-| `Kernel\ConfigSchemaContractTest` | What config schema can say: the plain mapping of examples 1 and 3, whole, with no list, no bound, nothing required and no shape for the ticket, the same whatever is stored or mounted; core's answer, a comment and no property; a constraint a schema does declare is said; the JSON this page quotes. |
+| `Kernel\ConfigSchemaContractTest` | What config schema can say: the plain mapping of examples 1 and 3, whole, with no list, no bound, nothing required and no keys for the ticket, the same whatever is stored or mounted; core's answer, a comment and no property; a constraint a schema does declare is said; the JSON this page quotes. |
 | `Kernel\ExamplesTodayPanelTest` | The second panel under examples 1 to 3: its two documents and its table, row by row; its rows read from the resource's full schema, so the pricing, the venue and what is stored leave every row and both documents as they were; example 4's keys on the resource's side only; the classic twin's page. |
 | `Unit\ExamplesReadmeTest` | This page against the files it quotes, and its Drush commands. |
 | `Functional\ExamplesRoutesTest` | Every route answers an administrator and refuses anonymous; the landing page; both panels under example 3, and a save through it; the classic twin's page with its two documents, and a save through it. |

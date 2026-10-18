@@ -17,7 +17,7 @@ use Drupal\Core\TypedData\MapDataDefinition;
 interface BlueprintInterface extends BlueprintAdditionsInterface {
 
   /**
-   * A slot: a structure whose shape one sibling INPUT key chooses.
+   * A slot: a child structure one sibling INPUT key chooses.
    *
    * The parent never names the children. Every structure carrying
    * #[Variant] for this class and key fills the slot, one per
@@ -49,15 +49,16 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
   public function attachBy(string $key, string $by): MapDataDefinition;
 
   /**
-   * Says what the shape depends on, for as long as the build is reused.
+   * Says what the declared keys depend on, while the build is reused.
    *
-   * A shape is read from live site state as often as from literals: a
-   * key offered only while a module is installed, a label read from
-   * configuration. Whatever is declared here is carried by the sealed
-   * data surface and merged with what each refiner that runs declares, so
-   * a form rendered from it is cached no longer than its shape holds. A
-   * resource or structure holds no service, so what it hands over is a
-   * CacheableMetadata built by hand: a cache tag, a context.
+   * What a blueprint declares is read from live site state as often as
+   * from literals: a key offered only while a module is installed, a
+   * label read from configuration. Whatever is declared here is carried
+   * by the sealed data surface and merged with what each refiner that
+   * runs declares, so a form rendered from it is cached no longer than
+   * its declaration holds. A resource or structure holds no service, so
+   * what it hands over is a CacheableMetadata built by hand: a cache tag,
+   * a context.
    *
    * @param \Drupal\Core\Cache\CacheableDependencyInterface $dependency
    *   The dependency.

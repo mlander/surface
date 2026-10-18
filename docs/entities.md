@@ -3,7 +3,7 @@
 A content entity's create and update form, said as a resource. It is
 the example meant to find where the pattern is thin: field types
 already describe their values as typed data, which is less than a
-shape says, so the resource and each field's structure are derived
+resource or structure says, so the resource and each field's structure are derived
 from the typed data first and layered on top of it (labels, defaults,
 what narrows, access, operations), with a class written by hand where
 the derivation is not enough.
@@ -95,7 +95,7 @@ Where the derivation is thin, a module writes a field type's item
 structure by hand: a class in its `src/Structure/` carrying
 `#[FieldItemStructure(type: 'telephone')]` and implementing
 `FieldItemStructureInterface`, whose static `defineItem(BlueprintInterface
-$inputs, FieldDefinitionInterface $field)` fills the shape, and whose
+$inputs, FieldDefinitionInterface $field)` fills the blueprint, and whose
 own static `#[RefinesInput]` methods refine it. It replaces the
 derivation for every field of that type; the field's label, operations
 and access stay derived. Its keys are the item's property names, which
@@ -139,7 +139,7 @@ the resource never lets anyone write what core's form would not.
 
 `ContentEntityStorage`, in `data_surface_entity` rather than beside the
 engine's storage classes, because what it reads and writes is the field
-item derivation's shape, which the engine does not own
+item derivation's keys, which the engine does not own
 ([decision](decisions.md#the-content-entity-storage)).
 
 - **Load** reads the entity the context names: its identity, and each
@@ -193,7 +193,7 @@ identity, whether a revision would be made, and each field's item.
 - Collections. `attachList()` exists ([Resources](resources.md#collections)),
   but a field with more than one value is still left out: deriving it
   as a collection waits for the entity side to resume.
-- Keys another module adds. An alter may target every content entity
+- Keys another module adds. An alter may name every content entity
   resource by the deriver's base id (`#[Alters('entity.content')]`),
   and its keys are built, refined, validated and offered, but a content
   entity has nowhere to keep `third_party_settings`, so its storage does
@@ -232,14 +232,14 @@ done about it.
 5. **A field type's own constraints are an instance method's.**
    `FieldItemInterface::getConstraints()` is asked of an item, so the
    derivation makes one from the item definition, with no entity, which
-   is all the ones a shape can say need. A field type whose
+   is all the ones a structure can state need. A field type whose
    `getConstraints()` reads its entity is caught and carries none.
 6. **Two bounds, one Range.** A numeric field type declares its minimum
    and its maximum as two `Range` constraints, each with its own
    message; carried onto one key they merge into one `Range`, which
    Symfony allows only with its own wording, so the field type's
    messages are dropped.
-7. **Constraints a shape cannot state** (`LinkType`,
+7. **Constraints a structure cannot state** (`LinkType`,
    `LinkAccess`, `ValidReference`, `ReferenceAccess`, a `PathAlias`,
    Scheduler's) are not carried; the entity checks them at prepare and
    the violation lands on the key. Neither contract can say them; the
@@ -299,7 +299,6 @@ done about it.
 
 `ContentEntityDerivationTest` (one resource per bundle with a form
 display, the item structure per covered type, what is left out, defaults,
-
 the registry cache and its tags), `ContentEntityAccessTest` (locked and
 omitted children from field access, the parent's entity access, an
 alter by base id, an override by field type), `ContentEntityStorageTest`

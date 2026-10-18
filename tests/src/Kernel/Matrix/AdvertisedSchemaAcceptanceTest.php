@@ -15,8 +15,8 @@ use Drupal\data_surface\Pipeline\UnknownKeysException;
 use Drupal\data_surface\Pipeline\VariantMismatchException;
 use Drupal\data_surface\Storage\StateStorage;
 use Drupal\data_surface_examples_compliance\Alter\RegistrationComplianceAlter;
-use Drupal\data_surface_surface_test\Resource\Cellar\CellarResource;
-use Drupal\data_surface_surface_test\Storage\CellarStorage;
+use Drupal\data_surface_resource_test\Resource\Cellar\CellarResource;
+use Drupal\data_surface_resource_test\Storage\CellarStorage;
 use Drupal\Tests\data_surface\Kernel\DataSurfaceKernelTestBase;
 use Drupal\Tests\data_surface\Traits\ContractValidationTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -115,7 +115,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     'data_surface_tool',
     'data_surface_examples',
     'data_surface_react',
-    'data_surface_surface_test',
+    'data_surface_resource_test',
     'data_surface_tool_test',
   ];
 
@@ -392,7 +392,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $this->actAsLarderKeeper();
     $rack = self::CELLAR['racks'][0];
     $blank = ['shelf' => NULL, 'spices' => NULL, 'label' => ''];
-    $this->assertTable('surface_test.cellar', $this->build(CellarResource::class, 'edit', ['larder' => 'main']), self::CELLAR, [
+    $this->assertTable('resource_test.cellar', $this->build(CellarResource::class, 'edit', ['larder' => 'main']), self::CELLAR, [
       'as stored' => [self::CELLAR, TRUE],
       'four racks and a blank row' => [['racks' => [$rack, $rack, $rack, $rack, $blank]], TRUE],
       'the racks as JSON' => [['racks' => (string) json_encode([$rack])], TRUE],
@@ -422,7 +422,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $this->actAsLarderKeeper('inspect spice rack');
     $cellar = $this->build(CellarResource::class, 'edit', ['larder' => 'main']);
     $this->assertTrue($cellar->isLocked('racks'));
-    $document = $this->decoded($this->container->get('data_surface.contract_emitter')->emit($cellar, array_replace($cellar->getDefaultValues(), self::CELLAR), 'surface_test.cellar')->document);
+    $document = $this->decoded($this->container->get('data_surface.contract_emitter')->emit($cellar, array_replace($cellar->getDefaultValues(), self::CELLAR), 'resource_test.cellar')->document);
     $racks = $document['schema']['properties']['racks'];
     $this->assertTrue($racks['readOnly']);
     $items = SchemaResolver::inline($racks, $document['schema'])['items'];

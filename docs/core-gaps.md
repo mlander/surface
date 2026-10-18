@@ -31,7 +31,7 @@ becomes a pass-through and no consumer changes.
 ## Defaults and examples on definitions
 
 `DataDefinitionInterface` can describe a value's type, label, description,
-settings, constraints and whether it is required — but not what value it
+settings, constraints and whether it is required, but not what value it
 starts from, and not what a valid one looks like. Every layer built on
 top has grown its own spelling: Field API has
 `getDefaultValue()`/`getDefaultValueLiteral()`, plugin contexts have
@@ -62,8 +62,8 @@ metadata.
 ## LabeledChoice, and the ask being "labels on Choice"
 
 A `Choice` constraint knows which values are allowed and nothing about
-what they mean. The labels live somewhere else — almost always a form's
-`#options` array — and the two are kept in agreement by hand.
+what they mean. The labels live somewhere else (almost always a form's
+`#options` array), and the two are kept in agreement by hand.
 
 Concrete cases in core today: `node.type.*.preview_mode` is constrained
 in config schema to `0`, `1` and `2`, while the words Disabled, Optional
@@ -78,8 +78,8 @@ The result is validation without meaning and meaning without validation,
 held by different layers.
 
 `LabeledChoice` is a `Choice` **subclass**, and that choice is the whole
-point of decision D4. Every `Choice`-aware consumer already sees it —
-core's own `Choice` reading, core's `AllowedValues`, a schema emitter —
+point of decision D4. Every `Choice`-aware consumer already sees it
+(core's own `Choice` reading, core's `AllowedValues`, a schema emitter),
 so the upstream ask becomes "add labels to `Choice`" rather than "accept
 a new constraint". Had it been a parallel constraint, every consumer
 would have needed teaching about it, one at a time.
@@ -147,8 +147,8 @@ about it.
 `ContextDefinitionNormalizer::applyConstraintSchema()` reads exactly two
 constraints when emitting a schema, `Choice` and `AllowedValues`, and it
 matches them by **plugin id**. So a value list declared as anything else
-— `LabeledChoice`, or an existence constraint such as `PluginExists`,
-`Country` or `LanguageExists` — does not reach the advertised schema at
+(`LabeledChoice`, or an existence constraint such as `PluginExists`,
+`Country` or `LanguageExists`) does not reach the advertised schema at
 all, even though `LabeledChoice` *is* a `Choice`.
 
 This is the one place decision D4 does not pay off yet, and it is the

@@ -80,7 +80,7 @@ store a value in another type, which no document accepts
 
 **Documents:** both. **Test:** `testCastingTableAcceptsNotationsTheSchemaRefuses`.
 
-Every cast the [casting table](semantics.md#the-casting-table) lists,
+Every cast the [casting table](semantics.md#the-coercion-table) lists,
 on optional keys:
 
 ```php
@@ -484,7 +484,7 @@ finding, not the invariant; reported and left.
 | boolean | `1.0`, `'01'`, `'1.0'` | accepted | as sent |
 
 The casting table leaves these "unchanged — the constraint refuses it"
-([semantics](semantics.md#the-casting-table) says so for an integer
+([semantics](semantics.md#the-coercion-table) says so for an integer
 `TRUE`), but core's PrimitiveType check compares loosely
 (`filter_var(TRUE, FILTER_VALIDATE_INT)` is `1`; `1.0 == '1'`), so it
 passes and the value is stored in a type the key does not declare. With

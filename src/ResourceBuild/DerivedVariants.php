@@ -75,17 +75,17 @@ final class DerivedVariants {
     }
     $this->bySlot = [];
     foreach ($this->derivers as $deriver) {
-      [$surface, $key] = $deriver->slot();
-      if (isset($this->bySlot[$surface][$key])) {
+      [$holder, $key] = $deriver->slot();
+      if (isset($this->bySlot[$holder][$key])) {
         throw new \LogicException(sprintf(
           'Both %s and %s derive the variants for %s, at its "%s" slot; one slot has one deriver.',
-          get_class($this->bySlot[$surface][$key]),
+          get_class($this->bySlot[$holder][$key]),
           get_class($deriver),
-          $surface,
+          $holder,
           $key,
         ));
       }
-      $this->bySlot[$surface][$key] = $deriver;
+      $this->bySlot[$holder][$key] = $deriver;
     }
     return $this->bySlot;
   }

@@ -41,8 +41,8 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
  * discovered resource or structure names. A derived resource's storage
  * and access class are named at run time, so the class resolver builds
  * them. A resource or a structure itself is not registered and never
- * instantiated: its shape and its refiners are static, called on the
- * class.
+ * instantiated: its defineInputs() and its refiners are static, called
+ * on the class.
  *
  * A plugin that is its own structure (#[UsesStructure] with no argument)
  * is not found here: it lives where its plugin type says, and the
@@ -72,9 +72,9 @@ final class ResourceCollectorPass implements CompilerPassInterface {
   public const DIRECTORIES = ['Resource', 'Structure', 'Alter'];
 
   /**
-   * The directories whose classes are read as one list.
+   * The directories of resources and structures, read as one list.
    */
-  protected const SHAPES = ['Resource', 'Structure'];
+  protected const DECLARATIONS = ['Resource', 'Structure'];
 
   /**
    * {@inheritdoc}
@@ -88,21 +88,21 @@ final class ResourceCollectorPass implements CompilerPassInterface {
       $lists = [];
       foreach (self::DIRECTORIES as $directory) {
         $classes = self::classesIn($module_dir . '/src/' . $directory, 'Drupal\\' . $module . '\\' . $directory);
-        $shapes = in_array($directory, self::SHAPES, TRUE);
-        $lists[$shapes ? 'shapes' : $directory] = array_merge($lists[$shapes ? 'shapes' : $directory] ?? [], array_fill_keys($classes, $shapes));
+        $declares = in_array($directory, self::DECLARATIONS, TRUE);
+        $lists[$declares ? 'declarations' : $directory] = array_merge($lists[$declares ? 'declarations' : $directory] ?? [], array_fill_keys($classes, $declares));
       }
-      // Both shape directories as one list, in the order a class's name
+      // Both declaring directories as one list, in the order a class's name
       // below its directory gives, whichever directory it is in.
       $prefix = strlen('Drupal\\' . $module . '\\');
-      uksort($lists['shapes'], static fn (string $a, string $b): int => strcmp(
+      uksort($lists['declarations'], static fn (string $a, string $b): int => strcmp(
         (string) strstr(substr($a, $prefix), '\\'),
         (string) strstr(substr($b, $prefix), '\\'),
       ));
       foreach ($lists as $list) {
-        foreach ($list as $class => $shapes) {
+        foreach ($list as $class => $declares) {
           $reflection = new \ReflectionClass($class);
           $this->collect($container, $reflection, (string) $module, $found);
-          if ($shapes) {
+          if ($declares) {
             $scanned[$class] = [(string) $module, $reflection];
           }
         }

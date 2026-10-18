@@ -168,10 +168,10 @@ class PipelineAccessTest extends DataSurfaceKernelTestBase {
 
     $unasked = $this->storage();
     $baseline = $this->pipeline()->submit($surface, $input, $unasked);
-    $neutral_target = $this->storage();
-    $neutral = $this->pipeline()->submit($surface, $input, $neutral_target, access: AccessResult::neutral());
-    $allowed_target = $this->storage();
-    $allowed = $this->pipeline()->submit($surface, $input, $allowed_target, access: AccessResult::allowed());
+    $neutral_storage = $this->storage();
+    $neutral = $this->pipeline()->submit($surface, $input, $neutral_storage, access: AccessResult::neutral());
+    $allowed_storage = $this->storage();
+    $allowed = $this->pipeline()->submit($surface, $input, $allowed_storage, access: AccessResult::allowed());
 
     foreach ([$baseline, $neutral, $allowed] as $result) {
       $this->assertTrue($result->isValid());
@@ -181,8 +181,8 @@ class PipelineAccessTest extends DataSurfaceKernelTestBase {
     }
     // Every stage ran for all three, in the same order.
     $this->assertSame(1, $unasked->loads);
-    $this->assertSame(1, $neutral_target->loads);
-    $this->assertSame(1, $allowed_target->loads);
+    $this->assertSame(1, $neutral_storage->loads);
+    $this->assertSame(1, $allowed_storage->loads);
     $this->assertSame(
       ['gated prepare', 'gated commit', 'gated prepare', 'gated commit', 'gated prepare', 'gated commit'],
       $this->log->getArrayCopy(),

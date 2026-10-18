@@ -19,7 +19,7 @@ namespace Drupal\data_surface\Resource;
  * `<base>:<derivative>`, and the build step, the alters (which may name
  * the base to alter every derivative), the routes, the catalogue and the
  * derived tools treat it as they treat a class. What it does not have is
- * a class of its own; its shape and operations are methods it names.
+ * a class of its own; its inputs and operations are methods it names.
  *
  * @see \Drupal\data_surface\Resource\Attribute\DerivesResources
  * @see \Drupal\data_surface\Resource\DerivedResource

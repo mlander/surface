@@ -30,8 +30,8 @@ ordinary `hook_form_node_type_form_alter`. Nothing in this module, and
 nothing in the tool's base class, names either setting, or any other key
 of a content type; `NodeTypeToolComparisonTest` greps the two files to
 keep that true. Enable the extras module and the tool advertises both
-settings — the deadline as an amount and a unit, the tags with their
-pattern — and holds every caller to them, storing one week as the
+settings (the deadline as an amount and a unit, the tags with their
+pattern) and holds every caller to them, storing one week as the
 604800 seconds core's form would store, and ten business days as the
 1036800 seconds core's form stores for them too.
 
@@ -106,7 +106,7 @@ thing, so it was written to be:
   unit become the integer lives only in the form's validation callback.
 - **The demo does not rest on obscurity.** A capable agent reading only
   the schema will recognize 3600 and 2592000 as an hour and thirty days
-  in seconds, guess the unit, and send 604800 for a week — and be
+  in seconds, guess the unit, and send 604800 for a week, and be
   right. The claim is not that it cannot; it is that it has to infer.
   The stored schema is accurate but carries no meaning, so a
   schema-only agent's correct guess is still unverified inference,
@@ -179,8 +179,8 @@ is written.
 
 The resource does not transform tags; it refuses the ones it would have
 to transform. The pipeline never turns a value into a different one on
-a caller's behalf, so the contract says what a stored tag looks like — a
-list, each item matching a pattern, no item twice — and a caller sends
+a caller's behalf, so the contract says what a stored tag looks like (a
+list, each item matching a pattern, no item twice), and a caller sends
 that. The list type replaces the comma split outright; the lower casing
 and de-duplication become a pattern and a uniqueness constraint that a
 caller can read in the advertised schema. The resource-driven form

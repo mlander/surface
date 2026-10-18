@@ -7,9 +7,9 @@ namespace Drupal\Tests\data_surface\Kernel;
 use Drupal\data_surface\Pipeline\StorageViolationsException;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Storage\ConfigObjectStorage;
-use Drupal\data_surface_target_test\Storage\PlainSettingsStorage;
-use Drupal\data_surface_target_test\Storage\TranslatableSettingsStorage;
-use Drupal\data_surface_target_test\Storage\MissingSchemaSettingsStorage;
+use Drupal\data_surface_storage_test\Storage\PlainSettingsStorage;
+use Drupal\data_surface_storage_test\Storage\TranslatableSettingsStorage;
+use Drupal\data_surface_storage_test\Storage\MissingSchemaSettingsStorage;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -32,7 +32,7 @@ class ConfigObjectStorageTest extends DataSurfaceKernelTestBase {
   protected static $modules = [
     'system',
     'data_surface',
-    'data_surface_target_test',
+    'data_surface_storage_test',
   ];
 
   /**
@@ -156,17 +156,17 @@ class ConfigObjectStorageTest extends DataSurfaceKernelTestBase {
     $described = [
       'greeting' => 'Hello',
       'limit' => 3,
-      'third_party_settings' => ['data_surface_target_test' => ['note' => 'Kept']],
+      'third_party_settings' => ['data_surface_storage_test' => ['note' => 'Kept']],
     ];
     $this->assertSame([], $this->refusals($storage, $described));
 
     $refusals = $this->refusals($storage, ['third_party_settings' => ['nobody' => ['note' => 'Lost']]] + $described);
     $this->assertSame(['third_party_settings.nobody'], array_keys($refusals));
-    $this->assertStringContainsString('No config schema describes the settings the nobody module stores in data_surface_target_test.translatable', $refusals['third_party_settings.nobody']);
+    $this->assertStringContainsString('No config schema describes the settings the nobody module stores in data_surface_storage_test.translatable', $refusals['third_party_settings.nobody']);
 
     $refusals = $this->refusals($this->storage(PlainSettingsStorage::class), [
       'limit' => 3,
-      'third_party_settings' => ['data_surface_target_test' => ['note' => 'Lost']],
+      'third_party_settings' => ['data_surface_storage_test' => ['note' => 'Lost']],
     ]);
     $this->assertSame(['third_party_settings'], array_keys($refusals), 'An owner that declares no third party settings refuses every mount, under that key.');
   }
@@ -176,7 +176,7 @@ class ConfigObjectStorageTest extends DataSurfaceKernelTestBase {
    */
   public function testAnObjectWithNoSchemaIsAnError(): void {
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('No config schema describes data_surface_target_test.missing');
+    $this->expectExceptionMessage('No config schema describes data_surface_storage_test.missing');
     $this->storage(MissingSchemaSettingsStorage::class)->prepare($this->context(), ['limit' => 1]);
   }
 

@@ -117,11 +117,11 @@ class DataSurfaceFormCacheTest extends DataSurfaceKernelTestBase {
     $state = $this->container->get('state');
     $field = $this->plainField();
 
-    $state_target = new StateStorage($state, 'data_surface.form_cache');
+    $state_storage = new StateStorage($state, 'data_surface.form_cache');
     $state->set('data_surface.form_cache', ['name' => 'From state']);
 
-    $targets = [
-      'state' => $state_target,
+    $storages = [
+      'state' => $state_storage,
       'field settings' => new FieldSettingsStorage($field),
       'base field override' => new BaseFieldOverrideStorage(
         $this->container->get('entity_field.manager'),
@@ -129,16 +129,16 @@ class DataSurfaceFormCacheTest extends DataSurfaceKernelTestBase {
         'entity_test',
         ['name' => ['field' => 'name']],
       ),
-      'composite' => new CompositeStorage([[$state_target, ['name']]]),
+      'composite' => new CompositeStorage([[$state_storage, ['name']]]),
     ];
 
-    foreach ($targets as $description => $target) {
+    foreach ($storages as $description => $storage) {
       // The form cache stores a serialized form array and restores it
       // whole, which is the thing under test, so this deliberately
       // allows every class the way core's own form cache does.
       // phpcs:ignore DrupalPractice.FunctionCalls.InsecureUnserialize.InsecureUnserialize
-      $restored = unserialize(serialize($target));
-      $this->assertInstanceOf($target::class, $restored, $description);
+      $restored = unserialize(serialize($storage));
+      $this->assertInstanceOf($storage::class, $restored, $description);
       // Working means reading, which is the stage that needs every
       // service the storage was given.
       $this->assertIsArray($restored->load($surface), $description);
@@ -150,7 +150,7 @@ class DataSurfaceFormCacheTest extends DataSurfaceKernelTestBase {
     // whole, which is the thing under test, so this deliberately
     // allows every class the way core's own form cache does.
     // phpcs:ignore DrupalPractice.FunctionCalls.InsecureUnserialize.InsecureUnserialize
-    $restored = unserialize(serialize($state_target));
+    $restored = unserialize(serialize($state_storage));
     $restored->commit($restored->prepare($surface, ['name' => 'Written after waking']));
     $this->assertSame(['name' => 'Written after waking'], $state->get('data_surface.form_cache'));
   }

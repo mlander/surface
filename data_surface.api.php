@@ -55,7 +55,7 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
 }
 
 /**
- * @defgroup data_surface_surface Declaring a resource or a structure
+ * @defgroup data_surface_resource Declaring a resource or a structure
  * @{
  * A resource or a structure is a class, discovered, built in a context
  * and sealed.
@@ -63,8 +63,8 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  * A resource is a thing with identity and storage that operations read
  * and write: a class implementing
  * \Drupal\data_surface\Resource\ResourceInterface and carrying
- * \Drupal\data_surface\Resource\Attribute\Resource. A structure is a shape
- * with members and no identity or storage of its own, only ever held by
+ * \Drupal\data_surface\Resource\Attribute\Resource. A structure is a group
+ * of keys with no identity or storage of its own, only ever held by
  * something else (attached to a parent, filling a slot as a variant, or
  * configuring a plugin): a class implementing
  * \Drupal\data_surface\Resource\StructureInterface and carrying
@@ -74,7 +74,7 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  * decides the kind. The build step,
  * \Drupal\data_surface\ResourceBuild\ResourcesInterface (service
  * data_surface.resources), is the only thing that builds either. The class
- * is never instantiated: its shape and its refiners are static, called on
+ * is never instantiated: its inputs and its refiners are static, called on
  * the class, so it has no constructor and holds no service, and a list
  * that depends on the site is a constraint whose options resolver fetches
  * it. Labels are built with the global t(), since a static method has

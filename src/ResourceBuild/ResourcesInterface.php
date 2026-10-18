@@ -14,10 +14,10 @@ use Drupal\data_surface\Resource\OperationContext;
  * The build step: a class and a context in, a sealed data surface out.
  *
  * What docs/how-it-fits.md calls the framework. It builds resources and
- * structures alike: it runs the shape methods over the engine's builder,
- * applies the discovered alters, applies the context, binds the
- * #[RefinesInput] methods as the engine's refiners, builds each child
- * the same way in its own frame, and seals. It is the only way either
+ * structures alike: it runs defineInputs() and defineOutputs() over the
+ * engine's builder, applies the discovered alters, applies the context,
+ * binds the #[RefinesInput] methods as the engine's refiners, builds each
+ * child the same way in its own frame, and seals. It is the only way either
  * kind is built.
  *
  * The answer is the engine's DataSurfaceInterface, which the pipeline,

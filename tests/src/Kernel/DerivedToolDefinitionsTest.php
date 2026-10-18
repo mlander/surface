@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Component\Serialization\Yaml;
+use Drupal\Core\Access\AccessResultReasonInterface;
 use Drupal\Core\Render\RenderContext;
+use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\data_surface_demo_node_type\Resource\NodeTypeResource;
 use Drupal\tool\Tool\ToolDefinition;
 use Drupal\tool\Tool\ToolManager;
 use Drupal\tool\TypedData\InputDefinitionInterface;
@@ -54,7 +57,7 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
     'data_surface_demo',
     'data_surface_demo_extras',
     'data_surface_demo_node_type',
-    'data_surface_surface_test',
+    'data_surface_resource_test',
     'data_surface_tool',
   ];
 
@@ -202,6 +205,29 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
     foreach ($after as $id) {
       $this->assertContains($id, $listed);
     }
+  }
+
+  /**
+   * Tests that a derived tool declares its operation's permission.
+   *
+   * The Tool API checks a declared permission before the tool's own
+   * access and prints it in `tool:info`; a permission with a `%key`
+   * placeholder names a different permission per call, so it is not
+   * declared and the tool's own access is the only check.
+   */
+  public function testDerivedToolsDeclareTheOperationsPermission(): void {
+    $definitions = $this->toolManager()->getDefinitions();
+    $this->assertSame(NodeTypeResource::PERMISSION, $definitions['data_surface:node.type:add']->getPermission());
+    $this->assertSame(NodeTypeResource::PERMISSION, $definitions['data_surface:node.type:edit']->getPermission());
+    $this->assertSame(NodeTypeResource::PERMISSION, $definitions['data_surface:node.type:edit:read']->getPermission());
+    $this->assertNull($definitions['data_surface:field.instance:add']->getPermission());
+    $this->assertNull($definitions['data_surface:field.instance:edit:read']->getPermission());
+
+    // The declared permission is asked first, before any input is read.
+    $refused = ToolManager::checkPermission($definitions['data_surface:node.type:add'], new AnonymousUserSession());
+    $this->assertFalse($refused->isAllowed());
+    $this->assertInstanceOf(AccessResultReasonInterface::class, $refused);
+    $this->assertStringContainsString(NodeTypeResource::PERMISSION, (string) $refused->getReason());
   }
 
   /**

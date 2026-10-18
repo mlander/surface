@@ -62,17 +62,17 @@ final class ResourceReactPage implements ContainerInjectionInterface {
    *
    * @param \Symfony\Component\HttpFoundation\Request $request
    *   The request, whose query string carries the operation's parameters.
-   * @param string $surface
-   *   The resource id, from the route's {surface} parameter.
-   * @param string $situation
-   *   The operation id, from the route's {situation} parameter.
+   * @param string $resource
+   *   The resource id, from the route's {resource} parameter.
+   * @param string $operation
+   *   The operation id, from the route's {operation} parameter.
    *
    * @return array
    *   A render array.
    */
-  public function page(Request $request, string $surface, string $situation): array {
+  public function page(Request $request, string $resource, string $operation): array {
     try {
-      $served = $this->servedOperations->fromRequest($surface, $situation, $request);
+      $served = $this->servedOperations->fromRequest($resource, $operation, $request);
     }
     catch (\InvalidArgumentException $e) {
       throw new NotFoundHttpException($e->getMessage(), $e);
@@ -112,17 +112,17 @@ final class ResourceReactPage implements ContainerInjectionInterface {
   /**
    * Titles the page with the operation's label.
    *
-   * @param string $surface
-   *   The resource id, from the route's {surface} parameter.
-   * @param string $situation
-   *   The operation id, from the route's {situation} parameter.
+   * @param string $resource
+   *   The resource id, from the route's {resource} parameter.
+   * @param string $operation
+   *   The operation id, from the route's {operation} parameter.
    *
    * @return string
    *   The label.
    */
-  public function title(string $surface, string $situation): string {
+  public function title(string $resource, string $operation): string {
     try {
-      return (string) $this->t('React: @label', ['@label' => $this->registry->getOperation($surface, $situation)->label]);
+      return (string) $this->t('React: @label', ['@label' => $this->registry->getOperation($resource, $operation)->label]);
     }
     catch (\InvalidArgumentException) {
       return (string) $this->t('React: resource');

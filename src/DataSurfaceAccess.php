@@ -72,10 +72,10 @@ final class DataSurfaceAccess {
    * Turns an answer with no opinion into an explicit refusal.
    *
    * For the resource or structure that *owns* an operation, and only for
-   * that one. Neutral is how a shape says the question is not its
-   * business, and one that has made the requirements its business has no
-   * third state to offer: either it grants the operation or it refuses
-   * it.
+   * that one. Neutral is how a resource or structure says the question
+   * is not its business, and one that has made the requirements its
+   * business has no third state to offer: either it grants the operation
+   * or it refuses it.
    *
    * The distinction matters because of how core's helpers answer.
    * AccessResult::allowedIfHasPermission() and an entity access handler

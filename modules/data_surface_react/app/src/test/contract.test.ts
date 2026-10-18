@@ -46,7 +46,7 @@ describe('resolving a reference', () => {
     const site = {
       title: 'Left bin',
       allOf: [
-        { $ref: '#/$defs/surface_test.cupboard.bin' },
+        { $ref: '#/$defs/resource_test.cupboard.bin' },
         {
           properties: {
             bin: { readOnly: true, const: 'left', 'x-surface': { widget: 'text', locked: true, dependsOn: [], refined: false, stale: false } },
@@ -57,7 +57,7 @@ describe('resolving a reference', () => {
       ],
       'x-surface': fieldset,
     } as unknown as Schema;
-    const root: Schema = { type: 'object', properties: { left: site }, $defs: { 'surface_test.cupboard.bin': bin } };
+    const root: Schema = { type: 'object', properties: { left: site }, $defs: { 'resource_test.cupboard.bin': bin } };
     const resolved = resolveSchema(site, root);
     expect(resolved).not.toHaveProperty('allOf');
     expect(resolved.title).toBe('Left bin');
@@ -153,12 +153,12 @@ describe('a collection', () => {
       shelves: {
         title: 'Shelves',
         type: ['array', 'null'],
-        items: { $ref: '#/$defs/surface_test.pantry.shelf' },
+        items: { $ref: '#/$defs/resource_test.pantry.shelf' },
         maxItems: 3,
         'x-surface': { widget: 'list', list: true, locked: false, dependsOn: [], refined: false, stale: false },
       },
     },
-    $defs: { 'surface_test.pantry.shelf': shelf },
+    $defs: { 'resource_test.pantry.shelf': shelf },
   };
 
   it('dereferences its items', () => {

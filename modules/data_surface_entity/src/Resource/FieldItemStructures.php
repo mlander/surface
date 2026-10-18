@@ -103,7 +103,7 @@ final class FieldItemStructures implements ResourceDeriverInterface {
   }
 
   /**
-   * Fills one field item's shape.
+   * Fills one field item's blueprint.
    *
    * @param \Drupal\data_surface\Resource\BlueprintInterface $inputs
    *   The blueprint to fill.

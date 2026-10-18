@@ -8,7 +8,7 @@ use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\data_surface\Resource\BlueprintInterface;
 
 /**
- * A field item's shape written by hand, for one field type.
+ * A field item's keys written by hand, for one field type.
  *
  * Where the derivation from typed data is thin, a module writes the item
  * structure itself and marks it #[FieldItemStructure(type: '...')]. Its
@@ -19,7 +19,7 @@ use Drupal\data_surface\Resource\BlueprintInterface;
 interface FieldItemStructureInterface {
 
   /**
-   * Fills the item's shape.
+   * Fills the item's blueprint.
    *
    * Static, like a structure's defineInputs(), and value-independent; it is
    * handed the field definition because one class serves every field of

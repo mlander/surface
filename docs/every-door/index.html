@@ -10,7 +10,7 @@
 body { margin: 0; }
 [hidden] { display: none !important; }
 </style>
-<title>One Surface, Every Door</title>
+<title>One Resource, Every Door</title>
 <!-- cspell:ignore lerp metalness Raycaster -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
@@ -180,7 +180,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
     </nav>
 
     <section class="chapter" id="ch-all">
-      <h2>Declare the shape once</h2>
+      <h2>Declare the inputs once</h2>
       <p>A resource says what it takes: its keys, their types and their limits. It says nothing about forms, routes or tools.</p>
       <p>Everything that needs those values reads the same contract. A form, a React page and an agent accept and refuse exactly the same things.</p>
       <p class="muted">Turn the model, pick a layer above, or change a value below and watch it reach every door.</p>
@@ -222,8 +222,8 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
 
     <section class="chapter" id="ch-parts" hidden>
       <h2>Structures</h2>
-      <p>A resource can dock a structure at one of its keys. The part keeps its own keys, refinement and validation, and the parent cannot reach into it. That is what makes Contact reusable anywhere.</p>
-      <p>A slot is a key whose part depends on another value. Pricing decides whether the free ticket or the paid ticket is docked.</p>
+      <p>A resource can attach a structure at one of its keys. The child keeps its own keys, refinement and validation, and the parent cannot reach into it. That is what makes Contact reusable anywhere.</p>
+      <p>A slot is a key whose child another key's value chooses. Pricing decides whether the free ticket or the paid ticket fills it.</p>
       <pre class="code" data-code="parts"></pre>
     </section>
 
@@ -243,7 +243,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
 
     <section class="chapter" id="ch-contract" hidden>
       <h2>The contract</h2>
-      <p>Ask the resource with the values so far and it answers with its shape as it stands: JSON Schema, with labelled choices as <code>oneOf</code> and slots as <code>if</code> / <code>then</code>.</p>
+      <p>Ask the resource with the values so far and it answers with its schema as it stands: JSON Schema, with labelled choices as <code>oneOf</code> and slots as <code>if</code> / <code>then</code>.</p>
       <p>Nothing in it depends on who is asking.</p>
       <pre class="code" data-code="contract"></pre>
     </section>
@@ -372,7 +372,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
   }
 
   #[RefinesInput('capacity')]
-  public function capacityWithoutLicence(
+  public static function capacityWithoutLicence(
     DataDefinition $capacity,
     ?string $licence,
   ): DataDefinition { /* stops at 100 */ }
@@ -410,7 +410,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
       sample: "defaults:\n  _form: DataSurfaceOperationForm\n  _data_surface_resource: RegistrationStep3Resource\n  _data_surface_operation: configure" },
     { id: 'plugin', name: 'Plugin forms', tier: 2, ang: 151, via: 'form', shipped: true,
       body: 'A formatter, a block or any plugin with settings names a structure, or is one. Its configuration form is drawn from it.',
-      sample: "#[UsesStructure]\nfinal class DataSurfaceDemoFormatter extends FormatterBase {\n  public static function defineInputs(BlueprintInterface $inputs): void {}\n}" },
+      sample: "#[UsesStructure]\nfinal class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements StructureInterface {\n  public static function defineInputs(BlueprintInterface $inputs): void {}\n}" },
     { id: 'headless', name: 'Headless', tier: 2, ang: 119, via: 'schema', shipped: true,
       body: 'A React app that knows nothing about this resource draws it from the schema: selects from oneOf, slots from if / then, order and grouping from the x-surface hints.',
       sample: "/surface-react/registration.step3/configure" },
@@ -789,7 +789,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
       v(2.3 * Math.cos(ca), RING, 2.3 * Math.sin(ca)));
   }
   scene.add(lines(cone, 'contractLine', ['contract'], 0.55, null, true));
-  label('Contract: the shape as it stands', scene, 0, RING + 0.75, 0, ['contract'], 'major', { c: 'contract' });
+  label('Contract: the schema as it stands', scene, 0, RING + 0.75, 0, ['contract'], 'major', { c: 'contract' });
 
   /* commit: validated values go down to storage */
   var commit = new T.LineCurve3(v(-4.55, 1.3, 0.6), v(-4.55, 0.32, 0.6));

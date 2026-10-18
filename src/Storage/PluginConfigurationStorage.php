@@ -32,10 +32,11 @@ use Drupal\data_surface\Pipeline\PreparedValues;
  * given with the plugin's defaults, which is harmless here because the
  * prepared artifact is already the complete configuration: accept() has
  * filled every data surface key and the host-owned keys are carried over
- * untouched, so there is nothing for the merge to add. The plugin base
- * classes coming with the demo ports set $this->configuration directly
- * instead, which is why the pipeline's merge rule, not the host's, is the
- * one that decides what a data surface key ends up holding.
+ * untouched, so there is nothing for the merge to add. The plugin host
+ * base classes (DataSurfaceConfigurationTrait) set $this->configuration
+ * directly instead, which is why the pipeline's merge rule, not the
+ * host's, is the one that decides what a data surface key ends up
+ * holding.
  *
  * @todo Report the providers that contributed definitions to the data
  *   surface as dependencies of the prepared configuration, so a plugin

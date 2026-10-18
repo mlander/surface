@@ -127,7 +127,7 @@ final class OperationInputs {
   /**
    * Gets every input of the tool for one operation, as declared.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $surface
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
@@ -140,10 +140,10 @@ final class OperationInputs {
    *   no single entity type's, or has the name of one of the tool's own
    *   inputs) or the resource cannot be built.
    */
-  public function inputs(ResourceDefinition $surface, OperationDefinition $operation): array {
-    $neutral = $this->neutral($surface, $operation);
-    $inputs = $this->parameterInputs($surface, $operation, $neutral);
-    $inputs[self::VALUES] = $this->declaredValues($surface, $operation, $neutral);
+  public function inputs(ResourceDefinition $resource, OperationDefinition $operation): array {
+    $neutral = $this->neutral($resource, $operation);
+    $inputs = $this->parameterInputs($resource, $operation, $neutral);
+    $inputs[self::VALUES] = $this->declaredValues($resource, $operation, $neutral);
     $inputs[self::DRY_RUN] = new InputDefinition(
       data_type: 'boolean',
       label: $this->t('Dry run'),
@@ -157,7 +157,7 @@ final class OperationInputs {
   /**
    * Gets the inputs of the read tool for one operation: its parameters.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $surface
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
@@ -168,8 +168,8 @@ final class OperationInputs {
    * @throws \LogicException
    *   When a parameter cannot be an input, as inputs() says.
    */
-  public function parameters(ResourceDefinition $surface, OperationDefinition $operation): array {
-    return $this->parameterInputs($surface, $operation, $this->neutral($surface, $operation));
+  public function parameters(ResourceDefinition $resource, OperationDefinition $operation): array {
+    return $this->parameterInputs($resource, $operation, $this->neutral($resource, $operation));
   }
 
   /**
@@ -183,7 +183,7 @@ final class OperationInputs {
    * storage as it is (docs/semantics.md, Stale values). A key the resource
    * marks secret is not there at all.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $surface
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
@@ -194,17 +194,17 @@ final class OperationInputs {
    * @throws \LogicException
    *   When the resource cannot be built.
    */
-  public function readOutputs(ResourceDefinition $surface, OperationDefinition $operation): array {
-    $neutral = $this->neutral($surface, $operation);
+  public function readOutputs(ResourceDefinition $resource, OperationDefinition $operation): array {
+    $neutral = $this->neutral($resource, $operation);
     // Where the secrets are: the neutral build, or, for an operation that
     // takes nothing, its own.
-    $built = $neutral ?? $this->resources->build($surface->name(), $this->resources->operation($surface->name(), $operation->id));
+    $built = $neutral ?? $this->resources->build($resource->name(), $this->resources->operation($resource->name(), $operation->id));
     return [
       self::VALUES => $this->inputDefinitions->outputFromInput(
-        $this->declaredValues($surface, $operation, $neutral),
+        $this->declaredValues($resource, $operation, $neutral),
         $this->inputDefinitions->secrets($built),
         $this->t('Stored values'),
-        $this->t('What is stored now, as the @surface resource describes it: every key the operation does not already know, including those other modules add, in the shape the write tool takes. A key storage holds nothing for is absent, and a secret is never returned.', ['@surface' => $surface->id]),
+        $this->t('What is stored now, as the @resource resource describes it: every key the operation does not already know, including those other modules add, in the shape the write tool takes. A key storage holds nothing for is absent, and a secret is never returned.', ['@resource' => $resource->id]),
       ),
     ];
   }
@@ -217,7 +217,7 @@ final class OperationInputs {
    * less every key the resource marks secret, at any depth, which is
    * never read back to a caller (docs/semantics.md, Secrets).
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $surface
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
    * @param \Drupal\data_surface\DataSurfaceInterface $built
    *   The built resource, in the context.
@@ -227,9 +227,9 @@ final class OperationInputs {
    * @return array
    *   The stored values, keyed by resource key.
    */
-  public function stored(ResourceDefinition $surface, DataSurfaceInterface $built, OperationContext $context): array {
-    $stored = $this->resources->storage($surface->name(), $context, $built)->load($built);
-    $stored = array_diff_key($stored, array_flip($this->knownIdentity($surface, $context)));
+  public function stored(ResourceDefinition $resource, DataSurfaceInterface $built, OperationContext $context): array {
+    $stored = $this->resources->storage($resource->name(), $context, $built)->load($built);
+    $stored = array_diff_key($stored, array_flip($this->knownIdentity($resource, $context)));
     return $this->inputDefinitions->withoutSecrets($stored, $this->inputDefinitions->secrets($built));
   }
 
@@ -240,7 +240,7 @@ final class OperationInputs {
    * what its storage loads now; one that creates has nothing stored, and
    * keeps the declared defaults.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $surface
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
    * @param \Drupal\data_surface\DataSurfaceInterface $built
    *   The built resource, in the context.
@@ -251,11 +251,11 @@ final class OperationInputs {
    *   The map: the resource's keys less the identity keys the context
    *   knows, each required as the resource says.
    */
-  public function values(ResourceDefinition $surface, DataSurfaceInterface $built, OperationContext $context): MapInputDefinition {
-    $map = $this->map($surface, $built, $this->knownIdentity($surface, $context));
+  public function values(ResourceDefinition $resource, DataSurfaceInterface $built, OperationContext $context): MapInputDefinition {
+    $map = $this->map($resource, $built, $this->knownIdentity($resource, $context));
     if (!$context->creates) {
       // Decision: see docs/decisions.md#required-is-the-resources-and-a-listing-carries-no-stored-value.
-      $this->inputDefinitions->withStored($map, $built, $this->resources->storage($surface->name(), $context, $built)->load($built));
+      $this->inputDefinitions->withStored($map, $built, $this->resources->storage($resource->name(), $context, $built)->load($built));
     }
     return $map;
   }
@@ -268,7 +268,7 @@ final class OperationInputs {
    * out keeps what is stored rather than taking a default, and a listing
    * is cached where a stored value would go stale unseen.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $surface
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
@@ -279,16 +279,16 @@ final class OperationInputs {
    * @return \Drupal\tool\TypedData\MapInputDefinition
    *   The map.
    */
-  protected function declaredValues(ResourceDefinition $surface, OperationDefinition $operation, ?DataSurfaceInterface $neutral): MapInputDefinition {
+  protected function declaredValues(ResourceDefinition $resource, OperationDefinition $operation, ?DataSurfaceInterface $neutral): MapInputDefinition {
     if ($operation->needsNothing()) {
-      $context = $this->resources->operation($surface->name(), $operation->id);
-      $map = $this->map($surface, $this->resources->build($surface->name(), $context), $this->knownIdentity($surface, $context));
+      $context = $this->resources->operation($resource->name(), $operation->id);
+      $map = $this->map($resource, $this->resources->build($resource->name(), $context), $this->knownIdentity($resource, $context));
     }
     else {
       // Decision: see docs/decisions.md#identity-before-the-parameters.
-      $map = $this->map($surface, $neutral ?? $this->resources->build($surface->name(), new OperationContext($operation->id)), $this->suppliedIdentity($surface, $operation));
+      $map = $this->map($resource, $neutral ?? $this->resources->build($resource->name(), new OperationContext($operation->id)), $this->suppliedIdentity($resource, $operation));
     }
-    if ($this->changesWhatExists($surface, $operation)) {
+    if ($this->changesWhatExists($resource, $operation)) {
       // Decision: see docs/decisions.md#required-is-the-resources-and-a-listing-carries-no-stored-value.
       $this->inputDefinitions->withoutDefaults($map);
     }
@@ -303,7 +303,7 @@ final class OperationInputs {
    * creating; one that needs a subject, by its parameters naming one
    * thing whole.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $surface
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
@@ -311,17 +311,17 @@ final class OperationInputs {
    * @return bool
    *   TRUE when a key left out keeps what is stored.
    */
-  public function changesWhatExists(ResourceDefinition $surface, OperationDefinition $operation): bool {
+  public function changesWhatExists(ResourceDefinition $resource, OperationDefinition $operation): bool {
     if (!$operation->needsNothing()) {
-      return $operation->namesOneThing($surface->identity);
+      return $operation->namesOneThing($resource->identity);
     }
-    return !$this->resources->operation($surface->name(), $operation->id)->creates;
+    return !$this->resources->operation($resource->name(), $operation->id)->creates;
   }
 
   /**
    * Builds the resource in a context that knows nothing, when needed.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $surface
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
@@ -330,14 +330,14 @@ final class OperationInputs {
    *   The built resource, in a context that knows the operation's id and
    *   nothing else, or NULL for an operation that takes no parameters.
    */
-  protected function neutral(ResourceDefinition $surface, OperationDefinition $operation): ?DataSurfaceInterface {
-    return $operation->parameters === [] ? NULL : $this->resources->build($surface->name(), new OperationContext($operation->id));
+  protected function neutral(ResourceDefinition $resource, OperationDefinition $operation): ?DataSurfaceInterface {
+    return $operation->parameters === [] ? NULL : $this->resources->build($resource->name(), new OperationContext($operation->id));
   }
 
   /**
    * Converts the operation's parameters into tool inputs.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $surface
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
@@ -350,13 +350,13 @@ final class OperationInputs {
    * @throws \LogicException
    *   When a parameter cannot be an input.
    */
-  protected function parameterInputs(ResourceDefinition $surface, OperationDefinition $operation, ?DataSurfaceInterface $neutral): array {
+  protected function parameterInputs(ResourceDefinition $resource, OperationDefinition $operation, ?DataSurfaceInterface $neutral): array {
     $inputs = [];
     foreach ($operation->parameters as $parameter) {
       if (in_array($parameter->name, [self::VALUES, self::DRY_RUN], TRUE)) {
-        throw new \LogicException(sprintf('The "%s" operation of the %s resource takes $%s, which is the name of an input every resource tool has.', $operation->id, $surface->id, $parameter->name));
+        throw new \LogicException(sprintf('The "%s" operation of the %s resource takes $%s, which is the name of an input every resource tool has.', $operation->id, $resource->id, $parameter->name));
       }
-      $inputs[$parameter->name] = $this->parameterInput($parameter, $surface, $operation, $neutral);
+      $inputs[$parameter->name] = $this->parameterInput($parameter, $resource, $operation, $neutral);
     }
     return $inputs;
   }
@@ -364,7 +364,7 @@ final class OperationInputs {
   /**
    * Lists the identity keys a context knows.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $surface
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
    * @param \Drupal\data_surface\Resource\OperationContext $context
    *   The context.
@@ -372,14 +372,14 @@ final class OperationInputs {
    * @return string[]
    *   The identity keys it knows, which are no values.
    */
-  protected function knownIdentity(ResourceDefinition $surface, OperationContext $context): array {
-    return array_keys(array_intersect_key($context->known, array_flip($surface->identity)));
+  protected function knownIdentity(ResourceDefinition $resource, OperationContext $context): array {
+    return array_keys(array_intersect_key($context->known, array_flip($resource->identity)));
   }
 
   /**
    * Converts a built resource into the `values` input.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $surface
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
    * @param \Drupal\data_surface\DataSurfaceInterface $built
    *   The built resource.
@@ -389,11 +389,11 @@ final class OperationInputs {
    * @return \Drupal\tool\TypedData\MapInputDefinition
    *   The map, required when any of its properties is.
    */
-  protected function map(ResourceDefinition $surface, DataSurfaceInterface $built, array $known): MapInputDefinition {
+  protected function map(ResourceDefinition $resource, DataSurfaceInterface $built, array $known): MapInputDefinition {
     $map = $this->inputDefinitions->fromSurface(
       $built,
-      $this->t('@surface values', ['@surface' => $surface->id]),
-      $this->t('The values, as the @surface resource describes them: every key it takes that the operation does not already know, including those other modules add, with its label, its meaning and the values it allows.', ['@surface' => $surface->id]),
+      $this->t('@resource values', ['@resource' => $resource->id]),
+      $this->t('The values, as the @resource resource describes them: every key it takes that the operation does not already know, including those other modules add, with its label, its meaning and the values it allows.', ['@resource' => $resource->id]),
     );
     $properties = array_diff_key($map->getPropertyDefinitions(), array_flip($known));
     $map->setPropertyDefinitions($properties);
@@ -404,7 +404,7 @@ final class OperationInputs {
   /**
    * Gets the tool's outputs for one resource.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $surface
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
@@ -413,7 +413,7 @@ final class OperationInputs {
    *   `values`, `committed` and `prepared`, then the resource's own outputs
    *   whose names do not collide with those three.
    */
-  public function outputs(ResourceDefinition $surface, OperationDefinition $operation): array {
+  public function outputs(ResourceDefinition $resource, OperationDefinition $operation): array {
     $outputs = [
       self::VALUES => new OutputDefinition(
         data_type: 'map',
@@ -432,17 +432,17 @@ final class OperationInputs {
         required: FALSE,
       ),
     ];
-    if (!$surface->hasOutputs()) {
+    if (!$resource->hasOutputs()) {
       return $outputs;
     }
-    $built = $this->resources->build($surface->name(), new OperationContext($operation->id));
+    $built = $this->resources->build($resource->name(), new OperationContext($operation->id));
     return $outputs + $this->inputDefinitions->outputsFromSurface($built);
   }
 
   /**
    * Describes the tool for one operation.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $surface
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
@@ -450,20 +450,20 @@ final class OperationInputs {
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup
    *   The description.
    */
-  public function description(ResourceDefinition $surface, OperationDefinition $operation): TranslatableMarkup {
-    if ($this->changesWhatExists($surface, $operation)) {
-      return $this->t('@label: the "@operation" operation of the @surface resource. @needs The values input is the resource itself, less what the operation already knows: every setting it takes, including those other modules add, with its label, its meaning and the values it allows. A key left out keeps its current value; @read returns the current values.', [
+  public function description(ResourceDefinition $resource, OperationDefinition $operation): TranslatableMarkup {
+    if ($this->changesWhatExists($resource, $operation)) {
+      return $this->t('@label: the "@operation" operation of the @resource resource. @needs The values input is the resource itself, less what the operation already knows: every setting it takes, including those other modules add, with its label, its meaning and the values it allows. A key left out keeps its current value; @read returns the current values.', [
         '@label' => (string) $operation->label,
         '@operation' => $operation->id,
-        '@surface' => $surface->id,
+        '@resource' => $resource->id,
         '@needs' => $this->needs($operation),
-        '@read' => self::TOOL . ':' . $surface->id . ':' . $operation->id . ResourceOperationReadTool::SUFFIX,
+        '@read' => self::TOOL . ':' . $resource->id . ':' . $operation->id . ResourceOperationReadTool::SUFFIX,
       ]);
     }
-    return $this->t('@label: the "@operation" operation of the @surface resource. @needs The values input is the resource itself, less what the operation already knows: every setting it takes, including those other modules add, with its label, its meaning and the values it allows.', [
+    return $this->t('@label: the "@operation" operation of the @resource resource. @needs The values input is the resource itself, less what the operation already knows: every setting it takes, including those other modules add, with its label, its meaning and the values it allows.', [
       '@label' => (string) $operation->label,
       '@operation' => $operation->id,
-      '@surface' => $surface->id,
+      '@resource' => $resource->id,
       '@needs' => $this->needs($operation),
     ]);
   }
@@ -471,7 +471,7 @@ final class OperationInputs {
   /**
    * Describes the read tool for one operation.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $surface
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
@@ -479,11 +479,11 @@ final class OperationInputs {
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup
    *   The description.
    */
-  public function readDescription(ResourceDefinition $surface, OperationDefinition $operation): TranslatableMarkup {
-    return $this->t('Reads what is stored for @label: the "@operation" operation of the @surface resource, and writes nothing. @needs The values output is the resource itself, less what the operation already knows, in the shape the write tool takes, so a caller can read what is there before changing it. A secret is never returned.', [
+  public function readDescription(ResourceDefinition $resource, OperationDefinition $operation): TranslatableMarkup {
+    return $this->t('Reads what is stored for @label: the "@operation" operation of the @resource resource, and writes nothing. @needs The values output is the resource itself, less what the operation already knows, in the shape the write tool takes, so a caller can read what is there before changing it. A secret is never returned.', [
       '@label' => (string) $operation->label,
       '@operation' => $operation->id,
-      '@surface' => $surface->id,
+      '@resource' => $resource->id,
       '@needs' => $this->needs($operation),
     ]);
   }
@@ -510,7 +510,7 @@ final class OperationInputs {
    *
    * @param \Drupal\data_surface\ResourceBuild\OperationParameter $parameter
    *   The parameter.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $surface
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource, for messages.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
    *   The operation, for messages.
@@ -524,12 +524,12 @@ final class OperationInputs {
    * @throws \LogicException
    *   When the parameter takes an object no single entity type is.
    */
-  protected function parameterInput(OperationParameter $parameter, ResourceDefinition $surface, OperationDefinition $operation, ?DataSurfaceInterface $neutral = NULL): InputDefinitionInterface {
+  protected function parameterInput(OperationParameter $parameter, ResourceDefinition $resource, OperationDefinition $operation, ?DataSurfaceInterface $neutral = NULL): InputDefinitionInterface {
     $label = ucfirst(str_replace('_', ' ', $parameter->name));
     if ($parameter->takesObject()) {
       $entity_type_id = $this->operationArguments->entityTypeOf($parameter);
       if ($entity_type_id === NULL) {
-        throw new \LogicException(sprintf('The "%s" operation of the %s resource takes %s, which no tool can send: it is no single entity type.', $operation->id, $surface->id, $parameter->describe()));
+        throw new \LogicException(sprintf('The "%s" operation of the %s resource takes %s, which no tool can send: it is no single entity type.', $operation->id, $resource->id, $parameter->describe()));
       }
       return new InputDefinition(
         data_type: 'string',
@@ -558,7 +558,7 @@ final class OperationInputs {
   /**
    * Reads the identity keys an operation knows off its signature.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $surface
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
@@ -566,18 +566,18 @@ final class OperationInputs {
    * @return string[]
    *   The identity keys its parameters supply.
    */
-  protected function suppliedIdentity(ResourceDefinition $surface, OperationDefinition $operation): array {
+  protected function suppliedIdentity(ResourceDefinition $resource, OperationDefinition $operation): array {
     $named = [];
     $subject = FALSE;
     foreach ($operation->parameters as $parameter) {
       if ($parameter->takesObject()) {
         $subject = TRUE;
       }
-      elseif (in_array($parameter->name, $surface->identity, TRUE)) {
+      elseif (in_array($parameter->name, $resource->identity, TRUE)) {
         $named[] = $parameter->name;
       }
     }
-    return $subject ? $surface->identity : $named;
+    return $subject ? $resource->identity : $named;
   }
 
 }

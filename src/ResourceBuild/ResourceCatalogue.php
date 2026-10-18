@@ -140,7 +140,7 @@ final class ResourceCatalogue {
    * operation whose permission could never be named could never be
    * allowed.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $surface
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource or structure.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
@@ -150,8 +150,8 @@ final class ResourceCatalogue {
    * @return bool
    *   TRUE when it can be asked on its own.
    */
-  public static function standalone(ResourceDefinition $surface, OperationDefinition $operation, array $plugins): bool {
-    return $surface->storage !== NULL && $plugins === [] && $operation->unresolvablePlaceholders() === [];
+  public static function standalone(ResourceDefinition $resource, OperationDefinition $operation, array $plugins): bool {
+    return $resource->storage !== NULL && $plugins === [] && $operation->unresolvablePlaceholders() === [];
   }
 
   /**
@@ -164,7 +164,7 @@ final class ResourceCatalogue {
    * whole (OperationDefinition::namesOneThing()), because the context is
    * not there to ask until a caller names the subject.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $surface
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource or structure.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
@@ -174,20 +174,20 @@ final class ResourceCatalogue {
    * @return bool
    *   TRUE when what it changes can be read on its own.
    */
-  public function reads(ResourceDefinition $surface, OperationDefinition $operation, array $plugins): bool {
-    if (!static::standalone($surface, $operation, $plugins)) {
+  public function reads(ResourceDefinition $resource, OperationDefinition $operation, array $plugins): bool {
+    if (!static::standalone($resource, $operation, $plugins)) {
       return FALSE;
     }
     if (!$operation->needsNothing()) {
-      return $operation->namesOneThing($surface->identity);
+      return $operation->namesOneThing($resource->identity);
     }
-    return $this->creates($surface, $operation) === FALSE;
+    return $this->creates($resource, $operation) === FALSE;
   }
 
   /**
    * Answers whether an operation creates, when it can be asked unaided.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $surface
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource or structure.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
@@ -197,12 +197,12 @@ final class ResourceCatalogue {
    *   or cannot be asked (a clash, a context for another operation),
    *   which building it reports.
    */
-  protected function creates(ResourceDefinition $surface, OperationDefinition $operation): ?bool {
+  protected function creates(ResourceDefinition $resource, OperationDefinition $operation): ?bool {
     if (!$operation->needsNothing()) {
       return NULL;
     }
     try {
-      return $this->resources->operation($surface->name(), $operation->id)->creates;
+      return $this->resources->operation($resource->name(), $operation->id)->creates;
     }
     catch (\LogicException | \InvalidArgumentException) {
       return NULL;

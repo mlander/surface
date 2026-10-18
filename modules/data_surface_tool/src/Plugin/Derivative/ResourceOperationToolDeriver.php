@@ -52,6 +52,13 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * its current value, which its read tool returns, and the definitions are
  * cached, so a stored value listed here would go stale unseen.
  *
+ * The operation's permission is the tool's declared permission, which
+ * the Tool API checks before the tool's own access and prints in
+ * `tool:info`, when it is one permission as written: one with a `%key`
+ * placeholder names a different permission for each thing it is asked
+ * of, so it is declared nowhere and the tool's own access, which fills
+ * the placeholder from the parameters, is the only check.
+ *
  * An operation that changes a thing that exists has a read tool beside
  * its write tool, `<resource id>:<operation id>:read`, of the class
  * ResourceOperationReadTool: its parameters as inputs, the stored values
@@ -112,35 +119,36 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
   public function getDerivativeDefinitions($base_plugin_definition) {
     assert($base_plugin_definition instanceof ToolDefinition);
     $this->derivatives = [];
-    foreach ($this->registry->getDefinitions() as $surface) {
+    foreach ($this->registry->getDefinitions() as $resource) {
       // A resource or structure with no storage of its own is stored by
       // its parent or by its host; one a plugin names with
       // #[UsesStructure] is configured through that plugin's host, which
       // holds the instance and supplies the storage. Neither is a tool of
       // its own.
-      $plugins = $this->plugins->usedBy($surface->name());
-      if ($surface->storage === NULL || $plugins !== []) {
+      $plugins = $this->plugins->usedBy($resource->name());
+      if ($resource->storage === NULL || $plugins !== []) {
         continue;
       }
       try {
-        $operations = $this->registry->getOperations($surface->name());
+        $operations = $this->registry->getOperations($resource->name());
       }
       catch (\LogicException $e) {
-        $this->skip($surface->id, $e);
+        $this->skip($resource->id, $e);
         continue;
       }
       foreach ($operations as $operation) {
-        if (!ResourceCatalogue::standalone($surface, $operation, $plugins)) {
+        if (!ResourceCatalogue::standalone($resource, $operation, $plugins)) {
           continue;
         }
-        $id = $surface->id . ':' . $operation->id;
+        $id = $resource->id . ':' . $operation->id;
         try {
           $definition = $this->definition(
             $base_plugin_definition,
             $this->t('@label', ['@label' => (string) $operation->label]),
-            $this->operationInputs->description($surface, $operation),
-            $this->operationInputs->inputs($surface, $operation),
-            $this->operationInputs->outputs($surface, $operation),
+            $this->operationInputs->description($resource, $operation),
+            $this->operationInputs->inputs($resource, $operation),
+            $this->operationInputs->outputs($resource, $operation),
+            $operation,
           );
           // Once the operation's parameters arrive, the values input is
           // the resource built in the operation's real context.
@@ -152,8 +160,8 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
           continue;
         }
         $this->derivatives[$id] = $definition;
-        if ($this->catalogue->reads($surface, $operation, $plugins)) {
-          $this->read($base_plugin_definition, $surface, $operation);
+        if ($this->catalogue->reads($resource, $operation, $plugins)) {
+          $this->read($base_plugin_definition, $resource, $operation);
         }
       }
     }
@@ -165,20 +173,21 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
    *
    * @param \Drupal\tool\Tool\ToolDefinition $base_plugin_definition
    *   The write tool's base definition.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $surface
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
    *   An operation that changes a thing that exists.
    */
-  protected function read(ToolDefinition $base_plugin_definition, ResourceDefinition $surface, OperationDefinition $operation): void {
-    $id = $surface->id . ':' . $operation->id . ResourceOperationReadTool::SUFFIX;
+  protected function read(ToolDefinition $base_plugin_definition, ResourceDefinition $resource, OperationDefinition $operation): void {
+    $id = $resource->id . ':' . $operation->id . ResourceOperationReadTool::SUFFIX;
     try {
       $definition = $this->definition(
         $base_plugin_definition,
         $this->t('@label, read only', ['@label' => (string) $operation->label]),
-        $this->operationInputs->readDescription($surface, $operation),
-        $this->operationInputs->parameters($surface, $operation),
-        $this->operationInputs->readOutputs($surface, $operation),
+        $this->operationInputs->readDescription($resource, $operation),
+        $this->operationInputs->parameters($resource, $operation),
+        $this->operationInputs->readOutputs($resource, $operation),
+        $operation,
       )
         ->setOperation(ToolOperation::Read)
         ->setDestructive(FALSE)
@@ -205,14 +214,17 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
    *   Its inputs, which replace the base definition's.
    * @param array<string, \Drupal\tool\TypedData\OutputDefinitionInterface> $outputs
    *   Its outputs, which replace the base definition's.
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation, whose permission the tool declares when it can.
    *
    * @return \Drupal\tool\Tool\ToolDefinition
    *   The definition.
    */
-  protected function definition(ToolDefinition $base_plugin_definition, TranslatableMarkup $label, TranslatableMarkup $description, array $inputs, array $outputs): ToolDefinition {
+  protected function definition(ToolDefinition $base_plugin_definition, TranslatableMarkup $label, TranslatableMarkup $description, array $inputs, array $outputs, OperationDefinition $operation): ToolDefinition {
     $definition = (clone $base_plugin_definition)
       ->setLabel($label)
-      ->setDescription($description);
+      ->setDescription($description)
+      ->setPermission(static::declaredPermission($operation));
     foreach (array_keys($definition->getInputDefinitions(TRUE)) as $name) {
       $definition->removeInputDefinition($name);
     }
@@ -226,6 +238,25 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
       $definition->addOutputDefinition($name, $output);
     }
     return $definition;
+  }
+
+  /**
+   * Answers the permission a tool can declare for an operation.
+   *
+   * The Tool API reads a declared permission as a route's `_permission`:
+   * a `,` or a `+` would join names the operation means as one, and a
+   * `%key` placeholder is filled per call, so neither is declared.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   *
+   * @return string|null
+   *   The operation's permission as written, or NULL when it has none or
+   *   it is not one fixed permission name.
+   */
+  public static function declaredPermission(OperationDefinition $operation): ?string {
+    $permission = $operation->permission;
+    return $permission === NULL || $permission === '' || strpbrk($permission, '%,+') !== FALSE ? NULL : $permission;
   }
 
   /**

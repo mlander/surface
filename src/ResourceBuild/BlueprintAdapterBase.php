@@ -106,7 +106,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * {@inheritdoc}
    */
   public function attach(string $key, string $child): MapDataDefinition {
-    $shell = $this->reserveSubsurface('attach', $key);
+    $shell = $this->reserveChild('attach', $key);
     $this->attachments[$key] = $child;
     return $shell;
   }
@@ -301,7 +301,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * @throws \LogicException
    *   When the key is taken, or this blueprint cannot hold a child.
    */
-  protected function reserveSubsurface(string $verb, string $key): MapDataDefinition {
+  protected function reserveChild(string $verb, string $key): MapDataDefinition {
     if ($this->outputs) {
       throw new \LogicException(sprintf('%s() cannot place a child at the output "%s": outputs do not hold attached structures yet.', $verb, $key));
     }

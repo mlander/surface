@@ -137,7 +137,7 @@ default.
 A resource names its storage with `#[Resource(storage:)]`, a
 `Resource\ResourceStorageInterface` with the same three verbs over the
 context instead of the data surface: `load($context)`,
-`prepare($context, $values)`, which returns the storage-shaped array
+`prepare($context, $values)`, which returns the array in storage layout
 after storage's own checks, and `commit($context, $prepared)`. It loads
 by the identity the context knows, so the context never carries an
 entity, and creates or updates by whether the context creates.
@@ -216,9 +216,9 @@ calls with nothing but a context.
 
 ## Prepare and commit are separate, and that is the whole design
 
-`prepare()` writes nothing. It shapes, it validates against whatever the
-storage itself has an opinion about (a config schema, usually), and it
-hands back the artifact a commit would store. So a caller can preview a
+`prepare()` writes nothing. It lays the values out, it validates
+against whatever the storage itself has an opinion about (a config
+schema, usually), and it hands back the artifact a commit would store. So a caller can preview a
 submission, diff it, show it, or throw it away without anything having
 happened.
 

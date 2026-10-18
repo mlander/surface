@@ -10,7 +10,7 @@ caller agree about what was accepted.
 
 This module is that place. A *resource* (a thing with identity and
 storage that operations read and write: a content type, a field) or a
-*structure* (a shape with members that only something else holds: a
+*structure* (a group of keys that only something else holds: a
 block's settings) is declared once as a class, built in a context,
 sealed into a data surface, and then read: a generated form renders it,
 a pipeline accepts and validates values against it, and storage writes
@@ -28,7 +28,12 @@ dependency.
 The rule the module holds itself to is that refinement may only *narrow*.
 Whatever a data surface advertises when it is sealed stays true of
 everything it accepts afterwards, so a caller that read it once, or a
-machine-readable contract emitted from it, is never contradicted later.
+machine-readable contract emitted from it, is never contradicted later,
+with one qualifier: the schema for a set of answers is exact for them,
+and the full schema, written for any answers, marks what only the
+runtime can settle (`dynamic`, `runtime`, `checkedOnServer`), where the
+pipeline may still refuse what the schema allows
+([the served contract](docs/served-contract.md#two-documents)).
 That is the property that makes a data surface worth having over a form
 array, and it is the property the module exists to prove out for
 [the core issue behind it](https://www.drupal.org/project/drupal/issues/3622144).
@@ -93,7 +98,7 @@ final class TeaserBlock extends DataSurfaceBlockBase {
 ```
 
 The structure class goes in the module's `src/Structure/`, where it is
-discovered; nothing is registered by hand. Its shape is static, asked
+discovered; nothing is registered by hand. Its declaration is static, asked
 of the class, so it is never constructed, and its labels are `t()`.
 A small plugin can also be its own structure: `#[UsesStructure]` with no
 argument, and the same static `defineInputs()` on the block class
@@ -123,13 +128,13 @@ would have shown.
 
 ## Glossary
 
-The module uses these twelve words in exactly one sense each.
+The module uses these fourteen words in exactly one sense each.
 
 - **Resource**: a thing with identity and storage that operations read
   and write; the form, the tool and the schema are derived from it.
   Declared as a class carrying `#[Resource(id, identity:, storage:,
   access:)]`. A resource with no identity keys is a singleton.
-- **Structure**: a shape with members and no identity or storage of its
+- **Structure**: a group of keys with no identity or storage of its
   own, only ever held by something else: attached to a parent, filling a
   slot as a variant, or configuring a plugin, whose host supplies the
   operation and the storage. Declared as a class carrying
@@ -140,6 +145,13 @@ The module uses these twelve words in exactly one sense each.
   that narrow them. Once sealed it is only read. It has two halves: what
   a host **accepts**, and what its execution **emits**, declared in the
   same vocabulary (see [Outputs](docs/outputs.md)).
+- **Blueprint**: what a resource or structure declares its keys into,
+  handed to `defineInputs()` and `defineOutputs()` as a
+  `BlueprintInterface`; an alter gets the add-only
+  `BlueprintAdditionsInterface`. Filled once at build, then sealed.
+- **Layout**: how a storage lays accepted values out where that differs
+  from how they are asked for, a `SettingsLayoutInterface`; an alter
+  hands one for its mount with `HasStorageLayoutInterface::storageLayout()`.
 - **Definition**: one core `DataDefinitionInterface` describing a single
   value: its type, label, description, constraints, whether it is
   required, and the interim default and example metadata the module
@@ -152,8 +164,8 @@ The module uses these twelve words in exactly one sense each.
   that validates a value and the list that is offered as form options are
   the same list, derived rather than repeated.
 - **Storage**: where accepted values are written, and the place that
-  knows the distance between the layout a resource describes and the
-  layout the store wants. A resource names its storage class, a
+  knows the distance between how a resource asks for its values and
+  how the store lays them out (a layout). A resource names its storage class, a
   `ResourceStorageInterface` with `load()`, `prepare()` (rehearse the
   write, no side effects) and `commit()`; a plugin's host supplies one of
   the engine's (plugin configuration, field settings) for what it holds.
@@ -182,7 +194,8 @@ The module uses these twelve words in exactly one sense each.
   as `configure`), whether it creates, which identity keys are known, and
   any narrowing, starting values or child contexts the operation adds.
   Built by an operation (or bare, by a plugin host), applied once by the
-  build step, and never seen by a shape method or a refiner.
+  build step, and never seen by a method that fills a blueprint or by a
+  refiner.
 - **Alter**: another module's class in its `src/Alter/`, carrying
   `#[Alters]`. It adds keys to a resource or structure (mounted under
   `third_party_settings.<module>`), rewords a label with `describe()`,
@@ -257,7 +270,7 @@ their configuration may change without a deprecation path.
   an operation as JSON Schema 2020-12 with an `x-surface` extension, a
   refine endpoint that re-narrows it as answers change, a validate
   endpoint that rehearses the write, and a React app that renders the
-  form from it at `/surface-react/{surface}/{situation}`. Its built app
+  form from it at `/surface-react/{resource}/{operation}`. Its built app
   is committed, so it needs no Node.
 
 Each submodule's README says what it shows, how to try it, and what gates

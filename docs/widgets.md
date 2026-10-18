@@ -31,9 +31,9 @@ value tree is already in the definition's clean shape.
 ## Applicability is an instance method
 
 `isApplicable()` is deliberately not static. A widget may have to ask a
-collaborator before it can answer — the options widget asks the options
+collaborator before it can answer (the options widget asks the options
 service whether the definition's constraints name a list that is not
-empty — and a static answer would have to reach the container to do it.
+empty), and a static answer would have to reach the container to do it.
 
 The manager instantiates every widget once, in ascending weight order,
 and asks each in turn; the first that says yes wins. So a specialized
@@ -46,7 +46,7 @@ definition for the rest of the request.
 By returning `FALSE` from `isApplicable()`. There is no other way to opt
 out, and there is no fallback widget: a definition no widget claims
 throws at build time rather than rendering as something approximate. An
-unrefined `any` key is the case you will meet first — no widget claims
+unrefined `any` key is the case you will meet first: no widget claims
 it, because guessing an element for a type that says nothing would be a
 guess about the contract.
 
@@ -95,9 +95,9 @@ so a refusal says what the `Range`, and any message a refiner gave it,
 says ([decision](decisions.md#an-element-hints-and-the-rule-speaks)). A select offers an empty option by [the empty
 option rule](decisions.md#the-empty-option-rule): always when optional,
 and when required only while no valid choice is selected. The string
-widget picks its element type from the definition — `textarea` when the
+widget picks its element type from the definition (`textarea` when the
 definition carries the `multiline` type setting, otherwise `email`,
-`url` or `textfield` from the data type — and both the string and number
+`url` or `textfield` from the data type), and both the string and number
 widgets render a definition's first declared example as `#placeholder`,
 which is how a valid value is shown before it is typed rather than after
 validation fails. A textarea gets neither `#maxlength` nor
@@ -116,8 +116,8 @@ those is missing is in
 ## Extraction returns raw shapes
 
 A widget **does not coerce**. `extractValue()` hands back the raw
-submitted value in the definition's shape — a scalar for a primitive
-definition, an array keyed by property name for a complex one — and the
+submitted value in the definition's shape (a scalar for a primitive
+definition, an array keyed by property name for a complex one), and the
 pipeline's `accept()` casts it.
 
 This is not a division of labor for its own sake. Casting in the widgets
@@ -135,16 +135,17 @@ elements, as the map widget does, overrides `extractValue()`.
 
 Form API assigns `#parents` from the root of the complete form, so they
 are absolute, while a subform state reads values relative to the fragment
-it wraps. A host that hands its plugin a subform state — a block's
+it wraps. A host that hands its plugin a subform state (a block's
 settings, built with `SubformState::createForSubform()`, is the common
-case — would therefore have every value looked up one level too deep and
+case) would therefore have every value looked up one level too deep and
 come back `NULL`, which the data surface reports as "not configured": a
 spurious violation for a required key, and a stored value silently
 replaced by nothing for an optional one.
 
-`DataSurfaceWidgetBase::rawValue()` handles it, and a widget that
-overrides `extractValue()` should go through it rather than reading
-`$form_state` directly. An absolute path is read against the complete
+`DataSurfaceWidgetBase::rawValue()` handles it ([the SubformState
+lesson](forms.md#the-subformstate-lesson) is the whole story), and a
+widget that overrides `extractValue()` should go through it rather than
+reading `$form_state` directly. An absolute path is read against the complete
 form state it is absolute in; an element with no `#parents` has not been
 processed at all (programmatic use, kernel tests) and is read at
 `$fallback_parents`, relative to the state handed over.
@@ -174,8 +175,8 @@ final class ColorWidget extends DataSurfaceWidgetBase {
 }
 ```
 
-`baseElement()` supplies what every element wants from a definition —
-`#title`, `#description`, `#required` — so a widget only adds the part
+`baseElement()` supplies what every element wants from a definition
+(`#title`, `#description`, `#required`), so a widget only adds the part
 that is its own. The attribute takes `id`, `label`, `weight`, and
 optionally a `deriver`, as every core plugin attribute does.
 

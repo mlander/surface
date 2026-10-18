@@ -17,12 +17,12 @@ use Drupal\data_surface\Pipeline\UnknownKeysException;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface\Collection;
-use Drupal\data_surface_surface_test\Structure\Broken\NarrowsListItemsStructure;
-use Drupal\data_surface_surface_test\Structure\Broken\RefinesListItemKeyStructure;
-use Drupal\data_surface_surface_test\Structure\Broken\WatchesListStructure;
-use Drupal\data_surface_surface_test\Resource\Cellar\CellarResource;
-use Drupal\data_surface_surface_test\Resource\Larder\SpiceRackResource;
-use Drupal\data_surface_surface_test\Storage\CellarStorage;
+use Drupal\data_surface_resource_test\Structure\Broken\NarrowsListItemsStructure;
+use Drupal\data_surface_resource_test\Structure\Broken\RefinesListItemKeyStructure;
+use Drupal\data_surface_resource_test\Structure\Broken\WatchesListStructure;
+use Drupal\data_surface_resource_test\Resource\Cellar\CellarResource;
+use Drupal\data_surface_resource_test\Resource\Larder\SpiceRackResource;
+use Drupal\data_surface_resource_test\Storage\CellarStorage;
 use Drupal\data_surface_tool\Plugin\tool\Tool\ResourceOperationTool;
 use Drupal\data_surface_tool\OperationInputs;
 use Drupal\Tests\data_surface\Traits\ContractValidationTrait;
@@ -46,7 +46,7 @@ use Symfony\Component\HttpFoundation\Request;
  * shape, the build, refinement, the pipeline, both contracts, the write
  * and read tools, and the stale rule.
  *
- * @see \Drupal\data_surface_surface_test\Resource\Cellar\CellarResource
+ * @see \Drupal\data_surface_resource_test\Resource\Cellar\CellarResource
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -58,12 +58,12 @@ class CollectionTest extends DataSurfaceKernelTestBase {
   /**
    * The write tool for the cellar's edit operation.
    */
-  protected const TOOL = 'data_surface:surface_test.cellar:edit';
+  protected const TOOL = 'data_surface:resource_test.cellar:edit';
 
   /**
    * The read tool beside it.
    */
-  protected const READ_TOOL = 'data_surface:surface_test.cellar:edit:read';
+  protected const READ_TOOL = 'data_surface:resource_test.cellar:edit:read';
 
   /**
    * What the cellar holds before each test.
@@ -76,7 +76,7 @@ class CollectionTest extends DataSurfaceKernelTestBase {
       ['shelf' => 'top', 'spices' => 2, 'label' => 'Spare'],
     ],
     'shelves' => [
-      ['unit' => 'cm', 'height' => 120, 'third_party_settings' => ['data_surface_surface_test' => ['sturdy' => TRUE]]],
+      ['unit' => 'cm', 'height' => 120, 'third_party_settings' => ['data_surface_resource_test' => ['sturdy' => TRUE]]],
     ],
   ];
 
@@ -91,7 +91,7 @@ class CollectionTest extends DataSurfaceKernelTestBase {
     'tool',
     'data_surface',
     'data_surface_tool',
-    'data_surface_surface_test',
+    'data_surface_resource_test',
   ];
 
   /**
@@ -185,7 +185,7 @@ class CollectionTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($entry->isNested());
     $this->assertNull($entry->childFor([]));
     $this->assertSame(SpiceRackResource::class, $entry->list->item->source);
-    $this->assertSame('surface_test.larder.rack', $entry->list->item->id);
+    $this->assertSame('resource_test.larder.rack', $entry->list->item->id);
     // It starts with no items.
     $this->assertNull($edit->getDefault('racks'));
   }
@@ -259,7 +259,7 @@ class CollectionTest extends DataSurfaceKernelTestBase {
       $this->fail('A parent refiner watched its collection.');
     }
     catch (\LogicException $e) {
-      $this->assertStringContainsString('watches "racks", which is a collection in surface_test.broken.watches_list', $e->getMessage());
+      $this->assertStringContainsString('watches "racks", which is a collection in resource_test.broken.watches_list', $e->getMessage());
     }
     // And one that names a key inside an item names nothing it has.
     try {
@@ -267,7 +267,7 @@ class CollectionTest extends DataSurfaceKernelTestBase {
       $this->fail('A parent refiner named a key inside its collection\'s items.');
     }
     catch (\LogicException $e) {
-      $this->assertStringContainsString('refines "racks.spices", which surface_test.broken.refines_list_item_key does not declare as an input', $e->getMessage());
+      $this->assertStringContainsString('refines "racks.spices", which resource_test.broken.refines_list_item_key does not declare as an input', $e->getMessage());
     }
   }
 
@@ -402,11 +402,11 @@ class CollectionTest extends DataSurfaceKernelTestBase {
   protected function contract(DataSurfaceInterface $surface, bool $full = FALSE, string $operation = 'edit'): array {
     $emitter = $this->container->get('data_surface.contract_emitter');
     if ($full) {
-      return $emitter->emitFull($surface, 'surface_test.cellar', $operation)->document;
+      return $emitter->emitFull($surface, 'resource_test.cellar', $operation)->document;
     }
     $context = $this->resources()->operation(CellarResource::class, 'edit', ['larder' => 'main']);
     $stored = $this->resources()->storage(CellarResource::class, $context, $surface)->load($surface);
-    return $emitter->emit($surface, array_replace($surface->getDefaultValues(), $stored), 'surface_test.cellar', $operation)->document;
+    return $emitter->emit($surface, array_replace($surface->getDefaultValues(), $stored), 'resource_test.cellar', $operation)->document;
   }
 
   /**
@@ -419,14 +419,14 @@ class CollectionTest extends DataSurfaceKernelTestBase {
     $racks = $schema['properties']['racks'];
     $this->assertSame('Spice racks', $racks['title']);
     $this->assertSame(['array', 'null'], $racks['type']);
-    $this->assertSame(['$ref' => '#/$defs/surface_test.larder.rack'], $racks['items']);
+    $this->assertSame(['$ref' => '#/$defs/resource_test.larder.rack'], $racks['items']);
     $this->assertSame(1, $racks['minItems']);
     $this->assertSame(4, $racks['maxItems']);
     $this->assertTrue($racks['x-surface']['list']);
     $this->assertSame(['size'], $racks['x-surface']['dependsOn']);
     $this->assertFalse($racks['x-surface']['locked']);
-    $this->assertArrayHasKey('surface_test.larder.rack', $schema['$defs']);
-    $this->assertSame('#/$defs/surface_test.pantry.shelf', $schema['properties']['shelves']['items']['$ref']);
+    $this->assertArrayHasKey('resource_test.larder.rack', $schema['$defs']);
+    $this->assertSame('#/$defs/resource_test.pantry.shelf', $schema['properties']['shelves']['items']['$ref']);
     // The values carry every item, in order; the schema none of them.
     $this->assertSame(self::STORED['racks'], $document['values']['racks']);
     $this->assertSame(self::STORED['shelves'], $document['values']['shelves']);
@@ -436,7 +436,7 @@ class CollectionTest extends DataSurfaceKernelTestBase {
     // The full schema: the same array, the parent's Count per size.
     $full = $this->contract($edit, TRUE)['schema'];
     $racks = $full['properties']['racks'];
-    $this->assertSame(['$ref' => '#/$defs/surface_test.larder.rack'], $racks['items']);
+    $this->assertSame(['$ref' => '#/$defs/resource_test.larder.rack'], $racks['items']);
     $this->assertSame(4, $racks['maxItems']);
     $this->assertTrue($racks['x-surface']['list']);
     $this->assertTrue($racks['x-surface']['enumerated']);
@@ -464,7 +464,7 @@ class CollectionTest extends DataSurfaceKernelTestBase {
     $add = $this->resources()->buildOperation(CellarResource::class, 'add');
     foreach ([FALSE, TRUE] as $is_full) {
       $schema = $this->contract($add, $is_full, 'add')['schema'];
-      $this->assertSame(['$ref' => '#/$defs/surface_test.larder.rack'], $schema['properties']['racks']['items']);
+      $this->assertSame(['$ref' => '#/$defs/resource_test.larder.rack'], $schema['properties']['racks']['items']);
       $inline = SchemaResolver::inline($schema['properties']['racks'], $schema);
       $this->assertSame(10, $inline['items']['properties']['spices']['maximum']);
     }
@@ -478,7 +478,7 @@ class CollectionTest extends DataSurfaceKernelTestBase {
       $this->assertTrue($schema['properties']['racks']['x-surface']['locked']);
       // Every item differs from its def, the def being the rack as
       // declared: the items narrow it by composition.
-      $this->assertSame(['$ref' => '#/$defs/surface_test.larder.rack'], $schema['properties']['racks']['items']['allOf'][0]);
+      $this->assertSame(['$ref' => '#/$defs/resource_test.larder.rack'], $schema['properties']['racks']['items']['allOf'][0]);
       $inline = SchemaResolver::inline($schema['properties']['racks'], $schema);
       $this->assertTrue($inline['items']['properties']['spices']['readOnly']);
     }
@@ -604,11 +604,11 @@ class CollectionTest extends DataSurfaceKernelTestBase {
    *   The resource's part of the built form.
    */
   protected function form(array $input = []): array {
-    $route = $this->container->get('router.route_provider')->getRouteByName('data_surface_surface_test.cellar.edit');
+    $route = $this->container->get('router.route_provider')->getRouteByName('data_surface_resource_test.cellar.edit');
     $stack = $this->container->get('request_stack');
     $request = Request::create('/surface-test/cellar/main');
     $request->setSession($stack->getSession());
-    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, 'data_surface_surface_test.cellar.edit');
+    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, 'data_surface_resource_test.cellar.edit');
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     $request->attributes->set('larder', 'main');
     $request->attributes->set('_raw_variables', new InputBag(['larder' => 'main']));

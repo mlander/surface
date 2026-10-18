@@ -73,7 +73,7 @@ Three states, and the middle one is the one worth being careful about.
 | --- | --- | --- |
 | The key is missing | The producer has nothing to say about it on this run. | The output is not required. |
 | The key holds `Omitted::value()` | The same thing, said from inside an array literal. Conformance strips it before anything else looks. | The output is not required. |
-| The key holds `NULL` | `NULL` **is** the value. It is emitted, and it is checked against the definition like `0` or the empty string. | The definition accepts it — so never for a required output. |
+| The key holds `NULL` | `NULL` **is** the value. It is emitted, and it is checked against the definition like `0` or the empty string. | The definition accepts it, so never for a required output. |
 
 `Pipeline\Omitted` exists because PHP has no way to leave a key out of
 an array expression, and the readable shape of a producer is one
@@ -94,7 +94,7 @@ libraries reach for with their own missing-value markers.
 
 The sentinel is a singleton and is recognized by identity, so nothing a
 producer could legitimately emit is mistaken for it. Stripping reaches
-every depth — a map output's properties are outputs too — and closes
+every depth (a map output's properties are outputs too) and closes
 the gap an omitted list item leaves, because a list with a hole in it
 is not a shape any consumer expects.
 
@@ -123,8 +123,8 @@ integer was declared is a bug in the producer and reporting it is the
 point. That is stricter than core's own `PrimitiveType` constraint,
 which asks whether a value *could be* the type, and deliberately so: the
 question here is what a consumer will actually be handed. The strict
-check covers the plain scalar types — integer, float,
-boolean, string, email, uri — and leaves everything else alone, because
+check covers the plain scalar types (integer, float,
+boolean, string, email, uri) and leaves everything else alone, because
 a rule this module never defined would be a guess. An integer where a
 float was declared is the one widening allowed, since every integer is
 that float exactly.
@@ -144,9 +144,9 @@ it.
 public function formatValue(FieldItemInterface $item, array $settings): array;
 ```
 
-The pure data step — no render array, no theme, no markup — returning
-output-shaped data per delta. `viewElements()` in the base then
-assembles one element per delta from a small published vocabulary:
+The pure data step, with no render array, no theme and no markup: it
+returns the formatter's outputs, one array per delta.
+`viewElements()` in the base then assembles one element per delta from a small published vocabulary:
 
 | Key | Renders as |
 | --- | --- |
@@ -156,8 +156,8 @@ assembles one element per delta from a small published vocabulary:
 
 A formatter whose markup is not one wrapper around one string overrides
 `viewElements()` as it always did. The split is still worth having,
-because the data step stays separately callable — by a test, by a JSON
-representation, by an agent asking what this formatter would show — and
+because the data step stays separately callable (by a test, by a JSON
+representation, by an agent asking what this formatter would show) and
 separately checkable against the contract.
 
 The demo formatter is the worked example: it is its own structure, and
@@ -170,9 +170,9 @@ outputs are never refined.
 ### The tool bridge
 
 `InputDefinitions::outputsFromSurface()` converts an output map
-into the Tool API's output definitions — `OutputDefinition`, and
-`ListOutputDefinition` or `MapOutputDefinition` for structure — rather
-than input definitions: an output is
+into the Tool API's output definitions (`OutputDefinition`, and
+`ListOutputDefinition` or `MapOutputDefinition` for a list or a map)
+rather than input definitions: an output is
 never rendered as a form element, never refined by a caller's other
 answers, and never locked.
 
@@ -204,8 +204,8 @@ public function alterOutputs(BlueprintAdditionsInterface $outputs): void {
 ```
 
 What the alter adds is mounted under its module's name, so the value
-lands at `third_party_outputs.my_module.badge` — advertised,
-conformance checked, and machine-visible — and cannot collide with the
+lands at `third_party_outputs.my_module.badge` (advertised,
+conformance checked, and machine-visible) and cannot collide with the
 owner's outputs or with another contributor's. The owner may not declare
 an output of that name; the key belongs to whoever mounts under it. An
 alter cannot offer more values on an output with `extendChoices()`:

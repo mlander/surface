@@ -50,14 +50,14 @@ use Drupal\data_surface\DefinitionMetadata;
  * that is meant to be a pure function, for one flag that is already
  * known wherever a layout is built.
  *
- * So the provider that knows its data surface hands the list over, and
+ * So the storage that knows its data surface hands the list over, and
  * `forSurface()` is the two-line way to read it off one.
  *
  * ## Values already in storage
  *
  * A key declared secret today has values in storage from yesterday, in
- * plaintext. `fromStorage()` hands those to the pipeline unchanged — the
- * codec's `isEncrypted()` is what tells them apart — so nothing breaks
+ * plaintext. `fromStorage()` hands those to the pipeline unchanged (the
+ * codec's `isEncrypted()` is what tells them apart), so nothing breaks
  * on the read side, and `toStorage()` enciphers them on the next write.
  * Migration is therefore the next save of each affected thing, with no
  * update hook and no scan. What it is not is retroactive: until that

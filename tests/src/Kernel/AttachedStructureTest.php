@@ -18,14 +18,14 @@ use Drupal\data_surface\Attachment;
 use Drupal\data_surface\ResourceBuild\ResourceBlueprint;
 use Drupal\data_surface\ResourceBuild\ResourceBlueprintAdditions;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
-use Drupal\data_surface_surface_test\Structure\Pantry\JarStructure;
-use Drupal\data_surface_surface_test\Resource\Pantry\LabelResource;
-use Drupal\data_surface_surface_test\Resource\Pantry\PantryResource;
-use Drupal\data_surface_surface_test\Structure\Pantry\ShelfStructure;
-use Drupal\data_surface_surface_test\Resource\Pantry\TinResource;
-use Drupal\data_surface_surface_test\Storage\PantryLabelStorage;
-use Drupal\data_surface_surface_test\Storage\PantryStorage;
-use Drupal\data_surface_surface_test\Storage\PantryTinStorage;
+use Drupal\data_surface_resource_test\Structure\Pantry\JarStructure;
+use Drupal\data_surface_resource_test\Resource\Pantry\LabelResource;
+use Drupal\data_surface_resource_test\Resource\Pantry\PantryResource;
+use Drupal\data_surface_resource_test\Structure\Pantry\ShelfStructure;
+use Drupal\data_surface_resource_test\Resource\Pantry\TinResource;
+use Drupal\data_surface_resource_test\Storage\PantryLabelStorage;
+use Drupal\data_surface_resource_test\Storage\PantryStorage;
+use Drupal\data_surface_resource_test\Storage\PantryTinStorage;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -40,7 +40,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * ResourceBuildTest; what passes through the one door, identity in the
  * child's context, is tested here with the storage classes.
  *
- * @see \Drupal\data_surface_surface_test\Resource\Pantry\PantryResource
+ * @see \Drupal\data_surface_resource_test\Resource\Pantry\PantryResource
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -53,7 +53,7 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
     'system',
     'user',
     'data_surface',
-    'data_surface_surface_test',
+    'data_surface_resource_test',
   ];
 
   /**
@@ -89,7 +89,7 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
     $this->assertSame(LabelResource::class, $surface->getDefinitions()->entry('label')->attachment->source);
 
     // Declared where defineInputs() put it, as a map of the child's keys,
-    // the child's own alter included under its module, as on any shape.
+    // the child's own alter included under its module, as on any structure.
     $this->assertSame(['pantry', 'kind', 'shelf', 'label', 'kind_settings'], $surface->getDefinitions()->names());
     $shelf = $surface->getDefinition('shelf');
     $this->assertInstanceOf(MapDataDefinition::class, $shelf);
@@ -101,7 +101,7 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
     $this->assertSame([
       'unit' => 'cm',
       'height' => 30,
-      'third_party_settings' => ['data_surface_surface_test' => ['sturdy' => TRUE]],
+      'third_party_settings' => ['data_surface_resource_test' => ['sturdy' => TRUE]],
     ], $surface->getDefault('shelf'));
     $this->assertSame(['text' => 'Pantry'], $surface->getDefault('label'));
   }
@@ -134,7 +134,7 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
     $this->assertSame([
       'unit' => 'in',
       'height' => 100,
-      'third_party_settings' => ['data_surface_surface_test' => ['sturdy' => TRUE]],
+      'third_party_settings' => ['data_surface_resource_test' => ['sturdy' => TRUE]],
     ], $values['shelf']);
     $violations = $this->pipeline()->validate($surface, $values);
     $this->assertSame(['shelf.height'], array_map(static fn ($violation): string => $violation->fullPath(), iterator_to_array($violations, FALSE)));
@@ -319,7 +319,7 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
     $builder = new DataSurfaceBuilder();
     $typed_data = $this->container->get('typed_data_manager');
     $first = new ResourceBlueprintAdditions($builder, $typed_data, 'first_module');
-    $second = new ResourceBlueprintAdditions($builder, $typed_data, 'data_surface_surface_test');
+    $second = new ResourceBlueprintAdditions($builder, $typed_data, 'data_surface_resource_test');
     $first->add('badge', 'string', 'Badge');
     $second->add('ribbon', 'string', 'Ribbon');
     $first->describe('third_party_settings.first_module', label: 'Badges', description: 'How the title is decorated.');
@@ -336,7 +336,7 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['badge'], array_keys($badges->getPropertyDefinitions()));
     // Unnamed, a mount is titled with the module's human name, and no
     // more: no "settings" after it.
-    $this->assertSame('Data Surface Surface Test', (string) $mount->getPropertyDefinition('data_surface_surface_test')->getLabel());
+    $this->assertSame('Data Surface Resource Test', (string) $mount->getPropertyDefinition('data_surface_resource_test')->getLabel());
 
     $third = new ResourceBlueprintAdditions(new DataSurfaceBuilder(), $typed_data, 'third_module');
     $this->expectException(\LogicException::class);
@@ -492,7 +492,7 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
     $this->assertSame([
       'unit' => 'in',
       'height' => 20,
-      'third_party_settings' => ['data_surface_surface_test' => ['sturdy' => TRUE]],
+      'third_party_settings' => ['data_surface_resource_test' => ['sturdy' => TRUE]],
     ], $pantry['values']['shelf']);
     $label = $state->get(PantryStorage::key('larder', PantryLabelStorage::PART));
     $this->assertSame(['text' => 'Big larder'], $label['values']);

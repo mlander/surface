@@ -2,8 +2,8 @@
 
 A generated form is one more consumer of the pipeline, not a value path
 of its own. The widgets collect a raw submitted tree and
-`DataSurfacePipelineInterface::accept()` does the rest — coercion,
-merging, locking, refusing undeclared keys — so the form produces exactly
+`DataSurfacePipelineInterface::accept()` does the rest (coercion,
+merging, locking, refusing undeclared keys), so the form produces exactly
 what a JSON payload carrying the same strings produces.
 
 The layer has two halves. `data_surface.form_builder`
@@ -38,9 +38,9 @@ you adopt a family none of the base classes covers:
   untouched, which is what lets host-owned keys (a block's `id`, `label`,
   `provider`; a variant's `weight`; a context mapping) survive
   progressive adoption.
-- **`DataSurfaceHostFormTrait`** holds the three form stages —
-  `buildDataSurfaceForm()`, `validateDataSurfaceForm()`,
-  `submitDataSurfaceForm()` — named for what they do rather than for one
+- **`DataSurfaceHostFormTrait`** holds the three form stages,
+  `buildDataSurfaceForm()`, `validateDataSurfaceForm()` and
+  `submitDataSurfaceForm()`, named for what they do rather than for one
   host's spelling of them.
 - **`DataSurfacePluginFormTrait`** names those three for
   `PluginFormInterface`: `buildConfigurationForm`,
@@ -70,14 +70,14 @@ calls the parent constructor last is safe, because promoted properties
 are assigned before the body runs. Assigning collaborators in `create()`
 after construction is what fails. This is also why the host traits fetch
 their services from the container at the point of use rather than
-injecting them — a documented exception, not a habit.
+injecting them: a documented exception, not a habit.
 
 **Trait over inheritance.** A host base class that composes core's
 `ConfigurableTrait` into itself (actions, search pages, media sources,
 CKEditor 5) is adopted by a subclass that simply uses
 `DataSurfaceConfigurationTrait`. A trait used in the child overrides
 methods the parent flattened from its own trait, so no `insteadof` is
-needed — and `insteadof` naming a parent's trait is itself a fatal error.
+needed, and `insteadof` naming a parent's trait is itself a fatal error.
 The deep merge `ConfigurableTrait` would have applied is therefore never
 reached, which is the point: the pipeline's merge rule is the only one
 that decides what a declared key holds.
@@ -87,7 +87,7 @@ that decides what a declared key holds.
 A generated form is gated twice by the time it writes: once by whatever
 let the person reach the page, and once by the pipeline's access stage
 when the submit handler runs. Those two must be the same answer, not two
-spellings of one intention — a route requirement is checked when the page
+spellings of one intention: a route requirement is checked when the page
 is built and the submit arrives later, so a permission revoked in between
 is caught only by the half that writes.
 
@@ -105,8 +105,8 @@ operation form on its way in and out, and the generated tool all ask
 `NodeTypeResource`'s access in the same operation, so nothing in that
 module spells the permission twice.
 
-An access refusal has no element to be flagged on — it belongs to the run
-rather than to a value — so `flagSurfaceErrors()` reports it as a
+An access refusal has no element to be flagged on (it belongs to the run
+rather than to a value), so `flagSurfaceErrors()` reports it as a
 form-level error under the reserved `@access` key. See
 [the access stage](pipeline.md#access).
 
@@ -194,8 +194,8 @@ Every key another key refines against gets an `#ajax` with
 `refreshSurface()` as the callback, at any depth: an attached child's or
 a chosen slot variant's own dependency is wired too, as a trigger of the
 child's own refiners. One exception, on purpose: an element whose
-`#type` is a grouping type — `details`, `fieldset`, `container`, which
-is what the map widget renders — is left unwired. A `details` is not an
+`#type` is a grouping type (`details`, `fieldset`, `container`, which
+is what the map widget renders) is left unwired. A `details` is not an
 input, emits no change event, and an `#ajax` on it never fires, which is
 worse than nothing because the form looks wired and is not. Attaching to
 each leaf inside it was considered and rejected: a refiner depends on the
@@ -228,7 +228,7 @@ capacity; the room replaces the capacity; the pricing replaces the
 ticket slot. In the demo block, the entity type replaces the bundle and
 the field, and the bundle replaces the field. Replacing the whole
 container, as the form once did, redrew the select the person had just
-changed and left the real change — a maximum moving on another field —
+changed and left the real change (a maximum moving on another field)
 looking like nothing happened.
 
 The callback answers with an `AjaxResponse`:
@@ -256,8 +256,8 @@ Each trigger carries, under `TRIGGER_KEY`, its own path below the
 container and the dotted paths it replaces. The dependency edges are
 fixed when a data surface is sealed, so the closure the previous build wrote
 is the closure of this one; each element is then taken from the rebuilt
-container. When a dependent cannot be found there — a host or a
-cosmetic layer took it out — the callback falls back to returning the
+container. When a dependent cannot be found there (a host or a
+cosmetic layer took it out), the callback falls back to returning the
 container, which the browser puts in place of the wrapper the trigger
 names: coarser, never wrong.
 
@@ -276,9 +276,9 @@ one error that request can produce. A violation reported on it is not
 made a Form API error, because Form API skips the rebuild
 once anything has errored and every dependent would come back refined
 against the answer before this one: the builder holds it for the
-request, the rebuild goes ahead — refining as though the refused value
+request, the rebuild goes ahead (refining as though the refused value
 were not there, since [a refiner never sees an invalid
-sibling](decisions.md#a-refiner-never-sees-an-invalid-sibling) — and
+sibling](decisions.md#a-refiner-never-sees-an-invalid-sibling)), and
 the callback replaces the trigger with the error under it, in the form
 element template's own error slot, with `aria-invalid` and the `error`
 class. Type `EV-2048` as example 3's licence: the licence is redrawn
@@ -352,7 +352,7 @@ and neither is the rest of the data surface.
 
 It was once limited to the whole container, and that one line was a bug
 with two halves. A dependent still holding a value the new choice had
-just orphaned was inside the limit, so the rebuild flagged it — an error
+just orphaned was inside the limit, so the rebuild flagged it: an error
 for a question nobody had asked. And because Form API skips the rebuild
 outright once anything has errored, the container came back refined
 against the choice that had just been replaced: the dependent's list did
@@ -366,14 +366,14 @@ One consequence to know about, because it is not obvious: Form API
 answers a limit by **throwing away every value outside it** before the
 rebuild runs. So by the time the container is rebuilt,
 `$form_state->getValues()` holds the one key that was touched. That is
-why the in-progress overlay is read from the raw input instead — see
+why the in-progress overlay is read from the raw input instead: see
 [the SubformState lesson](#the-subformstate-lesson).
 
 It is set in a `#process` callback on the container rather than written
 at build time, for two reasons that are easy to get wrong:
 
 1. A container does not know its own `#parents` until Form API assigns
-   them, so there is no path to limit to at build time — and neither do
+   them, so there is no path to limit to at build time, and neither do
    its children, so the callback computes each child's path the way Form
    API is about to.
 2. It has to be the container's callback rather than each child's,
@@ -384,9 +384,9 @@ at build time, for two reasons that are easy to get wrong:
 
 Form API assigns `#parents` from the root of the complete form, so they
 are **absolute**. A subform state reads values **relative** to the
-fragment it wraps. A host that hands its plugin a subform state — a
+fragment it wraps. A host that hands its plugin a subform state (a
 block's settings, built with `SubformState::createForSubform()`, is the
-common case — therefore has every absolute path looked up one level too
+common case) therefore has every absolute path looked up one level too
 deep.
 
 The failure is silent and expensive. The value comes back `NULL`, the
@@ -420,8 +420,8 @@ $form_state)` is the one overlay every host builds from: stored
 underneath, in-progress edit on top, and the discard rule below applied
 between them.
 
-A full submit — the Save button, with or without JavaScript, or a
-programmatic `submitForm()` — is the other case the overlay covers. The
+A full submit (the Save button, with or without JavaScript, or a
+programmatic `submitForm()`) is the other case the overlay covers. The
 build it is processed against runs before Form API knows the triggering
 element, so no rebuild input is found; instead the host's
 `surfaceSubmissionPath()` names where its container sits in the input,
@@ -433,13 +433,13 @@ venue's room as a choice it was never offered before the data surface
 is asked, and a slot flipped in the same request is rendered as the stored
 variant, with no element for the chosen variant's keys to arrive in. A
 select left on the empty option it was given in place of a stored value
-— named in the hidden input the container posts — is read as that
+(named in the hidden input the container posts) is read as that
 stored value, here and on an AJAX rebuild alike, so it is rebuilt
 standing for it rather than as a key that holds nothing.
 `DataSurfaceOperationForm` answers `surfaceSubmissionPath()`, since its
 container is its own top level key; a plugin host nested inside another
 form cannot know its position before Form API assigns it, answers NULL,
-and is built from what is stored — so without JavaScript a plugin host
+and is built from what is stored, so without JavaScript a plugin host
 refuses a valid save that moves a parent and its dependent together
 ([decisions](decisions.md#a-plugin-host-cannot-overlay-a-full-submission)).
 
@@ -478,7 +478,7 @@ from**, not what the value is.
 | What happened | A bundle was deleted, a module uninstalled, a refiner narrowed under a saved value | The person changed a dependency, orphaning what a dependent was holding |
 | What it is | A **stored** value that no longer validates | Input nobody submitted: an answer to a question no longer on the screen |
 | Treatment | Kept behind the empty option, warning on save | **Discarded**, silently |
-| Cleared when | A real submit, and at no other time | Never — nothing was stored to clear |
+| Cleared when | A real submit, and at no other time | Never: nothing was stored to clear |
 | Said out loud | A messenger warning, on every save | Nothing at all |
 
 The two halves meet at the Save button. A stored value the rebuild
@@ -490,7 +490,7 @@ the parent back shows it chosen again.
 
 The two meet without conflicting. If a parent changes while a child was
 already standing for a stale stored value, the child still stands for
-it under the new parent's list — and the value is still stored, because
+it under the new parent's list, and the value is still stored, because
 a stored value changes on a submit and at no other time.
 
 ### The in-form half: discarding orphaned input
@@ -503,8 +503,8 @@ is **dropped from the input**, and the key falls back, in this order:
 
 1. its **stored** value, when the narrowed definition still offers that;
 2. the **empty option standing for it**, when something is stored and
-   is no longer offered — the other half of the table, reached from
-   here;
+   is no longer offered (the other half of the table, reached from
+   here);
 3. **nothing chosen**: the empty option, with nothing behind it.
 
 In the second case the key is an **orphan** of the edit: a key it
@@ -516,7 +516,7 @@ person is looking at, and records what it stands for under
 `DataSurfaceFormBuilderInterface::STANDING_KEY` for the element alone.
 So in the registration example, moving the venue away from a stored
 room leaves the room standing for it and the capacity back at its
-declared limit — not still capped, and described, by a room no longer
+declared limit, not still capped, and described, by a room no longer
 on the screen. A stored value the site narrowed away under a dependency
 nobody moved is not an orphan: it is stale, kept, and what refines
 against it still does, exactly as when the form was first built.
@@ -530,9 +530,9 @@ to judge and nothing to report.
 Three rules keep it honest:
 
 - **Only input is ever dropped.** `discardedRefinementInput()` names
-  keys — and, inside an attached child or a chosen slot variant, the
+  keys (and, inside an attached child or a chosen slot variant, the
   dotted paths of the child's own keys its own refiners orphaned, asked
-  of the child in its own frame; a stored value is never touched by it. A rule that could reach
+  of the child in its own frame); a stored value is never touched by it. A rule that could reach
   storage would be the stale model with the safety taken off.
 - **The chain settles in one rebuild, to a fixed point.** Dropping a
   value moves what the next target refines against, and so does holding
@@ -559,7 +559,7 @@ straight back into the rebuilt select.
 
 The settling lives in the form builder, behind two calls:
 `discardedRefinementInput()` names what is dropped, and
-`refinementOverlay()` returns the values to build from — stored
+`refinementOverlay()` returns the values to build from: stored
 underneath, the input that stands on top, orphans unanswered, with
 `STANDING_KEY` beside them. `surfaceFormValues()` uses both on every
 host's rebuild; `buildSurfaceForm()` refines against the overlay and
@@ -569,8 +569,8 @@ the pipeline both refine against what was submitted.
 
 ## Stale values on a form
 
-A select whose stored value is no longer among the options it offers —
-a deleted bundle, an uninstalled plugin, a refinement that narrowed —
+A select whose stored value is no longer among the options it offers
+(a deleted bundle, an uninstalled plugin, a refinement that narrowed)
 comes up on its **empty option**, selected, and the stored value is not
 an option:
 
@@ -634,7 +634,7 @@ already, so it keeps.
 On submit, `flagSurfaceErrors()` turns each stale reference into a
 messenger **warning** and never a form error: nothing is wrong with the
 submission and the save is going ahead. The nag repeats on every save,
-which is the point — the value keeps working, and it will not start
+which is the point: the value keeps working, and it will not start
 working again on its own.
 
 ## Violations
@@ -841,7 +841,7 @@ Three cases, and the demo module is the second one:
    surface beside several unrelated things (a confirmation step, a
    batch, an entity form it rides inside) is a form, and it composes the
    data surface's container itself.
-2. **The shape and the destination belong to different owners.**
+2. **The structure and the destination belong to different owners.**
    `data_surface_demo` renders the demo block's structure into a
    `StateStorage`, which is exactly the claim it exists to make: a
    structure is independent of where its values are stored. An operation
@@ -859,8 +859,8 @@ surface (from a plugin's `getDataSurface()`, or from
 `ResourcesInterface::build()` with a context), build the container, and
 hand the submitted values to the pipeline with storage:
 
-Compose `DataSurfaceHostTrait` for the three collaborators — the
-pipeline, the form builder, and the in-progress AJAX input — and the
+Compose `DataSurfaceHostTrait` for the three collaborators (the
+pipeline, the form builder, and the in-progress AJAX input), and the
 class is three delegations long:
 
 ```php

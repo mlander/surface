@@ -88,8 +88,8 @@ what a host refused.
 One trap worth stating, because core's helpers set it:
 `AccessResult::allowedIfHasPermission()` and an entity access handler
 both answer **neutral** when the answer is no, since another checker
-might still allow it. A route reads that neutral as a refusal — a route
-requires allowed — while this gate reads it as "nothing to say". A
+might still allow it. A route reads that neutral as a refusal (a route
+requires allowed), while this gate reads it as "nothing to say". A
 caller that owns the operation therefore says no out loud, or the same
 account is turned away by the route and let through by the payload:
 
@@ -108,9 +108,9 @@ allowed. A plugin host's neutral is still the right answer for a
 structure that owns nothing.
 
 `setConfiguration()` deliberately does not consult access. A host
-constructs its plugins from what it has already stored — core's block,
+constructs its plugins from what it has already stored (core's block,
 condition and action bases all call `setConfiguration()` from inside
-their own constructors — so gating there would ask whether the current
+their own constructors), so gating there would ask whether the current
 account may configure a block during a cache warm, a cron run, or an
 anonymous page view. The gate belongs where something is written, which
 is `submit()`.
@@ -135,8 +135,8 @@ It needs no services. After it runs, every declared key is present and
 every value is either `NULL` or a configured value in its declared type.
 That is the shape `validate()`, the storage and any consumer can rely on.
 
-The rules it applies — what counts as configured, the coercion table, how
-lists and maps merge — are [Value semantics](semantics.md), which is the
+The rules it applies (what counts as configured, the coercion table, how
+lists and maps merge) are [Value semantics](semantics.md), which is the
 reference for this page.
 
 ### validate
@@ -176,8 +176,8 @@ refusal. A value that the refined data surface will not take, which is
 as they are stored, and which is no longer among the values the key
 offers, is **stale**: nothing about this run tried to change it, so
 refusing it would punish a caller for something the site did. A run that
-moves a dependency — the venue — and sends back the dependent stored
-under the old one — the room — has narrowed the list itself, and is
+moves a dependency (the venue) and sends back the dependent stored
+under the old one (the room) has narrowed the list itself, and is
 refused. The full rule and its two deliberate boundaries are in
 [value semantics](semantics.md#stale-values-the-third-state).
 
@@ -220,7 +220,7 @@ The output half of `validate()`, and the only stage that runs after the
 host has done its work rather than before. It holds what was emitted to
 the data surface's [output definitions](outputs.md), which are never
 refined: it strips the `Omitted` sentinel, refuses keys no output declares, and checks what is
-left against each definition's type and constraints — answering with the
+left against each definition's type and constraints, answering with the
 same `ViolationSet` everything else answers with.
 
 Nothing is cast. Input arrives from people and payloads, so `accept()`
@@ -229,7 +229,7 @@ front of it, so a wrong type is a violation rather than a notation.
 
 It is not part of `submit()`. Emitting is the host's own act, not a
 pipeline stage, and the pipeline has no way to run it; what the pipeline
-offers is the check, so a host — or a generated test — can hold the
+offers is the check, so a host, or a generated test, can hold the
 emitted array to what the data surface advertised.
 
 ### prepare
@@ -238,10 +238,11 @@ emitted array to what the data surface advertised.
 public function prepare(DataSurfaceInterface $surface, array $values, DataSurfaceStorageInterface $storage): PreparedValues;
 ```
 
-Hands the values to the storage for shaping. Writes nothing. Answers with a
-`PreparedValues`: the accepted `values`, the storage-shaped `artifact`,
-and any calculated `dependencies`. This is the preview artifact —
-everything a renderer or a diff needs, nothing stored.
+Hands the values to the storage, which lays them out as it stores them.
+Writes nothing. Answers with a `PreparedValues`: the accepted `values`,
+the `artifact` in storage layout, and any calculated `dependencies`.
+This is the preview artifact: everything a renderer or a diff needs,
+nothing stored.
 
 ### commit
 
@@ -300,7 +301,7 @@ leading `@`, so the whole `@` prefix is the pipeline's namespace for a
 refusal belonging to no particular key. The violation's message is the
 refusal's reason, as a message object like every other violation's, and
 `isValid()` is `FALSE` for the same reason an out-of-range number makes
-it false — a caller that only branches on `isValid()` needs to know
+it false: a caller that only branches on `isValid()` needs to know
 nothing new. A caller that wants to tell a 403 from a 422 asks
 `isAccessRefused()`.
 
@@ -364,25 +365,18 @@ twice:
 
 ## Violations are objects
 
-Every message in a violation is a `TranslatableMarkup` (the data
-surface's own required message, the pipeline's unknown-key and shape
-refusals, and whatever a constraint or a config schema produced), and it
-stays one the whole way out: through `DataSurfaceResult`, through
-`FormStateInterface::setError()`, into a caller's own report.
-
-Placeholders are still placeholders until something renders the message,
-so a value containing markup is escaped once, by whoever prints it,
-rather than escaped at build time and escaped again on the page.
-
-There are exactly three places a message becomes text, and all three are
-exception messages, because PHP has nowhere to put an object in one.
+Every message in a violation is a `TranslatableMarkup`, and it stays one
+the whole way out: through `DataSurfaceResult`, through
+`FormStateInterface::setError()`, into a caller's own report. Why, how a
+placeholder is filled in, and the three places a message becomes text
+are in [Value semantics](semantics.md#violation-messages-are-objects).
 
 ## Exceptions
 
 | Exception | Thrown by | When |
 | --- | --- | --- |
 | `UnknownKeysException` | `accept()` | The input carries a key no definition declares, at any depth. |
-| `ShapeMismatchException` | `accept()` | The input carries a value in a shape its definition cannot hold — a string where a map was advertised. Names the dotted path and what was expected. |
+| `ShapeMismatchException` | `accept()` | The input carries a value in a shape its definition cannot hold, such as a string where a map was advertised. Names the dotted path and what was expected. |
 | `VariantMismatchException` | `accept()` | A slot's value carries keys the chosen variant does not declare and another variant does. Names the slot, the deciding key and the misplaced keys. |
 | `StorageViolationsException` | `prepare()` | What the storage writes to refuses the values; a config schema, usually. |
 
@@ -402,16 +396,11 @@ individually and you handle the exceptions yourself.
 
 ## The host-owns-the-write split
 
-Some hosts save for themselves. Field UI copies whatever a settings
-element produced onto the field config entity and saves it, so a field
-type's settings form runs accept, validate and **prepare**, writes the
-prepared artifact into form state, and deliberately does not commit —
-calling both would save the field twice.
-
-That is why the transform lives in `prepare()` and not in `commit()`. A
-caller that does own the write reaches the same transform through
-`submit()` and gets the same stored settings. The storage owns the
-transform; the host owns the write.
+Some hosts save for themselves: a field type's settings form runs
+accept, validate and **prepare**, and never commits, because Field UI
+saves the field. That is why the transform lives in `prepare()` and not
+in `commit()`. The storage owns the transform; the host owns the write
+([Storage](storage.md#the-host-owns-the-write-split)).
 
 ## Calling it without a form
 

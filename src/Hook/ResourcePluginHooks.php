@@ -149,7 +149,7 @@ final class ResourcePluginHooks {
     // it names a structure of its own: the attribute is not inherited by
     // PHP, so the ancestry is walked here. A subclass of a plugin that is
     // its own structure is its own structure in turn, inheriting the
-    // static shape.
+    // static defineInputs().
     // Decision: see docs/decisions.md#a-plugin-that-is-its-own-structure.
     for ($reflection = new \ReflectionClass($class); $reflection !== FALSE; $reflection = $reflection->getParentClass()) {
       foreach ($reflection->getAttributes(UsesStructure::class) as $attribute) {

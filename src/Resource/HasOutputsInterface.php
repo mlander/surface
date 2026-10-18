@@ -10,7 +10,7 @@ namespace Drupal\data_surface\Resource;
  * Optional, because most only ask. Same tool as inputs.
  * Outputs are never refined, because a refinement narrows what may be
  * sent and nobody sends an output; a #[RefinesInput] naming an output key is
- * refused at seal. An output whose shape depends on an input value is a
+ * refused at seal. An output whose keys depend on an input value is a
  * variant: attachBy() on that input key, exactly as for an input slot.
  *
  * Inputs and outputs are separate namespaces; a key may appear in both
@@ -23,10 +23,10 @@ namespace Drupal\data_surface\Resource;
 interface HasOutputsInterface {
 
   /**
-   * Shape of what the resource or structure answers with.
+   * Outputs. What the resource or structure answers with.
    *
    * Static, like DefinesInputsInterface::defineInputs(), and for the same
-   * reason: a shape takes nothing but the blueprint to fill.
+   * reason: it takes nothing but the blueprint to fill.
    *
    * @param \Drupal\data_surface\Resource\BlueprintInterface $outputs
    *   The output blueprint to fill.

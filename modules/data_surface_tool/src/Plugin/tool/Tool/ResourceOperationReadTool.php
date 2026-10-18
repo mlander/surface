@@ -44,19 +44,19 @@ final class ResourceOperationReadTool extends ResourceOperationToolBase {
    * {@inheritdoc}
    */
   protected function doExecute(array $values): ExecutableResult {
-    [$surface, $operation, $context] = $this->operation($values);
+    [$resource, $operation, $context] = $this->operation($values);
     // Asked again here, as the write tool does: execute() is callable from
     // PHP without an access check.
-    if (!$this->operationAccess($surface, $context, $this->currentUser)->isAllowed()) {
+    if (!$this->operationAccess($resource, $context, $this->currentUser)->isAllowed()) {
       return ExecutableResult::failure($this->t('You do not have permission to do this.'));
     }
     if ($context->creates) {
       return ExecutableResult::failure($this->t('@label creates what it is about, so nothing is stored to read.', ['@label' => (string) $operation->label]));
     }
-    $built = $this->resources->build($surface->name(), $context);
+    $built = $this->resources->build($resource->name(), $context);
     return ExecutableResult::success(
       $this->t('@label: the stored values were read, and nothing was written.', ['@label' => (string) $operation->label]),
-      [OperationInputs::VALUES => $this->operationInputs->stored($surface, $built, $context)],
+      [OperationInputs::VALUES => $this->operationInputs->stored($resource, $built, $context)],
     );
   }
 

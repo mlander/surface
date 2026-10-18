@@ -44,13 +44,13 @@ use Drupal\data_surface\Resource\ResourceDeriverInterface;
  * Two kinds of refusal, kept apart on purpose:
  * - What is wrong with the attributes themselves (an operation with
  *   nothing to belong to, an operation method that is not static, a
- *   class whose shape method is not static, two classes claiming one id,
+ *   class whose defineInputs() is not static, two classes claiming one id,
  *   a class with the attribute of one kind and the interface of the
  *   other, a reference to a class that exists and is neither a resource
  *   nor a structure) is refused here, when discovery is read, because it
  *   cannot be pinned on one build.
  * - What is wrong with one resource or structure (two operations with
- *   one id, a refiner watching a key the shape never declares) is
+ *   one id, a refiner watching a key it never declares) is
  *   refused when that one is asked for, naming the offender, so one
  *   module's mistake does not take every other one down with it.
  */
@@ -489,7 +489,7 @@ final class ResourceRegistry {
       if (!$deriver instanceof ResourceDeriverInterface) {
         throw new \LogicException(sprintf('%s carries #[DerivesResources] but does not implement %s.', $class, ResourceDeriverInterface::class));
       }
-      foreach ($deriver->derivatives($overridden) as $derivative => $surface) {
+      foreach ($deriver->derivatives($overridden) as $derivative => $declared) {
         $id = $base . ':' . $derivative;
         if (str_contains((string) $derivative, ':')) {
           throw new \LogicException(sprintf(
@@ -503,7 +503,7 @@ final class ResourceRegistry {
         }
         $ids[$id] = $class;
         $refiners = [];
-        foreach ($surface->refiners as $refining) {
+        foreach ($declared->refiners as $refining) {
           array_push($refiners, ...self::refinersOf(new \ReflectionClass($refining)));
         }
         $derived[$id] = [
@@ -511,19 +511,19 @@ final class ResourceRegistry {
             class: NULL,
             id: $id,
             module: $module,
-            identity: array_values($surface->identity),
-            storage: $surface->storage,
-            access: $surface->access,
+            identity: array_values($declared->identity),
+            storage: $declared->storage,
+            access: $declared->access,
             refiners: $refiners,
-            inputs: $surface->inputs,
-            outputs: $surface->outputs,
+            inputs: $declared->inputs,
+            outputs: $declared->outputs,
             base: $base,
             deriver: $class,
-            label: $surface->label,
-            description: $surface->description,
-            notes: $surface->notes,
-            cacheTags: array_values($surface->cacheTags),
-            kind: $surface->kind(),
+            label: $declared->label,
+            description: $declared->description,
+            notes: $declared->notes,
+            cacheTags: array_values($declared->cacheTags),
+            kind: $declared->kind(),
           ),
           array_map(static fn (DerivedOperation $operation): OperationDefinition => new OperationDefinition(
             id: $operation->id,
@@ -540,7 +540,7 @@ final class ResourceRegistry {
             ),
             default: $operation->default,
             context: $operation->context,
-          ), array_values($surface->operations)),
+          ), array_values($declared->operations)),
         ];
       }
     }
@@ -555,7 +555,7 @@ final class ResourceRegistry {
    * #[Structure] and StructureInterface. A plugin that is its own
    * structure carries neither attribute, or #[Structure], and implements
    * StructureInterface. A class carrying both attributes is refused. Both
-   * interfaces extend DefinesInputsInterface, whose shape methods are
+   * interfaces extend DefinesInputsInterface, whose defineInputs() is
    * static. PHP itself refuses a class that implements the interface
    * with an instance defineInputs(), so the class that reaches here with
    * one is a class that dropped the interface to get it past the
@@ -593,7 +593,7 @@ final class ResourceRegistry {
     foreach (['defineInputs' => $interface, 'defineOutputs' => HasOutputsInterface::class] as $method => $needed) {
       if ($class->hasMethod($method) && !$class->getMethod($method)->isStatic()) {
         throw new \LogicException(sprintf(
-          '%s %s and declares %s() as an instance method. A shape is a property of its class and takes nothing but the blueprint to fill: declare it `public static function %s(BlueprintInterface $%s): void`, and implement %s.',
+          '%s %s and declares %s() as an instance method. What a class declares belongs to the class, and the method takes nothing but the blueprint to fill: declare it `public static function %s(BlueprintInterface $%s): void`, and implement %s.',
           $class->getName(),
           $how,
           $method,

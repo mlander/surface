@@ -29,7 +29,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * Five endpoints over the same operation, four of them the served twin
  * of something the operation form already does:
  *
- * - `GET /surface-api/{surface}/{situation}`: the contract for the
+ * - `GET /surface-api/{resource}/{operation}`: the contract for the
  *   values the form would open with, what the storage holds over the
  *   built resource's defaults, and the fingerprint of what it holds.
  * - `GET .../schema`: the full schema, for any values, which reads
@@ -100,17 +100,17 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *
    * @param \Symfony\Component\HttpFoundation\Request $request
    *   The request, carrying the operation's parameters.
-   * @param string $surface
-   *   The resource id, from the route's {surface} parameter.
-   * @param string $situation
-   *   The operation id, from the route's {situation} parameter.
+   * @param string $resource
+   *   The resource id, from the route's {resource} parameter.
+   * @param string $operation
+   *   The operation id, from the route's {operation} parameter.
    *
    * @return \Drupal\Core\Cache\CacheableJsonResponse
    *   The contract, and under `fingerprint` the fingerprint of the stored
    *   values it was built from, for a submit to send back.
    */
-  public function contract(Request $request, string $surface, string $situation): CacheableJsonResponse {
-    $served = $this->served($surface, $situation, $request);
+  public function contract(Request $request, string $resource, string $operation): CacheableJsonResponse {
+    $served = $this->served($resource, $operation, $request);
     return $this->respond($served, $this->emit($served, $this->servedOperations->current($served)), [
       'fingerprint' => $this->servedOperations->fingerprint($served),
     ]);
@@ -131,18 +131,18 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *
    * @param \Symfony\Component\HttpFoundation\Request $request
    *   The request, carrying the operation's parameters.
-   * @param string $surface
-   *   The resource id, from the route's {surface} parameter.
-   * @param string $situation
-   *   The operation id, from the route's {situation} parameter.
+   * @param string $resource
+   *   The resource id, from the route's {resource} parameter.
+   * @param string $operation
+   *   The operation id, from the route's {operation} parameter.
    *
    * @return \Drupal\Core\Cache\CacheableJsonResponse
    *   The full schema document: `surface`, `situation`, `label`, `schema`
    *   and, when declared, `outputs`; no `values`, `stale` or
    *   `fingerprint`.
    */
-  public function schema(Request $request, string $surface, string $situation): CacheableJsonResponse {
-    $served = $this->served($surface, $situation, $request);
+  public function schema(Request $request, string $resource, string $operation): CacheableJsonResponse {
+    $served = $this->served($resource, $operation, $request);
     $full = $this->emitter->emitFull($served->surface, $served->definition->id, $served->operation->id, $served->operation->label, widgets: TRUE);
     $response = new CacheableJsonResponse($full->document);
     $response->setEncodingOptions(JsonResponse::DEFAULT_ENCODING_OPTIONS | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
@@ -157,18 +157,18 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *
    * @param \Symfony\Component\HttpFoundation\Request $request
    *   The request; its body is `{values, stale, parameters}`.
-   * @param string $surface
-   *   The resource id, from the route's {surface} parameter.
-   * @param string $situation
-   *   The operation id, from the route's {situation} parameter.
+   * @param string $resource
+   *   The resource id, from the route's {resource} parameter.
+   * @param string $operation
+   *   The operation id, from the route's {operation} parameter.
    *
    * @return \Drupal\Core\Cache\CacheableJsonResponse
    *   The contract, its `stale` naming every orphan as well as every key
    *   the site narrowed away, and under `discarded` the keys, or dotted
    *   paths into a part, whose answer the new choices orphaned.
    */
-  public function refine(Request $request, string $surface, string $situation): CacheableJsonResponse {
-    $served = $this->served($surface, $situation, $request);
+  public function refine(Request $request, string $resource, string $operation): CacheableJsonResponse {
+    $served = $this->served($resource, $operation, $request);
     $body = $this->servedOperations->body($request);
     $current = $this->servedOperations->current($served);
     // Keys the resource does not declare are not an edit of it, so they
@@ -194,10 +194,10 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *
    * @param \Symfony\Component\HttpFoundation\Request $request
    *   The request; its body is `{values, stale, parameters}`.
-   * @param string $surface
-   *   The resource id, from the route's {surface} parameter.
-   * @param string $situation
-   *   The operation id, from the route's {situation} parameter.
+   * @param string $resource
+   *   The resource id, from the route's {resource} parameter.
+   * @param string $operation
+   *   The operation id, from the route's {operation} parameter.
    *
    * @return \Symfony\Component\HttpFoundation\JsonResponse
    *   `{valid, violations, stale, values, prepared}`: whether the values
@@ -205,8 +205,8 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   reference beside them, the accepted values, and what the storage
    *   rehearsed writing; nothing is written.
    */
-  public function validate(Request $request, string $surface, string $situation): JsonResponse {
-    $served = $this->served($surface, $situation, $request);
+  public function validate(Request $request, string $resource, string $operation): JsonResponse {
+    $served = $this->served($resource, $operation, $request);
     if ($served->storage === NULL) {
       throw new BadRequestHttpException(sprintf('The %s resource names no storage, so there is no write to rehearse.', $served->definition->id));
     }
@@ -245,10 +245,10 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *
    * @param \Symfony\Component\HttpFoundation\Request $request
    *   The request; its body is `{values, stale, parameters, fingerprint?}`.
-   * @param string $surface
-   *   The resource id, from the route's {surface} parameter.
-   * @param string $situation
-   *   The operation id, from the route's {situation} parameter.
+   * @param string $resource
+   *   The resource id, from the route's {resource} parameter.
+   * @param string $operation
+   *   The operation id, from the route's {operation} parameter.
    *
    * @return \Symfony\Component\HttpFoundation\JsonResponse
    *   `{committed, valid, violations, stale, outputs, contract, created}`:
@@ -261,8 +261,8 @@ final class ResourceApiController implements ContainerInjectionInterface {
    * @throws \Symfony\Component\HttpKernel\Exception\BadRequestHttpException
    *   When the body is malformed or the resource names no storage.
    */
-  public function submit(Request $request, string $surface, string $situation): JsonResponse {
-    $served = $this->served($surface, $situation, $request);
+  public function submit(Request $request, string $resource, string $operation): JsonResponse {
+    $served = $this->served($resource, $operation, $request);
     if ($served->storage === NULL) {
       throw new BadRequestHttpException(sprintf('The %s resource names no storage, so there is nothing to write to.', $served->definition->id));
     }
@@ -301,7 +301,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
       : [];
     // Built afresh: what was written is what the resource now refines
     // against and what the storage now loads.
-    $fresh = $this->served($surface, $situation, $request);
+    $fresh = $this->served($resource, $operation, $request);
     $contract = $this->emit($fresh, $this->servedOperations->current($fresh))->document + [
       'fingerprint' => $this->servedOperations->fingerprint($fresh),
     ];

@@ -189,11 +189,11 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
     // changes what it names and nothing else.
     $context = $this->resources()->operation(FieldInstanceResource::class, 'edit', [$field]);
     $surface = $this->resources()->build(FieldInstanceResource::class, $context);
-    $target = $this->resources()->storage(FieldInstanceResource::class, $context, $surface);
-    $loaded = $target->load($surface);
+    $resource_storage = $this->resources()->storage(FieldInstanceResource::class, $context, $surface);
+    $loaded = $resource_storage->load($surface);
     $this->assertSame('Address', $loaded['label']);
     $this->assertSame(['US', 'CA'], $loaded['settings']['available_countries']);
-    $result = $this->pipeline()->submit($surface, ['required' => TRUE, 'settings' => ['available_countries' => ['DE']]], $target);
+    $result = $this->pipeline()->submit($surface, ['required' => TRUE, 'settings' => ['available_countries' => ['DE']]], $resource_storage);
     $this->assertTrue($result->committed, implode(', ', $result->violations->keys()));
     $field = $this->reloadField();
     $this->assertTrue($field->isRequired());
@@ -203,7 +203,7 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
 
     // A settings violation is filed under the field's key, dotted into
     // the child.
-    $result = $this->pipeline()->submit($surface, ['settings' => ['field_overrides' => ['organization' => 'mandatory']]], $target);
+    $result = $this->pipeline()->submit($surface, ['settings' => ['field_overrides' => ['organization' => 'mandatory']]], $resource_storage);
     $this->assertSame(['settings.field_overrides.organization'], array_map(static fn ($violation): string => $violation->fullPath(), iterator_to_array($result->violations, FALSE)));
   }
 
@@ -295,14 +295,14 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
 
     // One submission: the storage's cardinality, through its own storage class,
     // and the field, created on it.
-    $target = $this->resources()->storage(FieldInstanceResource::class, $reuse, $surface);
+    $resource_storage = $this->resources()->storage(FieldInstanceResource::class, $reuse, $surface);
     // The address field type has no storage settings, so its derived
     // variant is empty.
     $this->assertSame(
       ['field_type' => 'address', 'cardinality' => 1, 'translatable' => TRUE, 'settings' => []],
-      $target->load($surface)['storage'],
+      $resource_storage->load($surface)['storage'],
     );
-    $result = $this->pipeline()->submit($surface, ['label' => 'Address', 'storage' => ['cardinality' => 2]], $target);
+    $result = $this->pipeline()->submit($surface, ['label' => 'Address', 'storage' => ['cardinality' => 2]], $resource_storage);
     $this->assertTrue($result->committed, implode(', ', $result->violations->keys()));
     $this->assertSame('Address', $this->reloadField()?->getLabel());
     $this->assertSame(2, FieldStorageConfig::loadByName('entity_test', 'field_address')->getCardinality());
@@ -346,10 +346,10 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
     $cardinality = $surface->getDefinitions()->entry('storage')->attachment->child->getDefinition('cardinality');
     $this->assertSame(['min' => 3], $cardinality->getConstraints()['Range']);
 
-    $target = $this->resources()->storage(FieldInstanceResource::class, $context, $surface);
-    $result = $this->pipeline()->submit($surface, ['storage' => ['cardinality' => 2]], $target);
+    $resource_storage = $this->resources()->storage(FieldInstanceResource::class, $context, $surface);
+    $result = $this->pipeline()->submit($surface, ['storage' => ['cardinality' => 2]], $resource_storage);
     $this->assertSame(['storage.cardinality'], array_map(static fn ($violation): string => $violation->fullPath(), iterator_to_array($result->violations, FALSE)));
-    $result = $this->pipeline()->submit($surface, ['storage' => ['cardinality' => 5]], $target);
+    $result = $this->pipeline()->submit($surface, ['storage' => ['cardinality' => 5]], $resource_storage);
     $this->assertTrue($result->committed, implode(', ', $result->violations->keys()));
     $this->assertSame(5, FieldStorageConfig::loadByName('entity_test', 'field_address')->getCardinality());
   }

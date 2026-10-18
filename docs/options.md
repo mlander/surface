@@ -2,7 +2,7 @@
 
 A list of allowed values is needed twice: once as a constraint (is this
 value allowed?) and once as form `#options` (what do the values mean?).
-Written twice, the two can drift. Core has the same split —
+Written twice, the two can drift. Core has the same split:
 `OptionsProviderInterface` hangs labels off the instantiated data object
 rather than the definition, so nothing working from definitions alone can
 see them.
@@ -18,8 +18,8 @@ type that reads any constraint as a list.
 ## LabeledChoice
 
 `LabeledChoice` is a `Choice` subclass. Because it *is* a `Choice`, every
-`Choice`-aware consumer already sees it — core's own `Choice` reading, a
-schema emitter, a form builder — and the upstream ask becomes "labels on
+`Choice`-aware consumer already sees it (core's own `Choice` reading, a
+schema emitter, a form builder), and the upstream ask becomes "labels on
 `Choice`" rather than a second constraint. Its validator is
 `ChoiceValidator`, named rather than subclassed, so what it accepts is
 exactly what `Choice` accepts, down to the comparison. Labels and
@@ -66,14 +66,14 @@ named by its value.
 
 Both spellings are one declaration to every consumer: the resolver
 answers with the same `OptionSet`, the narrowing check gives the same
-verdict, and a contribution merges into either identically —
+verdict, and a contribution merges into either identically:
 `ChoiceSpellingParityTest` is where that is held to.
 
 ### One vocabulary, declared once
 
 The map spelling already keeps a declaration from naming a value twice.
-When the *code* names the values too — a `match` on a stored setting, a
-lookup of what each value offers — a backed enum keeps the whole
+When the *code* names the values too (a `match` on a stored setting, a
+lookup of what each value offers), a backed enum keeps the whole
 vocabulary in one place. Core's `NodePreviewMode` is the precedent:
 cases, a `label()` method, and `asOptions()` projecting the two into the
 value-to-label map a form takes.
@@ -119,7 +119,7 @@ $inputs->add('variant', 'string', t('Variant'))
 constraint, and an alter widens it at build time with
 `extendChoices()`: `data_surface_demo_extras` contributes `ribbon`, which
 is deliberately not a case in the demo's enum. A contributor answers for
-its own value, and the owner's enum is not where that value lives — that
+its own value, and the owner's enum is not where that value lives: that
 is what a contribution *is*. So code acting on a stored value takes the
 string it was handed rather than `DemoVariant::from()`-ing it, and only
 the owner's own half of the vocabulary is enumerated. An enum used as a
@@ -171,7 +171,7 @@ resolver did not exist.
 `data_surface.options` (`Options\DataSurfaceOptions`) is what consumers
 call. `resolve(DataDefinitionInterface $definition): ?OptionSet` walks
 the definition's constraints, asks each resolver, and answers with the
-list — or `NULL` when no constraint on the definition names one.
+list, or `NULL` when no constraint on the definition names one.
 
 When more than one constraint resolves, the answer is their
 **intersection**, because every constraint on a definition has to hold at
@@ -231,8 +231,8 @@ literal, such as hidden/optional/required.
 Core validates that a plugin, a bundle, an extension or a config object
 exists, but nothing says "this is a language code", so it is the obvious
 next existence constraint to propose upstream beside the ones that exist.
-It is written to be module-agnostic, in core's own style — `allowLocked`
-as the permission option, a placeholder message — for the same reason
+It is written to be module-agnostic, in core's own style (`allowLocked`
+as the permission option, a placeholder message), for the same reason
 `LabeledChoice` is.
 
 ## Writing a resolver

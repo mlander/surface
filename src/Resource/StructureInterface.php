@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface\Resource;
 
 /**
- * A structure: a shape with members, and no identity or storage of its own.
+ * A structure: a group of keys with no identity or storage of its own.
  *
  * Carries #[Structure], or nothing at all when a plugin class is its own
  * structure (#[UsesStructure] with no argument). A structure is only ever

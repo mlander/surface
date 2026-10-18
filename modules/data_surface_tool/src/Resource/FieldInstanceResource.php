@@ -35,7 +35,7 @@ use Drupal\field\FieldStorageConfigInterface;
  * the UI with no settings class still fills the slot, with a variant
  * FieldSettingsSchemaVariants derives from its config schema.
  *
- * Add, reuse and edit are not shapes. They are how much is already
+ * Add, reuse and edit are not three resources. They are how much is already
  * known, so they are the three ways to ask for this resource, below.
  *
  * @code

@@ -423,7 +423,7 @@ class AddressFieldResourceTest extends DataSurfaceKernelTestBase {
   /**
    * Tests the element validate writing storage-shaped values.
    */
-  public function testElementValidateWritesStorageShapedValues(): void {
+  public function testElementValidateWritesValuesInTheStorageLayout(): void {
     $element = $this->fieldItem()->fieldSettingsForm([], new FormState());
     // Field UI merges the field type's elements into $form['settings'],
     // and copies that value onto the field config entity.

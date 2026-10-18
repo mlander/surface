@@ -163,13 +163,13 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
    */
   public function testFieldItemStructuresForEachCoveredType(): void {
     $surface = $this->add('kitchen');
-    $shape = [];
+    $types = [];
     foreach (array_keys(static::KITCHEN) + ['changed' => 'changed'] as $name) {
       if (!$surface->getDefinitions()->has($name)) {
         continue;
       }
       foreach (static::child($surface, $name)->getDefinitions() as $key => $definition) {
-        $shape[$name][$key] = $definition->getDataType();
+        $types[$name][$key] = $definition->getDataType();
       }
     }
     $this->assertSame([
@@ -193,7 +193,7 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
       'field_link' => ['uri' => 'uri', 'title' => 'string'],
       'field_term' => ['target_id' => 'integer'],
       'changed' => ['value' => 'integer'],
-    ], $shape);
+    ], $types);
 
     $constraint = static fn (string $field, string $key, string $name): ?array => static::child($surface, $field)->getDefinition($key)?->getConstraints()[$name] ?? NULL;
     // What the field type and its settings narrow, carried.

@@ -28,7 +28,7 @@ use Drupal\data_surface\Resource\StructureInterface;
  * fetches.
  *
  * Strings are built with the global t() rather than $this->t(): the
- * shape and the refiners are static, so there is no instance for the
+ * declarations and the refiners are static, so there is no instance for the
  * translation service to be injected into, and the markup t() returns
  * translates at render time just the same.
  *

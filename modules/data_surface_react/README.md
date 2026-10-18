@@ -5,14 +5,14 @@ One operation of one resource becomes five endpoints and a page:
 
 | | Path | What it does |
 | --- | --- | --- |
-| Page | `GET /surface-react/{surface}/{situation}` | Mounts the React app, titled with the operation's label. |
-| Contract | `GET /surface-api/{surface}/{situation}` | The JSON contract with the values the form opens with, and the stored values' `fingerprint`. |
-| Full schema | `GET /surface-api/{surface}/{situation}/schema` | The contract for any values: every listable dependency a conditional, the rest `dynamic` or `runtime`; no values. Cacheable. |
-| Refine | `POST /surface-api/{surface}/{situation}/refine` | The contract re-narrowed against in-progress values: the AJAX rebuild's equivalent. |
-| Validate | `POST /surface-api/{surface}/{situation}/validate` | The pipeline's dry run: `{valid, violations, stale, values, prepared}`, nothing written. |
-| Submit | `POST /surface-api/{surface}/{situation}/submit` | The write: `{committed, valid, violations, stale, outputs, contract, created}`; a refusal is 200 with `committed: false`. |
+| Page | `GET /surface-react/{resource}/{operation}` | Mounts the React app, titled with the operation's label. |
+| Contract | `GET /surface-api/{resource}/{operation}` | The JSON contract with the values the form opens with, and the stored values' `fingerprint`. |
+| Full schema | `GET /surface-api/{resource}/{operation}/schema` | The contract for any values: every listable dependency a conditional, the rest `dynamic` or `runtime`; no values. Cacheable. |
+| Refine | `POST /surface-api/{resource}/{operation}/refine` | The contract re-narrowed against in-progress values: the AJAX rebuild's equivalent. |
+| Validate | `POST /surface-api/{resource}/{operation}/validate` | The pipeline's dry run: `{valid, violations, stale, values, prepared}`, nothing written. |
+| Submit | `POST /surface-api/{resource}/{operation}/submit` | The write: `{committed, valid, violations, stale, outputs, contract, created}`; a refusal is 200 with `committed: false`. |
 
-`{surface}` is the `#[Resource]` id (`registration.step2`), `{situation}`
+`{resource}` is the `#[Resource]` id (`registration.step2`), `{operation}`
 the operation id (`configure`). An operation's parameters arrive in the
 query string by the operation method's parameter names, or in a POST
 body's `parameters`: `/surface-react/node.type/edit?type=article`.

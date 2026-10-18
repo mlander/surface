@@ -27,7 +27,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 class ResourceCatalogueTest extends DataSurfaceKernelTestBase {
 
   /**
-   * Every module in this repository that declares or alters a shape.
+   * Every module here that declares or alters a resource or structure.
    *
    * {@inheritdoc}
    */

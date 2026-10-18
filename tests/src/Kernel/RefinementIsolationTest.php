@@ -185,15 +185,15 @@ class RefinementIsolationTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests two shapes with a key of one name keep their own properties.
+   * Tests two builds with a key of one name keep their own properties.
    *
    * The cause underneath, apart from any alter: a plain map's properties
-   * and a list's items are held to the shape being validated, never to
-   * another shape's key of the same name validated earlier in the
-   * process.
+   * and a list's items are held to the data surface being validated,
+   * never to another data surface's key of the same name validated
+   * earlier in the process.
    */
-  public function testTwoShapesWithOneKeyNameKeepTheirOwnRules(): void {
-    $shape = static fn (int $max, string $tag): DataSurfaceInterface => (new DataSurfaceBuilder([
+  public function testTwoBuildsWithOneKeyNameKeepTheirOwnRules(): void {
+    $build = static fn (int $max, string $tag): DataSurfaceInterface => (new DataSurfaceBuilder([
       'settings' => MapDataDefinition::create()
         ->setPropertyDefinition('size', DataDefinition::create('integer')->addConstraint('Range', ['max' => $max])),
       'tags' => ListDataDefinition::create('string')->setItemDefinition(
@@ -202,9 +202,9 @@ class RefinementIsolationTest extends DataSurfaceKernelTestBase {
     ]))->seal();
     $values = ['settings' => ['size' => 10], 'tags' => ['b']];
 
-    $this->assertSame(['settings.size', 'tags.0'], $this->refusals($shape(5, 'a'), $values));
-    $this->assertSame([], $this->refusals($shape(50, 'b'), $values));
-    $this->assertSame(['settings.size', 'tags.0'], $this->refusals($shape(5, 'a'), $values));
+    $this->assertSame(['settings.size', 'tags.0'], $this->refusals($build(5, 'a'), $values));
+    $this->assertSame([], $this->refusals($build(50, 'b'), $values));
+    $this->assertSame(['settings.size', 'tags.0'], $this->refusals($build(5, 'a'), $values));
   }
 
   /**

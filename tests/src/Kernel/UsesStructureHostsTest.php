@@ -15,13 +15,13 @@ use Drupal\data_surface_address\Resource\AddressFieldSettingsResource;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface_demo\Plugin\Field\FieldFormatter\DataSurfaceDemoFormatter;
 use Drupal\data_surface_demo\Structure\DemoBlockStructure;
-use Drupal\data_surface_surface_test\PlainThresholdPlugin;
-use Drupal\data_surface_surface_test\Plugin\Action\ThresholdAction;
-use Drupal\data_surface_surface_test\Plugin\Block\StickyNoteBlock;
-use Drupal\data_surface_surface_test\Plugin\Condition\ThresholdCondition;
-use Drupal\data_surface_surface_test\Resource\PinnedNoteResource;
-use Drupal\data_surface_surface_test\Structure\ThresholdStructure;
-use Drupal\data_surface_surface_test\Alter\StickyNoteAlter;
+use Drupal\data_surface_resource_test\PlainThresholdPlugin;
+use Drupal\data_surface_resource_test\Plugin\Action\ThresholdAction;
+use Drupal\data_surface_resource_test\Plugin\Block\StickyNoteBlock;
+use Drupal\data_surface_resource_test\Plugin\Condition\ThresholdCondition;
+use Drupal\data_surface_resource_test\Resource\PinnedNoteResource;
+use Drupal\data_surface_resource_test\Structure\ThresholdStructure;
+use Drupal\data_surface_resource_test\Alter\StickyNoteAlter;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use PHPUnit\Framework\Attributes\Group;
@@ -55,7 +55,7 @@ class UsesStructureHostsTest extends DataSurfaceKernelTestBase {
     'data_surface',
     'data_surface_address',
     'data_surface_demo',
-    'data_surface_surface_test',
+    'data_surface_resource_test',
   ];
 
   /**
@@ -78,12 +78,12 @@ class UsesStructureHostsTest extends DataSurfaceKernelTestBase {
   public function testEveryHostRecordsTheAttribute(): void {
     $named = [
       ['plugin.manager.block', 'data_surface_demo', DemoBlockStructure::class],
-      ['plugin.manager.block', 'data_surface_surface_test_pinned_note', PinnedNoteResource::class],
+      ['plugin.manager.block', 'data_surface_resource_test_pinned_note', PinnedNoteResource::class],
       // A plugin that is its own structure records its own class.
       ['plugin.manager.field.formatter', 'data_surface_demo_string', DataSurfaceDemoFormatter::class],
-      ['plugin.manager.block', 'data_surface_surface_test_sticky_note', StickyNoteBlock::class],
-      ['plugin.manager.condition', 'data_surface_surface_test_threshold', ThresholdStructure::class],
-      ['plugin.manager.action', 'data_surface_surface_test_threshold', ThresholdStructure::class],
+      ['plugin.manager.block', 'data_surface_resource_test_sticky_note', StickyNoteBlock::class],
+      ['plugin.manager.condition', 'data_surface_resource_test_threshold', ThresholdStructure::class],
+      ['plugin.manager.action', 'data_surface_resource_test_threshold', ThresholdStructure::class],
       // Read off the class another module's alter swapped in.
       ['plugin.manager.field.field_type', 'address', AddressFieldSettingsResource::class],
     ];
@@ -92,7 +92,7 @@ class UsesStructureHostsTest extends DataSurfaceKernelTestBase {
     }
     $this->assertArrayNotHasKey(UsesStructure::DEFINITION_KEY, $this->container->get('plugin.manager.field.field_type')->getDefinition('string'));
     $this->assertSame(
-      ['action:data_surface_surface_test_threshold', 'condition:data_surface_surface_test_threshold'],
+      ['action:data_surface_resource_test_threshold', 'condition:data_surface_resource_test_threshold'],
       $this->container->get('data_surface.resource_plugins')->usedBy(ThresholdStructure::class),
     );
   }
@@ -118,9 +118,9 @@ class UsesStructureHostsTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['field_formatter:data_surface_demo_string'], $plugins->usedBy(DataSurfaceDemoFormatter::class));
 
     $sticky = $registry->getDefinition(StickyNoteBlock::class);
-    $this->assertSame('surface_test.sticky_note', $sticky->id);
-    $this->assertSame('data_surface_surface_test', $sticky->module);
-    $this->assertSame(['block:data_surface_surface_test_sticky_note'], $plugins->usedBy(StickyNoteBlock::class));
+    $this->assertSame('resource_test.sticky_note', $sticky->id);
+    $this->assertSame('data_surface_resource_test', $sticky->module);
+    $this->assertSame(['block:data_surface_resource_test_sticky_note'], $plugins->usedBy(StickyNoteBlock::class));
     $this->assertSame([StickyNoteAlter::class], array_map(static fn ($alter) => $alter->class, $sticky->alters));
 
     // Neither is in the list the compiler pass made: both came from the
@@ -160,11 +160,11 @@ class UsesStructureHostsTest extends DataSurfaceKernelTestBase {
    * Tests the block host on a block that is its own structure.
    */
   public function testTheBlockHostWhenTheBlockIsItsOwnStructure(): void {
-    $block = $this->container->get('plugin.manager.block')->createInstance('data_surface_surface_test_sticky_note');
+    $block = $this->container->get('plugin.manager.block')->createInstance('data_surface_resource_test_sticky_note');
     $this->assertInstanceOf(StickyNoteBlock::class, $block);
     $surface = $block->getDataSurface();
     $this->assertSame(['color', 'note'], $surface->getDefinitions()->names());
-    // Defaults read off the block's own static shape.
+    // Defaults read off the block's own static defineInputs().
     $this->assertSame('yellow', $block->getConfiguration()['color']);
     $this->assertSame('Sticky', $block->getConfiguration()['note']);
     // The alter that names the block class applies.
@@ -185,13 +185,13 @@ class UsesStructureHostsTest extends DataSurfaceKernelTestBase {
    * Tests the block host.
    */
   public function testTheBlockHost(): void {
-    $block = $this->container->get('plugin.manager.block')->createInstance('data_surface_surface_test_pinned_note');
+    $block = $this->container->get('plugin.manager.block')->createInstance('data_surface_resource_test_pinned_note');
     $surface = $block->getDataSurface();
     $this->assertSame(['note'], $surface->getDefinitions()->names());
     // Defaults reach the configuration through the host, beside the
     // host's own keys.
     $this->assertSame('Pinned', $block->getConfiguration()['note']);
-    $this->assertSame('data_surface_surface_test_pinned_note', $block->getConfiguration()['id']);
+    $this->assertSame('data_surface_resource_test_pinned_note', $block->getConfiguration()['id']);
     // The host supplies the storage: the plugin's configuration, never
     // the resource's own, which only an operation asked on its own uses.
     $this->assertInstanceOf(PluginConfigurationStorage::class, $block->getDataSurfaceStorage());
@@ -222,13 +222,13 @@ class UsesStructureHostsTest extends DataSurfaceKernelTestBase {
    * Tests the condition host, the structure's refiner included.
    */
   public function testTheConditionHost(): void {
-    $condition = $this->container->get('plugin.manager.condition')->createInstance('data_surface_surface_test_threshold', ['reading' => 20]);
+    $condition = $this->container->get('plugin.manager.condition')->createInstance('data_surface_resource_test_threshold', ['reading' => 20]);
     $this->assertInstanceOf(ThresholdCondition::class, $condition);
     $surface = $condition->getDataSurface();
     $this->assertSame(['mode', 'threshold', 'reading'], $surface->getDefinitions()->names());
     // The host's own key stays the host's.
     $configuration = $condition->getConfiguration();
-    $this->assertSame('data_surface_surface_test_threshold', $configuration['id']);
+    $this->assertSame('data_surface_resource_test_threshold', $configuration['id']);
     $this->assertFalse($configuration['negate']);
     $this->assertSame(10, $configuration['threshold']);
     $this->assertTrue($condition->evaluate());
@@ -246,7 +246,7 @@ class UsesStructureHostsTest extends DataSurfaceKernelTestBase {
    * Tests the action host, writing through the storage it supplies.
    */
   public function testTheActionHost(): void {
-    $action = $this->container->get('plugin.manager.action')->createInstance('data_surface_surface_test_threshold');
+    $action = $this->container->get('plugin.manager.action')->createInstance('data_surface_resource_test_threshold');
     $this->assertInstanceOf(ThresholdAction::class, $action);
     $this->assertSame(['mode' => 'at_least', 'threshold' => 10, 'reading' => 0], $action->getConfiguration());
 
@@ -287,7 +287,7 @@ class UsesStructureHostsTest extends DataSurfaceKernelTestBase {
     $plugin = new PlainThresholdPlugin(['reading' => 3], 'plain', [
       'id' => 'plain',
       'class' => PlainThresholdPlugin::class,
-      'provider' => 'data_surface_surface_test',
+      'provider' => 'data_surface_resource_test',
       UsesStructure::DEFINITION_KEY => ThresholdStructure::class,
     ]);
     $form_object = new DataSurfacePluginForm();

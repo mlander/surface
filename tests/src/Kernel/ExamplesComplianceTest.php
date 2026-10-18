@@ -348,6 +348,29 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Tests a refusal a refiner caused names the keys it depends on.
+   *
+   * Too few stewards is about the capacity, and a capacity over a
+   * hundred is about the room and the licence: each refusal says so in a
+   * second sentence. The licence's own pattern is its own rule, and its
+   * refusal says nothing more (testTheLicencePatternIsChecked()).
+   */
+  public function testRefusalNamesWhatItDependsOn(): void {
+    $messages = static fn (iterable $violations): array => array_map(
+      static fn ($violation): string => strip_tags((string) $violation->message),
+      iterator_to_array($violations),
+    );
+    $this->assertSame(
+      ['This value should be 3 or more. This depends on Capacity.'],
+      $messages($this->pipeline()->validate($this->surface(), ['capacity' => 150] + self::compliance('2048', 2) + self::EVENT)),
+    );
+    $this->assertSame(
+      ['This value should be between 1 and 100. This depends on Room, Event licence.'],
+      $messages($this->pipeline()->validate($this->surface(), ['capacity' => 150] + self::compliance(NULL, 3) + self::EVENT)),
+    );
+  }
+
+  /**
    * Tests the pipeline writes a large event with a licence, and not without.
    */
   public function testThePipelineRefusesLargeEventWithoutLicence(): void {

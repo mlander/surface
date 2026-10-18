@@ -59,7 +59,7 @@ final class ConfigSchemaPanel {
    *
    * @param string $config
    *   The config object's name.
-   * @param array|null $surface
+   * @param array|null $full
    *   The full JSON Schema the resource emits for the same settings
    *   (ContractEmitter::emitFull()), to compare with; NULL for a page
    *   with no resource.
@@ -69,7 +69,7 @@ final class ConfigSchemaPanel {
    * @return array
    *   A render array: a collapsed details element.
    */
-  public function build(string $config, ?array $surface = NULL, string|\Stringable|null $note = NULL): array {
+  public function build(string $config, ?array $full = NULL, string|\Stringable|null $note = NULL): array {
     $today = $this->contract->describe($config);
     $panel = [
       '#type' => 'details',
@@ -97,7 +97,7 @@ final class ConfigSchemaPanel {
       '#title' => $this->t('The most a plain mapping of config schema could say'),
       'json' => $this->json($today['derived']),
     ];
-    if ($surface !== NULL) {
+    if ($full !== NULL) {
       $panel['comparison_note'] = [
         '#markup' => '<p>' . $this->t('Key by key, the JSON Schema keywords each one states: the mapping above, and the full schema the resource emits, the one that holds for any answers. Neither reads a value, so this table does not change either.') . '</p>',
       ];
@@ -108,7 +108,7 @@ final class ConfigSchemaPanel {
           $this->t('From config schema'),
           $this->t('From the resource'),
         ],
-        '#rows' => $this->comparison($today['derived'], $surface),
+        '#rows' => $this->comparison($today['derived'], $full),
         '#attributes' => ['class' => ['data-surface-today-comparison']],
       ];
     }
@@ -137,15 +137,15 @@ final class ConfigSchemaPanel {
    *
    * @param array $derived
    *   The schema mapped from config schema.
-   * @param array $surface
+   * @param array $full
    *   The full schema the resource emits.
    *
    * @return array
    *   The table rows, and a last one for `required`.
    */
-  protected function comparison(array $derived, array $surface): array {
+  protected function comparison(array $derived, array $full): array {
     $rows = [];
-    foreach ($surface['properties'] ?? [] as $key => $property) {
+    foreach ($full['properties'] ?? [] as $key => $property) {
       $key = (string) $key;
       $from_schema = $derived['properties'][$key] ?? NULL;
       $rows[] = [
@@ -153,9 +153,9 @@ final class ConfigSchemaPanel {
           ['data' => ['#markup' => '<code>' . htmlspecialchars($key) . '</code>']],
           is_array($from_schema) ? $this->keywords($from_schema) : (string) $this->t('not declared'),
           implode(', ', array_filter([
-            $this->keywords(SchemaResolver::resolve($property, $surface), ''),
+            $this->keywords(SchemaResolver::resolve($property, $full), ''),
             $this->reference($property),
-            $this->conditionals($surface, $key),
+            $this->conditionals($full, $key),
           ])),
         ],
         'data-today-key' => $key,
@@ -165,7 +165,7 @@ final class ConfigSchemaPanel {
       'data' => [
         ['data' => ['#markup' => '<code>required</code>']],
         isset($derived['required']) ? implode(', ', $derived['required']) : (string) $this->t('not stated'),
-        isset($surface['required']) ? implode(', ', $surface['required']) : (string) $this->t('not stated'),
+        isset($full['required']) ? implode(', ', $full['required']) : (string) $this->t('not stated'),
       ],
       'data-today-keyword' => 'required',
     ];
@@ -215,29 +215,29 @@ final class ConfigSchemaPanel {
   /**
    * Says what the resource states about a key as conditionals on its parent.
    *
-   * A slot's shapes, one per value of the key that chooses it, and what
+   * A slot's variants, one per value of the key that chooses it, and what
    * a refiner answers for each value it could be handed, are written on
-   * the parent object as `allOf` of `if`/`then`, not on the key. A shape
+   * the parent object as `allOf` of `if`/`then`, not on the key. A variant
    * is named by the value that chooses it, the keys it has once its
    * reference is resolved, and the def it refers to; a case that only
    * narrows the key is counted.
    *
-   * @param array $surface
+   * @param array $full
    *   The full schema the resource emits.
    * @param string $key
    *   The key.
    *
    * @return string
-   *   The phrase, such as "if/then on pricing (2 shapes: free has note,
+   *   The phrase, such as "if/then on pricing (2 variants: free has note,
    *   $ref (registration.step3.ticket.free); paid has price, currency,
    *   $ref (registration.step3.ticket.paid))" or "if/then on venue (3
    *   cases)", or the empty string when no conditional names the key.
    */
-  protected function conditionals(array $surface, string $key): string {
+  protected function conditionals(array $full, string $key): string {
     $count = 0;
     $on = [];
-    $shapes = [];
-    foreach ($surface['allOf'] ?? [] as $branch) {
+    $variants = [];
+    foreach ($full['allOf'] ?? [] as $branch) {
       $site = $branch['then']['properties'][$key] ?? NULL;
       if (!is_array($site)) {
         continue;
@@ -245,9 +245,9 @@ final class ConfigSchemaPanel {
       $count++;
       $if = is_array($branch['if']['properties'] ?? NULL) ? $branch['if']['properties'] : [];
       $on += array_fill_keys(array_map('strval', array_keys($if)), TRUE);
-      $then = SchemaResolver::resolve($site, $surface);
+      $then = SchemaResolver::resolve($site, $full);
       if (is_array($then['properties'] ?? NULL)) {
-        $shapes[] = implode(', ', array_filter([
+        $variants[] = implode(', ', array_filter([
           (string) $this->t('@value has @keys', [
             '@value' => implode(', ', array_map('strval', array_column($if, 'const'))),
             '@keys' => implode(', ', array_keys($then['properties'])),
@@ -259,9 +259,9 @@ final class ConfigSchemaPanel {
     if ($count === 0) {
       return '';
     }
-    $arguments = ['@keys' => implode(', ', array_keys($on)), '@shapes' => implode('; ', $shapes)];
-    return (string) ($shapes !== []
-      ? $this->formatPlural($count, 'if/then on @keys (1 shape: @shapes)', 'if/then on @keys (@count shapes: @shapes)', $arguments)
+    $arguments = ['@keys' => implode(', ', array_keys($on)), '@variants' => implode('; ', $variants)];
+    return (string) ($variants !== []
+      ? $this->formatPlural($count, 'if/then on @keys (1 variant: @variants)', 'if/then on @keys (@count variants: @variants)', $arguments)
       : $this->formatPlural($count, 'if/then on @keys (1 case)', 'if/then on @keys (@count cases)', $arguments));
   }
 

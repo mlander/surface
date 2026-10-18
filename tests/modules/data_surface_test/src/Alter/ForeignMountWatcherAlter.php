@@ -9,12 +9,12 @@ use Drupal\data_surface\Resource\Attribute\Alters;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
 use Drupal\data_surface\Resource\AltersInputsInterface;
-use Drupal\data_surface_surface_test\Structure\MountWatcherStructure;
+use Drupal\data_surface_resource_test\Structure\MountWatcherStructure;
 
 /**
  * Watches a key another module mounted, which is refused.
  *
- * The kind is data_surface_surface_test's. Applies only where that module
+ * The kind is data_surface_resource_test's. Applies only where that module
  * is enabled too, since the structure it names is that module's.
  */
 #[Alters(MountWatcherStructure::class)]

@@ -9,9 +9,9 @@ namespace Drupal\data_surface_entity\Structure\Attribute;
  *
  * Replaces the derivation from typed data for that field type wherever a
  * field of it is derived: the class implements FieldItemStructureInterface,
- * whose defineItem() fills the item's shape, and its own static
+ * whose defineItem() fills the item's blueprint, and its own static
  * #[RefinesInput] methods refine it. The field's label, operations and
- * access stay the derived ones; only the shape and its refiners are
+ * access stay the derived ones; only the keys and their refiners are
  * written by hand.
  *
  * @see \Drupal\data_surface_entity\Structure\FieldItemStructureInterface

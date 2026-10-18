@@ -14,7 +14,7 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Attachment;
 use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
-use Drupal\data_surface_surface_test\Resource\Pantry\PantryResource;
+use Drupal\data_surface_resource_test\Resource\Pantry\PantryResource;
 use Drupal\data_surface_test\Plugin\Block\DataSurfaceChainTestBlock;
 use Drupal\node\Entity\NodeType;
 use PHPUnit\Framework\Attributes\Group;
@@ -73,7 +73,7 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
     'data_surface',
     'data_surface_demo',
     'data_surface_test',
-    'data_surface_surface_test',
+    'data_surface_resource_test',
   ];
 
   /**

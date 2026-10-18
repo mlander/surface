@@ -3,8 +3,8 @@
 A resource or structure says what a key may hold. Refinement says what
 it may hold *given what the other keys hold*: which variants exist for
 the chosen casing, which bundles exist for the chosen entity type, which
-fields exist on that bundle. This page says who is allowed to change a shape,
-when, by how much, and how long the answer is good for.
+fields exist on that bundle. This page says who is allowed to change a
+resource or structure, when, by how much, and how long the answer is good for.
 
 It is the contribution-model chapter: read
 [Declaring a resource](declaring-a-resource.md) first for how a resource
@@ -32,9 +32,9 @@ each role has exactly one permission.
 | **Contributor** | Build time: an alter's `alterInputs()` | Add keys, mounted under its own module's name; offer more values on a fixed list with `extendChoices()`; reword a label or description with `describe()` | Add bare top-level keys, take anything away, change a key's type, contribute a value somebody already owns |
 | **Refiner** | Refinement, per request: a `#[RefinesInput]` method | Narrow one key, reading the siblings it watches | Touch a value its class did not contribute, hand back a value it was not given |
 
-The shape's **owner**, the `#[Resource]` or `#[Structure]` class that
-declares it, is simply the first contributor. Its keys and its `#[RefinesInput]`
-methods are contribution number one, and they are held to the same rules
+The **owner** of a resource or structure, the `#[Resource]` or
+`#[Structure]` class that declares it, is simply the first contributor.
+Its keys and its `#[RefinesInput]` methods are contribution number one, and they are held to the same rules
 as everybody who arrives later.
 
 Nothing removes. A site that must hide an owner's key or value by
@@ -73,7 +73,7 @@ Two refusals fall out of this, both at build time:
   contract its owner deliberately left open, which is not a
   contribution.
 
-A key an alter adds lands at `third_party_settings.<module>.<key>` —
+A key an alter adds lands at `third_party_settings.<module>.<key>`:
 advertised, validated and machine-visible, the way core stores
 third-party settings. A formatter or widget host has one extra rule to
 know about there: it prunes saved settings against its static defaults
@@ -86,7 +86,7 @@ Refinement runs per request, whenever the values a key depends on are
 known. In four lines:
 
 1. Deep-clone the advertised definition, and divide its list of allowed
-   values into the owner's — everything nobody contributed — and one
+   values into the owner's (everything nobody contributed) and one
    slice per contributor.
 2. Run the owner's refiners over the owner's slice.
 3. Run each contributor's refiners over that contributor's slice.
@@ -101,12 +101,12 @@ owner's chain, after the owner's own methods.
 The union is the whole point. A refiner narrowing "its" option can never
 take a sibling module's option with it, and can never put back an option
 another module narrowed away, because it never sees them. Where a key
-has a single contribution — nearly every key — the algorithm reduces to
+has a single contribution (nearly every key), the algorithm reduces to
 a plain chain of refiners over the whole definition, minus the ability
 to widen.
 
 Only the values are merged this way. Everything else about the refined
-definition — its other constraints, its description, its default — is
+definition (its other constraints, its description, its default) is
 the owner's, because the owner is the one who answers for the key.
 
 #### One method, one rule
@@ -259,7 +259,7 @@ than a refused refinement.
 | Adding a `Length`, `Range` or `Count` bound where there was none | narrower |
 | Changing or dropping a `Length` or `Count` `exactly` | **refused** |
 | Sharpening a label, description, default or example | neither, and allowed |
-| Refining `any` to a concrete type, a map included | narrower — the declared escape hatch |
+| Refining `any` to a concrete type, a map included | narrower: the declared escape hatch |
 | Changing the data type to one of its derivatives (`entity` to `entity:node` to `entity:node:article`) | narrower |
 | Changing the data type any other way | **refused** |
 | Turning off the required flag | **refused** |
@@ -309,7 +309,7 @@ what widened:
 
 Two more checks belong to the same contract. Building refuses a
 resource or structure in which a key refines, directly or indirectly,
-against itself: a cycle is not an infinite loop (each target is walked
+against itself: a cycle is not an infinite loop (each key is walked
 once), which is exactly why it has to be refused, since the answer would
 otherwise depend on the order the keys happened to be read in. And a
 sealed data surface is only read: refinement returns a new data surface
@@ -319,7 +319,7 @@ What the build step seals is a `DefinitionMap`: one `Entry` per
 key, in declaration order, carrying that key's definition, its
 contributor, its locked state, its refinement edges, the values
 contributed to it and the refiner chains bound to it. The map checks
-the rest of the shape once, as it is built — a key declared twice, or a
+the rest once, as it is built: a key declared twice, or a
 refinement edge naming a key nobody declared, is refused there.
 Refinement then rebuilds the map one entry at a time through `with()`,
 replacing only the definition, so a narrowed data surface cannot lose
@@ -335,7 +335,7 @@ that rendering holds. A data surface is therefore a
 `CacheableDependencyInterface`, and there are three places metadata
 enters it:
 
-- **The shape.** `BlueprintInterface::addCacheableDependency()` in
+- **The blueprint.** `BlueprintInterface::addCacheableDependency()` in
   `defineInputs()`, for anything the definitions themselves were read
   from: a key offered only while a module is installed, a label read
   from configuration.
@@ -355,7 +355,7 @@ enters it:
   element it builds.
 
 The form builder applies the refined data surface's metadata to its
-container, so a generated form carries both halves: the shape's, on the
+container, so a generated form carries both halves: the blueprint's, on the
 container, and each list's, on its element. See
 [Generated forms](forms.md).
 
@@ -366,19 +366,19 @@ data surface:
 
 - **Cache tags and max-age travel.** They describe how long an answer
   stays true for *everybody*, so they can be stored in a shared cache
-  and invalidated for everybody at once. A refined shape carrying the
+  and invalidated for everybody at once. A refined data surface carrying the
   `config:system.site` tag can be cached and will be dropped when that
   config is saved.
 - **Cache contexts mean per-request.** A context says the answer would
-  have been different for a different request — a different user,
-  language, or URL. A refined shape carrying contexts is only valid for
+  have been different for a different request: a different user,
+  language, or URL. A refined data surface carrying contexts is only valid for
   the request that produced it. It may be stored in a shared cache only
   by a cache that varies on those contexts; anything that stores it
-  without them is storing one visitor's shape and serving it to the
+  without them is storing one visitor's data surface and serving it to the
   next.
 
 The practical rule for anything holding a data surface: **never persist a
-refined shape that carries cache contexts** unless the thing persisting
+refined data surface that carries cache contexts** unless the thing persisting
 it varies by those contexts. A data surface with no contexts, a
 `PERMANENT` max-age and no tags is static, and may be reused freely.
 Anything else is only as reusable as its shortest-lived half.
@@ -386,7 +386,7 @@ Anything else is only as reusable as its shortest-lived half.
 ## Worked example: the extras demo
 
 `data_surface_demo` ships a field formatter whose `variant` key
-advertises four values — `bold`, `strong`, `quiet`, `muted` — and one
+advertises four values (`bold`, `strong`, `quiet`, `muted`) and one
 refiner that narrows them to the ones the chosen casing offers. It knows
 nothing about any other module.
 
@@ -442,7 +442,8 @@ contract all see the same five values, narrowed the same way.
   key only while its list is non-empty ([Widgets](widgets.md#the-stock-widgets)),
   so the select becomes a text field holding the stored value, which
   Save then refuses as not a valid choice. Until a refiner can say that
-  a key does not apply (ROADMAP item 2), spell "only when weekly" as a
+  a key does not apply ([ROADMAP](../ROADMAP.md), "This key does not
+  apply"), spell "only when weekly" as a
   slot on the deciding key whose other variants declare no keys: an
   empty variant renders as nothing and its value is an empty map
   ([Children](resources.md#children)).
@@ -461,4 +462,4 @@ contract all see the same five values, narrowed the same way.
   it stands, NULL while empty. Another module's mounted key, and any
   key inside a map that is not a mount, still needs the dotted paths.
 - **Storage.** For config-backed values, widening is a schema alter and
-  the shape follows; storage gates the write either way.
+  the resource or structure follows; storage gates the write either way.

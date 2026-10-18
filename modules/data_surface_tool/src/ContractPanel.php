@@ -230,8 +230,8 @@ final class ContractPanel implements DataSurfaceFormPanelInterface {
       // whose keys are listed once, under `*`.
       $source = $entry->list->item->source;
       $count = $definition->getConstraints()['Count'] ?? NULL;
-      $rows[] = $this->row($path, $this->t('collection'), $definition, NULL, $this->t('A list of @surface@count', [
-        '@surface' => $source === NULL ? $this->t('a sealed data surface') : $this->registry->getDefinition($source)->id,
+      $rows[] = $this->row($path, $this->t('collection'), $definition, NULL, $this->t('A list of @child@count', [
+        '@child' => $source === NULL ? $this->t('a sealed data surface') : $this->registry->getDefinition($source)->id,
         '@count' => is_array($count) ? ', ' . $this->bounds('Count', $count) : '',
       ]), $depends, $this->status($declared, $definition, $entry->locked, $entry->isRefinedAtRuntime()));
       $declared_item = $declared instanceof ListDataDefinitionInterface ? $declared->getItemDefinition() : NULL;
@@ -240,8 +240,8 @@ final class ContractPanel implements DataSurfaceFormPanelInterface {
     }
     if ($entry->attachment !== NULL && $definition instanceof ComplexDataDefinitionInterface) {
       $source = $entry->attachment->source;
-      $rows[] = $this->row($path, $this->t('part'), $definition, NULL, $this->t('A fixed part: @surface', [
-        '@surface' => $source === NULL ? $this->t('a sealed data surface') : $this->registry->getDefinition($source)->id,
+      $rows[] = $this->row($path, $this->t('part'), $definition, NULL, $this->t('A fixed part: @child', [
+        '@child' => $source === NULL ? $this->t('a sealed data surface') : $this->registry->getDefinition($source)->id,
       ]), $depends, $this->t('as declared'));
       $this->propertyRows($rows, $path, $definition, $declared instanceof ComplexDataDefinitionInterface ? $declared->getPropertyDefinitions() : [], []);
       return;

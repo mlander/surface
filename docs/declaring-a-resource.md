@@ -5,13 +5,13 @@ A resource or structure is declared in one place: a class in a module's
 `#[Structure]`. The attribute decides the kind, not the directory.
 Discovery finds the class the way core finds one in `src/Hook`, the
 build step (`data_surface.resources`) builds it in a context and seals
-it, and nothing ever constructs one: its shape and its refiners are
+it, and nothing ever constructs one: its declaration and its refiners are
 static, asked of the class. A plugin whose configuration a structure is
 only names it, with `#[UsesStructure]`, or is it, with `#[UsesStructure]`
 and no argument ([On a plugin](#on-a-plugin)).
 
 A resource is a thing with identity and storage that operations read
-and write; a structure is a shape with members that something else
+and write; a structure is a group of keys that something else
 holds. Both are written the same way, and this page is the class and
 what it says. [Resources and structures as classes](resources.md) has
 operations, alters, children, access, storage and the tools generated
@@ -71,8 +71,8 @@ outputs, which the demo formatter declares; the test module's
 
 - **Everything on the class is static.** `defineInputs()` and
   `defineOutputs()` are static on the interface, and a `#[RefinesInput]`
-  method on a resource or structure is refused unless it is static. Shape is a
-  property of the class: it takes no values, context or services, and
+  method on a resource or structure is refused unless it is static. What it
+  declares is a property of the class: it takes no values, context or services, and
   static holds it to that by the language.
 - **`defineInputs()` is a flat list.** No `if`, no loop, and it never
   mentions a sibling. A constraint written there is fully known with no
@@ -99,7 +99,7 @@ outputs, which the demo formatter declares; the test module's
   services; an alter's refiners are static methods too, unless they
   declare `runtime: TRUE`, the one kind an instance method may be.
 
-### Nothing live in the shape
+### Nothing live in the blueprint
 
 A list of allowed values that depends on the site is a constraint whose
 options resolver fetches it, never a list the class assembles. "Live"
@@ -111,10 +111,10 @@ no core constraint names the list, a module adds one with its resolver,
 as the demo does with `DataSurfaceDemoBundleField`; see [Options and
 resolvers](options.md).
 
-A shape that does depend on site state (a key offered only while a
+A blueprint whose keys do depend on site state (a key offered only while a
 module is installed, a label read from configuration) says so with
 `BlueprintInterface::addCacheableDependency()`, so a form rendered from it
-is cached no longer than its shape holds.
+is cached no longer than those keys hold.
 
 ## On a plugin
 
@@ -206,8 +206,8 @@ class SurfaceGatedItem extends StringItem implements FieldSurfaceProviderInterfa
 }
 ```
 
-A field type whose storage layout differs from the layout a caller is
-asked for overrides `getDataSurfaceStorage()` and hands
+A field type whose storage layout differs from how a caller is asked
+for its settings overrides `getDataSurfaceStorage()` and hands
 `FieldSettingsStorage` a layout, as `SurfaceAddressItem` does.
 
 What a host supplies, and why the structure does not:
@@ -222,7 +222,7 @@ What a host supplies, and why the structure does not:
   `getDataSurfaceStorage()` throws.
 - **Static defaults.** `defaultSettings()` and `defaultFieldSettings()`
   read `#[UsesStructure]` off the class and take
-  `ResourcesInterface::defaults()`: the structure's own shape alone,
+  `ResourcesInterface::defaults()`: the structure's own declaration alone,
   with no alter, context or refiner.
 
 `#[UsesStructure]` is copied into the plugin definition, so the catalogue
@@ -287,7 +287,7 @@ decided by one question: is there an instance a translation service
 could have been injected into?
 
 **Static context calls the global `t()`.** A resource's or structure's
-shape, its refiners and its operations are static, and so are a
+declaration, its refiners and its operations are static, and so are a
 plugin's static protocol methods; an enum has no properties. Nothing can
 be injected there, so `t('Headline')` is the spelling. It returns the
 same lazy `TranslatableMarkup` that `new TranslatableMarkup('Headline')`

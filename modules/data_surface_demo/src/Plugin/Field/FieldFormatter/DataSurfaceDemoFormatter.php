@@ -24,10 +24,11 @@ use Drupal\data_surface_demo\DemoVariant;
  * A field formatter that is its own structure.
  *
  * #[UsesStructure] with no argument: the class declares its settings and
- * what it emits beside the one thing it does, showing a value. Its shape
- * and its refiner are static, so nothing constructs the formatter to ask;
- * the formatter host builds the structure from this class, renders its
- * form, validates it and answers the static defaults from it. Its id is
+ * what it emits beside the one thing it does, showing a value. Its
+ * declarations and its refiner are static, so nothing constructs the
+ * formatter to ask; the formatter host builds the structure from this
+ * class, renders its form, validates it and answers the static defaults
+ * from it. Its id is
  * field_formatter:data_surface_demo_string, from the plugin, and an alter
  * names it by this class. No defaultSettings, no settingsForm, no
  * settingsSummary, and no render array. The classic demo writes them
