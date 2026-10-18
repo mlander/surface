@@ -395,6 +395,24 @@ refinement with its enforcement, child operations with three-way access,
 collections, the vocabulary) is complete as scoped; the entity side is
 tabled until the user resumes it.
 
+Priority, in milestones (2026-10-18). A before anything: a known bug
+and an unverified invariant make everything above them suspect. B before
+C: B changes what a schema can state, and C reads that schema. The
+renames sit in A because they are cheapest before new code exists.
+
+- **A, merge-ready:** the refinement leak; the never-stricter audit; the
+  blueprint and storage layout renames (item 4); the docs reading pass
+  and the leftover-words decision; then merge `next` to `main`, the React
+  local resolution included.
+- **B, what the contract can say:** declarative narrowing (2); ports (3);
+  named scalar shapes (5).
+- **C, access and the doors:** static and runtime access (6); operation
+  behaviour facts and the tool door's refusal feedback (7).
+- **D, edges as they bite:** item 8.
+- **E, the entity side** when resumed: item 9.
+- **In parallel from now:** file the drafted core issues (item 10); the
+  core conversation is slow and depends on nothing above.
+
 1. **Make `next` trustworthy, then merge it to `main`.**
    - The refinement leak: one call to the registration tool changes the
      verdict of the next call in the same process (a capacity of 50 is
