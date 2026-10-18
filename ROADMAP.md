@@ -466,6 +466,16 @@ tabled until the user resumes it.
    means narrowing the `values` map from its own partial value in the
    tool bridge. One retry per dependent key is the target. Applies to
    ECA and MCP alike.
+   Also the operation's behaviour facts, which MCP reads as its tool
+   annotations and the bridge already derives from the Tool API:
+   `#[Operation]` gains `destructive` and `readOnly` (both false by
+   default); idempotent is derived from `creates` unless declared; the
+   tool deriver maps read-only to the `Read` kind and sets destructive;
+   both schema documents carry the facts at the top beside the
+   operation's id and label, so a client reading the contract directly
+   has them; open-world is a later flag on the storage. Tool API gap to
+   file: idempotence is a property of the operation kind, not the tool,
+   so an edit cannot say it is idempotent while an add says it is not.
 6. **Pattern edges**, each small: a read-only operation form for the
    top-level locked answer (today read as denied); a view-only slot
    variant (today not offered); `childrenMayAnswer()` skipping the
