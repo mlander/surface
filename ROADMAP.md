@@ -410,8 +410,13 @@ renames sit in A because they are cheapest before new code exists.
   behaviour facts and the tool door's refusal feedback (7).
 - **D, edges as they bite:** item 8.
 - **E, the entity side** when resumed: item 9.
-- **In parallel from now:** file the drafted core issues (item 10); the
-  core conversation is slow and depends on nothing above.
+- **In parallel from now:** file the drafted core issues (item 10),
+  now including one for conditional data definitions (a complex
+  definition declares `when`/`then`/`required` conditions that only
+  narrow; typed data validates them, the JSON Schema normalizer emits
+  `if`/`then` and `dependentRequired`; the companion to the dependency
+  metadata issue); the core conversation is slow and depends on nothing
+  above.
 
 1. **Make `next` trustworthy, then merge it to `main`.**
    - The refinement leak: one call to the registration tool changes the
