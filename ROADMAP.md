@@ -446,7 +446,18 @@ tabled until the user resumes it.
    wherever it is used, which a container may want to opt out of (to
    decide); a change to the structure changes every container's stored
    shape, which is Phase D with an explicit contract to diff.
-4. **Static and runtime access**, the same split as refinement. Static
+4. **Named scalar shapes.** The one Smithy level the pattern lacks: a
+   named simple shape with its traits, reused anywhere (`string Licence
+   @pattern`). Today a scalar's constraints, message and description are
+   written inline at each key, and core's answer, a data type plugin, is
+   too heavy for a four-digit string with a label. A `#[Shape('event.licence')]`
+   class whose static `define()` returns the data definition, used as
+   `$inputs->add('licence', Licence::class)`: the contract emits it once
+   as a def and references it; an alter can target the shape and so
+   tighten every use on the site; a port can declare it as its type;
+   and "shape" takes its Smithy place, resources, structures and named
+   scalars all being shapes. Small, additive, after ports.
+5. **Static and runtime access**, the same split as refinement. Static
    access is decidable from the account alone (an operation's
    permission, a role) and is stated in the full schema and the tool
    listing for the account asking. Runtime access depends on the
@@ -459,7 +470,7 @@ tabled until the user resumes it.
    locked or omitted later. Access answers per key or structure;
    narrowing allowed values by account is a runtime refiner, not
    access.
-5. **The tool door's feedback.** Keep the listing small, as intended.
+6. **The tool door's feedback.** Keep the listing small, as intended.
    Name each dependency in the input's description. Make a refusal on a
    dependent key say what is allowed for the values sent ("room: not
    offered for Riverside Hall; choose Main hall or East room"), which
@@ -476,7 +487,7 @@ tabled until the user resumes it.
    has them; open-world is a later flag on the storage. Tool API gap to
    file: idempotence is a property of the operation kind, not the tool,
    so an edit cannot say it is idempotent while an add says it is not.
-6. **Pattern edges**, each small: a read-only operation form for the
+7. **Pattern edges**, each small: a read-only operation form for the
    top-level locked answer (today read as denied); a view-only slot
    variant (today not offered); `childrenMayAnswer()` skipping the
    build when no access class exists; a collection inside an item on
@@ -484,7 +495,7 @@ tabled until the user resumes it.
    from the read tool; `attachListBy()`; an item routed to its child's
    own storage; the phpstan rule for static refiners; the "Right now"
    wording for a key that is both narrowed and under a runtime rule.
-7. **The entity side, when resumed.** Fields as two shapes: a `field`
+8. **The entity side, when resumed.** Fields as two shapes: a `field`
    resource (identity: entity and field name; a collection of items
    with Count from cardinality; field access; a `set` operation whose
    tool shares Tool Belt's `field_set_value` contract) and a
@@ -498,7 +509,7 @@ tabled until the user resumes it.
    first alter with a storage of its own, and a placed block as a
    config entity resource whose settings are a slot keyed by plugin id
    with each plugin's structure as a variant.
-8. **The core conversation**, bottom-up: the definition-level facts
+9. **The core conversation**, bottom-up: the definition-level facts
    first (constraints to JSON Schema keywords, `refined_by` on
    definitions, a setter contract, labels on Choice; drafted), then
    operations and access for config objects framed as what entity types
