@@ -418,7 +418,27 @@ tabled until the user resumes it.
    emitter writes it as a conditional without executing anything. Keys
    move from `dynamic` to `enumerated`; the compliance capacity is the
    first case. The static/runtime split made this possible.
-3. **Static and runtime access**, the same split as refinement. Static
+3. **Ports: a structure declares what it reads from its container.**
+   The wall says a child never names a parent's key, and structures
+   obey it; an alter may watch the owner's keys by name, and the
+   compliance example does (its stewards rule watches `capacity`),
+   which binds the reusable piece to one owner's key names. Instead a
+   structure declares a port under a name of its own
+   (`$inputs->reads('capacity', 'integer')`) and its refiners watch the
+   port; the container wires each port to one of its keys when it
+   attaches the structure (`attach('compliance', Compliance::class,
+   reads: ['capacity' => 'seats'])`), whether the container is a
+   resource or an alter. Consequences: an alter's shape must be able to
+   `attach()` and `attachList()` under its mount, so an alter becomes
+   an adapter that attaches a reusable structure and wires it; a
+   port-dependent conditional is emitted at the site on the parent's
+   `allOf`, never in the structure's def, which stays reusable; the
+   child's `dependsOn` is translated to the parent's path at the site;
+   identity handed through `withChild(known:)` is documented as a port
+   of a fixed kind, a port being a live sibling value. Rewording an
+   owner's label or tightening an owner's key directly stays an
+   alter's own business, as glue for one owner.
+4. **Static and runtime access**, the same split as refinement. Static
    access is decidable from the account alone (an operation's
    permission, a role) and is stated in the full schema and the tool
    listing for the account asking. Runtime access depends on the
@@ -431,14 +451,14 @@ tabled until the user resumes it.
    locked or omitted later. Access answers per key or structure;
    narrowing allowed values by account is a runtime refiner, not
    access.
-4. **The tool door's feedback.** Keep the listing small, as intended.
+5. **The tool door's feedback.** Keep the listing small, as intended.
    Name each dependency in the input's description. Make a refusal on a
    dependent key say what is allowed for the values sent ("room: not
    offered for Riverside Hall; choose Main hall or East room"), which
    means narrowing the `values` map from its own partial value in the
    tool bridge. One retry per dependent key is the target. Applies to
    ECA and MCP alike.
-5. **Pattern edges**, each small: a read-only operation form for the
+6. **Pattern edges**, each small: a read-only operation form for the
    top-level locked answer (today read as denied); a view-only slot
    variant (today not offered); `childrenMayAnswer()` skipping the
    build when no access class exists; a collection inside an item on
@@ -446,7 +466,7 @@ tabled until the user resumes it.
    from the read tool; `attachListBy()`; an item routed to its child's
    own storage; the phpstan rule for static refiners; the "Right now"
    wording for a key that is both narrowed and under a runtime rule.
-6. **The entity side, when resumed.** Fields as two shapes: a `field`
+7. **The entity side, when resumed.** Fields as two shapes: a `field`
    resource (identity: entity and field name; a collection of items
    with Count from cardinality; field access; a `set` operation whose
    tool shares Tool Belt's `field_set_value` contract) and a
@@ -460,7 +480,7 @@ tabled until the user resumes it.
    first alter with a storage of its own, and a placed block as a
    config entity resource whose settings are a slot keyed by plugin id
    with each plugin's structure as a variant.
-7. **The core conversation**, bottom-up: the definition-level facts
+8. **The core conversation**, bottom-up: the definition-level facts
    first (constraints to JSON Schema keywords, `refined_by` on
    definitions, a setter contract, labels on Choice; drafted), then
    operations and access for config objects framed as what entity types
