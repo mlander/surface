@@ -43,6 +43,7 @@ nav:
       - Widgets: widgets.md
       - Options and resolvers: options.md
       - The served contract: served-contract.md
+      - 'Audit: never stricter': audit-never-stricter.md
   - Extending a resource or structure:
       - Refinement and contributions: refinement.md
   - For core:

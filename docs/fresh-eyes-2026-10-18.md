@@ -237,7 +237,7 @@ have told me.
     compared, so this is allowed.) The tool shows my message. The form
     does not: core's number element checks `#max` first and says
     "Maximum recipients per send must be lower than or equal to 1000."
-    `forms.md` warns that element validation can pre-empt the
+    `forms.md` warns that element validation can override the
     surface's own violation, but only when you swap an element type in
     the cosmetic layer. The stock number widget does the same thing.
     *Should be:* `widgets.md` or `forms.md`.
@@ -559,7 +559,7 @@ that I needed for two answers. What I would tell the maintainers: put a
 settings-page recipe at the top of the README and ship the storage it
 needs; treat "this key does not apply" as a first-class case, because
 right now its natural spelling breaks the form and loosens the schema;
-and test what a *person* sees on a refusal (element checks pre-empting
+and test what a *person* sees on a refusal (element checks overriding
 the module's messages, placeholders printed raw) as carefully as the
 narrowing proofs are tested. The architecture deserves documentation
 that starts where its users start.

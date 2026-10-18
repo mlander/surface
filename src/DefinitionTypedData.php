@@ -124,15 +124,16 @@ final class DefinitionTypedData {
    */
   protected static function digest(DataDefinitionInterface $definition): string {
     try {
-      $parts = [serialize([
-        $definition->getDataType(),
-        $definition->getClass(),
-        $definition->isRequired(),
-        $definition->isReadOnly(),
-        $definition->getSettings(),
-        $definition->getConstraints(),
-      ],
-      )];
+      $parts = [
+        serialize([
+          $definition->getDataType(),
+          $definition->getClass(),
+          $definition->isRequired(),
+          $definition->isReadOnly(),
+          $definition->getSettings(),
+          $definition->getConstraints(),
+        ]),
+      ];
     }
     catch (\Throwable) {
       return bin2hex(random_bytes(16));

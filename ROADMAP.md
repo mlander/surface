@@ -413,7 +413,7 @@ renames sit in A because they are cheapest before new code exists.
   two contradictions (a page saying nothing emits a schema; two
   spellings of the operation label); two bugs: a `{{ max }}` placeholder
   printed literally in a refusal, and core's number element check
-  pre-empting the rule's own message; and a slot variant with no keys
+  overriding the rule's own message; and a slot variant with no keys
   must not crash the form (HTTP 500, "No data surface widget serves the
   map data type").
 - **B, what the contract can say:** inapplicable keys (2); declarative
