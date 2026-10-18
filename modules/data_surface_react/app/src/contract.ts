@@ -41,6 +41,17 @@ export interface Extension {
   /** On a module's fieldset inside a group: draw it right after this sibling of the group instead. */
   after?: string;
   /**
+   * The key's static refiners watch keys that each offer a list, and what
+   * they answer for every value is stated as conditionals on the frame:
+   * the page can narrow it with no request.
+   */
+  enumerated?: boolean;
+  /**
+   * Static, but not stated: a watched key cannot be listed, or the
+   * combinations exceed the cap. Narrowed for values by /refine.
+   */
+  dynamic?: boolean;
+  /**
    * A runtime refiner narrows the key too: a rule only the server applies,
    * when asked, which no schema states ahead of time. The full schema
    * keeps the key wider; this document is refined by it for its values.
@@ -282,6 +293,17 @@ export function resolveSchema(schema: Schema, root: Schema): Schema {
 }
 
 /**
+ * The schemas inlineSchema() resolved from a def: each a child's frame,
+ * where the parent's `allOf` ends and the child's own begins.
+ */
+const parts = new WeakSet<object>();
+
+/** Whether an inline schema is a child's frame (it was a reference to a def). */
+export function isPart(schema: Schema): boolean {
+  return parts.has(schema);
+}
+
+/**
  * A schema with every reference resolved, at every depth.
  *
  * What the app draws from: run once per contract, on load and on each
@@ -294,6 +316,10 @@ export function inlineSchema(schema: Schema, root?: Schema, ancestors: string[] 
   const [resolved, followed] = resolveAt(schema as Json, base, ancestors);
   if (root === undefined) {
     delete resolved.$defs;
+  }
+  if (followed.length > ancestors.length) {
+    // A child's frame: an attached part, a slot's variant, a collection's item.
+    parts.add(resolved);
   }
   const inline = (inner: unknown): unknown => (isObject(inner) ? inlineSchema(inner as Schema, base as Schema, followed) : inner);
   if (isObject(resolved.properties)) {
@@ -400,4 +426,856 @@ export function setAt<T>(values: T, path: string, value: unknown): T {
 /** Turns a path into an element id. */
 export function fieldId(path: string): string {
   return `dsr-${path.replace(/[^A-Za-z0-9_-]/g, '-')}`;
+}
+
+// Narrowing here.
+//
+// The full schema states every dependency that can be listed as a
+// conditional on the frame it sits in, and marks the rest: `dynamic` (a
+// static rule it could not list) and `runtime` (a rule only the server
+// can apply). So a change whose dependents are all stated can be narrowed
+// in the page, from the full schema, by the module's own rules; a change
+// with a dynamic or runtime dependent is asked of /refine. The page's
+// answer must be the server's: the same discard and orphan rule
+// (DataSurfaceFormBuilder::settle()), the same reading of a select
+// (ContractEmitter::property()), keyword for keyword.
+
+/** Why a change was asked of the server rather than narrowed here. */
+export type Marker = 'runtime' | 'dynamic' | 'stored' | 'unsettled' | 'pending';
+
+/** A change the page cannot narrow by itself, and the key that says why. */
+export class Unsettled extends Error {
+  constructor(
+    readonly key: string,
+    readonly marker: Marker,
+  ) {
+    super(`${key} cannot be narrowed here (${marker})`);
+  }
+}
+
+/** A form's state as a schema for its values: what the server answered, or what was narrowed here. */
+export interface Settled {
+  /** The schema for these answers, inline. */
+  schema: Schema;
+  /** The values it describes, as shown: a stale value is null. */
+  values: Values;
+  /** The paths shown on the empty option, standing for a stored value. */
+  stale: string[];
+}
+
+export interface Narrowing {
+  /** The full schema, inline: every key as declared, every listable dependency a conditional. */
+  full: Schema;
+  /** What the form shows now. */
+  previous: Settled;
+  /** The values the operation was loaded with: what is stored, over the defaults. */
+  stored: Values;
+  /** The values now, the change made. */
+  values: Values;
+  /** The stale paths as the page would send them, the changed path's taken out. */
+  stale: string[];
+  /** The path that changed. */
+  changed: string;
+}
+
+export type Narrowed =
+  | { local: true; keys: string[]; settled: Settled }
+  | { local: false; key: string; marker: Marker };
+
+/** What the server would be asked about, said in the panel. */
+export function narrowingStatus(narrowed: Narrowed): string {
+  if (narrowed.local) {
+    return `Narrowed here: ${narrowed.keys.join(', ')}`;
+  }
+  const why: Record<Marker, string> = {
+    runtime: 'depends on a runtime rule',
+    dynamic: 'depends on a dynamic rule',
+    stored: 'stands for a stored value only the server holds',
+    unsettled: 'could not be narrowed here',
+    pending: 'changed while an earlier change was being asked',
+  };
+  return `Asked the server: ${narrowed.key} ${why[narrowed.marker]}`;
+}
+
+/**
+ * Narrows a change from the full schema, or says why the server must.
+ *
+ * Every key that depends on the changed one, transitively, is found
+ * through `dependsOn`; one marked `dynamic` or `runtime`, one inside a
+ * part that is, or one standing for a stored value the page never saw,
+ * sends the change to /refine. Otherwise the change is settled here, the
+ * way /refine settles it: an answer the new choices orphan is dropped and
+ * falls back to what is stored, a stored value the edit orphaned is held
+ * unanswered and listed stale, and every key is read from the full
+ * schema's conditionals for the values that result. Anything the
+ * resolver cannot settle is asked rather than guessed.
+ */
+export function narrow(request: Narrowing): Narrowed {
+  try {
+    const found = dependents(request.full, request.values, request.changed);
+    if (found.names.length === 0) {
+      return { local: false, key: request.changed, marker: 'unsettled' };
+    }
+    const keys = found.names.map((name) => found.prefix + name);
+    const marked = markedIn(found.frame, found.names, found.prefix);
+    if (marked !== null) {
+      return { local: false, ...marked };
+    }
+    // A stale value the page was handed as nothing, which only the server
+    // knows: a dependent or a dependency of one cannot be judged here.
+    const unknown = request.stale.filter((path) => isEmpty(getAt(request.stored, path)));
+    const touched = new Set(keys.flatMap((key) => [key, ...dependsOnOf(found.frame, key.slice(found.prefix.length)).map((dep) => found.prefix + dep)]));
+    const hidden = unknown.find((path) => [...touched].some((key) => path === key || path.startsWith(`${key}.`)));
+    if (hidden !== undefined) {
+      return { local: false, key: hidden, marker: 'stored' };
+    }
+    return { local: true, keys, settled: resolveLocally(request, new Set(unknown)) };
+  }
+  catch (error) {
+    if (error instanceof Unsettled) {
+      return { local: false, key: error.key === '' ? request.changed : error.key, marker: error.marker };
+    }
+    return { local: false, key: request.changed, marker: 'unsettled' };
+  }
+}
+
+function dependsOnOf(frame: Schema, name: string): string[] {
+  return frame.properties?.[name]?.['x-surface']?.dependsOn ?? [];
+}
+
+function asValues(value: unknown): Values {
+  return isObject(value) ? value : {};
+}
+
+/** Whether `dep`, a `dependsOn` entry, watches `key`: the key itself, inside it, or around it. */
+function watches(dep: string, key: string): boolean {
+  return dep === key || key.startsWith(`${dep}.`) || dep.startsWith(`${key}.`);
+}
+
+/**
+ * The keys that depend on a path, transitively, in the frame they share.
+ *
+ * `dependsOn` names siblings, so the path is read from every frame it
+ * passes through, the top's and each child's, relative to that frame; a
+ * key an alter mounted is named in the frame by its dotted path. The wall
+ * means only one frame can answer.
+ */
+export function dependents(full: Schema, values: Values, path: string): { frame: Schema; prefix: string; names: string[] } {
+  const segments = path.split('.');
+  const found: { frame: Schema; prefix: string; names: string[] }[] = [];
+  let frame: Schema | null = full;
+  let held = values;
+  let prefix = '';
+  let i = 0;
+  while (frame !== null && i < segments.length) {
+    const names = closure(frame, segments.slice(i).join('.'));
+    if (names.length > 0) {
+      found.push({ frame, prefix, names });
+    }
+    const name = segments[i];
+    const property: Schema | undefined = frame.properties?.[name];
+    if (property === undefined || i === segments.length - 1) {
+      break;
+    }
+    if (property['x-surface']?.widget === 'slot') {
+      frame = resolveSlot(frame, name, held);
+      held = asValues(held[name]);
+      prefix += `${name}.`;
+      i += 1;
+    }
+    else if (property['x-surface']?.list && property.items !== undefined) {
+      const delta = segments[i + 1];
+      frame = property.items;
+      held = asValues((Array.isArray(held[name]) ? (held[name] as unknown[]) : [])[Number(delta)]);
+      prefix += `${name}.${delta}.`;
+      i += 2;
+    }
+    else if (property.properties !== undefined) {
+      frame = property;
+      held = asValues(held[name]);
+      prefix += `${name}.`;
+      i += 1;
+    }
+    else {
+      break;
+    }
+  }
+  if (found.length > 1) {
+    throw new Unsettled(path, 'unsettled');
+  }
+  return found[0] ?? { frame: full, prefix: '', names: [] };
+}
+
+function closure(frame: Schema, key: string): string[] {
+  const properties = frame.properties ?? {};
+  const reached = new Set<string>();
+  const queue = [key];
+  while (queue.length > 0) {
+    const next = queue.shift() as string;
+    for (const [name, property] of Object.entries(properties)) {
+      if (!reached.has(name) && (property['x-surface']?.dependsOn ?? []).some((dep) => watches(dep, next))) {
+        reached.add(name);
+        queue.push(name);
+      }
+    }
+  }
+  return Object.keys(properties).filter((name) => reached.has(name));
+}
+
+/** The first dependent the server must narrow, by its marker: on the key, or anywhere inside it. */
+function markedIn(frame: Schema, names: string[], prefix: string): { key: string; marker: Marker } | null {
+  const marker = (schema: Schema): Marker | null =>
+    schema['x-surface']?.runtime ? 'runtime' : schema['x-surface']?.dynamic ? 'dynamic' : null;
+  const inside = (schema: Schema, at: string): { key: string; marker: Marker } | null => {
+    for (const [name, property] of Object.entries(schema.properties ?? {})) {
+      const own = marker(property);
+      if (own !== null) {
+        return { key: at + name, marker: own };
+      }
+      const deeper = inside(property, `${at}${name}.`) ?? (property.items ? inside(property.items, `${at}${name}.*.`) : null);
+      if (deeper !== null) {
+        return deeper;
+      }
+    }
+    for (const condition of schema.allOf ?? []) {
+      for (const [name, branch] of Object.entries(condition.then?.properties ?? {})) {
+        const deeper = isPart(branch) ? inside(branch, `${at}${name}.`) : null;
+        if (deeper !== null) {
+          return deeper;
+        }
+      }
+    }
+    return null;
+  };
+  for (const name of names) {
+    const property = frame.properties?.[name] ?? {};
+    const own = marker(property);
+    if (own !== null) {
+      return { key: prefix + name, marker: own };
+    }
+    const branches = (frame.allOf ?? []).filter((condition) => conditionalKey(condition) === name).map((condition) => condition.then.properties[name]);
+    for (const child of [property, ...branches, ...(property.items ? [property.items] : [])]) {
+      const deeper = inside(child, `${prefix}${name}.`);
+      if (deeper !== null) {
+        return deeper;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Refuses a frame the page cannot read: a reference left unresolved (one
+ * outside `#/$defs`, or back into a def being read), or a conditional not
+ * of the emitter's one shape, an `if` of `const`s on keys of this frame
+ * and a `then` narrowing one key.
+ */
+function assertReadable(frame: Schema, path: string): void {
+  const properties = frame.properties ?? {};
+  for (const [name, property] of Object.entries(properties)) {
+    if (property.$ref !== undefined) {
+      throw new Unsettled(path + name, 'unsettled');
+    }
+  }
+  for (const condition of frame.allOf ?? []) {
+    const narrowed = Object.keys(condition?.then?.properties ?? {});
+    const named = Object.entries(condition?.if?.properties ?? {});
+    if (
+      narrowed.length !== 1
+      || named.length === 0
+      || 'else' in condition
+      || named.some(([key, test]) => !(key in properties) || !isObject(test) || !('const' in test))
+    ) {
+      throw new Unsettled(narrowed.length === 1 ? path + narrowed[0] : '', 'unsettled');
+    }
+  }
+}
+
+/** The key a conditional narrows: the emitter writes one per conditional. */
+function conditionalKey(condition: Conditional): string | undefined {
+  return Object.keys(condition.then?.properties ?? {})[0];
+}
+
+function isSlot(schema: Schema): boolean {
+  return schema['x-surface']?.widget === 'slot';
+}
+
+function isCollection(schema: Schema): boolean {
+  return Boolean(schema['x-surface']?.list) && schema.items !== undefined;
+}
+
+function norm(value: unknown): unknown {
+  return value === undefined ? null : value;
+}
+
+/** What a frame starts from, as the build step's defaults: each key's `default`, a locked key's `const`. */
+function frameDefaults(frame: Schema): Values {
+  const defaults: Values = {};
+  for (const [name, property] of Object.entries(frame.properties ?? {})) {
+    if (property.readOnly && property.const !== undefined) {
+      defaults[name] = property.const;
+    }
+    else if (property.default !== undefined) {
+      defaults[name] = property.default;
+    }
+  }
+  return defaults;
+}
+
+/** Whether a value can be held by a variant: every key it carries is one the variant declares. */
+function fits(variant: Schema, value: unknown): boolean {
+  if (Array.isArray(value) && value.length === 0) {
+    return true;
+  }
+  return isObject(value) && Object.keys(value).every((key) => key in (variant.properties ?? {}));
+}
+
+/** The values a select offers, or null for a key with no list. */
+function offered(schema: Schema): unknown[] | null {
+  if (schema.oneOf === undefined) {
+    return null;
+  }
+  const values = choices(schema).map((choice) => choice.const);
+  return values.length === 0 ? null : values;
+}
+
+/** OptionSet::allows(): an integer or a string the list names. */
+function allows(list: unknown[], value: unknown): boolean {
+  return (typeof value === 'string' || Number.isInteger(value)) && list.some((option) => String(option) === String(value));
+}
+
+/** DataSurfaceFormBuilder::sameAnswer(): a form posts every scalar as a string. */
+function sameAnswer(answer: unknown, stored: unknown): boolean {
+  if (isEmpty(answer) || isEmpty(stored)) {
+    return isEmpty(answer) === isEmpty(stored);
+  }
+  if (typeof answer === 'boolean' || typeof stored === 'boolean') {
+    return Boolean(answer) === Boolean(stored);
+  }
+  if (typeof answer !== 'object' && typeof stored !== 'object') {
+    return String(answer) === String(stored);
+  }
+  return sameJson(answer, stored);
+}
+
+/** Whether a conditional's `if` holds for a frame's values. */
+function met(condition: Conditional, values: Values): boolean {
+  return Object.entries(condition.if.properties).every(([key, { const: value }]) => !isEmpty(getAt(values, key)) && sameValue(value, getAt(values, key)));
+}
+
+/** The keywords whose change the emitter counts as narrowed (ContractEmitter::signature()). */
+const NARROWING = ['type', 'minimum', 'maximum', 'minLength', 'maxLength', 'minItems', 'maxItems', 'pattern', 'not', 'format'] as const;
+
+function narrows(declared: Schema, effective: Schema): boolean {
+  if (NARROWING.some((keyword) => !sameJson((declared as Json)[keyword], (effective as Json)[keyword]))) {
+    return true;
+  }
+  if (!sameJson((offered(declared) ?? []).map(String), (offered(effective) ?? []).map(String))) {
+    return true;
+  }
+  return Object.entries(effective.properties ?? {}).some(([name, property]) => narrows(declared.properties?.[name] ?? {}, property));
+}
+
+/** Answered for a list the page cannot read for these values. */
+const UNKNOWN = Symbol('unknown');
+
+interface Labels {
+  required: string;
+  optional: string;
+}
+
+/** The empty option's labels, as the server translated them: read from what it served. */
+function labels(schema: Schema): Labels {
+  const found: Partial<Labels> = {};
+  const walk = (node: unknown): void => {
+    if (Array.isArray(node)) {
+      node.forEach(walk);
+      return;
+    }
+    if (!isObject(node)) {
+      return;
+    }
+    const option = (node['x-surface'] as Extension | undefined)?.emptyOption;
+    if (option !== undefined && node.oneOf !== undefined) {
+      const optional = (node.oneOf as Choice[]).some((choice) => choice.const === null && choice.title === undefined);
+      found[optional ? 'optional' : 'required'] ??= option.label;
+    }
+    Object.values(node).forEach(walk);
+  };
+  walk(schema);
+  return { required: found.required ?? '- Select -', optional: found.optional ?? '- None -' };
+}
+
+interface Context {
+  /** The keys held unanswered, by path, each with the stored value it stands for. */
+  standing: Map<string, unknown>;
+  /** The stale paths whose stored value only the server knows. */
+  unknown: Set<string>;
+  labels: Labels;
+  previous: Settled;
+}
+
+/**
+ * Settles one frame, then each child in it, as DataSurfaceFormBuilder::settle().
+ *
+ * Every key that refines against a sibling is a target. An input whose
+ * dependency moved under it, or that the narrowed list no longer offers,
+ * is dropped and falls back to what is stored; a key falling back to a
+ * stored value its moved dependency no longer offers is held unanswered
+ * and stands for it. Repeated to the fixed point. A list read for values
+ * the page cannot narrow for (a dynamic or runtime key whose dependencies
+ * moved) is assumed to keep the input, and the frame is refused unless
+ * that key was dropped anyway.
+ */
+function settle(full: Schema, previous: Schema | null, input: Values, stored: Values, before: Values | null, path: string, top: boolean, context: Context): Values {
+  assertReadable(full, path);
+  const properties = full.properties ?? {};
+  const targets = Object.keys(properties).filter((name) => (properties[name]['x-surface']?.dependsOn ?? []).length > 0);
+  const overlay: Values = { ...stored, ...input };
+  const discarded: string[] = [];
+  const orphaned = new Map<string, unknown>();
+  const uncertain = new Map<string, Marker>();
+
+  const frameValues = (): Values => {
+    const kept: Values = { ...input };
+    for (const name of discarded) {
+      delete kept[name];
+    }
+    const values: Values = { ...stored, ...kept };
+    for (const name of orphaned.keys()) {
+      values[name] = null;
+    }
+    return values;
+  };
+  const listAt = (name: string, values: Values): unknown[] | null | typeof UNKNOWN => {
+    const declared = properties[name];
+    const extension = declared['x-surface'];
+    const deps = extension?.dependsOn ?? [];
+    if (jsonType(declared) === 'array') {
+      return null;
+    }
+    const was = previous?.properties?.[name];
+    if (was !== undefined && before !== null && deps.every((dep) => sameJson(norm(getAt(values, dep)), norm(getAt(before, dep))))) {
+      return offered(was);
+    }
+    if (extension?.runtime || extension?.dynamic) {
+      uncertain.set(name, extension.runtime ? 'runtime' : 'dynamic');
+      return UNKNOWN;
+    }
+    if (extension?.enumerated) {
+      const held = deps.map((dep) => !isEmpty(getAt(values, dep)));
+      if (held.every(Boolean)) {
+        const narrowed = (full.allOf ?? []).filter((condition) => conditionalKey(condition) === name && met(condition, values));
+        return offered(narrowed.reduce<Schema>((schema, condition) => merge(schema as Json, condition.then.properties[name] as Json) as Schema, declared));
+      }
+      if (held.some(Boolean)) {
+        uncertain.set(name, 'unsettled');
+        return UNKNOWN;
+      }
+    }
+    return offered(declared);
+  };
+  const stillStands = (name: string, values: Values): boolean => {
+    const declared = properties[name];
+    for (const dep of declared['x-surface']?.dependsOn ?? []) {
+      if (!sameJson(norm(getAt(overlay, dep)), norm(getAt(values, dep)))) {
+        return false;
+      }
+    }
+    if (isSlot(declared)) {
+      const variant = resolveSlot(full, name, values);
+      return variant === null || fits(variant, input[name]);
+    }
+    if (declared.properties !== undefined && !isPart(declared)) {
+      // A module's keys, mounted: which of them the dependency narrows
+      // is the server's to say, and nothing moved under them.
+      return true;
+    }
+    const value = input[name];
+    if (isEmpty(value) || (typeof value !== 'string' && !Number.isInteger(value))) {
+      return true;
+    }
+    const list = listAt(name, values);
+    return list === UNKNOWN || list === null || allows(list, value);
+  };
+  const isOrphaned = (name: string, values: Values): boolean => {
+    const declared = properties[name];
+    const value = values[name];
+    if ((typeof value !== 'string' && !Number.isInteger(value)) || isEmpty(value)) {
+      return false;
+    }
+    const moved = (declared['x-surface']?.dependsOn ?? []).some((dep) => !sameAnswer(getAt(values, dep), getAt(stored, dep)));
+    if (!moved || isSlot(declared)) {
+      return false;
+    }
+    const list = listAt(name, values);
+    if (list === UNKNOWN) {
+      throw new Unsettled(path + name, uncertain.get(name) ?? 'unsettled');
+    }
+    return list !== null && !allows(list, value);
+  };
+
+  let again: boolean;
+  let values: Values;
+  do {
+    values = frameValues();
+    again = false;
+    for (const name of targets) {
+      if (!discarded.includes(name) && !stillStands(name, values)) {
+        const declared = properties[name];
+        if (declared.properties !== undefined && !isPart(declared) && !isSlot(declared)) {
+          throw new Unsettled(path + name, declared['x-surface']?.dynamic ? 'dynamic' : 'unsettled');
+        }
+        discarded.push(name);
+        again = true;
+      }
+    }
+    if (again) {
+      continue;
+    }
+    for (const name of targets) {
+      if (!orphaned.has(name) && discarded.includes(name) && isOrphaned(name, values)) {
+        orphaned.set(name, values[name]);
+        again = true;
+      }
+    }
+  } while (again);
+  for (const name of uncertain.keys()) {
+    if (!discarded.includes(name)) {
+      throw new Unsettled(path + name, uncertain.get(name) as Marker);
+    }
+  }
+  for (const [name, value] of orphaned) {
+    context.standing.set(path + name, value);
+  }
+
+  // What the overlay keeps of the frame: at the top, what is stored under
+  // the input that stands; inside a child, the child's own input, its
+  // dropped keys left to the child's defaults.
+  if (!top) {
+    values = { ...input };
+    for (const name of discarded) {
+      delete values[name];
+    }
+    for (const name of orphaned.keys()) {
+      values[name] = null;
+    }
+  }
+  for (const [name, declared] of Object.entries(properties)) {
+    if (discarded.includes(name)) {
+      continue;
+    }
+    const held = input[name];
+    if (isCollection(declared) && Array.isArray(held)) {
+      const kept = Array.isArray(stored[name]) ? (stored[name] as unknown[]) : [];
+      values[name] = held.map((item, delta) => isObject(item)
+        ? settle(declared.items as Schema, null, item, { ...frameDefaults(declared.items as Schema), ...asValues(kept[delta]) }, null, `${path}${name}.${delta}.`, false, context)
+        : item);
+      continue;
+    }
+    if (!isObject(held) || (!isPart(declared) && !isSlot(declared))) {
+      continue;
+    }
+    const child = isSlot(declared) ? resolveSlot(full, name, values) : declared;
+    if (child === null) {
+      continue;
+    }
+    const was = isSlot(declared) ? (previous === null ? null : resolveSlot(previous, name, before ?? {})) : previous?.properties?.[name] ?? null;
+    const sameVariant = !isSlot(declared) || (before !== null && sameValue(getAt(values, declared['x-surface']?.by ?? ''), getAt(before, declared['x-surface']?.by ?? '')));
+    let kept: unknown = stored[name];
+    if (isSlot(declared) && !fits(child, kept)) {
+      kept = null;
+    }
+    values[name] = settle(child, sameVariant ? was : null, held, { ...frameDefaults(child), ...asValues(kept) }, sameVariant && before !== null ? asValues(before[name]) : null, `${path}${name}.`, false, context);
+  }
+  return values;
+}
+
+/**
+ * One frame's schema for its values, less what only the present moment
+ * says of a key (stale, the empty option), which present() adds.
+ *
+ * A key whose dependencies hold what they held when the form's schema was
+ * last settled keeps what it said then; any other is read from the full
+ * schema: as declared, with the `then` of each conditional its values
+ * meet laid over it once every key it watches holds a value, and with
+ * its conditionals, held to what its dependencies still offer, while one
+ * holds nothing (`enumerated`). A dynamic or runtime key is never read
+ * here.
+ */
+function core(full: Schema, previous: Schema | null, values: Values, before: Values | null, path: string, context: Context): Schema {
+  assertReadable(full, path);
+  const properties: Record<string, Schema> = {};
+  const conditions: Record<string, Conditional[]> = {};
+  const fullConditions = full.allOf ?? [];
+  const previousConditions = previous?.allOf ?? [];
+  const mine = (list: Conditional[], name: string) => list.filter((condition) => conditionalKey(condition) === name);
+  for (const [name, declared] of Object.entries(full.properties ?? {})) {
+    const at = path + name;
+    const extension = declared['x-surface'];
+    const deps = extension?.dependsOn ?? [];
+    const was = previous?.properties?.[name];
+    const held = values[name];
+    if (was !== undefined && before !== null && deps.every((dep) => sameJson(norm(getAt(values, dep)), norm(getAt(before, dep))))) {
+      properties[name] = was;
+      conditions[name] = mine(previousConditions, name);
+      if (isPart(declared) && !isCollection(declared)) {
+        properties[name] = core(declared, was, { ...frameDefaults(declared), ...asValues(held) }, asValues(before[name]), `${at}.`, context);
+      }
+      else if (isSlot(declared)) {
+        const by = extension?.by ?? '';
+        conditions[name] = mine(previousConditions, name).map((condition) => {
+          if (!sameValue(condition.if.properties[by]?.const, values[by])) {
+            return condition;
+          }
+          const fullBranch = mine(fullConditions, name).find((branch) => sameValue(branch.if.properties[by]?.const, values[by]));
+          const variant = fullBranch?.then.properties[name];
+          if (variant === undefined) {
+            throw new Unsettled(at, 'unsettled');
+          }
+          const own = { ...frameDefaults(variant), ...(fits(variant, held) ? asValues(held) : {}) };
+          return { ...condition, then: { ...condition.then, properties: { [name]: core(variant, condition.then.properties[name], own, asValues(before[name]), `${at}.`, context) } } };
+        });
+      }
+      continue;
+    }
+    if (extension?.runtime) {
+      throw new Unsettled(at, 'runtime');
+    }
+    if (extension?.dynamic) {
+      throw new Unsettled(at, 'dynamic');
+    }
+    if (isSlot(declared)) {
+      properties[name] = declared;
+      const by = extension?.by ?? '';
+      conditions[name] = mine(fullConditions, name).map((condition) => {
+        const variant = condition.then.properties[name];
+        const chosen = sameValue(condition.if.properties[by]?.const, values[by]);
+        const own = { ...frameDefaults(variant), ...(chosen && fits(variant, held) ? asValues(held) : {}) };
+        return { ...condition, then: { ...condition.then, properties: { [name]: core(variant, null, own, null, `${at}.`, context) } } };
+      });
+      continue;
+    }
+    if (isPart(declared) && !isCollection(declared)) {
+      properties[name] = core(declared, null, { ...frameDefaults(declared), ...asValues(held) }, null, `${at}.`, context);
+      conditions[name] = [];
+      continue;
+    }
+    // A key, a list of values, a plain map or a collection: narrowed by
+    // its conditionals.
+    let effective = declared;
+    let enumerated = Boolean(extension?.enumerated);
+    conditions[name] = [];
+    if (enumerated) {
+      const holds = deps.map((dep) => !isEmpty(getAt(values, dep)));
+      if (holds.every(Boolean)) {
+        for (const condition of mine(fullConditions, name)) {
+          if (met(condition, values)) {
+            const then = condition.then.properties[name];
+            if (then.type !== undefined && !sameJson(then.type, declared.type)) {
+              // Requiredness narrowed: the frame's `required` would move too.
+              throw new Unsettled(at, 'unsettled');
+            }
+            effective = merge(effective as Json, then as Json) as Schema;
+          }
+        }
+        enumerated = false;
+      }
+      else if (holds.some(Boolean)) {
+        throw new Unsettled(at, 'unsettled');
+      }
+      else {
+        // What the emitter enumerates over: each watched key's list as it
+        // stands, so a capacity offers the conditionals of the rooms the
+        // venue still offers.
+        conditions[name] = mine(fullConditions, name).filter((condition) => Object.entries(condition.if.properties).every(([dep, { const: value }]) => {
+          const list = properties[dep] ?? (dep in (full.properties ?? {}) ? undefined : null);
+          if (list === null || list === undefined) {
+            throw new Unsettled(at, 'unsettled');
+          }
+          return (offered(list) ?? []).some((option) => sameValue(option, value));
+        }));
+      }
+    }
+    if (isCollection(declared)) {
+      // The items are the child's def, described from nothing: no value
+      // inside one changes the schema.
+      effective = { ...effective, items: core(declared.items as Schema, null, {}, null, `${at}.*.`, context) };
+    }
+    const own: Extension = { ...(effective['x-surface'] as Extension), refined: narrows(declared, effective) };
+    if (!enumerated) {
+      delete own.enumerated;
+    }
+    properties[name] = { ...effective, 'x-surface': own };
+  }
+  const allOf = Object.keys(full.properties ?? {}).flatMap((name) => conditions[name] ?? []);
+  const frame: Schema = { ...full, properties };
+  delete frame.allOf;
+  if (allOf.length > 0) {
+    frame.allOf = allOf;
+  }
+  return frame;
+}
+
+/**
+ * Adds what is true of one moment to a frame's schema, and reads its values as shown.
+ *
+ * ContractEmitter::frame() and property(): a select's empty option by the
+ * empty option rule, a stored value no longer offered shown as nothing
+ * and listed stale, an orphan stale whatever its widget, a slot's chosen
+ * variant, a part narrowed when a key inside it is. A key holding nothing
+ * shows its default, except inside a plain map.
+ */
+function present(schema: Schema, full: Schema, values: Values, path: string, map: boolean, context: Context, stale: string[]): { schema: Schema; shown: Values } {
+  const properties: Record<string, Schema> = {};
+  const shown: Values = {};
+  const replaced = new Map<Conditional, Conditional>();
+  for (const [name, property] of Object.entries(schema.properties ?? {})) {
+    const declared = full.properties?.[name] ?? property;
+    const at = path + name;
+    const extension = (property['x-surface'] ?? {}) as Extension;
+    const held = values[name];
+    if (isSlot(declared)) {
+      const by = extension.by ?? '';
+      const branches = (schema.allOf ?? []).filter((condition) => conditionalKey(condition) === name);
+      const chosen = branches.find((condition) => sameValue(condition.if.properties[by]?.const, values[by])) ?? null;
+      const id = chosen === null ? null : chosen.then.properties[name]['x-surface']?.variant ?? null;
+      properties[name] = { ...property, 'x-surface': { ...extension, chosen: id, refined: id !== null, stale: false } };
+      shown[name] = held;
+      for (const branch of branches) {
+        const variant = branch.then.properties[name];
+        const variantId = variant['x-surface']?.variant;
+        const fullBranch = (full.allOf ?? []).find((condition) => conditionalKey(condition) === name && condition.then.properties[name]['x-surface']?.variant === variantId);
+        const fullVariant = fullBranch?.then.properties[name] ?? variant;
+        const isChosen = branch === chosen;
+        const own = { ...frameDefaults(fullVariant), ...(isChosen && fits(fullVariant, held) ? asValues(held) : {}) };
+        const answered = present(variant, fullVariant, own, `${at}.`, false, isChosen ? context : { ...context, standing: new Map() }, isChosen ? stale : []);
+        replaced.set(branch, {
+          ...branch,
+          then: {
+            ...branch.then,
+            properties: {
+              [name]: { ...answered.schema, 'x-surface': { ...(variant['x-surface'] as Extension), refined: isChosen && anyRefined(answered.schema), stale: false } },
+            },
+          },
+        });
+        if (isChosen) {
+          shown[name] = answered.shown;
+        }
+      }
+      continue;
+    }
+    if (isCollection(declared)) {
+      const items = present(property.items as Schema, declared.items as Schema, {}, `${at}.*.`, false, { ...context, standing: new Map() }, []);
+      properties[name] = { ...property, items: items.schema, 'x-surface': { ...extension, stale: false } };
+      const list = held ?? property.default;
+      shown[name] = Array.isArray(list)
+        ? list.map((item, delta) => {
+          const prefix = `${at}.${delta}.`;
+          const own = { ...frameDefaults(declared.items as Schema), ...asValues(item) };
+          try {
+            const narrowed = core(declared.items as Schema, null, own, null, prefix, context);
+            return present(narrowed, declared.items as Schema, own, prefix, false, context, stale).shown;
+          }
+          catch {
+            // An item the page cannot read: what was last settled for it.
+            stale.push(...context.previous.stale.filter((dotted) => dotted.startsWith(prefix)));
+            return item;
+          }
+        })
+        : null;
+      continue;
+    }
+    if (property.properties !== undefined) {
+      const part = isPart(declared);
+      const inner = part ? { ...frameDefaults(declared), ...asValues(held) } : asValues(held);
+      const answered = present(property, declared, inner, `${at}.`, !part, context, stale);
+      properties[name] = {
+        ...answered.schema,
+        'x-surface': { ...extension, refined: part ? anyRefined(answered.schema) : extension.refined || anyRefined(answered.schema), stale: false },
+      };
+      shown[name] = answered.shown;
+      continue;
+    }
+    const orphan = context.standing.has(at);
+    const value = property.writeOnly
+      ? null
+      : extension.locked && property.const !== undefined
+        ? property.const
+        : orphan
+          ? context.standing.get(at)
+          : map ? norm(held) : held ?? property.default ?? null;
+    const own: Extension = { ...extension, stale: false };
+    delete own.emptyOption;
+    let out: unknown = jsonType(property) === 'array' && Array.isArray(value) ? [...value] : value;
+    if (extension.widget === 'select' && !extension.multiple && jsonType(property) !== 'array' && property.oneOf !== undefined) {
+      const list = offered(property) ?? [];
+      const configured = !isEmpty(value);
+      const chosen = configured && allows(list, value);
+      const required = (schema.required ?? []).includes(name);
+      own.emptyOption = { show: !(chosen && required), label: required ? context.labels.required : context.labels.optional };
+      if (configured && !chosen) {
+        own.stale = true;
+        stale.push(at);
+        out = null;
+      }
+    }
+    if (context.unknown.has(at) && isEmpty(held) && !own.stale) {
+      // Stale when the page was handed it: the server holds what it stands for.
+      own.stale = true;
+      if (own.emptyOption !== undefined) {
+        own.emptyOption = { ...own.emptyOption, show: true };
+      }
+      stale.push(at);
+      out = null;
+    }
+    if (orphan) {
+      if (!own.stale) {
+        own.stale = true;
+        stale.push(at);
+      }
+      out = null;
+    }
+    properties[name] = { ...property, 'x-surface': own };
+    shown[name] = out;
+  }
+  const answered: Schema = { ...schema, properties };
+  if (schema.allOf !== undefined) {
+    answered.allOf = schema.allOf.map((condition) => replaced.get(condition) ?? condition);
+  }
+  return { schema: answered, shown };
+}
+
+/** ContractEmitter::anyRefined(): a property of the frame says it is narrowed now. */
+function anyRefined(schema: Schema): boolean {
+  return Object.values(schema.properties ?? {}).some((property) => Boolean(property['x-surface']?.refined));
+}
+
+/** ServedOperations::keepStale(): an empty answer at a stale path stands for the stored value. */
+function keepStale(values: Values, stored: Values, stale: string[]): Values {
+  let kept = values;
+  for (const path of stale) {
+    const value = getAt(kept, path);
+    const was = getAt(stored, path);
+    if (value !== undefined && isEmpty(value) && !isEmpty(was)) {
+      kept = setAt(kept, path, was);
+    }
+  }
+  return kept;
+}
+
+/** Settles the whole form for its values, from the full schema and what it showed last. */
+function resolveLocally(request: Narrowing, unknown: Set<string>): Settled {
+  const context: Context = {
+    standing: new Map(),
+    unknown,
+    labels: labels(request.previous.schema),
+    previous: request.previous,
+  };
+  const input = keepStale(request.values, request.stored, request.stale);
+  const values = settle(request.full, request.previous.schema, input, request.stored, request.previous.values, '', true, context);
+  const narrowed = core(request.full, request.previous.schema, values, request.previous.values, '', context);
+  const stale: string[] = [];
+  const answered = present(narrowed, request.full, values, '', false, context, stale);
+  return { schema: answered.schema, values: answered.shown, stale };
 }

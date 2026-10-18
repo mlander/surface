@@ -1,0 +1,123 @@
+import type { Contract, Marker, Schema, Settled, Values } from '../contract';
+import { inlineSchema, narrow, narrowingStatus, setAt } from '../contract';
+import example2 from './fixtures/refine-example2.json';
+import example3 from './fixtures/refine-example3.json';
+import compliance from './fixtures/refine-example3-compliance.json';
+
+// The page's narrowing held to the server's. Each fixture is what
+// ResourceApiController answered, as uid 1 after the examples were reset:
+// the full schema, the GET contract (its fingerprint removed), and a chain
+// of changes, each posted to /refine with the values and stale paths the
+// app would send after the one before. For every change the page narrows
+// by itself, its schema (inline), values and stale paths must be the
+// server's, keyword for keyword: nothing is ignored. A change the page
+// asks about must be asked, naming the dependent and its marker.
+
+interface Recorded {
+  schema: { schema: Schema };
+  contract: Contract;
+  steps: { changes: { path: string; value: unknown }[]; sent: { stale: string[] }; answer: Contract }[];
+}
+
+type Expected = 'local' | { key: string; marker: Marker };
+
+function served(contract: Contract): Settled {
+  return { schema: inlineSchema(contract.schema), values: contract.values, stale: contract.stale };
+}
+
+/**
+ * Plays a recorded chain through the page's resolver.
+ *
+ * A change narrowed here continues from what the page narrowed, so a
+ * chain of local changes is held to the server too; one asked continues
+ * from the server's answer, as the app does.
+ */
+function play(recorded: Recorded, expected: Expected[]): void {
+  const full = inlineSchema(recorded.schema.schema);
+  const stored = recorded.contract.values;
+  let previous = served(recorded.contract);
+  recorded.steps.forEach((step, index) => {
+    let values: Values = previous.values;
+    let stale = previous.stale;
+    for (const change of step.changes) {
+      values = setAt(values, change.path, change.value);
+      stale = stale.filter((path) => path !== change.path && !path.startsWith(`${change.path}.`));
+    }
+    // The page sends what the recorder sent.
+    expect(stale, `step ${index + 1}: the stale paths sent`).toEqual(step.sent.stale);
+    const changed = step.changes[step.changes.length - 1].path;
+    const narrowed = narrow({ full, previous, stored, values, stale, changed });
+    const want = expected[index];
+    if (want === 'local') {
+      expect(narrowed.local, `step ${index + 1} (${changed}): ${narrowingStatus(narrowed)}`).toBe(true);
+      if (!narrowed.local) {
+        return;
+      }
+      const answer = served(step.answer);
+      expect(narrowed.settled.values, `step ${index + 1}: values`).toEqual(answer.values);
+      expect(narrowed.settled.stale, `step ${index + 1}: stale`).toEqual(answer.stale);
+      expect(narrowed.settled.schema, `step ${index + 1}: schema`).toEqual(answer.schema);
+      previous = narrowed.settled;
+    }
+    else {
+      expect(narrowed, `step ${index + 1} (${changed})`).toEqual({ local: false, ...want });
+      previous = served(step.answer);
+    }
+  });
+}
+
+describe('narrowing here agrees with /refine', () => {
+  it('on example 2: every venue and room change is narrowed here, orphans and discards included', () => {
+    play(example2 as unknown as Recorded, ['local', 'local', 'local', 'local', 'local', 'local', 'local']);
+  });
+
+  it('on example 3: the venue, the room and the slot are narrowed here', () => {
+    play(example3 as unknown as Recorded, ['local', 'local', 'local', 'local', 'local', 'local', 'local']);
+  });
+
+  it('on example 3 with compliance: the slot here, the room and the capacity by the server', () => {
+    play(compliance as unknown as Recorded, [
+      'local',
+      { key: 'room', marker: 'runtime' },
+      'local',
+      { key: 'capacity', marker: 'dynamic' },
+      { key: 'capacity', marker: 'dynamic' },
+      'local',
+    ]);
+  });
+});
+
+describe('what is asked rather than narrowed', () => {
+  const recorded = example2 as unknown as Recorded;
+  const full = inlineSchema(recorded.schema.schema);
+
+  it('a dependent standing for a stored value the page was handed as nothing', () => {
+    // The site narrowed the stored room away before the page loaded: only
+    // the server knows which room it stands for.
+    const stored = { ...recorded.contract.values, room: null };
+    const previous = { ...served(recorded.contract), values: stored, stale: ['room'] };
+    expect(narrow({ full, previous, stored, values: { ...stored, venue: 'library' }, stale: ['room'], changed: 'venue' })).toEqual({ local: false, key: 'room', marker: 'stored' });
+  });
+
+  it('anything the resolver cannot read, rather than a wrong form', () => {
+    const previous = served(recorded.contract);
+    const values = { ...previous.values, venue: 'library' };
+    expect(narrow({ full: {}, previous, stored: previous.values, values, stale: [], changed: 'venue' })).toEqual({ local: false, key: 'venue', marker: 'unsettled' });
+    // A conditional narrowing nothing, one naming a key outside the frame,
+    // a reference left unresolved.
+    const noThen = { ...full, allOf: [{ if: { properties: { venue: { const: 'library' } } } }] } as unknown as Schema;
+    expect(narrow({ full: noThen, previous, stored: previous.values, values, stale: [], changed: 'venue' })).toEqual({ local: false, key: 'venue', marker: 'unsettled' });
+    const outside = { ...full, allOf: [...(full.allOf ?? []), { if: { properties: { 'contact.email': { const: 'a@b.c' } } }, then: { properties: { room: { maxLength: 3 } } } }] } as unknown as Schema;
+    expect(narrow({ full: outside, previous, stored: previous.values, values, stale: [], changed: 'venue' })).toEqual({ local: false, key: 'room', marker: 'unsettled' });
+    const referred = { ...full, properties: { ...full.properties, open: { $ref: 'https://example.com/open.json' } } } as unknown as Schema;
+    expect(narrow({ full: referred, previous, stored: previous.values, values, stale: [], changed: 'venue' })).toEqual({ local: false, key: 'open', marker: 'unsettled' });
+  });
+});
+
+describe('the status line', () => {
+  it('names what was narrowed, or the key and marker that asked', () => {
+    expect(narrowingStatus({ local: true, keys: ['room', 'capacity'], settled: { schema: {}, values: {}, stale: [] } })).toBe('Narrowed here: room, capacity');
+    expect(narrowingStatus({ local: false, key: 'room', marker: 'runtime' })).toBe('Asked the server: room depends on a runtime rule');
+    expect(narrowingStatus({ local: false, key: 'capacity', marker: 'dynamic' })).toBe('Asked the server: capacity depends on a dynamic rule');
+  });
+});

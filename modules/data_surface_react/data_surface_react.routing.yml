@@ -1,9 +1,9 @@
-# The page and the four endpoints of one operation of one resource, both
+# The page and the five endpoints of one operation of one resource, both
 # named by id: /surface-react/registration.step2/configure. An operation's
 # parameters arrive in the query string (and, on a POST, in the body's
 # "parameters"), by the operation method's parameter names.
 #
-# One requirement on all five, the operation's: its permission, then the
+# One requirement on all six, the operation's: its permission, then the
 # resource's access class, and no opinion is a refusal. The three POSTs also
 # want the X-CSRF-Token header a session token from /session/token is.
 
@@ -19,6 +19,14 @@ data_surface_react.contract:
   path: '/surface-api/{surface}/{situation}'
   defaults:
     _controller: '\Drupal\data_surface_react\Controller\ResourceApiController::contract'
+  methods: [GET]
+  requirements:
+    _data_surface_react_access: 'TRUE'
+
+data_surface_react.schema:
+  path: '/surface-api/{surface}/{situation}/schema'
+  defaults:
+    _controller: '\Drupal\data_surface_react\Controller\ResourceApiController::schema'
   methods: [GET]
   requirements:
     _data_surface_react_access: 'TRUE'

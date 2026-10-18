@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import type { FullSchema } from './api';
 import type { Contract, Schema, Values } from './contract';
 import { choices, inlineSchema, isObject, jsonType, resolveSlot } from './contract';
 
@@ -123,18 +124,39 @@ function rows(schema: Schema, values: Values, prefix = ''): Row[] {
  * The contract as it stands, collapsed under the form: a row per key,
  * then the JSON itself. The React twin of the contract panel the
  * operation form shows. The rows read each key's effective schema, its
- * references resolved (`schema`, which the form resolves once per
- * contract); the JSON is the document as served, `$defs` and all.
+ * references resolved (`schema`: the server's last answer, or what the
+ * form narrowed from the full schema since); the JSON is each document as
+ * served, `$defs` and all. One line says how the last change was
+ * narrowed: here, naming the keys, or by the server, naming the key and
+ * the marker that sent it there.
  */
-export function ContractPanel({ contract, schema, values }: { contract: Contract; schema?: Schema; values: Values }): JSX.Element {
+export function ContractPanel({
+  contract,
+  full,
+  schema,
+  values,
+  narrowing,
+}: {
+  contract: Contract;
+  full?: FullSchema | null;
+  schema?: Schema;
+  values: Values;
+  narrowing?: string | null;
+}): JSX.Element {
   const inline = useMemo(() => schema ?? inlineSchema(contract.schema), [schema, contract]);
   return (
     <details className="dsr-contract">
       <summary>Contract</summary>
       <p>
-        Read from the contract the server serves for this operation, re-narrowed as the answers above change.
+        Read from the contract the server serves for this operation, re-narrowed as the answers above change: here,
+        from the full schema, where it states the answer, and by the server where it does not.
         Change an answer another key depends on and this changes with the form.
       </p>
+      {narrowing ? (
+        <p className="dsr-contract__narrowing" aria-live="polite">
+          {narrowing}.
+        </p>
+      ) : null}
       <div className="dsr-contract__table">
         <table>
           <thead>
@@ -171,6 +193,12 @@ export function ContractPanel({ contract, schema, values }: { contract: Contract
         <summary>JSON</summary>
         <pre>{JSON.stringify(contract, null, 2)}</pre>
       </details>
+      {full ? (
+        <details className="dsr-contract__json">
+          <summary>The full schema, for any answers</summary>
+          <pre>{JSON.stringify(full, null, 2)}</pre>
+        </details>
+      ) : null}
     </details>
   );
 }

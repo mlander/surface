@@ -407,7 +407,7 @@ renames sit in A because they are cheapest before new code exists.
 - **B, what the contract can say:** declarative narrowing (2); ports (3);
   named scalar shapes (5).
 - **C, access and the doors:** static and runtime access (6); operation
-  behaviour facts and the tool door's refusal feedback (7).
+  behavior facts and the tool door's refusal feedback (7).
 - **D, edges as they bite:** item 8.
 - **E, the entity side** when resumed: item 9.
 - **In parallel from now:** file the drafted core issues (item 10),
@@ -511,7 +511,7 @@ renames sit in A because they are cheapest before new code exists.
    means narrowing the `values` map from its own partial value in the
    tool bridge. One retry per dependent key is the target. Applies to
    ECA and MCP alike.
-   Also the operation's behaviour facts, which MCP reads as its tool
+   Also the operation's behavior facts, which MCP reads as its tool
    annotations and the bridge already derives from the Tool API:
    `#[Operation]` gains `destructive` and `readOnly` (both false by
    default); idempotent is derived from `creates` unless declared; the

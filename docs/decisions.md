@@ -1381,3 +1381,42 @@ API the form does not have. The React app opts in; a page can turn it
 off with `sendFingerprint: false`. A check, not a lock: it narrows the
 window to the moment between the comparison and the commit.
 (`ServedOperations::fingerprint()`)
+
+### The page resolves what the schema states
+
+The React page narrows a change itself when the full schema states the
+answer, and asks `/refine` for the rest. On a change it collects every
+key that depends on the changed one, transitively, through `dependsOn`;
+when none is marked `dynamic` or `runtime`, nor holds one inside it, it
+reads each from the full schema's conditionals for the new values and
+sends nothing. When one is, or the resolver meets anything it cannot
+read (a stale value it was handed as `null`, a reference left
+unresolved, a conditional naming a key outside its frame), it posts to
+`/refine` as before. Validate and submit always ask: the pipeline has
+the last word.
+
+The full schema is fetched once, beside the contract, and never again
+in a session. It reads no value: `emitFull()` is handed only the locked
+keys the operation knows, so it is the same whatever is stored or
+typed, and its cacheability is the option lists', the refined data
+surfaces' and the access answer's, never storage's. A write changes
+what is stored, which the full schema never read, and no answer carries
+a signal that the schema itself moved, so there is nothing to refetch
+on. A site that changes an option list during a session (a bundle
+added) is answered by the server where it matters, on validate and
+submit.
+
+The page's settling mirrors the server's exactly, orphans included,
+because a local answer is a stand-in for `/refine`'s and must be the
+same answer. An orphan is what makes a save judge the right thing: the
+stored room under a moved venue is shown on the empty option and its
+path travels back stale, so the pipeline reads it as the stored value
+and refuses it, as the form's Save does. A page that kept the orphaned
+room, or kept a capacity typed under it, would draw a form the server
+never draws and send values the server would have dropped. So the page
+applies the same discard rule and the same fixed point, down to
+re-settling every orphan on every change (a capacity typed under an
+orphaned room falls back to what is stored when the pricing changes),
+and a Vitest test holds it to recorded `/refine` answers for examples 2
+and 3, keyword for keyword. (`narrow()` in `app/src/contract.ts`,
+`ResourceApiController::schema()`)

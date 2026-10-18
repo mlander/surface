@@ -1,4 +1,4 @@
-import type { Contract, Created, Submission, Validation, Values } from './contract';
+import type { Contract, Created, Schema, Submission, Validation, Values } from './contract';
 
 /**
  * Whether a submit sends the fingerprint the contract was loaded with.
@@ -25,8 +25,19 @@ export interface Settings {
 
 export type Fetcher = (input: string, init?: RequestInit) => Promise<Response>;
 
+/** The full schema: the contract for any values, with no values beside it. */
+export interface FullSchema {
+  surface: string;
+  situation: string | null;
+  label: string | null;
+  schema: Schema;
+  outputs?: Schema;
+}
+
 export interface Api {
   contract(): Promise<Contract>;
+  /** The full schema, which reads no value: fetched once, beside the contract. */
+  schema(): Promise<FullSchema>;
   refine(values: Values, stale: string[]): Promise<Contract>;
   validate(values: Values, stale: string[]): Promise<Validation>;
   submit(values: Values, stale: string[], fingerprint: string | null): Promise<Submission>;
@@ -40,7 +51,7 @@ export function pageOf(settings: Settings, created: Created): string {
 }
 
 /**
- * The four endpoints of one operation.
+ * The five endpoints of one operation.
  *
  * The operation's parameters travel in the query string of every call
  * and in the body of the POSTs; the POSTs carry the session's CSRF token,
@@ -79,6 +90,8 @@ export function createApi(settings: Settings, fetcher: Fetcher): Api {
   return {
     contract: async () =>
       read<Contract>(await fetcher(`${base}${suffix}`, { credentials: 'same-origin', headers: { Accept: 'application/json' } })),
+    schema: async () =>
+      read<FullSchema>(await fetcher(`${base}/schema${suffix}`, { credentials: 'same-origin', headers: { Accept: 'application/json' } })),
     refine: (values, stale) => post<Contract>('refine', values, stale),
     validate: (values, stale) => post<Validation>('validate', values, stale),
     submit: (values, stale, fingerprint) =>

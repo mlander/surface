@@ -1,11 +1,15 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { pageOf, type Settings } from '../api';
-import type { Contract } from '../contract';
+import type { Contract, Schema } from '../contract';
+import { getAt } from '../contract';
 import { SurfaceForm } from '../SurfaceForm';
 import example2 from './fixtures/example2.json';
 import library from './fixtures/example2-library.json';
 import example3 from './fixtures/example3.json';
+import narrowed2 from './fixtures/refine-example2.json';
+import narrowed3 from './fixtures/refine-example3.json';
+import compliance from './fixtures/refine-example3-compliance.json';
 
 // One integration test over a mocked server: the contracts are what the
 // module's emitter wrote for examples 2 and 3 (ServedContractTest's
@@ -34,6 +38,40 @@ function refined({ init }: Call): Contract {
   return { ...(library as unknown as Contract), values: { ...library.values, title: sent.values.title } };
 }
 
+/** What the recorder wrote: the full schema, the GET contract, and /refine's answers to a chain of changes. */
+interface Recorded {
+  schema: { schema: Schema };
+  contract: Contract;
+  steps: { changes: { path: string; value: unknown }[]; answer: Contract }[];
+}
+
+/**
+ * A server serving one recorded chain: the contract, the full schema, and
+ * for a refine the answer to the latest recorded change the values sent
+ * carry.
+ */
+function recordedServer(recorded: Recorded, surface: string, more: Record<string, (call: Call) => unknown> = {}) {
+  const base = `/surface-api/${surface}/configure`;
+  return server({
+    ...more,
+    [base]: () => recorded.contract,
+    [`${base}/schema`]: () => recorded.schema,
+    [`${base}/refine`]: ({ init }) => {
+      const sent = JSON.parse(String(init?.body));
+      const step = [...recorded.steps].reverse().find(({ changes }) => {
+        const last = changes[changes.length - 1];
+        return JSON.stringify(getAt(sent.values, last.path)) === JSON.stringify(last.value);
+      });
+      return step?.answer ?? recorded.contract;
+    },
+  });
+}
+
+/** The contract panel's line saying how the last change was narrowed. */
+function narrowingLine(): string | null {
+  return document.querySelector('.dsr-contract__narrowing')?.textContent ?? null;
+}
+
 function server(routes: Record<string, (call: Call) => unknown>) {
   const calls: Call[] = [];
   const fetcher = vi.fn(async (url: string, init?: RequestInit) => {
@@ -41,7 +79,10 @@ function server(routes: Record<string, (call: Call) => unknown>) {
     if (url === '/session/token') {
       return new Response('the-token');
     }
-    const route = Object.keys(routes).find((path) => url.startsWith(path));
+    // By path: a server with no route for the full schema answers it 404,
+    // and the form asks /refine for every change, as it did before it
+    // could narrow by itself.
+    const route = Object.keys(routes).find((path) => url.split('?')[0] === path);
     if (route === undefined) {
       return new Response('Not found', { status: 404, statusText: 'Not Found' });
     }
@@ -318,13 +359,19 @@ describe('submitting an operation that creates', () => {
 describe('the browser fetch', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('fetches the contract once, however often the form renders', async () => {
-    const { calls, fetcher } = server({ '/surface-api/registration.step2/configure': () => example2 });
+  it('fetches the contract and the full schema once, together, however often the form renders', async () => {
+    const recorded = narrowed2 as unknown as Recorded;
+    const { calls, fetcher } = server({
+      '/surface-api/registration.step2/configure': () => recorded.contract,
+      '/surface-api/registration.step2/configure/schema': () => recorded.schema,
+    });
     vi.stubGlobal('fetch', fetcher);
     render(<SurfaceForm settings={settings} />);
     await userEvent.type(await screen.findByLabelText(/Event title/), ' again');
     expect(screen.getByLabelText(/Event title/)).toHaveValue('Spring meetup again');
-    expect(calls.map((call) => call.url)).toEqual(['/surface-api/registration.step2/configure']);
+    // A change narrowed here asks for nothing more.
+    await userEvent.selectOptions(screen.getByLabelText(/Venue/), 'Old Library');
+    expect(calls.map((call) => call.url)).toEqual(['/surface-api/registration.step2/configure', '/surface-api/registration.step2/configure/schema']);
   });
 });
 
@@ -410,5 +457,96 @@ describe('the React form of example 3', () => {
     expect(compliance.nextElementSibling).toContainElement(screen.getByLabelText(/Pricing/));
     // The group it was stored in draws nothing of its own.
     expect(document.querySelector('.dsr-group')).toBeNull();
+  });
+});
+
+describe('narrowing here, from the full schema', () => {
+  const refines = (calls: Call[]) => calls.filter((call) => call.url.endsWith('/refine'));
+
+  it('narrows the room and the capacity of example 2 on a venue change, with no request', async () => {
+    const { calls, fetcher } = recordedServer(narrowed2 as unknown as Recorded, 'registration.step2');
+    render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
+    await userEvent.selectOptions(await screen.findByLabelText(/Venue/), 'Old Library');
+
+    const room = screen.getByLabelText(/Room/);
+    expect(within(room).getAllByRole('option').map((option) => option.textContent)).toEqual(['- Select -', 'Reading room', 'Garden room']);
+    expect(screen.getByLabelText(/Capacity/)).toHaveAttribute('max', '1000');
+    expect(narrowingLine()).toBe('Narrowed here: room, capacity.');
+
+    await userEvent.selectOptions(screen.getByLabelText(/Room/), 'Garden room');
+    expect(screen.getByLabelText(/Capacity/)).toHaveAttribute('max', '30');
+    expect(screen.getByLabelText(/Capacity/)).toHaveAccessibleDescription('Up to 30 for the Garden room.');
+    expect(narrowingLine()).toBe('Narrowed here: capacity.');
+    expect(refines(calls)).toHaveLength(0);
+  });
+
+  it('shows the room the venue orphaned stale, on its empty option, and sends it back by its path', async () => {
+    const { calls, fetcher } = recordedServer(narrowed2 as unknown as Recorded, 'registration.step2', {
+      // Only what is sent matters here.
+      '/surface-api/registration.step2/configure/submit': () => ({ committed: false, valid: false, violations: [], stale: [], outputs: {}, contract: null, created: null }),
+    });
+    const submits = () => calls.filter((call) => call.url.endsWith('/submit'));
+    render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
+    await userEvent.selectOptions(await screen.findByLabelText(/Venue/), 'Old Library');
+
+    // On the empty option, standing for the stored main hall; not required
+    // to a browser, since empty there means keep.
+    expect(screen.getByLabelText(/Room/)).toHaveDisplayValue('- Select -');
+    expect(screen.getByLabelText(/Room/)).not.toBeRequired();
+    await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    await waitFor(() => expect(submits()).toHaveLength(1));
+    const body = JSON.parse(String(submits()[0].init?.body));
+    expect(body.stale).toEqual(['room']);
+    expect(body.values.room).toBeNull();
+
+    // The venue moved back: the stored room is offered again, and stands.
+    await userEvent.selectOptions(screen.getByLabelText(/Venue/), 'Riverside Hall');
+    expect(screen.getByLabelText(/Room/)).toHaveDisplayValue('Main hall');
+    expect(screen.getByLabelText(/Capacity/)).toHaveAttribute('max', '400');
+    expect(refines(calls)).toHaveLength(0);
+  });
+
+  it('narrows example 3\'s ticket here on a pricing change: the slot', async () => {
+    const { calls, fetcher } = recordedServer(compliance as unknown as Recorded, 'registration.step3');
+    render(<SurfaceForm settings={{ ...settings, surface: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
+    await userEvent.selectOptions(await screen.findByLabelText(/Pricing/), 'paid');
+    const ticket = screen.getByRole('group', { name: 'Ticket' });
+    expect(within(ticket).getByLabelText(/Price/)).toBeRequired();
+    expect(within(ticket).getByLabelText(/Currency/)).toHaveDisplayValue('EUR');
+    expect(within(ticket).queryByLabelText('Note')).toBeNull();
+    expect(narrowingLine()).toBe('Narrowed here: ticket.');
+    expect(refines(calls)).toHaveLength(0);
+  });
+
+  it('asks the server on a venue change of example 3 with compliance: the room is narrowed at runtime', async () => {
+    const { calls, fetcher } = recordedServer(compliance as unknown as Recorded, 'registration.step3');
+    render(<SurfaceForm settings={{ ...settings, surface: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
+    await userEvent.selectOptions(await screen.findByLabelText(/Venue/), 'Old Library');
+    expect(narrowingLine()).toBe('Asked the server: room depends on a runtime rule.');
+    await waitFor(() => expect(refines(calls)).toHaveLength(1));
+    await waitFor(() => expect(screen.getByLabelText(/Room/)).toHaveDisplayValue('- Select -'));
+    expect(JSON.parse(String(refines(calls)[0].init?.body)).values.venue).toBe('library');
+
+    // The pricing after it is still the slot's, narrowed here.
+    await userEvent.selectOptions(screen.getByLabelText(/Pricing/), 'paid');
+    expect(narrowingLine()).toBe('Narrowed here: ticket.');
+    expect(refines(calls)).toHaveLength(1);
+  });
+
+  it('asks the server on a licence change of example 3 with compliance: the capacity is dynamic', async () => {
+    const { calls, fetcher } = recordedServer(compliance as unknown as Recorded, 'registration.step3');
+    render(<SurfaceForm settings={{ ...settings, surface: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
+    await userEvent.type(await screen.findByLabelText(/Event licence/), '2');
+    expect(narrowingLine()).toBe('Asked the server: capacity depends on a dynamic rule.');
+    await waitFor(() => expect(refines(calls)).toHaveLength(1));
+  });
+
+  it('narrows example 3 without compliance here, venue and room alike', async () => {
+    const { calls, fetcher } = recordedServer(narrowed3 as unknown as Recorded, 'registration.step3');
+    render(<SurfaceForm settings={{ ...settings, surface: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
+    await userEvent.selectOptions(await screen.findByLabelText(/Venue/), 'Harbour Centre');
+    expect(within(screen.getByLabelText(/Room/)).getAllByRole('option').map((option) => option.textContent)).toEqual(['- Select -', 'Auditorium', 'Upper deck']);
+    expect(narrowingLine()).toBe('Narrowed here: room, capacity.');
+    expect(refines(calls)).toHaveLength(0);
   });
 });

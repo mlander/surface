@@ -3,7 +3,7 @@
 A resource built in one of its operations, served as a JSON document a
 client with no PHP can render a form from, re-narrow as answers change,
 validate against before anything is written, and then write through. The
-emitter is the main module's; the four endpoints and a React app that
+emitter is the main module's; the five endpoints and a React app that
 renders from them are the experimental submodule `data_surface_react`.
 
 This is the roadmap's "served contract" in its first shape: one
@@ -44,7 +44,8 @@ JSON Schema cannot say them. This one can.
   (`modules/data_surface_examples/README.md`).
 - **Over HTTP.** `GET /surface-api/{surface}/{situation}`, the
   resource's id and the operation's id, with `data_surface_react`
-  enabled: the whole document, widget hints included.
+  enabled: the whole document, widget hints included. The full schema is
+  `GET /surface-api/{surface}/{situation}/schema` beside it.
 - **Not `drush tool:info`.** That prints the Tool API's rendering of the
   derived tool, which cannot say a shape keyed by a sibling: a slot is
   flattened to one map, the variant the stored values choose, or every
@@ -85,8 +86,10 @@ The emitter writes two documents from one data surface, by one code path.
   frame is described from nothing, not from the child's defaults. Only
   the locked keys an operation knows are read, since no value changes
   them. It is what a validator, or an agent planning its values, or
-  anything that takes the schema once, wants. No route serves it yet;
-  the contract panel shows it.
+  anything that takes the schema once, wants, and what a drawing client
+  [narrows from](#a-drawing-client-that-narrows-locally).
+  `GET .../schema` serves it, with the widget hints; the contract panel
+  shows it.
 
 Neither is ever stricter than the pipeline
 ([decision](decisions.md#two-documents-never-stricter-than-the-runtime)).
@@ -542,7 +545,7 @@ What the emitter's `widget`, when asked for, mirrors is
 
 ## The endpoints
 
-All five routes take the operation's parameters from the query string
+All six routes take the operation's parameters from the query string
 (and a POST body's `parameters`), and are gated by
 `_data_surface_react_access`: the operation's permission, then the
 access class the resource or structure names, through
@@ -557,6 +560,14 @@ when it cannot read the body, and the controller refuses the body.
 resource's id and `{situation}` the operation's id, answers the document
 for the values the operation form would open with, and their
 `fingerprint`.
+
+**`GET /surface-api/{surface}/{situation}/schema`** answers
+[the full schema](#two-documents) for the operation, with the widget
+hints: `surface`, `situation`, `label`, `schema` and, when declared,
+`outputs`; no `values`, `stale` or `fingerprint`. It reads no value, so
+it is the same whatever is stored or typed, and it is the one document
+that may be cached ([below](#cacheability)). The same access as the GET
+contract.
 
 **`POST .../refine`**, body `{values, stale}`, answers the document
 re-narrowed against the values, which is what the form's AJAX rebuild
@@ -717,6 +728,52 @@ was read from included, the access answer's own, and `url.query_args`, as HTTP
 cache metadata on a `CacheableJsonResponse`. It is never stored: the
 values in it come from storage, and storage says nothing about how
 long what it loaded holds ([decision](decisions.md#a-served-contract-is-never-stored)).
+The full schema carries the same metadata, and
+`languages:language_interface` for its labels, but is not max-age 0: no
+stored value is in it, so what it says it depends on is all it depends
+on.
+
+## A drawing client that narrows locally
+
+The schema for these answers is still what a drawing client loads first:
+it carries the values, the stale paths and the fingerprint, and it is
+refined by the runtime refiners for those values. Beside it, once, the
+client may fetch the full schema, and from then on answer most changes
+itself. The rule, as `data_surface_react` applies it:
+
+- **Narrow from the full schema.** On a change of a key, collect every
+  key that depends on it, transitively, through `dependsOn` in the frame
+  they share (the top, or a child's, by path). When none of them is
+  marked `dynamic` or `runtime`, nor holds one inside it, read each
+  key's schema for the new values from the full schema: as declared,
+  with the `then` of every conditional on its frame whose `if` the values
+  meet once every key it watches holds a value, and with its
+  conditionals, held to what those keys still offer, while one holds
+  nothing. A slot is its chosen variant's def; a part is its def,
+  described for its values.
+- **Settle as `/refine` does.** The answer must be the server's, so the
+  client mirrors the [discard rule](#the-endpoints): an answer the new
+  choices orphan is dropped and falls back to what is stored; a stored
+  value its moved dependency no longer offers is held unanswered, shown
+  on the empty option, and listed in `stale`; and the reading of a select
+  (the [empty option rule](decisions.md#the-empty-option-rule), a value
+  no longer offered shown as nothing) and of a key holding nothing (its
+  default) is the emitter's. A number above a lowered maximum is kept,
+  as the server keeps it, and the pipeline refuses it on submit.
+- **Ask when a dependent is `dynamic` or `runtime`.** Its rule is not in
+  the full schema, so the client posts to `/refine` as before. It also
+  asks for anything it cannot settle: a stale value it was handed as
+  `null`, whose stored value only the server knows; a reference left
+  unresolved; a conditional naming a key outside its frame.
+- **Validate and submit always ask.** The pipeline has the last word,
+  and the full schema is never stricter than it, but not always as
+  strict.
+
+Example 2 narrows every change itself. Example 3 does too; with example
+4's module on, a change of the venue asks (the room is `runtime`, for
+the closed rooms), and so does the licence and the room (the capacity is
+`dynamic`, watching free text), while the pricing is still narrowed
+here: the ticket is a slot, stated whole.
 
 ## What a write needs
 

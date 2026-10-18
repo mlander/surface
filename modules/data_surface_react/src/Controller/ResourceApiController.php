@@ -26,12 +26,15 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 /**
  * Serves one operation's contract, re-narrows it, rehearses and writes.
  *
- * Four endpoints over the same operation, each the served twin of
- * something the operation form already does:
+ * Five endpoints over the same operation, four of them the served twin
+ * of something the operation form already does:
  *
  * - `GET /surface-api/{surface}/{situation}`: the contract for the
  *   values the form would open with, what the storage holds over the
  *   built resource's defaults, and the fingerprint of what it holds.
+ * - `GET .../schema`: the full schema, for any values, which reads
+ *   nothing stored and so may be cached; a client narrows from it where
+ *   its conditionals state the answer and asks refine for the rest.
  * - `POST .../refine`, body `{values, stale}`: the contract re-narrowed
  *   against in-progress answers, the AJAX rebuild's equivalent. The
  *   answers are overlaid on the stored values, a stale path sent back
@@ -111,6 +114,42 @@ final class ResourceApiController implements ContainerInjectionInterface {
     return $this->respond($served, $this->emit($served, $this->servedOperations->current($served)), [
       'fingerprint' => $this->servedOperations->fingerprint($served),
     ]);
+  }
+
+  /**
+   * Serves the full schema: the operation's contract for any values.
+   *
+   * The emitter's second document, with the widget hints: it reads no
+   * value, so it is the same whatever is stored or typed, and a client
+   * fetches it once and narrows from its conditionals where they state
+   * the answer. Unlike the contract it may be cached: what it depends on
+   * is the option lists' and the refined data surfaces' cacheability, the
+   * access answer's, the query string the parameters arrive in and the
+   * language its labels are in, never what storage holds.
+   *
+   * Decision: see docs/decisions.md#the-page-resolves-what-the-schema-states.
+   *
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The request, carrying the operation's parameters.
+   * @param string $surface
+   *   The resource id, from the route's {surface} parameter.
+   * @param string $situation
+   *   The operation id, from the route's {situation} parameter.
+   *
+   * @return \Drupal\Core\Cache\CacheableJsonResponse
+   *   The full schema document: `surface`, `situation`, `label`, `schema`
+   *   and, when declared, `outputs`; no `values`, `stale` or
+   *   `fingerprint`.
+   */
+  public function schema(Request $request, string $surface, string $situation): CacheableJsonResponse {
+    $served = $this->served($surface, $situation, $request);
+    $full = $this->emitter->emitFull($served->surface, $served->definition->id, $served->operation->id, $served->operation->label, widgets: TRUE);
+    $response = new CacheableJsonResponse($full->document);
+    $response->setEncodingOptions(JsonResponse::DEFAULT_ENCODING_OPTIONS | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    $response->addCacheableDependency($full);
+    $response->addCacheableDependency($this->servedOperations->access($served));
+    $response->getCacheableMetadata()->addCacheContexts(['url.query_args', 'languages:language_interface']);
+    return $response;
   }
 
   /**

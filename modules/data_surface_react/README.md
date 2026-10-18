@@ -1,12 +1,13 @@
 # Data Surface - React
 
 A resource's form, rendered in React from a contract the module serves.
-One operation of one resource becomes four endpoints and a page:
+One operation of one resource becomes five endpoints and a page:
 
 | | Path | What it does |
 | --- | --- | --- |
 | Page | `GET /surface-react/{surface}/{situation}` | Mounts the React app, titled with the operation's label. |
 | Contract | `GET /surface-api/{surface}/{situation}` | The JSON contract with the values the form opens with, and the stored values' `fingerprint`. |
+| Full schema | `GET /surface-api/{surface}/{situation}/schema` | The contract for any values: every listable dependency a conditional, the rest `dynamic` or `runtime`; no values. Cacheable. |
 | Refine | `POST /surface-api/{surface}/{situation}/refine` | The contract re-narrowed against in-progress values: the AJAX rebuild's equivalent. |
 | Validate | `POST /surface-api/{surface}/{situation}/validate` | The pipeline's dry run: `{valid, violations, stale, values, prepared}`, nothing written. |
 | Submit | `POST /surface-api/{surface}/{situation}/submit` | The write: `{committed, valid, violations, stale, outputs, contract, created}`; a refusal is 200 with `committed: false`. |
@@ -15,7 +16,7 @@ One operation of one resource becomes four endpoints and a page:
 the operation id (`configure`). An operation's parameters arrive in the
 query string by the operation method's parameter names, or in a POST
 body's `parameters`: `/surface-react/node.type/edit?type=article`.
-Access on all five is the operation's: its permission, then the
+Access on all six is the operation's: its permission, then the
 resource's access class through `Resources::access()`, no opinion read as
 a refusal. The three POSTs want the session's CSRF token from
 `/session/token` in an `X-CSRF-Token` header. A submit may send back the
@@ -68,9 +69,21 @@ and so on.
   mapping renders none. Locked keys are disabled and say why; a stale
   value shows on the empty option and stands for the stored value,
   which stays on the server.
-- **Refines** on a change to any key something depends on: it posts the
-  values to `/refine` (debounced) and re-renders from the answer,
-  keeping what was touched since the request left.
+- **Narrows here, or asks.** On load it fetches the contract and the full
+  schema together, once; the full schema reads no value, so it is never
+  fetched again. On a change to any key something depends on, it
+  collects every key that depends on it, transitively. When none is
+  `dynamic` or `runtime`, the form narrows itself from the full schema's
+  conditionals, by the rules `/refine` applies (an orphaned answer
+  dropped to what is stored, a stored value the change orphaned shown on
+  the empty option and listed stale), with no request. When one is, or
+  anything cannot be settled here, it posts the values to `/refine`
+  (debounced) and re-renders from the answer, keeping what was touched
+  since the request left. A change made while a refine is out joins it.
+  The contract panel says which, in one line: "Narrowed here: room,
+  capacity", or "Asked the server: room depends on a runtime rule"
+  ([a drawing client that narrows locally](../../docs/served-contract.md#a-drawing-client-that-narrows-locally)).
+  Validate and submit always ask.
 - **Saves**: Submit posts the values, the stale paths and the
   fingerprint the contract was loaded with to `/submit`. A refusal shows
   beside its field, by path, and in a summary; a refusal at path `''`
@@ -83,8 +96,9 @@ and so on.
   page turns it off with `sendFingerprint: false` in its
   `drupalSettings.dataSurfaceReact`.
 
-Below the form, collapsed, the contract: a row per key, as the PHP
-contract panel shows it, then the JSON.
+Below the form, collapsed, the contract: the line on the last change, a
+row per key, as the PHP contract panel shows it, then the JSON of the
+last contract served and of the full schema.
 
 ## The app
 
@@ -108,8 +122,10 @@ Run them on the host, not inside ddev. The library
 | Test | Covers |
 | --- | --- |
 | `Kernel\ServedContractTest` | The main module's emitter over examples 1 to 3, the content type resource and the demo block structure: labels, `oneOf` titles, bounds, the venue to room dependency, the slot's conditional, the locked machine name on edit, the widget hints off by default and on for this submodule's endpoint; each part defined once under `$defs` and referred to, one def per class attached twice, a site narrowing its def only where it differs, and each document's verdicts on example 3 held to the pipeline's; every schema checked by opis/json-schema (draft 2020-12) and against the vendored draft-07 meta-schema. |
-| `Functional\ServedContractEndpointsTest` | 200 and 403, the JSON shape, refine narrowing the room by the venue, validate refusing a wrong room and a capacity over the room's and accepting a valid payload, nothing written; the landing page's React links. |
+| `Functional\ServedContractEndpointsTest` | 200 and 403, the JSON shape, the full schema's access and content, cacheable and the same across two stored states, refine narrowing the room by the venue, validate refusing a wrong room and a capacity over the room's and accepting a valid payload, nothing written; the landing page's React links. |
 | `Functional\ServedSubmitEndpointTest` | Submit writing example 2 and answering the fresh contract; a wrong room refused with nothing written; anonymous, token-less and malformed posts; a stale fingerprint refused with nothing written, and no fingerprint meaning the last write wins; a content type added through it answering `created` at `edit` with its `type`, then edited and deleted. |
+| `FunctionalJavascript\ReactNarrowingTest` | In a browser, counting the page's fetches with `performance.getEntriesByType('resource')`: example 2's venue and room narrowed with no `/refine`; example 3 with compliance asking on the venue (the room is runtime) and not on the pricing; the panel's line for each. |
+| `app/src/test/narrow.test.ts` | The page's narrowing held to recorded `/refine` answers (`fixtures/refine-*.json`) for chains of changes on example 2 and example 3, compliance off and on: schema, values and stale paths equal keyword for keyword, each local step continuing from the last; the changes asked named by key and marker; a stale value only the server knows, and frames it cannot read, asked. |
 | `app/src/test/contract.test.ts` | The resolver: a reference with keywords beside it, an `allOf` narrowing, a def inside a def, two sites sharing one def, a recursive reference kept, the JSON Pointer escaping; example 3's served contract defining its parts once and read inline. |
 | `app/src/test/widgets.test.tsx` | Each widget from a schema fragment, the empty option rule, locked, slot resolution, the list; a placed fieldset drawn after the sibling it names, its values sent under its group. |
-| `app/src/test/SurfaceForm.test.tsx` | The app against a mocked server serving the emitter's own contracts: refine on a dependency, the stale room, validate's inline and summary messages; submit's success with stale warnings and the re-render, a refusal, the fingerprint sent and its refusal, the toggle off, and the move to a created thing's page; example 3's parts drawn from their defs, the paid ticket on a pricing change, a refusal on the contact's email shown on that field, and its Compliance fieldset right after the capacity. |
+| `app/src/test/SurfaceForm.test.tsx` | The app against a mocked server serving the emitter's own contracts: the contract and the full schema fetched once, together; narrowing here with no request (example 2's venue and room, example 3's venue and pricing), the orphaned room stale and sent back by its path, example 3 with compliance asking on the venue and the licence, the panel's line; with no full schema, refine on a dependency, the stale room, validate's inline and summary messages; submit's success with stale warnings and the re-render, a refusal, the fingerprint sent and its refusal, the toggle off, and the move to a created thing's page; example 3's parts drawn from their defs, the paid ticket on a pricing change, a refusal on the contact's email shown on that field, and its Compliance fieldset right after the capacity. |

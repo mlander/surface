@@ -10,12 +10,13 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Psr\Http\Message\ResponseInterface;
 
 /**
- * Tests the React page and the three contract endpoints over HTTP.
+ * Tests the React page and the contract endpoints over HTTP.
  *
  * The examples' landing page links the React page of examples 1 to 3.
  * Example 2 is the subject throughout, because it is where an answer
  * narrows another: the venue the rooms, the room the capacity. The page
- * and the contract answer an administrator and refuse anonymous; refine
+ * and the contract answer an administrator and refuse anonymous; the full
+ * schema is the same whatever is stored, and may be cached; refine
  * narrows the room by the venue and shows an orphaned room stale; and
  * validate refuses a room of another venue and a capacity above the
  * room's, accepts a valid payload, and writes nothing either way. On
@@ -98,6 +99,52 @@ class ServedContractEndpointsTest extends BrowserTestBase {
    */
   protected function offered(array $property): array {
     return array_column(array_filter($property['oneOf'], fn (array $choice): bool => isset($choice['title'])), 'const');
+  }
+
+  /**
+   * Tests the full schema: its access, its content, and that no value moves it.
+   */
+  public function testFullSchemaReadsNoValue(): void {
+    $this->drupalGet('surface-api/registration.step2/configure/schema');
+    $this->assertSession()->statusCodeEquals(403);
+
+    $this->drupalLogin($this->drupalCreateUser(['administer site configuration']));
+    $this->drupalGet('surface-api/registration.step2/configure/schema');
+    $this->assertSession()->statusCodeEquals(200);
+    $first = $this->getSession()->getPage()->getContent();
+    $full = json_decode($first, TRUE);
+    // The document and nothing that is one moment's: no values, no stale
+    // paths, no fingerprint.
+    $this->assertSame(['surface', 'situation', 'label', 'schema'], array_keys($full));
+    $this->assertSame('registration.step2', $full['surface']);
+    $room = $full['schema']['properties']['room'];
+    $this->assertCount(6, $this->offered($room));
+    $this->assertSame(['widget' => 'select', 'locked' => FALSE, 'dependsOn' => ['venue'], 'enumerated' => TRUE], $room['x-surface']);
+    // Every listable dependency as a conditional: three venues, six rooms.
+    $this->assertCount(9, $full['schema']['allOf']);
+    // Cacheable: it reads nothing stored, so it is not max-age 0 as the
+    // contract is.
+    $this->assertSame('-1 (Permanent)', $this->getSession()->getResponseHeader('X-Drupal-Cache-Max-Age'));
+    $this->assertStringContainsString('url.query_args', (string) $this->getSession()->getResponseHeader('X-Drupal-Cache-Contexts'));
+    $this->drupalGet('surface-api/registration.step2/configure');
+    $this->assertSame('0 (Uncacheable)', $this->getSession()->getResponseHeader('X-Drupal-Cache-Max-Age'));
+
+    // Another stored state: the contract follows it, the full schema does
+    // not.
+    $this->config(self::CONFIG)
+      ->set('venue', 'harbour')
+      ->set('room', 'harbour_deck')
+      ->set('capacity', 90)
+      ->save();
+    $this->drupalGet('surface-api/registration.step2/configure');
+    $this->assertSame('harbour_deck', json_decode($this->getSession()->getPage()->getContent(), TRUE)['values']['room']);
+    $this->drupalGet('surface-api/registration.step2/configure/schema');
+    $this->assertSession()->statusCodeEquals(200);
+    $this->assertSame($first, $this->getSession()->getPage()->getContent());
+
+    // An operation that names nothing is refused, as on the contract.
+    $this->drupalGet('surface-api/registration.step2/nothing/schema');
+    $this->assertSession()->statusCodeEquals(403);
   }
 
   /**
