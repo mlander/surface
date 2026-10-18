@@ -410,6 +410,8 @@ renames sit in A because they are cheapest before new code exists.
   behavior facts and the tool door's refusal feedback (8).
 - **D, edges as they bite:** item 9.
 - **E, the entity side** when resumed: item 10.
+- **F, confidence in the direction** (gates, not features; several run
+  alongside B and C): item 12 below.
 - **In parallel from now:** file the drafted core issues (item 11),
   now including one for conditional data definitions (a complex
   definition declares `when`/`then`/`required` conditions that only
@@ -564,6 +566,50 @@ renames sit in A because they are cheapest before new code exists.
    already have, then third-party settings for simple config, and Form
    API last. `docs/core-gaps.md` and the proposal document are to be
    rewritten in the new vocabulary to carry it.
+
+12. **Confidence in the direction.** The two risks the design carries
+    are weight and the untested half, so these are gates every later
+    item is held to, with the evidence each produces.
+    - **A concept budget, with a page that enforces it.** A doc page,
+      "Your first resource", that writes a working resource using only
+      resource, operation, storage and `add()`, and nothing else, with a
+      drift test that pins its code. Every item in B and C must leave
+      that page unchanged; a concept that cannot stay off it has to
+      justify itself. Beside it, a one-page concept inventory: each
+      concept, the question that makes you need it, and the sentence to
+      skip it. Smithy's recurring complaint is weight; this is the
+      defence.
+    - **Fresh eyes, twice.** First a reader with no context (an agent
+      given only the docs and a task, none of this history) writes a
+      resource with a structure, an alter and a runtime rule from the
+      docs alone, and logs every place it guessed, searched or got it
+      wrong; the log becomes doc fixes. Then the same exercise by a
+      person. Repeat the agent run after every milestone; it is cheap.
+    - **Two real adopters.** Port two existing contrib settings forms
+      that we did not write (candidates: pathauto's settings, metatag's
+      defaults, or another module's `ConfigFormBase` with options and a
+      dependency between fields) as resources in a sandbox module, and
+      record what the pattern could not express or expressed badly.
+      Generality is only shown on forms designed without us in mind.
+    - **The entity proof, with a definition of done.** Item 10 counts as
+      done when one real bundle with a multi-value field, an entity
+      reference, an image and a path alias is created and edited through
+      the form, the React page, the tool and MCP, with field permissions
+      honoured, and the "today" comparison beside it. Ports, mixins and
+      collections all have to hold at once there; nothing else exercises
+      them together.
+    - **The audit stays green.** `NeverStricterAuditTest` pins the
+      invariant; a breach decided and fixed changes a test on purpose,
+      never silently. New doors and new kinds add cases to it.
+    - **An evolution design before anyone depends on a resource.**
+      Phase D, written after reading Smithy's defaults-and-model-evolution
+      design: which changes to a resource are compatible, what a stored
+      value migration looks like, how a contract diff is reported.
+    - **The core story told once, by an outsider's standard.** Rewrite
+      `docs/core-gaps.md` and the proposal in the new vocabulary, bottom
+      up (definition facts, then operations and access for config, then
+      third-party settings for simple config, Form API last), and have
+      the fresh-eyes reader read that too.
 
 ## Rejected, on the record
 
