@@ -573,6 +573,14 @@ renames sit in A because they are cheapest before new code exists.
    means narrowing the `values` map from its own partial value in the
    tool bridge. One retry per dependent key is the target. Applies to
    ECA and MCP alike.
+   Defaults in the listing (decided 2026-10-18): a tool listing is
+   cached by clients and is a discovery channel, so it stops carrying
+   current stored values as `default`. A create operation lists the
+   declared defaults; an edit operation lists none and says in its
+   description that a key left out keeps its current value and that the
+   read tool returns current values. The schema for these answers keeps
+   current values in `values` (per request, never cached) and the full
+   schema keeps declared defaults. Updates stay a patch.
    Also the operation's behavior facts, which MCP reads as its tool
    annotations and the bridge already derives from the Tool API:
    `#[Operation]` gains `destructive` and `readOnly` (both false by
