@@ -684,6 +684,17 @@ renames sit in A because they are cheapest before new code exists.
    from the read tool; `attachListBy()`; an item routed to its child's
    own storage; the phpstan rule for static refiners; the "Right now"
    wording for a key that is both narrowed and under a runtime rule.
+   Also: a text key's `Length` max reaches the element as `#maxlength`,
+   and on a POST past it core's message shows instead of the rule's
+   own (the gap the number widget had; found 2026-10-18 by the shapes
+   unit). And a candidate held back on purpose (2026-10-18): a typed
+   reference to a sibling value inside a declared rule
+   (`constrain('Range', ['min' => Value::of('created')])`), which
+   would spare the coded refiner for key-to-key comparisons but puts
+   a declared rule on the `dynamic` side of the full schema, since
+   JSON Schema cannot state it; built only if the adopter gate (item
+   13) shows such comparisons are common. Drupal tokens in strings are
+   not a candidate: a string is a value, and tokens are runtime.
 11. **The entity side, when resumed.** Fields as two kinds: a `field`
    resource (identity: entity and field name; a collection of items
    with Count from cardinality; field access; a `set` operation whose
