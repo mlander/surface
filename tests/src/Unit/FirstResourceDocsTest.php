@@ -22,6 +22,9 @@ use PHPUnit\Framework\Attributes\Group;
  *   entry for the key, whole.
  * - `<!-- lines: <path> -->`: every line of the block is a line of the
  *   file, for an info file whose bookkeeping lines the page leaves out.
+ * - `<!-- excerpt: <path> -->`: the block is a run of the file's lines,
+ *   in order and with nothing between them, its indentation aside; for
+ *   a few keys of a class, as QuotedCodeDocsTest holds them.
  *
  * Every file of the module but its README is shown on one of the pages,
  * every routing and schema entry too, and the first page names none of
@@ -55,16 +58,19 @@ class FirstResourceDocsTest extends UnitTestCase {
   }
 
   /**
-   * Lists the marked blocks of both pages.
+   * Lists the marked blocks of pages.
+   *
+   * @param string[] $pages
+   *   The pages, relative to the module root; both of these by default.
    *
    * @return array<int, array{0: string, 1: string, 2: string, 3: string}>
    *   Each block: its page, its marker kind, what the marker names, and
    *   the block's text.
    */
-  public static function blocks(): array {
+  public static function blocks(array $pages = self::PAGES): array {
     $blocks = [];
-    foreach (self::PAGES as $page) {
-      preg_match_all('/<!-- (code|yaml|lines): (\S+) -->\n\n```[a-z]*\n(.*?)\n```/s', self::page($page), $matches, PREG_SET_ORDER);
+    foreach ($pages as $page) {
+      preg_match_all('/<!-- (code|yaml|lines|excerpt): (\S+) -->\n\n```[a-z]*\n(.*?)\n```/s', self::page($page), $matches, PREG_SET_ORDER);
       foreach ($matches as [, $kind, $target, $text]) {
         $blocks[] = [$page, $kind, $target, $text];
       }
@@ -115,6 +121,68 @@ class FirstResourceDocsTest extends UnitTestCase {
   }
 
   /**
+   * Reads what a marked block must be, from the file it names.
+   *
+   * @param string $kind
+   *   The marker kind.
+   * @param string $file
+   *   The file.
+   * @param string|null $key
+   *   The top-level key, for a YAML entry.
+   * @param string $text
+   *   The block's text.
+   *
+   * @return string|null
+   *   What the block must say; NULL for an excerpt the file does not hold.
+   */
+  public static function expected(string $kind, string $file, ?string $key, string $text): ?string {
+    $lines = explode("\n", (string) file_get_contents($file));
+    return match ($kind) {
+      'code' => trim((string) file_get_contents($file)),
+      'yaml' => self::entry($file, (string) $key),
+      'excerpt' => self::excerpt($lines, explode("\n", $text)) ? $text : NULL,
+      // Every line of the block, in the order the file has them.
+      default => implode("\n", array_values(array_intersect($lines, explode("\n", $text)))),
+    };
+  }
+
+  /**
+   * Answers whether a run of a file's lines is the block, indentation aside.
+   *
+   * @param string[] $lines
+   *   The file's lines.
+   * @param string[] $block
+   *   The block's lines.
+   *
+   * @return bool
+   *   Whether the file has them, in order, with nothing between them.
+   */
+  protected static function excerpt(array $lines, array $block): bool {
+    $wanted = self::flushLeft($block);
+    for ($start = 0; $start + count($block) <= count($lines); $start++) {
+      if (self::flushLeft(array_slice($lines, $start, count($block))) === $wanted) {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
+
+  /**
+   * Takes the indentation every line shares off a run of lines.
+   *
+   * @param string[] $lines
+   *   The lines.
+   *
+   * @return string[]
+   *   The same, as far left as they go.
+   */
+  protected static function flushLeft(array $lines): array {
+    $indents = array_map(static fn (string $line): int => strlen($line) - strlen(ltrim($line, ' ')), array_filter($lines, static fn (string $line): bool => trim($line) !== ''));
+    $indent = $indents === [] ? 0 : min($indents);
+    return array_map(static fn (string $line): string => rtrim(substr($line, min($indent, strlen($line)))), $lines);
+  }
+
+  /**
    * Tests each marked block is the module's code as it is.
    */
   #[DataProvider('providerBlocks')]
@@ -123,13 +191,7 @@ class FirstResourceDocsTest extends UnitTestCase {
     $file = self::ROOT . '/' . $path;
     $this->assertFileExists($file, sprintf('%s quotes %s, which is not there.', $page, $path));
     $hint = sprintf('%s quotes %s as it no longer is; copy it into the page again.', $page, $target);
-    $expected = match ($kind) {
-      'code' => trim((string) file_get_contents($file)),
-      'yaml' => self::entry($file, (string) $key),
-      // Every line of the block, in the order the file has them.
-      default => implode("\n", array_values(array_intersect(explode("\n", (string) file_get_contents($file)), explode("\n", $text)))),
-    };
-    $this->assertSame($expected, $text, $hint);
+    $this->assertSame(self::expected($kind, $file, $key, $text), $text, $hint);
   }
 
   /**

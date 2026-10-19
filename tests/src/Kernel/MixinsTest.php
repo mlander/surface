@@ -313,7 +313,7 @@ class MixinsTest extends DataSurfaceKernelTestBase {
       $this->refusals($journal, ['visibility' => 'public', 'shared' => TRUE]),
     );
     $this->assertSame(
-      ['changed' => 'Changed is required.'],
+      ['changed' => 'Changed is required when Created is 1700000000.'],
       $this->refusals($journal, ['changed' => NULL]),
       'Once the created time is set, the changed time is required.',
     );
@@ -324,7 +324,7 @@ class MixinsTest extends DataSurfaceKernelTestBase {
     );
     $this->assertSame(
       [
-        'created' => 'Created is required.',
+        'created' => 'Created is required when Published is on.',
         'revision' => 'This value should be between 1 and 1 when Created is empty.',
       ],
       $this->refusals($journal, ['created' => NULL, 'changed' => NULL]),

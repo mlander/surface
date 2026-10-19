@@ -708,8 +708,8 @@ drush tool:run data_surface:registration.step3:configure --uid=1 --input='{"valu
 `--uid=1` because `tool:run` runs as anonymous unless told otherwise,
 and the operation asks for "administer site configuration", for a read
 as for a write. `tool:info` lists no defaults: configuring changes what
-exists, a key left out keeps its current value, and the description
-names the read tool, the second command, for what that value is. The dry run
+exists, an optional key left out keeps its current value, and the
+description names the read tool, the second command, for what that value is. The dry run
 is a second input, which `tool:run` reads as `name=value` and decodes as
 JSON, so `true` is a boolean.
 

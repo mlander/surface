@@ -1270,6 +1270,23 @@ the child's defaults, not over what is stored at its delta, since the
 list is sent whole and an item may have moved.
 (`Collection::isEmptyItem()`, `DataSurfacePipeline::acceptCollection()`)
 
+### An item is never null
+
+An item of a list is never nullable in either schema: its type has no
+`null`, and a list of choices offers no untitled `{const: null}` for an
+item. Decided 2026-10-19, from the second fresh-eyes log (entry 19),
+where a required list of weekdays offered `null` as a day. An empty
+item, of a plain list as of a collection, is dropped by `accept()`
+before anything reads the list, so null never reaches the accepted
+document, which is the scope both schemas are held to: a null item
+posted is dropped and the document is accepted by both, and a schema
+that offered null would advertise a value no stored list holds. The key
+holding the list still allows null while it is optional, since null
+clears it ([Absent keeps, null clears](#absent-keeps-null-clears)). The
+tool listing is the Tool API's normalizer's, which still reads an item
+as optional. (`ContractEmitter::neverNull()`,
+`AdvertisedSchemaAcceptanceTest::testListItemsAreNeverNull()`)
+
 ### Count is the parent's
 
 The list key belongs to the parent: its Count, and any constraint on
@@ -1681,7 +1698,17 @@ value not on its list unexplained.
   is the one that applies, not the listing's wider one, so the next try
   is accepted; the value beside each label is what a caller sends, which
   a label alone does not say. A refusal by a rule the key declared
-  itself names no condition. A refused mounted key is matched to the
+  itself names no condition.
+- **Required, the same.** A key a refiner or a declared rule made
+  required for these values says so with the same clause, a port by the
+  container's key it reads, at the site: "Phone is required when
+  Maximum visitors is 80." A key required by its own declaration in
+  `defineInputs()` says "Phone is required." alone, as before. Decided
+  2026-10-19, from the second fresh-eyes log (entry 18): a declared
+  `require()` said only "Phone is required.", where a constraint the
+  same rule tightened named its condition, so the reason a caller had
+  to fix a sibling was missing from exactly the refusal it caused.
+  `->describe()` stays the form's sentence under the field. A refused mounted key is matched to the
   property its refusal is about. The contracts are unchanged: this is
   the message, not the schema. The form says the same sentence: a
   select offers only what is allowed, so a person rarely reads it.
@@ -1712,6 +1739,7 @@ value not on its list unexplained.
 
 (`DataSurfacePipeline::sayingWhatIsAllowed()`,
 `DataSurfacePipeline::conditions()`, `DataSurfacePipeline::choices()`,
+`DataSurfacePipeline::isRequired()`,
 `InputDefinitions::withDependencies()`, `ToolFeedbackTest`)
 
 ### An operation states how it behaves
@@ -1786,8 +1814,9 @@ What a property defaults to in the tool's static definition, its
 listing, depends on whether the operation creates. One that creates
 lists the declared defaults, which are what a key left out becomes. One
 that changes a thing that exists lists none, at any depth, and its
-description says that a key left out keeps its current value and names
-the read tool that returns the current values.
+description says that an optional key left out keeps its current value
+and names the read tool that returns the current values; a required key
+cannot be left out, which the Tool API refuses before the tool runs.
 
 Why (decided 2026-10-18, replacing "defaults are what is stored"): a
 listing is a discovery channel that clients cache, `tools/list` in MCP
@@ -1921,6 +1950,15 @@ element's error back to the rule's message would keep two checks that
 can disagree; one check is the module's whole case. The email and url
 elements keep their validation for now: it also trims the value, which
 the pipeline does not. (`NumberWidget::buildElement()`)
+
+The string widget does the same for a `Length`'s maximum (ROADMAP item
+10, and the adopters' gate, 2026-10-19): core checks `#maxlength` in the
+form validator, before any form level handler, and its "cannot be
+longer than" replaced the rule's own message. The maximum reaches the
+browser as the `maxlength` attribute, and `#maxlength` is cleared, the
+element type's own default with it (128 for a text field, 254 for an
+email), so the form enforces no limit the definition does not declare.
+(`StringWidget::lengthHint()`, `RefusalMessagesTest`)
 
 ### A Regex is explained by its message
 
@@ -2510,6 +2548,44 @@ internationalized address, a URI with a space, a date with no time), so
 a client that asserts formats may refuse what the pipeline accepts; the
 suite's validator does not assert them, as a standard one does not.
 (`ContractEmitter::type()`)
+
+### A composite is its parts
+
+Core's two composite constraints are stated through their parts:
+`Sequentially` as an `allOf` of its parts' translations, in order, and
+`AtLeastOneOf` as an `anyOf`, each part translated as the constraint
+alone would be (a `Regex` with `match: FALSE` is `not: {pattern}`).
+Decided 2026-10-19, from the adopters' gate, whose honeypot element name
+holds three Regex rules in one `Sequentially`, since core keeps one
+constraint per name; the emitter named it under `checkedOnServer` only.
+When any part has no keyword (a constraint checked on the server alone,
+a Regex no pattern carries, a list of values the options resolver never
+reads inside a composite), the whole composite stays under
+`checkedOnServer`: an `anyOf` short of a part would refuse what that
+part allows, and an `allOf` short of one would state a rule that is not
+the one checked. Each part's message is the server's to say; only a
+key's own Regex fills `x-surface.patternMessage`. Symfony's `All`
+applies its constraints to each item of a collection, not all of them
+to one value, and core registers no `All` plugin, so it is not read as
+an `allOf`. (`ContractEmitter::parts()`,
+`AdvertisedSchemaAcceptanceTest::testCompositesAreTheirParts()`)
+
+### A machine document carries plain text
+
+A label or a description is written for the form, which renders it as
+markup: a placeholder in it is escaped ("Double quotation marks
+(&quot;)") and its text may hold tags. Both schemas, the React page that
+reads them and the tool listing carry its plain text instead: a line
+break as a new line, every other tag stripped, entities decoded; an
+option's label and description the same. Decided 2026-10-19, from the
+adopters' gate, which found escaped placeholders in pathauto's labels
+and honeypot's `<br /><strong>` in every machine document, and a
+description escaped by the "Depends on" sentence the tool listing
+appends ("you&#039;d"). A client that renders nothing reads the text a
+person reads on the form; one that renders HTML is handed no markup it
+did not ask for. The form renders the markup as before. A tool listing's
+label stays translatable, read as plain text when it is read.
+(`Contract\PlainText`, `PlainTextMarkup`, `PlainTextDocumentsTest`)
 
 ### A refused submit is an answer
 

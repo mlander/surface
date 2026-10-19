@@ -3,7 +3,10 @@
 Every idea in the module, one line each: the question that makes you
 need it, and the sentence that lets you skip it. The four marked **1**
 are all [Your first resource](first-resource.md) uses; a working settings
-page needs nothing else. Read a row only when its question is yours.
+page needs nothing else. Read a row only when its question is yours. A
+time of day, a multi-select, a text area and the other keys a settings
+page often asks for are [Common settings recipes](recipes.md), one
+snippet each.
 
 | Concept | You need it when you ask | Skip it when |
 | --- | --- | --- |
@@ -26,7 +29,7 @@ page needs nothing else. Read a row only when its question is yours.
 | Slot and variant, `attachBy()`, `#[Variant]` | Does one key's value choose which further keys apply? | No answer changes which keys there are. |
 | Collection, `attachList()` | Does it hold a list of repeated groups of keys? | Nothing repeats. |
 | Alter, `#[Alters]` | Am I adding keys or rules to a resource another module owns, or attaching a structure of mine to it? | You own it: change the class. |
-| Mounted keys and their config schema | Does my alter's module store keys on someone else's config object? ([Storage](storage.md#keys-another-module-mounts)) | You write no alter. |
+| Mounted keys and their config schema | Does my alter's module store keys on someone else's config object, or may another module's alter store keys on mine? Both sides declare config schema: the owner of a simple config object declares `third_party_settings` up front, a sequence typed by the module key, before any alter exists, and the mounting module declares its part ([Storage](storage.md#keys-another-module-mounts), [a whole alter](resources.md#a-whole-alter)). | You write no alter, and no other module will mount keys on your config object. An owner that skips it leaves every later alter needing an edit of the owner's schema; an owner that is a config entity declares nothing, since core describes its `third_party_settings`. |
 | `describe()` and `extendChoices()` | Must my alter reword or place an owner's key, or offer one more value on its list? | Your alter only adds keys of its own. |
 | Secret, `DefinitionMetadata::setSecret()` | Is a value write-only, such as an API key? | Every value may be read back. |
 | Examples, `DefinitionMetadata::setExamples()` | Should the form show what a valid value looks like? | The label says enough. |

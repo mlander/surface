@@ -81,7 +81,7 @@ class FirstResourceTest extends DataSurfaceKernelTestBase {
     $this->setUpCurrentUser(permissions: ['administer data_surface_first']);
     $newsletter = $this->form('data_surface_first.newsletter');
     $this->assertSame('textfield', $newsletter['sender_name']['#type']);
-    $this->assertSame(64, $newsletter['sender_name']['#maxlength']);
+    $this->assertSame(64, $newsletter['sender_name']['#attributes']['maxlength']);
     $this->assertTrue($newsletter['sender_name']['#required']);
     $this->assertSame('email', $newsletter['sender_email']['#type']);
     $this->assertSame('select', $newsletter['frequency']['#type']);

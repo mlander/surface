@@ -28,6 +28,7 @@ nav:
   - Your first resource: first-resource.md
   - Your second resource: second-resource.md
   - Concepts: concepts.md
+  - Common settings recipes: recipes.md
   - Installation: installation.md
   - The pattern: pattern.md
   - How it fits: how-it-fits.md
@@ -52,3 +53,7 @@ nav:
   - For core:
       - Adoption catalogue: adoption.md
       - Core gaps: core-gaps.md
+  - Evidence:
+      - 'Fresh eyes, 2026-10-18': fresh-eyes-2026-10-18.md
+      - 'Fresh eyes, 2026-10-19': fresh-eyes-2026-10-19.md
+      - 'Two adopters, 2026-10-19': adopters-2026-10-19.md

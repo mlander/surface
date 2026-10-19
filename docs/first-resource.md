@@ -244,6 +244,9 @@ them the same way; the tool declares it, so `drush tool:info` prints it.
 drush pm:install data_surface_first
 ```
 
+On a site run with DDEV, every `drush` command on this page is
+`ddev drush`, from the project root.
+
 Visit `/admin/config/services/surface-newsletter` as someone with the
 permission. The form has a text field for the sender's name, at most 64
 characters; an email field; a select of Weekly and Monthly; and a number
@@ -272,8 +275,13 @@ Outputs:
   committed: true
 ```
 
-The key left out, `max_recipients`, kept what was stored. The read tool
-beside it answers with what is stored now:
+The key left out, `max_recipients`, kept what was stored. Only an
+optional key may be left out, and `max_recipients` is the one optional
+key here. A key the resource requires is sent on every call, an edit
+too: leave out `sender_name` and the Tool API refuses the call before
+anything of the resource runs, with "values.sender_name: This property
+is required.", and nothing is written. The read tool beside the write
+tool answers with what is stored now:
 
 ```
 Success: Configure the newsletter: the stored values were read, and nothing was written.
@@ -294,3 +302,5 @@ form, the tool and the schema came for free, from the one class.
   values depend on another's.
 - [Concepts](concepts.md): every other idea in the module, the question
   that makes you need it, and how to tell you do not.
+- [Common settings recipes](recipes.md): a time of day, a multi-select,
+  a text area and a few more, one snippet each.

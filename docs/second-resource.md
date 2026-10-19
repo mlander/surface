@@ -185,7 +185,9 @@ the method below it:
 
 - **The form** rebuilds the region select over AJAX when the country
   changes, offering the three regions of the country chosen.
-- **The tool** refuses a region of the other country:
+- **The tool** refuses a region of the other country. Both keys are
+  required, so both are sent on every call (`ddev drush` on a site run
+  with DDEV):
 
   ```bash
   drush tool:run data_surface:first.store:configure --uid=1 --input='{"values":{"country":"US","region":"CA-ON"}}' --input=dry_run=true

@@ -325,3 +325,36 @@ data_surface_resource_test.exhibit:
               type: string
               label: 'Policy'
               nullable: true
+
+# The opening hours fixture: the common settings recipes (docs/recipes.md).
+data_surface_resource_test.opening_hours:
+  type: config_object
+  label: 'Opening hours'
+  mapping:
+    opens:
+      type: string
+      label: 'Opens at'
+    closes:
+      type: integer
+      label: 'Closes at, in minutes after midnight'
+    days:
+      type: sequence
+      label: 'Days open'
+      sequence:
+        type: string
+        label: 'Day'
+    notes:
+      type: text
+      label: 'Notes'
+    after_hours:
+      type: boolean
+      label: 'After-hours access'
+    door_code:
+      type: string
+      label: 'Door code'
+    keywords:
+      type: sequence
+      label: 'Keywords'
+      sequence:
+        type: string
+        label: 'Keyword'

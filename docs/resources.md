@@ -502,8 +502,8 @@ own is a tool, `data_surface:<resource id>:<operation id>`, derived by
   `dry_run`. A key the resource requires is required in `values`,
   whatever the operation. An operation that creates lists the declared
   defaults; one that changes a thing that exists lists none, and its
-  description says that a key left out keeps its current value and
-  names the read tool, since a listing is cached by its clients
+  description says that an optional key left out keeps its current
+  value (a required one cannot be left out) and names the read tool, since a listing is cached by its clients
   ([decision](decisions.md#required-is-the-resources-and-a-listing-carries-no-stored-value)).
   The definition is static, which is what operations make possible: an
   operation that needs nothing is the exact contract before anyone
@@ -799,6 +799,170 @@ level.
 Nothing an alter does removes: it cannot take a key or a value away
 from the owner. A site policy that hides an owner's key is a later
 concept, not a verb here.
+
+### A whole alter
+
+The examples' compliance alter is the shape most alters have, whole: its
+`use` lines, a constructor the container calls with the services it
+asks for (it is an autowired service, so the arguments are found by
+type), `StringTranslationTrait` for `$this->t()`, the glue in
+`alterInputs()`, and a runtime refiner reading State, the one kind of
+refiner that may be an instance method. A test fails if this page and the
+module differ.
+
+<!-- code: modules/data_surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php -->
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\data_surface_examples_compliance\Alter;
+
+use Drupal\Core\State\StateInterface;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\Core\StringTranslation\TranslationInterface;
+use Drupal\Core\TypedData\DataDefinition;
+use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\data_surface\Refinement\Condition;
+use Drupal\data_surface\Resource\Attribute\Alters;
+use Drupal\data_surface\Resource\Attribute\RefinesInput;
+use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
+use Drupal\data_surface\Resource\AltersInputsInterface;
+use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
+use Drupal\data_surface_examples_compliance\Structure\ComplianceStructure;
+
+/**
+ * Example 4: others get a say.
+ *
+ * Another module's class, naming example 3's resource: an adapter. It
+ * attaches the compliance structure at its own mount, so the licence and
+ * the stewards are stored under this module's name, and wires the
+ * structure's capacity port to example 3's capacity. The rest is glue for
+ * this one owner: it titles the fieldset and draws it right after the
+ * capacity its licence lifts, rewords one of the owner's labels, stops the
+ * owner's capacity at a hundred without a licence, a rule declared as
+ * data, and leaves out a room the site has closed, which only the site
+ * knows when it is asked. Example 3 is not changed and does not know this
+ * module exists.
+ */
+#[Alters(RegistrationStep3Resource::class)]
+final class RegistrationComplianceAlter implements AltersInputsInterface {
+
+  use StringTranslationTrait;
+
+  /**
+   * The State key listing the rooms that are closed, by room id.
+   */
+  public const CLOSED_ROOMS = 'data_surface_examples_compliance.closed_rooms';
+
+  /**
+   * Constructs the alter, which the container builds as a service.
+   *
+   * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
+   *   The string translation service.
+   * @param \Drupal\Core\State\StateInterface $state
+   *   The State, where the closed rooms are listed.
+   */
+  public function __construct(TranslationInterface $string_translation, protected readonly StateInterface $state) {
+    $this->stringTranslation = $string_translation;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function alterInputs(BlueprintAdditionsInterface $inputs): void {
+    // The structure's capacity is example 3's.
+    $inputs->attach('third_party_settings.data_surface_examples_compliance', ComplianceStructure::class, reads: ['capacity' => 'capacity']);
+    $inputs->describe('title', label: $this->t('Public event title'));
+    $inputs->describe('third_party_settings.data_surface_examples_compliance', label: $this->t('Compliance'), after: 'capacity');
+    // Without a licence, no more than a hundred, whatever the room seats.
+    // The licence is the structure's, which this alter reads at its mount.
+    // A licence its own pattern refuses is no licence: a rule never sees
+    // an invalid sibling.
+    $inputs->narrow('capacity')
+      ->when(Condition::absent('licence'))
+      ->constrain('Range', ['max' => 100])
+      ->describe($this->t('Up to 100 without an event licence.'));
+  }
+
+  /**
+   * No room the site has closed, which only the site knows when asked.
+   *
+   * A runtime refiner: what it answers is read from State when the
+   * values are held to it, so no schema can state it ahead of time. It
+   * watches the venue so it narrows the venue's rooms, which the owner's
+   * refiner has already listed; the full schema still offers every room
+   * per venue, and the pipeline refuses a closed one. The one refiner
+   * here that is an instance method, which only a runtime refiner may
+   * be: it reads the State this alter was built with.
+   *
+   * @see docs/decisions.md#static-by-default-runtime-by-declaration
+   */
+  #[RefinesInput('room', runtime: TRUE)]
+  public function openRooms(DataDefinitionInterface $room, string $venue): DataDefinitionInterface {
+    $rooms = $room->getConstraints()['LabeledChoice']['choices'] ?? [];
+    $closed = array_intersect_key($rooms, array_flip((array) $this->state->get(self::CLOSED_ROOMS, [])));
+    if ($closed === [] || !$room instanceof DataDefinition) {
+      return $room;
+    }
+    $room->addConstraint('LabeledChoice', ['choices' => array_diff_key($rooms, $closed)]);
+    return $room->setDescription($this->formatPlural(
+      count($closed),
+      'The @rooms is closed.',
+      'The @rooms are closed.',
+      ['@rooms' => implode(' and the ', $closed)],
+    ));
+  }
+
+}
+```
+
+Its keys are stored in example 3's config object, under its module's
+name, so two schemas describe them. The owner declared
+`third_party_settings` before any alter existed, as a sequence typed by
+the module key, in `data_surface_examples.registration_step3`:
+
+<!-- excerpt: modules/data_surface_examples/config/schema/data_surface_examples.schema.yml -->
+
+```yaml
+# Where other modules' keys are mounted, each described by the module
+# that mounts it, under its own name.
+third_party_settings:
+  type: sequence
+  label: 'Third party settings'
+  requiredKey: false
+  sequence:
+    type: data_surface_examples.registration.third_party.[%key]
+```
+
+and the mounting module declares its part, the type that key names:
+
+<!-- code: modules/data_surface_examples_compliance/config/schema/data_surface_examples_compliance.schema.yml -->
+
+```yaml
+# What this module's alter mounts on example 3's registration settings,
+# described under this module's name, which is where the alter's keys
+# are stored.
+data_surface_examples.registration.third_party.data_surface_examples_compliance:
+  type: mapping
+  label: 'Compliance settings'
+  mapping:
+    licence:
+      type: string
+      label: 'Event licence'
+      nullable: true
+    stewards:
+      type: integer
+      label: 'Stewards'
+      nullable: true
+```
+
+An owner that leaves `third_party_settings` out of its schema makes every
+later alter on its simple config object refused until the owner's schema
+changes ([Storage](storage.md#keys-another-module-mounts)). An owner
+that is a config entity declares nothing, since core describes its
+`third_party_settings`; the mounting module still declares its part.
 
 ## What the build checks
 

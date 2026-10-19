@@ -113,9 +113,9 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
         'title',
         ['#type' => 'textfield', '#default_value' => 'Hello'],
       ],
-      'Length caps the text field' => [
+      'Length caps the text field, as a hint the rule speaks for' => [
         'title',
-        ['#maxlength' => 40],
+        ['#attributes' => ['maxlength' => 40], '#maxlength' => NULL],
       ],
       'the multiline setting is a textarea' => [
         'notes',

@@ -87,6 +87,24 @@ keeps what it holds, so the key holds it again when it applies: a weekly
 send day survives a month of monthly sends
 ([decision](decisions.md#a-key-that-does-not-apply)).
 
+A form posted without JavaScript keeps the stored value too. The form
+draws no element for a key that does not apply, and draws it again over
+AJAX when the key it depends on changes; with JavaScript off nothing is
+redrawn, so the post says nothing about that key, and a key left out
+keeps what it holds ([Absent keeps, null
+clears](decisions.md#absent-keeps-null-clears)). A person who turns
+after-hours access on and saves posts no door code: the stored code
+stands and the save is accepted, where "required when on" might have
+been expected to refuse it (a key that holds nothing is refused, and the
+form, redrawn, now shows it). The other way round, a fieldset the
+original form hid with `#states` and the module rules out with a
+declared `doesNotApply()` keeps its stored ticks when its controlling
+box is ticked and the form is saved without JavaScript, where the
+original form, whose `#states` hides nothing without JavaScript, saved
+whatever its boxes held. Absent keeps: what a post says about a key that
+does not apply for the values it carries is not read as an answer for
+it.
+
 ## The coercion table
 
 `accept()` turns raw input into the type the definition declares by the

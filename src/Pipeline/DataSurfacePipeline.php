@@ -567,12 +567,10 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         // was never set is this case whether it is required or not, and
         // it is never stale: there is no value to keep.
         if ($definition->isRequired()) {
-          $errors[] = new Violation($name, '', $this->t('@label is required.', [
-            '@label' => $definition->getLabel() ?? $name,
-          ]));
+          $errors[] = new Violation($name, '', $this->isRequired($surface, $refined, $name, '', $definition->getLabel() ?? $name, $values));
         }
         foreach ($missing as $path => $label) {
-          $errors[] = new Violation($name, $path, $this->t('@label is required.', ['@label' => $label]));
+          $errors[] = new Violation($name, $path, $this->isRequired($surface, $refined, $name, $path, $label, $values));
         }
         continue;
       }
@@ -619,6 +617,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         $refusals[] = new Violation($name, $path, ViolationMessage::of($violation));
       }
       foreach ($missing as $path => $label) {
+        // What a rule made required is said below, with the rest.
         $refusals[] = new Violation($name, $path, $this->t('@label is required.', ['@label' => $label]));
       }
       if ($refusals !== [] && $this->isStale($definition, $value, $name, $current, $refined->getDefinitions()->dependencies($name), $values)) {
@@ -789,6 +788,53 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     return $shown === []
       ? $this->t('choose @choice', ['@choice' => $last])
       : $this->t('choose @choices or @last', ['@choices' => implode(', ', $shown), '@last' => $last]);
+  }
+
+  /**
+   * Says that a key is required, and, when a rule made it so, why.
+   *
+   * A key declared required says so alone ("Phone is required."). One a
+   * refiner or a declared rule made required for these values goes on
+   * to name each key the rule watches and what it holds, as a refused
+   * constraint does: "Phone is required when Maximum visitors is 80." A
+   * port is named by the container's key it reads.
+   *
+   * Decision: see
+   * docs/decisions.md#a-refusal-names-what-it-depends-on.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface as declared.
+   * @param \Drupal\data_surface\DataSurfaceInterface $refined
+   *   The same, refined against the values.
+   * @param string $name
+   *   The key.
+   * @param string $path
+   *   The property path below it, for a required property of a map; ''
+   *   for the key itself.
+   * @param string|\Stringable $label
+   *   The label of what is required.
+   * @param array $values
+   *   The values of the key's level.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   The refusal.
+   */
+  protected function isRequired(DataSurfaceInterface $surface, DataSurfaceInterface $refined, string $name, string $path, string|\Stringable $label, array $values): TranslatableMarkup {
+    $parents = $path === '' ? [$name] : [$name, ...explode('.', $path)];
+    $declared = static::definitionAt($surface, $parents);
+    $entry = $refined->getDefinitions()->entry($name);
+    $dependencies = $path === '' ? ($entry->dependencies ?? []) : ($entry->paths[$path] ?? $entry->dependencies ?? []);
+    if ($entry?->slot !== NULL) {
+      $dependencies = array_values(array_diff($dependencies, [$entry->slot->by]));
+    }
+    $conditions = $declared === NULL || $declared->isRequired() ? [] : $this->conditions($refined, $dependencies, $values);
+    if ($conditions === []) {
+      return $this->t('@label is required.', ['@label' => $label]);
+    }
+    return $this->t('@label is required when @conditions.', [
+      '@label' => $label,
+      '@conditions' => implode(' ' . $this->t('and') . ' ', array_map('strval', $conditions)),
+    ]);
   }
 
   /**

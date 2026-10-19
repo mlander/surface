@@ -156,4 +156,43 @@ class RefusalMessagesTest extends DataSurfaceKernelTestBase {
     $this->assertSame(500, $this->config('data_surface_first.newsletter')->get('max_recipients'), 'Nothing was written.');
   }
 
+  /**
+   * Tests the text field shows the Length's message, not core's maxlength.
+   *
+   * ROADMAP item 10: core checks `#maxlength` before any form level
+   * handler and keeps its own error. The maximum reaches the browser as
+   * an attribute, and the rule's violation is the one message.
+   */
+  public function testTheRulesMessageReachesTheTextField(): void {
+    $route_name = 'data_surface_first.newsletter';
+    $route = $this->container->get('router.route_provider')->getRouteByName($route_name);
+    $stack = $this->container->get('request_stack');
+    $request = Request::create($route->getPath());
+    $request->setSession($stack->getSession());
+    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, $route_name);
+    $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
+    $stack->push($request);
+
+    $form = $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class);
+    $element = $form[DataSurfaceOperationForm::SURFACE_KEY]['sender_name'];
+    $this->assertSame(64, $element['#attributes']['maxlength'], 'The maximum still reaches the browser, as a hint.');
+    $this->assertNull($element['#maxlength'], 'Core does not check it beside the rule.');
+    $this->assertNull($form[DataSurfaceOperationForm::SURFACE_KEY]['sender_email']['#maxlength'], 'Nor its own default for an element type.');
+
+    $form_state = new FormState();
+    $form_state->setValues([
+      DataSurfaceOperationForm::SURFACE_KEY => [
+        'sender_name' => str_repeat('n', 65),
+        'sender_email' => 'newsletter@example.com',
+        'frequency' => 'weekly',
+        'max_recipients' => '500',
+      ],
+    ]);
+    $this->container->get('form_builder')->submitForm(DataSurfaceOperationForm::class, $form_state);
+
+    $errors = array_map(static fn ($error): string => strip_tags((string) $error), $form_state->getErrors());
+    $this->assertSame(['surface][sender_name' => 'This value is too long. It should have 64 characters or less.'], $errors);
+    $this->assertSame('The newsletter', $this->config('data_surface_first.newsletter')->get('sender_name'), 'Nothing was written.');
+  }
+
 }

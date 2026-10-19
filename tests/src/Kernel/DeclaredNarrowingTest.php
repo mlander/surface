@@ -277,7 +277,9 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
     $this->assertSame([
       'declared_value' => 'This value should be between 0 and 500 when Weight in kilograms is 1 and Reference is empty and Insured is off and Customs code is empty.',
     ], $refusals(['declared_value' => 501]));
-    $this->assertSame(['signature' => 'Signed for by is required.'], $refusals(['insured' => TRUE]));
+    // A declared rule's require() names what it read, as a refused
+    // constraint does; a key declared required names nothing.
+    $this->assertSame(['signature' => 'Signed for by is required when Insured is on and Declared value is 100.'], $refusals(['insured' => TRUE]));
     $this->assertSame([], $refusals(['insured' => TRUE, 'signature' => 'Ann']));
     $this->assertSame([
       'handling' => 'The value you selected is not a valid choice when Service is Standard; choose Fragile (fragile) or This way up (upright).',
@@ -287,7 +289,9 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
     ], $refusals(['note' => 'Ring twice']));
     $this->assertSame(['note' => 'Note for the driver is required.'], $refusals($freight + self::customs('C1')));
     $this->assertSame([], $refusals(['note' => 'Ring twice', 'declared_value' => 100] + $freight + self::customs('C1')));
-    $this->assertArrayHasKey(self::CUSTOMS, $refusals(['note' => 'Ring twice'] + $freight));
+    $this->assertSame([
+      self::CUSTOMS => 'Customs code is required when Service is Freight and Weight in kilograms is 40.',
+    ], $refusals(['note' => 'Ring twice'] + $freight), 'An alter\'s rule on its mounted key, the same.');
     $this->assertArrayHasKey('tracking', $refusals(['reference' => 'R1', 'service' => 'express', 'tracking' => 'nope']));
     $this->assertSame([], $refusals(['reference' => 'R1', 'service' => 'express', 'tracking' => 'AB123456']));
   }
@@ -526,7 +530,7 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
     $tool->setInputValue(OperationInputs::VALUES, $parcel);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
-    $this->assertStringContainsString('signature: Signed for by is required.', (string) $tool->getResult()->getMessage());
+    $this->assertStringContainsString('signature: Signed for by is required when Insured is on and Declared value is 100.', (string) $tool->getResult()->getMessage());
 
     $tool = $tools->createInstance('data_surface:resource_test.parcel:configure');
     $tool->setInputValue(OperationInputs::VALUES, $parcel + ['signature' => 'Ann', 'declared_value' => 400]);

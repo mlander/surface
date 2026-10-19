@@ -250,11 +250,11 @@ final class ContractEmitter {
     if (!$widgets) {
       $schema = $this->withoutWidgets($schema);
     }
-    $title = $label === NULL ? [] : ['title' => (string) $label];
+    $title = $label === NULL ? [] : ['title' => PlainText::of($label)];
     $document = [
       'surface' => $resource_id,
       'situation' => $operation_id,
-      'label' => $label === NULL ? NULL : (string) $label,
+      'label' => $label === NULL ? NULL : PlainText::of($label),
       'schema' => ['$schema' => self::DIALECT] + $title + $this->operation($operation, $schema),
       'values' => $shown,
       'stale' => $stale,
@@ -338,11 +338,11 @@ final class ContractEmitter {
     if (!$widgets) {
       $schema = $this->withoutWidgets($schema);
     }
-    $title = $label === NULL ? [] : ['title' => (string) $label];
+    $title = $label === NULL ? [] : ['title' => PlainText::of($label)];
     $document = [
       'surface' => $resource_id,
       'situation' => $operation_id,
-      'label' => $label === NULL ? NULL : (string) $label,
+      'label' => $label === NULL ? NULL : PlainText::of($label),
       'schema' => ['$schema' => self::DIALECT] + $title + $this->operation($operation, $schema),
     ];
     $outputs = $this->outputs($surface, $cacheability);
@@ -2354,7 +2354,7 @@ final class ContractEmitter {
       $item = $definition->getItemDefinition();
       $ignored = [];
       [$items] = $this->property($item, NULL, NULL, $path . '.*', FALSE, [], $cacheability, $ignored);
-      $schema += ['type' => $this->nullable('array', $definition), 'items' => $items] + $this->keywords($definition, 'array');
+      $schema += ['type' => $this->nullable('array', $definition), 'items' => static::neverNull($items)] + $this->keywords($definition, 'array');
       $extension = $this->extension($listed ? 'select' : 'list', $locked, $depends, $refined) + ($listed ? ['multiple' => TRUE] : []);
       $shown = is_array($value) ? array_values($value) : $value;
     }
@@ -2632,17 +2632,18 @@ final class ContractEmitter {
    *   The definition.
    *
    * @return array
-   *   `title` and `description`, each only when the definition has one.
+   *   `title` and `description`, each only when the definition has one,
+   *   as plain text (PlainText).
    */
   protected function describe(DataDefinitionInterface $definition): array {
     $described = [];
     $label = $definition->getLabel();
     if ($label !== NULL && (string) $label !== '') {
-      $described['title'] = (string) $label;
+      $described['title'] = PlainText::of($label);
     }
     $description = $definition->getDescription();
     if ($description !== NULL && (string) $description !== '') {
-      $described['description'] = (string) $description;
+      $described['description'] = PlainText::of($description);
     }
     return $described;
   }
@@ -2712,6 +2713,38 @@ final class ContractEmitter {
       return $type;
     }
     return [$type, 'null'];
+  }
+
+  /**
+   * Says an item of a list as never null.
+   *
+   * An item is not a key a caller clears: accept() drops an empty item
+   * before anything reads the list, so null never reaches the accepted
+   * document, and a schema that offered it would offer a value no list
+   * holds. The item's type loses null, and a list of choices its untitled
+   * null entry, unless that entry is all there is: a list of no values,
+   * whose items nothing satisfies.
+   *
+   * Decision: see docs/decisions.md#an-item-is-never-null.
+   *
+   * @param array $item
+   *   The item, as a key would be said.
+   *
+   * @return array
+   *   The same, never null.
+   */
+  protected static function neverNull(array $item): array {
+    if (is_array($item['type'] ?? NULL)) {
+      $types = array_values(array_diff($item['type'], ['null']));
+      $item['type'] = count($types) === 1 ? $types[0] : $types;
+    }
+    if (isset($item['oneOf'])) {
+      $choices = array_values(array_filter($item['oneOf'], static fn (mixed $choice): bool => $choice !== ['const' => NULL]));
+      if ($choices !== []) {
+        $item['oneOf'] = $choices;
+      }
+    }
+    return $item;
   }
 
   /**
@@ -2811,6 +2844,20 @@ final class ContractEmitter {
           }
           break;
 
+        // Core's two composites: every part, in order, or at least one.
+        // Decision: see docs/decisions.md#a-composite-is-its-parts.
+        case 'Sequentially':
+        case 'AtLeastOneOf':
+          $parts = $this->parts($options, $type);
+          $combinator = $name === 'AtLeastOneOf' ? 'anyOf' : 'allOf';
+          if ($parts === NULL) {
+            $unstated[] = (string) $name;
+          }
+          else {
+            $keywords[$combinator] = [...($keywords[$combinator] ?? []), ...$parts];
+          }
+          break;
+
         default:
           if (!in_array($name, self::STATED, TRUE)) {
             $unstated[] = (string) $name;
@@ -2821,6 +2868,47 @@ final class ContractEmitter {
       $keywords[self::EXTENSION . '-checked'] = $unstated;
     }
     return $keywords;
+  }
+
+  /**
+   * States the parts of a composite constraint, each as its own schema.
+   *
+   * Each part is translated as a constraint on its own is, by keywords().
+   * A part no keyword states (one checked on the server, a Regex no
+   * pattern carries, a Range on a string, a list of allowed values the
+   * options resolver never reads inside a composite) leaves the whole
+   * composite unstated: an `anyOf` short of a part would refuse what that
+   * part allows, and an `allOf` is kept whole or not at all, so what is
+   * stated is what is checked. A part's message is the server's to say.
+   *
+   * @param mixed $options
+   *   The composite's options, its parts under `constraints`, each a
+   *   constraint's name and options.
+   * @param string|array|null $type
+   *   The JSON type the key was given.
+   *
+   * @return array[]|null
+   *   One schema per part, in order; NULL when any part cannot be stated.
+   */
+  protected function parts(mixed $options, string|array|null $type): ?array {
+    $constraints = is_array($options) ? ($options['constraints'] ?? NULL) : NULL;
+    if (!is_array($constraints) || $constraints === []) {
+      return NULL;
+    }
+    $parts = [];
+    foreach ($constraints as $constraint) {
+      if (!is_array($constraint) || count($constraint) !== 1) {
+        return NULL;
+      }
+      $name = (string) array_key_first($constraint);
+      $part = $this->keywords((new DataDefinition())->addConstraint($name, $constraint[$name]), $type);
+      unset($part[self::EXTENSION . '-pattern-message']);
+      if ($part === [] || isset($part[self::EXTENSION . '-checked'])) {
+        return NULL;
+      }
+      $parts[] = $part;
+    }
+    return $parts;
   }
 
   /**
@@ -2858,9 +2946,9 @@ final class ContractEmitter {
   protected function choices(OptionSet $set, DataDefinitionInterface $definition): array {
     $choices = [];
     foreach ($set->options as $value => $label) {
-      $choice = ['const' => $this->cast($value, $definition), 'title' => (string) $label];
+      $choice = ['const' => $this->cast($value, $definition), 'title' => PlainText::of($label)];
       if (isset($set->descriptions[$value])) {
-        $choice['description'] = (string) $set->descriptions[$value];
+        $choice['description'] = PlainText::of($set->descriptions[$value]);
       }
       $choices[] = $choice;
     }

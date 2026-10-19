@@ -176,6 +176,8 @@ hand.
   contract](served-contract.md).
 - **Reading this as a core proposal**: [Adoption
   catalogue](adoption.md) and [Core gaps](core-gaps.md).
+- **Writing the common keys of a settings page**: [Common settings
+  recipes](recipes.md).
 
 The module ships no resources of its own on a production site. It
 provides the model, the pipeline, the two plugin types and the host
@@ -183,3 +185,16 @@ adoption layer; resources and structures come from the modules that
 declare them. Twelve experimental submodules demonstrate the model and
 double as the fixtures the tests run against: see
 [Installation](installation.md).
+
+## Evidence
+
+What the module was held to by people and agents who did not write it,
+each a log of what they met, kept as written:
+
+- [Fresh eyes, 2026-10-18](fresh-eyes-2026-10-18.md): a newcomer builds
+  a newsletter settings page from the documentation alone.
+- [Fresh eyes, 2026-10-19](fresh-eyes-2026-10-19.md): a second newcomer
+  builds a library's opening hours, a reused structure and an alter.
+- [Two adopters, 2026-10-19](adopters-2026-10-19.md): two contributed
+  modules' settings forms, pathauto's and honeypot's, ported as
+  resources.

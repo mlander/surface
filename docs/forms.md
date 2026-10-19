@@ -831,6 +831,16 @@ stock number widget does the same for core's number element, whose own
 `#min` and `#max` check would otherwise answer before a `Range` and its
 message ([decision](decisions.md#an-element-hints-and-the-rule-speaks)).
 
+A swap must also keep the shape the element posts. The widget that drew
+the element reads the value back from what it posts, in the
+definition's shape, and the cosmetic layer runs after the widget has
+chosen the element, never instead of it. Radios may replace a select:
+both post one value, the chosen option's key. Checkboxes may not replace
+a multiple select: a multiple select posts the list of the values
+chosen, checkboxes post every option, each with its value or `0`, which
+the options widget does not read as a list. A swap that changes what is
+posted is a widget of its own ([Writing a widget](widgets.md#writing-a-widget)).
+
 `data_surface_demo_node_type` is the worked example: two routes and a
 cosmetics service holding core's vertical tabs, the machine name's
 mirror-while-typing, the message and the redirect. There is no form

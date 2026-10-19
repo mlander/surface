@@ -153,8 +153,8 @@ requires it, on an edit as on an add. A tool for an operation that
 creates lists the declared defaults; one for an operation that changes
 what exists, such as `data_surface:registration.step3:configure` or
 `data_surface:field.instance:edit`, lists no default at all, because a
-listing is cached by its clients and a key left out keeps its current
-value: its description says so and names the read tool, which returns
+listing is cached by its clients and an optional key left out keeps
+its current value: its description says so and names the read tool, which returns
 the current values. A key another narrows says so in its description,
 by the path a caller sends it under ("Depends on venue."), and a
 refusal says what is allowed for the values sent: example 3's

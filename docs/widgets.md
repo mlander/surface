@@ -86,12 +86,14 @@ apply at all is not narrowed to nothing: its refiner answers
 
 What the stock widgets do beyond the obvious: defaults populate at every
 depth, and constraint options reach the element, so the browser enforces
-what the definition declares. `Length`'s `max` becomes `#maxlength` on
-the string widget and `Range`'s `min` and `max` become `#min` and `#max`
-on the number widget. Those are hints for the browser, not checks: the
-number widget clears core's `#element_validate`, whose own wording ("must
-be lower than or equal to") would otherwise replace the rule's message,
-so a refusal says what the `Range`, and any message a refiner gave it,
+what the definition declares. `Length`'s `max` becomes the `maxlength`
+attribute on the string widget and `Range`'s `min` and `max` become
+`#min` and `#max` on the number widget. Those are hints for the browser,
+not checks: the number widget clears core's `#element_validate`, whose
+own wording ("must be lower than or equal to") would otherwise replace
+the rule's message, and the string widget clears `#maxlength`, which
+core checks the same way ("cannot be longer than"), so a refusal says
+what the `Range` or the `Length`, and any message a refiner gave it,
 says ([decision](decisions.md#an-element-hints-and-the-rule-speaks)). A select offers an empty option by [the empty
 option rule](decisions.md#the-empty-option-rule): always when optional,
 and when required only while no valid choice is selected. The string
@@ -100,7 +102,7 @@ definition carries the `multiline` type setting, otherwise `email`,
 `url` or `textfield` from the data type), and both the string and number
 widgets render a definition's first declared example as `#placeholder`,
 which is how a valid value is shown before it is typed rather than after
-validation fails. A textarea gets neither `#maxlength` nor
+validation fails. A textarea gets neither a `maxlength` nor a
 `#placeholder`.
 
 A definition marked secret is the one case where the string widget

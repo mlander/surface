@@ -212,7 +212,7 @@ class PortsTest extends DataSurfaceKernelTestBase {
 
     $venue = $this->built(VenueResource::class)->getDefinitions();
     $this->assertSame(['layout' => 'layout', 'guests' => 'capacity'], $venue->entry('seating')->attachment->reads);
-    $this->assertSame(['seating.rows' => ['capacity'], 'seating.aisle' => ['layout']], $venue->refinementPaths(), 'The child\'s dependencies, at its paths in the container\'s frame, on the container\'s keys.');
+    $this->assertSame(['seating.rows' => ['capacity'], 'seating.aisle' => ['layout'], 'seating.ushers' => ['capacity']], $venue->refinementPaths(), 'The child\'s dependencies, at its paths in the container\'s frame, on the container\'s keys.');
 
     $hall = $this->built(HallResource::class)->getDefinitions();
     $this->assertSame(['layout' => 'arrangement'], $hall->entry('chairs')->attachment->reads, 'The guests port is optional, and left unwired.');
@@ -225,6 +225,7 @@ class PortsTest extends DataSurfaceKernelTestBase {
       'chairs.aisle' => ['arrangement'],
       self::MOUNT . '.rows' => ['guests'],
       self::MOUNT . '.aisle' => ['style'],
+      self::MOUNT . '.ushers' => ['guests'],
     ], $hall->refinementPaths(), 'The adapter\'s rule reads the structure\'s aisle at its mount.');
     $mount = self::at($this->built(HallResource::class), self::MOUNT);
     $this->assertInstanceOf(ComplexDataDefinitionInterface::class, $mount);
@@ -298,6 +299,12 @@ class PortsTest extends DataSurfaceKernelTestBase {
       ['seating.aisle' => 'Aisle does not apply when Layout is Standing.'],
       $refusals(self::venue('standing', 60, ['rows' => 2, 'aisle' => 'side'])),
     );
+    $this->assertSame(
+      ['seating.ushers' => 'Ushers is required when Capacity is 300.'],
+      $refusals(self::venue('banquet', 300, ['rows' => 20, 'aisle' => 'none', 'ushers' => NULL])),
+      'A declared rule\'s require() through a port names the container\'s key it reads.',
+    );
+    $this->assertSame([], $refusals(self::venue('banquet', 80, ['rows' => 8, 'aisle' => 'none', 'ushers' => NULL])));
     $accepted = $pipeline->accept($venue, self::venue('standing', 60, ['rows' => 2]), []);
     $this->assertArrayNotHasKey('aisle', $accepted['seating'], 'A key a port rules out is read as left out.');
     $this->assertSame([], iterator_to_array($pipeline->validate($venue, $accepted, [])));
@@ -311,6 +318,17 @@ class PortsTest extends DataSurfaceKernelTestBase {
     $this->assertSame(40, self::at($hall->refine(['arrangement' => 'theatre', 'guests' => 50]), 'chairs.rows')->getConstraints()['Range']['max'], 'The chairs\' guests port is unwired: it holds nothing, and the rule reading it never holds.');
     $glued = $hall->refine(['third_party_settings' => ['data_surface_resource_test' => ['aisle' => 'none']]]);
     $this->assertSame(300, $glued->getDefinition('guests')->getConstraints()['Range']['max'], 'The adapter\'s rule reads the structure\'s aisle.');
+    $no_ushers = ['rows' => 20, 'aisle' => 'side', 'ushers' => NULL];
+    $overflow = self::hall('standing', 'banquet', 250, ['rows' => 5], $no_ushers);
+    $messages = [];
+    foreach ($pipeline->validate($hall, $pipeline->accept($hall, $overflow, []), []) as $violation) {
+      $messages[$violation->fullPath()] = strip_tags((string) $violation->message);
+    }
+    $this->assertSame(
+      [self::MOUNT . '.ushers' => 'Ushers is required when Guests is 250.'],
+      $messages,
+      'At the hall\'s site, the port is the hall\'s guests, by its label.',
+    );
   }
 
   /**
@@ -353,18 +371,25 @@ class PortsTest extends DataSurfaceKernelTestBase {
            "rows": {"description": "Up to 10 rows for up to 100 guests.", "maximum": 10}}}}},
          "x-surface": {"declared": true}}
         JSON,
+      'the rule requiring the ushers, reading the guests port, at the capacity' => <<<'JSON'
+        {"if": {"properties": {"capacity": {"type": "number", "exclusiveMinimum": 200}}, "required": ["capacity"]},
+         "then": {"properties": {"seating": {"properties": {"ushers": {"type": "integer"}}, "required": ["ushers"]}}},
+         "x-surface": {"declared": true}}
+        JSON,
     ];
     foreach ($expected as $label => $json) {
       $this->assertContains(json_decode($json, TRUE), $full['allOf'], $label);
     }
-    $this->assertCount(4, $full['allOf']);
+    $this->assertCount(5, $full['allOf']);
 
     // A standard validator holds a document to the def and the site.
     $this->assertTrue($this->validates($full, self::venue('standing', 60, ['rows' => 2, 'ushers' => NULL])));
     $this->assertFalse($this->validates($full, self::venue('standing', 60, ['rows' => 2, 'aisle' => 'side'])));
     $this->assertFalse($this->validates($full, self::venue('theatre', 60, ['rows' => 2])), 'Where the aisle applies, it is required.');
     $this->assertFalse($this->validates($full, self::venue('theatre', 60, ['rows' => 20, 'aisle' => 'side'])));
-    $this->assertTrue($this->validates($full, self::venue('theatre', 600, ['rows' => 20, 'aisle' => 'side'])));
+    $ushered = ['rows' => 20, 'aisle' => 'side', 'ushers' => 4];
+    $this->assertTrue($this->validates($full, self::venue('theatre', 600, $ushered)));
+    $this->assertFalse($this->validates($full, self::venue('theatre', 600, ['rows' => 20, 'aisle' => 'side'])), 'Over two hundred guests, the ushers are said.');
 
     // The reuse: one def, its conditionals at each of the hall's sites.
     $hall = $this->schema('hall', HallResource::class);
@@ -381,8 +406,8 @@ class PortsTest extends DataSurfaceKernelTestBase {
       $keys[] = implode(',', array_keys($condition['if']['properties'] ?? []));
     }
     // The adapter's rule, then the chairs per arrangement, the mount per
-    // style, and the mount's rows per guests; nothing per guests for the
-    // chairs, whose port is unwired.
+    // style, and the mount's rows and ushers per guests; nothing per
+    // guests for the chairs, whose port is unwired.
     $this->assertSame([
       'third_party_settings',
       'arrangement',
@@ -391,6 +416,7 @@ class PortsTest extends DataSurfaceKernelTestBase {
       'style',
       'style',
       'style',
+      'guests',
       'guests',
     ], $keys);
     $chairs = ['rows' => 5, 'aisle' => 'centre'];

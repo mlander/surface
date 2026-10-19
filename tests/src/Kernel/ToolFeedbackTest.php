@@ -258,6 +258,10 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
         $compliance(['stewards' => 1]) + ['capacity' => 100] + $event,
         self::COMPLIANCE . '.stewards: This value should be 2 or more when Capacity is 100.',
       ],
+      'a key its own declaration requires names no condition' => [
+        ['title' => ''] + $event,
+        'title: Public event title is required.',
+      ],
     ];
     foreach ($refusals as $which => [$values, $expected]) {
       $this->assertSame([FALSE, 'The values were refused: ' . $expected], $this->call(ExampleCalls::TOOL, $values), $which);

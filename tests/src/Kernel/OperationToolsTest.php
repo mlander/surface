@@ -181,7 +181,7 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     // Editing changes what exists, so the listing carries no default,
     // declared or stored: a key left out keeps its current value.
     $this->assertNull($values->getPropertyDefinitions()['title_label']->getDefaultValue());
-    $this->assertStringContainsString('A key left out keeps its current value; data_surface:node.type:edit:read returns the current values.', (string) $edit->getDescription());
+    $this->assertStringContainsString('An optional key left out keeps its current value; data_surface:node.type:edit:read returns the current values.', (string) $edit->getDescription());
     // Adding one creates, so it lists the declared defaults.
     $this->assertSame('Title', $add->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['title_label']->getDefaultValue());
     $this->assertStringNotContainsString('keeps its current value', (string) $add->getDescription());

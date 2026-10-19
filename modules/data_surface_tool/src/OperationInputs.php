@@ -59,11 +59,11 @@ use Drupal\tool\TypedData\OutputDefinition;
  * What a property defaults to depends on whether the operation creates.
  * One that creates lists the declared defaults, which are what a key left
  * out becomes. One that changes a thing that exists lists none in its
- * static definition, which clients cache as a discovery channel: a key
- * left out keeps its current value, and its description names the read
- * tool that returns the current values. Once its parameters arrive, the
- * refined `values` (values()) defaults each property to what the storage
- * loads now, for that one request.
+ * static definition, which clients cache as a discovery channel: an
+ * optional key left out keeps its current value, and its description
+ * names the read tool that returns the current values. Once its
+ * parameters arrive, the refined `values` (values()) defaults each
+ * property to what the storage loads now, for that one request.
  *
  * Access in a listing is the account's: the static definitions are built
  * for the account alone (ResourcesInterface::buildStatic()), so a key a
@@ -497,7 +497,7 @@ final class OperationInputs {
    */
   public function description(ResourceDefinition $resource, OperationDefinition $operation): TranslatableMarkup {
     if ($this->changesWhatExists($resource, $operation)) {
-      return $this->t('@label: the "@operation" operation of the @resource resource. @needs The values input is the resource itself, less what the operation already knows: every setting it takes, including those other modules add, with its label, its meaning and the values it allows. A key left out keeps its current value; @read returns the current values.', [
+      return $this->t('@label: the "@operation" operation of the @resource resource. @needs The values input is the resource itself, less what the operation already knows: every setting it takes, including those other modules add, with its label, its meaning and the values it allows. An optional key left out keeps its current value; @read returns the current values.', [
         '@label' => (string) $operation->label,
         '@operation' => $operation->id,
         '@resource' => $resource->id,

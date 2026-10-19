@@ -202,10 +202,7 @@ final class InputDefinitions {
       }
       $note = $this->t('Depends on @keys.', ['@keys' => implode(', ', $keys)]);
       $description = (string) $this->description($target);
-      $target->setDescription($description === '' ? $note : $this->t('@description @note', [
-        '@description' => $description,
-        '@note' => $note,
-      ]));
+      $target->setDescription($this->appended($description, $note));
     }
     return $map;
   }
@@ -479,10 +476,7 @@ final class InputDefinitions {
       $description = (string) $this->description($definition);
       if ($union instanceof DataDefinition) {
         $union->setRequired(FALSE);
-        $union->setDescription($description === '' ? $note : $this->t('@description @note', [
-          '@description' => $description,
-          '@note' => $note,
-        ]));
+        $union->setDescription($this->appended($description, $note));
       }
       DefinitionMetadata::setDefaultValue($union, NULL);
       $properties[$name] = $this->fromDefinition($union);
@@ -494,10 +488,7 @@ final class InputDefinitions {
     $description = (string) $this->description($placeholder);
     return new MapInputDefinition(
       label: $this->label($placeholder),
-      description: $description === '' ? $note : $this->t('@description @note', [
-        '@description' => $description,
-        '@note' => $note,
-      ]),
+      description: $this->appended($description, $note),
       required: $placeholder->isRequired(),
       property_definitions: $properties,
     );
@@ -926,14 +917,7 @@ final class InputDefinitions {
    *   The description with the note appended.
    */
   protected function secretNote(TranslatableMarkup|string $description): TranslatableMarkup {
-    $note = $this->t('Write only: the stored value is never returned, and sending nothing leaves it unchanged.');
-    if ((string) $description === '') {
-      return $note;
-    }
-    return $this->t('@description @note', [
-      '@description' => $description,
-      '@note' => $note,
-    ]);
+    return $this->appended((string) $description, $this->t('Write only: the stored value is never returned, and sending nothing leaves it unchanged.'));
   }
 
   /**
@@ -955,10 +939,7 @@ final class InputDefinitions {
     $note = $this->t('Whether this may be changed is decided once the thing it belongs to is known: a call may find it locked or left out.');
     $description = (string) $this->description($input);
     if ($input instanceof DataDefinition) {
-      $input->setDescription($description === '' ? $note : $this->t('@description @note', [
-        '@description' => $description,
-        '@note' => $note,
-      ]));
+      $input->setDescription($this->appended($description, $note));
     }
   }
 
@@ -1080,20 +1061,42 @@ final class InputDefinitions {
   }
 
   /**
+   * Appends a sentence to a description, as plain text.
+   *
+   * The description is plain text already, so the sentence joining the
+   * two is read as plain text too and escapes neither: "you'd" stays
+   * "you'd".
+   *
+   * @param string $description
+   *   The description, plain text, or ''.
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup $note
+   *   The sentence.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   The two, or the sentence alone.
+   */
+  protected function appended(string $description, TranslatableMarkup $note): TranslatableMarkup {
+    return PlainTextMarkup::translatable($description === '' ? $note : $this->t('@description @note', [
+      '@description' => $description,
+      '@note' => $note,
+    ]));
+  }
+
+  /**
    * Gets a definition's label, which an input definition must have.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition to read.
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup|string
-   *   The label.
+   *   The label, as plain text: a tool listing renders no markup.
    */
   protected function label(DataDefinitionInterface $definition): TranslatableMarkup|string {
     $label = $definition->getLabel();
     if ($label === NULL || (string) $label === '') {
       return $this->t('@type value', ['@type' => $definition->getDataType()]);
     }
-    return $label instanceof TranslatableMarkup ? $label : (string) $label;
+    return PlainTextMarkup::of($label);
   }
 
   /**
@@ -1108,14 +1111,15 @@ final class InputDefinitions {
    *   The definition to read.
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup|string
-   *   The description, empty when the definition declares none.
+   *   The description as plain text, empty when the definition declares
+   *   none.
    */
   protected function description(DataDefinitionInterface $definition): TranslatableMarkup|string {
     $description = $definition->getDescription();
     if ($description === NULL) {
       return '';
     }
-    return $description instanceof TranslatableMarkup ? $description : (string) $description;
+    return PlainTextMarkup::of($description);
   }
 
 }

@@ -51,11 +51,8 @@ final class StringWidget extends DataSurfaceWidgetBase {
       },
       '#default_value' => $value,
     ];
-    // Constraint-to-element mapping the adapter era lacked: the browser
-    // enforces what the definition declares.
-    $length = $this->constraint($definition, 'Length');
-    if (isset($length['max']) && $element['#type'] !== 'textarea') {
-      $element['#maxlength'] = (int) $length['max'];
+    if ($element['#type'] !== 'textarea') {
+      $element = $this->lengthHint($element, $definition);
     }
     // The first declared example shows what a valid value looks like
     // before the value is typed, rather than after validation fails.
@@ -112,9 +109,35 @@ final class StringWidget extends DataSurfaceWidgetBase {
         '@note' => $note,
       ])
       : $note;
+    return $this->lengthHint($element, $definition);
+  }
+
+  /**
+   * Puts a Length's maximum on the element as a hint for the browser.
+   *
+   * The `maxlength` attribute stops a browser at the maximum, and
+   * `#maxlength` is cleared: core checks it before any form level
+   * handler, a form keeps the first error per element, and its wording
+   * ("cannot be longer than") would replace the rule's own message. The
+   * element type's own default (128 for a text field) goes with it, so
+   * no limit the definition does not declare is enforced on the form
+   * alone.
+   *
+   * Decision: see docs/decisions.md#an-element-hints-and-the-rule-speaks.
+   *
+   * @param array $element
+   *   The element.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition it draws.
+   *
+   * @return array
+   *   The element, with the hint.
+   */
+  protected function lengthHint(array $element, DataDefinitionInterface $definition): array {
+    $element['#maxlength'] = NULL;
     $length = $this->constraint($definition, 'Length');
     if (isset($length['max'])) {
-      $element['#maxlength'] = (int) $length['max'];
+      $element['#attributes']['maxlength'] = (int) $length['max'];
     }
     return $element;
   }

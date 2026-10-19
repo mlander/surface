@@ -136,7 +136,7 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
    * is the resource built in its real context: every key required exactly
    * when the built resource requires it, though the settings always
    * exist. It changes what exists, so it lists no default at any depth: a
-   * listing is cached by clients, a key left out keeps its current value,
+   * listing is cached by clients, an optional key left out keeps its value,
    * and the description names the read tool that returns those. A write
    * through the tool leaves the definition as it was.
    */
@@ -155,7 +155,7 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
     // capacity of 50 is no more what a key left out becomes than the
     // installed title is.
     $this->assertSame([], $this->defaults($values));
-    $this->assertStringContainsString('A key left out keeps its current value; ' . ExampleCalls::READ_TOOL . ' returns the current values.', (string) $definition->getDescription());
+    $this->assertStringContainsString('An optional key left out keeps its current value; ' . ExampleCalls::READ_TOOL . ' returns the current values.', (string) $definition->getDescription());
     $contact = $properties['contact'];
     $this->assertInstanceOf(MapInputDefinition::class, $contact);
     $this->assertFalse($contact->isRequired());

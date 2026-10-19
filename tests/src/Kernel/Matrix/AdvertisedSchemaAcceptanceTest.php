@@ -309,6 +309,11 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'a boolean for an integer' => [['count' => TRUE], TRUE],
       'a single tag for a list' => [['tags' => 'x'], TRUE],
       'an empty list' => [['tags' => []], TRUE],
+      // An item is never null in either document: accept() drops an empty
+      // item, so the document holds none. Decision: see
+      // docs/decisions.md#an-item-is-never-null.
+      'a null item, dropped' => [['tags' => ['a', NULL]], TRUE],
+      'an empty item, dropped' => [['tags' => ['', 'b']], TRUE],
       'format is advisory: an internationalized address' => [['mail' => 'üser@example.com'], TRUE],
       'format is advisory: a URI with a space' => [['link' => 'http://a b.example'], TRUE],
       'below the range' => [['count' => 0], FALSE],
@@ -484,6 +489,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'thirty kilograms by standard' => [['weight' => 30], FALSE],
       'two labels on a light parcel' => [['labels' => ['dry', 'heavy']], FALSE],
       'two labels on six kilograms' => [['weight' => 6, 'labels' => ['dry', 'heavy']], TRUE],
+      'a label and a null one, dropped' => [['labels' => ['dry', NULL]], TRUE],
       'worth 600 under two kilograms' => [['declared_value' => 600], FALSE],
       'worth 600 at two kilograms' => [['weight' => 2, 'declared_value' => 600], TRUE],
       'worth 6000 with no reference' => [['weight' => 2, 'declared_value' => 6000], FALSE],
@@ -524,6 +530,8 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'twelve rows for eighty guests' => [$seating(['rows' => 12]), FALSE],
       'twelve rows for three hundred guests' => [['capacity' => 300] + $seating(['rows' => 12]), TRUE],
       'a rows count the seating does not have' => [['capacity' => 300] + $seating(['rows' => 50]), FALSE],
+      'no ushers for three hundred guests' => [['capacity' => 300] + $seating(['rows' => 12, 'ushers' => NULL]), FALSE],
+      'no ushers said for eighty guests' => [$seating(['ushers' => NULL]), TRUE],
     ]);
     $mount = static fn (array $seating): array => [
       'third_party_settings' => ['data_surface_resource_test' => $seating + $stored],
@@ -541,6 +549,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'overflow with no aisle, banquet, three hundred guests' => [$banquet(300) + $mount(['aisle' => 'none']), TRUE],
       'overflow with no aisle, banquet, four hundred guests' => [$banquet(400) + $mount(['aisle' => 'none']), FALSE],
       'standing overflow, the aisle left out' => [['style' => 'standing'] + $mount(['aisle' => NULL]), TRUE],
+      'no overflow ushers for five hundred' => [['guests' => 500] + $mount(['rows' => 20, 'ushers' => NULL]), FALSE],
     ]);
   }
 
@@ -1002,6 +1011,118 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     // Without it, the defined blocks are the list, as before.
     $strict = $this->surface(['k' => DataDefinition::create('string')->setLabel('K')->addConstraint('PluginExists', ['manager' => 'plugin.manager.block'])]);
     $this->assertNotNull($this->options()->resolve($strict->getDefinitions()->get('k')));
+  }
+
+  /**
+   * An item of a list is never null, in either document.
+   *
+   * Null never reaches an accepted list, so a schema that offered it would
+   * offer a value no list holds; an item a caller sends as null is
+   * dropped before the documents read the list (the rows above).
+   */
+  public function testListItemsAreNeverNull(): void {
+    $emitter = $this->container->get('data_surface.contract_emitter');
+    $parcel = $this->build('tool_test.specimen');
+    $documents = [
+      'the full schema' => $this->decoded($emitter->emitFull($parcel, 'tool_test.specimen')->document['schema']),
+      'the schema for these answers' => $this->decoded($emitter->emit($parcel, self::SPECIMEN, 'tool_test.specimen')->document['schema']),
+    ];
+    foreach ($documents as $which => $schema) {
+      $items = $schema['properties']['tags']['items'];
+      $this->assertSame('string', $items['type'], $which);
+      $this->assertFalse($this->validates($schema, ['tags' => ['a', NULL]]), $which . ': a null item is no item.');
+    }
+    $this->installConfig(['data_surface_resource_test']);
+    $labels = $this->decoded($emitter->emitFull($this->build('resource_test.parcel'), 'resource_test.parcel')->document['schema'])['properties']['labels']['items'];
+    $this->assertSame('string', $labels['type']);
+    $this->assertNotContains(['const' => NULL], $labels['oneOf'], 'An item of a list of choices offers no null.');
+    $this->assertSame(['dry', 'heavy', 'perishable'], array_column($labels['oneOf'], 'const'));
+  }
+
+  /**
+   * Core's composites, stated as their parts, never stricter.
+   *
+   * The honeypot port's element name (docs/adopters-2026-10-19.md): three
+   * Regex rules in a Sequentially, the third with `match: FALSE`. As
+   * honeypot writes them, two patterns end in `$` without `D` and one
+   * reads `.`, which no pattern carries, so the composite is checked on
+   * the server alone. Written so both engines read them alike, it is an
+   * `allOf` of the three, the third a `not`. An AtLeastOneOf is an
+   * `anyOf`, and a part no keyword states leaves either unstated.
+   *
+   * @see docs/decisions.md#a-composite-is-its-parts
+   */
+  public function testCompositesAreTheirParts(): void {
+    $emitter = $this->container->get('data_surface.contract_emitter');
+    $name = fn (array $rules): DataSurfaceInterface => $this->surface([
+      'element_name' => DataDefinition::create('string')->setLabel('Honeypot element name')->setRequired(TRUE)
+        ->addConstraint('Sequentially', ['constraints' => $rules]),
+    ]);
+    $letters = 'The element name cannot contain spaces or other special characters.';
+    $first = 'The element name must start with a letter.';
+    $common = 'The element name cannot match one of the common Drupal form field names (e.g. name, pass, website).';
+    $as_written = $name([
+      ['Regex' => ['pattern' => '/^[-_a-zA-Z0-9]+$/', 'message' => $letters]],
+      ['Regex' => ['pattern' => '/^[a-zA-Z].+$/', 'message' => $first]],
+      ['Regex' => ['pattern' => '/^(name|pass|website)$/', 'match' => FALSE, 'message' => $common]],
+    ]);
+    $property = $this->decoded($emitter->emitFull($as_written, 'audit')->document['schema'])['properties']['element_name'];
+    $this->assertSame(['Sequentially'], $property['x-surface']['checkedOnServer']);
+    $this->assertArrayNotHasKey('allOf', $property);
+
+    $carried = $name([
+      ['Regex' => ['pattern' => '/^[-_a-zA-Z0-9]+$/D', 'message' => $letters]],
+      ['Regex' => ['pattern' => '/^[a-zA-Z][^\n]+$/D', 'message' => $first]],
+      ['Regex' => ['pattern' => '/^(name|pass|website)$/D', 'match' => FALSE, 'message' => $common]],
+    ]);
+    $property = $this->decoded($emitter->emitFull($carried, 'audit')->document['schema'])['properties']['element_name'];
+    $this->assertSame([
+      ['pattern' => '^[-_a-zA-Z0-9]+$'],
+      ['pattern' => '^[a-zA-Z][^\n]+$'],
+      ['not' => ['pattern' => '^(name|pass|website)$']],
+    ], $property['allOf']);
+    $this->assertArrayNotHasKey('checkedOnServer', $property['x-surface']);
+    foreach (['as written' => $as_written, 'carried' => $carried] as $which => $surface) {
+      // Left to the server, a refused name is accepted by both schemas.
+      $wide = $which === 'as written';
+      $this->assertTable('audit', $surface, [], [
+        $which . ': a generic name' => [['element_name' => 'url'], TRUE],
+        $which . ': with a hyphen and a digit' => [['element_name' => 'home-page2'], TRUE],
+        $which . ': a space' => [['element_name' => 'my url'], FALSE, $wide, $wide],
+        $which . ': a digit first' => [['element_name' => '1url'], FALSE, $wide, $wide],
+        $which . ': one letter' => [['element_name' => 'u'], FALSE, $wide, $wide],
+        $which . ': a field name' => [['element_name' => 'website'], FALSE, $wide, $wide],
+      ]);
+    }
+
+    // At least one of: an `anyOf`, each part its own translation.
+    $either = $this->surface([
+      'code' => DataDefinition::create('string')->setLabel('Code')->addConstraint('AtLeastOneOf', [
+        'constraints' => [
+          ['Length' => ['max' => 2]],
+          ['Regex' => ['pattern' => '/^[0-9]+$/D']],
+        ],
+      ]),
+    ]);
+    $property = $this->decoded($emitter->emitFull($either, 'audit')->document['schema'])['properties']['code'];
+    $this->assertSame([['maxLength' => 2], ['pattern' => '^[0-9]+$']], $property['anyOf']);
+    $this->assertTable('audit', $either, [], [
+      'two letters' => [['code' => 'ab'], TRUE],
+      'many digits' => [['code' => '123456'], TRUE],
+      'many letters' => [['code' => 'abcdef'], FALSE],
+    ]);
+    // A part no keyword states: the whole composite is the server's.
+    $unstated = $this->surface([
+      'code' => DataDefinition::create('string')->setLabel('Code')->addConstraint('AtLeastOneOf', [
+        'constraints' => [
+          ['Length' => ['max' => 2]],
+          ['Regex' => ['pattern' => '/^\d+\z/']],
+        ],
+      ]),
+    ]);
+    $property = $this->decoded($emitter->emitFull($unstated, 'audit')->document['schema'])['properties']['code'];
+    $this->assertArrayNotHasKey('anyOf', $property);
+    $this->assertSame(['AtLeastOneOf'], $property['x-surface']['checkedOnServer']);
   }
 
   /**

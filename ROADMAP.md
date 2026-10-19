@@ -730,10 +730,11 @@ renames sit in A because they are cheapest before new code exists.
    from the read tool; `attachListBy()`; an item routed to its child's
    own storage; the phpstan rule for static refiners; the "Right now"
    wording for a key that is both narrowed and under a runtime rule.
-   Also: a text key's `Length` max reaches the element as `#maxlength`,
-   and on a POST past it core's message shows instead of the rule's
-   own (the gap the number widget had; found 2026-10-18 by the shapes
-   unit). And a candidate held back on purpose (2026-10-18): a typed
+   Also, DONE 2026-10-19: a text key's `Length` max reached the
+   element as `#maxlength`, and on a POST past it core's message showed
+   instead of the rule's own (the gap the number widget had; found
+   2026-10-18 by the shapes unit); the maximum is now the `maxlength`
+   attribute and the rule's violation the one message. And a candidate held back on purpose (2026-10-18): a typed
    reference to a sibling value inside a declared rule
    (`constrain('Range', ['min' => Value::of('created')])`), which
    would spare the coded refiner for key-to-key comparisons but puts
@@ -784,12 +785,21 @@ renames sit in A because they are cheapest before new code exists.
       docs alone, and logs every place it guessed, searched or got it
       wrong; the log becomes doc fixes. Then the same exercise by a
       person. Repeat the agent run after every milestone; it is cheap.
+      Agent half RUN 2026-10-18 and 2026-10-19
+      (`docs/fresh-eyes-2026-10-19.md`); verdict: yes for the contract
+      half today, every door agreeing on every rule, and yes for an admin
+      settings page, correct before it is pleasant. The person half is
+      still to run.
     - **Two real adopters.** Port two existing contrib settings forms
       that we did not write (candidates: pathauto's settings, metatag's
       defaults, or another module's `ConfigFormBase` with options and a
       dependency between fields) as resources in a sandbox module, and
       record what the pattern could not express or expressed badly.
       Generality is only shown on forms designed without us in mind.
+      RUN 2026-10-19, pathauto and honeypot (`docs/adopters-2026-10-19.md`);
+      verdict: one set of rules at every door and `#states` became a
+      contract, while keys that come from the site, the widget set and
+      several rules per key are the gaps a contrib author hits first.
     - **The entity proof, with a definition of done.** Item 11 counts as
       done when one real bundle with a multi-value field, an entity
       reference, an image and a path alias is created and edited through
@@ -809,6 +819,29 @@ renames sit in A because they are cheapest before new code exists.
       up (definition facts, then operations and access for config, then
       third-party settings for simple config, Form API last), and have
       the fresh-eyes reader read that too.
+
+14. **From the gates (2026-10-19).** The two gates of item 13 were folded
+    in on 2026-10-19: the recipes page, a whole alter, the cosmetic
+    seam's posted shape, refusals naming a declared rule's condition,
+    plain text in the machine documents, items never null, composites
+    as `allOf` and `anyOf`, and the maxlength message. Not built, each
+    with the gate that found it:
+    - **Per-option state in a list**: an item shown and locked, as
+      pathauto's entity types with patterns are. (Adopters.)
+    - **An alter adding entries to a map the owner stores**: pathauto's
+      punctuation hook; alters mount only at their own key. (Adopters.)
+    - **A default from a sibling key**: pathauto's punctuation rows start
+      from the separator, in storage `load()` today. (Adopters.)
+    - **"- None -" on every optional select**: the original offered no
+      empty choice; requiring the key means sending every row. (Adopters.)
+    - **The widget set, the next unit**: checkboxes, radios, a list of
+      free strings on the Form API door. (Adopters; fresh eyes, 8.)
+    - **A time-of-day type**: today a string with a Regex, or minutes
+      when a rule compares it (`docs/recipes.md`). (Fresh eyes, 6.)
+    - **Site-derived keys cost a deriver**: 107 lines for pathauto's,
+      against the original's loop of about 20. (Adopters.)
+    - **Required keys resent on every edit call**: a decision pending
+      with the user. (Fresh eyes, 16; adopters.)
 
 ## Rejected, on the record
 
