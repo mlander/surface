@@ -135,14 +135,16 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
    * {@inheritdoc}
    *
    * The values input is held to its shape here, its types, the keys it
-   * requires and its nesting, and to no rule: the pipeline judges every
-   * rule when the tool runs, against the definitions narrowed by the
-   * values sent, so a refusal says what is allowed for them, a value on a
-   * list names the list, and a key another narrows names what it depends
-   * on and what that holds. Held to the listing here instead, a key
-   * another narrows would be refused for a value outside every answer
-   * with nothing said about the answer that applies, and a caller would
-   * need a second try. The listing keeps every constraint it advertises.
+   * requires (none, for an operation that changes what exists, whose key
+   * left out keeps what is stored) and its nesting, and to no rule: the
+   * pipeline judges every rule when the tool runs, against the
+   * definitions narrowed by the values sent, so a refusal says what is
+   * allowed for them, a value on a list names the list, and a key another
+   * narrows names what it depends on and what that holds. Held to the
+   * listing here instead, a key another narrows would be refused for a
+   * value outside every answer with nothing said about the answer that
+   * applies, and a caller would need a second try. The listing keeps every
+   * constraint it advertises.
    *
    * Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
    */
@@ -151,7 +153,15 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     if (!$listed instanceof InputDefinitionInterface || !array_key_exists(OperationInputs::VALUES, $values)) {
       return parent::validateInputValues($values);
     }
-    $this->inputDefinitions[OperationInputs::VALUES] = InputDefinitions::shapeOf($listed);
+    try {
+      [$resource, $operation] = $this->found();
+      $update = $this->operationInputs->changesWhatExists($resource, $operation);
+    }
+    catch (\InvalidArgumentException | \LogicException) {
+      $update = FALSE;
+    }
+    // Decision: see docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door.
+    $this->inputDefinitions[OperationInputs::VALUES] = InputDefinitions::shapeOf($listed, $update);
     try {
       return parent::validateInputValues($values);
     }

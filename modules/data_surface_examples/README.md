@@ -261,7 +261,7 @@ final class RegistrationStep2Resource implements ResourceInterface {
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', ['choices' => Venues::rooms()]);
     $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
-      ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
+      ->addConstraint('Range', ['min' => 1]);
   }
 
   /**
@@ -274,16 +274,19 @@ final class RegistrationStep2Resource implements ResourceInterface {
 
   /**
    * No more people than the chosen room seats, said under the field.
+   *
+   * A room that seats no known number changes nothing: the capacity keeps
+   * its lower bound and has no upper one.
    */
   #[RefinesInput('capacity')]
   public static function capacityOfRoom(DataDefinitionInterface $capacity, string $room): DataDefinitionInterface {
     $seats = Venues::seats($room);
-    $capacity->addConstraint('Range', ['min' => 1, 'max' => $seats ?? 1000]);
     if ($seats !== NULL && $capacity instanceof DataDefinition) {
-      $capacity->setDescription(t('Up to @seats for the @room.', [
-        '@seats' => $seats,
-        '@room' => Venues::rooms()[$room],
-      ]));
+      $capacity->addConstraint('Range', ['min' => 1, 'max' => $seats])
+        ->setDescription(t('Up to @seats for the @room.', [
+          '@seats' => $seats,
+          '@room' => Venues::rooms()[$room],
+        ]));
     }
     return $capacity;
   }
@@ -300,7 +303,9 @@ one of them, so the room select comes up on its empty option rather
 than on some other room. The saved room has not gone anywhere: Save
 refuses it, since it belongs to the venue you just moved away from,
 until a room of the new venue is chosen, and putting the venue back
-shows it chosen again.
+shows it chosen again. While no room of the venue is chosen, the
+capacity has its lower bound, 1, and no upper one: there are no seats
+to stop at.
 Choose the garden room and the capacity's row says "from 1 to 30", and
 the text under the capacity field, rebuilt with it, says "Up to 30 for
 the Garden room." A refiner can only tighten: the framework checks
@@ -346,7 +351,7 @@ final class RegistrationStep3Resource implements ResourceInterface {
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', ['choices' => Venues::rooms()]);
     $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
-      ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
+      ->addConstraint('Range', ['min' => 1]);
     $inputs->add('pricing', 'string', t('Pricing'), default: 'free')
       ->setRequired(TRUE)
       ->addConstraint('Choice', ['choices' => ['free', 'paid']]);
@@ -366,16 +371,19 @@ final class RegistrationStep3Resource implements ResourceInterface {
 
   /**
    * No more people than the chosen room seats, said under the field.
+   *
+   * A room that seats no known number changes nothing: the capacity keeps
+   * its lower bound and has no upper one.
    */
   #[RefinesInput('capacity')]
   public static function capacityOfRoom(DataDefinitionInterface $capacity, string $room): DataDefinitionInterface {
     $seats = Venues::seats($room);
-    $capacity->addConstraint('Range', ['min' => 1, 'max' => $seats ?? 1000]);
     if ($seats !== NULL && $capacity instanceof DataDefinition) {
-      $capacity->setDescription(t('Up to @seats for the @room.', [
-        '@seats' => $seats,
-        '@room' => Venues::rooms()[$room],
-      ]));
+      $capacity->addConstraint('Range', ['min' => 1, 'max' => $seats])
+        ->setDescription(t('Up to @seats for the @room.', [
+          '@seats' => $seats,
+          '@room' => Venues::rooms()[$room],
+        ]));
     }
     return $capacity;
   }
@@ -714,9 +722,11 @@ drush tool:run data_surface:registration.step3:configure --uid=1 --input='{"valu
 
 `--uid=1` because `tool:run` runs as anonymous unless told otherwise,
 and the operation asks for "administer site configuration", for a read
-as for a write. `tool:info` lists no defaults: configuring changes what
-exists, an optional key left out keeps its current value, and the
-description names the read tool, the second command, for what that value is. The dry run
+as for a write. `tool:info` lists no defaults and requires no key:
+configuring changes what exists, a key left out keeps its current value
+(each key the resource requires says "Required; a value already stored
+stands when left out."), and the description names the read tool, the
+second command, for what that value is. The dry run
 is a second input, which `tool:run` reads as `name=value` and decodes as
 JSON, so `true` is a boolean.
 
@@ -742,13 +752,15 @@ stored. With example 4's module enabled, `tool:info` shows, among the
 `values` input's properties:
 
 ```
-|   └ room                               | string  | Yes      | No       |        | Room                      | riverside_main|riverside_east|library_reading|library_garden|harbour_auditorium|harbour_deck | Room: Depends on venue.                  |
-|   └ capacity                           | integer | No       | No       |        | Capacity                  | minimum 1, maximum 1000                                                                      | Capacity: Depends on room, third_party…  |
-|       └ stewards                       | integer | Yes      | No       |        | Stewards                  |                                                                                              | Stewards: Depends on capacity.           |
+|   └ room                               | string  | No       | No       |        | Room                      | riverside_main|riverside_east|library_reading|library_garden|harbour_auditorium|harbour_deck | Room: Depends on venue. Required; a…     |
+|   └ capacity                           | integer | No       | No       |        | Capacity                  | minimum 1                                                                                    | Capacity: Depends on room, third_party…  |
+|       └ stewards                       | integer | No       | No       |        | Stewards                  |                                                                                              | Stewards: Depends on capacity. Required… |
 ```
 
 `tool:info` cuts a long description short; the capacity's reads in full
-"Depends on room, third_party_settings.data_surface_examples_compliance.licence."
+"Depends on room, third_party_settings.data_surface_examples_compliance.licence.",
+and the room's "Depends on venue. Required; a value already stored stands
+when left out."
 
 A refusal says what is allowed for the values sent, in one sentence per
 key: what the key depends on and what that holds, and for a value not
@@ -1477,7 +1489,7 @@ Drush commands are checked against `ExampleCalls`.
 | `Kernel\ExamplesTodayPanelTest` | The second panel under examples 1 to 3: its two documents and its table, row by row; its rows read from the resource's full schema, so the pricing, the venue and what is stored leave every row and both documents as they were; example 4's keys on the resource's side only; the classic twin's page. |
 | `Unit\ExamplesReadmeTest` | This page against the files it quotes, and its Drush commands. |
 | `Functional\ExamplesRoutesTest` | Every route answers an administrator and refuses anonymous; the landing page; both panels under example 3, and a save through it; the classic twin's page with its two documents, and a save through it. |
-| `FunctionalJavascript\ExamplesAjaxRefreshTest` | In a browser: example 2's venue replaces the room and the capacity and leaves the venue the same node, the orphaned room on its empty option with the stale marker and the capacity back at 1000; a room then narrows the capacity and loses `- Select -`. Example 3's paid pricing swaps the note for a price and a currency, and leaves the second panel's table and its two documents as they were. |
+| `FunctionalJavascript\ExamplesAjaxRefreshTest` | In a browser: example 2's venue replaces the room and the capacity and leaves the venue the same node, the orphaned room on its empty option with the stale marker and the capacity with no upper bound; a room then narrows the capacity and loses `- Select -`. Example 3's paid pricing swaps the note for a price and a currency, and leaves the second panel's table and its two documents as they were. |
 | `FunctionalJavascript\ExamplesComplianceRefreshTest` | Example 4, in a browser: one fieldset titled "Compliance", the ceiling of 100 lifted to the main hall's 400 by `2048`, and the stewards at 1 for 50 and 3 for 150; a malformed licence on blur is said once, under the licence, with `aria-invalid` and nothing at the top, and caps the capacity at a hundred; corrected, the error goes and the room's limit comes back. A refused capacity left by a click on text keeps no focus, and left by Tab lands on the Compliance fieldset after it. The fieldset is drawn below the capacity and above the pricing, and stays there when `2048` and Tab lift the capacity, which, with the stewards, is all that is replaced. With the East room closed in State, choosing Riverside Hall offers the main hall alone and says why. |
 | `Functional\ServedContractEndpointsTest` | In React: the landing page's links, and example 2's contract, refine and validate over HTTP. |
 | `Functional\ServedSubmitEndpointTest` | In React: example 2 saved over HTTP, refused, and refused after someone else saved. |

@@ -52,8 +52,15 @@ A key can be sent three things, and they mean three things
 
 "What it holds" is what storage holds for it on an operation that
 changes something that exists, or its declared default on one that
-creates. So a partial update keeps every key it leaves out, and a key
-that is sent `null`, an emptied text box, or an optional select's
+creates. So a partial update keeps every key it leaves out, a required
+one included: a required key left out is refused only where it holds
+nothing, a create's key with no default or a stored thing's key with no
+value yet, and the refusal is "@label is required.", judged on the
+merged document. That is why a generated tool for an operation that
+changes what exists requires no key at its door, and says "Required; a
+value already stored stands when left out." on each key the resource
+requires ([decision](decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
+A key that is sent `null`, an emptied text box, or an optional select's
 "- None -" is cleared. Two exceptions keep what they hold when sent
 nothing: a list, which is emptied with `[]` ([Lists](#lists)), and a
 secret, which is emptied with its clear marker

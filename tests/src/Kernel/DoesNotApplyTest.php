@@ -335,7 +335,9 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
     $tool = $tools->createInstance('data_surface:resource_test.bulletin:configure');
     $values = $tool->getInputDefinition(OperationInputs::VALUES);
     $this->assertFalse($values->getPropertyDefinition('send_day')->isRequired(), 'Required only where it applies, which a listing cannot say.');
-    $this->assertTrue($values->getPropertyDefinition('frequency')->isRequired());
+    // An update: required in words, a stored value standing when left out.
+    $this->assertFalse($values->getPropertyDefinition('frequency')->isRequired());
+    $this->assertStringEndsWith('Required; a value already stored stands when left out.', (string) $values->getPropertyDefinition('frequency')->getDescription());
 
     $tool->setInputValue(OperationInputs::VALUES, ['frequency' => 'monthly']);
     $tool->execute();

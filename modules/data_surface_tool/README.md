@@ -135,9 +135,9 @@ actually wants to say. A key left out keeps what is stored; a null
 clears it ([decision](../../docs/decisions.md#absent-keeps-null-clears)).
 A secret is the one exception: it is optional, a null or a key left out
 keeps the stored secret, and only the clear marker
-(`@data_surface:clear-secret`) empties it. The label is there because
-the resource requires it, and the Tool API refuses a required key left
-out (below).
+(`@data_surface:clear-secret`) empties it. The label could be left out
+too: the edit tool requires no key, and a required one left out keeps
+what is stored, which the pipeline judges (below).
 
 ## How to try it
 
@@ -148,14 +148,19 @@ drush tool:list
 ```
 
 `drush tool:info data_surface:field.instance:reuse` prints the input
-definitions. Every key in `values` is required exactly when the resource
-requires it, on an edit as on an add. A tool for an operation that
-creates lists the declared defaults; one for an operation that changes
-what exists, such as `data_surface:registration.step3:configure` or
-`data_surface:field.instance:edit`, lists no default at all, because a
-listing is cached by its clients and an optional key left out keeps
-its current value: its description says so and names the read tool, which returns
-the current values. A key another narrows says so in its description,
+definitions, and the description names the operation's kind (`create`,
+`update` or `read`). A tool for an operation that creates requires each
+key in `values` exactly when the resource requires it, and lists the
+declared defaults. One for an operation that changes what exists, such
+as `data_surface:registration.step3:configure` or
+`data_surface:field.instance:edit`, requires no key and lists no
+default at all, because a listing is cached by its clients and a key
+left out keeps its current value: each key the resource requires says
+"Required; a value already stored stands when left out.", and the
+description says "A key left out keeps its current value;" and names
+the read tool, which returns the current values. An edit of a thing
+that holds no value for a required key is refused by the pipeline, in
+the key's own words. A key another narrows says so in its description,
 by the path a caller sends it under ("Depends on venue."), and a
 refusal says what is allowed for the values sent: example 3's
 [README](../data_surface_examples/README.md#when-a-call-is-refused)
@@ -268,7 +273,8 @@ The routes of `data_surface_examples` name it.
 | `Kernel\OperationToolsTest` | The generated tools: which exist, the two derivation rules, what they advertise, refinement to the thing a parameter names, execution, dry run, access, the storage tool's has-data constraint. |
 | `Kernel\ResourceCatalogueTest` | The catalogue read from the static layer, and `docs/catalogue.md` against it, where each derived slot is listed. |
 | `Kernel\ExamplesStepsTest` | The contract panel: its rows as the answers narrow them, the contract's slot conditionals, and the tool's schema below them. |
-| `Kernel\ExamplesToolTest` | `data_surface:registration.step3:configure`: the example calls, its definition (required as the resource says, no default at any depth, the read tool named in its description, and the same after a write), and a partial update the Tool API refuses. |
+| `Kernel\ExamplesToolTest` | `data_surface:registration.step3:configure`: the example calls, its definition (no key required and each the resource requires saying so, no default at any depth, the read tool named in its description, and the same after a write), and a partial update that leaves a required key out, kept where it is stored and refused by the pipeline where it is not. |
+| `Kernel\OperationKindsTest` | Every shipped operation's kind, on the examples, the first module and the tool test modules: a create lists the resource's required keys, an update lists none and says why, a read only operation lists none, and a read tool takes only the parameters. |
 | `Kernel\ReadToolTest` | The read tools: one per operation that changes a thing that exists and none for one that creates, a read operation taking exactly the parameters, an output map of the write tool's keys, step 3's stored values with the compliance module's mounted keys before and after a write, the content type read by its type, an unknown parameter failing as for the write tool, access as the write tool's, and a secret never returned. |
 | `Kernel\OperationFactsTest` | How an operation behaves: the attribute's defaults, idempotence derived from whether it creates, contradicting facts refused, the Tool API's kind and destructive flag as the MCP bridge reads them, no read tool beside a read only operation, and `x-surface.operation` at the top of both documents. |
 | `Kernel\ToolFeedbackTest` | What the listing and a refusal say: each key another narrows naming what it depends on, once, through a port at its site; every refusal form (a list, a list another key narrows, a long list capped, a bound, a pattern, a key that does not apply); `values` held to its shape before the tool runs; and an agent's retry loop on example 3 fixing each key from its refusal in one try, through the runner MCP and ECA call. |
@@ -372,18 +378,18 @@ changing the Tool API.
   statement is carried anyway.
 - **A required map property's default is not honoured.** A resource's
   required key must hold a value, which a default or a stored value
-  can supply; the bridge says `required` as the resource does, and, once
-  a tool's parameters name what it edits, puts what is stored in each
-  property's `default`. But
-  `TypedInputsTrait::validateInputValue()` refuses a required property
-  the payload leaves out ("This property is required.") whatever its
-  default, and the `!isset($default_value) && isRequired()` check that
-  does honour a default covers top level inputs only. So until the Tool
-  API honours a property's default (issue 5 of the Tool API gaps raised
-  upstream), a caller sends every required key on an edit, as stored if
-  it means to keep it; beyond them, a payload is partial and the
-  pipeline fills the rest from what is stored. `ExamplesToolTest` pins
-  the refusal.
+  can supply. `TypedInputsTrait::validateInputValue()` refuses a
+  required property the payload leaves out ("This property is
+  required.") whatever its default, and the `!isset($default_value) &&
+  isRequired()` check that does honour a default covers top level
+  inputs only (issue 5 of the Tool API gaps raised upstream). So a tool
+  for an operation that changes what exists requires no key at all, in
+  its listing and at its door, and says on each key the resource
+  requires that a value already stored stands when left out; the
+  pipeline judges the merged document, and refuses a required key only
+  where nothing is stored for it. A create says `required` as the
+  resource does, since nothing is stored there. `ExamplesToolTest` pins
+  a partial update that leaves a required key out.
 - **Input validation runs before the tool does, against the listing.**
   The Tool API holds every input to its definition before the tool
   runs, and a map's property refusal comes out nested, "values:
@@ -392,7 +398,7 @@ changing the Tool API.
   another narrows is refused against its widest answer, with nothing
   said about the answer that applies, and a caller needs a second try.
   So the tool holds `values` to its shape alone there (types, the keys
-  it requires, its nesting: `validateInputValues()`,
+  it requires, none on an update, its nesting: `validateInputValues()`,
   `InputDefinitions::shapeOf()`) and leaves every rule to the pipeline,
   which narrows `values` from the document sent and says what is allowed
   for it ([decision](../../docs/decisions.md#a-refusal-names-what-it-depends-on)).

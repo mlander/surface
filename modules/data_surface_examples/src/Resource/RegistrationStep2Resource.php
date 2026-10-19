@@ -50,7 +50,7 @@ final class RegistrationStep2Resource implements ResourceInterface {
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', ['choices' => Venues::rooms()]);
     $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
-      ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
+      ->addConstraint('Range', ['min' => 1]);
   }
 
   /**
@@ -63,16 +63,19 @@ final class RegistrationStep2Resource implements ResourceInterface {
 
   /**
    * No more people than the chosen room seats, said under the field.
+   *
+   * A room that seats no known number changes nothing: the capacity keeps
+   * its lower bound and has no upper one.
    */
   #[RefinesInput('capacity')]
   public static function capacityOfRoom(DataDefinitionInterface $capacity, string $room): DataDefinitionInterface {
     $seats = Venues::seats($room);
-    $capacity->addConstraint('Range', ['min' => 1, 'max' => $seats ?? 1000]);
     if ($seats !== NULL && $capacity instanceof DataDefinition) {
-      $capacity->setDescription(t('Up to @seats for the @room.', [
-        '@seats' => $seats,
-        '@room' => Venues::rooms()[$room],
-      ]));
+      $capacity->addConstraint('Range', ['min' => 1, 'max' => $seats])
+        ->setDescription(t('Up to @seats for the @room.', [
+          '@seats' => $seats,
+          '@room' => Venues::rooms()[$room],
+        ]));
     }
     return $capacity;
   }

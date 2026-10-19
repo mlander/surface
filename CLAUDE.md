@@ -42,7 +42,11 @@ the record of the rework that brought the module to the pattern.
 - **Operation**: a way a resource is asked for, a static `#[Operation]`
   method returning an `OperationContext` whose `id` is the operation's.
   It states how a call behaves, `readOnly:` and `destructive:`, and
-  idempotence, derived from whether it creates unless declared; a tool
+  idempotence, derived from whether it creates unless declared, and its
+  kind, `create`, `update` or `read`, always derived: a create's tool
+  requires what the resource requires, an update's requires nothing at
+  its door
+  (`docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door`); a tool
   carries them to the Tool API and both documents state them under
   `x-surface.operation`
   (`docs/decisions.md#an-operation-states-how-it-behaves`).

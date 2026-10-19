@@ -495,9 +495,10 @@ class ShapesTest extends DataSurfaceKernelTestBase {
     $manager = $this->container->get('plugin.manager.tool');
     $properties = $manager->getDefinition('data_surface:resource_test.depot:configure')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions();
     $this->assertSame(['sku', 'spare', 'tag'], array_keys($properties));
-    $this->assertTrue($properties['sku']->isRequired());
+    // An update: required in words, a stored value standing when left out.
+    $this->assertFalse($properties['sku']->isRequired());
     $this->assertSame(['Regex' => self::PATTERN, 'Length' => ['min' => 4, 'max' => 12]], self::declared($properties['sku']));
-    $this->assertSame('Two capitals and digits, as printed on the shelf.', (string) $properties['sku']->getDescription());
+    $this->assertSame('Two capitals and digits, as printed on the shelf. Required; a value already stored stands when left out.', (string) $properties['sku']->getDescription());
     $this->assertFalse($properties['spare']->isRequired());
     $this->assertSame(['Regex' => self::PATTERN, 'Length' => ['max' => 6]], self::declared($properties['spare']));
 

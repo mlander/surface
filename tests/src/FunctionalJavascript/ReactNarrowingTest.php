@@ -70,7 +70,7 @@ class ReactNarrowingTest extends ExamplesWebDriverTestBase {
     $this->assertNotNull($assert->waitForElement('xpath', '//select[@id="dsr-room"]/option[text()="Reading room"]'));
     // On the empty option, standing for the stored main hall.
     $this->assertSame('', $page->findField('room')->getValue());
-    $this->assertSame('1000', $page->findField('capacity')->getAttribute('max'));
+    $this->assertNull($page->findField('capacity')->getAttribute('max'));
     $this->assertSame('Narrowed here: room, capacity.', $this->narrowing());
 
     $page->selectFieldOption('room', 'Garden room');

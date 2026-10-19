@@ -508,12 +508,19 @@ own is a tool, `data_surface:<resource id>:<operation id>`, derived by
   parameter named for one of the resource's keys described as that key,
   with its label, meaning and allowed values), then `values`, the
   resource's keys less the identity keys the operation knows, then
-  `dry_run`. A key the resource requires is required in `values`,
-  whatever the operation. An operation that creates lists the declared
-  defaults; one that changes a thing that exists lists none, and its
-  description says that an optional key left out keeps its current
-  value (a required one cannot be left out) and names the read tool, since a listing is cached by its clients
-  ([decision](decisions.md#required-is-the-resources-and-a-listing-carries-no-stored-value)).
+  `dry_run`. What `values` requires follows the operation's kind
+  (`create`, `update` or `read`, stated in the tool's description and
+  in both documents). An operation that creates requires what the
+  resource requires and lists the declared defaults. One that changes a
+  thing that exists requires nothing, at any depth, and lists no
+  default: each key the resource requires says "Required; a value
+  already stored stands when left out.", and the description says "A
+  key left out keeps its current value;" and names the read tool, since
+  a listing is cached by its clients and the Tool API refuses a required
+  key left out before the tool runs. The pipeline still refuses an edit
+  of a thing that holds no value for a required key, in the key's own
+  words
+  ([decision](decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
   The definition is static, which is what operations make possible: an
   operation that needs nothing is the exact contract before anyone
   calls, and one that needs an existing thing refines `values` to its
@@ -523,7 +530,7 @@ own is a tool, `data_surface:<resource id>:<operation id>`, derived by
   A key another narrows says so in its description, once, by the path
   a caller sends it under: "Depends on venue." The Tool API holds
   `values` to its shape before the tool runs (types, the keys it
-  requires, its nesting), and the pipeline holds it to every rule,
+  requires, none on an update, its nesting), and the pipeline holds it to every rule,
   against the definitions the values sent narrow, so a refusal says
   what is allowed for them
   ([decision](decisions.md#a-refusal-names-what-it-depends-on)): "room:

@@ -55,16 +55,21 @@ use Drupal\tool\TypedData\OutputDefinition;
  * An operation that needs nothing is built in its real context from the
  * start.
  *
- * Every property of `values` is required exactly when the resource, built
- * for that operation, requires it, whether the operation creates or not.
- * What a property defaults to depends on whether the operation creates.
- * One that creates lists the declared defaults, which are what a key left
- * out becomes. One that changes a thing that exists lists none in its
- * static definition, which clients cache as a discovery channel: an
- * optional key left out keeps its current value, and its description
- * names the read tool that returns the current values. Once its
- * parameters arrive, the refined `values` (values()) defaults each
- * property to what the storage loads now, for that one request.
+ * What a property of `values` requires and defaults to depends on the
+ * operation's kind (OperationDefinition::kind()). One that creates
+ * requires a property exactly when the resource, built for that
+ * operation, requires the key, and lists the declared defaults, which are
+ * what a key left out becomes. One that changes a thing that exists
+ * requires none and lists no default in its static definition, which
+ * clients cache as a discovery channel: a key left out keeps its current
+ * value, each key the resource requires says so in its description, the
+ * tool's description names the read tool that returns the current
+ * values, and the pipeline refuses the merged document when a required
+ * key has nothing stored. Once its parameters arrive, the refined
+ * `values` (values()) requires what the resource requires and defaults
+ * each property to what the storage loads now, for that one request;
+ * the tool still holds a call to it with nothing required
+ * (ResourceOperationTool::validateInputValues()).
  *
  * Access in a listing is the account's: the static definitions are built
  * for the account alone (ResourcesInterface::buildStatic()), so a key a
@@ -275,7 +280,7 @@ final class OperationInputs {
   public function values(ResourceDefinition $resource, DataSurfaceInterface $built, OperationContext $context): MapInputDefinition {
     $map = $this->inputDefinitions->withDependencies($this->map($resource, $built, $this->knownIdentity($resource, $context)), $built);
     if (!$context->creates) {
-      // Decision: see docs/decisions.md#required-is-the-resources-and-a-listing-carries-no-stored-value.
+      // Decision: see docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door.
       $this->inputDefinitions->withStored($map, $built, $this->resources->storage($resource->name(), $context, $built)->load($built));
     }
     return $map;
@@ -306,10 +311,14 @@ final class OperationInputs {
   /**
    * Gets the `values` map a tool's static definition declares.
    *
-   * An operation that creates lists the declared defaults; one that
-   * changes a thing that exists lists none, at any depth, since a key left
-   * out keeps what is stored rather than taking a default, and a listing
-   * is cached where a stored value would go stale unseen.
+   * An operation that creates lists the declared defaults and the keys
+   * the resource requires. One that changes a thing that exists lists no
+   * default and requires no key, at any depth, since a key left out keeps
+   * what is stored rather than taking a default, the Tool API refuses a
+   * required key left out before the tool runs, and a listing is cached
+   * where a stored value would go stale unseen; each key the resource
+   * requires says so in its description, and the pipeline still refuses
+   * the merged document when nothing is stored for it.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
@@ -318,14 +327,16 @@ final class OperationInputs {
    * @param \Drupal\data_surface\DataSurfaceInterface|null $neutral
    *   The resource built in a context that knows nothing, for an operation
    *   that needs a subject.
-   * @param bool $dependencies
-   *   Whether each dependent key's description names what it depends on,
-   *   as an input's does; an output's does not.
+   * @param bool $input
+   *   Whether the map is the write tool's input, whose dependent keys name
+   *   what they depend on and whose required keys, on an operation that
+   *   changes what exists, say so in words; the read tool's output does
+   *   neither.
    *
    * @return \Drupal\tool\TypedData\MapInputDefinition
    *   The map.
    */
-  protected function declaredValues(ResourceDefinition $resource, OperationDefinition $operation, ?DataSurfaceInterface $neutral, bool $dependencies = TRUE): MapInputDefinition {
+  protected function declaredValues(ResourceDefinition $resource, OperationDefinition $operation, ?DataSurfaceInterface $neutral, bool $input = TRUE): MapInputDefinition {
     if ($operation->needsNothing()) {
       $context = $this->resources->operation($resource->name(), $operation->id);
       $built = $this->resources->buildStatic($resource->name(), $context);
@@ -336,13 +347,16 @@ final class OperationInputs {
       $built = $neutral ?? $this->resources->buildStatic($resource->name(), new OperationContext($operation->id));
       $map = $this->map($resource, $built, $this->suppliedIdentity($resource, $operation));
     }
-    if ($dependencies) {
+    if ($input) {
       // Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
       $this->inputDefinitions->withDependencies($map, $built);
     }
     if ($this->changesWhatExists($resource, $operation)) {
-      // Decision: see docs/decisions.md#required-is-the-resources-and-a-listing-carries-no-stored-value.
+      // Decision: see docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door.
       $this->inputDefinitions->withoutDefaults($map);
+      if ($input) {
+        $this->inputDefinitions->withoutRequired($map);
+      }
     }
     return $map;
   }
@@ -382,6 +396,25 @@ final class OperationInputs {
       return $operation->namesOneThing($resource->identity);
     }
     return !$this->resources->operation($resource->name(), $operation->id)->creates;
+  }
+
+  /**
+   * Names the kind of call a tool for an operation is.
+   *
+   * The operation's kind (OperationDefinition::kind()), with whether it
+   * creates read as changesWhatExists() reads it, since an operation that
+   * needs a subject cannot build its context before the subject is named.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
+   *   The resource.
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   *
+   * @return string
+   *   OperationDefinition::CREATE, ::UPDATE or ::READ.
+   */
+  public function kind(ResourceDefinition $resource, OperationDefinition $operation): string {
+    return $operation->kind(!$this->changesWhatExists($resource, $operation));
   }
 
   /**
@@ -510,6 +543,11 @@ final class OperationInputs {
   /**
    * Describes the tool for one operation.
    *
+   * Its kind first, then what it needs and what its values are. An update
+   * says what a key left out does and names the read tool; a read only
+   * operation that changes nothing says a key left out is checked as it
+   * is stored.
+   *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
@@ -519,21 +557,23 @@ final class OperationInputs {
    *   The description.
    */
   public function description(ResourceDefinition $resource, OperationDefinition $operation): TranslatableMarkup {
-    if ($this->changesWhatExists($resource, $operation)) {
-      return $this->t('@label: the "@operation" operation of the @resource resource. @needs The values input is the resource itself, less what the operation already knows: every setting it takes, including those other modules add, with its label, its meaning and the values it allows. An optional key left out keeps its current value; @read returns the current values.', [
-        '@label' => (string) $operation->label,
-        '@operation' => $operation->id,
-        '@resource' => $resource->id,
-        '@needs' => $this->needs($operation),
-        '@read' => self::TOOL . ':' . $resource->id . ':' . $operation->id . ResourceOperationReadTool::SUFFIX,
-      ]);
-    }
-    return $this->t('@label: the "@operation" operation of the @resource resource. @needs The values input is the resource itself, less what the operation already knows: every setting it takes, including those other modules add, with its label, its meaning and the values it allows.', [
+    $changes = $this->changesWhatExists($resource, $operation);
+    $arguments = [
       '@label' => (string) $operation->label,
       '@operation' => $operation->id,
       '@resource' => $resource->id,
+      '@kind' => $this->kind($resource, $operation),
       '@needs' => $this->needs($operation),
-    ]);
+    ];
+    if ($changes && $operation->readOnly) {
+      return $this->t('@label: the "@operation" operation of the @resource resource (kind: @kind). @needs The values input is the resource itself, less what the operation already knows: every setting it takes, including those other modules add, with its label, its meaning and the values it allows. A key left out is checked at its current value, and nothing is written.', $arguments);
+    }
+    if ($changes) {
+      return $this->t('@label: the "@operation" operation of the @resource resource (kind: @kind). @needs The values input is the resource itself, less what the operation already knows: every setting it takes, including those other modules add, with its label, its meaning and the values it allows. A key left out keeps its current value; @read returns the current values.', $arguments + [
+        '@read' => self::TOOL . ':' . $resource->id . ':' . $operation->id . ResourceOperationReadTool::SUFFIX,
+      ]);
+    }
+    return $this->t('@label: the "@operation" operation of the @resource resource (kind: @kind). @needs The values input is the resource itself, less what the operation already knows: every setting it takes, including those other modules add, with its label, its meaning and the values it allows.', $arguments);
   }
 
   /**

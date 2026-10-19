@@ -350,8 +350,8 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $configure = $this->full(ProgramResource::class)[ContractEmitter::EXTENSION]['operation'];
     $check = $this->full(ProgramResource::class, 'check')[ContractEmitter::EXTENSION]['operation'];
     $facts = ['creates' => FALSE, 'readOnly' => FALSE, 'destructive' => FALSE, 'idempotent' => TRUE];
-    $this->assertSame(['id' => 'configure', 'label' => 'Configure the program'] + $facts, $configure);
-    $this->assertSame(array_replace(['id' => 'check', 'label' => 'Check a program'] + $facts, ['readOnly' => TRUE]), $check);
+    $this->assertSame(['id' => 'configure', 'label' => 'Configure the program', 'kind' => 'update'] + $facts, $configure);
+    $this->assertSame(array_replace(['id' => 'check', 'label' => 'Check a program', 'kind' => 'read'] + $facts, ['readOnly' => TRUE]), $check);
     $tools = $this->container->get('plugin.manager.tool');
     $this->assertSame(ToolOperation::Write, $tools->getDefinition('data_surface:event.program:configure')->getOperation());
     $this->assertSame(ToolOperation::Read, $tools->getDefinition('data_surface:event.program:check')->getOperation());
@@ -462,8 +462,10 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $accounts = json_decode(htmlspecialchars_decode((string) $panel['accounts']['content']['#value']), TRUE);
     $this->assertSame('runtime', $accounts['you']['property'][ContractEmitter::EXTENSION]['access']);
     $this->assertTrue($accounts['without the permission']['property']['readOnly']);
+    $this->assertSame(['configure', 'update'], array_slice($panel['facts']['#rows'][0], 0, 2));
     $this->assertSame([
       'check',
+      'read',
       'true',
       'false',
       'true',

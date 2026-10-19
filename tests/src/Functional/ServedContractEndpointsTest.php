@@ -225,10 +225,11 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $this->assertSame('library', $refined['values']['venue']);
     $this->assertSame('Spring meetup', $refined['values']['title']);
     // The orphaned room is held unanswered, so the capacity is refined
-    // against no room at all: its declared limit, and no room's words
-    // under it. It falls back to what is stored.
+    // against no room at all: its declared lower bound and no upper one,
+    // and no room's words under it. It falls back to what is stored.
     $capacity = $refined['schema']['properties']['capacity'];
-    $this->assertSame(1000, $capacity['maximum']);
+    $this->assertSame(1, $capacity['minimum']);
+    $this->assertArrayNotHasKey('maximum', $capacity);
     $this->assertArrayNotHasKey('description', $capacity);
     $this->assertSame(50, $refined['values']['capacity']);
 
@@ -241,7 +242,7 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     ]));
     $this->assertSame(['room'], $again['stale']);
     $this->assertNull($again['values']['room']);
-    $this->assertSame(1000, $again['schema']['properties']['capacity']['maximum']);
+    $this->assertArrayNotHasKey('maximum', $again['schema']['properties']['capacity']);
 
     // Saved from there, the empty room stands for the stored one, which
     // the same submission's venue refuses, as the form refuses it

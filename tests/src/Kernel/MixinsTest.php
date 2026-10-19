@@ -532,7 +532,9 @@ class MixinsTest extends DataSurfaceKernelTestBase {
     $values = $manager->getDefinition('data_surface:resource_test.journal:configure')->getInputDefinition(OperationInputs::VALUES);
     $properties = $values->getPropertyDefinitions();
     $this->assertSame(self::KEYS, array_keys($properties));
-    $this->assertTrue($properties['owner']->isRequired());
+    // An update: required in words, a stored value standing when left out.
+    $this->assertFalse($properties['owner']->isRequired());
+    $this->assertStringEndsWith('Required; a value already stored stands when left out.', (string) $properties['owner']->getDescription());
     $this->assertFalse($properties['shared']->isRequired());
 
     $read = $manager->createInstance('data_surface:resource_test.journal:configure:read');

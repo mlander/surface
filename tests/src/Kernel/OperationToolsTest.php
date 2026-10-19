@@ -165,8 +165,9 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     $this->assertSame([], $add->getInputDefinitionRefiners());
 
     // Editing one needs the content type, by id; its machine name is
-    // known, so it is no input. What the resource requires is required
-    // here as on add: editing does not make a key optional.
+    // known, so it is no input. Editing changes what exists, so no key is
+    // required: what the resource requires is said in words, and a key
+    // left out keeps what is stored.
     $edit = $manager->getDefinition('data_surface:node.type:edit');
     $this->assertSame(['type', OperationInputs::VALUES, OperationInputs::DRY_RUN], array_keys($edit->getInputDefinitions()));
     $this->assertSame('string', $edit->getInputDefinition('type')->getDataType());
@@ -174,14 +175,20 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     $values = $edit->getInputDefinition(OperationInputs::VALUES);
     $this->assertArrayNotHasKey('type', $values->getPropertyDefinitions());
     $this->assertArrayHasKey('name', $values->getPropertyDefinitions());
-    $this->assertTrue($values->getPropertyDefinitions()['name']->isRequired());
-    $this->assertTrue($values->getPropertyDefinitions()['title_label']->isRequired());
+    $this->assertFalse($values->getPropertyDefinitions()['name']->isRequired());
+    $this->assertFalse($values->getPropertyDefinitions()['title_label']->isRequired());
+    $this->assertStringEndsWith('Required; a value already stored stands when left out.', (string) $values->getPropertyDefinitions()['name']->getDescription());
     $this->assertFalse($values->getPropertyDefinitions()['description']->isRequired());
-    $this->assertTrue($values->isRequired());
+    $this->assertStringNotContainsString('Required;', (string) $values->getPropertyDefinitions()['description']->getDescription());
+    $this->assertFalse($values->isRequired());
+    // Adding one creates, so what the resource requires is required.
+    $this->assertTrue($add->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['name']->isRequired());
+    $this->assertStringContainsString('(kind: create)', (string) $add->getDescription());
+    $this->assertStringContainsString('(kind: update)', (string) $edit->getDescription());
     // Editing changes what exists, so the listing carries no default,
     // declared or stored: a key left out keeps its current value.
     $this->assertNull($values->getPropertyDefinitions()['title_label']->getDefaultValue());
-    $this->assertStringContainsString('An optional key left out keeps its current value; data_surface:node.type:edit:read returns the current values.', (string) $edit->getDescription());
+    $this->assertStringContainsString('A key left out keeps its current value; data_surface:node.type:edit:read returns the current values.', (string) $edit->getDescription());
     // Adding one creates, so it lists the declared defaults.
     $this->assertSame('Title', $add->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['title_label']->getDefaultValue());
     $this->assertStringNotContainsString('keeps its current value', (string) $add->getDescription());
@@ -247,7 +254,8 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
 
     // Once the content type is named, the values input is refined to it:
     // required as the resource says, and each key defaulting to what the
-    // content type stores now.
+    // content type stores now. The tool still holds a call to it with no
+    // key required, since a key left out keeps what is stored.
     $tool = $this->tool('data_surface:node.type:edit');
     $tool->setInputValue('type', 'recipe');
     $values = $tool->getInputDefinition(OperationInputs::VALUES);
@@ -258,18 +266,10 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Food', $properties['description']->getDefaultValue());
     $this->assertTrue($properties['title_label']->isRequired());
 
-    // A required key left out is refused by the Tool API, stored value or
-    // not, before the tool runs.
+    // A required key left out keeps what is stored, as an optional one
+    // does: the call reaches the pipeline, which judges the merged
+    // document.
     $tool->setInputValue(OperationInputs::VALUES, ['name' => 'Recipes']);
-    $tool->execute();
-    $this->assertFalse($tool->getResult()->isSuccess());
-    $this->assertStringContainsString('values.title_label: This property is required.', (string) $tool->getResult()->getMessage());
-
-    // Every required key sent, a key that is not required is still left
-    // alone: it keeps what is stored.
-    $tool = $this->tool('data_surface:node.type:edit');
-    $tool->setInputValue('type', 'recipe');
-    $tool->setInputValue(OperationInputs::VALUES, ['name' => 'Recipes', 'title_label' => 'Dish'] + self::NODE_TYPE_REQUIRED);
     $tool->execute();
     $result = $tool->getResult();
     $this->assertTrue($result->isSuccess(), (string) $result->getMessage());

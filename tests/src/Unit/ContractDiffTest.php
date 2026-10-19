@@ -181,11 +181,7 @@ class ContractDiffTest extends UnitTestCase {
         ContractDiff::BREAKS,
         $breaking,
       ],
-      'a required key added' => [
-        ['properties/notes' => ['title' => 'Notes', 'type' => 'string'], 'required' => ['venue', 'notes']],
-        ContractDiff::NARROWS,
-        $breaking,
-      ],
+
       'a constraint tightened' => [['properties/capacity/maximum' => 500], ContractDiff::NARROWS, $breaking],
       'a pattern added' => [['properties/code/pattern' => '^[A-Z]{2}$'], ContractDiff::NARROWS, $breaking],
       'a choice removed' => [['properties/venue/oneOf/1' => self::REMOVE], ContractDiff::NARROWS, $breaking],
@@ -220,6 +216,46 @@ class ContractDiffTest extends UnitTestCase {
         $breaking,
       ],
     ];
+  }
+
+  /**
+   * Tests a required key added says what a write must now supply.
+   *
+   * To the inputs a note; to the outputs, what a client reads, a key
+   * always there narrows what it may meet, which is compatible.
+   */
+  public function testRequiredKeyAddedSaysWhatWritesSupply(): void {
+    $current = self::BASELINE;
+    $current['schema']['properties']['notes'] = ['title' => 'Notes', 'type' => 'string'];
+    $current['schema']['required'][] = 'notes';
+    $changes = (new ContractDiff())->compare(self::BASELINE, $current);
+    $this->assertSame(['configure#/properties/notes'], array_map(static fn (ContractChange $change): string => $change->path, $changes));
+    $this->assertSame('required key added: a write must now supply notes where nothing is stored', $changes[0]->change);
+    $this->assertSame([ContractDiff::NOTE, ContractChange::COMPATIBLE], [$changes[0]->effect, $changes[0]->status]);
+    $current['schema']['properties']['notes']['default'] = 'None';
+    [$change] = (new ContractDiff())->compare(self::BASELINE, $current);
+    $this->assertSame('required key added, with a default', $change->change);
+    $this->assertSame([ContractDiff::NOTE, ContractChange::COMPATIBLE], [$change->effect, $change->status]);
+
+    $baseline = self::BASELINE + ['outputs' => ['type' => 'object', 'properties' => [], 'required' => []]];
+    $current = $baseline;
+    $current['outputs']['properties']['sent'] = ['type' => 'integer'];
+    $current['outputs']['required'] = ['sent'];
+    [$change] = (new ContractDiff())->compare($baseline, $current);
+    $this->assertSame('required key added', $change->change);
+    $this->assertSame([ContractDiff::NARROWS, ContractChange::COMPATIBLE], [$change->effect, $change->status]);
+  }
+
+  /**
+   * Tests the operation's kind is not compared on its own.
+   *
+   * It is derived from `readOnly` and `creates`, which are; a baseline
+   * written before it was stated reads the same.
+   */
+  public function testTheKindIsNotComparedOnItsOwn(): void {
+    $current = self::BASELINE;
+    $current['schema']['x-surface']['operation']['kind'] = 'update';
+    $this->assertSame([], (new ContractDiff())->compare(self::BASELINE, $current));
   }
 
   /**

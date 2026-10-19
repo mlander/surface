@@ -1882,10 +1882,24 @@ operation (`DerivedOperation`).
 - **Both documents.** The schema for these answers and the full schema
   state the facts at the top, first under the top's `x-surface`, beside
   the title that is the operation's label:
-  `x-surface.operation: {id, label, creates, readOnly, destructive,
-  idempotent}`, so a client reading the contract directly has the
-  operation's own answer, idempotence included. A document asked for in
-  no operation states none.
+  `x-surface.operation: {id, label, kind, creates, readOnly,
+  destructive, idempotent}`, so a client reading the contract directly
+  has the operation's own answer, idempotence included. A document
+  asked for in no operation states none.
+- **A kind, derived.** `kind` names the call in one word, `create`,
+  `update` or `read` (decided 2026-10-19): a read only operation is a
+  read, one whose context creates is a create, and every other an
+  update (`OperationDefinition::kind()`). It is never declared, so it
+  cannot disagree with `readOnly` and `creates`, and the contract diff
+  does not compare it on its own: a change to it is a change to one of
+  those two, which it does compare. It is the fact a client needs first,
+  and it says what a generated tool asks for at its door: a create
+  requires the keys the resource requires, an update none ([Required is
+  the resource's, and an update tool requires nothing at its
+  door](#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
+  A tool says it in its description, "(kind: update)", beside the Tool
+  API's own `Read` or `Write`, which `tool:info` prints as its
+  operation.
 - **No read tool beside a read only operation.** It changes nothing, so
   there is nothing to read before changing it
   (`ResourceCatalogue::reads()`).
@@ -1905,9 +1919,9 @@ and the pipeline is the one place that calls it, so the refusal there is
 the cheapest honest check. Whether a call reaches beyond
 the site (MCP's open world) is a fact of the storage, not the
 operation, and a later flag there; the MCP bridge says open world for
-every tool today. (`Operation`, `OperationDefinition::facts()`,
+every tool today. (`Operation`, `OperationDefinition::facts()`, `OperationDefinition::kind()`,
 `ContractEmitter::operation()`, `DataSurfacePipeline::commit()`,
-`OperationFactsTest`, `LockedAccessTest`)
+`OperationFactsTest`, `OperationKindsTest`, `LockedAccessTest`)
 
 ### A violation summary is plain text
 
@@ -1917,36 +1931,64 @@ line is escaped there, so a message's own placeholder markup (Range's
 `<em class="placeholder">`) would otherwise reach the caller, Drush
 included, as literal tags. (`ResultReportingTrait::violationSummary()`)
 
-### Required is the resource's, and a listing carries no stored value
+### Required is the resource's, and an update tool requires nothing at its door
 
-A derived tool's `values` property is required exactly when the resource,
-built for the operation, requires the key, whatever its default and
-whether or not the operation creates, except a secret, which is always
+A derived tool for an operation that creates marks a `values` property
+required exactly when the resource, built for the operation, requires
+the key, whatever its default, except a secret, which is always
 optional ([A secret is optional, never nullable](#a-secret-is-optional-never-nullable)).
+A tool for an operation that changes a thing that exists marks no
+property required, at any depth, and each key the resource requires
+says so in its description instead: "Required; a value already stored
+stands when left out." The pipeline is unchanged: it judges the merged
+document, what is sent laid over what is stored, so an edit of a thing
+that holds no value for a required key is refused with the key's own
+message ("Event title is required."), and one that holds a value keeps
+it. The refined `values` a tool builds once its parameters arrive, the
+schema for these answers and the form keep the resource's `required`;
+the tool holds what it is sent to the shape alone before it runs, and on
+an update that shape requires nothing either
+(`ResourceOperationTool::validateInputValues()`), so the call reaches
+the pipeline. A collection's items keep their required keys: an item
+sent is sent whole, with nothing stored under it to stand.
+
 What a property defaults to in the tool's static definition, its
 listing, depends on whether the operation creates. One that creates
 lists the declared defaults, which are what a key left out becomes. One
 that changes a thing that exists lists none, at any depth, and its
-description says that an optional key left out keeps its current value
-and names the read tool that returns the current values; a required key
-cannot be left out, which the Tool API refuses before the tool runs.
+description says "A key left out keeps its current value; <read tool>
+returns the current values."
 
-Why (decided 2026-10-18, replacing "defaults are what is stored"): a
-listing is a discovery channel that clients cache, `tools/list` in MCP
-among them, so a stored value in it is as of the last discovery and goes
-stale unseen, and a default on an edit says what a key left out becomes,
-which is not what happens: it keeps what is stored. The read tool is
-the per-request answer to "what is there". Once an operation's
-parameters arrive, the refined `values`, which no client caches, still
-defaults each property to what its storage loads now, and the schema
-for these answers keeps current values in `values`; the full schema
-keeps declared defaults. Updates stay a patch. The cost is the Tool
-API's: it refuses a required map property a payload leaves out, default
-or not (`TypedInputsTrait::validateInputValue()`), so an edit sends
-every required key. A write through the tool no longer clears the
-definition cache, since nothing in the listing changed.
-(`OperationInputs::declaredValues()`, `OperationInputs::values()`,
-`InputDefinitions::withoutDefaults()`, `InputDefinitions::withStored()`)
+Why no required key on an update (decided 2026-10-19, replacing "a
+required key cannot be left out"): the Tool API refuses a required input
+a payload leaves out before the resource runs, default or not
+(`TypedInputsTrait::validateInputValue()`), so "required" on an update
+tool told callers something false: that a key with a value stored must
+be sent again, when the pipeline would have kept it. Updates are a
+patch, and a patch requires nothing at the door. Required is still the
+resource's, and still said, in words, where a caller reads it. The case
+that shows the rule holds is a required field added to an entity later:
+a thing stored before it holds no value there, so the next edit of that
+thing must supply one, and does, because the pipeline refuses the merged
+document without it, in the key's own words; a thing that has one keeps
+it. A create still lists the resource's required keys: nothing is
+stored, so a key left out holds only its default.
+
+Why no stored value in a listing (decided 2026-10-18, replacing
+"defaults are what is stored"): a listing is a discovery channel that
+clients cache, `tools/list` in MCP among them, so a stored value in it
+is as of the last discovery and goes stale unseen, and a default on an
+edit says what a key left out becomes, which is not what happens: it
+keeps what is stored. The read tool is the per-request answer to "what
+is there". Once an operation's parameters arrive, the refined `values`,
+which no client caches, still defaults each property to what its storage
+loads now, and the schema for these answers keeps current values in
+`values`; the full schema keeps declared defaults. A write through the
+tool no longer clears the definition cache, since nothing in the
+listing changed. (`OperationInputs::declaredValues()`,
+`OperationInputs::values()`, `InputDefinitions::withoutRequired()`,
+`InputDefinitions::withoutDefaults()`, `InputDefinitions::withStored()`,
+`OperationKindsTest`)
 
 ### Which operations read
 
@@ -2775,8 +2817,10 @@ As in the Tool API, `required` means present and not null and says
 nothing about size: an empty list or map is a value, and "not empty" is
 `NotBlank` or `Count`. A secret is the one exception, never in
 `required` ([A secret is optional, never nullable](#a-secret-is-optional-never-nullable)).
-The Tool API bridge copies the same flag ([Required is the resource's,
-and a listing carries no stored value](#required-is-the-resources-and-a-listing-carries-no-stored-value)); the served contract's
+The Tool API bridge copies the same flag for an operation that creates,
+and says it in words on one that changes what exists ([Required is the
+resource's, and an update tool requires nothing at its
+door](#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)); the served contract's
 `values` always carry every key, so presence is never the question
 there. The pipeline holds a required list to the same: core's `NotNull`
 reads an empty list as null, so it is not asked of `[]`, which every
@@ -3085,6 +3129,23 @@ resource](evolution.md#compatible-and-breaking). Each choice, and why:
   document by the schema served with it: the documents are closed, so a
   full schema cached before a key was added refuses a newer document,
   and a client fetches it again when the version moves.
+- **A required key added is compatible, with a note** (decided
+  2026-10-19, replacing "breaking, as for an optional key made
+  required"). No value stored and no document sent before held the key,
+  so nothing said before changes meaning: a thing stored before it has
+  nothing there, and its next write must supply the key, which the
+  pipeline asks for in the key's own words when it is missing, and an
+  update tool lets through to the pipeline, since it requires nothing at
+  its door ([Required is the resource's, and an update tool requires
+  nothing at its door](#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
+  The lint reports it as a note, "a write must now supply <key> where
+  nothing is stored"; with a default, which a value stored before reads,
+  it asks nothing. An optional key made required stays breaking: there
+  the nothing a stored value holds may be a `null` a client sent on
+  purpose, which cleared it, and the `null` that cleared it is refused
+  from then on, so what was said before changes meaning. Where the new
+  key's value can be derived from what is stored, the version is raised
+  and a migration writes it, so no write is asked for it.
 - **A version on the declaration, from 1.** `#[Resource(version:)]` and
   `#[Structure(version:)]` count the breaking changes made to stored
   values; a compatible change never moves the number. Both documents

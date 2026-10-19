@@ -407,9 +407,10 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
   /**
    * Tests a partial edit clearing one key and keeping its siblings.
    *
-   * The label is the one key the resource requires, so it is sent as an
-   * edit sends it, with what is stored; the Tool API refuses a required
-   * property left out. Below it, everything is partial.
+   * The label is the one key the resource requires: the refined input
+   * says so and defaults it to what is stored, and the edit tool requires
+   * nothing at its door, so it is left out here and keeps what is
+   * stored. Below it, everything is partial too.
    */
   public function testEditClearsOneOverrideAndKeepsTheCountries(): void {
     $this->addField();
@@ -420,12 +421,12 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($values->getPropertyDefinitions()['label']->isRequired());
     $this->assertSame('Address', $values->getPropertyDefinitions()['label']->getDefaultValue());
     $tool->setInputValue(OperationInputs::VALUES, [
-      'label' => 'Address',
       'settings' => ['field_overrides' => ['organization' => NULL]],
     ]);
     $tool->execute();
 
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResultMessage());
+    $this->assertSame('Address', $this->reloadField()->label());
     $settings = $this->reloadField()->getSettings();
     $this->assertSame([], $settings['field_overrides']);
     // Untouched by a payload that never mentioned them: the pipeline

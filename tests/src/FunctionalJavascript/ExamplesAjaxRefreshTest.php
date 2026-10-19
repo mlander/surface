@@ -45,7 +45,7 @@ class ExamplesAjaxRefreshTest extends ExamplesWebDriverTestBase {
     $this->assertSame('', $page->findField('surface[room]')->getValue());
     $assert->hiddenFieldValueEquals('surface[@stale]', 'room');
     // The orphaned room no longer caps the capacity, nor describes it.
-    $this->assertSame('1000', $page->findField('surface[capacity]')->getAttribute('max'));
+    $this->assertNull($page->findField('surface[capacity]')->getAttribute('max'));
     $this->assertStringNotContainsString('Up to', $this->formItemText('surface[capacity]'));
     $assert->elementNotExists('css', '.messages');
     $assert->elementNotExists('css', '.error');

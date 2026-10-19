@@ -15,6 +15,21 @@ use Drupal\data_surface\Resource\ResourceCallable;
 final class OperationDefinition {
 
   /**
+   * The kind of an operation whose context creates.
+   */
+  public const CREATE = 'create';
+
+  /**
+   * The kind of an operation that changes what exists.
+   */
+  public const UPDATE = 'update';
+
+  /**
+   * The kind of a read only operation.
+   */
+  public const READ = 'read';
+
+  /**
    * Constructs an OperationDefinition.
    *
    * @param string $id
@@ -102,6 +117,32 @@ final class OperationDefinition {
   }
 
   /**
+   * Names what kind of call the operation is: a create, an update or a read.
+   *
+   * Derived, never declared: a read only operation is a read, one whose
+   * context creates is a create, and every other changes what exists, an
+   * update. What a generated tool asks for at its door follows from it: a
+   * create requires the keys the resource requires, and an update requires
+   * none, a key left out keeping what is stored.
+   *
+   * Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
+   *
+   * @param bool $creates
+   *   Whether its context creates: the context's own answer, or, where
+   *   the context cannot be asked yet, what the signature says.
+   *
+   * @return string
+   *   self::CREATE, self::UPDATE or self::READ.
+   */
+  public function kind(bool $creates): string {
+    return match (TRUE) {
+      $this->readOnly => self::READ,
+      $creates => self::CREATE,
+      default => self::UPDATE,
+    };
+  }
+
+  /**
    * States how the operation behaves, in the context it was asked in.
    *
    * What both schema documents carry at the top, under
@@ -111,13 +152,14 @@ final class OperationDefinition {
    * @param \Drupal\data_surface\Resource\OperationContext $context
    *   The context the operation built.
    *
-   * @return array{id: string, label: string, creates: bool, readOnly: bool, destructive: bool, idempotent: bool}
+   * @return array{id: string, label: string, kind: string, creates: bool, readOnly: bool, destructive: bool, idempotent: bool}
    *   The facts.
    */
   public function facts(OperationContext $context): array {
     return [
       'id' => $this->id,
       'label' => (string) $this->label,
+      'kind' => $this->kind($context->creates),
       'creates' => $context->creates,
       'readOnly' => $this->readOnly,
       'destructive' => $this->destructive,

@@ -12,6 +12,7 @@
                     "operation": {
                         "id": "configure",
                         "label": "Configure the program",
+                        "kind": "update",
                         "creates": false,
                         "readOnly": false,
                         "destructive": false,
@@ -116,6 +117,7 @@
                     "operation": {
                         "id": "check",
                         "label": "Check a program",
+                        "kind": "read",
                         "creates": false,
                         "readOnly": true,
                         "destructive": false,

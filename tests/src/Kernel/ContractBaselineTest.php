@@ -105,7 +105,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
   /**
    * Tests a breaking change needs a version raised or an allowance.
    *
-   * Each verdict, on a real baseline: the second example's capacity bound
+   * Each verdict, on a real baseline: the first example's capacity bound
    * tightened, and the contact structure's phone removed inside the third
    * example's document, where only the contact's own version answers for
    * it.
@@ -116,19 +116,19 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     $current = $baselines->emit(self::PINNED);
 
     $tightened = $current;
-    $tightened['registration.step2']['documents'][0]['schema']['properties']['capacity']['maximum'] = 500;
+    $tightened['registration.step1']['documents'][0]['schema']['properties']['capacity']['maximum'] = 500;
     [$change] = $this->changes($baselines->compare($committed, $tightened));
     $this->assertSame('configure#/properties/capacity/maximum', $change->path);
     $this->assertSame('maximum lowered from 1000 to 500', $change->change);
     $this->assertSame(ContractChange::BREAKING, $change->status);
 
     $raised = $tightened;
-    $raised['registration.step2']['documents'][0]['schema']['x-surface']['version'] = 2;
+    $raised['registration.step1']['documents'][0]['schema']['x-surface']['version'] = 2;
     $statuses = array_map(static fn (ContractChange $change): string => $change->change . ': ' . $change->status, $this->changes($baselines->compare($committed, $raised)));
     $this->assertSame(['maximum lowered from 1000 to 500: versioned', 'version raised from 1 to 2: compatible'], $statuses);
 
     $allowing = $committed;
-    $allowing['registration.step2']['allowed'] = [
+    $allowing['registration.step1']['allowed'] = [
       ['path' => 'configure#/properties/capacity/maximum', 'reason' => 'No venue seats more than 500.'],
     ];
     [$change] = $this->changes($baselines->compare($allowing, $tightened));
@@ -144,6 +144,39 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     $contact['x-surface'] = ['version' => 2];
     [$change] = array_values(array_filter($this->changes($baselines->compare($committed, $removed)), static fn (ContractChange $change): bool => $change->owner === 'registration.contact' && $change->effect !== 'note'));
     $this->assertSame(ContractChange::VERSIONED, $change->status);
+  }
+
+  /**
+   * Tests a required key added is compatible, with a note.
+   *
+   * Nothing stored or sent before held it, so the lint passes it and says
+   * what it asks of a write; a default answers for it. An optional key
+   * made required stays breaking.
+   */
+  public function testRequiredKeyAddedOnlyNotes(): void {
+    $baselines = $this->container->get('data_surface.contract_baselines');
+    $committed = $baselines->read($baselines->directory('data_surface'));
+    $current = $baselines->emit(self::PINNED);
+
+    $added = $current;
+    $schema = &$added['registration.step2']['documents'][0]['schema'];
+    $schema['properties']['organizer'] = ['title' => 'Organizer', 'type' => 'string'];
+    $schema['required'][] = 'organizer';
+    [$change] = array_values(array_filter($baselines->compare($committed, $added), static fn (ContractChange $change): bool => str_ends_with($change->path, '/organizer')));
+    $this->assertSame('configure#/properties/organizer', $change->path);
+    $this->assertSame('required key added: a write must now supply organizer where nothing is stored', $change->change);
+    $this->assertSame(['note', ContractChange::COMPATIBLE], [$change->effect, $change->status]);
+
+    $schema['properties']['organizer']['default'] = 'The events team';
+    [$change] = array_values(array_filter($baselines->compare($committed, $added), static fn (ContractChange $change): bool => str_ends_with($change->path, '/organizer')));
+    $this->assertSame('required key added, with a default', $change->change);
+    $this->assertSame(ContractChange::COMPATIBLE, $change->status);
+    unset($schema);
+
+    $made = $current;
+    $made['registration.step2']['documents'][0]['schema']['required'][] = 'capacity';
+    [$change] = $this->changes($baselines->compare($committed, $made));
+    $this->assertSame(['capacity made required', ContractChange::BREAKING], [$change->change, $change->status]);
   }
 
   /**

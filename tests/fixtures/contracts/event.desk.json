@@ -12,6 +12,7 @@
                     "operation": {
                         "id": "configure",
                         "label": "Configure the information desk",
+                        "kind": "update",
                         "creates": false,
                         "readOnly": false,
                         "destructive": false,

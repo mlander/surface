@@ -12,6 +12,7 @@
                     "operation": {
                         "id": "configure",
                         "label": "Configure registration",
+                        "kind": "update",
                         "creates": false,
                         "readOnly": false,
                         "destructive": false,
@@ -108,7 +109,6 @@
                             "null"
                         ],
                         "minimum": 1,
-                        "maximum": 1000,
                         "default": 50,
                         "x-surface": {
                             "locked": false,

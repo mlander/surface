@@ -160,10 +160,13 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
       'the cached definition' => $manager->getDefinition(ExampleCalls::TOOL)->getInputDefinition(OperationInputs::VALUES),
       'the instance' => $manager->createInstance(ExampleCalls::TOOL)->getInputDefinition(OperationInputs::VALUES),
     ];
+    // An update: what the resource requires is said after what it
+    // depends on.
+    $required = ' Required; a value already stored stands when left out.';
     $expected = [
-      'room' => 'Depends on venue.',
+      'room' => 'Depends on venue.' . $required,
       'capacity' => 'Depends on room, ' . self::COMPLIANCE . '.licence.',
-      self::COMPLIANCE . '.stewards' => 'Depends on capacity.',
+      self::COMPLIANCE . '.stewards' => 'Depends on capacity.' . $required,
     ];
     foreach ($listings as $which => $values) {
       $this->assertInstanceOf(MapInputDefinition::class, $values);
@@ -288,16 +291,19 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
   /**
    * Tests the Tool API holds values to their shape and the pipeline to rules.
    *
-   * A value of the wrong type, or a required key left out, is refused
-   * before the tool runs, as the Tool API refuses any input. A value the
-   * listing's own list would refuse reaches the pipeline, which says what
-   * is allowed for the values sent.
+   * A value of the wrong type is refused before the tool runs, as the
+   * Tool API refuses any input; a required key left out is not, on an
+   * update, since it keeps what is stored, and the pipeline judges that.
+   * A value the listing's own list would refuse reaches the pipeline,
+   * which says what is allowed for the values sent.
    */
   public function testTheToolApiHoldsValuesToTheirShape(): void {
     $event = ['title' => 'Harbour talk', 'venue' => 'riverside', 'room' => 'riverside_east', 'pricing' => 'free'];
     [$success, $message] = $this->call(ExampleCalls::TOOL, ['capacity' => 'many'] + $event);
     $this->assertFalse($success);
     $this->assertStringStartsWith("Invalid input:\nvalues", $message);
+    $dry_run = 'Dry run of Configure registration: the values were accepted and prepared, and nothing was written.';
+    $this->assertSame([TRUE, $dry_run], $this->call(ExampleCalls::TOOL, ['capacity' => 40]), 'The required keys left out keep what is stored.');
     [$success, $message] = $this->call(ExampleCalls::TOOL, ['venue' => 'riverside_hall'] + $event);
     $this->assertFalse($success);
     $this->assertSame('The values were refused: venue: The value you selected is not a valid choice; ' . self::VENUES . '.', $message);

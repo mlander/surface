@@ -733,7 +733,7 @@ renames sit in A because they are cheapest before new code exists.
    tool bridge. One retry per dependent key is the target. Applies to
    ECA and MCP alike.
    Defaults in the listing (decided 2026-10-18, DONE 2026-10-18,
-   `docs/decisions.md#required-is-the-resources-and-a-listing-carries-no-stored-value`): a tool listing is
+   `docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door`): a tool listing is
    cached by clients and is a discovery channel, so it stops carrying
    current stored values as `default`. A create operation lists the
    declared defaults; an edit operation lists none and says in its

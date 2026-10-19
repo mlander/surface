@@ -12,6 +12,7 @@
                     "operation": {
                         "id": "configure",
                         "label": "Configure the bulletin",
+                        "kind": "update",
                         "creates": false,
                         "readOnly": false,
                         "destructive": false,

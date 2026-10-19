@@ -100,6 +100,11 @@ class OperationFactsTest extends DataSurfaceKernelTestBase {
       $this->assertSame([
         'id' => $id,
         'label' => (string) $operation->label,
+        'kind' => match (TRUE) {
+          $read_only => OperationDefinition::READ,
+          $creates => OperationDefinition::CREATE,
+          default => OperationDefinition::UPDATE,
+        },
         'creates' => $creates,
         'readOnly' => $read_only,
         'destructive' => $destructive,
@@ -203,6 +208,7 @@ class OperationFactsTest extends DataSurfaceKernelTestBase {
     $this->assertSame([
       'id' => 'configure',
       'label' => 'Configure registration',
+      'kind' => 'update',
       'creates' => FALSE,
       'readOnly' => FALSE,
       'destructive' => FALSE,

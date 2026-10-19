@@ -593,7 +593,10 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
     $values = $tool->getInputDefinition(OperationInputs::VALUES);
     $this->assertFalse($values->getPropertyDefinition('note')->isRequired(), 'Required where it applies, which a listing cannot say.');
     $this->assertFalse($values->getPropertyDefinition('signature')->isRequired(), 'Required for an insured parcel only.');
-    $this->assertTrue($values->getPropertyDefinition('weight')->isRequired());
+    // An update: the weight the resource requires is said in words, and a
+    // stored one stands when left out.
+    $this->assertFalse($values->getPropertyDefinition('weight')->isRequired());
+    $this->assertStringEndsWith('Required; a value already stored stands when left out.', (string) $values->getPropertyDefinition('weight')->getDescription());
 
     $parcel = ['service' => 'standard', 'weight' => 1, 'insured' => TRUE];
     $tool->setInputValue(OperationInputs::VALUES, $parcel);

@@ -12,6 +12,7 @@
                     "operation": {
                         "id": "configure",
                         "label": "Configure ticket sales",
+                        "kind": "update",
                         "creates": false,
                         "readOnly": false,
                         "destructive": false,

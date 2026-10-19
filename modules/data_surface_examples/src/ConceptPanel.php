@@ -323,10 +323,10 @@ final class ConceptPanel {
       $facts = $operation->facts($this->resources->operation($served->resource, $operation->id));
       $tool_id = 'data_surface:' . $resource->id . ':' . $operation->id;
       $tool = $this->toolManager->hasDefinition($tool_id) ? $this->toolManager->getDefinition($tool_id) : NULL;
-      $kind = '—';
+      $tool_kind = '—';
       $hints = '—';
       if ($tool instanceof ToolDefinition) {
-        $kind = $tool->getOperation()->value;
+        $tool_kind = $tool->getOperation()->value;
         // As the MCP bridge derives them from the kind and the flag.
         $hints = sprintf(
           'readOnlyHint %s, destructiveHint %s, idempotentHint %s',
@@ -337,11 +337,12 @@ final class ConceptPanel {
       }
       $rows[] = [
         $operation->id,
+        $facts['kind'],
         self::yesNo($facts['readOnly']),
         self::yesNo($facts['destructive']),
         self::yesNo($facts['idempotent']),
         $tool_id,
-        $kind,
+        $tool_kind,
         $hints,
         self::yesNo($this->toolManager->hasDefinition($tool_id . ':read')),
       ];
@@ -354,9 +355,10 @@ final class ConceptPanel {
       ),
       'facts' => [
         '#type' => 'table',
-        '#caption' => $this->t('How each operation behaves: what both documents state under <code>x-surface.operation</code>, the Tool API kind its tool is given, and the hints an MCP client reads from that kind. The Tool API has idempotence on the kind, not the tool, and no kind that writes is idempotent, so configuring, idempotent in both documents, reaches an MCP client as not.'),
+        '#caption' => $this->t('How each operation behaves: what both documents state under <code>x-surface.operation</code>, its kind first (a create, an update or a read, derived from whether it is read only and whether it creates), the Tool API kind its tool is given, and the hints an MCP client reads from that kind. The Tool API has idempotence on the kind, not the tool, and no kind that writes is idempotent, so configuring, idempotent in both documents, reaches an MCP client as not.'),
         '#header' => [
           $this->t('Operation'),
+          'kind',
           'readOnly',
           'destructive',
           'idempotent',

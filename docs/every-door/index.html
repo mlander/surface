@@ -333,7 +333,7 @@ final class RegistrationStep3Resource implements ResourceInterface {
     $inputs->add('venue', 'string', t('Venue'))
       ->addConstraint('LabeledChoice', ['choices' => Venues::VENUES]);
     $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
-      ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
+      ->addConstraint('Range', ['min' => 1]);
     // open, room, pricing
   }
 

@@ -319,7 +319,8 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['room'], $contract['stale']);
     // Nothing caps the capacity by a room no longer on the screen.
     $capacity = $contract['schema']['properties']['capacity'];
-    $this->assertSame(1000, $capacity['maximum']);
+    $this->assertSame(1, $capacity['minimum']);
+    $this->assertArrayNotHasKey('maximum', $capacity);
     $this->assertArrayNotHasKey('description', $capacity);
     $this->assertFalse($capacity['x-surface']['refined']);
     $this->assertSame(50, $contract['values']['capacity']);
@@ -648,7 +649,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $this->assertSame(array_map(Venues::rooms(...), array_combine(array_keys(Venues::VENUES), array_keys(Venues::VENUES))), $rooms);
 
     $capacity = $schema['properties']['capacity'];
-    $this->assertSame(1000, $capacity['maximum']);
+    $this->assertArrayNotHasKey('maximum', $capacity, 'Only a room bounds it from above.');
     $this->assertTrue($capacity['x-surface']['enumerated']);
     $capacities = [];
     foreach ($this->branches($schema, 'capacity') as [$when, $then]) {
@@ -875,7 +876,8 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     ], $rooms);
 
     $capacity = $schema['properties']['capacity'];
-    $this->assertSame([1, 1000, 50], [$capacity['minimum'], $capacity['maximum'], $capacity['default']]);
+    $this->assertSame([1, 50], [$capacity['minimum'], $capacity['default']]);
+    $this->assertArrayNotHasKey('maximum', $capacity);
     $this->assertArrayNotHasKey('description', $capacity);
     $this->assertSame(['locked' => FALSE, 'dependsOn' => ['room'], 'enumerated' => TRUE], $capacity['x-surface']);
     $seats = [];
@@ -937,7 +939,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $schema = $this->full('registration.step3')['schema'];
     $this->assertWellFormed($schema);
     $capacity = $schema['properties']['capacity'];
-    $this->assertSame(1000, $capacity['maximum']);
+    $this->assertArrayNotHasKey('maximum', $capacity);
     $this->assertArrayNotHasKey('description', $capacity);
     $this->assertSame([
       'locked' => FALSE,

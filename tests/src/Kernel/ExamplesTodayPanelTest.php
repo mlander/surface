@@ -149,10 +149,10 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
       'title' => ['title, type', 'title, type'],
       'open' => ['title, type', 'title, type, default'],
       'venue' => ['title, type', 'title, type, oneOf (3)'],
-      // The full schema: every room and a case per venue, a thousand and
-      // a case per room, both ticket variants, whatever is stored.
+      // The full schema: every room and a case per venue, a lower bound
+      // and a case per room, both ticket variants, whatever is stored.
       'room' => ['title, type', 'title, type, oneOf (6), if/then on venue (3 cases)'],
-      'capacity' => ['title, type', 'title, type, minimum, maximum, default, if/then on room (6 cases)'],
+      'capacity' => ['title, type', 'title, type, minimum, default, if/then on room (6 cases)'],
       'pricing' => ['title, type', 'title, type, oneOf (2), default'],
       'ticket' => [
         'title, $comment',

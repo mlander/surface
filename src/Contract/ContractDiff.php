@@ -22,7 +22,10 @@ namespace Drupal\data_surface\Contract;
  * - BREAKS: neither (a key removed or renamed, a type replaced, a
  *   reference to another def, a required port);
  * - NOTE: nothing a validator reads (a label, a description, a default,
- *   a marker under `x-surface`).
+ *   a marker under `x-surface`), and one thing it does: a required key
+ *   added to the inputs, which no document stored or sent before held, so
+ *   a write supplies it where nothing is stored and the pipeline refuses
+ *   one that does not by name.
  *
  * For the inputs, what a client sends, NARROWS and BREAKS are breaking;
  * for the outputs, what a client reads, WIDENS and BREAKS are. A
@@ -563,9 +566,23 @@ final class ContractDiff {
         $found[] = [$owner, $at, 'key removed', self::BREAKS, $reading];
       }
       elseif (!array_key_exists($key, $old)) {
-        $found[] = in_array($key, $required, TRUE)
-          ? [$owner, $at, 'required key added', self::NARROWS, $reading]
-          : [$owner, $at, 'optional key added', self::ADDS, $reading];
+        [$change, $effect] = match (TRUE) {
+          !in_array($key, $required, TRUE) => ['optional key added', self::ADDS],
+          $reading => ['required key added', self::NARROWS],
+          // Nothing stored or sent before held it, so no document changes
+          // meaning: a write supplies it where nothing is stored, and the
+          // pipeline refuses one that does not in the key's own words.
+          // Decision: see docs/decisions.md#a-resource-evolves-in-the-open.
+          is_array($new[$key]) && array_key_exists('default', $new[$key]) => [
+            'required key added, with a default',
+            self::NOTE,
+          ],
+          default => [
+            sprintf('required key added: a write must now supply %s where nothing is stored', $key),
+            self::NOTE,
+          ],
+        };
+        $found[] = [$owner, $at, $change, $effect, $reading];
       }
       else {
         array_push($found, ...$this->node($old[$key], $new[$key], $at, $owner, $reading));

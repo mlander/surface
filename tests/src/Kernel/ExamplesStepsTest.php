@@ -351,7 +351,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     $full = json_decode(htmlspecialchars_decode((string) $panel['full']['json']['#value']), TRUE);
     $this->assertCount(2, $contract['properties']['room']['oneOf']);
     $this->assertCount(6, $full['properties']['room']['oneOf']);
-    $this->assertSame(1000, $full['properties']['capacity']['maximum']);
+    $this->assertArrayNotHasKey('maximum', $full['properties']['capacity'], 'With no room, no upper bound.');
     $this->assertSame(['locked', 'dependsOn', 'enumerated'], array_keys($full['properties']['room']['x-surface']));
     $narrows = [];
     foreach ($full['allOf'] as $branch) {
@@ -496,7 +496,8 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     $this->assertSame('', $container['room']['#value']);
     $this->assertSame('riverside_east', $container['room'][DataSurfaceWidgetBase::STALE_KEY]);
     $this->assertSame('room', $container[DataSurfaceFormBuilderInterface::STALE_MARKER_KEY]['#value']);
-    $this->assertSame(1000, $container['capacity']['#max']);
+    $this->assertArrayNotHasKey('#max', $container['capacity'], 'With no room, no upper bound.');
+    $this->assertSame(1, $container['capacity']['#min']);
     $this->assertArrayNotHasKey('#description', $container['capacity']);
 
     $response = $this->ajaxResponse($state);
@@ -507,15 +508,14 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
       $this->wrapperSelector($container[DataSurfaceOperationForm::PANEL_KEY]),
     ], $this->ajaxSelectors($response, 'replaceWith'));
     $markup = $this->ajaxMarkup($response, $capacity);
-    $this->assertStringContainsString('max="1000"', $markup);
-    $this->assertStringNotContainsString('max="120"', $markup);
+    $this->assertStringNotContainsString('max=', $markup);
     $this->assertStringNotContainsString('Up to', $markup);
     // The panel beside it says the same thing.
     $rows = [];
     foreach ($container[DataSurfaceOperationForm::PANEL_KEY][ExamplePanels::CONTRACT]['keys']['#rows'] as $row) {
       $rows[$row['data-surface-key']] = $row['data'];
     }
-    $this->assertSame('from 1 to 1000', (string) $rows['capacity'][5]['data']['#markup']);
+    $this->assertSame('at least 1', (string) $rows['capacity'][5]['data']['#markup']);
 
     // The room stays stored: a rebuild is not a submit.
     $this->assertSame('riverside_east', $this->config('data_surface_examples.registration_step2')->get('room'));
@@ -542,7 +542,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     ], 'venue');
     $container = $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY];
     $this->assertSame('riverside_east', $container['room'][DataSurfaceWidgetBase::STALE_KEY]);
-    $this->assertSame(1000, $container['capacity']['#max']);
+    $this->assertArrayNotHasKey('#max', $container['capacity']);
     $this->assertArrayNotHasKey('#description', $container['capacity']);
     $this->assertSame('Bring a badge', $container['ticket']['note']['#value']);
     $this->assertSame('desk@example.com', $container['contact']['email']['#value']);

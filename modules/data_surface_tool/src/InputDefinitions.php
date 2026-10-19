@@ -287,17 +287,24 @@ final class InputDefinitions {
    * sent, so a refusal says what is allowed for them; the listing keeps
    * the constraints it advertises.
    *
+   * On an operation that changes what exists, the shape requires nothing
+   * either: a key left out keeps what is stored, which the pipeline
+   * judges, so the refined input, which says what the resource requires,
+   * does not refuse it first.
+   *
    * Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
    *
    * @param \Drupal\tool\TypedData\InputDefinitionInterface $input
    *   The input, as listed or refined.
+   * @param bool $requiresNothing
+   *   Whether no key is required, at any depth but a list's items.
    *
    * @return \Drupal\tool\TypedData\InputDefinitionInterface
    *   A copy of it, holding no constraint.
    */
-  public static function shapeOf(InputDefinitionInterface $input): InputDefinitionInterface {
+  public static function shapeOf(InputDefinitionInterface $input, bool $requiresNothing = FALSE): InputDefinitionInterface {
     $shape = clone $input;
-    static::withoutConstraints($shape);
+    static::withoutConstraints($shape, $requiresNothing);
     return $shape;
   }
 
@@ -306,17 +313,24 @@ final class InputDefinitions {
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $input
    *   The copy; changed in place.
+   * @param bool $requiresNothing
+   *   Whether to make it optional too, and every property below it but a
+   *   list's items.
    */
-  protected static function withoutConstraints(DataDefinitionInterface $input): void {
+  protected static function withoutConstraints(DataDefinitionInterface $input, bool $requiresNothing = FALSE): void {
     if ($input instanceof DataDefinition) {
       $input->setConstraints([]);
+      if ($requiresNothing) {
+        $input->setRequired(FALSE);
+      }
     }
     if ($input instanceof MapInputDefinition) {
       foreach ($input->getPropertyDefinitions() as $property) {
-        static::withoutConstraints($property);
+        static::withoutConstraints($property, $requiresNothing);
       }
     }
     if ($input instanceof ListInputDefinition) {
+      // An item is sent whole, so it keeps the keys it requires.
       static::withoutConstraints($input->getItemDefinition());
     }
   }
@@ -747,6 +761,46 @@ final class InputDefinitions {
         $this->withoutDefaults($property);
       }
     }
+    return $map;
+  }
+
+  /**
+   * Requires no property of a map, at any depth, saying it in words.
+   *
+   * For the static listing of an operation that changes a thing that
+   * exists: a key left out keeps what is stored, and the Tool API refuses
+   * a required property a payload leaves out before the tool runs, so a
+   * required one there would refuse a call the pipeline accepts. Each key
+   * the resource requires says so in its description instead, and the
+   * pipeline still refuses the merged document when nothing is stored for
+   * it, in the key's own words. A list's items keep theirs, since an item
+   * is sent whole, with nothing stored under it to stand.
+   *
+   * Decision: see
+   * docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door.
+   *
+   * @param \Drupal\tool\TypedData\MapInputDefinition $map
+   *   The map, changed in place.
+   *
+   * @return \Drupal\tool\TypedData\MapInputDefinition
+   *   The same map.
+   */
+  public function withoutRequired(MapInputDefinition $map): MapInputDefinition {
+    foreach ($map->getPropertyDefinitions() as $property) {
+      if (!$property instanceof InputDefinitionInterface) {
+        continue;
+      }
+      if ($property->isRequired()) {
+        $property->setRequired(FALSE);
+        if ($property instanceof DataDefinition) {
+          $property->setDescription($this->appended((string) $this->description($property), $this->t('Required; a value already stored stands when left out.')));
+        }
+      }
+      if ($property instanceof MapInputDefinition) {
+        $this->withoutRequired($property);
+      }
+    }
+    $map->setRequired(FALSE);
     return $map;
   }
 

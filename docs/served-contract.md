@@ -72,7 +72,7 @@ The emitter writes two documents from one data surface, by one code path.
   it.
 - **The full schema**, `emitFull()`, reads no value, so it is the same
   whatever is stored or typed. Every key is the one declared
-  (every room; a capacity from 1 to 1000), every dependency that can be
+  (every room; a capacity of at least 1, with no upper bound but a room's), every dependency that can be
   listed is written as conditionals on the parent, always, under
   [the same rules and cap](#exact-where-it-can-be), and a key whose
   dependency cannot be listed keeps its declared schema with
@@ -173,7 +173,7 @@ Example 2's full schema, abbreviated:
 ```json
 "room": {"title": "Room", "type": "string", "oneOf": [...all six rooms...],
          "x-surface": {"locked": false, "dependsOn": ["venue"], "enumerated": true}},
-"capacity": {"title": "Capacity", "type": ["integer", "null"], "minimum": 1, "maximum": 1000, "default": 50,
+"capacity": {"title": "Capacity", "type": ["integer", "null"], "minimum": 1, "default": 50,
              "x-surface": {"locked": false, "dependsOn": ["room"], "enumerated": true}},
 ...
 "allOf": [
@@ -218,6 +218,7 @@ documents alike:
   "operation": {
     "id": "configure",
     "label": "Configure registration",
+    "kind": "update",
     "creates": false,
     "readOnly": false,
     "destructive": false,
@@ -227,6 +228,12 @@ documents alike:
 }
 ```
 
+`kind` names the call, derived and never declared: `read` for a read
+only operation, `create` for one whose context creates, and `update` for
+every other, which changes what exists. A generated tool asks for what
+its kind says at its door: a create requires the keys the resource
+requires, and an update requires none, since a key left out keeps what
+is stored ([decision](decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
 `creates` is the context's answer; `idempotent` is the operation's own,
 derived from `creates` unless declared, which a tool listing cannot
 always say (the Tool API reads idempotence off the operation kind, and
@@ -294,7 +301,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | `ports` | On an object, a def's or the top's, when the structure reads ports: each port's typed data `type`, whether it is `required`, and the `shape` it reads, when it reads one. A port is no property: its value is a key of the container, which the site names ([below](#a-port-is-stated-at-its-site)). |
 | `reads` | On a site, the property where a child that reads ports is used: each port, mapped to the key of the parent's frame it reads. |
 | `runtime` | Only when `true`: a runtime refiner narrows the key too, by a rule no schema can state ([three markers](#three-markers)). Never in a conditional and never in the full schema; the schema for these answers is refined by it for its values. Written beside `enumerated` or `dynamic` when the key has static refiners as well. |
-| `operation` | At the top only, first: how the operation behaves, `{id, label, creates, readOnly, destructive, idempotent}` ([above](#the-schema)). |
+| `operation` | At the top only, first: how the operation behaves, `{id, label, kind, creates, readOnly, destructive, idempotent}` ([above](#the-schema)). |
 | `version` | At the top always, after `operation`; on a def only above 1, absent reading as 1: which version of its stored values the resource or structure describes, counting the breaking changes made to them. A compatible change never moves it; a client compares it before trusting a cached document ([Evolving a resource](evolution.md#the-version)). |
 | `doesNotApply` | On an object, the top or a child's frame, never on a property: the keys of it a refiner answered [do not apply](refinement.md#when-a-key-does-not-apply) to these values, each with the keys it depends on, `{"send_day": ["frequency"]}`. They are no properties of it; a client refines when one of those changes. |
 
@@ -775,7 +782,7 @@ Example 2, nothing chosen, abbreviated:
 ```json
 "room": {"title": "Room", "type": "string", "oneOf": [...every room...],
          "x-surface": {"dependsOn": ["venue"], "refined": false, "enumerated": true, ...}},
-"capacity": {"title": "Capacity", "type": ["integer", "null"], "minimum": 1, "maximum": 1000,
+"capacity": {"title": "Capacity", "type": ["integer", "null"], "minimum": 1,
              "x-surface": {"dependsOn": ["room"], "refined": false, "enumerated": true, ...}},
 ...
 "allOf": [
@@ -911,8 +918,8 @@ stands for, and it is listed in `stale` with `x-surface.stale: true` and
 a `null` value, whatever its widget. `discarded` names the inputs
 dropped on the way there; `stale` names what is shown standing for a
 stored value, orphans and keys the site narrowed away alike. So moving
-the venue off the library leaves the capacity at its declared
-`maximum: 1000`, with no room's description under it, rather than
+the venue off the library leaves the capacity as declared, `minimum:
+1` and no `maximum`, with no room's description under it, rather than
 capped by a reading room no longer on the screen. A client sends the
 `stale` paths back with the next refine, validate or submit; empty there
 stands for the stored value again, so a refine answers the same orphan,

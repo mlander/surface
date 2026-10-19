@@ -12,6 +12,7 @@
                     "operation": {
                         "id": "configure",
                         "label": "Configure the store location",
+                        "kind": "update",
                         "creates": false,
                         "readOnly": false,
                         "destructive": false,

@@ -264,8 +264,10 @@ drush tool:run data_surface:first.newsletter:configure --uid=1 --input='{"values
 drush tool:run data_surface:first.newsletter:configure:read --uid=1
 ```
 
-`tool:info` lists the same four keys, required and bounded as the class
-says. The write answers:
+`tool:info` lists the same four keys, bounded as the class says. The
+operation changes settings that exist, so the tool requires none of
+them: the three the class requires say "Required; a value already
+stored stands when left out." in their descriptions. The write answers:
 
 ```
 Success: Configure the newsletter: the values were accepted and written.
@@ -275,13 +277,13 @@ Outputs:
   committed: true
 ```
 
-The key left out, `max_recipients`, kept what was stored. Only an
-optional key may be left out, and `max_recipients` is the one optional
-key here. A key the resource requires is sent on every call, an edit
-too: leave out `sender_name` and the Tool API refuses the call before
-anything of the resource runs, with "values.sender_name: This property
-is required.", and nothing is written. The read tool beside the write
-tool answers with what is stored now:
+The key left out, `max_recipients`, kept what was stored. A key the
+class requires may be left out too once a value for it is stored, and
+the stored value stands. Where nothing is stored for it, on an
+operation that creates or for a thing that has no value yet, it cannot
+be left out: the resource refuses the call in the key's own words,
+"Sender name is required.", and nothing is written. The read tool
+beside the write tool answers with what is stored now:
 
 ```
 Success: Configure the newsletter: the stored values were read, and nothing was written.
