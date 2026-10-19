@@ -50,6 +50,8 @@ final class DemoBlockStructure implements StructureInterface {
 }
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 That is `DemoBlockStructure` in `data_surface_demo`, shortened: a
 structure, since the block that names it holds it and stores it. Each
 part of a resource or structure has one home:
@@ -126,6 +128,8 @@ final class Licence implements ShapeInterface {
 
 }
 ```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 A key uses it in the type position of `add()`, with a label of its own:
 
@@ -205,6 +209,8 @@ final class DataSurfaceDemoBlock extends DataSurfaceBlockBase {
 
 }
 ```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 Nothing else is needed. The block has no `defaultConfiguration()`, no
 `blockForm()`, no `blockValidate()` and no `blockSubmit()`:
@@ -475,6 +481,8 @@ $token = $inputs->add('token', 'string', t('API key'), default: '')
   ->setDescription(t('The key this field authenticates with.'));
 DefinitionMetadata::setSecret($token);
 ```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 That is the test module's `SecretFieldSettingsStructure`, a structure
 the secret field type names.

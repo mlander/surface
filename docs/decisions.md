@@ -760,6 +760,8 @@ $inputs->narrow('capacity')
   ->describe($this->t('Up to 100 without an event licence.'));
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 The guidance: declare the rule when its condition and effect fit the
 vocabulary; write a refiner when the effect must be computed (the
 stewards for a capacity, `ceil($capacity / 50)`, stays coded) or the
@@ -1622,6 +1624,27 @@ submit written back unchanged would report a write that did nothing.
 `DataSurfacePipeline::submit()`, `ContractEmitter::lockedWhole()`,
 `LockedAccessTest`, `LockedAccessFormTest`)
 
+**A locked key inside an open write is said, not refused** (decided
+2026-10-19, from the third fresh-eyes log, entry 22). A key locked one
+at a time (an identity key the operation knows, an entry of keys from
+the site its provider locks, a key a locked variant or a locked child
+holds) keeps what it holds whatever is sent for it, as the never
+stricter audit settled: a posted value is a notation of the document,
+not a refusal. A caller whose value did not land learned nothing, so
+the run notes it: one note per key whose value sent is not what it
+keeps, read as though the key were open (a form's `"0"` for a stored
+`FALSE`, or a map sent with fewer keys, each as held, is what it keeps
+and says nothing), "<Label> is locked and kept as stored; the value
+sent was not taken." The notes block nothing and are no violation
+(`DataSurfaceResult::$notes`): the write tool puts each after its
+message by its full path and lists them under `notes` beside `stale`;
+the React `/validate` and `/submit` answer `notes`, `{path, message}`,
+beside `stale`. The form needs none: it draws the key disabled, and
+posts what it holds. A resource locked whole is refused above, not
+noted. (`DataSurfacePipeline::acceptKey()`, `DataSurfacePipeline::takes()`,
+`ResultReportingTrait::notesSaid()`, `LockedAccessTest`,
+`KeysFromSiteTest`, `ServedSubmitEndpointTest`)
+
 ### A variant is open, locked or not offered
 
 A slot's variant invoked through an operation whose access omits it is
@@ -1775,6 +1798,17 @@ value not on its list unexplained.
   property its refusal is about. The contracts are unchanged: this is
   the message, not the schema. The form says the same sentence: a
   select offers only what is allowed, so a person rarely reads it.
+- **A presence condition says set.** A key a declared rule reads only
+  by whether it holds a value, `present()` or `absent()`, with nothing
+  else watching it, is said as set or empty and never by what it holds:
+  "Name is required when Email is set.", "Signature does not apply when
+  Email is empty." A key an `equals()`, an `in()` or a bound compares
+  keeps its value, an option by its label ("when Service is Express"),
+  since the value is what the rule asked about; so does a key a coded
+  refiner also watches, since what the code read cannot be told. Decided
+  2026-10-19, from the third fresh-eyes log (entry 22): "Name is
+  required when Email is digest@example.com" read as though only that
+  address made the name required.
 - **The tool judges by the pipeline.** A derived tool's `values` is held
   by the Tool API to its shape alone before the tool runs, its types,
   the keys it requires and its nesting
@@ -1804,7 +1838,8 @@ value not on its list unexplained.
   nothing says nothing more.
 
 (`DataSurfacePipeline::sayingWhatIsAllowed()`,
-`DataSurfacePipeline::conditions()`, `DataSurfacePipeline::choices()`,
+`DataSurfacePipeline::conditions()`, `Entry::presenceDependencies()`,
+`DataSurfacePipeline::choices()`,
 `DataSurfacePipeline::isRequired()`,
 `InputDefinitions::withDependencies()`, `ToolFeedbackTest`)
 
@@ -2048,6 +2083,28 @@ element type's own default with it (128 for a text field, 254 for an
 email), so the form enforces no limit the definition does not declare.
 (`StringWidget::lengthHint()`, `RefusalMessagesTest`)
 
+And for `#required` (decided 2026-10-19, from the third fresh-eyes log,
+entry 21): core checks it before any form level handler, and its
+"Name field is required." replaced the rule's own "Name is required
+when Email is set.", so the form said one thing and the tool another.
+The element keeps `required` as a hint: the form builder, processing
+the container before any element in it is checked, clears `#required`
+on every element that holds a value (any widget's, a module's own
+included), marks it (`DataSurfaceFormBuilderInterface::REQUIRED_KEY`),
+and puts it back when the element is drawn, first in its `#pre_render`
+list, so the browser's `required` attribute, the label's marker and the
+radios' legend are drawn as core draws them, on the page and in an AJAX
+response alike. The pipeline's violation is the one message: "Name is
+required." for a key required by its declaration, "... is required
+when ..." for one a rule made required. A details or a fieldset holds
+no value, so its `#required` is the marker alone and stays. A list is
+never drawn required, a multiple select now as the checkboxes already
+were: the empty list satisfies a required list, and a `required`
+attribute would ask for one item more than the rule does. The widgets'
+`#required_error` went with this. (`DataSurfaceFormBuilder::requiredHints()`,
+`DataSurfaceFormBuilder::preRenderRequired()`, `RefusalMessagesTest`,
+`FirstResourceTest`)
+
 ### A Regex is explained by its message
 
 A pattern is for machines, and is carried only where both engines read
@@ -2090,10 +2147,11 @@ cleared:
    shown: the key's author chose the default.
 3. On first entry a required select comes up on the empty option, and
    a save leaving it there is refused with the key's own required
-   message ("@label is required."), set as the element's
-   `#required_error` so core's check, which answers first, says it in
-   the pipeline's words. A required select standing for a stale value is
-   not `#required` to core, since empty there means keep; its label
+   message ("@label is required."), the pipeline's: core's check is off
+   on every element the form builder draws
+   ([An element hints and the rule speaks](#an-element-hints-and-the-rule-speaks)).
+   A required select standing for a stale value is not required at all,
+   since empty there means keep: no `required` attribute, and its label
    keeps the marker.
 4. A select that may be cleared (an optional key its storage does not
    always hold) keeps its empty option, `- None -`, always. Choosing it
@@ -2420,7 +2478,8 @@ why:
 - **Per entry state.** An entry the provider locks is held to what is
   stored (for `attachEach()`, a locked child): drawn fixed on the form,
   `readOnly` in both documents, locked in the tool listing, and a value
-  posted for it not taken. That is per-option state for a map of things,
+  posted for it not taken, and said so in a note
+  ([Locked at the top](#locked-at-the-top)). That is per-option state for a map of things,
   a key per option. A plain list of choices, a `list` of `string` with a
   Choice, still has none: an option there is a value, not a key, and a
   lock is per key. An entry may say what it starts from, over the

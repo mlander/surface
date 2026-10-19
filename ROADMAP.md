@@ -876,8 +876,10 @@ renames sit in A because they are cheapest before new code exists.
       Agent half RUN 2026-10-18 and 2026-10-19
       (`docs/fresh-eyes-2026-10-19.md`); verdict: yes for the contract
       half today, every door agreeing on every rule, and yes for an admin
-      settings page, correct before it is pleasant. The person half is
-      still to run.
+      settings page, correct before it is pleasant. Third run 2026-10-19
+      (`docs/fresh-eyes-2026-10-19b.md`): yes for the contract half and
+      mostly yes for the form half, its gaps folded in. The person half
+      is still to run.
     - **Two real adopters.** Port two existing contrib settings forms
       that we did not write (candidates: pathauto's settings, metatag's
       defaults, or another module's `ConfigFormBase` with options and a

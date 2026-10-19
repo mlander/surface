@@ -180,6 +180,8 @@ final class FieldInstanceResource implements ResourceInterface {
 }
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 (The real class adds descriptions, a `PluginExists` on the entity type
 and the machine name's own `Regex` and `Length`, and three operations,
 below.)
@@ -258,6 +260,8 @@ and the field resource never changes:
 #[Variant(of: FieldInstanceResource::class, key: 'settings', value: 'address')]
 final class AddressFieldSettingsResource implements ResourceInterface {
 ```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 The deciding key's allowed values become exactly the values the
 variants fill. A slot's values may also come from a description that
@@ -388,6 +392,8 @@ final class DemoBlockAlter implements AltersInputsInterface {
 }
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 - What an alter adds is mounted under its module,
   `third_party_settings.<module>.<key>`, so the owner's storage and
   schema never have to know it. Its `#[RefinesInput]` methods may
@@ -478,6 +484,8 @@ final class DataSurfaceDemoBlock extends DataSurfaceBlockBase {
 
 }
 ```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 **The plugin is its own structure.** `#[UsesStructure]` with no
 argument, and the plugin implements `StructureInterface`: its static

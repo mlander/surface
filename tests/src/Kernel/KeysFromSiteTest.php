@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
+use Drupal\Component\Render\PlainTextOutput;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
@@ -186,6 +187,39 @@ class KeysFromSiteTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['enabled' => TRUE, 'hours' => 2], $accepted['benches']['press']);
     $this->assertFalse($accepted['lights']['press']);
     $this->assertTrue($this->pipeline()->validate($workshop, $accepted, $stored)->isEmpty());
+
+    // Not refused, and the caller is told, once per key: the result's
+    // notes, and the tool's message after its own.
+    $resources = $this->container->get('data_surface.resources');
+    $storage = $resources->storage(WorkshopResource::class, $resources->operation(WorkshopResource::class, 'configure'), $workshop);
+    $notes = static fn ($result): array => array_combine(
+      array_map(static fn ($note): string => $note->fullPath(), $result->notes),
+      array_map(static fn ($note): string => (string) $note->message, $result->notes),
+    );
+    $result = $this->pipeline()->submit($workshop, [
+      'benches' => ['press' => ['enabled' => FALSE, 'hours' => 9]],
+      'lights' => ['press' => TRUE, 'lathe' => FALSE],
+    ], $storage, dry_run: TRUE);
+    $this->assertTrue($result->isValid());
+    $this->assertSame([
+      'benches.press' => 'Drill press is locked and kept as stored; the value sent was not taken.',
+      'lights.press' => 'Drill press is locked and kept as stored; the value sent was not taken.',
+    ], $notes($result));
+    // What it holds, sent back, a map with fewer keys or a form's "0"
+    // among them, was taken: nothing to say.
+    $result = $this->pipeline()->submit($workshop, [
+      'benches' => ['press' => ['hours' => 2]],
+      'lights' => ['press' => '0'],
+    ], $storage, dry_run: TRUE);
+    $this->assertSame([], $result->notes);
+
+    $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:resource_test.workshop:configure');
+    $tool->setInputValue(OperationInputs::VALUES, ['lights' => ['press' => TRUE]]);
+    $tool->execute();
+    $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResult()->getMessage());
+    $this->assertSame('Configure the workshop: the values were accepted and written. lights.press: Drill press is locked and kept as stored; the value sent was not taken.', PlainTextOutput::renderFromHtml((string) $tool->getResult()->getMessage()));
+    $this->assertSame(['lights.press' => 'Drill press is locked and kept as stored; the value sent was not taken.'], $tool->getResult()->getContextValues()['notes'] ?? NULL);
+    $this->assertFalse($this->config('data_surface_resource_test.workshop')->get('lights.press'));
   }
 
   /**

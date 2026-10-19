@@ -11,6 +11,7 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\data_surface\DataSurface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMap;
+use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Form\DataSurfaceOperationForm;
 use Drupal\data_surface\Pipeline\ViolationSummary;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -193,6 +194,79 @@ class RefusalMessagesTest extends DataSurfaceKernelTestBase {
     $errors = array_map(static fn ($error): string => strip_tags((string) $error), $form_state->getErrors());
     $this->assertSame(['surface][sender_name' => 'This value is too long. It should have 64 characters or less.'], $errors);
     $this->assertSame('The newsletter', $this->config('data_surface_first.newsletter')->get('sender_name'), 'Nothing was written.');
+  }
+
+  /**
+   * Tests a required field says the resource's words, not core's.
+   *
+   * The third fresh-eyes run (entry 21): core checks #required before any
+   * form level handler and keeps its own "Name field is required." The
+   * element is still drawn required, the browser's `required` attribute
+   * and the label's marker, and the pipeline's violation is the message.
+   */
+  public function testTheRulesMessageReachesRequiredField(): void {
+    $this->onRoute('data_surface_first.newsletter');
+    $form = $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class);
+    $element = $form[DataSurfaceOperationForm::SURFACE_KEY]['sender_name'];
+    $this->assertFalse($element['#required'], 'Core does not check it beside the rule.');
+    $this->assertTrue($element[DataSurfaceFormBuilderInterface::REQUIRED_KEY]);
+    $html = (string) $this->container->get('renderer')->renderInIsolation($element);
+    $this->assertMatchesRegularExpression('/<input[^>]*name="surface\[sender_name\]"[^>]*required="required"/', $html, 'The browser is still told, as a hint.');
+    $this->assertStringContainsString('form-required', $html, 'The label keeps its marker.');
+
+    $form_state = new FormState();
+    $form_state->setValues([
+      DataSurfaceOperationForm::SURFACE_KEY => [
+        'sender_name' => '',
+        'sender_email' => 'newsletter@example.com',
+        'frequency' => 'weekly',
+        'max_recipients' => '500',
+      ],
+    ]);
+    $this->container->get('form_builder')->submitForm(DataSurfaceOperationForm::class, $form_state);
+    $errors = array_map(static fn ($error): string => strip_tags((string) $error), $form_state->getErrors());
+    $this->assertSame(['surface][sender_name' => 'Sender name is required.'], $errors);
+    $this->assertSame('The newsletter', $this->config('data_surface_first.newsletter')->get('sender_name'), 'Nothing was written.');
+  }
+
+  /**
+   * Tests a key a rule made required says the rule's condition on the form.
+   *
+   * The parcel stores an insured parcel, so its form draws the signature
+   * required; left empty, the refusal is the pipeline's, naming what the
+   * rule read, as the tool's is.
+   */
+  public function testRuleMadeRequiredSaysItsConditionOnTheForm(): void {
+    $this->container->get('module_installer')->install(['data_surface_resource_test']);
+    $this->config('data_surface_resource_test.parcel')->set('insured', TRUE)->set('signature', 'Ann')->save();
+    $this->onRoute('data_surface_resource_test.parcel');
+    $form = $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class);
+    $this->assertTrue($form[DataSurfaceOperationForm::SURFACE_KEY]['signature'][DataSurfaceFormBuilderInterface::REQUIRED_KEY]);
+
+    $form_state = new FormState();
+    $form_state->setValues([
+      DataSurfaceOperationForm::SURFACE_KEY => ['signature' => ''] + $this->config('data_surface_resource_test.parcel')->getRawData(),
+    ]);
+    $this->container->get('form_builder')->submitForm(DataSurfaceOperationForm::class, $form_state);
+    $errors = array_map(static fn ($error): string => strip_tags((string) $error), $form_state->getErrors());
+    $this->assertSame(['surface][signature' => 'Signed for by is required when Insured is on and Declared value is 100.'], $errors);
+    $this->assertSame('Ann', $this->config('data_surface_resource_test.parcel')->get('signature'), 'Nothing was written.');
+  }
+
+  /**
+   * Makes a route the request being handled, as a page request would.
+   *
+   * @param string $route_name
+   *   The route.
+   */
+  protected function onRoute(string $route_name): void {
+    $route = $this->container->get('router.route_provider')->getRouteByName($route_name);
+    $stack = $this->container->get('request_stack');
+    $request = Request::create($route->getPath());
+    $request->setSession($stack->getSession());
+    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, $route_name);
+    $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
+    $stack->push($request);
   }
 
 }

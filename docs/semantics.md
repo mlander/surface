@@ -489,7 +489,13 @@ to exactly one value. That value is **whatever storage already holds**,
 and the declared default only for a key storage has never held. Input
 for a locked key is ignored: it is not an error, just not a way to move
 the value. This is why editing an entity whose id is locked no longer
-resets it to the default.
+resets it to the default. A value sent for it that is not what it holds
+is said, though, once per key and blocking nothing: the run's notes
+(`DataSurfaceResult::$notes`), which the tool puts after its message
+and the React `/validate` and `/submit` answer as `notes`, say "Machine
+name is locked and kept as stored; the value sent was not taken." The
+form says nothing, since it draws the key disabled
+([decision](decisions.md#locked-at-the-top)).
 
 ### Locked and omitted children
 

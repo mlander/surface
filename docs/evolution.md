@@ -90,6 +90,8 @@ the full schema again when the version it holds is not the one served.
 #[Resource('example.newsletter', storage: NewsletterStorage::class, version: 2)]
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 It counts the breaking changes made to the values stored for it, so a
 compatible change never moves it, and it is 1 until the first breaking
 change after values were first stored. Three readers use it:
@@ -140,6 +142,8 @@ final class NewsletterResource implements ResourceInterface, StoredValueMigratio
 
 }
 ```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 What the runner will do:
 

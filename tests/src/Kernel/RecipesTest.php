@@ -89,8 +89,10 @@ class RecipesTest extends DataSurfaceKernelTestBase {
     $this->assertSame('fieldset', $form['keywords']['#type'], 'A list of free strings is rows to add and remove.');
     $this->assertSame('Add another', (string) $form['keywords']['add']['#value']);
 
+    $this->assertArrayNotHasKey('#type', $form['late_days'], 'No element while after-hours access is off.');
     $open = $this->formBuilder()->buildSurfaceForm($hours, ['after_hours' => TRUE] + $hours->getDefaultValues(), new FormState());
     $this->assertTrue($open['door_code']['#required']);
+    $this->assertSame('checkboxes', $open['late_days']['#type']);
 
     $full = $this->container->get('data_surface.contract_emitter')->emitFull($hours, 'resource_test.opening_hours', widgets: TRUE)->document['schema'];
     $this->assertSame('^([01]\d|2[0-3]):[0-5]\d$', $full['properties']['opens']['pattern']);
@@ -99,6 +101,7 @@ class RecipesTest extends DataSurfaceKernelTestBase {
     $this->assertSame('time', $full['properties']['opens']['x-surface']['widget']);
     $this->assertSame('checkboxes', $full['properties']['days']['x-surface']['widget']);
     $this->assertSame('list', $full['properties']['keywords']['x-surface']['widget']);
+    $this->assertSame(1, $full['properties']['late_days']['minItems'], 'At least one day, stated wherever the key applies.');
   }
 
   /**
@@ -112,9 +115,60 @@ class RecipesTest extends DataSurfaceKernelTestBase {
     $days = $this->refusals(['days' => ['mon', 'xyz']]);
     $this->assertSame(['days.1' => 'The value you selected is not a valid choice.'], $days);
     $this->assertSame(['door_code' => 'Door code does not apply when After-hours access is off.'], $this->refusals(['door_code' => '7310']));
-    $this->assertSame(['door_code' => 'Door code is required.'], $this->refusals(['after_hours' => TRUE]), 'Required where it applies, by its own declaration.');
-    $this->assertSame([], $this->refusals(['after_hours' => TRUE, 'door_code' => '7310']));
+    $this->assertSame([
+      'door_code' => 'Door code is required.',
+      'late_days' => 'Choose at least one day for after-hours access.',
+    ], $this->refusals(['after_hours' => TRUE]), 'Required where it applies, by its own declaration; a list by its Count.');
+    $this->assertSame([], $this->refusals(['after_hours' => TRUE, 'door_code' => '7310', 'late_days' => ['sat']]));
+    $empty = $this->refusals([
+      'after_hours' => TRUE,
+      'door_code' => '7310',
+      'late_days' => [],
+    ]);
+    $this->assertSame(['late_days' => 'Choose at least one day for after-hours access.'], $empty, 'The empty list is configured, so required alone would take it.');
+    $this->assertSame(['late_days' => 'After-hours days does not apply when After-hours access is off.'], $this->refusals(['late_days' => ['sat']]));
     $this->assertSame([], $this->refusals(['keywords' => ['maps', 'archives']]));
+  }
+
+  /**
+   * Tests the opening hours' schema asks what docs/storage.md says it does.
+   *
+   * Fully validatable: every key stored unless it says requiredKey:
+   * false, and null only where it says nullable: true.
+   */
+  public function testTheSchemaIsFullyValidatable(): void {
+    $typed = $this->container->get('config.typed');
+    $name = 'data_surface_resource_test.opening_hours';
+    // The language code its translatable notes ask for, which the
+    // storage writes beside the values.
+    $stored = ['langcode' => 'en'] + $this->config($name)->getRawData();
+    $violations = static function (array $data) use ($typed, $name): array {
+      $messages = [];
+      foreach ($typed->createFromNameAndData($name, $data)->validate() as $violation) {
+        $messages[$violation->getPropertyPath()] = strip_tags((string) $violation->getMessage());
+      }
+      return $messages;
+    };
+    $this->assertSame([], $violations($stored), 'The installed object holds every key.');
+    $this->assertSame([], $violations(['door_code' => NULL, 'notes' => NULL] + $stored), 'A nullable key may hold nothing.');
+    $this->assertArrayHasKey('opens', $violations(['opens' => NULL] + $stored), 'Any other may not.');
+    $left_out = $stored;
+    unset($left_out['holidays']);
+    $this->assertSame(["'holidays' is a required key."], array_values($violations($left_out)), 'Every key is stored.');
+  }
+
+  /**
+   * Tests a key left out keeps what is stored, so required asks no resend.
+   *
+   * On an edit, a required key is refused only when it is sent empty or
+   * nothing is stored for it.
+   */
+  public function testKeyLeftOutKeepsWhatIsStored(): void {
+    $this->config('data_surface_resource_test.opening_hours')->set('door_code', '7310')->set('late_days', ['sat'])->save();
+    $this->assertSame([], $this->refusals(['after_hours' => TRUE]), 'Both left out: what is stored stands.');
+    $refused = ['door_code' => 'Door code is required.'];
+    $this->assertSame($refused, $this->refusals(['after_hours' => TRUE, 'door_code' => '']), 'Sent empty, it is refused.');
+    $this->assertSame($refused, $this->refusals(['after_hours' => TRUE, 'door_code' => NULL]));
   }
 
 }

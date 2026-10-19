@@ -1,7 +1,9 @@
 analyse
+cget
 ciphertext
 ciphertexts
 containerless
+cset
 ddev
 deriver
 derivers
@@ -33,6 +35,7 @@ subschema
 subschemas
 superfences
 toolkits
+undercount
 unfiled
 ungated
 unstored

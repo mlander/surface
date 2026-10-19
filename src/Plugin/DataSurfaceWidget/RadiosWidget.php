@@ -89,11 +89,6 @@ final class RadiosWidget extends ChoiceWidgetBase {
       // Empty is "keep" here, not a refusal.
       $element['#required'] = FALSE;
     }
-    elseif ($definition->isRequired()) {
-      $element['#required_error'] = $this->t('@label is required.', [
-        '@label' => $definition->getLabel() ?? '',
-      ]);
-    }
     if ($set !== NULL) {
       $element = static::describedOptions($element, $set);
     }

@@ -144,7 +144,7 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
       'stale' => [],
       'fingerprint' => $loaded['fingerprint'],
     ]));
-    $this->assertSame(['committed', 'valid', 'violations', 'stale', 'outputs', 'contract', 'created'], array_keys($answer));
+    $this->assertSame(['committed', 'valid', 'violations', 'stale', 'notes', 'outputs', 'contract', 'created'], array_keys($answer));
     $this->assertTrue($answer['committed']);
     $this->assertTrue($answer['valid']);
     $this->assertSame([], $answer['violations']);
@@ -271,6 +271,19 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
     $this->assertTrue($edited['committed']);
     $this->assertNull($edited['created']);
     $this->assertSame('Recipes', $edited['contract']['values']['name']);
+    $this->assertSame([], $edited['notes'], 'The locked machine name, sent as it is held, was taken.');
+
+    // Another machine name sent for it is kept as stored, not refused,
+    // and the answer says so.
+    $renamed = $this->json($this->post('surface-api/node.type/edit/submit', [
+      'values' => ['type' => 'recipes'] + $edited['contract']['values'],
+      'parameters' => ['type' => 'recipe'],
+    ]));
+    $this->assertTrue($renamed['committed'], (string) json_encode($renamed['violations']));
+    $this->assertSame([
+      ['path' => 'type', 'message' => 'Machine name is locked and kept as stored; the value sent was not taken.'],
+    ], $renamed['notes']);
+    $this->assertSame('recipe', $renamed['contract']['values']['type']);
 
     $type->delete();
     $this->assertNull(NodeType::load('recipe'));

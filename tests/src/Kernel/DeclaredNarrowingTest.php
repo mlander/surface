@@ -13,6 +13,7 @@ use Drupal\data_surface\Refinement\DoesNotApply;
 use Drupal\data_surface\Refinement\Rule;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface_resource_test\Resource\Parcel\ParcelResource;
+use Drupal\data_surface_resource_test\Structure\Sender\SenderIdentityStructure;
 use Drupal\data_surface_resource_test\Structure\Broken\MistypedConditionStructure;
 use Drupal\data_surface_resource_test\Structure\Broken\RequiresRuledOutStructure;
 use Drupal\data_surface_resource_test\Structure\Broken\UnconditionalRuleStructure;
@@ -319,6 +320,49 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
     ], $refusals(['note' => 'Ring twice'] + $freight), 'An alter\'s rule on its mounted key, the same.');
     $this->assertArrayHasKey('tracking', $refusals(['reference' => 'R1', 'service' => 'express', 'tracking' => 'nope']));
     $this->assertSame([], $refusals(['reference' => 'R1', 'service' => 'express', 'tracking' => 'AB123456']));
+  }
+
+  /**
+   * Tests a key a rule reads for presence alone is said as set, not held.
+   *
+   * The present() and absent() conditions ask whether a key holds a value,
+   * so the refusal says "when Reference is set"; equals, in and the bounds
+   * keep the value they compared.
+   */
+  public function testPresenceConditionIsSaidAsSet(): void {
+    $parcel = $this->parcel();
+    $stored = $this->config('data_surface_resource_test.parcel')->getRawData();
+    $refusals = function (array $values) use ($parcel, $stored): array {
+      $messages = [];
+      $accepted = $this->pipeline()->accept($parcel, $values, $stored);
+      foreach ($this->pipeline()->validate($parcel, $accepted, $stored) as $violation) {
+        $messages[$violation->fullPath()] = strip_tags((string) $violation->message);
+      }
+      return $messages;
+    };
+    $this->assertSame([
+      'declared_value' => 'This value should be between 0 and 500 when Weight in kilograms is 1 and Reference is set and Insured is off and Customs code is empty.',
+    ], $refusals(['declared_value' => 501, 'reference' => 'R1']));
+    $this->assertSame([
+      'declared_value' => 'This value should be between 1 and 100000 when Weight in kilograms is 2 and Reference is set and Insured is off and Customs code is set.',
+    ], $refusals(['weight' => 2, 'declared_value' => 0, 'reference' => 'R1'] + self::customs('C1')), 'A key an alter mounted, the same.');
+    $this->assertSame([
+      'tracking' => 'A tracking code is two capitals and six digits, such as AB123456 when Reference is set and Service is Express and Insured is off.',
+    ], $refusals(['reference' => 'R1', 'service' => 'express', 'tracking' => 'nope']));
+
+    // The third fresh-eyes run's sender: a name once an email is given.
+    $resources = $this->container->get('data_surface.resources');
+    $sender = $resources->build(SenderIdentityStructure::class, new OperationContext('configure'));
+    $said = function (array $values) use ($sender): array {
+      $messages = [];
+      foreach ($this->pipeline()->validate($sender, $this->pipeline()->accept($sender, $values, []), []) as $violation) {
+        $messages[$violation->fullPath()] = strip_tags((string) $violation->message);
+      }
+      return $messages;
+    };
+    $this->assertSame(['name' => 'Name is required when Email is set.'], $said(['email' => 'digest@example.com']));
+    $this->assertSame([], $said(['email' => 'digest@example.com', 'name' => 'Digest']));
+    $this->assertSame(['signature' => 'Signature does not apply when Email is empty.'], $said(['signature' => 'Ann']));
   }
 
   /**

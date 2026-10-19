@@ -99,6 +99,8 @@ final class DemoBlockStructure implements StructureInterface {
 }
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 - **`defineInputs()` and `alterInputs()` get a blueprint to fill, and nothing else**: no
   values, no context, no services. The owner's are static, so the
   language holds them to that; the build step calls them on the class
@@ -233,6 +235,8 @@ FieldStorageResource::edit($storage))`, an edit for its storage) and
 shrink once the field has data, with `withConstraint()`, and knows the
 field type, its one identity key, which locks its settings to that
 type's.
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 ```php
 $resources = \Drupal::service('data_surface.resources');
@@ -372,6 +376,8 @@ public function access(OperationContext $context, AccountInterface $account): Ac
   return AccessAnswer::open()->addCacheableDependency($read);
 }
 ```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 Ask the account first, so its answers read nothing else.
 
@@ -628,6 +634,8 @@ final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements
 }
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 A plugin that is its own structure is found through the plugin
 definitions (`ResourcePlugins::ownStructures()`), not a directory, and
 discovery holds it to the same rules: it implements
@@ -767,6 +775,8 @@ final class DemoBlockAlter implements AltersInputsInterface {
 
 }
 ```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 `describe()` takes the owner's key by its name, the alter's own key by
 its name, and another alter's key by its mounted path,
@@ -1071,6 +1081,8 @@ $inputs->attachBy('settings', by: 'field_type')
 #[Variant(of: FieldInstanceResource::class, key: 'settings', value: 'address')]
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 `attach()` and `attachBy()` return the map definition at the key, a
 core `MapDataDefinition`, the way `add()` returns its definition, so
 the owner labels and describes its own child's key with the core
@@ -1175,6 +1187,8 @@ $inputs->attach('compliance', ComplianceStructure::class, reads: ['capacity' => 
 $inputs->attach('third_party_settings.data_surface_examples_compliance', ComplianceStructure::class, reads: ['capacity' => 'capacity']);
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 - **A port is a live sibling value.** The structure's refiners watch it
   by its name, and its declared rules name it in a condition, as they
   would a sibling key: it gates a coded refiner while it holds nothing,
@@ -1245,6 +1259,8 @@ final class JournalResource implements ResourceInterface {
 
 }
 ```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 The journal's keys are `title`, `visibility`, `owner`, `shared`,
 `created`, `changed`, `revision`: the ownership's two and the
@@ -1479,6 +1495,8 @@ public static function fewerRacksWhenSmall(DataDefinitionInterface $racks, strin
 }
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 - **Items are children.** Every item is the child, refined, accepted
   and validated by it in its own frame, under its own key names. The
   child is built once for the list, invoked exactly as an attached
@@ -1541,6 +1559,8 @@ final class ProtectedForms implements KeysFromSiteInterface {
 }
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 - **The spelling.** `addEach($key, $type, from:, default:)` declares one
   value per thing, each as `add()` declares a key: a typed data type or a
   shape, labeled with the thing's label, starting from the thing's
@@ -1572,8 +1592,11 @@ final class ProtectedForms implements KeysFromSiteInterface {
   change one is access.
 - **A locked thing** (`add($id, $label, locked: TRUE)`) is held to what
   is stored: drawn fixed on the form, `readOnly` in both documents, locked
-  in the tool listing, and a value posted for it is not taken. A thing
-  holding a structure is that structure locked.
+  in the tool listing, and a value posted for it is not taken, which the
+  tool and the React submit say in a note ("Drill press is locked and
+  kept as stored; the value sent was not taken.",
+  [decision](decisions.md#locked-at-the-top)). A thing holding a
+  structure is that structure locked.
 - **The keys are ordinary keys.** The full schema states every one; the
   map is a def of the owner's (`resource_test.workshop.benches`), and the
   structure at the things is one def each refers to. A rule of the
@@ -1632,6 +1655,8 @@ final class ContentEntityResources implements ResourceDeriverInterface {
 
 }
 ```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 - **The deriver** is a class carrying `#[DerivesResources(base:)]` and
   implementing `ResourceDeriverInterface`, kept in `src/Resource/`. The

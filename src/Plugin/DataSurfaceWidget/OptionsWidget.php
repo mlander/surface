@@ -81,10 +81,13 @@ final class OptionsWidget extends ChoiceWidgetBase {
     ];
     if ($multiple) {
       // A list offers every value at once and needs no empty choice:
-      // choosing nothing is the empty list.
+      // choosing nothing is the empty list. Never #required, as the
+      // checkboxes are not: a required list must hold a value, and the
+      // empty list is one.
       $element['#default_value'] = is_array($value) ? $value : [];
       $element['#multiple'] = TRUE;
       $element['#size'] = min(max(count($options), 2), self::MAXIMUM_SIZE);
+      $element['#required'] = FALSE;
     }
     else {
       $element = $this->singleSelect($element, $definition, $set, $value);
@@ -148,16 +151,10 @@ final class OptionsWidget extends ChoiceWidgetBase {
         $element['#label_attributes']['class'] = ['js-form-required', 'form-required'];
       }
     }
-    elseif ($required) {
-      // First entry: nothing stored, so nothing to keep, and saving with
-      // the empty option still selected is refused in the data surface's own
-      // words. Core's required check runs first and a form state keeps
-      // only the first error on an element, so its generic "field is
-      // required" would otherwise be the one shown.
-      $element['#required_error'] = $this->t('@label is required.', [
-        '@label' => $definition->getLabel() ?? '',
-      ]);
-    }
+    // Otherwise, a required select with nothing chosen is refused in the
+    // data surface's own words: the form builder keeps Form API's own
+    // required check off every element it draws.
+    // Decision: see docs/decisions.md#an-element-hints-and-the-rule-speaks.
     return $element;
   }
 

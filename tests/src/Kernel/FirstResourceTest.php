@@ -7,6 +7,7 @@ namespace Drupal\Tests\data_surface\Kernel;
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteObjectInterface;
+use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Form\DataSurfaceOperationForm;
 use Drupal\data_surface_tool\OperationInputs;
 use Drupal\Tests\data_surface\Unit\FirstResourceDocsTest;
@@ -82,7 +83,10 @@ class FirstResourceTest extends DataSurfaceKernelTestBase {
     $newsletter = $this->form('data_surface_first.newsletter');
     $this->assertSame('textfield', $newsletter['sender_name']['#type']);
     $this->assertSame(64, $newsletter['sender_name']['#attributes']['maxlength']);
-    $this->assertTrue($newsletter['sender_name']['#required']);
+    // Drawn required, and checked by the resource alone: Form API's own
+    // check is off, its "field is required" never the message.
+    $this->assertTrue($newsletter['sender_name'][DataSurfaceFormBuilderInterface::REQUIRED_KEY]);
+    $this->assertFalse($newsletter['sender_name']['#required']);
     $this->assertSame('email', $newsletter['sender_email']['#type']);
     $this->assertSame('select', $newsletter['frequency']['#type']);
     $this->assertSame(['weekly' => 'Weekly', 'monthly' => 'Monthly'], array_map('strval', $newsletter['frequency']['#options']));

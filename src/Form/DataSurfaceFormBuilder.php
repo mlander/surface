@@ -1133,6 +1133,10 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       // anything does.
       static::wireRows($element, [], $wrapper_id);
     }
+    // Before any child is processed, so before Form API checks one.
+    foreach (static::elementChildren($element) as $key) {
+      $element[$key] = static::requiredHints($element[$key], \Drupal::service('element_info'));
+    }
     static::limitAjax($element, $element['#parents'] ?? [], !empty($element['#tree']));
     // The wrappers the AJAX callback replaces by. Placed here rather than
     // at build time because the container's id is only final once a host
@@ -1154,10 +1158,66 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
   }
 
   /**
+   * Makes the #required of every value element below one a hint only.
+   *
+   * A widget draws a required key with #required, which paints the
+   * browser's `required` attribute and the label's marker, and which Form
+   * API also checks, before any form level handler: a form keeps the
+   * first error per element, so its "Name field is required." replaced
+   * the data surface's own, "Name is required when Email is set." So the
+   * check is taken away and the drawing kept: #required is cleared on
+   * each element that holds a value, REQUIRED_KEY says it was set, and
+   * preRenderRequired(), first in the element's #pre_render list, puts
+   * it back when the element is drawn, on the page and in an AJAX
+   * response alike. A details or a fieldset holds no value and is never
+   * checked, so it keeps its #required as it is.
+   *
+   * Decision: see docs/decisions.md#an-element-hints-and-the-rule-speaks.
+   *
+   * @param array $element
+   *   The element.
+   * @param \Drupal\Core\Render\ElementInfoManagerInterface $element_info
+   *   The element info manager, for each type's own #pre_render list,
+   *   which an explicit one replaces.
+   *
+   * @return array
+   *   The element, and every element below it, with #required a hint.
+   */
+  protected static function requiredHints(array $element, ElementInfoManagerInterface $element_info): array {
+    $type = $element['#type'] ?? NULL;
+    if (!empty($element['#required']) && is_string($type) && !empty($element_info->getInfo($type)['#input'])) {
+      $element['#required'] = FALSE;
+      $element[self::REQUIRED_KEY] = TRUE;
+      $element['#pre_render'] = [
+        [static::class, 'preRenderRequired'],
+        ...($element['#pre_render'] ?? $element_info->getInfo($type)['#pre_render'] ?? []),
+      ];
+    }
+    foreach (static::elementChildren($element) as $key) {
+      $element[$key] = static::requiredHints($element[$key], $element_info);
+    }
+    return $element;
+  }
+
+  /**
+   * Draws an element required that Form API did not check as required.
+   *
+   * @param array $element
+   *   The element.
+   *
+   * @return array
+   *   The element, #required as its widget set it.
+   */
+  public static function preRenderRequired(array $element): array {
+    $element['#required'] = !empty($element[self::REQUIRED_KEY]);
+    return $element;
+  }
+
+  /**
    * {@inheritdoc}
    */
   public static function trustedCallbacks(): array {
-    return ['preRenderSurfaceContainer'];
+    return ['preRenderSurfaceContainer', 'preRenderRequired'];
   }
 
   /**

@@ -149,7 +149,9 @@ class ExamplesFullSubmitTest extends BrowserTestBase {
     $this->rawPost('surface-examples/3', $fields + ['surface[ticket][note]' => 'Donations welcome']);
     $assert = $this->assertSession();
     $assert->elementExists('css', 'input[name="surface[ticket][price]"][aria-invalid="true"]');
-    $assert->pageTextContains('Price field is required.');
+    // In the resource's own words: Form API's required check is off.
+    $assert->pageTextContains('Price is required.');
+    $assert->pageTextNotContains('Price field is required.');
     $assert->pageTextNotContains('The changes have been saved.');
     $this->assertSame($before, $this->stored('step3'));
 

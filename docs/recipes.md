@@ -148,6 +148,8 @@ $inputs->narrow('door_code')
   ->doesNotApply();
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 Not `->require()` in a rule: required where it applies is what
 `defineInputs()` already says, a key that does not apply is never
 required, and the build refuses a rule requiring a key a refiner may
@@ -159,6 +161,49 @@ kept for the day it applies again. With it on, the code is required
 [When a key does not apply](refinement.md#when-a-key-does-not-apply);
 what a form posted without JavaScript keeps:
 [Value semantics](semantics.md#a-key-that-does-not-apply).
+
+**A list** is the case where required does not say what a reader
+means. Required means configured, and the empty list is a value, so a
+required list that applies is satisfied by no item at all: neither
+`setRequired()` nor a rule's `->require()` asks for one. "At least one
+day while after-hours access is on" is a `Count` with a minimum of 1,
+with its own message, in `defineInputs()` beside the same rule: the
+count is what the list allows wherever it applies, and a key that does
+not apply is never validated, so the condition stays the rule's alone.
+
+<!-- excerpt: tests/modules/data_surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
+
+```php
+$late = (new ListDataDefinition(['type' => 'list'], $day))
+  ->setLabel(t('After-hours days'))
+  ->setRequired(TRUE)
+  ->addConstraint('Count', [
+    'min' => 1,
+    'minMessage' => 'Choose at least one day for after-hours access.',
+  ]);
+$inputs->addDefinition('late_days', $late, default: []);
+$inputs->narrow('late_days')
+  ->when(Condition::not(Condition::equals('after_hours', TRUE)))
+  ->doesNotApply();
+```
+
+With after-hours access on and no day checked, every door refuses it
+("Choose at least one day for after-hours access."), and the full
+schema says `minItems: 1`. A list that always applies, and needs an item only
+while another key holds a value, takes the count in the rule instead,
+`->constrain('Count', ['min' => 1])` after its `->when()`
+([Declaring a rule](refinement.md#declaring-a-rule)); its refusal is
+core's sentence with the condition after it, since a rule's `Count`
+carries no message.
+
+**A key left out keeps what is stored**
+([decision](decisions.md#absent-keeps-null-clears)), and that meets
+required on an edit: a key required by its declaration, or by a rule's
+`->require()`, is refused only when it is sent empty (`""` or `null`)
+or nothing is stored for it. Turning after-hours access on with a code
+and a day already stored needs neither sent again, and a tool call that
+leaves the code out is accepted; one that sends `"door_code": ""` is
+refused ("Door code is required.").
 
 ## A list of free strings
 
@@ -220,6 +265,8 @@ public function keys(): KeyedList {
   return $keys;
 }
 ```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 A bench added to the configuration is a key at the next request, at
 every door. A bench marked locked there is drawn fixed and keeps what is

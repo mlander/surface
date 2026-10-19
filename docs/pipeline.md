@@ -34,6 +34,8 @@ to do.
 public function access(string $resource, OperationContext $context, ?AccountInterface $account = NULL): AccessResultInterface;
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 Not a method on the pipeline: it is `ResourcesInterface::access()`, on
 the build step, and the pipeline is one of its callers. One answer per
 resource or structure, context and account, read by the generated form, a
@@ -121,13 +123,17 @@ is `submit()`.
 public function accept(DataSurfaceInterface $surface, array $input, array $current = []): array;
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 Produces a complete, typed value set from partial, untyped input. Values
 merge in one order at every level: the data surface's **declared
 defaults**, then the **current stored values** (so a partial update is
 legal), then the **input**, cast through each definition.
 
 Locked keys take what storage holds, falling back to the declared
-default, and ignore whatever was submitted for them. Keys the data
+default, and ignore whatever was submitted for them; a value submitted
+for one that is not what it holds is noted, once per key, for
+`submit()` to hand on (below). Keys the data
 surface does not declare are refused rather than dropped, at any depth,
 and so is input in a shape the definition cannot hold.
 
@@ -149,6 +155,8 @@ reference for this page.
 ```php
 public function validate(DataSurfaceInterface $surface, array $values, array $current = []): ViolationSet;
 ```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 Refines the data surface against the values first, then runs the
 constraints, so the constraints the values are held to are the ones the
@@ -221,6 +229,8 @@ the same stored values it extracted against.
 public function conformOutput(DataSurfaceInterface $surface, array $output): ViolationSet;
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 The output half of `validate()`, and the only stage that runs after the
 host has done its work rather than before. It holds what was emitted to
 the data surface's [output definitions](outputs.md), which are never
@@ -243,6 +253,8 @@ emitted array to what the data surface advertised.
 public function prepare(DataSurfaceInterface $surface, array $values, DataSurfaceStorageInterface $storage): PreparedValues;
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 Hands the values to the storage, which lays them out as it stores them.
 Writes nothing. Answers with a `PreparedValues`: the accepted `values`,
 the `artifact` in storage layout, and any calculated `dependencies`.
@@ -255,6 +267,8 @@ nothing stored.
 public function commit(PreparedValues $prepared, DataSurfaceStorageInterface $storage): void;
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 Writes the artifact. The only stage with side effects.
 
 ### submit
@@ -263,14 +277,24 @@ Writes the artifact. The only stage with side effects.
 public function submit(DataSurfaceInterface $surface, array $input, DataSurfaceStorageInterface $storage, bool $dry_run = FALSE, ?AccessResultInterface $access = NULL): DataSurfaceResult;
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 Runs every stage, stopping at the first that refuses the values, so a
 caller reads one result rather than orchestrating five calls. The
 storage is both where current values are read from and where the result
 is written.
 
 `DataSurfaceResult` carries `values`, `violations`, the `prepared`
-artifact when the values were valid, `committed`, and the `access` answer
-the run was gated by. `isValid()` is the question most callers ask.
+artifact when the values were valid, `committed`, the `access` answer
+the run was gated by, and `notes`. `isValid()` is the question most
+callers ask.
+
+`notes` are what the caller is told and nothing blocks: a `Violation`
+per locked key whose value sent was not taken, "Machine name is locked
+and kept as stored; the value sent was not taken." They are no
+violation, so `isValid()` never reads them; the write tool and the
+React endpoints say them beside the stale references
+([decision](decisions.md#locked-at-the-top)).
 
 A committed result can still carry violations, and there is exactly one
 way that happens: the set holds stale references and nothing else. They
@@ -419,6 +443,8 @@ if (!$result->isValid()) {
   // $result->violations, a ViolationSet.
 }
 ```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 `'5'` arrives as a string and is stored as the integer `5`, because the
 definition says `integer` and the coercion table says a numeric string

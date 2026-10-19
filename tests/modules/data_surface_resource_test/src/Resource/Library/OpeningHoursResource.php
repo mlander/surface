@@ -83,6 +83,18 @@ final class OpeningHoursResource implements ResourceInterface {
       ->when(Condition::not(Condition::equals('after_hours', TRUE)))
       ->doesNotApply();
 
+    $late = (new ListDataDefinition(['type' => 'list'], $day))
+      ->setLabel(t('After-hours days'))
+      ->setRequired(TRUE)
+      ->addConstraint('Count', [
+        'min' => 1,
+        'minMessage' => 'Choose at least one day for after-hours access.',
+      ]);
+    $inputs->addDefinition('late_days', $late, default: []);
+    $inputs->narrow('late_days')
+      ->when(Condition::not(Condition::equals('after_hours', TRUE)))
+      ->doesNotApply();
+
     $keywords = (new ListDataDefinition(['type' => 'list'], DataDefinition::create('string')))
       ->setLabel(t('Keywords'));
     $inputs->addDefinition('keywords', $keywords, default: []);

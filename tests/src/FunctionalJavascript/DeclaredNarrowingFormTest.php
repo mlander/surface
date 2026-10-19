@@ -76,7 +76,11 @@ class DeclaredNarrowingFormTest extends WebDriverTestBase {
     // Insured, over AJAX: the signature is required, and says why.
     $page->checkField('surface[insured]');
     $assert_session->assertWaitOnAjaxRequest();
-    $this->assertTrue($assert_session->fieldExists('surface[signature]')->hasAttribute('required'));
+    $signature = $assert_session->fieldExists('surface[signature]');
+    $this->assertTrue($signature->hasAttribute('required'));
+    // Drawn as core draws a required element, though core does not check
+    // it: the label's marker comes back with the rebuilt element.
+    $assert_session->elementExists('css', 'label.form-required[for="' . $signature->getAttribute('id') . '"]');
     $assert_session->pageTextContains('An insured parcel is signed for.');
 
     // Freight, over AJAX: the note applies, required.

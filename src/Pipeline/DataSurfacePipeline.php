@@ -70,6 +70,19 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   public const CHOICES_SHOWN = 10;
 
   /**
+   * The locked keys the last accept() was sent a value it did not take.
+   *
+   * Collected while accepting, one per key by its full path, so a caller
+   * learns why a value it sent did not land; submit() hands them on as
+   * the result's notes. Every accept() starts it again.
+   *
+   * Decision: see docs/decisions.md#locked-at-the-top.
+   *
+   * @var array<string, \Drupal\data_surface\Pipeline\Violation>
+   */
+  protected array $notTaken = [];
+
+  /**
    * Constructs a DataSurfacePipeline.
    *
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
@@ -99,6 +112,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * {@inheritdoc}
    */
   public function accept(DataSurfaceInterface $surface, array $input, array $current = []): array {
+    $this->notTaken = [];
     return $this->acceptLevel($surface, $input, $current, '');
   }
 
@@ -322,13 +336,37 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * @param array $values
    *   The values accepted at this level so far, which is where a slot
    *   reads its deciding key.
+   * @param bool $open
+   *   TRUE to read the input as though the key were not locked: what a
+   *   value sent for a locked key would have been, to tell whether it
+   *   was taken.
    *
    * @return mixed
    *   The accepted value.
    */
-  protected function acceptKey(DataSurfaceInterface $surface, Entry $entry, array $input, array $current, string $prefix, array $values): mixed {
+  protected function acceptKey(DataSurfaceInterface $surface, Entry $entry, array $input, array $current, string $prefix, array $values, bool $open = FALSE): mixed {
     $name = $entry->name;
     $path = static::joinPath($prefix, $name);
+    if ($entry->locked && !$open) {
+      // A locked key's value space is narrowed to exactly one value, so
+      // input cannot move it: it holds what it holds, read the way a key
+      // the input leaves out is. That one value is whatever storage
+      // holds; the declared default is only the starting point for a
+      // key storage has never held. A locked child (its access answered
+      // locked) is read the way an unanswered one is, so a stored value
+      // missing a key the child added since still holds the whole shape.
+      // A value sent for it that is not what it holds is not refused,
+      // and the caller is told it was not taken.
+      // Decision: see docs/decisions.md#locked-at-the-top.
+      $kept = $this->acceptKey($surface, $entry, [], $current, $prefix, $values, TRUE);
+      if (array_key_exists($name, $input) && !$this->takes($surface, $entry, $input, $current, $prefix, $values, $kept)) {
+        [$key, $below] = array_pad(explode('.', $path, 2), 2, '');
+        $this->notTaken[$path] = new Violation($key, $below, $this->t('@label is locked and kept as stored; the value sent was not taken.', [
+          '@label' => $entry->definition->getLabel() ?? $name,
+        ]));
+      }
+      return $kept;
+    }
     // What the key already holds: the stored value when storage has
     // one, and the declared default only when it has none. A stored
     // NULL is a stored value, so array_key_exists rather than ??.
@@ -351,17 +389,6 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       return $this->acceptCollection($entry, $entry->list, $input, $fallback, $path);
     }
     $child = $entry->childFor($values);
-    if ($entry->locked) {
-      // A locked key's value space is narrowed to exactly one value,
-      // so input cannot move it. That one value is whatever storage
-      // holds; the declared default is only the starting point for a
-      // key storage has never held. A locked child (its access answered
-      // locked) is read the way an unanswered one is, so a stored value
-      // missing a key the child added since still holds the whole shape.
-      return $child !== NULL && is_array($fallback)
-        ? $this->acceptLevel($child, [], $fallback, $path)
-        : $fallback;
-    }
     if (!array_key_exists($name, $input)) {
       // A key the input leaves out keeps what it holds; null or '' sent
       // for it is something said, and clears an optional key.
@@ -383,13 +410,86 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   }
 
   /**
+   * Answers whether what was sent for a locked key is what it keeps.
+   *
+   * The value sent is read as though the key were open, and so is what
+   * it keeps, so a form's "1" and a stored TRUE are one value, and a map
+   * sent with fewer keys than it holds, all of them as held, is too. A
+   * value that could not be held at all was not taken. A secret is never
+   * compared: anything sent for one was not taken.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface the key belongs to.
+   * @param \Drupal\data_surface\Entry $entry
+   *   The locked key.
+   * @param array $input
+   *   The raw input for the key's level, which holds the key.
+   * @param array $current
+   *   What the key's level already holds.
+   * @param string $prefix
+   *   The dotted path of the key's level.
+   * @param array $values
+   *   The values accepted at this level so far.
+   * @param mixed $kept
+   *   What the key keeps.
+   *
+   * @return bool
+   *   TRUE when the value sent is what the key keeps.
+   */
+  protected function takes(DataSurfaceInterface $surface, Entry $entry, array $input, array $current, string $prefix, array $values, mixed $kept): bool {
+    if (DefinitionMetadata::isSecret($entry->definition)) {
+      return !ValueState::isConfigured($input[$entry->name]);
+    }
+    // A locked key inside the one being compared is this key's matter,
+    // not its own: what the comparison finds there is not kept.
+    $noted = $this->notTaken;
+    try {
+      $sent = $this->acceptKey($surface, $entry, $input, $current, $prefix, $values, TRUE);
+      $held = $this->acceptKey($surface, $entry, [$entry->name => $kept], $current, $prefix, $values, TRUE);
+      return static::sameValue($sent, $held);
+    }
+    catch (\InvalidArgumentException) {
+      return FALSE;
+    }
+    finally {
+      $this->notTaken = $noted;
+    }
+  }
+
+  /**
+   * Compares two accepted values, a map's keys in any order.
+   *
+   * @param mixed $a
+   *   One value.
+   * @param mixed $b
+   *   The other.
+   *
+   * @return bool
+   *   Whether they hold the same, type for type.
+   */
+  protected static function sameValue(mixed $a, mixed $b): bool {
+    if (!is_array($a) || !is_array($b)) {
+      return $a === $b;
+    }
+    if (count($a) !== count($b)) {
+      return FALSE;
+    }
+    foreach ($a as $key => $value) {
+      if (!array_key_exists($key, $b) || !static::sameValue($value, $b[$key])) {
+        return FALSE;
+      }
+    }
+    return TRUE;
+  }
+
+  /**
    * Accepts a collection's value: a list of items, each the child's.
    *
-   * A list the input says nothing about, or a locked one, holds what the
-   * level already holds, each item read through the child the way an
+   * A list the input says nothing about holds what the level already
+   * holds, each item read through the child the way an
    * unanswered child is, so a stored item missing a key the child added
-   * since reads the way a fresh one would. Input for a locked list is
-   * ignored, as for any locked key. Otherwise the list is the input, in
+   * since reads the way a fresh one would; a locked list is read so too,
+   * as any locked key is (acceptKey()). Otherwise the list is the input, in
    * the input's order, its keys dropped: delta is position. An item that
    * holds nothing at all, a row a form added and left blank, is dropped,
    * the way core drops an empty delta, once its keys are found to be the
@@ -424,7 +524,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   protected function acceptCollection(Entry $entry, Collection $list, array $input, mixed $fallback, string $path): mixed {
     $child = $list->child();
     $raw = $input[$entry->name] ?? NULL;
-    if ($entry->locked || !array_key_exists($entry->name, $input) || !ValueState::isConfigured($raw)) {
+    if (!array_key_exists($entry->name, $input) || !ValueState::isConfigured($raw)) {
       // As for a plain list: input that holds nothing says nothing, and
       // what the list already holds stands. Emptying it is said with an
       // empty list.
@@ -762,7 +862,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         if ($declared === NULL || $narrowed === NULL || json_encode($declared->getConstraints()) === json_encode($narrowed->getConstraints())) {
           continue;
         }
-        $conditions = $this->conditions($refined, $dependencies, $values);
+        $conditions = $this->conditions($refined, $dependencies, $values, $entry);
         break;
       }
       $allowed = isset($choices[$index]) ? $this->choices($refined, $name, $refusal->path) : NULL;
@@ -787,6 +887,14 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   /**
    * Says what each watched key holds, as the condition of a refusal.
    *
+   * A key only a declared rule reads, and only by whether it holds a
+   * value (`present()`, `absent()`), is said as set or empty, never by
+   * what it holds: the rule asked nothing else, and "when Email is
+   * digest@example.com" reads as though only that address counted.
+   *
+   * Decision: see
+   * docs/decisions.md#a-refusal-names-what-it-depends-on.
+   *
    * @param \Drupal\data_surface\DataSurfaceInterface $refined
    *   The data surface, refined against the values.
    * @param string[] $dependencies
@@ -794,13 +902,17 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *   name.
    * @param array $values
    *   The values of the level.
+   * @param \Drupal\data_surface\Entry|null $entry
+   *   The refused key, whose declared rules say which watched keys are
+   *   read for presence alone.
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup[]
    *   "Venue is Riverside Hall", one per watched key, an option by its
-   *   label.
+   *   label; "Email is set" for a key read for presence alone.
    */
-  protected function conditions(DataSurfaceInterface $refined, array $dependencies, array $values): array {
+  protected function conditions(DataSurfaceInterface $refined, array $dependencies, array $values, ?Entry $entry = NULL): array {
     $conditions = [];
+    $presence = $entry?->presenceDependencies() ?? [];
     foreach ($dependencies as $dependency) {
       $at = explode('.', $dependency);
       $watched = static::definitionAt($refined, $at);
@@ -808,6 +920,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       $set = $watched === NULL || !is_scalar($held) ? NULL : $this->options->resolve($watched);
       $shown = match (TRUE) {
         !ValueState::isConfigured($held) => $this->t('empty'),
+        in_array($dependency, $presence, TRUE) => $this->t('set'),
         $set !== NULL && isset($set->options[$held]) => $set->options[$held],
         is_bool($held) => $held ? $this->t('on') : $this->t('off'),
         is_scalar($held) => (string) $held,
@@ -933,7 +1046,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     if ($entry?->slot !== NULL) {
       $dependencies = array_values(array_diff($dependencies, [$entry->slot->by]));
     }
-    $conditions = $declared === NULL || $declared->isRequired() ? [] : $this->conditions($refined, $dependencies, $values);
+    $conditions = $declared === NULL || $declared->isRequired() ? [] : $this->conditions($refined, $dependencies, $values, $entry);
     if ($conditions === []) {
       return $this->t('@label is required.', ['@label' => $label]);
     }
@@ -970,7 +1083,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       $dependencies = array_values(array_diff($dependencies, [$entry->slot->by]));
     }
     $label = static::definitionAt($surface, $parents)?->getLabel() ?? end($parents);
-    $conditions = $this->conditions($refined, $dependencies, $values);
+    $conditions = $this->conditions($refined, $dependencies, $values, $entry);
     if ($conditions === []) {
       return $this->t('@label does not apply.', ['@label' => $label]);
     }
@@ -1582,15 +1695,18 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     // What storage holds is what the stale rule is judged against, and
     // it was loaded a moment ago for the merge, so the question costs
     // nothing extra here.
+    // Blocking nothing: a value sent for a locked key was not taken, and
+    // the caller is told so whatever else the run answers.
+    $notes = array_values($this->notTaken);
     $violations = $this->validate($surface, $values, $current);
     if (!$violations->isEmpty()) {
-      return new DataSurfaceResult($values, $violations, access: $access);
+      return new DataSurfaceResult($values, $violations, access: $access, notes: $notes);
     }
     try {
       $prepared = $this->prepare($surface, $this->kept($surface, $values, $current), $storage);
     }
     catch (StorageViolationsException $e) {
-      return new DataSurfaceResult($values, $e->getViolations(), access: $access);
+      return new DataSurfaceResult($values, $e->getViolations(), access: $access, notes: $notes);
     }
     // The set travels on rather than being replaced by an empty one: it
     // blocks nothing, so the run is valid and committed, and the stale
@@ -1599,10 +1715,10 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     // An operation that changes nothing stops where a dry run does.
     // Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
     if ($dry_run || $surface->changesNothing()) {
-      return new DataSurfaceResult($values, $violations, $prepared, access: $access);
+      return new DataSurfaceResult($values, $violations, $prepared, access: $access, notes: $notes);
     }
     $this->commit($prepared, $storage);
-    return new DataSurfaceResult($values, $violations, $prepared, TRUE, $access);
+    return new DataSurfaceResult($values, $violations, $prepared, TRUE, $access, $notes);
   }
 
   /**

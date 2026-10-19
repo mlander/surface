@@ -48,6 +48,11 @@ Every built group adopts the same way, in two files:
    context and the storage, because only it holds the instance.
 
 ```php
+use Drupal\Core\Condition\Attribute\Condition;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\data_surface\Plugin\Condition\DataSurfaceConditionBase;
+use Drupal\data_surface\Resource\Attribute\UsesStructure;
+
 #[Condition(id: 'data_surface_test_condition', label: new TranslatableMarkup('Data surface test condition'))]
 #[UsesStructure(TestConditionStructure::class)]
 final class DataSurfaceTestCondition extends DataSurfaceConditionBase {

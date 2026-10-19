@@ -243,8 +243,9 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
    * Tests that a key that was never set renders on the empty option.
    *
    * Rule 3: a required select on first entry shows its empty option,
-   * selected, and core's required check refuses it in the data surface's own
-   * words until something is chosen.
+   * selected, and the data surface refuses it in its own words until
+   * something is chosen: the form builder keeps core's own check off, so
+   * the widget sets no #required_error.
    */
   #[DataProvider('requiredCases')]
   public function testNeverSetSelectComesUpOnTheEmptyOption(bool $required): void {
@@ -259,9 +260,7 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
     $this->assertSame('What to feature.', (string) $element['#description']);
     $this->assertArrayNotHasKey('#attributes', $element);
     $this->assertSame($required, $element['#required']);
-    if ($required) {
-      $this->assertSame('Pick is required.', (string) $element['#required_error']);
-    }
+    $this->assertArrayNotHasKey('#required_error', $element);
   }
 
   /**

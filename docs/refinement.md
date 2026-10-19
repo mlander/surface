@@ -56,6 +56,8 @@ final class DemoFormatterAlter implements AltersInputsInterface {
 }
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 The alter's module is load-bearing, and nothing has to name it: the
 build step records what the alter adds under the module the class
 belongs to. That is what decides which values the alter's own refiners
@@ -218,6 +220,8 @@ public static function roomInVenue(DataDefinitionInterface $room, string $venue)
 public function openRooms(DataDefinitionInterface $room, string $venue): DataDefinitionInterface
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 - **Static, the default.** A pure function of the siblings it watches:
   the same values in, the same definition out, whatever is stored,
   whoever asks and whenever. That is a promise the module relies on:
@@ -354,6 +358,8 @@ public static function sendDayOnlyWhenWeekly(DataDefinitionInterface $send_day, 
   return $frequency === 'weekly' ? $send_day : DoesNotApply::here();
 }
 ```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 That is the bulletin of the test module, `resource_test.bulletin`. Its
 `defineInputs()` declares `send_day` as everything it may ever be, a
@@ -564,6 +570,8 @@ final class DemoFormatterAlter implements AltersInputsInterface {
 
 }
 ```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 The method refines a key the alter offered more values on, so it is
 bound as the `data_surface_demo_extras` contribution's refiner, not in

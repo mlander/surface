@@ -296,8 +296,10 @@ interface DataSurfacePipelineInterface {
    *
    * @return \Drupal\data_surface\Pipeline\DataSurfaceResult
    *   The accepted values, any violations, the prepared artifact when
-   *   the values were valid, whether the write happened, and the access
-   *   answer it was given, so a caller can merge its cacheability.
+   *   the values were valid, whether the write happened, the access
+   *   answer it was given, so a caller can merge its cacheability, and
+   *   the notes accept() made: each locked key whose value sent it did
+   *   not take, blocking nothing.
    */
   public function submit(DataSurfaceInterface $surface, array $input, DataSurfaceStorageInterface $storage, bool $dry_run = FALSE, ?AccessResultInterface $access = NULL): DataSurfaceResult;
 

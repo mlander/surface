@@ -183,10 +183,12 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
       dry_run: (bool) ($values[OperationInputs::DRY_RUN] ?? FALSE),
       access: $access,
     );
+    // Decision: see docs/decisions.md#locked-at-the-top.
+    $notes = $this->notesSaid($result->notes);
     if (!$result->isValid()) {
-      return ExecutableResult::failure($this->t('The values were refused: @violations', [
+      return ExecutableResult::failure($this->withNotes($this->t('The values were refused: @violations', [
         '@violations' => $this->violationSummary($result->violations),
-      ]));
+      ]), $notes));
     }
     $outputs = $result->committed && $storage instanceof StorageAdapter
       ? $storage->outputs($built, $result->values)
@@ -198,16 +200,16 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     }
     $stale = $this->staleReferences($result->violations);
     return ExecutableResult::success(
-      match (TRUE) {
+      $this->withNotes(match (TRUE) {
         $result->committed => $this->t('@label: the values were accepted and written.', ['@label' => (string) $operation->label]),
         // Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
         $built->changesNothing() => $this->t('@label changes nothing: the values were accepted and prepared, and nothing was written.', ['@label' => (string) $operation->label]),
         default => $this->t('Dry run of @label: the values were accepted and prepared, and nothing was written.', ['@label' => (string) $operation->label]),
-      },
+      }, $notes),
       [
         OperationInputs::VALUES => $result->values,
         OperationInputs::COMMITTED => $result->committed,
-      ] + $outputs + ($stale === [] ? [] : ['stale' => $stale]),
+      ] + $outputs + ($stale === [] ? [] : ['stale' => $stale]) + ($notes === [] ? [] : ['notes' => $notes]),
     );
   }
 

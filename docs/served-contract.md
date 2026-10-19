@@ -930,6 +930,7 @@ room left stale after its venue moved is refused. It answers:
   "valid": false,
   "violations": [{"path": "capacity", "message": "This value should be between 1 and 150 when Room is Upper deck."}],
   "stale": [],
+  "notes": [],
   "values": {...},
   "prepared": null
 }
@@ -937,7 +938,8 @@ room left stale after its venue moved is refused. It answers:
 
 `violations` are refusals by full dotted path (`ticket.price`,
 `contact.email`, `@access`), messages rendered to plain text at this
-boundary; `stale` the non-blocking stale references; `values` what
+boundary; `stale` the non-blocking stale references; `notes` what the
+caller is told and nothing blocks, `{path, message}` (below); `values` what
 `accept()` made of the input; `prepared` what storage rehearsed
 writing, when the run reached prepare. Nothing is written.
 
@@ -958,6 +960,7 @@ resource or structure with no storage. Every key is always present:
 | `valid` | Whether nothing was refused; on this endpoint the same answer as `committed`. |
 | `violations` | Each refusal, `{path, message}`, as validate's. |
 | `stale` | Each stale reference the write kept, `{path, message}`: the operation form's warning, said out loud. Present on a write as on a refusal. |
+| `notes` | Each value sent for a locked key that the key did not take, `{path, message}`, once per key: "Machine name is locked and kept as stored; the value sent was not taken." The key keeps what it holds and nothing is refused ([decision](decisions.md#locked-at-the-top)); a value sent as it is held says nothing. Present on a write as on a refusal. |
 | `outputs` | The declared outputs as storage reads them back after the write (`StorageAdapter::outputs()`), the tool's same answer; `{}` when none are declared, as the examples, the content type and the field do. |
 | `contract` | On a write, the whole document rebuilt from what is stored now, `fingerprint` included, so a client re-renders without a second request; `null` on a refusal. |
 | `created` | On a write by an operation that creates, where the created thing now lives: `{surface, situation, parameters}`: the resource's id, the id of an operation of it that does not create ([below](#where-a-created-thing-lives)), and that operation's parameters; otherwise `null`. |
@@ -968,7 +971,7 @@ A refused example 2, the library's garden room sent with the harbour:
 {
   "committed": false, "valid": false,
   "violations": [{"path": "room", "message": "The value you selected is not a valid choice when Venue is Harbour Centre; choose Auditorium (harbour_auditorium) or Upper deck (harbour_deck)."}],
-  "stale": [], "outputs": {}, "contract": null, "created": null
+  "stale": [], "notes": [], "outputs": {}, "contract": null, "created": null
 }
 ```
 
@@ -976,7 +979,7 @@ The harbour's deck, written:
 
 ```json
 {
-  "committed": true, "valid": true, "violations": [], "stale": [], "outputs": {},
+  "committed": true, "valid": true, "violations": [], "stale": [], "notes": [], "outputs": {},
   "contract": {
     "surface": "registration.step2", "situation": "configure", "label": "Configure registration",
     "schema": {...},

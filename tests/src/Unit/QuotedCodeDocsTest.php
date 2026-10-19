@@ -20,6 +20,8 @@ use PHPUnit\Framework\Attributes\Group;
  *   what the page says each recipe does.
  * - "Resources and structures" quotes the examples' compliance alter
  *   whole, with the two schemas that describe its keys.
+ * - "Storage" quotes the opening hours' fully validatable schema, which
+ *   RecipesTest holds to what the page says it asks.
  */
 #[Group('data_surface')]
 class QuotedCodeDocsTest extends UnitTestCase {
@@ -32,7 +34,7 @@ class QuotedCodeDocsTest extends UnitTestCase {
   /**
    * The pages, relative to the module root.
    */
-  public const PAGES = [self::RECIPES, 'docs/resources.md'];
+  public const PAGES = [self::RECIPES, 'docs/resources.md', 'docs/storage.md'];
 
   /**
    * Provides each marked block of the pages.
@@ -67,6 +69,14 @@ class QuotedCodeDocsTest extends UnitTestCase {
     $this->assertContains('modules/data_surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php', $quoted);
     $this->assertContains('modules/data_surface_examples/config/schema/data_surface_examples.schema.yml', $quoted);
     $this->assertContains('modules/data_surface_examples_compliance/config/schema/data_surface_examples_compliance.schema.yml', $quoted);
+  }
+
+  /**
+   * Tests the storage page quotes a fully validatable schema.
+   */
+  public function testFullyValidatableSchemaIsQuoted(): void {
+    $quoted = array_column(FirstResourceDocsTest::blocks(['docs/storage.md']), 3);
+    $this->assertNotEmpty(array_filter($quoted, static fn (string $text): bool => str_contains($text, 'FullyValidatable: ~') && str_contains($text, 'nullable: true')));
   }
 
   /**

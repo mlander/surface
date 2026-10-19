@@ -1,5 +1,7 @@
 # Fresh eyes three: newsletter digest from the docs alone
 
+<!-- cspell:ignore threeead -->
+
 Started reading: 07:02 (Mon Oct 19 2026, from `date`).
 
 ## Log

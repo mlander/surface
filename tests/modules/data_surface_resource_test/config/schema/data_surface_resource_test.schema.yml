@@ -353,6 +353,12 @@ data_surface_resource_test.opening_hours:
       type: string
       label: 'Door code'
       nullable: true
+    late_days:
+      type: sequence
+      label: 'After-hours days'
+      sequence:
+        type: string
+        label: 'Day'
     keywords:
       type: sequence
       label: 'Keywords'

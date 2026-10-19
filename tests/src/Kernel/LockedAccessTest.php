@@ -211,18 +211,27 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
     // The parent is not refused by it, and is written whole.
     $this->assertTrue($this->resources()->access(CabinetResource::class, $this->resources()->operation(CabinetResource::class, 'edit'))->isAllowed());
 
-    // What a locked variant holds is kept, whatever is posted for it.
+    // What a locked variant holds is kept, whatever is posted for it, and
+    // the caller is told its value was not taken, once per key.
     $result = $this->submit(['drawers' => 3, 'lock_settings' => ['digits' => 8]]);
     $this->assertTrue($result->committed, implode(' ', array_map(static fn ($v): string => (string) $v->message, iterator_to_array($result->violations))));
     $stored = $this->container->get('state')->get(CabinetStorage::KEY);
     $this->assertSame(3, $stored['drawers']);
     $this->assertSame(['digits' => 5], $stored['lock_settings']);
+    $this->assertCount(1, $result->notes);
+    $this->assertSame('lock_settings.digits', $result->notes[0]->fullPath());
+    $this->assertSame('Digits is locked and kept as stored; the value sent was not taken.', (string) $result->notes[0]->message);
+    $this->assertSame([], $this->submit(['lock_settings' => ['digits' => 5]])->notes, 'What it holds, sent back, was taken.');
+    $write = $this->runTool('data_surface:tool_test.cabinet:edit', [OperationInputs::VALUES => ['lock_settings' => ['digits' => 7]]]);
+    $this->assertTrue($write['success'], $write['message']);
+    $this->assertSame('Edit the cabinet: the values were accepted and written. lock_settings.digits: Digits is locked and kept as stored; the value sent was not taken.', $write['message']);
 
     // Chosen anew from the key lock, it starts from its defaults, fixed.
     $this->container->get('state')->set(CabinetStorage::KEY, ['lock' => 'key', 'lock_settings' => ['keys' => 3]] + self::STORED);
     $result = $this->submit(['lock' => 'code', 'lock_settings' => ['digits' => 8]]);
     $this->assertTrue($result->committed, implode(' ', array_map(static fn ($v): string => (string) $v->message, iterator_to_array($result->violations))));
     $this->assertSame(['digits' => 4], $this->container->get('state')->get(CabinetStorage::KEY)['lock_settings']);
+    $this->assertSame(['lock_settings.digits'], array_map(static fn ($note): string => $note->fullPath(), $result->notes));
 
     // Both documents mark the variant's keys locked.
     $emitter = $this->container->get('data_surface.contract_emitter');

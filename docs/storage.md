@@ -36,6 +36,8 @@ final class NewsletterStorage extends ConfigObjectStorage {
 #[Resource('first.newsletter', storage: NewsletterStorage::class)]
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 The subclass is autowired as a service when the resource is discovered,
 so it is the whole of the storage code. What it does:
 
@@ -69,7 +71,92 @@ so it is the whole of the storage code. What it does:
   `nullable: true` matters only in a fully validatable schema, on each
   optional key that may be emptied; elsewhere it changes nothing. The
   test module's opening hours (`resource_test.opening_hours`) are such
-  an object.
+  an object ([below](#a-fully-validatable-schema)).
+
+### A fully validatable schema
+
+`FullyValidatable` is core's opt-in to strict config validation, and
+the one place `nullable:` means anything. What it asks of the author of
+the schema:
+
+- **The constraint at the root**, `constraints: {FullyValidatable: ~}`
+  on the object's own entry. A part whose type is named by its data,
+  such as `third_party_settings` typed `<owner>.third_party.[%key]`,
+  answers to the type it resolves to: each mounting module's mapping
+  says `FullyValidatable` too, or its keys are held as before.
+- **A type on every key**, as any schema needs: config validation lets
+  data no schema describes through without a word.
+- **Every key stored.** A key the object leaves out is refused ("'notes'
+  is a required key.") unless it says `requiredKey: false`, so the
+  module's `config/install` carries every key, an empty one as `~`,
+  `''` or `[]`.
+- **`nullable: true` on each key that may hold nothing**, and only
+  there: null anywhere else is refused, by core and by the resource,
+  which holds such a key always ([decision](decisions.md#a-key-its-storage-always-holds)).
+  A text that may be left blank is `nullable: true`; a sequence is
+  never null, and stores `[]`.
+- **A constraint on a leaf is optional.** Core's own types carry some
+  (`email`, `label`); the resource's constraints are the rule at every
+  door, and `prepare()` holds the stored object to the schema's as
+  well, so a constraint written in both says the same thing twice and
+  keeps them in step by hand.
+
+To check a stored object, ask core's typed config, with the language
+code a translatable value needs (the storage writes it):
+`\Drupal::service('config.typed')->get('<name>')->validate()` answers no
+violation. The test module's opening hours, whose recipes are
+[Common settings recipes](recipes.md), store a text that may be left
+blank and a door code that may be cleared, and nothing else may hold
+null:
+
+<!-- yaml: tests/modules/data_surface_resource_test/config/schema/data_surface_resource_test.schema.yml#data_surface_resource_test.opening_hours -->
+
+```yaml
+data_surface_resource_test.opening_hours:
+  type: config_object
+  label: 'Opening hours'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    opens:
+      type: string
+      label: 'Opens at'
+    closes:
+      type: integer
+      label: 'Closes at, in minutes after midnight'
+    days:
+      type: sequence
+      label: 'Days open'
+      sequence:
+        type: string
+        label: 'Day'
+    notes:
+      type: text
+      label: 'Notes'
+      nullable: true
+    after_hours:
+      type: boolean
+      label: 'After-hours access'
+    door_code:
+      type: string
+      label: 'Door code'
+      nullable: true
+    late_days:
+      type: sequence
+      label: 'After-hours days'
+      sequence:
+        type: string
+        label: 'Day'
+    keywords:
+      type: sequence
+      label: 'Keywords'
+      sequence:
+        type: string
+        label: 'Keyword'
+    holidays:
+      type: string
+      label: 'On public holidays'
+```
 
 The values are stored as the resource accepted them, key for key: an
 attached structure is the map at its key, and a slot's variant the map
@@ -402,6 +489,8 @@ that wants the whole picture asks for it:
 ```php
 SchemaViolations::collect($typed_config, $name, $data, $paths, FALSE);
 ```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 Config with no schema at all is not an error. Plenty of config still has
 none, and storage that insisted would be unusable there.

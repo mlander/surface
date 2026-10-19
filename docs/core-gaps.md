@@ -321,6 +321,8 @@ $inputs->narrow('capacity')
   ->constrain('Range', ['max' => 100]);
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 Conditions come from a closed list (`present`, `absent`, `equals`, `in`,
 `atLeast`, `atMost`, `above`, `below`, `not`, `allOf`, `anyOf`), each one
 exact JSON Schema `if`; effects only narrow (a tighter bound or list,

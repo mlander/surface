@@ -232,7 +232,8 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
     $required = $this->form($this->one($choice()->setRequired(TRUE)))['key'];
     $this->assertSame(['s', 'm', 'l'], array_keys($required['#options']), 'Required: no empty radio.');
     $this->assertNull($required['#default_value'], 'Nothing chosen: nothing checked.');
-    $this->assertSame('Size is required.', (string) $required['#required_error']);
+    $this->assertTrue($required['#required'], 'Drawn required.');
+    $this->assertArrayNotHasKey('#required_error', $required, 'The form builder keeps core\'s check off: the refusal is the data surface\'s.');
     $held = $choice();
     DefinitionMetadata::setAlwaysHeld($held);
     $this->assertSame(['s', 'm', 'l'], array_keys($this->form($this->one($held), ['key' => 'm'])['key']['#options']), 'Always held: no empty radio either.');

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface_tool;
 
 use Drupal\Component\Render\PlainTextOutput;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Pipeline\ViolationSet;
 
 /**
@@ -70,6 +71,54 @@ trait ResultReportingTrait {
       $stale[$reference->fullPath()] = (string) $reference->message;
     }
     return $stale;
+  }
+
+  /**
+   * Names what a run told the caller and blocked nothing, by full path.
+   *
+   * A value sent for a locked key is kept as stored, not refused, so a
+   * caller whose value did not land would otherwise not learn why. Once
+   * per key, beside the violations and the stale references and never
+   * mixed into either: nothing is wrong, and nothing needs choosing
+   * again.
+   *
+   * Decision: see docs/decisions.md#locked-at-the-top.
+   *
+   * @param \Drupal\data_surface\Pipeline\Violation[] $notes
+   *   The notes, exactly as the pipeline reports them.
+   *
+   * @return array<string, string>
+   *   Each note's message, keyed by the full path of its key, rendered
+   *   as plain text for the reason the summary's are.
+   */
+  protected function notesSaid(array $notes): array {
+    $said = [];
+    foreach ($notes as $note) {
+      $said[$note->fullPath()] = PlainTextOutput::renderFromHtml((string) $note->message);
+    }
+    return $said;
+  }
+
+  /**
+   * Puts the notes after a result's message, one sentence per key.
+   *
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup $message
+   *   The message.
+   * @param array<string, string> $notes
+   *   The notes, as notesSaid() names them.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   The message, each note after it by its full path.
+   */
+  protected function withNotes(TranslatableMarkup $message, array $notes): TranslatableMarkup {
+    if ($notes === []) {
+      return $message;
+    }
+    $lines = [];
+    foreach ($notes as $path => $note) {
+      $lines[] = $path . ': ' . $note;
+    }
+    return $this->t('@message @notes', ['@message' => $message, '@notes' => implode(' ', $lines)]);
   }
 
 }

@@ -43,6 +43,8 @@ final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements
 }
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 The interface is optional, because most resources and structures only
 ask, so `defineInputs()` reads as "what this asks for" and a class that
 never mentions outputs answers with an empty map. Outputs take the same tool
@@ -85,6 +87,8 @@ return [
   'classes' => $variant === NULL ? Omitted::value() : ['v-' . $variant],
 ];
 ```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 Saying `'classes' => []` instead would be a different statement: "there
 are no classes" rather than "this run has nothing to say about
@@ -202,6 +206,8 @@ public function alterOutputs(BlueprintAdditionsInterface $outputs): void {
   $outputs->add('badge', 'string', $this->t('Badge'));
 }
 ```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 What the alter adds is mounted under its module's name, so the value
 lands at `third_party_outputs.my_module.badge` (advertised,

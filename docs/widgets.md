@@ -65,7 +65,7 @@ function my_module_data_surface_widget_info_alter(array &$definitions): void {
 | --- | --- | --- | --- |
 | `checkboxes` | -15 | A list whose item resolves to a list of allowed values, while it offers at most twelve (`CheckboxesWidget::MAXIMUM_OPTIONS`), or that asks for checkboxes. | `checkboxes`, never `#required` |
 | `radios` | -15 | One value that resolves to a list of allowed values and asks for radios. | `radios`; `- None -` a radio only where the key may be cleared |
-| `options` | -10 | Any definition whose constraints resolve to a list of allowed values, an empty one included: one value, and a list the checkboxes leave (more than twelve, or asking for a select). See [Options and resolvers](options.md). | `select`; a list's `#multiple` |
+| `options` | -10 | Any definition whose constraints resolve to a list of allowed values, an empty one included: one value, and a list the checkboxes leave (more than twelve, or asking for a select). See [Options and resolvers](options.md). | `select`; a list's `#multiple`, never `#required` |
 | `map` | 5 | A `ComplexDataDefinitionInterface`. One that declares no property, such as a slot variant for a choice with nothing more to say, renders as an empty container and answers an empty map. | `details` |
 | `list` | 8 | A list of single values with no list of allowed values, whose item a widget draws: keywords, a list of free strings or numbers. | a `fieldset` of rows, "Remove" beside each, "Add another" under them |
 | `time` | 9 | A `string` that asks for a time. | a time input |
@@ -232,9 +232,14 @@ final class ColorWidget extends DataSurfaceWidgetBase {
 }
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 `baseElement()` supplies what every element wants from a definition
 (`#title`, `#description`, `#required`), so a widget only adds the part
-that is its own. The attribute takes `id`, `label`, `weight`, and
+that is its own. `#required` draws the marker and the browser's
+`required` attribute and is never checked by core: the form builder
+keeps that check off, so a required key left empty is refused in the
+data surface's words ([decision](decisions.md#an-element-hints-and-the-rule-speaks)). The attribute takes `id`, `label`, `weight`, and
 optionally a `deriver`, as every core plugin attribute does.
 
 Three things to hold to:

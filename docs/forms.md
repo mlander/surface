@@ -624,9 +624,11 @@ hold](decisions.md#a-key-its-storage-always-holds). A required select,
 or one its storage always holds,
 with a stored value it still offers, or a declared default it offers,
 has no empty option at all; on first entry it comes up on `- Select -`,
-and a save leaving it there is refused with "@label is required.", set
-as the element's `#required_error` so core's own check, which answers
-first, uses the data surface's words.
+and a save leaving it there is refused with the data surface's own
+words, "@label is required." (or "... is required when ..." where a rule
+made it so): the form builder keeps core's own required check off every
+element it draws, which still draws the marker and the browser's
+`required` attribute ([decision](decisions.md#an-element-hints-and-the-rule-speaks)).
 
 Four things are true of a stale select, and each closes a different way
 of losing the value:

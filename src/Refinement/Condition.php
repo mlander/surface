@@ -303,6 +303,16 @@ final class Condition {
   }
 
   /**
+   * Returns whether this test asks only whether the key holds a value.
+   *
+   * @return bool
+   *   TRUE for present and absent.
+   */
+  public function isPresence(): bool {
+    return $this->kind === self::PRESENT || $this->kind === self::ABSENT;
+  }
+
+  /**
    * Lists the values this test compares the key's value with.
    *
    * @return array

@@ -153,6 +153,8 @@ public function applies(Constraint $constraint): bool;
 public function resolve(Constraint $constraint, DataDefinitionInterface $definition): OptionSet;
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 Nothing about resources or structures appears in either signature: a
 resolver is handed a constraint and a data definition, both core types,
 and answers with an `OptionSet`: allowed values as keys mapped to their
@@ -258,6 +260,8 @@ final class RoleExistsOptions extends DataSurfaceOptionsResolverBase {
 
 }
 ```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 Declare the cacheability honestly. It is what a generated form applies to
 the element it builds, and it is the difference between a select that

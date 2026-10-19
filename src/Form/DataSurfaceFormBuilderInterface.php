@@ -164,6 +164,20 @@ interface DataSurfaceFormBuilderInterface {
   public const PLACEHOLDER_KEY = '#data_surface_placeholder';
 
   /**
+   * Render key on a value element drawn required that Form API does not check.
+   *
+   * Set when the container is processed on each element whose #required
+   * the widget set: #required is cleared there, so Form API's own check
+   * ("... field is required.") never runs before the data surface's, and
+   * put back when the element is rendered, so the browser's `required`
+   * attribute and the label's marker are drawn as before. The pipeline's
+   * violation is the one message a refusal shows.
+   *
+   * Decision: see docs/decisions.md#an-element-hints-and-the-rule-speaks.
+   */
+  public const REQUIRED_KEY = '#data_surface_required';
+
+  /**
    * Builds a container of form elements for a data surface.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface

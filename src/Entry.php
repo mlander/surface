@@ -195,6 +195,42 @@ final class Entry {
   }
 
   /**
+   * Gets the sibling keys a declared rule of this key reads for presence.
+   *
+   * A key only declared rules watch, and each of their tests of it asks
+   * only whether it holds a value (`present()` or `absent()`): a refusal
+   * says such a key is set, never what it holds. A key a coded or a
+   * runtime refiner watches as well is not one, since what that refiner
+   * read cannot be told.
+   *
+   * Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
+   *
+   * @return string[]
+   *   The keys, a mounted one by its dotted path, in no particular order.
+   */
+  public function presenceDependencies(): array {
+    $presence = [];
+    foreach ($this->refiners as $chain) {
+      foreach ($chain as $link) {
+        if (!$link instanceof DeclaredRefiner) {
+          continue;
+        }
+        foreach ($link->rules[$this->name] ?? [] as $rule) {
+          foreach ($rule->condition()?->tests() ?? [] as $test) {
+            $at = implode('.', $link->pathOf((string) $test->key));
+            $presence[$at] = ($presence[$at] ?? TRUE) && $test->isPresence();
+          }
+        }
+      }
+    }
+    return array_map('strval', array_keys(array_filter(
+      $presence,
+      fn (bool $only, int|string $key): bool => $only && ($this->watchedBy[(string) $key] ?? 0) === DataSurfaceInterface::DECLARED,
+      ARRAY_FILTER_USE_BOTH,
+    )));
+  }
+
+  /**
    * Gets what the key's gate waits for, for the kinds of link asked for.
    *
    * A coded refiner, or a runtime one, runs once every key it watches

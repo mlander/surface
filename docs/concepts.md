@@ -51,3 +51,75 @@ snippet each.
 | Derived variants | Can a slot's variants be read from a description that exists, such as config schema? | Each variant is a class. |
 | Catalogue | What resources and operations does this site have? ([Catalogue](catalogue.md)) | You know your own. |
 | Version, `version:`, and the contract diff | Will a change I make break the values already stored, or a client that read the contract? Which changes are compatible, and what does a breaking one need? ([Evolving a resource](evolution.md)) | Nothing is stored or read yet: leave it at 1, and pin a baseline so the contract diff says when that stops being true. |
+
+## Namespaces
+
+Every class of the module a snippet in these pages names, beside the
+`use` line that imports it. A snippet that quotes a whole file carries
+its own `use` lines; the others leave them out and link here, from the
+section they sit in. A class a snippet borrows from a submodule or an
+example (`NewsletterStorage`, `DemoBlockStructure`) is in that module's
+`src/`, by the same rule: the namespace is the module's, then the
+directory. `NamespacesDocsTest` fails when a snippet names a class of
+the module that it does not import and this table does not list.
+
+| Class | Import |
+| --- | --- |
+| `AccessAnswer` | `use Drupal\data_surface\Resource\AccessAnswer;` |
+| `Alters` | `use Drupal\data_surface\Resource\Attribute\Alters;` |
+| `AltersInputsInterface` | `use Drupal\data_surface\Resource\AltersInputsInterface;` |
+| `BaseFieldOverrideStorage` | `use Drupal\data_surface\Storage\BaseFieldOverrideStorage;` |
+| `BlueprintAdditionsInterface` | `use Drupal\data_surface\Resource\BlueprintAdditionsInterface;` |
+| `BlueprintInterface` | `use Drupal\data_surface\Resource\BlueprintInterface;` |
+| `CompositeStorage` | `use Drupal\data_surface\Storage\CompositeStorage;` |
+| `Condition` | `use Drupal\data_surface\Refinement\Condition;` |
+| `ConfigEntityStorage` | `use Drupal\data_surface\Storage\ConfigEntityStorage;` |
+| `ConfigObjectStorage` | `use Drupal\data_surface\Storage\ConfigObjectStorage;` |
+| `DataSurfaceAccess` | `use Drupal\data_surface\DataSurfaceAccess;` |
+| `DataSurfaceBlockBase` | `use Drupal\data_surface\Plugin\Block\DataSurfaceBlockBase;` |
+| `DataSurfaceConditionBase` | `use Drupal\data_surface\Plugin\Condition\DataSurfaceConditionBase;` |
+| `DataSurfaceFieldTypeTrait` | `use Drupal\data_surface\Form\DataSurfaceFieldTypeTrait;` |
+| `DataSurfaceFormatterBase` | `use Drupal\data_surface\Plugin\Field\FieldFormatter\DataSurfaceFormatterBase;` |
+| `DataSurfaceInterface` | `use Drupal\data_surface\DataSurfaceInterface;` |
+| `DataSurfaceOptionsResolver` | `use Drupal\data_surface\Attribute\DataSurfaceOptionsResolver;` |
+| `DataSurfaceOptionsResolverBase` | `use Drupal\data_surface\Options\DataSurfaceOptionsResolverBase;` |
+| `DataSurfaceResult` | `use Drupal\data_surface\Pipeline\DataSurfaceResult;` |
+| `DataSurfaceStorageInterface` | `use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;` |
+| `DataSurfaceWidget` | `use Drupal\data_surface\Attribute\DataSurfaceWidget;` |
+| `DataSurfaceWidgetBase` | `use Drupal\data_surface\Widget\DataSurfaceWidgetBase;` |
+| `DefinitionMetadata` | `use Drupal\data_surface\DefinitionMetadata;` |
+| `DerivedOperation` | `use Drupal\data_surface\Resource\DerivedOperation;` |
+| `DerivedResource` | `use Drupal\data_surface\Resource\DerivedResource;` |
+| `DerivesResources` | `use Drupal\data_surface\Resource\Attribute\DerivesResources;` |
+| `DoesNotApply` | `use Drupal\data_surface\Refinement\DoesNotApply;` |
+| `FieldSettingsStorage` | `use Drupal\data_surface\Storage\FieldSettingsStorage;` |
+| `FieldSurfaceProviderInterface` | `use Drupal\data_surface\Form\FieldSurfaceProviderInterface;` |
+| `HasOutputsInterface` | `use Drupal\data_surface\Resource\HasOutputsInterface;` |
+| `HasStorageLayoutInterface` | `use Drupal\data_surface\Resource\HasStorageLayoutInterface;` |
+| `KeyedList` | `use Drupal\data_surface\Resource\KeyedList;` |
+| `KeysFromSiteInterface` | `use Drupal\data_surface\Resource\KeysFromSiteInterface;` |
+| `Omitted` | `use Drupal\data_surface\Pipeline\Omitted;` |
+| `Operation` | `use Drupal\data_surface\Resource\Attribute\Operation;` |
+| `OperationAccessInterface` | `use Drupal\data_surface\Resource\OperationAccessInterface;` |
+| `OperationContext` | `use Drupal\data_surface\Resource\OperationContext;` |
+| `OptionSet` | `use Drupal\data_surface\Options\OptionSet;` |
+| `PluginConfigurationStorage` | `use Drupal\data_surface\Storage\PluginConfigurationStorage;` |
+| `PreparedValues` | `use Drupal\data_surface\Pipeline\PreparedValues;` |
+| `RefinesInput` | `use Drupal\data_surface\Resource\Attribute\RefinesInput;` |
+| `Resource` | `use Drupal\data_surface\Resource\Attribute\Resource;` |
+| `ResourceCallable` | `use Drupal\data_surface\Resource\ResourceCallable;` |
+| `ResourceDeriverInterface` | `use Drupal\data_surface\Resource\ResourceDeriverInterface;` |
+| `ResourceInterface` | `use Drupal\data_surface\Resource\ResourceInterface;` |
+| `ResourceStorageInterface` | `use Drupal\data_surface\Resource\ResourceStorageInterface;` |
+| `SchemaViolations` | `use Drupal\data_surface\Storage\SchemaViolations;` |
+| `SettingsLayoutInterface` | `use Drupal\data_surface\Storage\SettingsLayoutInterface;` |
+| `Shape` | `use Drupal\data_surface\Resource\Attribute\Shape;` |
+| `ShapeInterface` | `use Drupal\data_surface\Resource\ShapeInterface;` |
+| `StateStorage` | `use Drupal\data_surface\Storage\StateStorage;` |
+| `StoredValueMigrationInterface` | `use Drupal\data_surface\Resource\StoredValueMigrationInterface;` |
+| `Structure` | `use Drupal\data_surface\Resource\Attribute\Structure;` |
+| `StructureInterface` | `use Drupal\data_surface\Resource\StructureInterface;` |
+| `UsesStructure` | `use Drupal\data_surface\Resource\Attribute\UsesStructure;` |
+| `Variant` | `use Drupal\data_surface\Resource\Attribute\Variant;` |
+| `Violation` | `use Drupal\data_surface\Pipeline\Violation;` |
+| `ViolationSet` | `use Drupal\data_surface\Pipeline\ViolationSet;` |

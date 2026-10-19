@@ -37,6 +37,11 @@ final class DataSurfaceResult {
    *   it carries cacheability a caller rendering or caching this result
    *   has to merge, and a neutral answer's cacheability is as real as a
    *   refusal's.
+   * @param \Drupal\data_surface\Pipeline\Violation[] $notes
+   *   What the caller is told and nothing blocks, one per key: a value
+   *   sent for a locked key that the key did not take, since it keeps
+   *   what it holds ("Lock is locked and kept as stored; the value sent
+   *   was not taken."). Never a refusal, so isValid() does not read it.
    */
   public function __construct(
     public readonly array $values,
@@ -44,6 +49,7 @@ final class DataSurfaceResult {
     public readonly ?PreparedValues $prepared = NULL,
     public readonly bool $committed = FALSE,
     public readonly ?AccessResultInterface $access = NULL,
+    public readonly array $notes = [],
   ) {
   }
 
