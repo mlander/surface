@@ -383,9 +383,9 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that an alter's attach, and an output's, are refused for now.
+   * Tests that an alter attaches only at its own mount, an output nowhere.
    */
-  public function testAttachIsTheOwnersInputVerbForNow(): void {
+  public function testAnAlterAttachesOnlyAtItsOwnMount(): void {
     $builder = new DataSurfaceBuilder();
     $outputs = new ResourceBlueprint($builder, $this->container->get('typed_data_manager'), TRUE);
     try {
@@ -395,10 +395,28 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
     catch (\LogicException $e) {
       $this->assertStringContainsString('outputs do not hold attached structures yet', $e->getMessage());
     }
+    // An alter attaches at its own mount, and only there.
+    // Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
     $additions = new ResourceBlueprintAdditions($builder, $this->container->get('typed_data_manager'), 'data_surface_resource_test');
+    try {
+      $additions->attachList('racks', RecipeResource::class);
+      $this->fail('An alter attached a collection.');
+    }
+    catch (\LogicException $e) {
+      $this->assertStringContainsString('a collection under the mount is not built', $e->getMessage());
+    }
+    $mount = $additions->attach('third_party_settings.data_surface_resource_test', RecipeResource::class);
+    $this->assertSame($mount, $builder->getThirdPartyMount('data_surface_resource_test'), 'The mount is held, for the alter to describe and place.');
+    try {
+      $additions->add('note', 'string', 'Note');
+      $this->fail('An alter added a key beside the structure at its mount.');
+    }
+    catch (\LogicException $e) {
+      $this->assertStringContainsString('A mount holding a structure holds its keys alone', $e->getMessage());
+    }
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('an attached structure inside that mount is not built');
-    $additions->attach('storage', RecipeResource::class);
+    $this->expectExceptionMessage('An alter attaches under its own mount, and only at the mount itself, third_party_settings.data_surface_resource_test');
+    (new ResourceBlueprintAdditions(new DataSurfaceBuilder(), $this->container->get('typed_data_manager'), 'data_surface_resource_test'))->attach('storage', RecipeResource::class);
   }
 
   /**

@@ -89,6 +89,7 @@ class ResourceCatalogueTest extends DataSurfaceKernelTestBase {
       'first.newsletter',
       'first.store',
       'node.type',
+      'registration.compliance',
       'registration.contact',
       'registration.step1',
       'registration.step2',
@@ -134,10 +135,10 @@ class ResourceCatalogueTest extends DataSurfaceKernelTestBase {
     ], $node_type['alters']);
     // An alter's methods, each by the key it refines, what it watches
     // and whether it is a runtime refiner. Its rule on the capacity is
-    // declared in alterInputs(), data the build reads, and no method.
+    // declared in alterInputs(), data the build reads, and no method; the
+    // stewards are the compliance structure's, which it attaches.
     $this->assertSame([
       ['key' => 'room', 'watches' => ['venue'], 'runtime' => TRUE],
-      ['key' => 'stewards', 'watches' => ['capacity'], 'runtime' => FALSE],
     ], $catalogue['registration.step3']['alters'][0]['refines']);
 
     $field = $catalogue['field.instance'];

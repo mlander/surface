@@ -134,6 +134,27 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   protected array $locked = [];
 
   /**
+   * The ports the data surface reads from its container, by name.
+   *
+   * @var array<string, \Drupal\data_surface\Port>
+   */
+  protected array $ports = [];
+
+  /**
+   * The structures alters attached at their mounts, by provider.
+   *
+   * @var array<string, \Drupal\data_surface\Attachment>
+   */
+  protected array $mounted = [];
+
+  /**
+   * The wirings refinement edges came from, by target, then dependency.
+   *
+   * @var array<string, array<string, string>>
+   */
+  protected array $wirings = [];
+
+  /**
    * What the data surface being built depends on.
    */
   protected CacheableMetadata $cacheability;
@@ -425,6 +446,46 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * {@inheritdoc}
    */
+  public function reserveThirdPartyMount(string $provider): MapDataDefinition {
+    $this->assertMutable();
+    $this->thirdParty[$provider] ??= [];
+    $mount = $this->getThirdPartyMount($provider);
+    assert($mount !== NULL);
+    return $mount;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function mountStructure(string $provider, Attachment $attachment): static {
+    $this->assertMutable();
+    if (($this->thirdParty[$provider] ?? []) !== [] || isset($this->mounted[$provider])) {
+      throw new \LogicException(sprintf('The %s mount holds keys already, so a structure cannot be attached there: a mount that holds a structure holds its keys alone.', $provider));
+    }
+    $this->reserveThirdPartyMount($provider);
+    foreach ($attachment->child->getDefinitions()->entries() as $name => $entry) {
+      $this->thirdParty[$provider][(string) $name] = DataSurface::deepClone($entry->definition);
+    }
+    $this->mounted[$provider] = $attachment;
+    $this->cacheability->addCacheableDependency($attachment->child);
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function addPort(Port $port): static {
+    $this->assertMutable();
+    if (isset($this->definitions[$port->name])) {
+      throw new \LogicException(sprintf('"%s" is a key of this data surface, so it cannot also be read as a port.', $port->name));
+    }
+    $this->ports[$port->name] = $port;
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function getThirdPartyMount(string $provider, bool $output = FALSE): ?MapDataDefinition {
     if (!isset(($output ? $this->thirdPartyOutputs : $this->thirdParty)[$provider])) {
       return NULL;
@@ -457,8 +518,13 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * {@inheritdoc}
    */
-  public function addRefinement(string $target, array $dependencies, bool $runtime = FALSE, bool $declared = FALSE): static {
+  public function addRefinement(string $target, array $dependencies, bool $runtime = FALSE, bool $declared = FALSE, ?string $wiring = NULL): static {
     $this->assertMutable();
+    if ($wiring !== NULL) {
+      foreach ($dependencies as $dependency) {
+        $this->wirings[$target][$dependency] = $wiring;
+      }
+    }
     $this->refinements[$target] = array_values(array_unique(array_merge($this->refinements[$target] ?? [], $dependencies)));
     $kind = match (TRUE) {
       $runtime => DataSurfaceInterface::RUNTIME,
@@ -571,6 +637,8 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
         staticRefinements: $this->staticRefinements(),
         lists: $this->lists,
         watchedBy: $this->watchedBy,
+        ports: array_values($this->ports),
+        mounted: $this->mounted === [] ? [] : ['third_party_settings' => $this->mounted],
       ),
       $this->cacheability,
       DefinitionMap::fromArrays(definitions: $outputs),
@@ -889,8 +957,9 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
       $cycle = array_slice($path, $seen);
       $cycle[] = $target;
       throw new \LogicException(sprintf(
-        'The refinement map has a cycle: %s. A definition cannot be refined against itself, directly or through its dependencies.',
+        'The refinement map has a cycle: %s. A definition cannot be refined against itself, directly or through its dependencies.%s',
         implode(' -> ', $cycle),
+        $this->wiringsOn($cycle),
       ));
     }
     $path[] = $target;
@@ -898,6 +967,29 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
       $this->walkRefinements((string) $dependency, $path, $settled);
     }
     $settled[$target] = TRUE;
+  }
+
+  /**
+   * Names the port wirings a cycle runs through, for its refusal.
+   *
+   * @param string[] $cycle
+   *   The cycle, each step refined against the next.
+   *
+   * @return string
+   *   A sentence naming each wiring, or '' when it runs through none.
+   */
+  protected function wiringsOn(array $cycle): string {
+    $named = [];
+    for ($i = 0; $i < count($cycle) - 1; $i++) {
+      [$from, $to] = [$cycle[$i], $cycle[$i + 1]];
+      foreach ($this->wirings as $target => $dependencies) {
+        $target = (string) $target;
+        if (isset($dependencies[$to]) && ($target === $from || str_starts_with($from, $target . '.') || str_starts_with($target, $from . '.'))) {
+          $named[$dependencies[$to]] = $dependencies[$to];
+        }
+      }
+    }
+    return $named === [] ? '' : sprintf(' It runs through %s: a port may not read a key that reads, through the structure, the port itself.', implode(', and ', $named));
   }
 
   /**

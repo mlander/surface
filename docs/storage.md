@@ -102,6 +102,13 @@ all is refused by the schema under that key. `data_surface_examples`
 declares `data_surface_examples.registration.third_party.[%key]` and
 `data_surface_examples_compliance` its part.
 
+A structure an alter attaches at its mount is described the same way:
+its keys are the mount's, so the mounting module's mapping lists them,
+and a mapping type of the structure's keys declared once serves every
+site that stores it ([Reusing a structure](resources.md#reusing-a-structure-from-another-module)).
+The test module's `data_surface_resource_test.seating` is one, used by
+the venue's `seating`, the hall's `chairs` and the hall's mount.
+
 ## What storage is
 
 Two interfaces with the same three verbs. A resource's own storage class

@@ -452,32 +452,39 @@ drush pm:install data_surface_examples_compliance
 ```
 
 then reload example 3. A second module, which example 3 does not know,
-changes it with one class. It adds two keys, an event licence and a
-number of stewards, stored under the module's own name (at
+changes it with two classes. One is a structure, what compliance asks
+of any event: an event licence and a number of stewards. The other is an
+alter of example 3, an adapter: it attaches the structure at its own
+mount, so the two keys are stored under the module's own name (at
 `third_party_settings.data_surface_examples_compliance.licence` and
-`.stewards`, so example 3's storage never has to know them), and
-rewords the title's label. Its rule and its two methods are what you
-see move. The rule is data, a condition and an effect, which the served
-contract writes down as it is; the first method is static, a pure
-function of what it watches, so the served contract states its answers
-ahead of time where it can; the second reads State, so it is a runtime
-refiner, the only kind an instance method may be:
+`.stewards`, so example 3's storage never has to know them), and it
+rewords the title's label. Its rules and its methods are what you see
+move. A rule is data, a condition and an effect, which the served
+contract writes down as it is; a static method is a pure function of
+what it watches, so the served contract states its answers ahead of
+time where it can; a method that reads State is a runtime refiner, the
+only kind an instance method may be:
 
-- **The licence lifts a ceiling on example 3's own key.** The rule on
-  `capacity`, `narrow('capacity')->when(Condition::absent('licence'))`,
-  reads the alter's `licence`. With no licence it caps the capacity at
-  100 and says so under the field; with one it leaves the capacity
-  alone, so the room's limit, from example 3's own method, is what
-  applies. Both narrow the same key, the method first and the rule
-  after, and each only narrows: the lower ceiling wins. The full schema
-  states the rule exactly, as an `if` that the licence holds nothing.
-- **The stewards follow the capacity.** The method on the alter's own
-  `stewards` watches example 3's `capacity`: one steward per fifty
-  people, at least one, and the number under the field says how many.
-- **A closed room is not offered.** The method on example 3's `room` is
-  a runtime refiner (`runtime: TRUE`): it reads the rooms a site has
-  closed from State, which no schema can state ahead of time. Nothing is
-  closed until a site says so (`drush state:set
+- **The licence lifts a ceiling on example 3's own key.** The alter's
+  rule on `capacity`, `narrow('capacity')->when(Condition::absent('licence'))`,
+  reads the structure's `licence` at the alter's mount. With no licence
+  it caps the capacity at 100 and says so under the field; with one it
+  leaves the capacity alone, so the room's limit, from example 3's own
+  method, is what applies. Both narrow the same key, the method first
+  and the rule after, and each only narrows: the lower ceiling wins. The
+  full schema states the rule exactly, as an `if` that the licence holds
+  nothing.
+- **The stewards follow the capacity.** The structure cannot name
+  example 3's capacity, since it is meant for any event: it reads a
+  `capacity` port, `$inputs->reads('capacity', 'integer', required:
+  TRUE)`, and its method on `stewards` watches the port, one steward per
+  fifty people, at least one. The alter wires the port to example 3's
+  key, `reads: ['capacity' => 'capacity']`; another module attaching the
+  structure would wire it to a key of its own.
+- **A closed room is not offered.** The alter's method on example 3's
+  `room` is a runtime refiner (`runtime: TRUE`): it reads the rooms a
+  site has closed from State, which no schema can state ahead of time.
+  Nothing is closed until a site says so (`drush state:set
   data_surface_examples_compliance.closed_rooms '["riverside_east"]'
   --input-format=json`); then the room leaves the East room out and says
   "The East room is closed.", the submit refuses it, and the full schema
@@ -485,6 +492,43 @@ refiner, the only kind an instance method may be:
   defaults opens every room again.
 
 No form alter, no hook.
+
+<!-- code: ../data_surface_examples_compliance/src/Structure/ComplianceStructure.php -->
+
+```php
+#[Structure('registration.compliance')]
+final class ComplianceStructure implements StructureInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->reads('capacity', 'integer', required: TRUE);
+    $licence = ['pattern' => '/^\d{4}$/D', 'message' => 'A licence number is four digits, such as 2048.'];
+    $licence_key = $inputs->add('licence', 'string', t('Event licence'))
+      ->setDescription(t('The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.'))
+      ->addConstraint('Regex', $licence);
+    DefinitionMetadata::setExamples($licence_key, ['2048']);
+    $inputs->add('stewards', 'integer', t('Stewards'), default: 1)->setRequired(TRUE);
+  }
+
+  /**
+   * One steward for every fifty people, at least one.
+   */
+  #[RefinesInput('stewards')]
+  public static function stewardsForCapacity(DataDefinition $stewards, int $capacity): DataDefinition {
+    $n = max(1, (int) ceil($capacity / 50));
+    return $stewards->addConstraint('Range', ['min' => $n])
+      ->setDescription(new PluralTranslatableMarkup(
+        $n,
+        'At least 1 steward for @capacity attendees.',
+        'At least @count stewards for @capacity attendees.',
+        ['@capacity' => $capacity],
+      ));
+  }
+
+}
+```
 
 <!-- code: ../data_surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php -->
 
@@ -515,15 +559,12 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $licence = ['pattern' => '/^\d{4}$/D', 'message' => 'A licence number is four digits, such as 2048.'];
-    $licence_key = $inputs->add('licence', 'string', $this->t('Event licence'))
-      ->setDescription($this->t('The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.'))
-      ->addConstraint('Regex', $licence);
-    DefinitionMetadata::setExamples($licence_key, ['2048']);
-    $inputs->add('stewards', 'integer', $this->t('Stewards'), default: 1)->setRequired(TRUE);
+    // The structure's capacity is example 3's.
+    $inputs->attach('third_party_settings.data_surface_examples_compliance', ComplianceStructure::class, reads: ['capacity' => 'capacity']);
     $inputs->describe('title', label: $this->t('Public event title'));
     $inputs->describe('third_party_settings.data_surface_examples_compliance', label: $this->t('Compliance'), after: 'capacity');
     // Without a licence, no more than a hundred, whatever the room seats.
+    // The licence is the structure's, which this alter reads at its mount.
     // A licence its own pattern refuses is no licence: a rule never sees
     // an invalid sibling.
     $inputs->narrow('capacity')
@@ -561,36 +602,23 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
     ));
   }
 
-  /**
-   * One steward for every fifty people, at least one.
-   */
-  #[RefinesInput('stewards')]
-  public static function stewardsForCapacity(DataDefinition $stewards, int $capacity): DataDefinition {
-    $n = max(1, (int) ceil($capacity / 50));
-    return $stewards->addConstraint('Range', ['min' => $n])
-      ->setDescription(new PluralTranslatableMarkup(
-        $n,
-        'At least 1 steward for @capacity attendees.',
-        'At least @count stewards for @capacity attendees.',
-        ['@capacity' => $capacity],
-      ));
-  }
-
 }
 ```
 
-The two keys sit in one fieldset, titled "Compliance" by the last line
-of `alterInputs()`, which also places it: `after: 'capacity'` draws the
-fieldset right after the capacity its licence lifts, on the form and in
-React, instead of last. Only where it is drawn moves; the keys are still
-stored and posted at
-`third_party_settings.data_surface_examples_compliance`, and the Tool
-API and the config schema see nothing new. Example 3 ships at Riverside Hall's main hall, which
+The two keys sit in one fieldset, titled "Compliance" by the alter,
+which also places it: `after: 'capacity'` draws the fieldset right after
+the capacity its licence lifts, on the form and in React, instead of
+last. Only where it is drawn moves; the keys are still stored and posted
+at `third_party_settings.data_surface_examples_compliance`, and the Tool
+API and the config schema see nothing new. In the served contract the
+fieldset is the structure's def, `registration.compliance`, referred to
+from the mount, which says which of example 3's keys the port reads
+(`x-surface.reads`). Example 3 ships at Riverside Hall's main hall, which
 seats 400. The capacity stops at 100, and its help text says why: "Up
 to 100 without an event licence." The
 licence asks for the four digits after EV- only. Type `2048` and the
 capacity goes back to the owner's "Up to 400 for the Main hall."; type
-`204` or `EV-2048` and the licence is refused, in the alter's words,
+`204` or `EV-2048` and the licence is refused, in the structure's words,
 under the field, and the capacity stops at 100 again: a rule never
 sees a value its own key refuses, so a licence in the wrong format is no
 licence. In a room that seats 100 or fewer the licence changes nothing:

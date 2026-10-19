@@ -19,6 +19,7 @@ use Drupal\data_surface\Pipeline\DataSurfaceResult;
 use Drupal\data_surface\Pipeline\ViolationSummary;
 use Drupal\data_surface_examples\ExampleCalls;
 use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
+use Drupal\data_surface_examples_compliance\Structure\ComplianceStructure;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -192,6 +193,16 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['room', self::LICENCE], $definitions->refinementPaths()['capacity']);
     $this->assertSame(['capacity'], $definitions->refinementPaths()[self::STEWARDS]);
     $this->assertArrayNotHasKey('third_party_settings', $definitions->refinementPaths());
+
+    // The keys are the compliance structure's, attached at the mount, its
+    // capacity port wired to example 3's capacity.
+    // Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
+    $mounted = $definitions->entry('third_party_settings')->mounted[self::MODULE] ?? NULL;
+    $this->assertNotNull($mounted);
+    $this->assertSame(ComplianceStructure::class, $mounted->source);
+    $this->assertSame('registration.compliance', $mounted->id);
+    $this->assertSame(['capacity' => 'capacity'], $mounted->reads);
+    $this->assertSame(['capacity'], array_keys($mounted->child->getDefinitions()->ports()));
   }
 
   /**

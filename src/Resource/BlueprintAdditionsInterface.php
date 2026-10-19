@@ -120,25 +120,46 @@ interface BlueprintAdditionsInterface {
    * handed to it, or its parent's context and known identity. Its
    * values are a map at the key, refined, accepted and validated by the
    * child in its own frame; a parent cannot refine into it and it cannot
-   * watch a parent key.
+   * watch a parent key. What it reads of its container it declares as
+   * ports (BlueprintInterface::reads()), which $reads wires to keys of
+   * the container: a required port must be wired, to a key that exists
+   * outside the child, of the port's type.
+   *
+   * An alter attaches at its own mount, `third_party_settings.<module>`,
+   * and only there: the mount's keys are then the structure's, stored
+   * under the module's name as any key an alter mounts, and the alter is
+   * an adapter between the structure and one owner. It wires the ports to
+   * the owner's keys, and its own glue (a describe(), a rule or a refiner
+   * on an owner's key) may read the structure's keys by their names; what
+   * they allow stays the structure's.
    *
    * Returns the map definition at the key, as add() returns its
    * definition, so the owner labels and describes it with the core
    * setters. The child fills its properties when it is built.
    *
+   * @code
+   * $inputs->attach('compliance', ComplianceStructure::class, reads: ['capacity' => 'seats']);
+   * @endcode
+   *
    * @param string $key
-   *   The key the child sits at.
+   *   The key the child sits at; for an alter, its own mount,
+   *   `third_party_settings.<module>`.
    * @param class-string<\Drupal\data_surface\Resource\DefinesInputsInterface> $child
    *   The child's class.
+   * @param array<string, string> $reads
+   *   The child's ports, each mapped to the container's key it reads: an
+   *   owner's key by its name.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The map at the key, already part of the blueprint.
    *
    * @throws \LogicException
-   *   When the key is already declared, or (for an alter, or for
-   *   outputs) not yet built: see docs/decisions.md.
+   *   When the key is already declared; for outputs; for an alter, at
+   *   any key but its own mount, or beside keys of its own there. The
+   *   wiring is checked when the parent is built: see
+   *   docs/resources.md#ports.
    */
-  public function attach(string $key, string $child): MapDataDefinition;
+  public function attach(string $key, string $child, array $reads = []): MapDataDefinition;
 
   /**
    * A collection at a key: a list whose every item is the child.
@@ -177,8 +198,9 @@ interface BlueprintAdditionsInterface {
    *   The list at the key, already part of the blueprint.
    *
    * @throws \LogicException
-   *   When the key is already declared, or (for an alter, or for
-   *   outputs) not yet built: see docs/decisions.md.
+   *   When the key is already declared, or (for an alter, whose mount
+   *   holds a collection nowhere yet, or for outputs) not yet built: see
+   *   docs/decisions.md.
    * @throws \InvalidArgumentException
    *   When a bound is negative, or $min is above $max.
    */

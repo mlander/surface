@@ -34,7 +34,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * map on the specimen, a slot and an attached part on example 3, a
  * runtime refiner, a declared rule and a mounted key on example 4,
  * collections on the cellar, keys that do not apply on the bulletin and
- * the notice, every declared rule's condition and effect on the parcel),
+ * the notice, every declared rule's condition and effect on the parcel,
+ * a structure's ports on the venue and the hall),
  * a table of documents the pipeline accepts and documents it refuses.
  * Each row is asserted three times: against the pipeline (accept(), then
  * validate() over what is stored), against the full
@@ -485,6 +486,51 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * The venue and the hall: a structure reading its container's keys.
+   *
+   * The seating's aisle follows the layout port, enumerated at each site;
+   * its rows follow the guests port, a rule stated as written at each
+   * site that wires it. Both documents hold each document to what the
+   * pipeline holds it to, both ways.
+   *
+   * @see docs/resources.md#ports
+   */
+  public function testPorts(): void {
+    $this->installConfig(['data_surface_resource_test']);
+    $stored = ['rows' => 5, 'aisle' => 'centre', 'ushers' => 0];
+    $seating = static fn (array $seating): array => ['seating' => $seating + $stored];
+    $this->assertTable('resource_test.venue', $this->build('resource_test.venue'), $this->stored('resource_test.venue'), [
+      'as stored' => [[], TRUE],
+      'a banquet with a side aisle' => [['layout' => 'banquet'] + $seating(['aisle' => 'side']), TRUE],
+      'a banquet with no aisle' => [['layout' => 'banquet'] + $seating(['aisle' => 'none']), TRUE],
+      'a theatre with no aisle' => [$seating(['aisle' => 'none']), FALSE],
+      'a theatre with its aisle left out' => [$seating(['aisle' => NULL]), FALSE],
+      'standing, the aisle left out' => [['layout' => 'standing'] + $seating(['aisle' => NULL]), TRUE],
+      'standing, with a side aisle' => [['layout' => 'standing'] + $seating(['aisle' => 'side']), FALSE],
+      'twelve rows for eighty guests' => [$seating(['rows' => 12]), FALSE],
+      'twelve rows for three hundred guests' => [['capacity' => 300] + $seating(['rows' => 12]), TRUE],
+      'a rows count the seating does not have' => [['capacity' => 300] + $seating(['rows' => 50]), FALSE],
+    ]);
+    $mount = static fn (array $seating): array => [
+      'third_party_settings' => ['data_surface_resource_test' => $seating + $stored],
+    ];
+    $chairs = static fn (array $chairs): array => ['chairs' => $chairs + ['rows' => 5]];
+    $banquet = static fn (int $guests): array => ['style' => 'banquet', 'guests' => $guests];
+    $this->assertTable('resource_test.hall', $this->build('resource_test.hall'), $this->stored('resource_test.hall'), [
+      'as stored' => [[], TRUE],
+      'chairs with a centre aisle at a banquet' => [$chairs(['rows' => 5, 'aisle' => 'centre']), FALSE],
+      'chairs with a centre aisle in a theatre' => [['arrangement' => 'theatre'] + $chairs(['aisle' => 'centre']), TRUE],
+      'twenty rows of chairs for fifty guests' => [['guests' => 50] + $chairs(['rows' => 20, 'aisle' => 'side']), TRUE],
+      'twenty overflow rows for fifty guests' => [['guests' => 50] + $mount(['rows' => 20]), FALSE],
+      'twenty overflow rows for five hundred guests' => [['guests' => 500] + $mount(['rows' => 20]), TRUE],
+      'overflow with no aisle in a theatre style' => [$mount(['aisle' => 'none']), FALSE],
+      'overflow with no aisle, banquet, three hundred guests' => [$banquet(300) + $mount(['aisle' => 'none']), TRUE],
+      'overflow with no aisle, banquet, four hundred guests' => [$banquet(400) + $mount(['aisle' => 'none']), FALSE],
+      'standing overflow, the aisle left out' => [['style' => 'standing'] + $mount(['aisle' => NULL]), TRUE],
+    ]);
+  }
+
+  /**
    * The notice: an attached child, a slot and a mounted key, ruled out.
    */
   public function testNotice(): void {
@@ -653,7 +699,8 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $accepted = $this->pipeline()->accept($step3, $licensed, $this->stored('registration.step3'));
     $this->assertTrue($this->pipeline()->validate($step3, $accepted)->has('third_party_settings'));
     $full = $this->decoded($this->container->get('data_surface.contract_emitter')->emitFull($step3, 'registration.step3')->document['schema']);
-    $this->assertSame('^\d{4}$', $full['properties']['third_party_settings']['properties']['data_surface_examples_compliance']['properties']['licence']['pattern']);
+    // The licence is the compliance structure's, defined once.
+    $this->assertSame('^\d{4}$', $full['$defs']['registration.compliance']['properties']['licence']['pattern']);
     $this->assertFalse($this->validates($full, $accepted));
   }
 

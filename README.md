@@ -201,7 +201,8 @@ The module uses these fourteen words in exactly one sense each.
   `third_party_settings.<module>`), rewords a label with `describe()`,
   offers more values on a fixed list with `extendChoices()`, and narrows
   with `#[RefinesInput]` methods, on the owner's keys or its own. It
-  never removes a key or a value, never retypes, and cannot attach.
+  never removes a key or a value, never retypes, and attaches a
+  structure only at its own mount.
 - **Slot**: an attached structure a sibling key chooses, declared with
   `attachBy($key, by: $sibling)`. Always open: the parent names no
   child, and every class marked `#[Variant]` for it fills it for one
@@ -264,8 +265,9 @@ their configuration may change without a deprecation path.
   to the shipped settings for a retake. Needs
   [Tool](https://www.drupal.org/project/tool).
 - **Data Surface Examples - Compliance**
-  (`data_surface_examples_compliance`): example 4, one alter class
-  changing example 3's resource, which does not know it.
+  (`data_surface_examples_compliance`): example 4, a compliance
+  structure and the one alter that attaches it to example 3's resource,
+  which does not know it.
 - **Data Surface - React** (`data_surface_react`): the served contract,
   an operation as JSON Schema 2020-12 with an `x-surface` extension, a
   refine endpoint that re-narrows it as answers change, a validate

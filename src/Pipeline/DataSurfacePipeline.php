@@ -103,8 +103,9 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * through this same method, so its locked keys, secrets and defaults
    * answer for themselves exactly as they would on their own. Slots are
    * accepted after everything else, because the variant is read from the
-   * accepted value of the deciding key; the result keeps declaration
-   * order.
+   * accepted value of the deciding key, and so is a child that reads
+   * ports, which read the accepted values of the keys they are wired to;
+   * the result keeps declaration order.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The data surface describing this level.
@@ -134,7 +135,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     $values = array_fill_keys($definitions->names(), NULL);
     $slots = [];
     foreach ($definitions->entries() as $name => $entry) {
-      if ($entry->slot !== NULL) {
+      if ($entry->slot !== NULL || ($entry->attachment !== NULL && $entry->attachment->reads !== [])) {
         $slots[] = $entry;
         continue;
       }
@@ -706,7 +707,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     foreach ($dependencies as $dependency) {
       $at = explode('.', $dependency);
       $watched = static::definitionAt($refined, $at);
-      $held = NestedArray::getValue($values, $at);
+      $held = NestedArray::getValue($values, $at) ?? $refined->getPortValues()[$dependency] ?? NULL;
       $set = $watched === NULL || !is_scalar($held) ? NULL : $this->options->resolve($watched);
       $shown = match (TRUE) {
         !ValueState::isConfigured($held) => $this->t('empty'),
@@ -767,15 +768,21 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   /**
    * Finds the definition at a key, or at a property path inside it.
    *
+   * A port is read as the container's key it is wired to.
+   *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The data surface.
    * @param string[] $parents
-   *   The key, then the property names below it.
+   *   The key, then the property names below it; or a port.
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
    *   The definition, or NULL when the path names none.
    */
   protected static function definitionAt(DataSurfaceInterface $surface, array $parents): ?DataDefinitionInterface {
+    if (count($parents) === 1 && $surface->getDefinition((string) $parents[0]) === NULL) {
+      // A port: the container's key it reads.
+      return $surface->getPortDefinition((string) $parents[0]);
+    }
     $definition = $surface->getDefinition((string) array_shift($parents));
     foreach ($parents as $property) {
       $definition = $definition instanceof ComplexDataDefinitionInterface ? $definition->getPropertyDefinition($property) : NULL;

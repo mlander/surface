@@ -782,12 +782,31 @@ owner's. The owner's storage and schema then never have to know a
 contributor's keys, which is how core keeps third-party settings.
 (`ResourceBlueprintAdditions`)
 
-### An alter cannot attach
+### An alter attaches at its own mount
 
-`attach()` and `attachList()` on an alter are refused. An alter's keys
-are mounted under its module, and an attached structure or a collection
-inside that mount is not built yet.
-(`ResourceBlueprintAdditions::attach()`, `ResourceBlueprintAdditions::attachList()`)
+An alter may `attach()` a structure at its own mount,
+`third_party_settings.<module>`, and nowhere else: the mount's keys are
+then the structure's, stored, posted and described by config schema
+under the module's name exactly as keys the alter added would be, and
+the alter adds no key of its own beside them. It still cannot attach at
+the owner's level, where the structure's keys would be the owner's, and
+`attachList()` on an alter is still refused, as is a structure at a key
+inside the mount: neither is built. The structure is built in its own
+frame, as any child is, and its answer for the values at the mount is
+written there (`Entry::$mounted`), so the form, the pipeline, storage
+and the tool bridge read the mount as the plain map they always read.
+That is what lets an alter be an adapter
+([ports](#a-port-is-a-live-sibling-value)) with no
+change to the owner's storage or to anything that reads it. The
+alter's glue may read the structure's keys by their names, as it reads
+any key it mounted, and may not narrow them: what they allow is the
+structure's. A resource or a structure with children of its own, or
+whose access answers locked or omitted, is refused at a mount; each is
+open. *Changed for ports: until then `attach()` and `attachList()` on
+an alter were both refused, an attached structure inside the mount not
+being built.*
+(`ResourceBlueprintAdditions::attach()`, `ResourceBlueprintAdditions::attachList()`,
+`Resources::mountStructure()`, `DataSurface::refineMounted()`)
 
 ### An alter refines its own mounted key
 
@@ -907,6 +926,82 @@ parent's to say about a key it owns. The pattern says a parent cannot
 refine into a
 child and a child cannot read a parent's value; refusing the watch too
 makes the wall hold both ways. (`Resources::assertWalled()`)
+
+### A port is a live sibling value
+
+A structure that needs a value its container holds declares a port, a
+name of its own with a type, `$inputs->reads('capacity', 'integer',
+required: TRUE)`; its `#[RefinesInput]` methods watch the port by that
+name and its declared rules name it in a condition, as they would a
+sibling. The container wires each port to one of its own keys when it
+attaches the structure, a resource at a key of its own and an alter at
+its mount: `attach('compliance', ComplianceStructure::class, reads:
+['capacity' => 'seats'])`. The compliance structure of example 4 is the
+first case. Each choice, and why:
+
+- **Live, and read as a sibling is.** The child is handed what the
+  wired key holds now, as the container admits it (a value its own key
+  refuses is handed as nothing), and refines in its own frame: a port
+  gates a coded refiner and is read as it stands by a rule, exactly as
+  a sibling is. It is never a key of the child: nothing stores, draws
+  or accepts it there, since the container does all three for its own
+  key. The wall stays where it was. The child names nothing of its
+  container, which names nothing inside it; what crosses is one value,
+  named by the child and chosen by the container. A copy into the
+  child's values would be a key the child stores, and a path into the
+  parent would be the child naming its parent's key, which binds the
+  reusable piece to one owner.
+- **The wiring is the site's.** Which key a port reads is said where the
+  structure is attached, because the structure is reused by containers
+  whose keys it cannot know (a capacity, a number of seats, the guests).
+  The build refuses an unwired required port, a wiring to a key the
+  container does not declare, to a key of another type, to a key inside
+  the child itself, a port the child does not read, and a cycle through
+  the wiring, naming it. An optional port left unwired holds nothing. A
+  slot's variant and a collection's item are wired by nothing yet, so
+  neither may require a port.
+- **What depends on a port is stated at the site.** The def is the
+  structure as declared, for no values, reused at every site with one
+  id, and a port is no property of it: a conditional naming the port
+  there would be read by a validator as a key that is always absent,
+  stricter than the pipeline, and a def that knew the wired key would
+  be one container's. So the def lists its ports (`x-surface.ports`), a
+  key reading a port names it in its `dependsOn` and carries neither
+  `enumerated` nor `dynamic`, and it is in no `required` where it may be
+  ruled out. The container states the rest on its own `allOf`, an `if`
+  on its key and a `then` reaching into the child at the site: coded
+  refiners enumerated over the wired keys' lists (`dynamic` when they
+  read a key of the child's too, whose value the container does not
+  state), declared rules as written, the port read at the wired key.
+  The site says which key each port reads (`x-surface.reads`), and its
+  `dependsOn` names the container's keys: the child's dependencies at
+  the parent's paths. The schema for these answers binds the ports to
+  its values, so the site narrows the def by composition, as before.
+- **An alter is an adapter.** An alter that attaches a reusable
+  structure at its own mount ([revised](#an-alter-attaches-at-its-own-mount))
+  wires the structure to one owner, and what stays its own is glue for
+  that owner: rewording or placing the owner's keys, a declared rule or
+  a coded refiner on an owner's key, `extendChoices()`. The glue may read
+  the structure's keys at its mount, because a relation between an
+  owner's key and the structure's answer (the compliance capacity
+  without a licence) is the one thing neither side can say alone, and
+  reading changes nothing the def says. A resource's own refiners still
+  do not read an attached child's keys: the wall is unchanged, and what
+  an alter reads is its own mount, as it always could.
+- **Identity is a port of a fixed kind.** What a parent hands a child
+  through `withChild(known:)` is a value the child reads from its
+  container too, settled when the parent is built: it locks the key the
+  child declares for it, selects what its storage loads and fills its
+  permission. A port is the live kind, a value the container's caller
+  may still change. Both stay, each where it applies, and identity is not
+  reimplemented as a port: a port locks nothing and is asked of no
+  operation.
+
+Open: a container opting out of the alters of a structure it attaches,
+which apply wherever it is used; ports on a slot's variant or a
+collection's item, which nothing wires yet. (`Port`, `BlueprintInterface::reads()`,
+`Attachment::bound()`, `Resources::assertWiring()`, `Resources::wirePorts()`,
+`DataSurface::refine()`, `ContractEmitter::site()`, `ContractEmitter::mounts()`)
 
 ### An empty variant is an empty map
 

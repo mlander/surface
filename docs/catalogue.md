@@ -40,6 +40,7 @@ one thing whole, with a single entity or with every identity key.
 | [`first.newsletter`](#firstnewsletter) | `NewsletterResource` | none | `configure` |
 | [`first.store`](#firststore) | `StoreResource` | none | `configure` |
 | [`node.type`](#nodetype) | `NodeTypeResource` | `type` | `add`, `edit` |
+| [`registration.compliance`](#registrationcompliance) | `ComplianceStructure` | none | none |
 | [`registration.contact`](#registrationcontact) | `ContactStructure` | none | none |
 | [`registration.step1`](#registrationstep1) | `RegistrationStep1Resource` | none | `configure` |
 | [`registration.step2`](#registrationstep2) | `RegistrationStep2Resource` | none | `configure` |
@@ -178,6 +179,15 @@ one thing whole, with a single entity or with every identity key.
 
 - Altered by `Drupal\data_surface_demo_extras\Alter\NodeTypeAlter` (`data_surface_demo_extras`), in every operation.
 
+## registration.compliance
+
+`Drupal\data_surface_examples_compliance\Structure\ComplianceStructure`, in `data_surface_examples_compliance`.
+
+- Kind: structure
+- Identity: none
+- Storage: none; its host or its parent stores it
+- Access: the operation's permission alone
+
 ## registration.contact
 
 `Drupal\data_surface_examples\Structure\ContactStructure`, in `data_surface_examples`.
@@ -226,7 +236,7 @@ one thing whole, with a single entity or with every identity key.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `configure` | Configure registration | nothing | no | `administer site configuration` | yes | yes | `RegistrationStep3Resource::configure()` (`data_surface_examples`) |
 
-- Altered by `Drupal\data_surface_examples_compliance\Alter\RegistrationComplianceAlter` (`data_surface_examples_compliance`), in every operation; it refines `room` (watching `venue`) at runtime, `stewards` (watching `capacity`).
+- Altered by `Drupal\data_surface_examples_compliance\Alter\RegistrationComplianceAlter` (`data_surface_examples_compliance`), in every operation; it refines `room` (watching `venue`) at runtime.
 
 - Slot `ticket` is filled by: `free` → `Drupal\data_surface_examples\Structure\FreeTicketStructure`, `paid` → `Drupal\data_surface_examples\Structure\PaidTicketStructure`.
 

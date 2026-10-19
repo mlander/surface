@@ -999,8 +999,9 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    * tickets are defs under `$defs`, keyed by their structures' ids; the
    * contact's property is a reference beside the label the parent gives
    * it, with nothing of the contact's own shape inlined; each of the
-   * ticket's conditionals refers to its variant's def. Nothing in example
-   * 3 differs from its def, so nothing is narrowed. A def is the
+   * ticket's conditionals refers to its variant's def; with the module on,
+   * the compliance structure its alter attaches is one more. Nothing in
+   * example 3 differs from its def, so nothing is narrowed. A def is the
    * declaration in either document: the same, less what the full schema
    * never says.
    */
@@ -1016,7 +1017,15 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
       foreach ($documents as $which => $schema) {
         $at = ($compliance ? 'With compliance, ' : '') . $which;
         $this->assertWellFormed($schema);
-        $this->assertSame(['registration.step3.ticket.free', 'registration.step3.ticket.paid', 'registration.contact'], array_keys($schema['$defs']), $at);
+        // With compliance, the structure its alter attaches at its mount
+        // is a def too.
+        $parts = [
+          'registration.step3.ticket.free',
+          'registration.step3.ticket.paid',
+          'registration.contact',
+          ...($compliance ? ['registration.compliance'] : []),
+        ];
+        $this->assertSame($parts, array_keys($schema['$defs']), $at);
 
         $contact = $schema['properties']['contact'];
         $this->assertSame(['title', '$ref', 'x-surface'], array_keys($contact), $at);
@@ -1036,7 +1045,28 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
           $this->assertSame($value, $then['x-surface']['variant'], $at);
         }
         $this->assertSame(['price', 'currency'], $schema['$defs']['registration.step3.ticket.paid']['required'], $at);
-        $this->assertStringNotContainsString('"allOf":[{"$ref"', (string) json_encode($schema), $at . ': nothing narrows.');
+        // Nothing narrows, but the compliance structure for these answers,
+        // whose stewards follow the capacity its port reads.
+        $mount = $schema['properties']['third_party_settings']['properties']['data_surface_examples_compliance'] ?? [];
+        $elsewhere = ['properties' => array_diff_key($schema['properties'], ['third_party_settings' => TRUE])] + $schema;
+        $this->assertStringNotContainsString('"allOf":[{"$ref"', (string) json_encode($elsewhere), $at . ': nothing narrows.');
+        if ($compliance) {
+          $this->assertSame(['capacity' => 'capacity'], $mount['x-surface']['reads'], $at);
+          if ($which === 'the full schema') {
+            $this->assertSame('#/$defs/registration.compliance', $mount['$ref'], $at);
+          }
+          else {
+            $stewards = [
+              'description' => 'At least 1 steward for 50 attendees.',
+              'minimum' => 1,
+              'x-surface' => ['locked' => FALSE, 'dependsOn' => ['capacity'], 'refined' => TRUE, 'stale' => FALSE],
+            ];
+            $this->assertSame([
+              ['$ref' => '#/$defs/registration.compliance'],
+              ['properties' => ['stewards' => $stewards]],
+            ], $mount['allOf'], $at);
+          }
+        }
       }
       $these = $documents['the schema for these answers']['$defs'];
       foreach ($documents['the full schema']['$defs'] as $key => $def) {

@@ -119,9 +119,10 @@ trait StaticRefinerAgreementTrait {
         $this->assertNotNull($entry, sprintf('%s states "%s", which it does not declare.', $label, $key));
         $combination = array_map(static fn (array $value): mixed => $value['const'], $if['properties']);
         $refined = $surface->refine(array_replace($known, $combination), $kinds)->getDefinition((string) $key) ?? $entry->definition;
-        if ($narrowed === FALSE || $entry->isNested()) {
+        if ($narrowed === FALSE || ($entry->isNested() && !isset($schema['properties'][$key]['x-surface']['reads']))) {
           // A key ruled out is `false`; a key holding a child is stated
-          // only where it does not apply.
+          // only where it does not apply, unless the child reads ports,
+          // whose answers its site states inside it.
           $this->assertSame($narrowed === FALSE, $emitter->describeKey($entry, $refined) === FALSE, sprintf('In %s, "%s" for %s does not apply exactly where the contract says.', $label, $key, json_encode($combination)));
           $compared++;
           continue;

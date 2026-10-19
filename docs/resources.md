@@ -592,15 +592,25 @@ the alter named them. They may watch the owner's keys and the keys the
 alter itself added, the latter named the same way and handed as they
 stand, NULL while unanswered, so the parameter takes NULL. A rule an
 alter declares with `narrow()` reads and narrows the same keys
-([Declaring a rule](refinement.md#declaring-a-rule)). In the examples'
-compliance alter, a rule reads the alter's own `licence` and caps the
-owner's capacity at a hundred while it is empty, and
-`#[RefinesInput('stewards')]` raises the alter's own stewards count with
-the owner's `capacity`. A watched mounted key is
-known everywhere else by its path, `third_party_settings.<module>.<key>`:
-the capacity's dependencies, its AJAX trigger and its `dependsOn` name
-the licence that way. Another module's mounted key is watched by no
-alter ([Decisions](decisions.md#an-alter-watches-its-own-mounted-key)).
+([Declaring a rule](refinement.md#declaring-a-rule)). A watched mounted
+key is known everywhere else by its path,
+`third_party_settings.<module>.<key>`. Another module's mounted key is
+watched by no alter ([Decisions](decisions.md#an-alter-watches-its-own-mounted-key)).
+
+An alter may also attach a structure, at its own mount and nowhere
+else, `attach('third_party_settings.<module>', Structure::class, reads:
+[...])`: the mount's keys are then the structure's, built in its own
+frame with its own refiners, rules, alters and access class, and the
+alter adds none of its own beside them. That makes the alter an
+adapter: it wires the structure's [ports](#ports) to the owner's keys,
+and keeps the glue for this one owner. The examples' compliance alter
+attaches the compliance structure, whose stewards follow a `capacity`
+port, and wires the port to example 3's capacity; its own rule reads
+the structure's `licence` at its mount and caps the owner's capacity at
+a hundred while it is empty, so the capacity's dependencies, its AJAX
+trigger and its `dependsOn` name the licence by its path. The glue may
+read the structure's keys and never narrows them
+([Decisions](decisions.md#an-alter-attaches-at-its-own-mount)).
 
 The one widening an alter may make is `extendChoices()`: more values on
 a key whose owner declared a list of allowed values. The values are the
@@ -619,8 +629,8 @@ owner declares `third_party_settings` as a sequence typed by the module
 key, and the mounting module declares its part; `ConfigObjectStorage`
 refuses a mount no schema describes ([Storage](storage.md#keys-another-module-mounts)).
 
-`DemoBlockAlter` in the demo extras module does all three things an
-alter can: it adds a badge, rewords the headline's help text with
+`DemoBlockAlter` in the demo extras module does the three things most
+alters do: it adds a badge, rewords the headline's help text with
 `describe()`, and caps the number of items while the block is a grid.
 
 ```php
@@ -698,7 +708,16 @@ Each refusal names the class and method at fault:
 - a class attached inside itself;
 - two operations of one class marked the default;
 - a parent context naming an operation its child does not declare, or
-  naming one that needs an argument nothing hands it.
+  naming one that needs an argument nothing hands it;
+- a port read under the name of a key, a refiner or rule narrowing a
+  port, a required port left unwired, a wiring to a key the container
+  does not declare, of another type or inside the child, a wiring of a
+  port the child does not read, a cycle through a wiring, and a slot's
+  variant or a collection's item that requires a port
+  ([Ports](#ports));
+- an alter attaching anywhere but its own mount, beside keys of its own
+  there, a collection, or a resource, a structure with children of its
+  own, or one whose access is not open, at its mount.
 
 ## Children
 
@@ -780,11 +799,14 @@ What that means, end to end:
   parent's key (`presentation_settings.columns`); that, and an emitted
   schema, are the only places a path crosses into a child.
 - **The wall.** A parent cannot refine a child's key or watch one; a
-  child cannot watch its parent's keys. The one door is the context: a
+  child cannot watch its parent's keys. Two doors cross it, each named
+  by the child and opened by the parent: the context, through which a
   parent hands a child what it needs as identity, the way the field
   instance resource's operations tell its settings which field they
-  belong to. The key a child sits at is the parent's own, so a parent's
-  refiner may say it [does not apply](refinement.md#when-a-key-does-not-apply),
+  belong to; and a [port](#ports), a value the child declares it reads
+  under a name of its own, which the parent wires to one of its keys.
+  The key a child sits at is the parent's own, so a parent's refiner
+  may say it [does not apply](refinement.md#when-a-key-does-not-apply),
   and nothing else about it.
 - **A slot** is advertised as an `any` placeholder marked as a slot
   (`DefinitionMetadata::slotOf()`) while its deciding key holds
@@ -820,8 +842,116 @@ What that means, end to end:
   `$defs` that every place it is used refers to: the wall is where a
   reference starts ([reusable subschemas](served-contract.md#reusable-subschemas)).
 
-An alter cannot attach yet (its keys are mounted under its module), and
-neither can an output; both are refused by name.
+An alter attaches only at its own mount ([Alters](#alters)), and an
+output attaches nothing; both are refused by name otherwise.
+
+### Ports
+
+A structure needs a value its container holds more often than it needs
+the container: the stewards an event needs follow its capacity, the
+aisles a room has follow its layout. The wall keeps the structure from
+naming the container's key, so it declares what it reads instead, a
+**port**, under a name of its own:
+
+```php
+#[Structure('registration.compliance')]
+final class ComplianceStructure implements StructureInterface {
+
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->reads('capacity', 'integer', required: TRUE);
+    $inputs->add('licence', 'string', t('Event licence'));
+    $inputs->add('stewards', 'integer', t('Stewards'), default: 1)->setRequired(TRUE);
+  }
+
+  #[RefinesInput('stewards')]
+  public static function stewardsForCapacity(DataDefinition $stewards, int $capacity): DataDefinition {
+    // ...
+  }
+
+}
+```
+
+and whatever attaches it says which of its own keys each port reads:
+
+```php
+// A resource, at a key of its own.
+$inputs->attach('compliance', ComplianceStructure::class, reads: ['capacity' => 'seats']);
+
+// An alter, at its own mount: the compliance alter on example 3.
+$inputs->attach('third_party_settings.data_surface_examples_compliance', ComplianceStructure::class, reads: ['capacity' => 'capacity']);
+```
+
+- **A port is a live sibling value.** The structure's refiners watch it
+  by its name, and its declared rules name it in a condition, as they
+  would a sibling key: it gates a coded refiner while it holds nothing,
+  a rule reads it as it stands, and a value its own key refuses is
+  handed as nothing. It moves as the wired key moves: the form rebuilds
+  the structure over AJAX when the key changes, a refusal names the key
+  (`This depends on Capacity.`), and the discard cascade follows it.
+  Nothing stores, draws or accepts a port in the structure: it is the
+  container's key, there.
+- **A port has a type and may be required.** `reads($port, $type,
+  required: TRUE)`; an optional port a container leaves unwired holds
+  nothing, so a refiner watching it never runs and a rule reads it as
+  absent. The type is a typed data type, and the wired key must have it
+  (`any` reads any key).
+- **The container wires each port** in `attach(..., reads: [port =>
+  key])`, naming one of its own plain input keys. The build refuses a
+  required port left unwired, a key the container does not declare, a
+  key of another type, a key inside the child itself, a port the child
+  does not read, and a wiring that would make a cycle in the refinement
+  map, naming it. A slot's variant and a collection's item are wired by
+  nothing yet, so neither may require a port.
+- **Identity is a port of a fixed kind.** What a parent hands a child
+  through `withChild(known:)` is read from the container too, but
+  settled when the parent is built: it locks the key the child declares,
+  selects what the child's storage loads and fills its permission. A
+  port is the live kind, a value the caller may still change, and locks
+  nothing.
+- **Emission.** The structure's def is the same at every site and names
+  no container: it lists its ports (`x-surface.ports`), and a key that
+  reads one names it in its `dependsOn`. What depends on a port is
+  stated at the site, on the container's `allOf`, an `if` on the
+  container's key and a `then` reaching into the structure where it
+  sits; the site's `x-surface.reads` says which key each port reads, and
+  its `dependsOn` names those keys ([the served
+  contract](served-contract.md#a-port-is-stated-at-its-site)).
+
+The test module's seating structure reads a layout (required) and a
+number of guests (optional); the venue attaches it at `seating`, wiring
+both, the hall at `chairs`, wiring the layout alone, and the hall's
+`HallSeatingAlter` at its own mount, wiring both to other keys of the
+hall (`PortsTest`).
+
+### Reusing a structure from another module
+
+A structure declared in one module is attached by another the same way
+its own module attaches it. The recipe:
+
+1. **Depend on the structure's module** in the reusing module's
+   `.info.yml`, so the class is discovered wherever it is attached.
+2. **Attach it and wire its ports**, at a key of the resource's own,
+   `attach('compliance', ComplianceStructure::class, reads: ['capacity' =>
+   'seats'])`, or, from an alter, at the alter's own mount. Every
+   required port must be wired, to a key of the container of the port's
+   type.
+3. **Describe its keys in config schema**, since the container's
+   storage holds them: the structure stores nothing itself. Under the
+   key it sits at for a resource's own config schema, and at the mount
+   for an alter, by the convention for keys another module mounts
+   ([Storage](storage.md#keys-another-module-mounts)): the owner's
+   `third_party_settings` a sequence typed by the module key, the
+   mounting module's mapping the structure's keys. A mapping type of the
+   structure's keys, declared once, can serve every site.
+4. **That is all.** The structure brings its refiners, its declared
+   rules, its access class and its operations, and keeps its def id in
+   both documents: one def, however many containers attach it. The
+   alters of the structure apply wherever it is used; a container
+   cannot opt out of them yet (open,
+   [decision](decisions.md#a-port-is-a-live-sibling-value)).
+   A change to the structure's keys changes every container's stored
+   layout, which is Phase D of the roadmap, with an explicit contract to
+   diff.
 
 ### Child operations
 

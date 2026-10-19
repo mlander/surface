@@ -369,6 +369,58 @@ interface DataSurfaceBuilderInterface {
   public function getThirdPartyMount(string $provider, bool $output = FALSE): ?MapDataDefinition;
 
   /**
+   * Holds one provider's input mount, before it has a key in it.
+   *
+   * For an alter that attaches a structure at its mount: the mount exists,
+   * to be described and placed, before the structure is built.
+   *
+   * @param string $provider
+   *   The module the mount belongs to.
+   *
+   * @return \Drupal\Core\TypedData\MapDataDefinition
+   *   The map its keys are sealed into.
+   *
+   * @throws \LogicException
+   *   When the builder is already sealed.
+   */
+  public function reserveThirdPartyMount(string $provider): MapDataDefinition;
+
+  /**
+   * Fixes a structure at one provider's input mount.
+   *
+   * The structure's keys are the mount's: they are sealed into the map at
+   * `third_party_settings.<provider>`, where its values are accepted,
+   * stored and described as any mounted key's, and the structure refines
+   * them there in its own frame, its ports wired as the attachment says
+   * (Entry::$mounted). Nothing else of the parent narrows them.
+   *
+   * @param string $provider
+   *   The module whose mount holds it.
+   * @param \Drupal\data_surface\Attachment $attachment
+   *   The sealed structure, with its ports wired.
+   *
+   * @return $this
+   *
+   * @throws \LogicException
+   *   When the builder is already sealed, or the provider has mounted
+   *   anything already.
+   */
+  public function mountStructure(string $provider, Attachment $attachment): static;
+
+  /**
+   * Declares a port the data surface reads from its container.
+   *
+   * @param \Drupal\data_surface\Port $port
+   *   The port.
+   *
+   * @return $this
+   *
+   * @throws \LogicException
+   *   When the builder is already sealed, or the name is a key.
+   */
+  public function addPort(Port $port): static;
+
+  /**
    * Declares that a target refines against sibling values.
    *
    * @param string $target
@@ -386,13 +438,16 @@ interface DataSurfaceBuilderInterface {
    *   TRUE when a declared rule reads them: refinement does not wait for
    *   them, and the rule reads them as they stand
    *   (Entry::declaredDependencies()).
+   * @param string|null $wiring
+   *   When the edges come from a port a container wired, the wiring in
+   *   words, which a cycle through them is refused naming.
    *
    * @return $this
    *
    * @throws \LogicException
    *   When the builder is already sealed.
    */
-  public function addRefinement(string $target, array $dependencies, bool $runtime = FALSE, bool $declared = FALSE): static;
+  public function addRefinement(string $target, array $dependencies, bool $runtime = FALSE, bool $declared = FALSE, ?string $wiring = NULL): static;
 
   /**
    * Appends a refiner to one contribution's chain for a target.

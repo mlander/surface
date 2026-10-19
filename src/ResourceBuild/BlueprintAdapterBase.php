@@ -46,6 +46,13 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   protected array $attachments = [];
 
   /**
+   * The ports each child attached through this blueprint reads, by key.
+   *
+   * @var array<string, array<string, string>>
+   */
+  protected array $wirings = [];
+
+  /**
    * The rules declared through this blueprint, in order.
    *
    * @var \Drupal\data_surface\Refinement\Rule[]
@@ -98,6 +105,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * {@inheritdoc}
    */
   public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): static {
+    $this->assertNoPort($key);
     if (in_array($key, $this->declared(), TRUE) || $this->isDeclared($key)) {
       throw new \LogicException(sprintf(
         'The %s "%s" was already added to this blueprint. Adding is never replacing: what one declaration said, another may not change.',
@@ -113,10 +121,56 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    */
-  public function attach(string $key, string $child): MapDataDefinition {
+  public function attach(string $key, string $child, array $reads = []): MapDataDefinition {
+    static::assertReads($key, $reads);
     $shell = $this->reserveChild('attach', $key);
     $this->attachments[$key] = $child;
+    $this->wirings[$key] = $reads;
     return $shell;
+  }
+
+  /**
+   * Gets the ports a child attached through this blueprint reads.
+   *
+   * @param string $key
+   *   The key the child sits at.
+   *
+   * @return array<string, string>
+   *   Each wired port, mapped to the container's key it reads.
+   */
+  public function wiring(string $key): array {
+    return $this->wirings[$key] ?? [];
+  }
+
+  /**
+   * Refuses a wiring that is not a port name mapped to a key.
+   *
+   * @param string $key
+   *   The key the child sits at.
+   * @param array $reads
+   *   The wiring.
+   *
+   * @throws \InvalidArgumentException
+   *   When an entry is not one.
+   */
+  protected static function assertReads(string $key, array $reads): void {
+    foreach ($reads as $port => $wired) {
+      if (!is_string($port) || $port === '' || !is_string($wired) || $wired === '') {
+        throw new \InvalidArgumentException(sprintf('attach() at "%s" was handed reads that do not map a port, by its name, to a key of the container, by its name: [\'port\' => \'key\'].', $key));
+      }
+    }
+  }
+
+  /**
+   * Refuses a key that this blueprint reads as a port.
+   *
+   * @param string $key
+   *   The key.
+   *
+   * @throws \LogicException
+   *   When it is a port.
+   */
+  protected function assertNoPort(string $key): void {
   }
 
   /**
@@ -134,6 +188,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
     if ($this->outputs) {
       throw new \LogicException(sprintf('attachList() cannot place a collection at the output "%s": outputs do not hold attached structures yet.', $key));
     }
+    $this->assertNoPort($key);
     if (in_array($key, $this->declared(), TRUE) || $this->isDeclared($key)) {
       throw new \LogicException(sprintf(
         'The input "%s" was already added to this blueprint. Adding is never replacing: what one declaration said, another may not change.',
@@ -336,6 +391,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
     if ($this->outputs) {
       throw new \LogicException(sprintf('%s() cannot place a child at the output "%s": outputs do not hold attached structures yet.', $verb, $key));
     }
+    $this->assertNoPort($key);
     if (in_array($key, $this->declared(), TRUE) || $this->isDeclared($key)) {
       throw new \LogicException(sprintf(
         'The input "%s" was already added to this blueprint. Adding is never replacing: what one declaration said, another may not change.',

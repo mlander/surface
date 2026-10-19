@@ -25,6 +25,12 @@ use Drupal\data_surface\DefinitionMetadata;
  * One of these serves every alter of one module on one build, so two
  * alters of the same module cannot add the same key either.
  *
+ * An alter may attach a structure, and only at its own mount: the
+ * mount's keys are then the structure's, which the build step builds in
+ * its own frame and fixes there (DataSurfaceBuilderInterface::
+ * mountStructure()). The alter is then an adapter: it wires the
+ * structure's ports to the owner's keys, and adds no key of its own.
+ *
  * @internal
  */
 final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
@@ -52,15 +58,36 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
 
   /**
    * {@inheritdoc}
+   *
+   * Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
    */
-  public function attach(string $key, string $child): MapDataDefinition {
-    throw new \LogicException(sprintf(
-      'The %s alter cannot attach %s at "%s" yet: an alter\'s keys are mounted under third_party_settings.%s, and an attached structure inside that mount is not built.',
-      $this->provider,
-      $child,
-      $key,
-      $this->provider,
-    ));
+  public function attach(string $key, string $child, array $reads = []): MapDataDefinition {
+    static::assertReads($key, $reads);
+    $mount = 'third_party_settings.' . $this->provider;
+    if ($this->outputs) {
+      throw new \LogicException(sprintf('The %s alter cannot attach %s at the output "%s": outputs do not hold attached structures yet.', $this->provider, $child, $key));
+    }
+    if ($key !== $mount) {
+      throw new \LogicException(sprintf(
+        'The %s alter attaches %s at "%s". An alter attaches under its own mount, and only at the mount itself, %s: at the owner\'s level the structure\'s keys would be the owner\'s, and a structure at a key inside the mount is not built.',
+        $this->provider,
+        $child,
+        $key,
+        $mount,
+      ));
+    }
+    if ($this->keys !== [] || $this->attachments !== []) {
+      throw new \LogicException(sprintf(
+        'The %s alter attaches %s at %s, where it has %s already. A mount holding a structure holds its keys alone: the alter is then an adapter, and adds no key of its own there.',
+        $this->provider,
+        $child,
+        $mount,
+        $this->keys !== [] ? 'added ' . implode(', ', $this->keys) : 'attached ' . implode(', ', $this->attachments),
+      ));
+    }
+    $this->attachments[$key] = $child;
+    $this->wirings[$key] = $reads;
+    return $this->builder->reserveThirdPartyMount($this->provider);
   }
 
   /**
@@ -68,7 +95,7 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    */
   public function attachList(string $key, string $child, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
     throw new \LogicException(sprintf(
-      'The %s alter cannot attach a collection of %s at "%s" yet: an alter\'s keys are mounted under third_party_settings.%s, and a collection inside that mount is not built.',
+      'The %s alter cannot attach a collection of %s at "%s" yet: an alter attaches a structure at its own mount, third_party_settings.%s, and a collection under the mount is not built.',
       $this->provider,
       $child,
       $key,
@@ -139,6 +166,14 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    * {@inheritdoc}
    */
   protected function declare(string $key, DataDefinitionInterface $definition, mixed $default): void {
+    if ($this->attachments !== []) {
+      throw new \LogicException(sprintf(
+        'The %s alter adds "%s" beside the structure it attached at third_party_settings.%s. A mount holding a structure holds its keys alone: the alter is an adapter there, and adds no key of its own.',
+        $this->provider,
+        $key,
+        $this->provider,
+      ));
+    }
     // Decision: see docs/decisions.md#where-an-alters-keys-live.
     if ($this->outputs) {
       if ($default !== NULL) {

@@ -275,4 +275,49 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
    */
   public function refine(array $values, bool|int $runtime = TRUE): static;
 
+  /**
+   * Returns the same data surface reading its ports from these values.
+   *
+   * A port is a value the data surface reads from its container, declared
+   * with BlueprintInterface::reads() and wired by the container to one of
+   * its keys. Its container binds it: refine() then hands each port's
+   * value to the refiners and rules that read it, by the port's name, as
+   * a sibling's value is handed. Nothing else changes: a port is no key,
+   * holds no value of the data surface's own, and is never stored.
+   *
+   * @param array<string, mixed> $values
+   *   What each port holds, by port name; names that are no port are
+   *   ignored, and a port left out holds nothing.
+   * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $definitions
+   *   The container's key each port reads, by port name: what a refusal
+   *   names when it depends on the port.
+   *
+   * @return static
+   *   The data surface, bound.
+   *
+   * @see docs/resources.md#ports
+   */
+  public function withPorts(array $values, array $definitions = []): static;
+
+  /**
+   * Gets the container's key a port reads, as its container bound it.
+   *
+   * @param string $port
+   *   The port.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
+   *   The key's definition, or NULL for no port, or one no container
+   *   bound.
+   */
+  public function getPortDefinition(string $port): ?DataDefinitionInterface;
+
+  /**
+   * Gets what each port holds, as its container bound it.
+   *
+   * @return array<string, mixed>
+   *   Every port the data surface reads, by name, NULL where nothing
+   *   holds it.
+   */
+  public function getPortValues(): array;
+
 }

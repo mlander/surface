@@ -76,7 +76,7 @@ of them is meant to replace core's own forms on a production site.
 | `data_surface_entity` | A resource derived for every content entity bundle with a form display, one structure per field, and a basic page added and edited through it at `/surface-entity`. Needs `node` and Tool; see [Content entities](entities.md). |
 | `data_surface_demo_node_type_tool` | A content type add tool whose input is the content type resource, compared with Tool Belt's bundle tool once another module has extended content types. Needs Tool. |
 | `data_surface_examples` | One resource that grows, one idea per example, each example a form beside the contract it emits, at `/surface-examples`: declaring, refining, parts, and the same contract as a tool. Needs Tool. |
-| `data_surface_examples_compliance` | Example 4: one alter class that changes example 3's resource, and nothing else. |
+| `data_surface_examples_compliance` | Example 4: a compliance structure, and one alter that attaches it to example 3's resource, and nothing else. |
 | `data_surface_react` | The served contract: an operation as JSON Schema with refine and validate endpoints, and a React form rendered from it at `/surface-react/{resource}/{operation}`. Its built app is committed, so it needs no Node. |
 
 Each submodule's own README says what it shows, how to try it, and which

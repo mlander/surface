@@ -1,0 +1,6 @@
+layout: theatre
+capacity: 80
+seating:
+  rows: 5
+  aisle: centre
+  ushers: 0

@@ -65,7 +65,9 @@ build(FieldInstanceResource::class, $context):
        $alter->alterOutputs(...)                    <- if it has outputs
        $alter->storageLayout()                       <- if HasStorageLayoutInterface
      ResourceBlueprintAdditions mounts what it adds at
-     third_party_settings.<module>
+     third_party_settings.<module>; a structure an alter attached there
+     is built now, in its own frame, its keys the mount's and its ports
+     wired to the owner's keys (mountStructure)
 
   3. the checks on the blueprint: every identity key is a declared input,
      no operation id is provided twice, no class is attached inside
@@ -101,6 +103,10 @@ build(FieldInstanceResource::class, $context):
      key locked) or omitted (the key left out):
        attach('storage', FieldStorageResource::class)
          -> build(FieldStorageResource::class, <its add operation, by id>)
+       attach('compliance', ComplianceStructure::class, reads: ['capacity' => 'seats'])
+         -> its ports checked against the parent's keys (assertWiring)
+         -> what reads a port recorded at its path, on the parent's key
+            (wirePorts); the child refines with the key's value, live
        attachBy('settings', by: 'field_type')
          -> one child per #[Variant] for (FieldInstanceResource, settings)
          -> one derived child per value a DerivedVariantsInterface service

@@ -259,11 +259,16 @@ final class InputDefinitions {
       $properties = $definition->getPropertyDefinitions();
       foreach ($child->getDefinitions()->entries() as $name => $child_entry) {
         $property = $properties[$name] ?? $child_entry->definition;
-        $map->setPropertyDefinition((string) $name, match (TRUE) {
+        $converted = match (TRUE) {
           $child_entry->slot !== NULL && isset($properties[$name]) && DefinitionMetadata::slotOf($properties[$name]) !== NULL => $this->fromSlot($child_entry->slot, $properties[$name]),
           $child_entry->list !== NULL => $this->fromEntry($child_entry->withDefinition($property)),
           default => $this->fromDefinition($property),
-        });
+        };
+        // As at the top: a key the child's refiners may rule out, by the
+        // child's own values or by a port, is optional in a listing.
+        // Decision: see docs/decisions.md#a-key-that-does-not-apply.
+        static::optionalWhereRuledOut($converted, $child_entry->mayNotApply());
+        $map->setPropertyDefinition((string) $name, $converted);
       }
     }
     return $map;

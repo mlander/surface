@@ -50,6 +50,13 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
   private array $entries = [];
 
   /**
+   * The ports the data surface reads from its container, by name.
+   *
+   * @var array<string, \Drupal\data_surface\Port>
+   */
+  private array $ports = [];
+
+  /**
    * Constructs a DefinitionMap.
    *
    * This is where a data surface's shape is checked, once: afterwards every
@@ -62,22 +69,32 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    *
    * @param \Drupal\data_surface\Entry[] $entries
    *   The entries, in the order the data surface declares them.
+   * @param \Drupal\data_surface\Port[] $ports
+   *   The ports the data surface reads from its container: names a
+   *   refinement edge may watch that are no key of its own.
    *
    * @throws \InvalidArgumentException
-   *   When two entries share a name, or a refinement edge names a key
-   *   nothing declares.
+   *   When two entries share a name, a port is named as a key, or a
+   *   refinement edge names a key nothing declares.
    */
-  public function __construct(array $entries) {
+  public function __construct(array $entries, array $ports = []) {
+    foreach ($ports as $port) {
+      $this->ports[$port->name] = $port;
+    }
     foreach ($entries as $entry) {
       if (isset($this->entries[$entry->name])) {
         throw new \InvalidArgumentException(sprintf('The key "%s" is declared twice.', $entry->name));
+      }
+      if (isset($this->ports[$entry->name])) {
+        throw new \InvalidArgumentException(sprintf('The key "%s" is declared, and read as a port.', $entry->name));
       }
       $this->entries[$entry->name] = $entry;
     }
     foreach ($this->entries as $name => $entry) {
       foreach ($entry->dependencies as $dependency) {
-        // A mounted key is named by its path, inside a key declared here.
-        if (!isset($this->entries[explode('.', $dependency)[0]])) {
+        // A mounted key is named by its path, inside a key declared here;
+        // a port by its own name.
+        if (!isset($this->entries[explode('.', $dependency)[0]]) && !isset($this->ports[$dependency])) {
           throw new \InvalidArgumentException(sprintf('Refinement dependency "%s" of "%s" is not a data surface definition.', $dependency, $name));
         }
       }
@@ -124,6 +141,11 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    *   For each target of $refinements, which kinds of link watch each of
    *   its dependencies, as a mask of DataSurfaceInterface::CODED,
    *   DECLARED and RUNTIME. Empty for a map built by hand.
+   * @param \Drupal\data_surface\Port[] $ports
+   *   The ports the data surface reads from its container.
+   * @param array<string, array<string, \Drupal\data_surface\Attachment>> $mounted
+   *   The structures alters attached at their mounts, keyed by the key
+   *   holding the mounts, then by the path below it.
    *
    * @return static
    *   The map.
@@ -143,8 +165,10 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
     ?array $staticRefinements = NULL,
     array $lists = [],
     array $watchedBy = [],
+    array $ports = [],
+    array $mounted = [],
   ): static {
-    foreach (array_merge(array_keys($refiners), array_keys($contributions), $locked, array_keys($attachments), array_keys($slots), array_keys($lists)) as $key) {
+    foreach (array_merge(array_keys($refiners), array_keys($contributions), $locked, array_keys($attachments), array_keys($slots), array_keys($lists), array_keys($mounted)) as $key) {
       if (!isset($definitions[$key])) {
         throw new \InvalidArgumentException(sprintf('"%s" is not a data surface definition.', $key));
       }
@@ -190,9 +214,10 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
         runtimeOnly: array_values(array_diff($dependencies[$name] ?? [], $static[$name] ?? [])),
         list: $lists[$name] ?? NULL,
         watchedBy: $kinds[$name] ?? [],
+        mounted: $mounted[$name] ?? [],
       );
     }
-    return new static($entries);
+    return new static($entries, $ports);
   }
 
   /**
@@ -411,18 +436,29 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
   }
 
   /**
-   * Returns whether any key holds a child: attached or a slot.
+   * Returns whether any key holds a child: attached, a slot, or mounted.
    *
    * @return bool
-   *   TRUE when at least one entry is nested.
+   *   TRUE when at least one entry is nested, or holds a structure an
+   *   alter attached at its mount.
    */
   public function hasNested(): bool {
     foreach ($this->entries as $entry) {
-      if ($entry->isNested()) {
+      if ($entry->isNested() || $entry->mounted !== []) {
         return TRUE;
       }
     }
     return FALSE;
+  }
+
+  /**
+   * Gets the ports the data surface reads from its container.
+   *
+   * @return array<string, \Drupal\data_surface\Port>
+   *   The ports, keyed by name, in the order they were declared.
+   */
+  public function ports(): array {
+    return $this->ports;
   }
 
   /**

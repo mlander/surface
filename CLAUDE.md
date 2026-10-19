@@ -41,7 +41,12 @@ the record of the rework that brought the module to the pattern.
   one for its mount with `HasStorageLayoutInterface::storageLayout()`.
 - **Alter**: another module's class that adds keys to a resource or
   structure and narrows it, `#[Alters]` in `src/Alter/`.
-- **Attach**: a fixed child at a key, `attach()`.
+- **Attach**: a fixed child at a key, `attach()`; an alter attaches only
+  at its own mount, `third_party_settings.<module>`, as an adapter.
+- **Port**: a value a structure reads from its container, declared under
+  a name of its own with `$inputs->reads('capacity', 'integer')` and
+  wired by the container with `attach(..., reads: ['capacity' =>
+  'seats'])`; a live sibling value, never stored by the structure.
 - **Slot**: a child a sibling key chooses, `attachBy()`.
 - **Variant**: a structure or resource that fills a slot for one value,
   `#[Variant(of:, key:, value:)]`.
@@ -130,7 +135,11 @@ storage of its own, an attached resource (the field's storage,
 variant class fills (`data_surface_tool` derives a field type's
 settings, and its storage settings, from its config schema). A child
 whose keys cannot be listed at all is a `#[RefinesInput]` method on an
-`any` key returning a map. `attachList()` is a collection: a list of
+`any` key returning a map. A structure reads a value of its container
+through a port it declares, `reads()`, which `attach(..., reads:)` wires
+to a key of the container's; what depends on a port is stated at the
+site, on the container's `allOf`, never in the structure's def
+(`docs/resources.md#ports`). `attachList()` is a collection: a list of
 child instances, the list (its Count) the parent's, each item the
 child's, its entry a `Collection` (`docs/resources.md#collections`).
 
@@ -149,7 +158,8 @@ field access as each field child's access (`docs/entities.md`). A
 child is built by the same build step in its own frame and sealed into
 the parent's entry as an `Attachment`, or a `Slot` of them; the
 pipeline, refinement, the form and the tool bridge recurse through those
-entries, and nothing in a parent can name a key inside its child. `docs/resources.md` has the rules.
+entries, and nothing in a parent can name a key inside its child (an
+alter's glue reads the structure at its own mount, never narrowing it). `docs/resources.md` has the rules.
 
 ## Running the suite
 

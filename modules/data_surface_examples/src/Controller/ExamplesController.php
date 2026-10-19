@@ -42,6 +42,11 @@ final class ExamplesController extends ControllerBase {
   public const COMPLIANCE_ALTER = 'src/Alter/RegistrationComplianceAlter.php';
 
   /**
+   * The structure example 4's alter attaches, in that module.
+   */
+  public const COMPLIANCE_STRUCTURE = 'src/Structure/ComplianceStructure.php';
+
+  /**
    * The module serving examples 1 to 3 as React forms.
    */
   public const REACT = 'data_surface_react';
@@ -142,7 +147,7 @@ final class ExamplesController extends ControllerBase {
             ? $this->t('It is enabled on this site now.')
             : $this->t('It is not enabled on this site yet.'),
           Link::fromTextAndUrl($this->t('Example 3, /surface-examples/3'), Url::fromRoute('data_surface_examples.step3'))->toRenderable(),
-          $this->t('The alter: @lines lines of code.', ['@lines' => $this->complianceLines()]),
+          $this->t('The structure and the alter: @lines lines of code.', ['@lines' => $this->complianceLines()]),
         ],
       ],
     ];
@@ -224,7 +229,7 @@ final class ExamplesController extends ControllerBase {
         'sentence' => $this->t('Another module adds two keys to example 3, rewords a label, caps the capacity at a hundred until an event licence is given, and asks for stewards as the capacity grows, without touching example 3.'),
         'items' => [
           $this->route('data_surface_examples.step4'),
-          $this->t('The alter: @lines lines of code.', ['@lines' => $this->complianceLines()]),
+          $this->t('The structure and the alter: @lines lines of code.', ['@lines' => $this->complianceLines()]),
         ],
       ],
       5 => [
@@ -295,13 +300,14 @@ final class ExamplesController extends ControllerBase {
   }
 
   /**
-   * Counts the lines of example 4's alter, enabled or not.
+   * Counts the lines of example 4's structure and alter, enabled or not.
    *
    * @return int
    *   The lines of code.
    */
   protected function complianceLines(): int {
-    return CodeLines::count(DRUPAL_ROOT . '/' . $this->moduleList->getPath(self::COMPLIANCE) . '/' . self::COMPLIANCE_ALTER);
+    $path = DRUPAL_ROOT . '/' . $this->moduleList->getPath(self::COMPLIANCE) . '/';
+    return CodeLines::count($path . self::COMPLIANCE_STRUCTURE) + CodeLines::count($path . self::COMPLIANCE_ALTER);
   }
 
   /**

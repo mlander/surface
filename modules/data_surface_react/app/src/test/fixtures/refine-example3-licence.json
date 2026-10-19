@@ -168,49 +168,15 @@
           "properties": {
             "data_surface_examples_compliance": {
               "title": "Compliance",
-              "type": [
-                "object",
-                "null"
-              ],
-              "properties": {
-                "licence": {
-                  "title": "Event licence",
-                  "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
-                  "type": [
-                    "string",
-                    "null"
-                  ],
-                  "pattern": "^\\d{4}$",
-                  "examples": [
-                    "2048"
-                  ],
-                  "x-surface": {
-                    "widget": "text",
-                    "locked": false,
-                    "dependsOn": [],
-                    "patternMessage": "A licence number is four digits, such as 2048."
-                  }
-                },
-                "stewards": {
-                  "title": "Stewards",
-                  "type": "integer",
-                  "default": 1,
-                  "x-surface": {
-                    "widget": "number",
-                    "locked": false,
-                    "dependsOn": []
-                  }
-                }
-              },
-              "additionalProperties": false,
-              "required": [
-                "stewards"
-              ],
+              "$ref": "#/$defs/registration.compliance",
               "x-surface": {
                 "widget": "fieldset",
                 "locked": false,
                 "dependsOn": [],
-                "after": "capacity"
+                "after": "capacity",
+                "reads": {
+                  "capacity": "capacity"
+                }
               }
             }
           },
@@ -613,6 +579,53 @@
           "required": [
             "email"
           ]
+        },
+        "registration.compliance": {
+          "type": "object",
+          "properties": {
+            "licence": {
+              "title": "Event licence",
+              "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^\\d{4}$",
+              "examples": [
+                "2048"
+              ],
+              "x-surface": {
+                "widget": "text",
+                "locked": false,
+                "dependsOn": [],
+                "patternMessage": "A licence number is four digits, such as 2048."
+              }
+            },
+            "stewards": {
+              "title": "Stewards",
+              "type": "integer",
+              "default": 1,
+              "x-surface": {
+                "widget": "number",
+                "locked": false,
+                "dependsOn": [
+                  "capacity"
+                ]
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "stewards"
+          ],
+          "x-surface": {
+            "ports": {
+              "capacity": {
+                "type": "integer",
+                "required": true
+              }
+            }
+          }
         }
       }
     }
@@ -797,49 +810,27 @@
           "properties": {
             "data_surface_examples_compliance": {
               "title": "Compliance",
-              "type": [
-                "object",
-                "null"
-              ],
-              "properties": {
-                "licence": {
-                  "title": "Event licence",
-                  "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
-                  "type": [
-                    "string",
-                    "null"
-                  ],
-                  "pattern": "^\\d{4}$",
-                  "examples": [
-                    "2048"
-                  ],
-                  "x-surface": {
-                    "widget": "text",
-                    "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false,
-                    "patternMessage": "A licence number is four digits, such as 2048."
-                  }
+              "allOf": [
+                {
+                  "$ref": "#/$defs/registration.compliance"
                 },
-                "stewards": {
-                  "title": "Stewards",
-                  "description": "At least 1 steward for 50 attendees.",
-                  "type": "integer",
-                  "minimum": 1,
-                  "default": 1,
-                  "x-surface": {
-                    "widget": "number",
-                    "locked": false,
-                    "dependsOn": [],
-                    "refined": true,
-                    "stale": false
+                {
+                  "properties": {
+                    "stewards": {
+                      "description": "At least 1 steward for 50 attendees.",
+                      "minimum": 1,
+                      "x-surface": {
+                        "widget": "number",
+                        "locked": false,
+                        "dependsOn": [
+                          "capacity"
+                        ],
+                        "refined": true,
+                        "stale": false
+                      }
+                    }
                   }
                 }
-              },
-              "additionalProperties": false,
-              "required": [
-                "stewards"
               ],
               "x-surface": {
                 "widget": "fieldset",
@@ -847,7 +838,10 @@
                 "dependsOn": [],
                 "refined": true,
                 "stale": false,
-                "after": "capacity"
+                "after": "capacity",
+                "reads": {
+                  "capacity": "capacity"
+                }
               }
             }
           },
@@ -1037,6 +1031,57 @@
           "required": [
             "email"
           ]
+        },
+        "registration.compliance": {
+          "type": "object",
+          "properties": {
+            "licence": {
+              "title": "Event licence",
+              "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^\\d{4}$",
+              "examples": [
+                "2048"
+              ],
+              "x-surface": {
+                "widget": "text",
+                "locked": false,
+                "dependsOn": [],
+                "refined": false,
+                "stale": false,
+                "patternMessage": "A licence number is four digits, such as 2048."
+              }
+            },
+            "stewards": {
+              "title": "Stewards",
+              "type": "integer",
+              "default": 1,
+              "x-surface": {
+                "widget": "number",
+                "locked": false,
+                "dependsOn": [
+                  "capacity"
+                ],
+                "refined": false,
+                "stale": false
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "stewards"
+          ],
+          "x-surface": {
+            "ports": {
+              "capacity": {
+                "type": "integer",
+                "required": true
+              }
+            }
+          }
         }
       }
     },
@@ -1254,49 +1299,27 @@
               "properties": {
                 "data_surface_examples_compliance": {
                   "title": "Compliance",
-                  "type": [
-                    "object",
-                    "null"
-                  ],
-                  "properties": {
-                    "licence": {
-                      "title": "Event licence",
-                      "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
-                      "type": [
-                        "string",
-                        "null"
-                      ],
-                      "pattern": "^\\d{4}$",
-                      "examples": [
-                        "2048"
-                      ],
-                      "x-surface": {
-                        "widget": "text",
-                        "locked": false,
-                        "dependsOn": [],
-                        "refined": false,
-                        "stale": false,
-                        "patternMessage": "A licence number is four digits, such as 2048."
-                      }
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/registration.compliance"
                     },
-                    "stewards": {
-                      "title": "Stewards",
-                      "description": "At least 1 steward for 50 attendees.",
-                      "type": "integer",
-                      "minimum": 1,
-                      "default": 1,
-                      "x-surface": {
-                        "widget": "number",
-                        "locked": false,
-                        "dependsOn": [],
-                        "refined": true,
-                        "stale": false
+                    {
+                      "properties": {
+                        "stewards": {
+                          "description": "At least 1 steward for 50 attendees.",
+                          "minimum": 1,
+                          "x-surface": {
+                            "widget": "number",
+                            "locked": false,
+                            "dependsOn": [
+                              "capacity"
+                            ],
+                            "refined": true,
+                            "stale": false
+                          }
+                        }
                       }
                     }
-                  },
-                  "additionalProperties": false,
-                  "required": [
-                    "stewards"
                   ],
                   "x-surface": {
                     "widget": "fieldset",
@@ -1304,7 +1327,10 @@
                     "dependsOn": [],
                     "refined": true,
                     "stale": false,
-                    "after": "capacity"
+                    "after": "capacity",
+                    "reads": {
+                      "capacity": "capacity"
+                    }
                   }
                 }
               },
@@ -1494,6 +1520,57 @@
               "required": [
                 "email"
               ]
+            },
+            "registration.compliance": {
+              "type": "object",
+              "properties": {
+                "licence": {
+                  "title": "Event licence",
+                  "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "pattern": "^\\d{4}$",
+                  "examples": [
+                    "2048"
+                  ],
+                  "x-surface": {
+                    "widget": "text",
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": false,
+                    "stale": false,
+                    "patternMessage": "A licence number is four digits, such as 2048."
+                  }
+                },
+                "stewards": {
+                  "title": "Stewards",
+                  "type": "integer",
+                  "default": 1,
+                  "x-surface": {
+                    "widget": "number",
+                    "locked": false,
+                    "dependsOn": [
+                      "capacity"
+                    ],
+                    "refined": false,
+                    "stale": false
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "stewards"
+              ],
+              "x-surface": {
+                "ports": {
+                  "capacity": {
+                    "type": "integer",
+                    "required": true
+                  }
+                }
+              }
             }
           }
         },
@@ -1712,49 +1789,27 @@
               "properties": {
                 "data_surface_examples_compliance": {
                   "title": "Compliance",
-                  "type": [
-                    "object",
-                    "null"
-                  ],
-                  "properties": {
-                    "licence": {
-                      "title": "Event licence",
-                      "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
-                      "type": [
-                        "string",
-                        "null"
-                      ],
-                      "pattern": "^\\d{4}$",
-                      "examples": [
-                        "2048"
-                      ],
-                      "x-surface": {
-                        "widget": "text",
-                        "locked": false,
-                        "dependsOn": [],
-                        "refined": false,
-                        "stale": false,
-                        "patternMessage": "A licence number is four digits, such as 2048."
-                      }
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/registration.compliance"
                     },
-                    "stewards": {
-                      "title": "Stewards",
-                      "description": "At least 1 steward for 50 attendees.",
-                      "type": "integer",
-                      "minimum": 1,
-                      "default": 1,
-                      "x-surface": {
-                        "widget": "number",
-                        "locked": false,
-                        "dependsOn": [],
-                        "refined": true,
-                        "stale": false
+                    {
+                      "properties": {
+                        "stewards": {
+                          "description": "At least 1 steward for 50 attendees.",
+                          "minimum": 1,
+                          "x-surface": {
+                            "widget": "number",
+                            "locked": false,
+                            "dependsOn": [
+                              "capacity"
+                            ],
+                            "refined": true,
+                            "stale": false
+                          }
+                        }
                       }
                     }
-                  },
-                  "additionalProperties": false,
-                  "required": [
-                    "stewards"
                   ],
                   "x-surface": {
                     "widget": "fieldset",
@@ -1762,7 +1817,10 @@
                     "dependsOn": [],
                     "refined": true,
                     "stale": false,
-                    "after": "capacity"
+                    "after": "capacity",
+                    "reads": {
+                      "capacity": "capacity"
+                    }
                   }
                 }
               },
@@ -1952,6 +2010,57 @@
               "required": [
                 "email"
               ]
+            },
+            "registration.compliance": {
+              "type": "object",
+              "properties": {
+                "licence": {
+                  "title": "Event licence",
+                  "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "pattern": "^\\d{4}$",
+                  "examples": [
+                    "2048"
+                  ],
+                  "x-surface": {
+                    "widget": "text",
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": false,
+                    "stale": false,
+                    "patternMessage": "A licence number is four digits, such as 2048."
+                  }
+                },
+                "stewards": {
+                  "title": "Stewards",
+                  "type": "integer",
+                  "default": 1,
+                  "x-surface": {
+                    "widget": "number",
+                    "locked": false,
+                    "dependsOn": [
+                      "capacity"
+                    ],
+                    "refined": false,
+                    "stale": false
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "stewards"
+              ],
+              "x-surface": {
+                "ports": {
+                  "capacity": {
+                    "type": "integer",
+                    "required": true
+                  }
+                }
+              }
             }
           }
         },
@@ -2170,49 +2279,27 @@
               "properties": {
                 "data_surface_examples_compliance": {
                   "title": "Compliance",
-                  "type": [
-                    "object",
-                    "null"
-                  ],
-                  "properties": {
-                    "licence": {
-                      "title": "Event licence",
-                      "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
-                      "type": [
-                        "string",
-                        "null"
-                      ],
-                      "pattern": "^\\d{4}$",
-                      "examples": [
-                        "2048"
-                      ],
-                      "x-surface": {
-                        "widget": "text",
-                        "locked": false,
-                        "dependsOn": [],
-                        "refined": false,
-                        "stale": false,
-                        "patternMessage": "A licence number is four digits, such as 2048."
-                      }
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/registration.compliance"
                     },
-                    "stewards": {
-                      "title": "Stewards",
-                      "description": "At least 1 steward for 50 attendees.",
-                      "type": "integer",
-                      "minimum": 1,
-                      "default": 1,
-                      "x-surface": {
-                        "widget": "number",
-                        "locked": false,
-                        "dependsOn": [],
-                        "refined": true,
-                        "stale": false
+                    {
+                      "properties": {
+                        "stewards": {
+                          "description": "At least 1 steward for 50 attendees.",
+                          "minimum": 1,
+                          "x-surface": {
+                            "widget": "number",
+                            "locked": false,
+                            "dependsOn": [
+                              "capacity"
+                            ],
+                            "refined": true,
+                            "stale": false
+                          }
+                        }
                       }
                     }
-                  },
-                  "additionalProperties": false,
-                  "required": [
-                    "stewards"
                   ],
                   "x-surface": {
                     "widget": "fieldset",
@@ -2220,7 +2307,10 @@
                     "dependsOn": [],
                     "refined": true,
                     "stale": false,
-                    "after": "capacity"
+                    "after": "capacity",
+                    "reads": {
+                      "capacity": "capacity"
+                    }
                   }
                 }
               },
@@ -2410,6 +2500,57 @@
               "required": [
                 "email"
               ]
+            },
+            "registration.compliance": {
+              "type": "object",
+              "properties": {
+                "licence": {
+                  "title": "Event licence",
+                  "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "pattern": "^\\d{4}$",
+                  "examples": [
+                    "2048"
+                  ],
+                  "x-surface": {
+                    "widget": "text",
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": false,
+                    "stale": false,
+                    "patternMessage": "A licence number is four digits, such as 2048."
+                  }
+                },
+                "stewards": {
+                  "title": "Stewards",
+                  "type": "integer",
+                  "default": 1,
+                  "x-surface": {
+                    "widget": "number",
+                    "locked": false,
+                    "dependsOn": [
+                      "capacity"
+                    ],
+                    "refined": false,
+                    "stale": false
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "stewards"
+              ],
+              "x-surface": {
+                "ports": {
+                  "capacity": {
+                    "type": "integer",
+                    "required": true
+                  }
+                }
+              }
             }
           }
         },

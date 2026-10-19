@@ -5,13 +5,29 @@ module has a say in a resource it does not own.
 
 ## What it shows
 
-One class, `Alter\RegistrationComplianceAlter`, naming example 3's
-resource with `#[Alters]`. It adds an event licence and a number
-of stewards, which are stored under this module's name at
+Two classes. `Structure\ComplianceStructure` is what compliance asks of
+any event: an event licence and a number of stewards, one per fifty
+people. It is meant for any resource, so it names none: the capacity it
+counts stewards for it reads through a port, under its own name,
+`$inputs->reads('capacity', 'integer', required: TRUE)`, and its static
+`#[RefinesInput('stewards')]` method watches the port. It translates
+with `t()` and holds no service, so the served contract runs it ahead of
+time where it can.
+
+`Alter\RegistrationComplianceAlter`, naming example 3's resource with
+`#[Alters]`, is the adapter. It attaches the structure at its own mount
+and wires the port to example 3's capacity:
+
+```php
+$inputs->attach('third_party_settings.data_surface_examples_compliance', ComplianceStructure::class, reads: ['capacity' => 'capacity']);
+```
+
+so the licence and the stewards are stored under this module's name at
 `third_party_settings.data_surface_examples_compliance` and described by
-this module's own config schema, and it rewords example 3's title label
-with `describe()`. Its last line titles the fieldset its keys sit in and
-places it right after the capacity the licence lifts:
+this module's own config schema, exactly where the alter's own keys were
+before the structure existed. The rest is glue for this one owner. It
+rewords example 3's title label with `describe()`, titles the fieldset
+and places it right after the capacity the licence lifts:
 
 ```php
 $inputs->describe('third_party_settings.data_surface_examples_compliance', label: $this->t('Compliance'), after: 'capacity');
@@ -19,8 +35,8 @@ $inputs->describe('third_party_settings.data_surface_examples_compliance', label
 
 The fieldset is drawn there on the form and in React; its keys are
 still stored and posted under this module's name. Its rule on the
-capacity, declared as data in `alterInputs()`, reads the licence it
-added itself:
+capacity, declared as data in `alterInputs()`, reads the structure's
+licence at its mount:
 
 ```php
 $inputs->narrow('capacity')
@@ -31,18 +47,16 @@ $inputs->narrow('capacity')
 
 Without a licence, example 3's capacity stops at a hundred, and with
 one the room's limit applies again; the full schema states the rule as
-written, so the capacity is exact there. Its static
-`#[RefinesInput('stewards')]` method watches example 3's `capacity`:
-one steward per fifty people, at least one, an effect computed, so a
-refiner. It translates with `t()` and holds no service, so the served
-contract runs it ahead of time where it can. Its
+written, so the capacity is exact there. Its
 `#[RefinesInput('room', runtime: TRUE)]` method leaves out the rooms a
 site has closed, which it reads from State through the service the
 alter is built with: a runtime refiner, because what it answers is known
 only when it is asked, so no schema can state it ahead of time, and the
 one instance method, which only a runtime refiner may be. Example
 3 does not change and does not know this module exists. There is no
-form alter and no hook.
+form alter and no hook. Another module could attach the compliance
+structure to a resource of its own and wire the port to its own
+capacity key ([reusing a structure](../../docs/resources.md#reusing-a-structure-from-another-module)).
 
 ## How to try it
 
@@ -85,7 +99,7 @@ deletes the key, which opens every room again; so does
 
 | Test | Covers |
 | --- | --- |
-| `Kernel\ExamplesComplianceTest` | The keys appear under the module's name and the label changes; the Compliance fieldset is built where its values post and drawn between the capacity and the pricing, the group it is stored in drawing nothing; the capacity stops at 100 without a licence and at the room's limit with `2048`; `204` is refused with the alter's message; the stewards' minimum is 3 at 150 and 1 at 20, said under the field; the pipeline refuses 150 without a licence and writes it with one; a room closed in State is left out, said in the room's help, and refused on submit; the licence replaces the capacity, the stewards and the panel, the capacity the stewards and the panel; example 5's calls answer as without the module. |
+| `Kernel\ExamplesComplianceTest` | The keys appear under the module's name, the compliance structure's, attached at the mount with its port wired to the capacity, and the label changes; the Compliance fieldset is built where its values post and drawn between the capacity and the pricing, the group it is stored in drawing nothing; the capacity stops at 100 without a licence and at the room's limit with `2048`; `204` is refused with the alter's message; the stewards' minimum is 3 at 150 and 1 at 20, said under the field; the pipeline refuses 150 without a licence and writes it with one; a room closed in State is left out, said in the room's help, and refused on submit; the licence replaces the capacity, the stewards and the panel, the capacity the stewards and the panel; example 5's calls answer as without the module. |
 | `Kernel\ServedContractTest::testClosedRoomIsLeftToTheRuntime` | Nothing closed, nothing changes; with the East room closed the full schema is the same document and still lists it, the schema for these answers leaves it out and says why, a validator holding the full schema accepts it and the pipeline refuses it. |
 | `Kernel\ServedContractTest::testExampleFourStatesTheCapacityExactly` | The full schema states the capacity per room and its licence rule as written, `x-surface.declared`, and nothing about it `dynamic`; the stewards stay `dynamic`; for no values the rule is evaluated, a hundred. |
 | `Kernel\StaticRefinerEnforcementTest::testTheExamplesAgree` | With the module on and a room closed, every conditional the served contract enumerates for example 3 is what refining afresh for its values answers, and the licence rule's conditional is what refining with the rules alone answers for sampled values of the licence: the static refiners are what they declare. |

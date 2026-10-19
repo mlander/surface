@@ -83,6 +83,12 @@ final class Entry {
    *   only a declared rule reads gates nothing. Empty for an entry built
    *   by hand, whose every dependency is read as a coded refiner's, a
    *   runtime one's in $runtimeOnly.
+   * @param array<string, \Drupal\data_surface\Attachment> $mounted
+   *   The structures alters attached at their mounts inside this key, by
+   *   the path below it (`<module>`), each with its ports wired: the
+   *   `third_party_settings` key's alone. The key stays a plain map the
+   *   parent refines, accepts and stores; each structure refines its own
+   *   keys inside it, in its own frame, and its answer is written there.
    */
   public function __construct(
     public readonly string $name,
@@ -98,6 +104,7 @@ final class Entry {
     public readonly array $runtimeOnly = [],
     public readonly ?Collection $list = NULL,
     public readonly array $watchedBy = [],
+    public readonly array $mounted = [],
   ) {
   }
 
@@ -130,6 +137,7 @@ final class Entry {
       $this->runtimeOnly,
       $this->list,
       $this->watchedBy,
+      $this->mounted,
     );
   }
 
@@ -306,27 +314,67 @@ final class Entry {
   /**
    * Gets the child answering for this key's value, if any.
    *
-   * An attached child always; a slot's only once the deciding key, read
-   * from the given values, names a variant. Everything that hands a
-   * nested value to the data surface describing it (accept, validate,
-   * refine, the form) asks this one question.
+   * An attached child always, reading its ports from the given values;
+   * a slot's only once the deciding key, read from the given values,
+   * names a variant. Everything that hands a nested value to the data
+   * surface describing it (accept, validate, refine, the form) asks this
+   * one question.
    *
    * @param array $values
    *   The values of the data surface this key belongs to, which is where a
-   *   slot's deciding key is read.
+   *   slot's deciding key and an attached child's wired ports are read.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface|null
    *   The child, or NULL for a plain key and for an unresolved slot.
    */
   public function childFor(array $values): ?DataSurfaceInterface {
     if ($this->attachment !== NULL) {
-      return $this->attachment->child;
+      return $this->attachment->bound($values);
     }
     if ($this->slot === NULL) {
       return NULL;
     }
     $chosen = $this->slot->chosen($values[$this->slot->by] ?? NULL);
     return $chosen === NULL ? NULL : $this->slot->variant($chosen)->child;
+  }
+
+  /**
+   * Returns the same entry, its children's ports read from these values.
+   *
+   * @param array $values
+   *   The values of the data surface this key belongs to, as admitted.
+   *
+   * @return static|null
+   *   The entry, every attached or mounted child that reads ports bound
+   *   to them; NULL when none reads any.
+   */
+  public function readingFrom(array $values): ?static {
+    $attachment = $this->attachment !== NULL && $this->attachment->reads !== [] ? $this->attachment->readFrom($values) : NULL;
+    $mounted = [];
+    foreach ($this->mounted as $path => $child) {
+      if ($child->reads !== []) {
+        $mounted[$path] = $child->readFrom($values);
+      }
+    }
+    if ($attachment === NULL && $mounted === []) {
+      return NULL;
+    }
+    return new static(
+      $this->name,
+      $this->definition,
+      $this->contributor,
+      $this->locked,
+      $this->dependencies,
+      $this->refiners,
+      $this->contributions,
+      $attachment ?? $this->attachment,
+      $this->slot,
+      $this->paths,
+      $this->runtimeOnly,
+      $this->list,
+      $this->watchedBy,
+      $mounted + $this->mounted,
+    );
   }
 
   /**

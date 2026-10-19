@@ -20,9 +20,10 @@ page needs nothing else. Read a row only when its question is yours.
 | Access class, `access:` | Does who may act depend on the thing itself, not a permission alone? | The operation's permission is the whole answer. |
 | Structure, `#[Structure]` | Is there a group of keys something else holds, or several resources share? | The keys are all one resource's own. |
 | Attached child, `attach()` | Should a group of keys sit under one key, as a fieldset? | Every key is a top level key. |
+| Port, `reads()` and `attach(..., reads:)` | Does a structure need a value its container holds, such as the capacity it counts stewards for? ([Resources](resources.md#ports)) | The structure's keys depend only on each other. |
 | Slot and variant, `attachBy()`, `#[Variant]` | Does one key's value choose which further keys apply? | No answer changes which keys there are. |
 | Collection, `attachList()` | Does it hold a list of repeated groups of keys? | Nothing repeats. |
-| Alter, `#[Alters]` | Am I adding keys or rules to a resource another module owns? | You own it: change the class. |
+| Alter, `#[Alters]` | Am I adding keys or rules to a resource another module owns, or attaching a structure of mine to it? | You own it: change the class. |
 | Mounted keys and their config schema | Does my alter's module store keys on someone else's config object? ([Storage](storage.md#keys-another-module-mounts)) | You write no alter. |
 | `describe()` and `extendChoices()` | Must my alter reword or place an owner's key, or offer one more value on its list? | Your alter only adds keys of its own. |
 | Secret, `DefinitionMetadata::setSecret()` | Is a value write-only, such as an API key? | Every value may be read back. |

@@ -583,8 +583,10 @@ contract all see the same five values, narrowed the same way.
   their own names, beside the owner's
   ([Decisions](decisions.md#an-alter-watches-its-own-mounted-key));
   the compliance alter of the examples caps the capacity at a hundred
-  until its own licence is given, by a declared rule, and raises its
-  stewards count with the capacity. A watched mounted key is never waited for: it is handed as
+  until the licence is given, by a declared rule reading the licence of
+  the compliance structure it attached at its mount, whose own refiner
+  raises the stewards count with the capacity it reads through a
+  [port](resources.md#ports). A watched mounted key is never waited for: it is handed as
   it stands, NULL while empty. Another module's mounted key, and any
   key inside a map that is not a mount, still needs the dotted paths.
 - **Storage.** For config-backed values, widening is a schema alter and

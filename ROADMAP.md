@@ -423,7 +423,7 @@ renames sit in A because they are cheapest before new code exists.
   must not crash the form (HTTP 500, "No data surface widget serves the
   map data type").
 - **B, what the contract can say:** inapplicable keys (2, done); declarative
-  narrowing (3, done); ports (4); mixins (5); named scalar shapes (7).
+  narrowing (3, done); ports (4, done); mixins (5); named scalar shapes (7).
 - **C, access and the doors:** static and runtime access (8); operation
   behavior facts and the tool door's refusal feedback (9).
 - **D, edges as they bite:** item 10.
@@ -519,7 +519,20 @@ renames sit in A because they are cheapest before new code exists.
    Left out: a conditional lock, and an alter's rule on values it
    offered with `extendChoices()`.
 4. **Ports: a structure declares what it reads from its container.**
-   The wall says a child never names a parent's key, and structures
+   DONE 2026-10-18 (`docs/decisions.md#a-port-is-a-live-sibling-value`,
+   `docs/resources.md#ports`): `$inputs->reads('capacity', 'integer',
+   required: TRUE)` declares a port and `attach($key, Child::class,
+   reads: ['capacity' => 'seats'])` wires it; an alter attaches at its own
+   mount, `third_party_settings.<module>`, as an adapter
+   (`docs/decisions.md#an-alter-attaches-at-its-own-mount`); what depends
+   on a port is stated at the site, on the container's `allOf`, with
+   `x-surface.reads` there and `x-surface.ports` on the def; the
+   compliance example is the first case, its storage and tools
+   unchanged. Left open: a container opting out of the structure's
+   alters; ports on a slot's variant or a collection's item; a
+   structure at a key inside a mount, a collection under a mount, and a
+   mounted structure with children of its own or access other than open.
+   As planned: the wall says a child never names a parent's key, and structures
    obey it; an alter may watch the owner's keys by name, and the
    compliance example does (its stewards rule watches `capacity`),
    which binds the reusable piece to one owner's key names. Instead a

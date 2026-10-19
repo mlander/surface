@@ -105,3 +105,67 @@ data_surface_resource_test.parcel.third_party.data_surface_resource_test:
       type: string
       label: 'Customs code'
       nullable: true
+
+# The seating structure's keys, wherever it is attached: the venue's
+# seating, the hall's chairs, and the hall's mount for HallSeatingAlter.
+# The structure stores nothing itself; each container describes it here.
+data_surface_resource_test.seating:
+  type: mapping
+  label: 'Seating'
+  mapping:
+    rows:
+      type: integer
+      label: 'Rows'
+    aisle:
+      type: string
+      label: 'Aisle'
+      nullable: true
+    ushers:
+      type: integer
+      label: 'Ushers'
+      nullable: true
+
+# The venue fixture: the seating structure, its ports wired to the venue.
+data_surface_resource_test.venue:
+  type: config_object
+  label: 'Venue'
+  mapping:
+    layout:
+      type: string
+      label: 'Layout'
+    capacity:
+      type: integer
+      label: 'Capacity'
+    seating:
+      type: data_surface_resource_test.seating
+      label: 'Seating'
+
+# The hall fixture: the seating structure reused as its chairs, and again
+# at HallSeatingAlter's mount.
+data_surface_resource_test.hall:
+  type: config_object
+  label: 'Hall'
+  mapping:
+    arrangement:
+      type: string
+      label: 'Arrangement'
+    style:
+      type: string
+      label: 'Overflow style'
+    guests:
+      type: integer
+      label: 'Guests'
+    chairs:
+      type: data_surface_resource_test.seating
+      label: 'Chairs'
+    third_party_settings:
+      type: sequence
+      label: 'Third party settings'
+      requiredKey: false
+      sequence:
+        type: data_surface_resource_test.hall.third_party.[%key]
+
+# What HallSeatingAlter mounts on the hall: the seating structure.
+data_surface_resource_test.hall.third_party.data_surface_resource_test:
+  type: data_surface_resource_test.seating
+  label: 'Overflow seating'

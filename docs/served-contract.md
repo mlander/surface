@@ -234,7 +234,7 @@ each written once, as a def under `$defs`, and referred to
 | --- | --- |
 | `widget` | Only when the caller asks for widget hints (`data_surface_react` does). The Form API-equivalent hint: `select`, `radios`, `checkbox`, `number`, `text`, `textarea`, `email`, `fieldset`, `slot`, `list` (a collection too); `null` when no widget would claim the key. |
 | `locked` | Identity the operation knows, or a key of a child whose access answered locked: shown, never changed. |
-| `dependsOn` | The sibling keys this key's refiners watch, in its own frame; a key an alter mounted, which only that alter may watch, by its dotted path in that frame (`third_party_settings.<module>.<key>`). A client refines when one of them changes. |
+| `dependsOn` | The sibling keys this key's refiners watch, in its own frame; a key an alter mounted, which only that alter may watch, by its dotted path in that frame (`third_party_settings.<module>.<key>`); a port the frame reads, by the port's name. A client refines when one of them changes. |
 | `refined` | Whether the key is narrowed right now, compared with what the resource or structure advertises in this operation. |
 | `stale` | The stored value is no longer offered; the key is shown on its empty option, standing for it. |
 | `emptyOption` | On a single select: `{show, label}`, by [the empty option rule](decisions.md#the-empty-option-rule): always for an optional select (`- None -`), for a required one only while no valid choice is selected (`- Select -`). |
@@ -249,6 +249,8 @@ each written once, as a def under `$defs`, and referred to
 | `dynamic` | Only when `true`: the key's static refiners have nothing to refine against yet, and what they would answer cannot be listed (a watched key with no list of values, or too many combinations). Static by declaration, not captured here: the schema is the unrefined, looser one, wider than the pipeline and never narrower ([decision](decisions.md#two-documents-never-stricter-than-the-runtime)); refine when a `dependsOn` key changes. In [the full schema](#two-documents) every key that cannot be listed carries it. |
 | `list` | Only when `true`, on a collection: an array whose every item is a child, its `items` a reference to the child's def. A renderer draws each item as that def's fieldset, adds and removes items within `minItems` and `maxItems`, and reads `dependsOn` inside each item under its delta (`shelves.1.unit`). |
 | `declared` | Only when `true`, in [the full schema](#two-documents) and in a def: rules declared as data narrow the key ([refinement](refinement.md#declaring-a-rule)), each stated as written, one conditional on the parent with `x-surface: {"declared": true}` beside its `if` and `then`, after the key's enumerated ones. Exact: a client evaluates each `if` and tightens the key by its `then` (the lower maximum, the values both lists offer). The schema for these answers evaluates the rules for its values and writes none. |
+| `ports` | On an object, a def's or the top's, when the structure reads ports: each port's typed data `type` and whether it is `required`. A port is no property: its value is a key of the container, which the site names ([below](#a-port-is-stated-at-its-site)). |
+| `reads` | On a site, the property where a child that reads ports is used: each port, mapped to the key of the parent's frame it reads. |
 | `runtime` | Only when `true`: a runtime refiner narrows the key too, by a rule no schema can state ([three markers](#three-markers)). Never in a conditional and never in the full schema; the schema for these answers is refined by it for its values. Written beside `enumerated` or `dynamic` when the key has static refiners as well. |
 | `doesNotApply` | On an object, the top or a child's frame, never on a property: the keys of it a refiner answered [do not apply](refinement.md#when-a-key-does-not-apply) to these values, each with the keys it depends on, `{"send_day": ["frequency"]}`. They are no properties of it; a client refines when one of those changes. |
 
@@ -282,7 +284,7 @@ code path they share (`ContractEmitter::define()` and `reference()`):
    `allOf` (what its refiners answer for each value they could be
    handed); and its own `x-surface` facts (a `dependsOn` inside the
    child, `enumerated`, `dynamic`, `group`, `after`, a slot's `by` and
-   `variants`). An alter of the child applies in the def, since alters
+   `variants`, the `ports` it reads). An alter of the child applies in the def, since alters
    apply by class. No label: that is the parent's to give. Each document
    writes its own defs, the schema for these answers with its
    `refined`, `stale` and `emptyOption` as they read for no values, the
@@ -292,7 +294,9 @@ code path they share (`ContractEmitter::define()` and `reference()`):
    to that use beside it: the title and description the parent gives the
    key, and the `x-surface` the parent reads for it (`locked`,
    `dependsOn` as the parent sees it, `refined`, `variant` on a slot's
-   conditional, the widget hint). JSON Schema 2020-12 applies keywords
+   conditional, the widget hint, and `reads`, which of the parent's keys
+   each port reads, with whatever depends on one stated on the parent's
+   `allOf`: [a port is stated at its site](#a-port-is-stated-at-its-site)). JSON Schema 2020-12 applies keywords
    beside `$ref` as well as its target.
 4. **Narrowing is composition.** Where the child at a site says more than
    its def (a key its context locked, a key refined for the values in
@@ -450,6 +454,61 @@ hints):
 }
 ```
 
+### A port is stated at its site
+
+A structure that reads a value from its container through a
+[port](resources.md#ports) is written as any child is, once, as a def,
+and the def names no container: it lists its ports under
+`x-surface.ports`, a key that reads one names the port in its
+`dependsOn`, and nothing that depends on a port is stated in it. A key
+reading a port that holds nothing carries neither `enumerated` nor
+`dynamic` there, and is in no `required` where it may be ruled out:
+the def is the widest reading, whatever the port holds.
+
+The site says the rest, on the parent's own `allOf`, because only the
+parent knows which of its keys a port reads. Its property carries
+`x-surface.reads`, each port and its key, and a `dependsOn` naming those
+keys, the child's dependencies at the parent's paths; under them, an
+`if` on the parent's key and a `then` reaching into the child where it
+sits. A coded refiner reading a port is enumerated over the wired key's
+list, as any key's refiners are over their siblings', and the site is
+`enumerated`, or `dynamic` where the key offers no list or the refiner
+also reads a key of the child's; a declared rule reading a port is
+stated as written, its condition read at the wired key, and the site is
+`declared`. The schema for these answers binds each port to the value
+its key holds, so the site narrows the def by composition, as any site
+does. The test module's venue attaches the seating structure at
+`seating`, its layout port wired to the venue's layout and its guests
+to the capacity; its full schema, abbreviated:
+
+```json
+"seating": {"title": "Seating", "$ref": "#/$defs/resource_test.seating",
+  "x-surface": {"dependsOn": ["capacity", "layout"], "reads": {"layout": "layout", "guests": "capacity"}, "enumerated": true, "declared": true}},
+...
+"allOf": [
+  {"if": {"properties": {"layout": {"const": "standing"}}, "required": ["layout"]},
+   "then": {"properties": {"seating": {"properties": {"aisle": false}}}}},
+  ...theatre and banquet, each with its aisles...
+  {"if": {"properties": {"capacity": {"type": "number", "maximum": 100}}, "required": ["capacity"]},
+   "then": {"properties": {"seating": {"properties": {"rows": {"description": "Up to 10 rows for up to 100 guests.", "maximum": 10}}}}},
+   "x-surface": {"declared": true}}
+],
+"$defs": {
+  "resource_test.seating": {"type": "object", "properties": {"rows": {...}, "aisle": {..., "x-surface": {"dependsOn": ["layout"]}}, ...},
+    "required": ["rows"], "additionalProperties": false,
+    "x-surface": {"ports": {"layout": {"type": "string", "required": true}, "guests": {"type": "integer", "required": false}}}}
+}
+```
+
+The hall reuses the structure at `chairs`, reading its arrangement, and
+its alter attaches it again at its mount, reading other keys: one def,
+the conditionals at each site. Example 4's compliance structure, at its
+alter's mount, is a site inside `third_party_settings` (`{"title":
+"Compliance", "$ref": "#/$defs/registration.compliance", "x-surface":
+{"reads": {"capacity": "capacity"}, ...}}`); its stewards read a number,
+so nothing about them is stated ahead, and the group stays `dynamic` on
+the capacity.
+
 ### Exact where it can be
 
 A static refiner is a pure function of the values it watches, and most
@@ -525,8 +584,9 @@ capacity (per room, 6); the demo block's `bundle` (per entity type) and
 (per casing); the demo extras' `limit` (per presentation; only the grid
 writes one). Declared: example 4's capacity, whose ceiling without a
 licence is a rule declared as data, stated as written beside its six
-conditionals per room. Dynamic: example 4's stewards, inside the mount,
-which watch the capacity, a number. Runtime: example 4's room, which its alter narrows
+conditionals per room. Dynamic: example 4's stewards, in the compliance
+structure at the mount, which read the capacity through a port, a
+number. Runtime: example 4's room, which its alter narrows
 by the rooms a site has closed, read from State; it stays enumerated per
 venue for example 3's own refiner. The field instance's `bundle` would
 be enumerated per entity type, but every operation of it knows the
@@ -847,7 +907,8 @@ Example 2 narrows every change itself. Example 3 does too; with example
 4's module on, a change of the venue asks (the room is `runtime`, for
 the closed rooms), and so does the licence and the room: the capacity is
 stated exactly, its licence rule declared, but the stewards that follow
-it are `dynamic`, watching a number. The pricing is still narrowed
+it, through the compliance structure's port, are `dynamic`, reading a
+number. The pricing is still narrowed
 here: the ticket is a slot, stated whole.
 
 ## What a write needs

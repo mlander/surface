@@ -33,6 +33,11 @@ use Drupal\data_surface\ResourceBuild\RefinesInputRefiner;
  * coded refiners are, and narrows its own property inside it; a condition
  * key the alter mounted is read at its dotted path.
  *
+ * A structure's rule that reads a port is stated where the port is wired,
+ * the site: there the emitter reads the rule through one of these bound
+ * at the key the structure sits at, $at naming the structure's key below
+ * it and $paths each condition key's path in the container's frame.
+ *
  * Decision: see docs/decisions.md#a-rule-declared-as-data.
  *
  * @internal
@@ -51,11 +56,16 @@ final class DeclaredRefiner implements DataSurfaceRefinerInterface, Applicabilit
    * @param array<string, string> $paths
    *   The condition keys the alter mounted, each mapped to the dotted path
    *   its value is read at.
+   * @param string|null $at
+   *   For rules stated at a site, the dotted path below the key they are
+   *   bound at of the key they narrow; NULL for rules bound where they
+   *   were declared.
    */
   public function __construct(
     public readonly array $rules,
     public readonly ?string $module = NULL,
     public readonly array $paths = [],
+    public readonly ?string $at = NULL,
   ) {
   }
 
@@ -63,6 +73,9 @@ final class DeclaredRefiner implements DataSurfaceRefinerInterface, Applicabilit
    * {@inheritdoc}
    */
   public function refineDataDefinition(string $name, DataDefinitionInterface $definition, array $values): DataDefinitionInterface {
+    if ($this->at !== NULL) {
+      return $this->refineAt(explode('.', $this->at), $definition, $this->rules[$name] ?? [], $values);
+    }
     if ($name === RefinesInputRefiner::MOUNT && $this->module !== NULL) {
       $own = $definition instanceof ComplexDataDefinitionInterface ? $definition->getPropertyDefinition($this->module) : NULL;
       if (!$own instanceof MapDataDefinition) {
@@ -83,6 +96,38 @@ final class DeclaredRefiner implements DataSurfaceRefinerInterface, Applicabilit
       if ($this->holds($rule, $values)) {
         $definition = $rule->apply($definition);
       }
+    }
+    return $definition;
+  }
+
+  /**
+   * Applies the rules that hold to the key at a path inside a map.
+   *
+   * @param string[] $parents
+   *   The path below the definition.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition, a copy.
+   * @param \Drupal\data_surface\Refinement\Rule[] $rules
+   *   The rules.
+   * @param array $values
+   *   The values the engine handed over.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface
+   *   The definition.
+   */
+  protected function refineAt(array $parents, DataDefinitionInterface $definition, array $rules, array $values): DataDefinitionInterface {
+    if ($parents === []) {
+      foreach ($rules as $rule) {
+        if (!DoesNotApply::marks($definition) && $this->holds($rule, $values)) {
+          $definition = $rule->apply($definition);
+        }
+      }
+      return $definition;
+    }
+    $first = (string) array_shift($parents);
+    $inner = $definition instanceof MapDataDefinition ? $definition->getPropertyDefinition($first) : NULL;
+    if ($definition instanceof MapDataDefinition && $inner !== NULL && !DoesNotApply::marks($inner)) {
+      $definition->setPropertyDefinition($first, $this->refineAt($parents, $inner, $rules, $values));
     }
     return $definition;
   }
@@ -110,7 +155,7 @@ final class DeclaredRefiner implements DataSurfaceRefinerInterface, Applicabilit
   public function rulesFor(string $name): array {
     $mounted = $name === RefinesInputRefiner::MOUNT && $this->module !== NULL;
     return array_map(
-      fn (Rule $rule): array => [$mounted ? $this->module . '.' . $rule->key : '', $rule],
+      fn (Rule $rule): array => [$this->at ?? ($mounted ? $this->module . '.' . $rule->key : ''), $rule],
       $this->rules[$name] ?? [],
     );
   }

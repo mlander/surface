@@ -69,3 +69,15 @@ data_surface_resource_test.parcel:
     _data_surface_operation: 'configure'
   requirements:
     _data_surface_operation_access: 'TRUE'
+
+# The venue's one operation, served by the generic form: a structure whose
+# ports read the venue's layout and capacity.
+data_surface_resource_test.venue:
+  path: '/surface-test/venue'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Configure the venue'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Venue\VenueResource'
+    _data_surface_operation: 'configure'
+  requirements:
+    _data_surface_operation_access: 'TRUE'

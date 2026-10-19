@@ -76,6 +76,11 @@ final class DataSurface implements DataSurfaceInterface {
    *   What a watched value passes before a refiner is handed it; NULL
    *   for a data surface no build step made, which hands every configured
    *   value over.
+   * @param array<string, mixed> $ports
+   *   What each port it reads holds now, as its container handed it
+   *   (withPorts()); empty for one no container bound.
+   * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $portDefinitions
+   *   The container's key each port reads, by port.
    *
    * @internal
    *   A data surface is built by the build step, which seals a
@@ -90,7 +95,36 @@ final class DataSurface implements DataSurfaceInterface {
     protected readonly DefinitionMap $outputs = new DefinitionMap([]),
     protected readonly array $thirdPartyLayouts = [],
     protected readonly ?WatchedValueCheckInterface $watchedValueCheck = NULL,
+    protected readonly array $ports = [],
+    protected readonly array $portDefinitions = [],
   ) {
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function withPorts(array $values, array $definitions = []): static {
+    $declared = $this->definitions->ports();
+    $values = array_intersect_key($values, $declared);
+    $definitions = array_intersect_key($definitions, $declared);
+    if ($values === $this->ports && $definitions === $this->portDefinitions) {
+      return $this;
+    }
+    return new self($this->definitions, $this->cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $values, $definitions);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getPortDefinition(string $port): ?DataDefinitionInterface {
+    return $this->portDefinitions[$port] ?? NULL;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getPortValues(): array {
+    return array_replace(array_fill_keys(array_keys($this->definitions->ports()), NULL), $this->ports);
   }
 
   /**
@@ -204,11 +238,17 @@ final class DataSurface implements DataSurfaceInterface {
       FALSE => self::STATIC,
       default => $runtime,
     };
+    if ($this->ports !== []) {
+      // A port is read by its name, as a sibling is, and holds what its
+      // container's key holds: that is the value, whatever was passed.
+      // Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
+      $values = array_replace($values, $this->ports);
+    }
     $refines = $this->refines($runtime);
     if (!$refines && !$this->definitions->hasNested()) {
       return $this;
     }
-    if (!$refines) {
+    if (!$refines && !$this->readsIntoChildren()) {
       return $this->refineAgainst($values, $values, $runtime);
     }
     // Decision: see docs/decisions.md#a-refiner-never-sees-an-invalid-sibling.
@@ -305,10 +345,25 @@ final class DataSurface implements DataSurfaceInterface {
         }
         // An attached structure is refined by its child, in the child's
         // frame, and by nothing else in the parent: no parent refiner can
-        // narrow into it.
-        $resolved = $this->refineNested($entry, $values, $cacheability, $runtime);
-        if ($resolved !== NULL) {
-          $definitions = $definitions->with($entry->withDefinition($resolved));
+        // narrow into it. Its ports read what the parent may hand a
+        // refiner.
+        $resolved = $this->refineNested($entry, $values, $cacheability, $runtime, $admitted);
+        // Whatever reads the refined data surface hands the child what it
+        // was refined with.
+        $bound = $entry->readingFrom($admitted);
+        if ($resolved !== NULL || $bound !== NULL) {
+          $definitions = $definitions->with($resolved === NULL ? $bound : ($bound ?? $entry)->withDefinition($resolved));
+          $changed = TRUE;
+        }
+        continue;
+      }
+      if ($entry->mounted !== []) {
+        // The key holding the alters' mounts, some of which hold a
+        // structure that refines its own keys there.
+        $refined = $this->refineMounted($entry, $refines ? $this->refinedEntry($entry, $admitted, $runtime, $cacheability) : NULL, $values, $admitted, $runtime, $cacheability);
+        $bound = $entry->readingFrom($admitted);
+        if ($refined !== NULL || $bound !== NULL) {
+          $definitions = $definitions->with($refined === NULL ? $bound : ($bound ?? $entry)->withDefinition($refined));
           $changed = TRUE;
         }
         continue;
@@ -327,8 +382,90 @@ final class DataSurface implements DataSurfaceInterface {
       $changed = TRUE;
     }
     return $changed
-      ? new self($definitions, $cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck)
+      ? new self($definitions, $cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $this->ports, $this->portDefinitions)
       : $this;
+  }
+
+  /**
+   * Answers whether a child of this data surface reads one of its keys.
+   *
+   * A port a container wired is a refinement edge into the child, so the
+   * values it reads are admitted as any refiner's are, even where no
+   * refiner of the container's own runs.
+   *
+   * @return bool
+   *   TRUE when an attached child, or a structure at a mount, reads a port.
+   */
+  protected function readsIntoChildren(): bool {
+    foreach ($this->definitions->entries() as $entry) {
+      if ($entry->attachment !== NULL && $entry->attachment->reads !== []) {
+        return TRUE;
+      }
+      foreach ($entry->mounted as $attachment) {
+        if ($attachment->reads !== []) {
+          return TRUE;
+        }
+      }
+    }
+    return FALSE;
+  }
+
+  /**
+   * Refines the structures alters attached at their mounts.
+   *
+   * Each is a sealed child, refined in its own frame against the values
+   * at its mount, over its own defaults, its ports reading what the
+   * parent may hand a refiner; what it answers is written into the map
+   * at its mount, where its keys are accepted and stored as any key an
+   * alter mounted is. Nothing of the parent's narrows a key there.
+   *
+   * Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
+   *
+   * @param \Drupal\data_surface\Entry $entry
+   *   The key holding the mounts, as advertised.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $refined
+   *   The key as its own refiners left it for these values, or NULL when
+   *   they changed nothing.
+   * @param array $values
+   *   The values the data surface is being refined against.
+   * @param array $admitted
+   *   The same values with every refused watched value withheld.
+   * @param int $runtime
+   *   The kinds of refiner that run.
+   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
+   *   Collects what each structure's refinement depended on.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
+   *   The key for these values, or NULL when nothing about it changes.
+   */
+  protected function refineMounted(Entry $entry, ?DataDefinitionInterface $refined, array $values, array $admitted, int $runtime, CacheableMetadata $cacheability): ?DataDefinitionInterface {
+    $before = $refined ?? $entry->definition;
+    $definition = NULL;
+    foreach ($entry->mounted as $path => $attachment) {
+      $parents = explode('.', (string) $path);
+      $child = $attachment->readFrom($admitted)->bound([]);
+      $value = NestedArray::getValue($values, [$entry->name, ...$parents]);
+      $answer = $child->refine(array_replace($child->getDefaultValues(), is_array($value) ? $value : []), $runtime);
+      $cacheability->addCacheableDependency($answer);
+      if ($answer === $child) {
+        continue;
+      }
+      $definition ??= static::deepClone($before);
+      $map = $definition;
+      foreach (array_slice($parents, 0, -1) as $parent) {
+        $map = $map instanceof ComplexDataDefinitionInterface ? $map->getPropertyDefinition($parent) : NULL;
+      }
+      $shell = $map instanceof MapDataDefinition ? $map->getPropertyDefinition((string) end($parents)) : NULL;
+      if (!$map instanceof MapDataDefinition || !$shell instanceof MapDataDefinition) {
+        throw new \LogicException(sprintf('The "%s.%s" mount no longer holds a map, so the structure attached there has nowhere to be written.', $entry->name, $path));
+      }
+      $map->setPropertyDefinition((string) end($parents), Attachment::mapOf($shell, $answer));
+    }
+    if ($definition === NULL) {
+      return $refined;
+    }
+    Narrowing::assertNarrows($entry->name, 'the structures attached at its mounts', $before, $definition);
+    return $definition;
   }
 
   /**
@@ -537,13 +674,16 @@ final class DataSurface implements DataSurfaceInterface {
    *   Collects what the child's refinement depended on.
    * @param int $runtime
    *   The kinds of the child's refiners that run.
+   * @param array|null $admitted
+   *   The values a refiner may be handed, which an attached child's ports
+   *   read; NULL for $values.
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
    *   The key's definition for these values, or NULL when nothing about
    *   it changes.
    */
-  protected function refineNested(Entry $entry, array $values, CacheableMetadata $cacheability, int $runtime = self::EVERY): ?DataDefinitionInterface {
-    $child = $entry->childFor($values);
+  protected function refineNested(Entry $entry, array $values, CacheableMetadata $cacheability, int $runtime = self::EVERY, ?array $admitted = NULL): ?DataDefinitionInterface {
+    $child = $entry->attachment !== NULL ? $entry->attachment->readFrom($admitted ?? $values)->bound([]) : $entry->childFor($values);
     if ($child === NULL) {
       return NULL;
     }

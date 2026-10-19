@@ -54,7 +54,11 @@ use Drupal\data_surface\Collection;
  * 2. The alters #[Alters] names for this class, in discovery order,
  *    skipping one whose operations leave this context's id out:
  *    alterInputs() and alterOutputs() over a ResourceBlueprintAdditions,
- *    which mounts what they add under the alter's module.
+ *    which mounts what they add under the alter's module. A structure an
+ *    alter attached at its own mount is built here, in its own frame, its
+ *    keys the mount's and its ports wired to the owner's keys
+ *    (mountStructure()), before anything is bound, since the alter's
+ *    glue reads its keys.
  * 3. The seal-time checks on the shape: every identity key is a declared
  *    input, and no operation id is provided twice.
  * 4. The context. Starting values become the declared defaults, when
@@ -78,6 +82,7 @@ use Drupal\data_surface\Collection;
  *    method may be an instance method: a static refiner is a static
  *    method, so it cannot hold the services its class was built with.
  * 6. The children, each through this same build step in its own frame,
+ *    its ports wired to the parent's keys (assertWiring(), wirePorts()),
  *    each invoked the way one asked on its own is: through one of
  *    its own operations when one applies (invokeChild()), otherwise in
  *    the context its parent's hands it or in its parent's own. Its access
@@ -214,11 +219,24 @@ final class Resources implements ResourcesInterface {
     $slots = $this->slotsOf($definition, $inputs, $input_keys);
 
     $this->applyContext($builder, $definition, $context, $input_keys, $attached, $lists);
+    $ports = $inputs->ports();
+    $frame = ['class' => $definition->name(), 'id' => $definition->id, 'key' => '', 'inputs' => $input_keys];
+    $permission = $this->registry->getOperations($definition->name())[$context->id]->permission ?? NULL;
+    $frame['permission'] = $permission === NULL ? NULL : static::resolvePermission($permission, $context);
+    // Each alter's structure at its own mount, built before any refiner or
+    // rule is bound, since the alter's glue reads its keys.
+    // Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
+    $readable = [];
+    foreach ($additions as $contributor => $blueprints) {
+      foreach (isset($blueprints[0]) ? $blueprints[0]->attachments() : [] as $key => $child) {
+        $readable[(string) $contributor] = $this->mountStructure($builder, $definition, (string) $contributor, (string) $key, (string) $child, $blueprints[0]->wiring((string) $key), $context, $frame, $ancestry, $input_keys, $attached, $lists);
+      }
+    }
     // What each module mounted, so an alter's method may watch its own
     // module's keys and is told so when it names another's.
     $mounted_by = [];
     foreach ($additions as $contributor => $blueprints) {
-      foreach (isset($blueprints[0]) ? $blueprints[0]->keys() : [] as $key) {
+      foreach ([...(isset($blueprints[0]) ? $blueprints[0]->keys() : []), ...($readable[(string) $contributor] ?? [])] as $key) {
         $mounted_by[$key][] = (string) $contributor;
       }
     }
@@ -248,21 +266,21 @@ final class Resources implements ResourcesInterface {
       $mounted = $contributor !== NULL && isset($additions[$contributor][0]) ? $additions[$contributor][0]->keys() : [];
       foreach ($links as [$instance, $refiners, $module]) {
         if ($module === $contributor) {
-          $this->bindRefiners($builder, $definition, $instance, $refiners, $input_keys, $outputs->keys(), $attached, $ancestry === [] ? NULL : $ancestry[count($ancestry) - 1], $module, $extended, $mounted, $module === NULL ? [] : $mounted_by, $lists);
+          $this->bindRefiners($builder, $definition, $instance, $refiners, $input_keys, $outputs->keys(), $attached, $ancestry === [] ? NULL : $ancestry[count($ancestry) - 1], $module, $extended, $mounted, $module === NULL ? [] : $mounted_by, $lists, $ports, $module === NULL ? [] : ($readable[$module] ?? []));
         }
       }
       $rules = $contributor === NULL ? $inputs->rules() : (isset($additions[$contributor][0]) ? $additions[$contributor][0]->rules() : []);
-      $this->bindRules($builder, $definition, $rules, $contributor, $input_keys, $attached, $lists, $extended, $mounted, $contributor === NULL ? [] : $mounted_by, $ruling);
+      $this->bindRules($builder, $definition, $rules, $contributor, $input_keys, $attached, $lists, $extended, $mounted, $contributor === NULL ? [] : $mounted_by, $ruling, $ports, $contributor === NULL ? [] : ($readable[$contributor] ?? []));
     }
 
     // The children, each through this same build step in its own frame:
     // its own shape, its own alters, its own refiners, and the context
     // it is invoked in, which its access may then narrow to locked or to
     // nothing at all, however it was invoked.
-    $frame = ['class' => $definition->name(), 'id' => $definition->id, 'key' => '', 'inputs' => $input_keys];
-    $permission = $this->registry->getOperations($definition->name())[$context->id]->permission ?? NULL;
-    $frame['permission'] = $permission === NULL ? NULL : static::resolvePermission($permission, $context);
     foreach ($inputs->attachments() as $key => $child) {
+      // Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
+      $reads = $inputs->wiring((string) $key);
+      $this->assertWiring($builder, $definition, NULL, (string) $key, (string) $child, $reads, $input_keys, $attached, $lists);
       [$attachment, $access] = $this->buildChild((string) $child, $context, $key, $frame, $ancestry);
       if ($access !== NULL) {
         // What the child's access answer read is what this data surface,
@@ -274,7 +292,9 @@ final class Resources implements ResourcesInterface {
         $builder->omit($key);
         continue;
       }
+      $attachment = $attachment->withReads($reads, static::wiredKeys($builder, $reads));
       $builder->attach($key, $attachment);
+      $this->wirePorts($builder, $key . '.', $attachment, FALSE, $definition->id);
       if ($access !== NULL && $access->isLocked()) {
         $builder->lock($key);
       }
@@ -283,6 +303,8 @@ final class Resources implements ResourcesInterface {
       $variants = [];
       $withheld = [];
       foreach ($children as $value => $child) {
+        // Nothing wires a variant's ports yet.
+        $this->assertWiring($builder, $definition, NULL, $key, $child, [], $input_keys, $attached, $lists, 'variant');
         [$attachment, $access] = $this->buildChild($child, $context, $key, $frame, $ancestry);
         if ($access !== NULL) {
           $builder->addCacheableDependency($access);
@@ -310,6 +332,8 @@ final class Resources implements ResourcesInterface {
     // per delta.
     // Decision: see docs/decisions.md#access-once-per-list.
     foreach ($inputs->lists() as $key => $child) {
+      // Nothing wires an item's ports yet.
+      $this->assertWiring($builder, $definition, NULL, $key, $child, [], $input_keys, $attached, $lists, 'collection');
       [$attachment, $access, $child_context] = $this->buildChild($child, $context, $key, $frame, $ancestry);
       if ($access !== NULL) {
         $builder->addCacheableDependency($access);
@@ -365,6 +389,270 @@ final class Resources implements ResourcesInterface {
       $access,
       $child_context,
     ];
+  }
+
+  /**
+   * Builds the structure an alter attached at its own mount, and fixes it.
+   *
+   * The alter is an adapter: the structure's keys are its mount's, stored
+   * under its module's name as any key an alter mounts, and the structure
+   * refines them there in its own frame, its ports reading the owner's
+   * keys the alter wired them to. Built before any refiner or rule is
+   * bound, because the alter's glue may read the structure's keys.
+   *
+   * Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
+   *
+   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   *   The owner's builder.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The owner.
+   * @param string $module
+   *   The alter's module.
+   * @param string $key
+   *   The mount, `third_party_settings.<module>`.
+   * @param string $child
+   *   The structure, by name.
+   * @param array<string, string> $reads
+   *   Its ports, each wired to an owner's key.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The owner's context.
+   * @param array $frame
+   *   The owner, as buildChild() reads it.
+   * @param array $ancestry
+   *   The owner's own ancestry.
+   * @param string[] $input_keys
+   *   The owner's plain input keys.
+   * @param string[] $attached
+   *   The owner's keys holding a child or a slot.
+   * @param string[] $lists
+   *   The owner's collection keys.
+   *
+   * @return string[]
+   *   The structure's keys, which the alter's glue may read.
+   *
+   * @throws \LogicException
+   *   For a resource with storage or identity, a structure holding a
+   *   child, a wiring the owner cannot honour, or an access answer other
+   *   than open.
+   */
+  protected function mountStructure(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, string $module, string $key, string $child, array $reads, OperationContext $context, array $frame, array $ancestry, array $input_keys, array $attached, array $lists): array {
+    $structure = $this->registry->getDefinition($child);
+    if ($structure->storage !== NULL || $structure->identity !== []) {
+      throw new \LogicException(sprintf(
+        'The %s alter of %s attaches %s at its mount, %s, and %s names %s. A mount holds a structure, which the owner\'s storage stores under the module\'s name.',
+        $module,
+        $definition->id,
+        $structure->id,
+        $key,
+        $structure->id,
+        $structure->storage !== NULL ? 'storage of its own' : 'identity keys',
+      ));
+    }
+    $this->assertWiring($builder, $definition, $module, $key, $child, $reads, $input_keys, $attached, $lists);
+    [$attachment, $access] = $this->buildChild($child, $context, $key, $frame, $ancestry);
+    if ($attachment === NULL || ($access !== NULL && !$access->isOpen())) {
+      throw new \LogicException(sprintf(
+        'The access of %s, attached at %s by the %s alter of %s, answered %s. A structure at a mount that is locked or left out is not built yet.',
+        $structure->id,
+        $key,
+        $module,
+        $definition->id,
+        $access?->answer() ?? 'omitted',
+      ));
+    }
+    if ($access !== NULL) {
+      $builder->addCacheableDependency($access);
+    }
+    foreach ($attachment->child->getDefinitions()->entries() as $name => $entry) {
+      if ($entry->isNested() || $entry->list !== NULL || $entry->mounted !== []) {
+        throw new \LogicException(sprintf(
+          'The %s alter of %s attaches %s at its mount, %s, and %s holds a child at "%s". A structure at a mount holds keys and maps, not children, for now.',
+          $module,
+          $definition->id,
+          $structure->id,
+          $key,
+          $structure->id,
+          $name,
+        ));
+      }
+    }
+    $attachment = $attachment->withReads($reads, static::wiredKeys($builder, $reads));
+    $builder->mountStructure($module, $attachment);
+    $this->wirePorts($builder, $key . '.', $attachment, TRUE, sprintf('the %s alter of %s', $module, $definition->id));
+    return $attachment->child->getDefinitions()->names();
+  }
+
+  /**
+   * Refuses a wiring of a child's ports that its container cannot honour.
+   *
+   * Each port wired is one the child reads, to a key of the container's
+   * own (an owner's plain input, by name) outside the child, of the
+   * port's type; every port the child requires is wired. A slot's variant
+   * and a collection's item are wired by nothing yet, so neither may
+   * require a port.
+   *
+   * Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
+   *
+   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   *   The container's builder, holding its keys.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The container: the owner, or the owner an alter adapts.
+   * @param string|null $module
+   *   The alter's module, or NULL for the owner itself.
+   * @param string $key
+   *   The key the child sits at.
+   * @param string $child
+   *   The child, by name.
+   * @param array<string, string> $reads
+   *   The wiring.
+   * @param string[] $input_keys
+   *   The owner's plain input keys.
+   * @param string[] $attached
+   *   The owner's keys holding a child or a slot.
+   * @param string[] $lists
+   *   The owner's collection keys.
+   * @param string $as
+   *   How the child is held: attach, variant or collection.
+   *
+   * @throws \LogicException
+   *   Naming the container, the port and what is wrong with the wiring.
+   */
+  protected function assertWiring(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, ?string $module, string $key, string $child, array $reads, array $input_keys, array $attached, array $lists, string $as = 'attach'): void {
+    [$ports, $declared] = $this->portsOf($child);
+    if ($ports === [] && $reads === []) {
+      return;
+    }
+    $who = $module === NULL ? $definition->id : sprintf('The %s alter of %s', $module, $definition->id);
+    $id = $this->registry->getDefinition($child)->id;
+    foreach ($reads as $port => $wired) {
+      if (!isset($ports[$port])) {
+        throw new \LogicException(sprintf('%s wires the "%s" port of %s at "%s", which %s does not read; it reads %s.', $who, $port, $id, $key, $id, $ports === [] ? 'no port' : implode(', ', array_keys($ports))));
+      }
+      $inside = $wired === $key || str_starts_with($wired, $key . '.') || (in_array($wired, $declared, TRUE) && !in_array($wired, $input_keys, TRUE));
+      $problem = match (TRUE) {
+        $inside => 'which is inside the child itself: a port reads its container\'s key, and what the child holds is its own',
+        in_array($wired, $attached, TRUE), in_array($wired, $lists, TRUE) => 'which holds a child: a port reads one value',
+        !in_array($wired, $input_keys, TRUE) => sprintf('which %s does not declare as an input: a port reads a key of its container, by name', $definition->id),
+        default => NULL,
+      };
+      if ($problem !== NULL) {
+        throw new \LogicException(sprintf('%s wires the "%s" port of %s at "%s" to "%s", %s.', $who, $port, $id, $key, $wired, $problem));
+      }
+      $type = $builder->getDefinition($wired)?->getDataType();
+      if ($ports[$port]->type !== 'any' && $type !== $ports[$port]->type) {
+        throw new \LogicException(sprintf('%s wires the "%s" port of %s at "%s", which reads %s %s, to "%s", which holds %s %s.', $who, $port, $id, $key, static::article((string) $ports[$port]->type), $ports[$port]->type, $wired, static::article((string) $type), $type));
+      }
+    }
+    foreach ($ports as $port) {
+      if (!$port->required || isset($reads[$port->name])) {
+        continue;
+      }
+      throw new \LogicException($as === 'attach'
+        ? sprintf('%s attaches %s at "%s" without wiring the "%s" port it requires: attach(\'%s\', ..., reads: [\'%s\' => \'<key>\']) names the key of %s it reads.', $who, $id, $key, $port->name, $key, $port->name, $definition->id)
+        : sprintf('%s fills the "%s" %s of %s and requires the "%s" port, which nothing wires: a port is wired by attach(), and a %s is wired by nothing yet.', $id, $key, $as === 'variant' ? 'slot' : 'collection', $who, $port->name, $as === 'variant' ? 'slot\'s variant' : 'collection\'s item'));
+    }
+  }
+
+  /**
+   * Gets the container's key each port is wired to, as declared.
+   *
+   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   *   The container's builder.
+   * @param array<string, string> $reads
+   *   The wiring.
+   *
+   * @return array<string, \Drupal\Core\TypedData\DataDefinitionInterface>
+   *   Each wired key's definition, by port.
+   */
+  protected static function wiredKeys(DataSurfaceBuilderInterface $builder, array $reads): array {
+    $wired = [];
+    foreach ($reads as $port => $key) {
+      $definition = $builder->getDefinition($key);
+      if ($definition !== NULL) {
+        $wired[$port] = DataSurface::deepClone($definition);
+      }
+    }
+    return $wired;
+  }
+
+  /**
+   * Reads what a child declares, without building it.
+   *
+   * @param string $child
+   *   The child, by name.
+   *
+   * @return array{0: array<string, \Drupal\data_surface\Port>, 1: string[]}
+   *   Its ports, by name, and every key it declares.
+   */
+  protected function portsOf(string $child): array {
+    $blueprint = new ResourceBlueprint(new DataSurfaceBuilder(), $this->typedDataManager);
+    $this->fillBlueprints($this->registry->getDefinition($child), $blueprint);
+    return [$blueprint->ports(), $blueprint->declared()];
+  }
+
+  /**
+   * Gets the article a type name is read with.
+   *
+   * @param string $type
+   *   The type.
+   *
+   * @return string
+   *   "an" or "a".
+   */
+  protected static function article(string $type): string {
+    return in_array(strtolower($type[0] ?? ''), ['a', 'e', 'i', 'o', 'u'], TRUE) ? 'an' : 'a';
+  }
+
+  /**
+   * Records, in the container, what a child's ports and keys move.
+   *
+   * The child refines in its own frame, under its own names; the
+   * container is told which of its keys each port reads, as edges at the
+   * child's paths in the container's frame, so a form rebuilds the child
+   * when one of them changes, a client refines, the cycle check follows
+   * the wiring, and a refusal names the container's key. For a structure
+   * at a mount, whose keys the container accepts as its own, the child's
+   * edges between its own keys are recorded at their paths too.
+   *
+   * Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
+   *
+   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   *   The container's builder.
+   * @param string $prefix
+   *   The child's path in the container's frame, with its trailing dot.
+   * @param \Drupal\data_surface\Attachment $attachment
+   *   The child, wired.
+   * @param bool $internal
+   *   Whether the child's edges between its own keys are recorded too.
+   * @param string $container
+   *   The container, in words, for a cycle's refusal.
+   */
+  protected function wirePorts(DataSurfaceBuilderInterface $builder, string $prefix, Attachment $attachment, bool $internal, string $container): void {
+    $map = $attachment->child->getDefinitions();
+    $ports = $map->ports();
+    $kinds = [
+      DataSurfaceInterface::CODED => [FALSE, FALSE],
+      DataSurfaceInterface::DECLARED => [FALSE, TRUE],
+      DataSurfaceInterface::RUNTIME => [TRUE, FALSE],
+    ];
+    foreach ($map->refinementPaths() as $target => $dependencies) {
+      $entry = $map->entry(explode('.', (string) $target)[0]);
+      foreach ($dependencies as $dependency) {
+        $port = isset($ports[$dependency]);
+        if ($port ? !isset($attachment->reads[$dependency]) : !$internal) {
+          // An unwired port holds nothing, and moves nothing.
+          continue;
+        }
+        $mapped = $port ? $attachment->reads[$dependency] : $prefix . $dependency;
+        $wiring = $port ? sprintf('the "%s" port of %s, which %s wires to "%s"', $dependency, $attachment->id ?? $attachment->source, $container, $mapped) : NULL;
+        $mask = $entry === NULL ? DataSurfaceInterface::CODED : ($entry->watchedBy[$dependency] ?? DataSurfaceInterface::CODED);
+        foreach ($kinds as $kind => [$runtime, $declared]) {
+          if (($mask & $kind) !== 0) {
+            $builder->addRefinement($prefix . $target, [$mapped], $runtime, $declared, $wiring);
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -1052,14 +1340,31 @@ final class Resources implements ResourcesInterface {
    * @param string[] $lists
    *   The owner's collection keys: a method may refine one (its Count),
    *   and may not watch one.
+   * @param array<string, \Drupal\data_surface\Port> $ports
+   *   The ports the owner reads, which a method may watch by name, never
+   *   refine.
+   * @param string[] $readable
+   *   For an alter that attached a structure at its mount, the
+   *   structure's keys: its methods may watch them, as keys it mounted,
+   *   and refine none.
    *
    * @throws \LogicException
    *   When a method fails a seal-time check, or one that watches nothing
    *   widens what it was given.
    */
-  protected function bindRefiners(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, object|string $instance, array $refiners, array $input_keys, array $output_keys, array $attached = [], ?array $parent = NULL, ?string $module = NULL, array $extended = [], array $mounted = [], array $mountedBy = [], array $lists = []): void {
+  protected function bindRefiners(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, object|string $instance, array $refiners, array $input_keys, array $output_keys, array $attached = [], ?array $parent = NULL, ?string $module = NULL, array $extended = [], array $mounted = [], array $mountedBy = [], array $lists = [], array $ports = [], array $readable = []): void {
     if ($refiners === []) {
       return;
+    }
+    foreach ($refiners as $refiner) {
+      // Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
+      if (isset($ports[$refiner->key]) && !in_array($refiner->key, $input_keys, TRUE)) {
+        throw new \LogicException(sprintf('%s refines "%s", a port %s reads. A port is its container\'s key, read under a name of the structure\'s own: it is watched, never refined.', $refiner->describe(), $refiner->key, $definition->id));
+      }
+      // Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
+      if (in_array($refiner->key, $readable, TRUE) && !in_array($refiner->key, $input_keys, TRUE)) {
+        throw new \LogicException(sprintf('%s refines "%s", a key of the structure its alter attached at its mount on %s. The alter reads the structure\'s keys; what they allow is the structure\'s, refined in its own frame.', $refiner->describe(), $refiner->key, $definition->id));
+      }
     }
     // Decision: see docs/decisions.md#static-by-default-runtime-by-declaration.
     $bindings = ['static' => [], 'runtime' => [], 'ungated' => []];
@@ -1070,17 +1375,18 @@ final class Resources implements ResourcesInterface {
       $own = $module !== NULL && in_array($refiner->key, $mounted, TRUE) && !in_array($refiner->key, $input_keys, TRUE);
       static::assertStaticOnResource($definition, $refiner, $module);
       static::assertStaticUnlessRuntime($definition, $refiner);
-      static::assertWalled($definition, $refiner, $input_keys, $attached, $parent, $lists);
-      static::assertNotWatchingForeignMount($definition, $refiner, $input_keys, $mounted, $mountedBy);
+      static::assertWalled($definition, $refiner, [...$input_keys, ...array_keys($ports)], $attached, $parent, $lists);
+      static::assertNotWatchingForeignMount($definition, $refiner, $input_keys, [...$mounted, ...$readable], $mountedBy);
       // Decision: see docs/decisions.md#count-is-the-parents.
       $refinable = $own ? [...$input_keys, $refiner->key] : [...$input_keys, ...$lists];
       if ($refiner->mayNotApply) {
         // Decision: see docs/decisions.md#a-key-that-does-not-apply.
         array_push($refinable, ...$attached);
       }
-      static::assertRefinable($definition, $refiner, $refinable, $output_keys, [...$input_keys, ...$mounted]);
+      $watchable = [...$input_keys, ...$mounted, ...$readable, ...array_keys($ports)];
+      static::assertRefinable($definition, $refiner, $refinable, $output_keys, $watchable);
       // Decision: see docs/decisions.md#an-alter-watches-its-own-mounted-key.
-      $watched = static::mountedWatches($definition, $refiner, $input_keys, $module, $mounted);
+      $watched = static::mountedWatches($definition, $refiner, $input_keys, $module, [...$mounted, ...$readable]);
       $paths += $watched;
       $key = $own ? RefinesInputRefiner::MOUNT : $refiner->key;
       if ($refiner->watched() === []) {
@@ -1176,11 +1482,18 @@ final class Resources implements ResourcesInterface {
    * @param string[] $ruling
    *   The keys a coded or runtime refiner may rule out, an alter's own by
    *   `<module>.<key>`.
+   * @param array<string, \Drupal\data_surface\Port> $ports
+   *   The ports the owner reads, which a condition may name, and no rule
+   *   narrows.
+   * @param string[] $readable
+   *   For an alter that attached a structure at its mount, the
+   *   structure's keys: a condition may name them, and no rule of the
+   *   alter's narrows them.
    *
    * @throws \LogicException
    *   Naming the rule and what is wrong with it.
    */
-  protected function bindRules(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, array $rules, ?string $module, array $input_keys, array $attached, array $lists, array $extended, array $mounted, array $mountedBy, array $ruling): void {
+  protected function bindRules(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, array $rules, ?string $module, array $input_keys, array $attached, array $lists, array $extended, array $mounted, array $mountedBy, array $ruling, array $ports = [], array $readable = []): void {
     if ($rules === []) {
       return;
     }
@@ -1196,6 +1509,15 @@ final class Resources implements ResourcesInterface {
       $own = $module !== NULL && in_array($rule->key, $mounted, TRUE) && !in_array($rule->key, $input_keys, TRUE);
       $nested = !$own && in_array($rule->key, $attached, TRUE);
       $list = !$own && in_array($rule->key, $lists, TRUE);
+      if (!in_array($rule->key, $input_keys, TRUE) && (isset($ports[$rule->key]) || in_array($rule->key, $readable, TRUE))) {
+        throw new \LogicException(sprintf(
+          '%s narrows "%s", %s. %s',
+          $name,
+          $rule->key,
+          isset($ports[$rule->key]) ? 'a port ' . $definition->id . ' reads' : 'a key of the structure the alter attached at its mount',
+          isset($ports[$rule->key]) ? 'A port is its container\'s key: a condition reads it, and no rule narrows it.' : 'The alter reads the structure\'s keys; what they allow is the structure\'s.',
+        ));
+      }
       if (!$own && !$nested && !$list && !in_array($rule->key, $input_keys, TRUE)) {
         throw new \LogicException(sprintf('%s narrows "%s", which %s does not declare as an input%s.', $name, $rule->key, $definition->id, isset($mountedBy[$rule->key]) ? sprintf(' (the %s module mounted it, and an alter narrows only the keys it mounted itself and the owner\'s)', implode(', ', $mountedBy[$rule->key])) : ''));
       }
@@ -1221,12 +1543,13 @@ final class Resources implements ResourcesInterface {
       // Decision: see docs/decisions.md#a-rule-declared-as-data.
       $watched = [];
       foreach ($condition->keys() as $key) {
-        $mine = $module !== NULL && in_array($key, $mounted, TRUE) && !in_array($key, $input_keys, TRUE);
+        $mine = $module !== NULL && in_array($key, [...$mounted, ...$readable], TRUE) && !in_array($key, $input_keys, TRUE);
+        $port = !$mine && isset($ports[$key]) && !in_array($key, $input_keys, TRUE);
         $problem = match (TRUE) {
           $key === $rule->key => 'the key the rule narrows: a key does not depend on itself',
           in_array($key, $attached, TRUE) => 'a key holding a child, whose values are the child\'s',
           in_array($key, $lists, TRUE) => 'a collection, whose items are each a child',
-          !$mine && !in_array($key, $input_keys, TRUE) => isset($mountedBy[$key])
+          !$mine && !$port && !in_array($key, $input_keys, TRUE) => isset($mountedBy[$key])
             ? sprintf('a key the %s module mounted: an alter reads the keys it mounted itself and the owner\'s', implode(', ', $mountedBy[$key]))
             : sprintf('no input of %s', $definition->id),
           default => NULL,
@@ -1234,14 +1557,19 @@ final class Resources implements ResourcesInterface {
         if ($problem !== NULL) {
           throw new \LogicException(sprintf('%s has a condition on "%s", which is %s.', $name, $key, $problem));
         }
-        // A port, once ports land, is resolved here, to the key its
-        // container wires it to.
+        // A port is read by its own name in this frame; the container that
+        // wires it says, at the site, which of its keys that is.
+        // Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
         $path = $mine ? RefinesInputRefiner::path((string) $module, $key) : $key;
         if ($mine) {
           $paths[$key] = $path;
         }
         $watched[] = $path;
-        $read = $mine ? $builder->getThirdPartyDefinition((string) $module, $key) : $builder->getDefinition($key);
+        $read = match (TRUE) {
+          $mine => $builder->getThirdPartyDefinition((string) $module, $key),
+          $port => $this->typedDataManager->createDataDefinition($ports[$key]->type),
+          default => $builder->getDefinition($key),
+        };
         assert($read !== NULL);
         static::assertReadable($name, $key, $condition, $read);
       }

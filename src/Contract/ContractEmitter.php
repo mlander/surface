@@ -25,6 +25,7 @@ use Drupal\data_surface\Refinement\DeclaredRefiner;
 use Drupal\data_surface\Refinement\DoesNotApply;
 use Drupal\data_surface\Refinement\Rule;
 use Drupal\data_surface\Attachment;
+use Drupal\data_surface\Port;
 use Drupal\data_surface\ResourceBuild\RefinesInputRefiner;
 use Drupal\data_surface\Entry;
 use Drupal\data_surface\Collection;
@@ -451,6 +452,10 @@ final class ContractEmitter {
     // docs/decisions.md#a-rule-declared-as-data.
     $runtime = !$full && !$declaring;
     $kinds = $runtime ? DataSurfaceInterface::STATIC : DataSurfaceInterface::CODED;
+    // A port holds what its container bound it to, read as a sibling is.
+    // Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
+    $ports = $declared->getDefinitions()->ports();
+    $values = $declared->getPortValues() + $values;
     $refined = $declared->refine($values, $runtime ? DataSurfaceInterface::EVERY : $kinds);
     $cacheability->addCacheableDependency($refined);
     $advertised = $declared->getDefinitions();
@@ -470,7 +475,9 @@ final class ContractEmitter {
       $name = (string) $name;
       $current = $now->entry($name) ?? $entry;
       $stated = $ahead->entry($name) ?? $entry;
-      $answered = ($coded->entry($name) ?? $entry) !== $entry;
+      // Compared by definition: a refinement rebinds a child's ports on
+      // its entry whether or not the definition moved.
+      $answered = ($coded->entry($name) ?? $entry)->definition !== $entry->definition;
       // A def is the declaration, which no context has locked.
       $locked = ($entry->locked || $frozen) && !$declaring;
       if ($full && !$entry->isNested() && $this->watchesFree($advertised, $entry, $declaring)) {
@@ -496,6 +503,11 @@ final class ContractEmitter {
       // A key holding a child is refined by the parent only to be ruled
       // out, and a slot's own deciding key is no refiner's.
       $ahead_of_time = $entry->codedDependencies() !== [] && !$locked && ($entry->isNested() ? $entry->refiners !== [] && !$this->holds($entry, $values) : !$answered);
+      // What a key reading a port that holds nothing answers is said where
+      // the port is wired, at the site, never here: a def is reused, and
+      // its container's keys are no properties of it.
+      $at_site = $ahead_of_time && $this->readsEmptyPort($entry, $ports, $values);
+      $ahead_of_time = $ahead_of_time && !$at_site;
       $enumerated = NULL;
       $stating = [];
       if ($entry->slot !== NULL) {
@@ -524,7 +536,9 @@ final class ContractEmitter {
           $shown[$name] = new \stdClass();
         }
         else {
-          $child = $attachment->child;
+          // Bound as the refinement of this frame bound it: a value its
+          // own key refuses is no value for a port either.
+          $child = ($current->attachment ?? $attachment)->bound($values);
           $held = $values[$name] ?? NULL;
           $inside = $full || $blank ? $this->known($child) : array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
           // A child its access locked is described locked through and
@@ -541,6 +555,18 @@ final class ContractEmitter {
           // A parent's refiner of an attached key says only whether it
           // applies.
           $enumerated = $this->enumerate($declared, $static, $entry, $values, $properties[$name], $prefix . $name, $cacheability, $kinds, TRUE);
+        }
+        if (!$declaring && $attachment->reads !== []) {
+          // Which of this frame's keys each port reads, and what the child
+          // answers for them where they hold nothing yet: said here, at the
+          // site, on this frame's allOf, never in the child's def.
+          // Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
+          $properties[$name][self::EXTENSION]['reads'] = $attachment->reads;
+          if (!$locked) {
+            [$branches, $markers] = $this->site($declared, $static, $entry, $current->attachment ?? $attachment, '', $values, $prefix . $name, $cacheability, $kinds, $runtime);
+            array_push($conditions, ...$branches);
+            $properties[$name][self::EXTENSION] += $markers;
+          }
         }
       }
       else {
@@ -589,12 +615,17 @@ final class ContractEmitter {
           // narrowed it for the present moment already, and a conditional
           // says what the coded ones add.
           $ignored = [];
-          $base = $current === $stated ? $properties[$name] : $this->property($stated->definition, NULL, NULL, $prefix . $name, FALSE, [], $cacheability, $ignored)[0];
+          $base = $current->definition === $stated->definition ? $properties[$name] : $this->property($stated->definition, NULL, NULL, $prefix . $name, FALSE, [], $cacheability, $ignored)[0];
           $enumerated = $this->enumerate($declared, $static, $entry, $values, $base, $prefix . $name, $cacheability, $kinds);
-          if ($enumerated !== NULL && $current === $stated) {
+          if ($enumerated !== NULL && $current->definition === $stated->definition) {
             $properties[$name] = $enumerated['base'];
           }
         }
+      }
+      if ($at_site) {
+        // Not stated here, so wherever its coded refiners may rule it
+        // out, it is not required here either.
+        [$properties[$name], $requires] = $this->mayNotApply($entry, DataSurfaceInterface::CODED, $properties[$name], $requires);
       }
       if ($ahead_of_time) {
         if ($enumerated === NULL) {
@@ -612,10 +643,23 @@ final class ContractEmitter {
       }
       if (!$runtime && $entry->isDeclared()) {
         // Each rule as written: a conditional of its own, after what the
-        // coded refiners answer, as the pipeline runs them.
+        // coded refiners answer, as the pipeline runs them. One reading a
+        // port is the site's to state.
         // Decision: see docs/decisions.md#a-rule-declared-as-data.
-        [$properties[$name], $stating, $requires] = $this->rules($entry, $current->definition, $properties[$name], $stating, $requires, $prefix . $name, $cacheability);
-        $properties[$name][self::EXTENSION]['declared'] = TRUE;
+        [$properties[$name], $stating, $requires, $stated] = $this->rules($entry, $current->definition, $properties[$name], $stating, $requires, $prefix . $name, $cacheability, array_keys($ports));
+        if ($stated) {
+          $properties[$name][self::EXTENSION]['declared'] = TRUE;
+        }
+      }
+      if ($entry->mounted !== [] && !$declaring) {
+        // The structures alters attached at their mounts: each module's
+        // property a site of the structure's def, and what the structure
+        // answers for keys its ports read stated here, on this frame.
+        [$properties[$name], $branches] = $this->mounts($declared, $static, $entry, $current, $properties[$name], $values, $prefix, $owner, $cacheability, $subschemas, $standing, $locked, $blank, $kinds, $runtime);
+        if (array_filter($branches, static fn (array $branch): bool => ($branch[self::EXTENSION]['declared'] ?? FALSE) === TRUE) !== []) {
+          $properties[$name][self::EXTENSION]['declared'] = TRUE;
+        }
+        array_push($stating, ...$branches);
       }
       array_push($conditions, ...$stating);
       if ($entry->isRefinedAtRuntime()) {
@@ -646,7 +690,243 @@ final class ContractEmitter {
     if ($ruled !== []) {
       $schema[self::EXTENSION] = ['doesNotApply' => $ruled];
     }
+    if ($ports !== []) {
+      // What the frame reads from its container, by the names its keys'
+      // `dependsOn` use; the site says which key of the container each is.
+      $schema[self::EXTENSION]['ports'] = array_map(static fn (Port $port): array => [
+        'type' => $port->type,
+        'required' => $port->required,
+      ], $ports);
+    }
     return [$schema, $shown === [] ? new \stdClass() : $shown];
+  }
+
+  /**
+   * Answers whether a key's coded refiners read a port that holds nothing.
+   *
+   * @param \Drupal\data_surface\Entry $entry
+   *   The key.
+   * @param array<string, \Drupal\data_surface\Port> $ports
+   *   The frame's ports.
+   * @param array $values
+   *   The frame's values, its ports' among them.
+   *
+   * @return bool
+   *   TRUE when what they answer depends on a port no container bound.
+   */
+  protected function readsEmptyPort(Entry $entry, array $ports, array $values): bool {
+    foreach ($entry->codedDependencies() as $key) {
+      if (isset($ports[$key]) && !ValueState::isConfigured($values[$key] ?? NULL)) {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
+
+  /**
+   * States, at a site, what a child answers for the ports it reads.
+   *
+   * The child's def never states what depends on a port: the port is no
+   * property there, and the def is reused wherever the child is attached.
+   * The container wires each port to a key of its own, so it can: here,
+   * on its own `allOf`, an `if` on its key and a `then` reaching into
+   * the child at the site. A coded refiner reading a port is enumerated
+   * over the wired keys' values, as any key's refiners are over their
+   * siblings', unless it also reads a key of the child's, whose value the
+   * container does not state; a declared rule reading a port is stated as
+   * written, its condition's port read at the wired key.
+   *
+   * Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $declared
+   *   The container's frame, as advertised.
+   * @param \Drupal\data_surface\DataSurfaceInterface $static
+   *   The same, refined for its values by its static refiners alone.
+   * @param \Drupal\data_surface\Entry $entry
+   *   The key holding the child, or the mounts.
+   * @param \Drupal\data_surface\Attachment $attachment
+   *   The child, wired.
+   * @param string $below
+   *   Where the child sits below the key: '' for an attached child, the
+   *   module for a structure at a mount.
+   * @param array $values
+   *   The container's values.
+   * @param string $path
+   *   The key's dotted path.
+   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
+   *   Collects what the description depends on.
+   * @param int $kinds
+   *   The kinds of refiner a combination is answered by.
+   * @param bool $runtime
+   *   Whether the document is for one set of values, where a rule is
+   *   evaluated, not stated.
+   * @param array|null $inline
+   *   The key's property as this frame states it inline, for a mount;
+   *   NULL for an attached child, which is described here.
+   *
+   * @return array{0: array, 1: array<string, true>}
+   *   The conditionals, and the markers the site carries: `enumerated`
+   *   or `dynamic`, and `declared`.
+   */
+  protected function site(DataSurfaceInterface $declared, DataSurfaceInterface $static, Entry $entry, Attachment $attachment, string $below, array $values, string $path, CacheableMetadata $cacheability, int $kinds, bool $runtime, ?array $inline = NULL): array {
+    $map = $attachment->child->getDefinitions();
+    $ports = $map->ports();
+    $held = $attachment->ports ?? $attachment->readFrom($values)->ports ?? [];
+    $empty = array_filter($attachment->reads, static fn (string $port): bool => !ValueState::isConfigured($held[$port] ?? NULL), ARRAY_FILTER_USE_KEY);
+    if ($empty === []) {
+      // Every port holds a value: the instance is refined for them.
+      return [[], []];
+    }
+    $definition = $static->getDefinition($entry->name) ?? $entry->definition;
+    $base = $inline ?? $this->stated($entry, $definition, $path, $cacheability);
+    $markers = [];
+    $branches = [];
+    if ($below === '') {
+      $reading = FALSE;
+      $mixed = FALSE;
+      $ruled = [];
+      foreach ($map->entries() as $name => $child) {
+        $watched = $child->codedDependencies();
+        if (array_intersect($watched, array_keys($empty)) === []) {
+          continue;
+        }
+        $reading = TRUE;
+        $mixed = $mixed || array_diff($watched, array_keys($ports)) !== [];
+        foreach ($child->mayNotApply(DataSurfaceInterface::CODED) as $inside) {
+          $ruled[] = $inside === '' ? (string) $name : $name . '.' . $inside;
+        }
+      }
+      if ($reading) {
+        // The def requires none of what may not apply; nor does the base a
+        // conditional is read over.
+        $enumerated = $mixed ? NULL : $this->enumerate($declared, $static, $entry, $values, static::requiringNone($base, $ruled), $path, $cacheability, $kinds);
+        $markers[$enumerated === NULL ? 'dynamic' : 'enumerated'] = TRUE;
+        array_push($branches, ...($enumerated['branches'] ?? []));
+      }
+    }
+    if ($runtime) {
+      return [$branches, $markers];
+    }
+    $links = [];
+    foreach ($map->entries() as $name => $child) {
+      foreach ($child->refiners as $chain) {
+        foreach ($chain as $link) {
+          if (!$link instanceof DeclaredRefiner) {
+            continue;
+          }
+          foreach ($link->rulesFor((string) $name) as [$inner, $rule]) {
+            $condition = $rule->condition();
+            $keys = $condition?->keys() ?? [];
+            $read = array_intersect($keys, array_keys($ports));
+            if ($condition === NULL || $read === []) {
+              continue;
+            }
+            $unwired = array_diff($read, array_keys($attachment->reads));
+            if ($unwired !== []) {
+              // A port no container wired holds nothing. A rule reading
+              // nothing else is answered here, once: one that never holds
+              // says nothing; any other is left to the server.
+              if (array_values($unwired) !== array_values($keys) || $condition->holds(array_fill_keys($keys, NULL))) {
+                $markers['dynamic'] = TRUE;
+              }
+              continue;
+            }
+            $paths = [];
+            $site = $below === '' ? $entry->name : $entry->name . '.' . $below;
+            foreach ($keys as $key) {
+              $paths[$key] = isset($ports[$key]) ? $attachment->reads[$key] : $site . '.' . implode('.', $link->pathOf($key));
+            }
+            $at = ($below === '' ? '' : $below . '.') . $name . ($inner === '' ? '' : '.' . $inner);
+            $links[] = new DeclaredRefiner([$entry->name => [$rule]], NULL, $paths, $at);
+          }
+        }
+      }
+    }
+    if ($links !== []) {
+      $pseudo = new Entry($entry->name, $definition, refiners: [DataSurfaceInterface::OWNER => $links]);
+      [, $stated] = $this->rules($pseudo, $definition, $base, [], FALSE, $path, $cacheability);
+      array_push($branches, ...$stated);
+      $markers['declared'] = TRUE;
+    }
+    return [$branches, $markers];
+  }
+
+  /**
+   * Writes each structure an alter attached at its mount as a site.
+   *
+   * The module's property inside `third_party_settings` refers to the
+   * structure's def, narrowed where this document's values refine it, and
+   * says which of the owner's keys each port reads; what the structure
+   * answers for a port that holds nothing is stated on this frame.
+   *
+   * Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $declared
+   *   The frame, as advertised.
+   * @param \Drupal\data_surface\DataSurfaceInterface $static
+   *   The same, refined for its values by its static refiners alone.
+   * @param \Drupal\data_surface\Entry $entry
+   *   The key holding the mounts.
+   * @param \Drupal\data_surface\Entry $current
+   *   The same key, as it stands.
+   * @param array $property
+   *   Its property, stated inline.
+   * @param array $values
+   *   The frame's values.
+   * @param string $prefix
+   *   The frame's path, with its trailing dot.
+   * @param string $owner
+   *   The frame's id.
+   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
+   *   Collects what the description depends on.
+   * @param \Drupal\data_surface\Contract\Subschemas $subschemas
+   *   The document's defs.
+   * @param array<string, mixed> $standing
+   *   The orphans of a refinement, by dotted path from the top.
+   * @param bool $locked
+   *   Whether the key is described locked.
+   * @param bool $blank
+   *   Whether the frame stands for every item of a collection.
+   * @param int $kinds
+   *   The kinds of refiner a combination is answered by.
+   * @param bool $runtime
+   *   Whether the document is for one set of values.
+   *
+   * @return array{0: array, 1: array}
+   *   The property, each mount a site, and the conditionals for the
+   *   frame's `allOf`.
+   */
+  protected function mounts(DataSurfaceInterface $declared, DataSurfaceInterface $static, Entry $entry, Entry $current, array $property, array $values, string $prefix, string $owner, CacheableMetadata $cacheability, Subschemas $subschemas, array $standing, bool $locked, bool $blank, int $kinds, bool $runtime): array {
+    $branches = [];
+    foreach ($entry->mounted as $module => $attachment) {
+      $module = (string) $module;
+      // Bound as the refinement of this frame bound it.
+      $attachment = $current->mounted[$module] ?? $attachment;
+      $inline = $property['properties'][$module] ?? NULL;
+      if (!is_array($inline)) {
+        continue;
+      }
+      $path = $prefix . $entry->name;
+      $markers = [];
+      if (!$locked) {
+        [$stated, $markers] = $this->site($declared, $static, $entry, $attachment, $module, $values, $path, $cacheability, $kinds, $runtime, $property);
+        array_push($branches, ...$stated);
+      }
+      $key = $this->define($attachment, $owner . '.' . $entry->name . '.' . $module, $cacheability, $subschemas);
+      $child = $attachment->bound($values);
+      $held = NestedArray::getValue($values, [$entry->name, $module]);
+      $inside = $subschemas->full || $blank ? $this->known($child) : array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
+      $ignored = [];
+      [$instance] = $this->instance($child, $key, $inside, $path . '.' . $module . '.', $attachment->id ?? $key, $cacheability, $ignored, $subschemas, $standing, $locked, $blank);
+      $map = $current->definition instanceof ComplexDataDefinitionInterface ? $current->definition->getPropertyDefinition($module) : NULL;
+      $site = ($map === NULL ? [] : $this->describe($map)) + $this->reference($key, $instance, $subschemas);
+      if (isset($inline['readOnly'])) {
+        $site['readOnly'] = $inline['readOnly'];
+      }
+      $site[self::EXTENSION] = (is_array($inline[self::EXTENSION] ?? NULL) ? $inline[self::EXTENSION] : []) + ['reads' => $attachment->reads] + $markers;
+      $property['properties'][$module] = $site;
+    }
+    return [$property, $branches];
   }
 
   /**
@@ -743,17 +1023,23 @@ final class ContractEmitter {
    *   The key's dotted path.
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
    *   Collects what the description depends on.
+   * @param string[] $ports
+   *   The ports of the frame: a rule reading one is not stated here, the
+   *   site that wires it states it, and a key it may rule out is not
+   *   required here.
    *
-   * @return array{0: array, 1: array, 2: bool}
-   *   The property, the key's conditionals, the coded ones first, and
-   *   whether the frame still requires the key.
+   * @return array{0: array, 1: array, 2: bool, 3: bool}
+   *   The property, the key's conditionals, the coded ones first,
+   *   whether the frame still requires the key, and whether any rule was
+   *   stated here.
    */
-  protected function rules(Entry $entry, DataDefinitionInterface $definition, array $property, array $branches, bool $requires, string $path, CacheableMetadata $cacheability): array {
+  protected function rules(Entry $entry, DataDefinitionInterface $definition, array $property, array $branches, bool $requires, string $path, CacheableMetadata $cacheability, array $ports = []): array {
     $name = $entry->name;
     $applicability = $entry->isNested();
     $base = $applicability ? [] : $this->stated($entry, $definition, $path, $cacheability);
     $declared = [];
     $ruling = [];
+    $stated = FALSE;
     foreach ($entry->refiners as $chain) {
       foreach ($chain as $link) {
         if (!$link instanceof DeclaredRefiner) {
@@ -762,6 +1048,19 @@ final class ContractEmitter {
         foreach ($link->rulesFor($name) as [$below, $rule]) {
           $condition = $rule->condition();
           assert($condition !== NULL);
+          if (array_intersect($condition->keys(), $ports) !== []) {
+            // Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
+            if ($rule->rulesOut()) {
+              if ($below === '') {
+                $requires = FALSE;
+              }
+              else {
+                $property = static::requiringNone($property, [(string) $below]);
+              }
+            }
+            continue;
+          }
+          $stated = TRUE;
           $paths = [];
           foreach ($condition->keys() as $key) {
             $paths[$key] = $link->pathOf($key);
@@ -835,7 +1134,7 @@ final class ContractEmitter {
         ];
       }
     }
-    return [$property, $branches, $requires];
+    return [$property, $branches, $requires, $stated];
   }
 
   /**
@@ -1118,7 +1417,8 @@ final class ContractEmitter {
    */
   protected function instance(DataSurfaceInterface $child, string $key, array $values, string $prefix, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing, bool $frozen = FALSE, bool $blank = FALSE): array {
     $def = $subschemas->get($key);
-    if ($subschemas->full && $def !== NULL && !$frozen && !$this->locks($child)) {
+    $bound = array_filter($child->getPortValues(), ValueState::isConfigured(...)) !== [];
+    if ($subschemas->full && $def !== NULL && !$frozen && !$bound && !$this->locks($child)) {
       return [$def, new \stdClass()];
     }
     return $this->frame($child, $values, $prefix, $owner, $cacheability, $stale, $subschemas, $standing, FALSE, $frozen, $blank);
@@ -1435,15 +1735,23 @@ final class ContractEmitter {
    */
   protected function enumerate(DataSurfaceInterface $declared, DataSurfaceInterface $refined, Entry $entry, array $values, array $base, string $path, CacheableMetadata $cacheability, int $kinds = DataSurfaceInterface::STATIC, bool $applicability = FALSE): ?array {
     $order = array_flip($declared->getDefinitions()->names());
+    $ports = $declared->getDefinitions()->ports();
     $watched = $entry->codedDependencies();
-    foreach ($watched as $key) {
+    foreach ($watched as $i => $key) {
       if (!isset($order[$key])) {
+        if (isset($ports[$key]) && ValueState::isConfigured($values[$key] ?? NULL)) {
+          // A port its container bound holds its value, as a held
+          // sibling does.
+          unset($watched[$i]);
+          continue;
+        }
         // A key an alter mounted, by its dotted path: a free value, or one
         // a conditional on the parent cannot name without restating the
         // mount around it.
         return NULL;
       }
     }
+    $watched = array_values($watched);
     usort($watched, static fn (string $a, string $b): int => $order[$a] <=> $order[$b]);
     $combinations = [[[], $refined]];
     foreach ($watched as $key) {
