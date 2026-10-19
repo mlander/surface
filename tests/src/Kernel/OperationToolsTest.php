@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
+use Drupal\Component\Render\PlainTextOutput;
 use Drupal\data_surface_demo_node_type\Storage\NodeTypeStorage;
 use Drupal\data_surface_resource_test\Resource\PinnedNoteResource;
 use Drupal\data_surface_tool\OperationInputs;
@@ -253,9 +254,9 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Recipe', NodeType::load('recipe')?->label());
 
     // Once the content type is named, the values input is refined to it:
-    // required as the resource says, and each key defaulting to what the
-    // content type stores now. The tool still holds a call to it with no
-    // key required, since a key left out keeps what is stored.
+    // each key defaulting to what the content type stores now, and, as the
+    // listing and the door say, none required: what the resource requires
+    // is said in words.
     $tool = $this->tool('data_surface:node.type:edit');
     $tool->setInputValue('type', 'recipe');
     $values = $tool->getInputDefinition(OperationInputs::VALUES);
@@ -264,12 +265,36 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Recipe', $properties['name']->getDefaultValue());
     $this->assertSame('Dish', $properties['title_label']->getDefaultValue());
     $this->assertSame('Food', $properties['description']->getDefaultValue());
-    $this->assertTrue($properties['title_label']->isRequired());
+    $this->assertFalse($values->isRequired());
+    $this->assertSame([], array_keys(array_filter($properties, static fn ($property): bool => $property->isRequired())));
+    $this->assertStringEndsWith('Required; a value already stored stands when left out.', (string) $properties['name']->getDescription());
+    $this->assertStringEndsWith('Required; a value already stored stands when left out.', (string) $properties['title_label']->getDescription());
+
+    // The name left out keeps what is stored.
+    $tool->setInputValue(OperationInputs::VALUES, ['description' => 'Dishes']);
+    $tool->execute();
+    $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResult()->getMessage());
+    $this->container->get('entity_type.manager')->getStorage('node_type')->resetCache();
+    $recipe = NodeType::load('recipe');
+    $this->assertSame(['Recipe', 'Dishes'], [$recipe->label(), $recipe->getDescription()]);
+
+    // The name sent empty is refused in its own words, and nothing is
+    // written.
+    $tool = $this->tool('data_surface:node.type:edit');
+    $tool->setInputValue('type', 'recipe');
+    $tool->setInputValue(OperationInputs::VALUES, ['name' => '', 'description' => 'Plates']);
+    $tool->execute();
+    $this->assertFalse($tool->getResult()->isSuccess());
+    $this->assertSame('The values were refused: name: Name is required.', PlainTextOutput::renderFromHtml((string) $tool->getResult()->getMessage()));
+    $this->container->get('entity_type.manager')->getStorage('node_type')->resetCache();
+    $this->assertSame('Dishes', NodeType::load('recipe')->getDescription());
 
     // A required key left out keeps what is stored, as an optional one
     // does: the call reaches the pipeline, which judges the merged
     // document.
-    $tool->setInputValue(OperationInputs::VALUES, ['name' => 'Recipes']);
+    $tool = $this->tool('data_surface:node.type:edit');
+    $tool->setInputValue('type', 'recipe');
+    $tool->setInputValue(OperationInputs::VALUES, ['name' => 'Recipes', 'description' => 'Food']);
     $tool->execute();
     $result = $tool->getResult();
     $this->assertTrue($result->isSuccess(), (string) $result->getMessage());

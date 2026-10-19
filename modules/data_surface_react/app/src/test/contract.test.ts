@@ -121,7 +121,14 @@ describe('example 3 as the emitter serves it', () => {
   const schema = example3.schema as unknown as Schema;
 
   it('defines the contact and both tickets once, and refers to them', () => {
-    expect(Object.keys(schema.$defs ?? {})).toEqual(['registration.step3.ticket.free', 'registration.step3.ticket.paid', 'registration.contact']);
+    // Example 4's module is on: its structure and its named shape are defs too.
+    expect(Object.keys(schema.$defs ?? {})).toEqual([
+      'registration.step3.ticket.free',
+      'registration.step3.ticket.paid',
+      'registration.contact',
+      'registration.compliance',
+      'event.licence',
+    ]);
     expect(schema.properties?.contact.$ref).toBe('#/$defs/registration.contact');
     expect(schema.properties?.contact).not.toHaveProperty('properties');
   });

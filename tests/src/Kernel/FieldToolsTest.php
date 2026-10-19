@@ -408,9 +408,9 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
    * Tests a partial edit clearing one key and keeping its siblings.
    *
    * The label is the one key the resource requires: the refined input
-   * says so and defaults it to what is stored, and the edit tool requires
-   * nothing at its door, so it is left out here and keeps what is
-   * stored. Below it, everything is partial too.
+   * says so in words, defaults it to what is stored and, as the edit
+   * tool's door, requires nothing, so it is left out here and keeps what
+   * is stored. Below it, everything is partial too.
    */
   public function testEditClearsOneOverrideAndKeepsTheCountries(): void {
     $this->addField();
@@ -418,7 +418,8 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
     $tool = $this->createTool(self::EDIT);
     $values = $tool->getInputDefinition(OperationInputs::VALUES);
     $this->assertInstanceOf(MapInputDefinition::class, $values);
-    $this->assertTrue($values->getPropertyDefinitions()['label']->isRequired());
+    $this->assertFalse($values->getPropertyDefinitions()['label']->isRequired());
+    $this->assertStringEndsWith('Required; a value already stored stands when left out.', (string) $values->getPropertyDefinitions()['label']->getDescription());
     $this->assertSame('Address', $values->getPropertyDefinitions()['label']->getDefaultValue());
     $tool->setInputValue(OperationInputs::VALUES, [
       'settings' => ['field_overrides' => ['organization' => NULL]],

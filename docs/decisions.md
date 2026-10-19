@@ -1944,12 +1944,15 @@ stands when left out." The pipeline is unchanged: it judges the merged
 document, what is sent laid over what is stored, so an edit of a thing
 that holds no value for a required key is refused with the key's own
 message ("Event title is required."), and one that holds a value keeps
-it. The refined `values` a tool builds once its parameters arrive, the
-schema for these answers and the form keep the resource's `required`;
-the tool holds what it is sent to the shape alone before it runs, and on
-an update that shape requires nothing either
+it. The refined `values` a tool builds once its parameters arrive says
+the same as the listing (decided 2026-10-19, so a client reading it is
+not told what the door does not enforce): nothing required, each key
+the resource requires saying so in words, each defaulting to what is
+stored. The tool holds what it is sent to that shape alone before it
+runs, requiring nothing on an update
 (`ResourceOperationTool::validateInputValues()`), so the call reaches
-the pipeline. A collection's items keep their required keys: an item
+the pipeline. The schema for these answers and the form keep the
+resource's `required`. A collection's items keep their required keys: an item
 sent is sent whole, with nothing stored under it to stand.
 
 What a property defaults to in the tool's static definition, its

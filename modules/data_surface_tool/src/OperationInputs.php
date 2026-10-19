@@ -66,9 +66,9 @@ use Drupal\tool\TypedData\OutputDefinition;
  * tool's description names the read tool that returns the current
  * values, and the pipeline refuses the merged document when a required
  * key has nothing stored. Once its parameters arrive, the refined
- * `values` (values()) requires what the resource requires and defaults
- * each property to what the storage loads now, for that one request;
- * the tool still holds a call to it with nothing required
+ * `values` (values()) defaults each property to what the storage loads
+ * now, for that one request, and requires nothing either, so a client
+ * reading it is told what the tool's door enforces
  * (ResourceOperationTool::validateInputValues()).
  *
  * Access in a listing is the account's: the static definitions are built
@@ -263,8 +263,10 @@ final class OperationInputs {
    * Gets the `values` input for an operation's real context.
    *
    * A context that changes a thing that exists defaults each property to
-   * what its storage loads now; one that creates has nothing stored, and
-   * keeps the declared defaults.
+   * what its storage loads now and, as its listing does, requires none,
+   * each key the resource requires saying so in its description; one that
+   * creates has nothing stored, and keeps the declared defaults and the
+   * keys the resource requires.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
@@ -275,13 +277,14 @@ final class OperationInputs {
    *
    * @return \Drupal\tool\TypedData\MapInputDefinition
    *   The map: the resource's keys less the identity keys the context
-   *   knows, each required as the resource says.
+   *   knows, each required as the resource says on a create.
    */
   public function values(ResourceDefinition $resource, DataSurfaceInterface $built, OperationContext $context): MapInputDefinition {
     $map = $this->inputDefinitions->withDependencies($this->map($resource, $built, $this->knownIdentity($resource, $context)), $built);
     if (!$context->creates) {
       // Decision: see docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door.
       $this->inputDefinitions->withStored($map, $built, $this->resources->storage($resource->name(), $context, $built)->load($built));
+      $this->inputDefinitions->withoutRequired($map);
     }
     return $map;
   }

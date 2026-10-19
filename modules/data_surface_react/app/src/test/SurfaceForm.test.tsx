@@ -126,8 +126,9 @@ describe('the React form of example 2', () => {
     expect(screen.getByLabelText(/Room/)).toHaveDisplayValue('- Select -');
     expect(screen.getByLabelText(/Room/)).not.toBeRequired();
     expect(screen.getByLabelText(/Event title/)).toHaveValue('Spring meetup!');
-    // The capacity is no longer capped by the room the room stands for.
-    expect(screen.getByLabelText(/Capacity/)).toHaveAttribute('max', '1000');
+    // The capacity is no longer capped by the room the room stands for:
+    // with no room, it has no upper bound.
+    expect(screen.getByLabelText(/Capacity/)).not.toHaveAttribute('max');
     expect(screen.getByLabelText(/Capacity/)).toHaveValue(50);
   });
 
@@ -494,7 +495,7 @@ describe('narrowing here, from the full schema', () => {
 
     const room = screen.getByLabelText(/Room/);
     expect(within(room).getAllByRole('option').map((option) => option.textContent)).toEqual(['- Select -', 'Reading room', 'Garden room']);
-    expect(screen.getByLabelText(/Capacity/)).toHaveAttribute('max', '1000');
+    expect(screen.getByLabelText(/Capacity/)).not.toHaveAttribute('max');
     expect(narrowingLine()).toBe('Narrowed here: room, capacity.');
 
     await userEvent.selectOptions(screen.getByLabelText(/Room/), 'Garden room');

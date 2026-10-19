@@ -6,6 +6,18 @@
     "schema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "title": "Configure registration",
+      "x-surface": {
+        "operation": {
+          "id": "configure",
+          "label": "Configure registration",
+          "kind": "update",
+          "creates": false,
+          "readOnly": false,
+          "destructive": false,
+          "idempotent": true
+        },
+        "version": 1
+      },
       "type": "object",
       "properties": {
         "title": {
@@ -98,7 +110,6 @@
             "null"
           ],
           "minimum": 1,
-          "maximum": 1000,
           "default": 50,
           "x-surface": {
             "widget": "number",
@@ -528,6 +539,18 @@
     "schema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "title": "Configure registration",
+      "x-surface": {
+        "operation": {
+          "id": "configure",
+          "label": "Configure registration",
+          "kind": "update",
+          "creates": false,
+          "readOnly": false,
+          "destructive": false,
+          "idempotent": true
+        },
+        "version": 1
+      },
       "type": "object",
       "properties": {
         "title": {
@@ -903,6 +926,18 @@
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "title": "Configure registration",
+          "x-surface": {
+            "operation": {
+              "id": "configure",
+              "label": "Configure registration",
+              "kind": "update",
+              "creates": false,
+              "readOnly": false,
+              "destructive": false,
+              "idempotent": true
+            },
+            "version": 1
+          },
           "type": "object",
           "properties": {
             "title": {
@@ -1290,6 +1325,18 @@
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "title": "Configure registration",
+          "x-surface": {
+            "operation": {
+              "id": "configure",
+              "label": "Configure registration",
+              "kind": "update",
+              "creates": false,
+              "readOnly": false,
+              "destructive": false,
+              "idempotent": true
+            },
+            "version": 1
+          },
           "type": "object",
           "properties": {
             "title": {
@@ -1668,6 +1715,18 @@
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "title": "Configure registration",
+          "x-surface": {
+            "operation": {
+              "id": "configure",
+              "label": "Configure registration",
+              "kind": "update",
+              "creates": false,
+              "readOnly": false,
+              "destructive": false,
+              "idempotent": true
+            },
+            "version": 1
+          },
           "type": "object",
           "properties": {
             "title": {
@@ -2047,6 +2106,18 @@
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "title": "Configure registration",
+          "x-surface": {
+            "operation": {
+              "id": "configure",
+              "label": "Configure registration",
+              "kind": "update",
+              "creates": false,
+              "readOnly": false,
+              "destructive": false,
+              "idempotent": true
+            },
+            "version": 1
+          },
           "type": "object",
           "properties": {
             "title": {
@@ -2138,7 +2209,6 @@
                 "null"
               ],
               "minimum": 1,
-              "maximum": 1000,
               "default": 50,
               "x-surface": {
                 "widget": "number",
@@ -2475,6 +2545,18 @@
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "title": "Configure registration",
+          "x-surface": {
+            "operation": {
+              "id": "configure",
+              "label": "Configure registration",
+              "kind": "update",
+              "creates": false,
+              "readOnly": false,
+              "destructive": false,
+              "idempotent": true
+            },
+            "version": 1
+          },
           "type": "object",
           "properties": {
             "title": {
@@ -2566,7 +2648,6 @@
                 "null"
               ],
               "minimum": 1,
-              "maximum": 1000,
               "default": 50,
               "x-surface": {
                 "widget": "number",
@@ -2897,6 +2978,18 @@
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "title": "Configure registration",
+          "x-surface": {
+            "operation": {
+              "id": "configure",
+              "label": "Configure registration",
+              "kind": "update",
+              "creates": false,
+              "readOnly": false,
+              "destructive": false,
+              "idempotent": true
+            },
+            "version": 1
+          },
           "type": "object",
           "properties": {
             "title": {
@@ -3273,6 +3366,18 @@
         "schema": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
           "title": "Configure registration",
+          "x-surface": {
+            "operation": {
+              "id": "configure",
+              "label": "Configure registration",
+              "kind": "update",
+              "creates": false,
+              "readOnly": false,
+              "destructive": false,
+              "idempotent": true
+            },
+            "version": 1
+          },
           "type": "object",
           "properties": {
             "title": {

@@ -5,6 +5,18 @@
     "schema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "title": "Configure registration",
+        "x-surface": {
+            "operation": {
+                "id": "configure",
+                "label": "Configure registration",
+                "kind": "update",
+                "creates": false,
+                "readOnly": false,
+                "destructive": false,
+                "idempotent": true
+            },
+            "version": 1
+        },
         "type": "object",
         "properties": {
             "title": {

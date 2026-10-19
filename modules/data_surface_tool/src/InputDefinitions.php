@@ -288,9 +288,8 @@ final class InputDefinitions {
    * the constraints it advertises.
    *
    * On an operation that changes what exists, the shape requires nothing
-   * either: a key left out keeps what is stored, which the pipeline
-   * judges, so the refined input, which says what the resource requires,
-   * does not refuse it first.
+   * either, as its listing and its refined input say: a key left out
+   * keeps what is stored, which the pipeline judges.
    *
    * Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
    *

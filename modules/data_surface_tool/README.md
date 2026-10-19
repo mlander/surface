@@ -166,7 +166,8 @@ refusal says what is allowed for the values sent: example 3's
 [README](../data_surface_examples/README.md#when-a-call-is-refused)
 shows an agent's retries. Once a tool that needs a subject has its
 parameters, its refined `values` defaults each key to what is stored
-now, for that one call. The `values` input's `settings` carry every field type's
+now, for that one call, and on an edit requires nothing, as its listing
+and its door do. The `values` input's `settings` carry every field type's
 settings until the storage is known, and refine into the address
 settings once `storage` names an address storage. Compare with
 `drush tool:info tool_belt:field_add` on the same site, or read
