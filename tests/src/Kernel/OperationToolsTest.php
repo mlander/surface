@@ -360,12 +360,12 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     ])->save();
     $tool = $this->tool('data_surface:field.instance:edit');
     $tool->setInputValue('field', 'entity_test.entity_test.field_address');
-    $tool->setInputValue(OperationInputs::VALUES, ['storage' => ['cardinality' => 2]]);
+    $tool->setInputValue(OperationInputs::VALUES, ['label' => 'Address', 'storage' => ['cardinality' => 2]]);
     $tool->execute();
-    // Refused before the tool runs: the refined values input carries the
+    // Refused when the tool runs: the pipeline holds the values to the
     // has-data constraint the storage's edit operation added.
     $this->assertFalse($tool->getResult()->isSuccess());
-    $this->assertStringContainsString('(property storage) (property cardinality) This value should be 3 or more.', (string) $tool->getResult()->getMessage());
+    $this->assertStringContainsString('storage.cardinality: This value should be 3 or more.', (string) $tool->getResult()->getMessage());
     $this->assertSame(3, FieldStorageConfig::loadByName('entity_test', 'field_address')->getCardinality());
   }
 

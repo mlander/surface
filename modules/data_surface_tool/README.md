@@ -155,7 +155,11 @@ what exists, such as `data_surface:registration.step3:configure` or
 `data_surface:field.instance:edit`, lists no default at all, because a
 listing is cached by its clients and a key left out keeps its current
 value: its description says so and names the read tool, which returns
-the current values. Once a tool that needs a subject has its
+the current values. A key another narrows says so in its description,
+by the path a caller sends it under ("Depends on venue."), and a
+refusal says what is allowed for the values sent: example 3's
+[README](../data_surface_examples/README.md#when-a-call-is-refused)
+shows an agent's retries. Once a tool that needs a subject has its
 parameters, its refined `values` defaults each key to what is stored
 now, for that one call. The `values` input's `settings` carry every field type's
 settings until the storage is known, and refine into the address
@@ -266,12 +270,19 @@ The routes of `data_surface_examples` name it.
 | `Kernel\ExamplesStepsTest` | The contract panel: its rows as the answers narrow them, the contract's slot conditionals, and the tool's schema below them. |
 | `Kernel\ExamplesToolTest` | `data_surface:registration.step3:configure`: the example calls, its definition (required as the resource says, no default at any depth, the read tool named in its description, and the same after a write), and a partial update the Tool API refuses. |
 | `Kernel\ReadToolTest` | The read tools: one per operation that changes a thing that exists and none for one that creates, a read operation taking exactly the parameters, an output map of the write tool's keys, step 3's stored values with the compliance module's mounted keys before and after a write, the content type read by its type, an unknown parameter failing as for the write tool, access as the write tool's, and a secret never returned. |
+| `Kernel\OperationFactsTest` | How an operation behaves: the attribute's defaults, idempotence derived from whether it creates, contradicting facts refused, the Tool API's kind and destructive flag as the MCP bridge reads them, no read tool beside a read only operation, and `x-surface.operation` at the top of both documents. |
+| `Kernel\ToolFeedbackTest` | What the listing and a refusal say: each key another narrows naming what it depends on, once, through a port at its site; every refusal form (a list, a list another key narrows, a long list capped, a bound, a pattern, a key that does not apply); `values` held to its shape before the tool runs; and an agent's retry loop on example 3 fixing each key from its refusal in one try, through the runner MCP and ECA call. |
 | `Kernel\DerivedToolDefinitionsTest` | Tool Explorer showing every derived tool, read tools included, installing a module deriving its tools, and each tool declaring its operation's permission unless it has a placeholder. |
 
 ## Who may run them
 
-The write tools are `ToolOperation::Write`, so the access answer has to
-be the real one, and a read tool asks the same question. It is the operation's permission, `administer %entity_type_id
+A write tool is `ToolOperation::Write`, or `ToolOperation::Read` for an
+operation that says it is read only, and destructive when its operation
+says so (`ResourceOperationToolDeriver::behaves()`); the MCP bridge
+reads both as the tool's annotations. None of the module's own
+operations says either, so every write tool here is a `Write` that
+destroys nothing, and the access answer has to be the real one, and a
+read tool asks the same question. It is the operation's permission, `administer %entity_type_id
 fields`, named from the identity the operation's context knows (the
 entity type the add tool is given, or the one the storage or field it
 names is on), then `FieldInstanceAccess`, which refuses a locked
@@ -373,11 +384,35 @@ changing the Tool API.
   it means to keep it; beyond them, a payload is partial and the
   pipeline fills the rest from what is stored. `ExamplesToolTest` pins
   the refusal.
-- **Input validation runs before the tool does.** Because the added
-  `Choice` constraint validates as well as describes, a bad settings
-  value is refused by `getExecutableValues()` and the tool's own pipeline
-  never sees it. The refusal is still path aware, in the Tool API's
-  spelling rather than the pipeline's.
+- **Input validation runs before the tool does, against the listing.**
+  The Tool API holds every input to its definition before the tool
+  runs, and a map's property refusal comes out nested, "values:
+  (property room) The value you selected is not a valid choice.", which
+  the MCP bridge prints without the path. Held to the listing, a key
+  another narrows is refused against its widest answer, with nothing
+  said about the answer that applies, and a caller needs a second try.
+  So the tool holds `values` to its shape alone there (types, the keys
+  it requires, its nesting: `validateInputValues()`,
+  `InputDefinitions::shapeOf()`) and leaves every rule to the pipeline,
+  which narrows `values` from the document sent and says what is allowed
+  for it ([decision](../../docs/decisions.md#a-refusal-names-what-it-depends-on)).
+  A self-refinement through `input_definition_refiners` would not do:
+  a refiner's own dependencies are validated before it runs, so a
+  document that breaks the listing is never narrowed, and a document
+  narrowed is refused in the Tool API's words. A way for a tool to hand
+  the Tool API the violations of an input, worded and with their paths, would let
+  the bridge keep the Tool API's validation step for rules too.
+- **Idempotence is the operation kind's, not the tool's.**
+  `ToolOperation::isIdempotent()` is a property of the kind, and every
+  kind that modifies (`Write`, `Trigger`) is not idempotent, so a tool
+  for an operation that changes what exists cannot say it is safe to
+  repeat while one that creates says it is not: both are `Write`, and
+  the MCP bridge annotates both `idempotentHint: false`. `Write` is the
+  least wrong kind: every idempotent kind does not modify, and would
+  also say the tool changes nothing. Both schema documents state the
+  operation's own answer under `x-surface.operation`. An idempotent flag
+  on the definition, beside `setDestructive()`, would let it say so
+  ([decision](../../docs/decisions.md#an-operation-states-how-it-behaves)).
 - **A declared permission cannot depend on the input.**
   `ToolDefinition::setPermission()` takes one route-style string, checked
   before any input is read, so a permission named from what a call is

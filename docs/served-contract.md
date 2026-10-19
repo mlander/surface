@@ -193,7 +193,7 @@ Example 2's full schema, abbreviated:
 | `surface` | The resource's id, the one on its `#[Resource]` (or a structure's, on its `#[Structure]`). |
 | `situation` | The operation's id, or `null` for a resource or structure asked for in no operation. |
 | `label` | The operation's label. |
-| `schema` | JSON Schema 2020-12 for the inputs, `x-surface` on every property. |
+| `schema` | JSON Schema 2020-12 for the inputs, `x-surface` on every property, and at the top how the operation behaves, `x-surface.operation` ([below](#the-schema)). |
 | `values` | The values the schema describes now: what storage holds over the declared defaults (which carry an operation's starting values and known identity), with any in-progress answers over that. Every key is present. A secret is `null` (masked: read as the key left out); a stale value is `null`, its path in `stale`. |
 | `stale` | The dotted paths shown on the empty option in place of a stored value. |
 | `outputs` | The output schema, when the resource or structure declares outputs. |
@@ -206,6 +206,32 @@ resource's id and `situation` the operation's id; `created` uses the
 same two keys.
 
 ### The schema
+
+At the top, after `$schema` and the `title` that is the operation's
+label, the top's `x-surface` says first how the operation behaves, as
+`#[Operation]` states it
+([decision](decisions.md#an-operation-states-how-it-behaves)), in both
+documents alike:
+
+```json
+"x-surface": {
+  "operation": {
+    "id": "configure",
+    "label": "Configure registration",
+    "creates": false,
+    "readOnly": false,
+    "destructive": false,
+    "idempotent": true
+  }
+}
+```
+
+`creates` is the context's answer; `idempotent` is the operation's own,
+derived from `creates` unless declared, which a tool listing cannot
+always say (the Tool API reads idempotence off the operation kind, and
+every kind that writes is not idempotent). Whatever else the top frame
+says under `x-surface` (`doesNotApply`, `ports`) follows it. A document
+asked for in no operation has no `operation`.
 
 Each frame (the top level, an attached part, a slot's variant) is an
 object with `properties` in declaration order, `required`, and
@@ -264,6 +290,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | `ports` | On an object, a def's or the top's, when the structure reads ports: each port's typed data `type`, whether it is `required`, and the `shape` it reads, when it reads one. A port is no property: its value is a key of the container, which the site names ([below](#a-port-is-stated-at-its-site)). |
 | `reads` | On a site, the property where a child that reads ports is used: each port, mapped to the key of the parent's frame it reads. |
 | `runtime` | Only when `true`: a runtime refiner narrows the key too, by a rule no schema can state ([three markers](#three-markers)). Never in a conditional and never in the full schema; the schema for these answers is refined by it for its values. Written beside `enumerated` or `dynamic` when the key has static refiners as well. |
+| `operation` | At the top only, first: how the operation behaves, `{id, label, creates, readOnly, destructive, idempotent}` ([above](#the-schema)). |
 | `doesNotApply` | On an object, the top or a child's frame, never on a property: the keys of it a refiner answered [do not apply](refinement.md#when-a-key-does-not-apply) to these values, each with the keys it depends on, `{"send_day": ["frequency"]}`. They are no properties of it; a client refines when one of those changes. |
 
 ### Reusable subschemas
@@ -890,7 +917,7 @@ room left stale after its venue moved is refused. It answers:
 ```json
 {
   "valid": false,
-  "violations": [{"path": "capacity", "message": "This value should be between 1 and 150. This depends on Room."}],
+  "violations": [{"path": "capacity", "message": "This value should be between 1 and 150 when Room is Upper deck."}],
   "stale": [],
   "values": {...},
   "prepared": null
@@ -929,7 +956,7 @@ A refused example 2, the library's garden room sent with the harbour:
 ```json
 {
   "committed": false, "valid": false,
-  "violations": [{"path": "room", "message": "The value you selected is not a valid choice. This depends on Venue."}],
+  "violations": [{"path": "room", "message": "The value you selected is not a valid choice when Venue is Harbour Centre; choose Auditorium (harbour_auditorium) or Upper deck (harbour_deck)."}],
   "stale": [], "outputs": {}, "contract": null, "created": null
 }
 ```

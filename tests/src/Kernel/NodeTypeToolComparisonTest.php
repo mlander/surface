@@ -243,10 +243,10 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
    * Tests that a deadline past thirty days is refused, on the amount.
    *
    * It is refused on what the caller sent, in the caller's units, at the
-   * amount's path; nothing is created. Through the tool, the Tool API's
-   * own input validation runs the resource's constraint first and reports
-   * it in its spelling; through the pipeline alone, the pipeline reports
-   * the full dotted path. The config schema's
+   * amount's path; nothing is created. Through the tool as through the
+   * pipeline alone, the pipeline reports it at the full dotted path: the
+   * tool holds the values to their shape alone before it runs. The
+   * config schema's
    * Range on the stored seconds is the second gate, and it holds too:
    * the pipeline's check runs first, and every value the resource stores
    * satisfies it.
@@ -256,7 +256,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
     $result = $this->runResourceTool($this->contentType('late') + $this->extras($this->deadline(45, 'days'), []));
     $this->assertFalse($result->isSuccess());
     $message = (string) $result->getMessage();
-    $this->assertStringContainsString(static::toolApiPath(NodeTypeReviewSettings::DEADLINE, NodeTypeReviewSettings::AMOUNT), $message);
+    $this->assertStringContainsString(static::refusedAt(NodeTypeReviewSettings::DEADLINE, NodeTypeReviewSettings::AMOUNT), $message);
     $this->assertStringContainsString('at most thirty days; 45 days is outside that', $message);
     $this->assertNull(NodeType::load('late'));
 
@@ -297,16 +297,15 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($result->isSuccess());
     $message = (string) $result->getMessage();
     foreach ([0, 1, 2] as $delta) {
-      $this->assertStringContainsString('(property ' . NodeTypeReviewSettings::TAGS . ') (item ' . $delta . ')', $message);
+      $this->assertStringContainsString(static::refusedAt(NodeTypeReviewSettings::TAGS, $delta), $message);
     }
     $this->assertNull(NodeType::load('typed'));
 
     // Every item well formed, one of them twice: the list is refused as a
-    // whole. The Tool API validates the list's own constraints now, so it
-    // refuses this before the pipeline is reached.
+    // whole, by the pipeline.
     $result = $this->runResourceTool($this->contentType('repeat') + $this->extras(NULL, ['news', 'news']));
     $this->assertFalse($result->isSuccess());
-    $this->assertStringContainsString(static::toolApiPath(NodeTypeReviewSettings::TAGS) . 'Each item may be listed only once.', (string) $result->getMessage());
+    $this->assertStringContainsString(static::refusedAt(NodeTypeReviewSettings::TAGS) . 'Each item may be listed only once.', (string) $result->getMessage());
     $this->assertNull(NodeType::load('repeat'));
 
     // One string where the list goes: typed data wraps it into a list of
@@ -314,7 +313,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
     // reaches storage.
     $result = $this->runResourceTool($this->contentType('unsplit') + $this->extras(NULL, 'News, Sports'));
     $this->assertFalse($result->isSuccess());
-    $this->assertStringContainsString('(property ' . NodeTypeReviewSettings::TAGS . ') (item 0)', (string) $result->getMessage());
+    $this->assertStringContainsString(static::refusedAt(NodeTypeReviewSettings::TAGS, 0), (string) $result->getMessage());
     $this->assertNull(NodeType::load('unsplit'));
   }
 
@@ -391,7 +390,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
     $this->assertSame(NodeTypeReviewSettings::DEADLINE_MAX, $this->stored('business_max')[NodeTypeReviewSettings::DEADLINE] ?? NULL);
     $result = $this->runResourceTool($this->contentType('business_late') + $this->extras($this->deadline(23, $business_days), NULL));
     $this->assertFalse($result->isSuccess());
-    $this->assertStringContainsString(static::toolApiPath(NodeTypeReviewSettings::DEADLINE, NodeTypeReviewSettings::AMOUNT), (string) $result->getMessage());
+    $this->assertStringContainsString(static::refusedAt(NodeTypeReviewSettings::DEADLINE, NodeTypeReviewSettings::AMOUNT), (string) $result->getMessage());
     $this->assertNull(NodeType::load('business_late'));
     $form_state = $this->submitClassicForm('business_person_max', '22', $business_days, '');
     $this->assertSame([], $form_state->getErrors());
@@ -1028,25 +1027,22 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Spells a path under this module's settings the way the Tool API does.
+   * Spells a path under this module's settings as a refusal names it.
    *
-   * Since #3583085 the Tool API prints each input violation as
-   * "<input>.<leaf>: (property a) (property b) <message>": the input's
-   * name, then the violation's own path, then the segments between them
-   * as typed data writes them into the message.
+   * The tool holds `values` to its shape alone before it runs, and the
+   * pipeline holds it to every rule, naming each refusal by its full
+   * dotted path: "third_party_settings.<module>.<key>.<leaf>: <message>".
    *
    * @param string $key
    *   The key under this module's third-party settings.
    * @param string|null $leaf
-   *   The property under that key the violation is on, if any.
+   *   The property or item under that key the violation is on, if any.
    *
    * @return string
-   *   The prefix of that violation's line in the failure message.
+   *   The prefix of that violation in the failure message.
    */
-  protected static function toolApiPath(string $key, ?string $leaf = NULL): string {
-    $segments = ['third_party_settings', self::EXTRAS, $key];
-    return OperationInputs::VALUES . ($leaf === NULL ? '' : '.' . $leaf) . ': '
-      . implode(' ', array_map(static fn (string $segment): string => '(property ' . $segment . ')', $segments)) . ' ';
+  protected static function refusedAt(string $key, string|int|null $leaf = NULL): string {
+    return implode('.', ['third_party_settings', self::EXTRAS, $key]) . ($leaf === NULL ? '' : '.' . $leaf) . ': ';
   }
 
   /**

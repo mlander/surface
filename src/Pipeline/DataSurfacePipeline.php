@@ -23,6 +23,7 @@ use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Refinement\DoesNotApply;
 use Drupal\data_surface\Entry;
 use Drupal\data_surface\Collection;
+use Symfony\Component\Validator\Constraints\Choice;
 
 /**
  * The one entry point from raw values to stored values.
@@ -62,6 +63,11 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * The data types an output is held to the PHP type of.
    */
   protected const OUTPUT_TYPES = ['integer', 'float', 'boolean', 'string', 'email', 'uri'];
+
+  /**
+   * The most allowed values a refusal lists, before saying how many more.
+   */
+  public const CHOICES_SHOWN = 10;
 
   /**
    * Constructs a DataSurfacePipeline.
@@ -593,6 +599,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       }
       $typed_data = DefinitionTypedData::create($this->typedDataManager, $definition, $value, $name);
       $refusals = [];
+      $choices = [];
       foreach ($typed_data->validate() as $violation) {
         $path = (string) $violation->getPropertyPath();
         if (isset($missing[$path])) {
@@ -605,6 +612,10 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         // a second time; a form error, a tool result and a log line each
         // render it themselves, at their own boundary. A Symfony
         // placeholder core's translator leaves in it is filled in then.
+        if ($violation->getConstraint() instanceof Choice) {
+          // A value not on a list: the refusal names the list.
+          $choices[count($refusals)] = TRUE;
+        }
         $refusals[] = new Violation($name, $path, ViolationMessage::of($violation));
       }
       foreach ($missing as $path => $label) {
@@ -619,22 +630,33 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         $errors[] = $this->staleViolation($definition, $value, $name);
         continue;
       }
-      $errors = array_merge($errors, $this->namingWhatItDependsOn($refusals, $surface, $refined, $name));
+      $errors = array_merge($errors, $this->sayingWhatIsAllowed($refusals, $surface, $refined, $name, $values, $choices));
     }
     return $errors;
   }
 
   /**
-   * Adds to a narrowed key's refusals which siblings narrowed it.
+   * Says in each refusal of a key what is allowed for the values sent.
    *
-   * A refusal a refiner caused, such as too few stewards for the capacity
-   * given, is about a value the caller may not have touched: the key it
-   * names is the one to fix, but the reason is a sibling. A refusal gets
-   * a second sentence naming the keys its refiners watch, and only
-   * when the refiners changed the refused key's constraints for these
-   * values; a refusal by a rule the key declared itself is left as it is.
-   * A key an alter mounted is refined one property at a time, so its
-   * refusals are matched to the property each is about.
+   * One sentence per refusal, so a caller fixes the key in one step:
+   *
+   * - A refusal a refiner caused, such as too few stewards for the
+   *   capacity given, is about a value the caller may not have touched:
+   *   the key it names is the one to fix, but the reason is a sibling.
+   *   When the refiners changed the refused key's constraints for these
+   *   values, the refusal goes on to name each key they watch and what it
+   *   holds, as a key that does not apply is said ("This value should be
+   *   3 or more when Capacity is 120."). A refusal by a rule the key
+   *   declared itself says no condition. A key an alter mounted is
+   *   refined one property at a time, so its refusals are matched to the
+   *   property each is about.
+   * - A value not on its key's list goes on to list what may be chosen,
+   *   as refined for these values, each label with its value, so the
+   *   sentence says what to send ("...; choose Main hall (riverside_main)
+   *   or East room (riverside_east)."), capped at CHOICES_SHOWN.
+   *
+   * Decision: see
+   * docs/decisions.md#a-refusal-names-what-it-depends-on.
    *
    * @param \Drupal\data_surface\Pipeline\Violation[] $refusals
    *   The key's refusals.
@@ -644,17 +666,22 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *   The same, refined against the values.
    * @param string $name
    *   The key.
+   * @param array $values
+   *   The values of the key's level.
+   * @param array<int, true> $choices
+   *   The refusals, by index, that a list of allowed values made.
    *
    * @return \Drupal\data_surface\Pipeline\Violation[]
-   *   The refusals, each naming what it depends on where that applies.
+   *   The refusals, each saying what is allowed where that applies.
    */
-  protected function namingWhatItDependsOn(array $refusals, DataSurfaceInterface $surface, DataSurfaceInterface $refined, string $name): array {
+  protected function sayingWhatIsAllowed(array $refusals, DataSurfaceInterface $surface, DataSurfaceInterface $refined, string $name, array $values, array $choices): array {
     $entry = $refined->getDefinitions()->entry($name);
-    if ($refusals === [] || $entry === NULL || $entry->dependencies === []) {
+    if ($refusals === [] || $entry === NULL) {
       return $refusals;
     }
-    $targets = $entry->paths === [] ? ['' => $entry->dependencies] : $entry->paths;
+    $targets = $entry->dependencies === [] ? [] : ($entry->paths === [] ? ['' => $entry->dependencies] : $entry->paths);
     foreach ($refusals as $index => $refusal) {
+      $conditions = [];
       foreach ($targets as $path => $dependencies) {
         $path = (string) $path;
         if ($path !== '' && $refusal->path !== $path && !str_starts_with($refusal->path, $path . '.')) {
@@ -666,18 +693,102 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         if ($declared === NULL || $narrowed === NULL || json_encode($declared->getConstraints()) === json_encode($narrowed->getConstraints())) {
           continue;
         }
-        $labels = array_map(
-          static fn (string $dependency): string => (string) (static::definitionAt($refined, explode('.', $dependency))?->getLabel() ?? $dependency),
-          $dependencies,
-        );
-        $refusals[$index] = new Violation($refusal->key, $refusal->path, $this->t('@message This depends on @keys.', [
-          '@message' => $refusal->message,
-          '@keys' => implode(', ', $labels),
-        ]));
+        $conditions = $this->conditions($refined, $dependencies, $values);
         break;
       }
+      $allowed = isset($choices[$index]) ? $this->choices($refined, $name, $refusal->path) : NULL;
+      if ($conditions === [] && $allowed === NULL) {
+        continue;
+      }
+      $arguments = [
+        '@message' => new Clause($refusal->message),
+        '@conditions' => implode(' ' . $this->t('and') . ' ', array_map('strval', $conditions)),
+        '@choices' => (string) $allowed,
+      ];
+      $message = match (TRUE) {
+        $allowed === NULL => $this->t('@message when @conditions.', $arguments),
+        $conditions === [] => $this->t('@message; @choices.', $arguments),
+        default => $this->t('@message when @conditions; @choices.', $arguments),
+      };
+      $refusals[$index] = new Violation($refusal->key, $refusal->path, $message);
     }
     return $refusals;
+  }
+
+  /**
+   * Says what each watched key holds, as the condition of a refusal.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $refined
+   *   The data surface, refined against the values.
+   * @param string[] $dependencies
+   *   The watched keys, a mounted key by its dotted path, a port by its
+   *   name.
+   * @param array $values
+   *   The values of the level.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup[]
+   *   "Venue is Riverside Hall", one per watched key, an option by its
+   *   label.
+   */
+  protected function conditions(DataSurfaceInterface $refined, array $dependencies, array $values): array {
+    $conditions = [];
+    foreach ($dependencies as $dependency) {
+      $at = explode('.', $dependency);
+      $watched = static::definitionAt($refined, $at);
+      $held = NestedArray::getValue($values, $at) ?? $refined->getPortValues()[$dependency] ?? NULL;
+      $set = $watched === NULL || !is_scalar($held) ? NULL : $this->options->resolve($watched);
+      $shown = match (TRUE) {
+        !ValueState::isConfigured($held) => $this->t('empty'),
+        $set !== NULL && isset($set->options[$held]) => $set->options[$held],
+        is_bool($held) => $held ? $this->t('on') : $this->t('off'),
+        is_scalar($held) => (string) $held,
+        default => $this->t('what it holds'),
+      };
+      $conditions[] = $this->t('@key is @value', ['@key' => $watched?->getLabel() ?? $dependency, '@value' => $shown]);
+    }
+    return $conditions;
+  }
+
+  /**
+   * Lists what a refused key may hold, as refined for the values sent.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $refined
+   *   The data surface, refined against the values.
+   * @param string $name
+   *   The key.
+   * @param string $path
+   *   The refused property below it, or ''.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup|null
+   *   "choose Main hall (riverside_main) or East room (riverside_east)",
+   *   at most CHOICES_SHOWN of them and how many more; "nothing may be
+   *   chosen" for an empty list; NULL when the key offers no list.
+   */
+  protected function choices(DataSurfaceInterface $refined, string $name, string $path): ?TranslatableMarkup {
+    $definition = $path === '' ? NULL : static::definitionAt($refined, [$name, ...explode('.', $path)]);
+    $definition ??= $refined->getDefinition($name);
+    $set = $definition === NULL ? NULL : $this->options->resolve($definition);
+    if ($set === NULL) {
+      return NULL;
+    }
+    if ($set->options === []) {
+      return $this->t('nothing may be chosen');
+    }
+    $choices = [];
+    foreach ($set->options as $value => $label) {
+      $choices[] = (string) $label === (string) $value
+        ? (string) $value
+        : (string) $this->t('@label (@value)', ['@label' => $label, '@value' => $value]);
+    }
+    $shown = array_slice($choices, 0, self::CHOICES_SHOWN);
+    $more = count($choices) - count($shown);
+    if ($more > 0) {
+      return $this->t('choose @choices and @count more', ['@choices' => implode(', ', $shown), '@count' => $more]);
+    }
+    $last = array_pop($shown);
+    return $shown === []
+      ? $this->t('choose @choice', ['@choice' => $last])
+      : $this->t('choose @choices or @last', ['@choices' => implode(', ', $shown), '@last' => $last]);
   }
 
   /**
@@ -707,21 +818,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       $dependencies = array_values(array_diff($dependencies, [$entry->slot->by]));
     }
     $label = static::definitionAt($surface, $parents)?->getLabel() ?? end($parents);
-    $conditions = [];
-    foreach ($dependencies as $dependency) {
-      $at = explode('.', $dependency);
-      $watched = static::definitionAt($refined, $at);
-      $held = NestedArray::getValue($values, $at) ?? $refined->getPortValues()[$dependency] ?? NULL;
-      $set = $watched === NULL || !is_scalar($held) ? NULL : $this->options->resolve($watched);
-      $shown = match (TRUE) {
-        !ValueState::isConfigured($held) => $this->t('empty'),
-        $set !== NULL && isset($set->options[$held]) => $set->options[$held],
-        is_bool($held) => $held ? $this->t('on') : $this->t('off'),
-        is_scalar($held) => (string) $held,
-        default => $this->t('what it holds'),
-      };
-      $conditions[] = $this->t('@key is @value', ['@key' => $watched?->getLabel() ?? $dependency, '@value' => $shown]);
-    }
+    $conditions = $this->conditions($refined, $dependencies, $values);
     if ($conditions === []) {
       return $this->t('@label does not apply.', ['@label' => $label]);
     }

@@ -1650,16 +1650,123 @@ string. (`Pipeline\ViolationMessage`, `InputDefinitions::constraints()`)
 
 ### A refusal names what it depends on
 
-When the refiners changed a key's constraints for the values given, a
-refusal of that key gets a second sentence naming every key its
-refiners watch, by label: "This depends on Capacity." The caller who
-sent stewards and no capacity learns which sibling to change, which the
-key's own message cannot say. Every watched key is named, held or not,
-because a refiner that watches a nullable value (the licence) narrows
-when it holds nothing; a refusal by a rule the key declared itself is
-left alone, and the contracts are unchanged: this is the message, not
-the schema. A refused mounted key is matched to the property its
-refusal is about. (`DataSurfacePipeline::namingWhatItDependsOn()`)
+A refusal says what is allowed for the values sent, in one sentence per
+key, so a caller fixes each key in one try. Decided 2026-10-19,
+amending the second sentence this entry first settled ("This depends on
+Capacity."), which named the keys and not what they hold, and left a
+value not on its list unexplained.
+
+- **The form.** The constraint's own message is the first clause, still
+  the object it built, its full stop left off (`Pipeline\Clause`). When
+  the refiners changed the refused key's constraints for these values,
+  it goes on "when" and each watched key with what it holds, by label,
+  an option by its label, nothing as "empty", joined by "and", the
+  phrase a key that does not apply already used: "This value should be
+  3 or more when Capacity is 150." When a list of allowed values made
+  the refusal (a `Choice`, `LabeledChoice` or `AllowedValues`), it goes
+  on to list the values the key allows as refined for these values,
+  each label with the value to send in brackets, a value with no label
+  of its own once: "The value you selected is not a valid choice when
+  Venue is Riverside Hall; choose Main hall (riverside_main) or East room
+  (riverside_east)." At most ten (`DataSurfacePipeline::CHOICES_SHOWN`),
+  then "and 2 more"; an empty list says "nothing may be chosen". A key
+  that does not apply keeps its sentence, "Send day does not apply when
+  Frequency is Monthly." A bound and a pattern say themselves, through
+  the constraint's message.
+- **Why each part.** The caller who sent stewards and no capacity learns
+  which sibling to change, which the key's own message cannot say, and
+  what it holds, so a caller that sent nothing for it sees that. Every
+  watched key is named, held or not, because a refiner that watches a
+  nullable value (the licence) narrows when it holds nothing. The list
+  is the one that applies, not the listing's wider one, so the next try
+  is accepted; the value beside each label is what a caller sends, which
+  a label alone does not say. A refusal by a rule the key declared
+  itself names no condition. A refused mounted key is matched to the
+  property its refusal is about. The contracts are unchanged: this is
+  the message, not the schema. The form says the same sentence: a
+  select offers only what is allowed, so a person rarely reads it.
+- **The tool judges by the pipeline.** A derived tool's `values` is held
+  by the Tool API to its shape alone before the tool runs, its types,
+  the keys it requires and its nesting
+  (`ResourceOperationTool::validateInputValues()`,
+  `InputDefinitions::shapeOf()`), and every rule is the pipeline's,
+  which narrows `values` from the document sent before it validates.
+  Held to the listing instead, a room outside every venue's list was
+  refused with no list that applies, and a capacity of 2000 with the
+  listing's bound of 1000 rather than the room's 30: a second try per
+  key, and in the Tool API's nested spelling ("values: (property
+  room) ..."), which the MCP bridge prints without the path. The listing
+  keeps every constraint it advertises, and the MCP server, which holds
+  arguments to the advertised schema before a tool runs, refuses a
+  value off an advertised list with that list. A value of the wrong type,
+  or a required key left out, is still the Tool API's to refuse.
+- **The listing names what a key depends on.** In a tool listing a key
+  another narrows says so in its own description, once: "Depends on
+  venue." Each key by its path in `values`, what a caller sends it
+  under; a port by the container's key it reads, at the site; never a
+  stored value. A slot's deciding key is said by the slot's own
+  description, and a key that holds a child names nothing its ports
+  read, which the keys inside it name. The read tool's output says
+  nothing about it. The listing stays small: a key that depends on
+  nothing says nothing more.
+
+(`DataSurfacePipeline::sayingWhatIsAllowed()`,
+`DataSurfacePipeline::conditions()`, `DataSurfacePipeline::choices()`,
+`InputDefinitions::withDependencies()`, `ToolFeedbackTest`)
+
+### An operation states how it behaves
+
+`#[Operation]` says whether a call changes nothing (`readOnly`) and
+whether it may destroy what is there (`destructive`), both `FALSE`
+unless said, and whether the same call twice leaves what the first left
+(`idempotent`), derived unless said: an operation that does not create
+is idempotent, the same document twice writing the same state; one that
+creates is not, the second call finding what the first made; a read only
+one is. Decided 2026-10-19. A read only operation that destroys, or
+that is not idempotent, is refused at discovery. `OperationDefinition`
+carries the three (`idempotent()`, `facts()`), and so does a derived
+operation (`DerivedOperation`).
+
+- **Why on the operation.** A client asks before it calls a tool that
+  destroys and retries one that is idempotent, and MCP reads both as a
+  tool's annotations. Only the author knows whether a call destroys; a
+  module that writes cannot read it off a storage class. Whether an
+  operation creates is the context's ([Whether an operation
+  creates](#whether-an-operation-creates)), so idempotence is derived
+  from it and declared only where the author knows better, such as an
+  operation that appends. None of the module's own operations destroys:
+  an edit changes the keys it is sent, and a key left out keeps its
+  value.
+- **The Tool API.** The tool deriver makes a read only operation the
+  `Read` kind and every other the `Write` kind, and passes `destructive`
+  to `setDestructive()`; a read tool is `Read` by what it is
+  (`ResourceOperationToolDeriver::behaves()`). The MCP bridge derives
+  `readOnlyHint` from a kind that does not modify, `idempotentHint` from
+  the kind, and `destructiveHint` from the flag. *Gap, to file:*
+  idempotence is a property of the kind in the Tool API, not of the
+  tool, and every kind that modifies is not idempotent, so an edit
+  cannot say it is idempotent while an add says it is not: both are
+  `Write`, and both read as not idempotent. `Write` is the least wrong
+  kind for an idempotent operation that changes what exists: every
+  idempotent kind does not modify, and would also say the operation
+  changes nothing, which a client acts on.
+- **Both documents.** The schema for these answers and the full schema
+  state the facts at the top, first under the top's `x-surface`, beside
+  the title that is the operation's label:
+  `x-surface.operation: {id, label, creates, readOnly, destructive,
+  idempotent}`, so a client reading the contract directly has the
+  operation's own answer, idempotence included. A document asked for in
+  no operation states none.
+- **No read tool beside a read only operation.** It changes nothing, so
+  there is nothing to read before changing it
+  (`ResourceCatalogue::reads()`).
+
+*Open:* nothing yet holds a read only operation to writing nothing: its
+tool and its form submit as any other. Whether a call reaches beyond
+the site (MCP's open world) is a fact of the storage, not the
+operation, and a later flag there; the MCP bridge says open world for
+every tool today. (`Operation`, `OperationDefinition::facts()`,
+`ContractEmitter::operation()`, `OperationFactsTest`)
 
 ### A violation summary is plain text
 
@@ -1705,7 +1812,9 @@ An operation that can be asked on its own has a read tool when it changes
 a thing that exists: one that needs nothing, by its context not
 creating; one that needs a subject, by its parameters naming one thing
 whole, a single entity with no scalar identity key beside it, or a
-scalar for every identity key. The context is the truth and cannot be
+scalar for every identity key. A read only operation has none: it
+changes nothing ([An operation states how it
+behaves](#an-operation-states-how-it-behaves)). The context is the truth and cannot be
 asked before the subject is named, and `creates` is not on
 `#[Operation]` ([Whether an operation creates](#whether-an-operation-creates)), so the signature is
 read, as identity is. A context that turns out to create is refused when

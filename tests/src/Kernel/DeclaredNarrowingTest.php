@@ -275,12 +275,12 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
     $freight = ['service' => 'freight', 'weight' => 40, 'handling' => 'cold'];
     $this->assertSame([], $refusals([]));
     $this->assertSame([
-      'declared_value' => 'This value should be between 0 and 500. This depends on Weight in kilograms, Reference, Insured, Customs code.',
+      'declared_value' => 'This value should be between 0 and 500 when Weight in kilograms is 1 and Reference is empty and Insured is off and Customs code is empty.',
     ], $refusals(['declared_value' => 501]));
     $this->assertSame(['signature' => 'Signed for by is required.'], $refusals(['insured' => TRUE]));
     $this->assertSame([], $refusals(['insured' => TRUE, 'signature' => 'Ann']));
     $this->assertSame([
-      'handling' => 'The value you selected is not a valid choice. This depends on Service.',
+      'handling' => 'The value you selected is not a valid choice when Service is Standard; choose Fragile (fragile) or This way up (upright).',
     ], $refusals(['handling' => 'cold']));
     $this->assertSame([
       'note' => 'Note for the driver does not apply when Service is Standard.',

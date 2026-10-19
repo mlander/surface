@@ -139,7 +139,7 @@ final class ContractPanel implements DataSurfaceFormPanelInterface {
         '#attributes' => ['class' => ['data-surface-contract-keys']],
       ],
     ];
-    $contract = $this->emitter->emit($declared, $values, $resource_id, $served->operation->id, $served->operation->label);
+    $contract = $this->emitter->emit($declared, $values, $resource_id, $served->operation->id, $served->operation->label, operation: $served->operation->facts($served->context));
     $panel['contract'] = [
       '#type' => 'details',
       '#open' => FALSE,
@@ -153,7 +153,7 @@ final class ContractPanel implements DataSurfaceFormPanelInterface {
     // what only the subject decides marked.
     // Decision: see
     // docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
-    $full = $this->emitter->emitFull($this->resources->buildStatic($served->resource, $served->context), $resource_id, $served->operation->id, $served->operation->label);
+    $full = $this->emitter->emitFull($this->resources->buildStatic($served->resource, $served->context), $resource_id, $served->operation->id, $served->operation->label, operation: $served->operation->facts($served->context));
     $panel['full'] = [
       '#type' => 'details',
       '#open' => FALSE,

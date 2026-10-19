@@ -681,7 +681,7 @@ Success: Configure registration: the values were accepted and written.
   committed: true
 
 2. A capacity above the room's
-Failed: The values were refused: capacity: This value should be between 1 and 30. This depends on Room.
+Failed: The values were refused: capacity: This value should be between 1 and 30 when Room is Garden room.
 
 3. A dry run
 Success: Dry run of Configure registration: the values were accepted and prepared, and nothing was written.
@@ -726,6 +726,45 @@ needs no licence and one steward, the default, so example 4's module
 does not change the answers. Enable it and send the first call with a
 capacity of 150, which the upper deck seats, and no licence to see it
 refuse.
+
+### When a call is refused
+
+The listing names what each key depends on, once, in its description,
+by the path a caller sends it under, and says nothing about what is
+stored. With example 4's module enabled, `tool:info` shows, among the
+`values` input's properties:
+
+```
+|   └ room                               | string  | Yes      | No       |        | Room                      | riverside_main|riverside_east|library_reading|library_garden|harbour_auditorium|harbour_deck | Room: Depends on venue.                  |
+|   └ capacity                           | integer | No       | No       |        | Capacity                  | minimum 1, maximum 1000                                                                      | Capacity: Depends on room, third_party…  |
+|       └ stewards                       | integer | Yes      | No       |        | Stewards                  |                                                                                              | Stewards: Depends on capacity.           |
+```
+
+`tool:info` cuts a long description short; the capacity's reads in full
+"Depends on room, third_party_settings.data_surface_examples_compliance.licence."
+
+A refusal says what is allowed for the values sent, in one sentence per
+key: what the key depends on and what that holds, and for a value not
+on its list, the list as it stands for them, each label with the value
+to send. An agent fixes each key in one retry. `ToolFeedbackTest` plays
+that loop as a dry run through the Tool API's runner, the way MCP and
+ECA call a tool: the agent sends the venue by name; then moves the
+event to a room of another venue; then doubles the capacity to 240,
+leaving the stewards at three. The three refusals:
+
+```
+Failed: The values were refused: venue: The value you selected is not a valid choice; choose Riverside Hall (riverside), Old Library (library) or Harbour Centre (harbour).
+Failed: The values were refused: room: The value you selected is not a valid choice when Venue is Riverside Hall; choose Main hall (riverside_main) or East room (riverside_east).
+Failed: The values were refused: third_party_settings.data_surface_examples_compliance.stewards: This value should be 5 or more when Capacity is 240.
+```
+
+Each time the agent reads the fix from the refusal alone and the next
+call is accepted. The Tool API holds `values` to its shape before the
+tool runs (types, the keys it requires, its nesting) and the pipeline
+holds it to every rule, against the definitions the values sent narrow,
+so a value outside the listing's list is answered with the list that
+applies rather than refused with none
+([decision](../../docs/decisions.md#a-refusal-names-what-it-depends-on)).
 
 ## In React
 

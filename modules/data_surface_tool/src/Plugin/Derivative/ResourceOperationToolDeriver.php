@@ -59,6 +59,10 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * of, so it is declared nowhere and the tool's own access, which fills
  * the placeholder from the parameters, is the only check.
  *
+ * Each write tool says how its operation behaves (behaves()): the Read
+ * kind for a read only operation, the Write kind for every other, and
+ * whether it may destroy what is there.
+ *
  * An operation that changes a thing that exists has a read tool beside
  * its write tool, `<resource id>:<operation id>:read`, of the class
  * ResourceOperationReadTool: its parameters as inputs, the stored values
@@ -150,6 +154,7 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
             $this->operationInputs->outputs($resource, $operation),
             $operation,
           );
+          static::behaves($definition, $operation);
           // Once the operation's parameters arrive, the values input is
           // the resource built in the operation's real context.
           $parameters = array_map(static fn ($parameter): string => $parameter->name, $operation->parameters);
@@ -238,6 +243,37 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
       $definition->addOutputDefinition($name, $output);
     }
     return $definition;
+  }
+
+  /**
+   * Says on a write tool how its operation behaves.
+   *
+   * The Tool API reads a tool's behavior from its operation kind and its
+   * destructive flag, and the MCP bridge turns both into a tool's
+   * annotations: read only from a kind that does not modify, idempotent
+   * from the kind, destructive from the flag. A read only operation is the
+   * Read kind, so it is read only and idempotent there; every other is the
+   * Write kind, and says whether it may destroy what is there.
+   *
+   * Idempotence is the kind's, not the tool's: every kind that modifies
+   * is not idempotent, so an operation that changes a thing that exists,
+   * which is idempotent, is a Write all the same and reads as not
+   * idempotent. The least wrong kind: every kind that is idempotent does
+   * not modify, so it would also say the operation changes nothing, which
+   * a client would act on. Both schema documents state the operation's
+   * own answer.
+   *
+   * Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
+   *
+   * @param \Drupal\tool\Tool\ToolDefinition $definition
+   *   The write tool's definition; changed in place.
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   */
+  public static function behaves(ToolDefinition $definition, OperationDefinition $operation): void {
+    $definition
+      ->setOperation($operation->readOnly ? ToolOperation::Read : ToolOperation::Write)
+      ->setDestructive($operation->destructive);
   }
 
   /**

@@ -670,7 +670,33 @@ renames sit in A because they are cheapest before new code exists.
    locked or omitted later. Access answers per key or structure;
    narrowing allowed values by account is a runtime refiner, not
    access.
-9. **The tool door's feedback.** Keep the listing small, as intended.
+9. **The tool door's feedback.** DONE 2026-10-19
+   (`docs/decisions.md#a-refusal-names-what-it-depends-on`,
+   `docs/decisions.md#an-operation-states-how-it-behaves`): a listing
+   names what each key another narrows depends on, once, in its
+   description, by the path a caller sends it under, through a port at
+   its site ("Depends on venue."); a refusal says what is allowed for
+   the values sent in one sentence per key, the constraint's message
+   then "when" each watched key and what it holds, then, for a value not
+   on its list, the list as refined, each label with its value, at most
+   ten and "and N more" ("The value you selected is not a valid choice
+   when Venue is Riverside Hall; choose Main hall (riverside_main) or
+   East room (riverside_east)."); the tool holds `values` to its shape
+   before it runs and leaves every rule to the pipeline, which narrows
+   from the document sent; `ToolFeedbackTest` plays an agent's retry
+   loop on example 3 through the Tool API's runner, one retry per key.
+   `#[Operation]` gains `readOnly` and `destructive`, and idempotence
+   derived from `creates` unless declared; the deriver maps read only to
+   the `Read` kind and destructive to `setDestructive()`; both documents
+   state `x-surface.operation` at the top; no read tool beside a read
+   only operation. Checked over MCP: the annotations reach `tools/list`,
+   the descriptions reach the input schema, a refusal reaches the
+   result's text, and the MCP server itself refuses a value off an
+   advertised list with that list before the tool runs. Left open: the
+   Tool API gap on idempotence (filed by the owner); nothing holds a
+   read only operation to writing nothing; open world as a flag on the
+   storage. As planned:
+   Keep the listing small, as intended.
    Name each dependency in the input's description. Make a refusal on a
    dependent key say what is allowed for the values sent ("room: not
    offered for Riverside Hall; choose Main hall or East room"), which

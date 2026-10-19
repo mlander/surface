@@ -71,7 +71,7 @@ class MixinFormTest extends BrowserTestBase {
 
     // Changed before created, refused at the member, in the journal's frame.
     $this->submitForm(['surface[changed]' => '1600000000'], 'Save');
-    $assert->pageTextContains('This value should be 1700000000 or more.');
+    $assert->pageTextContains('This value should be 1700000000 or more when Created is 1700000000.');
     $refused = $this->stored();
     $this->assertSame(1700000500, $refused['changed']);
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface\ResourceBuild;
 
+use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceCallable;
 
 /**
@@ -42,6 +43,17 @@ final class OperationDefinition {
    *   is bound to, called with the resolved arguments by name first;
    *   NULL for an #[Operation] method, called with them as named
    *   arguments.
+   * @param bool $destructive
+   *   Whether a call may destroy what is there.
+   * @param bool $readOnly
+   *   Whether a call changes nothing.
+   * @param bool|null $idempotent
+   *   Whether the same call twice leaves what the first left, as
+   *   declared; NULL when it is derived (idempotent()).
+   *
+   * @throws \LogicException
+   *   When the facts contradict each other: a read only operation that
+   *   destroys, or that is not idempotent.
    */
   public function __construct(
     public readonly string $id,
@@ -54,7 +66,64 @@ final class OperationDefinition {
     public readonly array $parameters = [],
     public readonly bool $default = FALSE,
     public readonly ?ResourceCallable $context = NULL,
-  ) {}
+    public readonly bool $destructive = FALSE,
+    public readonly bool $readOnly = FALSE,
+    public readonly ?bool $idempotent = NULL,
+  ) {
+    if ($readOnly && ($destructive || $idempotent === FALSE)) {
+      throw new \LogicException(sprintf(
+        'The "%s" operation, %s, says it changes nothing and also that it %s: a read only operation destroys nothing, and asking it twice leaves what asking it once did.',
+        $id,
+        $this->describe(),
+        $destructive ? 'may destroy what is there' : 'is not idempotent',
+      ));
+    }
+  }
+
+  /**
+   * Answers whether the same call twice leaves what the first left.
+   *
+   * As declared, or derived: a read only operation is idempotent, an
+   * operation that does not create is (the same document twice writes the
+   * same state), and one that creates is not (the second call finds what
+   * the first made, and makes another or is refused).
+   *
+   * Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
+   *
+   * @param bool $creates
+   *   Whether its context creates: the context's own answer, or, where
+   *   the context cannot be asked yet, what the signature says.
+   *
+   * @return bool
+   *   TRUE when a retry is safe.
+   */
+  public function idempotent(bool $creates): bool {
+    return $this->idempotent ?? ($this->readOnly || !$creates);
+  }
+
+  /**
+   * States how the operation behaves, in the context it was asked in.
+   *
+   * What both schema documents carry at the top, under
+   * `x-surface.operation`, so a client reading the contract directly
+   * knows what a tool listing says with its annotations.
+   *
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The context the operation built.
+   *
+   * @return array{id: string, label: string, creates: bool, readOnly: bool, destructive: bool, idempotent: bool}
+   *   The facts.
+   */
+  public function facts(OperationContext $context): array {
+    return [
+      'id' => $this->id,
+      'label' => (string) $this->label,
+      'creates' => $context->creates,
+      'readOnly' => $this->readOnly,
+      'destructive' => $this->destructive,
+      'idempotent' => $this->idempotent($context->creates),
+    ];
+  }
 
   /**
    * Answers whether the operation can be asked for with no subject.

@@ -114,6 +114,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
       $operation->operation->id,
       $operation->operation->label,
       $widgets,
+      $operation->operation->facts($operation->context),
     );
     return json_decode((string) json_encode($contract->document), TRUE);
   }
@@ -430,6 +431,10 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $extensions = $this->extensions($schema);
     $this->assertNotEmpty($extensions);
     foreach ($extensions as $at => $extension) {
+      if ($at === '') {
+        $this->assertSame(['operation'], array_keys($extension), 'The top states how the operation behaves.');
+        continue;
+      }
       $this->assertArrayNotHasKey('widget', $extension, $at . ' names no widget.');
       $this->assertArrayNotHasKey('multiple', $extension, $at . ' names no widget.');
       $this->assertSame(['locked', 'dependsOn', 'refined', 'stale'], array_slice(array_keys($extension), 0, 4), $at . ' keeps the data surface\'s own reading.');

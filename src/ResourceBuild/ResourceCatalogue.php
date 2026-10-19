@@ -158,7 +158,8 @@ final class ResourceCatalogue {
    * Answers whether what an operation changes can be read on its own.
    *
    * The rule a generated read tool follows: the operation can be asked
-   * on its own, and it changes a thing that exists. For an operation that
+   * on its own, and it changes a thing that exists. A read only operation
+   * changes nothing, so nothing beside it is read. For an operation that
    * needs nothing that is its context, which does not create; for one
    * that needs a subject it is its signature, which names one thing
    * whole (OperationDefinition::namesOneThing()), because the context is
@@ -175,7 +176,7 @@ final class ResourceCatalogue {
    *   TRUE when what it changes can be read on its own.
    */
   public function reads(ResourceDefinition $resource, OperationDefinition $operation, array $plugins): bool {
-    if (!static::standalone($resource, $operation, $plugins)) {
+    if (!static::standalone($resource, $operation, $plugins) || $operation->readOnly) {
       return FALSE;
     }
     if (!$operation->needsNothing()) {

@@ -180,6 +180,20 @@ already known, and that is a **context**, an `OperationContext`:
   own operation to invoke (`withChild()`, see [Child
   operations](#child-operations)). What depends on where you are is the
   operation's; what depends on what was entered is a refiner's.
+- An operation states how a call behaves, for a client deciding
+  whether to ask before calling and whether a retry is safe:
+  `#[Operation(readOnly: TRUE)]` for one that changes nothing,
+  `destructive: TRUE` for one that may destroy what is there (delete
+  it, or overwrite it beyond what was sent), both `FALSE` unless said.
+  Whether the same call twice leaves what the first left is derived: an
+  operation that does not create is idempotent, one that creates is not,
+  a read only one is; say `idempotent:` only where you know better, as
+  for an operation that appends. A tool carries them to the Tool API,
+  which MCP reads as a tool's annotations, and both schema documents
+  state them at the top, under `x-surface.operation`
+  ([decision](decisions.md#an-operation-states-how-it-behaves)). The
+  content type's and the field's operations say nothing: an edit changes
+  the keys it is sent, and a key left out keeps its value.
 
 The content type resource is the worked example:
 
@@ -497,6 +511,19 @@ own is a tool, `data_surface:<resource id>:<operation id>`, derived by
   real context (a field's settings become its type's, each key
   defaulting to what is stored now) through the Tool API's own input
   refiners once its parameters arrive.
+  A key another narrows says so in its description, once, by the path
+  a caller sends it under: "Depends on venue." The Tool API holds
+  `values` to its shape before the tool runs (types, the keys it
+  requires, its nesting), and the pipeline holds it to every rule,
+  against the definitions the values sent narrow, so a refusal says
+  what is allowed for them
+  ([decision](decisions.md#a-refusal-names-what-it-depends-on)): "room:
+  The value you selected is not a valid choice when Venue is Riverside
+  Hall; choose Main hall (riverside_main) or East room
+  (riverside_east)."
+- **Behavior** is the operation's: the `Read` kind for a read only
+  operation, the `Write` kind for every other, and destructive when it
+  says so.
 - **Access** is the operation's, decisively, then a slot variant its
   locked deciding key chose may refuse through its own access class.
 - **Execution** is the operation, the build, and one pipeline submit to
@@ -534,7 +561,7 @@ operations those are is `ResourceCatalogue::reads()`: one that needs
 nothing and whose context does not create, or one that needs a subject
 and whose parameters name one thing whole, a single entity or every
 identity key, since its context cannot be asked before a caller names
-the subject. So `node.type:edit`, `field.instance:edit` and
+the subject; never one that is read only, which changes nothing. So `node.type:edit`, `field.instance:edit` and
 `field.storage:edit` read, and `node.type:add`, `field.instance:add` and
 `field.instance:reuse` do not; a context that turns out to create is
 refused when the read runs.
@@ -987,7 +1014,7 @@ $inputs->attach('third_party_settings.data_surface_examples_compliance', Complia
   a rule reads it as it stands, and a value its own key refuses is
   handed as nothing. It moves as the wired key moves: the form rebuilds
   the structure over AJAX when the key changes, a refusal names the key
-  (`This depends on Capacity.`), and the discard cascade follows it.
+  (`... when Capacity is 150.`), and the discard cascade follows it.
   Nothing stores, draws or accepts a port in the structure: it is the
   container's key, there.
 - **A port has a type and may be required.** `reads($port, $type,

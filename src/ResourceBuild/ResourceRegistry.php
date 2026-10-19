@@ -520,6 +520,9 @@ final class ResourceRegistry {
             module: $module,
             parameters: array_map(OperationParameter::fromReflection(...), $method->getParameters()),
             default: $operation->default,
+            destructive: $operation->destructive,
+            readOnly: $operation->readOnly,
+            idempotent: $operation->idempotent,
           );
         }
       }
@@ -732,6 +735,9 @@ final class ResourceRegistry {
             ),
             default: $operation->default,
             context: $operation->context,
+            destructive: $operation->destructive,
+            readOnly: $operation->readOnly,
+            idempotent: $operation->idempotent,
           ), array_values($declared->operations)),
         ];
       }

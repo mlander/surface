@@ -365,9 +365,9 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
    * Tests a refusal a refiner caused names the keys it depends on.
    *
    * Too few stewards is about the capacity, and a capacity over a
-   * hundred is about the room and the licence: each refusal says so in a
-   * second sentence. The licence's own pattern is its own rule, and its
-   * refusal says nothing more (testTheLicencePatternIsChecked()).
+   * hundred is about the room and the licence: each refusal goes on to
+   * say what each holds. The licence's own pattern is its own rule, and
+   * its refusal says nothing more (testTheLicencePatternIsChecked()).
    */
   public function testRefusalNamesWhatItDependsOn(): void {
     $messages = static fn (iterable $violations): array => array_map(
@@ -375,11 +375,11 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
       iterator_to_array($violations),
     );
     $this->assertSame(
-      ['This value should be 3 or more. This depends on Capacity.'],
+      ['This value should be 3 or more when Capacity is 150.'],
       $messages($this->pipeline()->validate($this->surface(), ['capacity' => 150] + self::compliance('2048', 2) + self::EVENT)),
     );
     $this->assertSame(
-      ['This value should be between 1 and 100. This depends on Room, Event licence.'],
+      ['This value should be between 1 and 100 when Room is Main hall and Event licence is empty.'],
       $messages($this->pipeline()->validate($this->surface(), ['capacity' => 150] + self::compliance(NULL, 3) + self::EVENT)),
     );
   }

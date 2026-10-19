@@ -210,7 +210,7 @@ final class OperationInputs {
     $built = $neutral ?? $this->resources->buildStatic($resource->name(), $this->resources->operation($resource->name(), $operation->id));
     return [
       self::VALUES => $this->inputDefinitions->outputFromInput(
-        $this->declaredValues($resource, $operation, $neutral),
+        $this->declaredValues($resource, $operation, $neutral, FALSE),
         $this->inputDefinitions->secrets($built),
         $this->t('Stored values'),
         $this->t('What is stored now, as the @resource resource describes it: every key the operation does not already know, including those other modules add, in the shape the write tool takes. A key storage holds nothing for is absent, and a secret is never returned.', ['@resource' => $resource->id]),
@@ -265,7 +265,7 @@ final class OperationInputs {
    *   knows, each required as the resource says.
    */
   public function values(ResourceDefinition $resource, DataSurfaceInterface $built, OperationContext $context): MapInputDefinition {
-    $map = $this->map($resource, $built, $this->knownIdentity($resource, $context));
+    $map = $this->inputDefinitions->withDependencies($this->map($resource, $built, $this->knownIdentity($resource, $context)), $built);
     if (!$context->creates) {
       // Decision: see docs/decisions.md#required-is-the-resources-and-a-listing-carries-no-stored-value.
       $this->inputDefinitions->withStored($map, $built, $this->resources->storage($resource->name(), $context, $built)->load($built));
@@ -310,18 +310,27 @@ final class OperationInputs {
    * @param \Drupal\data_surface\DataSurfaceInterface|null $neutral
    *   The resource built in a context that knows nothing, for an operation
    *   that needs a subject.
+   * @param bool $dependencies
+   *   Whether each dependent key's description names what it depends on,
+   *   as an input's does; an output's does not.
    *
    * @return \Drupal\tool\TypedData\MapInputDefinition
    *   The map.
    */
-  protected function declaredValues(ResourceDefinition $resource, OperationDefinition $operation, ?DataSurfaceInterface $neutral): MapInputDefinition {
+  protected function declaredValues(ResourceDefinition $resource, OperationDefinition $operation, ?DataSurfaceInterface $neutral, bool $dependencies = TRUE): MapInputDefinition {
     if ($operation->needsNothing()) {
       $context = $this->resources->operation($resource->name(), $operation->id);
-      $map = $this->map($resource, $this->resources->buildStatic($resource->name(), $context), $this->knownIdentity($resource, $context));
+      $built = $this->resources->buildStatic($resource->name(), $context);
+      $map = $this->map($resource, $built, $this->knownIdentity($resource, $context));
     }
     else {
       // Decision: see docs/decisions.md#identity-before-the-parameters.
-      $map = $this->map($resource, $neutral ?? $this->resources->buildStatic($resource->name(), new OperationContext($operation->id)), $this->suppliedIdentity($resource, $operation));
+      $built = $neutral ?? $this->resources->buildStatic($resource->name(), new OperationContext($operation->id));
+      $map = $this->map($resource, $built, $this->suppliedIdentity($resource, $operation));
+    }
+    if ($dependencies) {
+      // Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
+      $this->inputDefinitions->withDependencies($map, $built);
     }
     if ($this->changesWhatExists($resource, $operation)) {
       // Decision: see docs/decisions.md#required-is-the-resources-and-a-listing-carries-no-stored-value.

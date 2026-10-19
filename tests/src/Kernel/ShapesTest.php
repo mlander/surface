@@ -510,9 +510,8 @@ class ShapesTest extends DataSurfaceKernelTestBase {
     $tool->setInputValue(OperationInputs::VALUES, ['sku' => 'xy99'] + self::DEPOT);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
-    // The Tool API holds the input to the same constraints first, in the
-    // shape's words.
-    $this->assertSame("Invalid input:\nvalues: (property sku) A stock code is two capitals and digits, such as AB12.", strip_tags((string) $tool->getResult()->getMessage()));
+    // The pipeline holds it to the shape's pattern, in the shape's words.
+    $this->assertSame('The values were refused: sku: A stock code is two capitals and digits, such as AB12.', strip_tags((string) $tool->getResult()->getMessage()));
     $tool = $manager->createInstance('data_surface:resource_test.depot:configure');
     $tool->setInputValue(OperationInputs::VALUES, ['sku' => 'XY99', 'spare' => 'ZZ1'] + self::DEPOT);
     $tool->execute();

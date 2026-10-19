@@ -8,7 +8,7 @@ page needs nothing else. Read a row only when its question is yours.
 | Concept | You need it when you ask | Skip it when |
 | --- | --- | --- |
 | **1** Resource, `#[Resource]` | What thing do I want a form, a tool and a schema for? | Never: everything starts here. |
-| **1** Operation, `#[Operation]` | How is it asked for, and which permission gates it? | Never: a route and a tool are made from one. |
+| **1** Operation, `#[Operation]` | How is it asked for, which permission gates it, and does a call change nothing (`readOnly`) or destroy what is there (`destructive`)? ([Resources](resources.md#operations-add-edit-and-the-rest)) | Never: a route and a tool are made from one. Leave `readOnly` and `destructive` out when a call does neither; whether it is safe to repeat is derived. |
 | **1** Storage, `ConfigObjectStorage` | Where do its values live? | A settings page: subclass `ConfigObjectStorage`, name the config object, done. |
 | **1** `defineInputs()` and `add()` | What keys does it take, of what type, allowing what (a constraint), defaulting to what? | Never. |
 | Shape, `#[Shape]` | Is one value, such as an event licence, asked for at several keys with the same type, pattern and words? ([Declaring a resource](declaring-a-resource.md#named-shapes)) | The value is asked for at one key: write its constraints there. |

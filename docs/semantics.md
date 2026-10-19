@@ -429,16 +429,23 @@ the pipeline wraps a message holding a Symfony placeholder in
 emphasized as `%max` would be, when the message is rendered: the form,
 the tool's refusal and the served contract all print the number. The
 tool's input definitions carry the constraint across respelled `%max`,
-so the Tool API's own check, which runs before the pipeline, says the
-same.
+so whatever holds a value to the listing's constraints says the same;
+the tool itself holds `values` to its shape alone before it runs, and
+leaves every rule to the pipeline.
 
-A refusal a refiner caused names what it depends on, in a second
-sentence: too few stewards for example 4's capacity reads "This value
-should be 3 or more. This depends on Capacity." The pipeline adds it
+A refusal says what is allowed for the values sent, in one sentence
+per key. One a refiner caused goes on to name what it depends on and
+what that holds: too few stewards for example 4's capacity reads "This
+value should be 3 or more when Capacity is 150." The pipeline adds it
 where the refused key, or the mounted property the refusal is about, is
 watched by a refiner and the refiners changed its constraints for these
-values; a rule the key declared itself says nothing more
-([decision](decisions.md#a-refusal-names-what-it-depends-on)).
+values; a rule the key declared itself names no condition. A value not
+on its key's list goes on to list what may be chosen, as refined for
+the values sent, each label with its value, at most ten and then how
+many more: "The value you selected is not a valid choice when Venue is
+Riverside Hall; choose Main hall (riverside_main) or East room
+(riverside_east)." The constraint's own message stays the first clause,
+the object it built ([decision](decisions.md#a-refusal-names-what-it-depends-on)).
 
 There are exactly three places a message becomes text, all of them
 exception messages, because PHP has nowhere to put an object in one:

@@ -170,6 +170,142 @@ final class InputDefinitions {
   }
 
   /**
+   * Names in each dependent key's description what it depends on.
+   *
+   * A listing states every key as declared, so a key another narrows
+   * says so in words, once, in its own description: "Depends on venue."
+   * Each key it depends on is named by its path in the values map, the
+   * name a caller sends it under; a port is named by the key of its
+   * container it reads, at the site; a stored value is never named. What
+   * chooses a slot's variant is said by the slot's own description, and a
+   * key that holds a child names nothing its ports read, which the keys
+   * inside it name.
+   *
+   * Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
+   *
+   * @param \Drupal\tool\TypedData\MapInputDefinition $map
+   *   The converted data surface; changed in place.
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface it was converted from.
+   *
+   * @return \Drupal\tool\TypedData\MapInputDefinition
+   *   The same map.
+   */
+  public function withDependencies(MapInputDefinition $map, DataSurfaceInterface $surface): MapInputDefinition {
+    foreach (static::dependencies($surface) as $path => $keys) {
+      $target = $map;
+      foreach (explode('.', $path) as $property) {
+        $target = $target instanceof MapInputDefinition ? $target->getPropertyDefinition($property) : NULL;
+      }
+      if (!$target instanceof DataDefinition) {
+        continue;
+      }
+      $note = $this->t('Depends on @keys.', ['@keys' => implode(', ', $keys)]);
+      $description = (string) $this->description($target);
+      $target->setDescription($description === '' ? $note : $this->t('@description @note', [
+        '@description' => $description,
+        '@note' => $note,
+      ]));
+    }
+    return $map;
+  }
+
+  /**
+   * Lists what each key of a data surface depends on, at any depth.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface, or a child of it.
+   * @param string $prefix
+   *   The path of the frame in the values map, with its trailing dot.
+   * @param array<string, string> $ports
+   *   The frame's ports, each mapped to the path in the values map of the
+   *   key it reads.
+   *
+   * @return array<string, string[]>
+   *   The paths each key depends on, keyed by its own path; a key that
+   *   depends on nothing is not there.
+   */
+  protected static function dependencies(DataSurfaceInterface $surface, string $prefix = '', array $ports = []): array {
+    $found = [];
+    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+      $at = $prefix . $name;
+      $resolve = static fn (string $key): string => $ports[$key] ?? $prefix . $key;
+      $children = [];
+      if ($entry->attachment !== NULL) {
+        $children[] = [$entry->attachment, $at . '.'];
+      }
+      foreach ($entry->mounted as $path => $attachment) {
+        $children[] = [$attachment, $at . '.' . $path . '.'];
+      }
+      foreach ($entry->slot->variants ?? [] as $variant) {
+        $children[] = [$variant, $at . '.'];
+      }
+      // What chooses a variant, and what a child's ports read, are said
+      // elsewhere: by the slot's own description, and by the keys that
+      // read them.
+      $read = array_merge($entry->slot === NULL ? [] : [$entry->slot->by], ...array_map(static fn (array $child): array => array_values($child[0]->reads), $children));
+      if ($entry->paths !== []) {
+        foreach ($entry->paths as $path => $keys) {
+          $found[$at . '.' . $path] = array_map($resolve, $keys);
+        }
+      }
+      else {
+        $own = array_values(array_diff($entry->dependencies, $read));
+        if ($own !== []) {
+          $found[$at] = array_map($resolve, $own);
+        }
+      }
+      foreach ($children as [$attachment, $below]) {
+        $found += static::dependencies($attachment->child, $below, array_map($resolve, $attachment->reads));
+      }
+    }
+    return $found;
+  }
+
+  /**
+   * Copies an input with its shape alone: no constraint at any depth.
+   *
+   * What the Tool API holds a tool's `values` to before the tool runs:
+   * its data types, which keys are required, its nesting. Every rule is
+   * the pipeline's to judge, against the values narrowed by the values
+   * sent, so a refusal says what is allowed for them; the listing keeps
+   * the constraints it advertises.
+   *
+   * Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
+   *
+   * @param \Drupal\tool\TypedData\InputDefinitionInterface $input
+   *   The input, as listed or refined.
+   *
+   * @return \Drupal\tool\TypedData\InputDefinitionInterface
+   *   A copy of it, holding no constraint.
+   */
+  public static function shapeOf(InputDefinitionInterface $input): InputDefinitionInterface {
+    $shape = clone $input;
+    static::withoutConstraints($shape);
+    return $shape;
+  }
+
+  /**
+   * Drops every constraint of a copied input, at any depth.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $input
+   *   The copy; changed in place.
+   */
+  protected static function withoutConstraints(DataDefinitionInterface $input): void {
+    if ($input instanceof DataDefinition) {
+      $input->setConstraints([]);
+    }
+    if ($input instanceof MapInputDefinition) {
+      foreach ($input->getPropertyDefinitions() as $property) {
+        static::withoutConstraints($property);
+      }
+    }
+    if ($input instanceof ListInputDefinition) {
+      static::withoutConstraints($input->getItemDefinition());
+    }
+  }
+
+  /**
    * Makes an input optional wherever a refiner may rule it out.
    *
    * @param \Drupal\tool\TypedData\InputDefinitionInterface $input

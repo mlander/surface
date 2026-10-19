@@ -41,6 +41,11 @@ the record of the rework that brought the module to the pattern.
   (`docs/declaring-a-resource.md#named-shapes`).
 - **Operation**: a way a resource is asked for, a static `#[Operation]`
   method returning an `OperationContext` whose `id` is the operation's.
+  It states how a call behaves, `readOnly:` and `destructive:`, and
+  idempotence, derived from whether it creates unless declared; a tool
+  carries them to the Tool API and both documents state them under
+  `x-surface.operation`
+  (`docs/decisions.md#an-operation-states-how-it-behaves`).
 - **Blueprint**: what a resource or structure declares its members
   into, handed to `defineInputs()` and `defineOutputs()`
   (`BlueprintInterface`); an alter gets the add-only

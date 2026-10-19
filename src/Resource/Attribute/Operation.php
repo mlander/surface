@@ -23,6 +23,14 @@ namespace Drupal\data_surface\Resource\Attribute;
  *     being the method's parameters plus the resource's open keys;
  *   - a route maps its parameters onto one operation;
  *   - the context's id is the operation id, nothing else.
+ *
+ * It also states how a call behaves, for a client deciding whether to
+ * ask before calling and whether a retry is safe: whether it changes
+ * nothing, whether it may destroy what is there, and whether the same
+ * call twice leaves what the first left. A tool carries them to the Tool
+ * API, and both schema documents state them at the top.
+ *
+ * Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
  */
 #[\Attribute(\Attribute::TARGET_METHOD)]
 final class Operation {
@@ -50,6 +58,21 @@ final class Operation {
    *   operations nor one of them matches the parent context's id. At most
    *   one operation of a class says so; two are refused when it is built.
    *   Meaningless for a resource asked on its own.
+   * @param bool $destructive
+   *   Whether a call may destroy what is there: delete it, or overwrite
+   *   it beyond what was sent. A client asks before it calls one. Not one
+   *   of the module's own operations is: an edit changes the keys it is
+   *   sent, and a key left out keeps its value.
+   * @param bool $readOnly
+   *   Whether a call changes nothing at all. A read tool is read only by
+   *   what it is, and needs no operation to say so.
+   * @param bool|null $idempotent
+   *   Whether the same call twice leaves what the first left, or NULL to
+   *   have it derived: an operation that does not create is idempotent,
+   *   the same document twice writing the same state, and one that
+   *   creates is not, the second call finding what the first made. A read
+   *   only operation is idempotent. Declared only where an operation
+   *   knows better, such as one that appends.
    */
   public function __construct(
     public readonly string $id,
@@ -57,6 +80,9 @@ final class Operation {
     public readonly ?string $of = NULL,
     public readonly ?string $permission = NULL,
     public readonly bool $default = FALSE,
+    public readonly bool $destructive = FALSE,
+    public readonly bool $readOnly = FALSE,
+    public readonly ?bool $idempotent = NULL,
   ) {}
 
 }

@@ -569,10 +569,10 @@ class CollectionTest extends DataSurfaceKernelTestBase {
       'larder' => 'main',
       OperationInputs::VALUES => ['racks' => [['spices' => 1], ['spices' => 41]]],
     ]);
-    // The Tool API holds an item to the definition it advertises before
-    // the pipeline is asked: the second item's spices.
+    // The pipeline holds each item to the child's rules, and names the
+    // second item's spices by its full path.
     $this->assertFalse($refused['success']);
-    $this->assertStringContainsString('(property racks) (item 1) (property spices)', $refused['message']);
+    $this->assertStringContainsString('racks.1.spices: This value should be between 0 and 40.', $refused['message']);
 
     // The read tool answers with the list.
     $read = $this->runTool(self::READ_TOOL, ['larder' => 'main']);

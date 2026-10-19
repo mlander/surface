@@ -44,6 +44,13 @@ final class DerivedOperation {
    * @param bool $default
    *   Whether this is the operation it is invoked through as a child
    *   when nothing else picks one.
+   * @param bool $destructive
+   *   Whether a call may destroy what is there, as on #[Operation].
+   * @param bool $readOnly
+   *   Whether a call changes nothing, as on #[Operation].
+   * @param bool|null $idempotent
+   *   Whether the same call twice leaves what the first left, or NULL to
+   *   have it derived, as on #[Operation].
    */
   public function __construct(
     public readonly string $id,
@@ -52,6 +59,9 @@ final class DerivedOperation {
     public readonly array $parameters = [],
     public readonly ?string $permission = NULL,
     public readonly bool $default = FALSE,
+    public readonly bool $destructive = FALSE,
+    public readonly bool $readOnly = FALSE,
+    public readonly ?bool $idempotent = NULL,
   ) {}
 
 }

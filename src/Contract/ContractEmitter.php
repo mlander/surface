@@ -230,11 +230,15 @@ final class ContractEmitter {
    *   on a list of allowed values, `x-surface.multiple`. Off by default:
    *   the contract itself names no widget, and a renderer that draws
    *   from it, as data_surface_react does, asks for them.
+   * @param array $operation
+   *   How the operation behaves (OperationDefinition::facts()), stated at
+   *   the top of the schema as `x-surface.operation`; empty for a data
+   *   surface asked for in no operation, which states none.
    *
    * @return \Drupal\data_surface\Contract\ServedContract
    *   The contract, and what it depends on.
    */
-  public function emit(DataSurfaceInterface $surface, array $values, string $resource_id, ?string $operation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE): ServedContract {
+  public function emit(DataSurfaceInterface $surface, array $values, string $resource_id, ?string $operation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE, array $operation = []): ServedContract {
     $cacheability = new CacheableMetadata();
     $stale = [];
     $standing = $values[DataSurfaceFormBuilderInterface::STANDING_KEY] ?? [];
@@ -251,7 +255,7 @@ final class ContractEmitter {
       'surface' => $resource_id,
       'situation' => $operation_id,
       'label' => $label === NULL ? NULL : (string) $label,
-      'schema' => ['$schema' => self::DIALECT] + $title + $schema,
+      'schema' => ['$schema' => self::DIALECT] + $title + $this->operation($operation, $schema),
       'values' => $shown,
       'stale' => $stale,
     ];
@@ -314,6 +318,8 @@ final class ContractEmitter {
    *   The operation's label, which titles the schema.
    * @param bool $widgets
    *   Whether to add the renderer's widget hints, as for emit().
+   * @param array $operation
+   *   How the operation behaves, as for emit().
    *
    * @return \Drupal\data_surface\Contract\ServedContract
    *   The document (`surface`, `situation`, `label`, `schema` and, when
@@ -321,7 +327,7 @@ final class ContractEmitter {
    *   on: the data surface and every option list read, never a stored
    *   value.
    */
-  public function emitFull(DataSurfaceInterface $surface, string $resource_id, ?string $operation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE): ServedContract {
+  public function emitFull(DataSurfaceInterface $surface, string $resource_id, ?string $operation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE, array $operation = []): ServedContract {
     $cacheability = new CacheableMetadata();
     $ignored = [];
     $subschemas = new Subschemas(TRUE, [...self::PRESENT, ...($widgets ? [] : self::WIDGET_HINTS)], $this->mixedIn($surface));
@@ -337,13 +343,41 @@ final class ContractEmitter {
       'surface' => $resource_id,
       'situation' => $operation_id,
       'label' => $label === NULL ? NULL : (string) $label,
-      'schema' => ['$schema' => self::DIALECT] + $title + $schema,
+      'schema' => ['$schema' => self::DIALECT] + $title + $this->operation($operation, $schema),
     ];
     $outputs = $this->outputs($surface, $cacheability);
     if ($outputs !== NULL) {
       $document['outputs'] = $outputs;
     }
     return new ServedContract($document, $cacheability);
+  }
+
+  /**
+   * States how the operation behaves, at the top of the schema.
+   *
+   * Under the top's `x-surface`, first, beside the title that is the
+   * operation's label: a client that reads the contract directly, with no
+   * tool listing, learns whether a call changes nothing, may destroy what
+   * is there, creates, and is safe to repeat. Whatever else the top frame
+   * says under `x-surface` follows it.
+   *
+   * Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
+   *
+   * @param array $operation
+   *   The facts, or empty for none.
+   * @param array $schema
+   *   The top frame.
+   *
+   * @return array
+   *   The top frame, `x-surface` first when there are facts.
+   */
+  protected function operation(array $operation, array $schema): array {
+    if ($operation === []) {
+      return $schema;
+    }
+    $extension = [self::EXTENSION => ['operation' => $operation] + ($schema[self::EXTENSION] ?? [])];
+    unset($schema[self::EXTENSION]);
+    return $extension + $schema;
   }
 
   /**
