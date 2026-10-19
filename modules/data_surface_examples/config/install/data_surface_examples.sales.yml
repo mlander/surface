@@ -1,0 +1,14 @@
+on_sale:
+  standard: true
+  student: true
+  speaker: false
+limits:
+  standard:
+    per_order: 4
+    waiting_list: false
+  student:
+    per_order: 1
+    waiting_list: true
+  speaker:
+    per_order: 1
+    waiting_list: false

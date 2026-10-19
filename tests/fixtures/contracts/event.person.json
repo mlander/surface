@@ -1,0 +1,77 @@
+{
+    "surface": "event.person",
+    "documents": [
+        {
+            "surface": "event.person",
+            "situation": null,
+            "label": null,
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "x-surface": {
+                    "version": 1,
+                    "ports": {
+                        "listed": {
+                            "type": "boolean",
+                            "required": false
+                        }
+                    }
+                },
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "title": "Name",
+                        "type": "string",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "email": {
+                        "title": "Email",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "email",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [
+                                "listed"
+                            ]
+                        }
+                    },
+                    "phone": {
+                        "$ref": "#/$defs/event.phone",
+                        "title": "Phone",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "patternMessage": "Write the number in digits, such as +1 555 0100."
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "name"
+                ],
+                "$defs": {
+                    "event.phone": {
+                        "title": "Phone",
+                        "description": "Digits, with spaces if you like, and a leading + for a country code.",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "pattern": "^\\+?[0-9 ]{7,20}$",
+                        "examples": [
+                            "+1 555 0100"
+                        ],
+                        "x-surface": {
+                            "patternMessage": "Write the number in digits, such as +1 555 0100."
+                        }
+                    }
+                }
+            }
+        }
+    ]
+}

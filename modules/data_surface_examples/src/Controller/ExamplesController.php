@@ -13,10 +13,17 @@ use Drupal\data_surface_examples\CodeLines;
 use Drupal\data_surface_examples\ConfigSchemaPanel;
 use Drupal\data_surface_examples\ExampleCalls;
 use Drupal\data_surface_examples\Form\RegistrationStep1ClassicForm;
+use Drupal\data_surface_examples\Resource\BulletinResource;
+use Drupal\data_surface_examples\Resource\DoorsResource;
+use Drupal\data_surface_examples\Resource\ProgramResource;
 use Drupal\data_surface_examples\Resource\RegistrationStep1Resource;
 use Drupal\data_surface_examples\Resource\RegistrationStep2Resource;
 use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
+use Drupal\data_surface_examples\Resource\TicketSalesResource;
+use Drupal\data_surface_examples\Shape\PhoneNumber;
 use Drupal\data_surface_examples\Storage\RegistrationStep1Storage;
+use Drupal\data_surface_examples\Structure\PersonStructure;
+use Drupal\data_surface_examples\Structure\ReviewStructure;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -84,6 +91,11 @@ final class ExamplesController extends ControllerBase {
   public function index(): array {
     $steps = [];
     foreach ($this->steps() as $number => $step) {
+      if ($number === 7) {
+        $steps['concepts'] = [
+          '#markup' => '<h2>' . $this->t('One small resource per concept') . '</h2><p>' . $this->t('Examples 7 to 11 leave the registration behind. Each is a small resource of its own for one or two concepts the registration does not need, and its page says first, above the contract, what it shows, where the docs explain it, and what its tool answers.') . '</p>',
+        ];
+      }
       $steps[$number] = [
         '#type' => 'container',
         'title' => [
@@ -244,6 +256,53 @@ final class ExamplesController extends ControllerBase {
         'title' => $this->t('every door'),
         'sentence' => $this->t('The same contract through every door. The decoupled page is the "In React" links above: the contract served as JSON and drawn by a React app. ECA and an AI agent, through the tool of example 5, are yours to show on your own site.'),
         'items' => [],
+      ],
+      7 => [
+        'title' => $this->t('a rule written as data'),
+        'sentence' => $this->t('A bulletin whose two rules read its frequency, each a condition and an effect declared beside the keys, which both schemas state as written: at most five items a week, and no send day for a monthly issue.'),
+        'items' => [
+          $this->route('data_surface_examples.step7'),
+          $this->react('event.bulletin'),
+          $this->lines(BulletinResource::class),
+        ],
+      ],
+      8 => [
+        'title' => $this->t('one part, used twice'),
+        'sentence' => $this->t('A person structure attached by two resources, its port wired to a different key by each; a phone shape asked for at two keys; a review mixed in; and a collection of volunteers.'),
+        'items' => [
+          $this->route('data_surface_examples.step8'),
+          $this->route('data_surface_examples.step8_desk'),
+          $this->react('event.press'),
+          $this->t('The person, the phone and the review: @lines lines of code.', ['@lines' => CodeLines::count($this->file(PersonStructure::class)) + CodeLines::count($this->file(PhoneNumber::class)) + CodeLines::count($this->file(ReviewStructure::class))]),
+        ],
+      ],
+      9 => [
+        'title' => $this->t('keys that come from the site'),
+        'sentence' => $this->t('A checkbox and a set of limits per ticket type the site has, listed by a provider; a type added is a key at the next request, and a locked one is kept as stored.'),
+        'items' => [
+          $this->route('data_surface_examples.step9'),
+          $this->react('event.sales'),
+          $this->lines(TicketSalesResource::class),
+        ],
+      ],
+      10 => [
+        'title' => $this->t('who may change what'),
+        'sentence' => $this->t('Fees locked for an account without a permission, stated ahead of time for that account, and once the program is published, settled only by what is stored; and a check that changes nothing, and says so.'),
+        'items' => [
+          $this->route('data_surface_examples.step10'),
+          $this->route('data_surface_examples.step10_check'),
+          $this->react('event.program'),
+          $this->lines(ProgramResource::class),
+        ],
+      ],
+      11 => [
+        'title' => $this->t('the stock widgets, and what nothing means'),
+        'sentence' => $this->t('A time, checkboxes, radios, a text area and rows of free values, each drawn from what its key declares; and a key left out, sent null, or sent a value.'),
+        'items' => [
+          $this->route('data_surface_examples.step11'),
+          $this->react('event.doors'),
+          $this->lines(DoorsResource::class),
+        ],
       ],
     ];
   }

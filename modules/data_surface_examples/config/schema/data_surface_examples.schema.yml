@@ -76,3 +76,172 @@ data_surface_examples.ticket.paid:
     currency:
       type: string
       label: 'Currency'
+
+# Example 7: the bulletin. The send day is kept while it does not apply.
+data_surface_examples.bulletin:
+  type: config_object
+  label: 'Bulletin settings, example 7'
+  mapping:
+    frequency:
+      type: string
+      label: 'Frequency'
+    send_day:
+      type: string
+      label: 'Send day'
+    items:
+      type: integer
+      label: 'Items per issue'
+
+# Example 8: a person, as two resources store it.
+data_surface_examples.person:
+  type: mapping
+  label: 'Person'
+  mapping:
+    name:
+      type: string
+      label: 'Name'
+    email:
+      type: email
+      label: 'Email'
+    phone:
+      type: string
+      label: 'Phone'
+
+# Example 8: the press page, the review's two keys flat beside its own.
+data_surface_examples.press:
+  type: config_object
+  label: 'Press page settings, example 8'
+  mapping:
+    public:
+      type: boolean
+      label: 'Show on the press page'
+    contact:
+      type: data_surface_examples.person
+      label: 'Press contact'
+    reviewed_on:
+      type: string
+      label: 'Reviewed on'
+    reviewed_by:
+      type: string
+      label: 'Reviewed by'
+
+# Example 8: the information desk, its volunteers a list of persons.
+data_surface_examples.desk:
+  type: config_object
+  label: 'Information desk settings, example 8'
+  mapping:
+    phone:
+      type: string
+      label: 'Desk phone'
+    in_program:
+      type: boolean
+      label: 'Listed in the printed program'
+    lead:
+      type: data_surface_examples.person
+      label: 'Desk lead'
+    volunteers:
+      type: sequence
+      label: 'Volunteers'
+      sequence:
+        type: data_surface_examples.person
+        label: 'Volunteer'
+
+# Example 9: the ticket types the site sells, which example 9's keys come from.
+data_surface_examples.ticket_types:
+  type: config_object
+  label: 'Ticket types'
+  mapping:
+    types:
+      type: sequence
+      label: 'Types'
+      sequence:
+        type: mapping
+        label: 'Ticket type'
+        mapping:
+          label:
+            type: label
+            label: 'Label'
+          locked:
+            type: boolean
+            label: 'Locked'
+
+# Example 9: ticket sales, one entry per ticket type in each map.
+data_surface_examples.sales:
+  type: config_object
+  label: 'Ticket sales settings, example 9'
+  mapping:
+    on_sale:
+      type: sequence
+      label: 'On sale'
+      sequence:
+        type: boolean
+        label: 'On sale'
+    limits:
+      type: sequence
+      label: 'Limits'
+      sequence:
+        type: mapping
+        label: 'Limit'
+        mapping:
+          per_order:
+            type: integer
+            label: 'Per order'
+          waiting_list:
+            type: boolean
+            label: 'Waiting list when sold out'
+
+# Example 10: the program, and its fees.
+data_surface_examples.program:
+  type: config_object
+  label: 'Program settings, example 10'
+  mapping:
+    headline:
+      type: string
+      label: 'Headline'
+    sessions:
+      type: integer
+      label: 'Sessions'
+    published:
+      type: boolean
+      label: 'Published'
+    fees:
+      type: mapping
+      label: 'Fees'
+      mapping:
+        standard:
+          type: float
+          label: 'Standard fee'
+        concession:
+          type: float
+          label: 'Concession fee'
+
+# Example 11: fully validatable, so only the notes may hold nothing, and
+# every other key is always held.
+data_surface_examples.doors:
+  type: config_object
+  label: 'Door settings, example 11'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    opens:
+      type: string
+      label: 'Doors open at'
+    days:
+      type: sequence
+      label: 'Days'
+      sequence:
+        type: string
+        label: 'Day'
+    badges:
+      type: string
+      label: 'Badges'
+    notes:
+      type: text
+      label: 'Notes for the door team'
+      nullable: true
+    greeters:
+      type: sequence
+      label: 'Greeters'
+      sequence:
+        type: string
+        label: 'Greeter'

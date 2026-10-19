@@ -90,12 +90,22 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
     // Example 4's closed rooms live in State, not in any example's
     // settings, and are opened again too.
     $this->container->get('state')->set('data_surface_examples_compliance.closed_rooms', ['riverside_east']);
+    // Examples 7 to 11 too, and the ticket types example 9 reads.
+    $this->config('data_surface_examples.bulletin')->set('frequency', 'monthly')->save();
+    $this->config('data_surface_examples.ticket_types')->set('types.vip', ['label' => 'VIP', 'locked' => FALSE])->save();
 
     $form_state = new FormState();
     $this->container->get('form_builder')->submitForm(ResetExamplesForm::class, $form_state);
     $this->assertSame([], $form_state->getErrors());
 
-    foreach (['data_surface_examples.registration_step1', $two, $three] as $name) {
+    $names = [
+      'data_surface_examples.registration_step1',
+      $two,
+      $three,
+      'data_surface_examples.bulletin',
+      'data_surface_examples.ticket_types',
+    ];
+    foreach ($names as $name) {
       $this->assertSame($this->shipped($name), $this->stored($name), $name);
     }
     $this->assertArrayNotHasKey('third_party_settings', $this->stored($three));

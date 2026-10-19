@@ -21,6 +21,14 @@ resource](second-resource.md) adds one key that depends on another, and
 [Concepts](concepts.md) lists every other idea with the question that
 makes you need it.
 
+To see them on a site, enable the examples module and visit
+`/surface-examples` (its README is
+`modules/data_surface_examples/README.md`). Examples 1 to 6 grow one
+registration form, one idea at a time; examples 7 to 11 are a small
+resource each, for a rule written as data, one part used twice, keys
+that come from the site, access and how an operation behaves, and the
+stock widgets with what a key left out, null or a value means.
+
 [The pattern](pattern.md) is the whole of what an author writes, and
 why; [How it fits](how-it-fits.md) follows one request through the
 build step. The rest of this page is the module around it.

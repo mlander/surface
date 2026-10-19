@@ -148,6 +148,9 @@ final class ConfigSchemaPanel {
     foreach ($full['properties'] ?? [] as $key => $property) {
       $key = (string) $key;
       $from_schema = $derived['properties'][$key] ?? NULL;
+      // A member a structure mixed in is `true` here: its def, referred
+      // to from the top's allOf, states it.
+      $property = is_array($property) ? $property : $this->member($full, $key);
       $rows[] = [
         'data' => [
           ['data' => ['#markup' => '<code>' . htmlspecialchars($key) . '</code>']],
@@ -170,6 +173,31 @@ final class ConfigSchemaPanel {
       'data-today-keyword' => 'required',
     ];
     return $rows;
+  }
+
+  /**
+   * Finds a mixed-in member's schema in the def that states it.
+   *
+   * @param array $full
+   *   The full schema the resource emits.
+   * @param string $key
+   *   The member's key.
+   *
+   * @return array
+   *   The member's schema, with the reference to the def it is stated in;
+   *   empty when no def mixed in states it.
+   */
+  protected function member(array $full, string $key): array {
+    foreach ($full['allOf'] ?? [] as $branch) {
+      if (!is_array($branch) || !isset($branch['$ref'])) {
+        continue;
+      }
+      $def = SchemaResolver::resolve($branch, $full);
+      if (is_array($def['properties'][$key] ?? NULL)) {
+        return $def['properties'][$key] + ['$ref' => $branch['$ref']];
+      }
+    }
+    return [];
   }
 
   /**

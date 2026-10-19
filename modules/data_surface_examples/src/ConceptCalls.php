@@ -1,0 +1,160 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\data_surface_examples;
+
+/**
+ * The tool calls examples 7 to 11 show, written down once.
+ *
+ * None writes anything: every call is a dry run, which accepts, validates
+ * and prepares the values, answers with what would be stored and stops,
+ * except a call to an operation that changes nothing, which stops there
+ * by itself and is sent as it would be for real. So each
+ * example's panel can make its calls whenever it is drawn and show what
+ * the tool answered, ExamplesConceptsToolTest makes them on the shipped
+ * settings and holds the README to their answers, and the README and the
+ * panels spell them as Drush commands.
+ *
+ * Each call names the tool by its resource and operation, and sends every
+ * key its resource requires, which the Tool API asks for on every call.
+ */
+final class ConceptCalls {
+
+  /**
+   * The calls, by resource id and then by name.
+   *
+   * Each says what it shows, the operation it calls (configure unless it
+   * says), the values it sends, and whether it is a dry run (unless it
+   * says).
+   */
+  public const CALLS = [
+    'event.bulletin' => [
+      'monthly_with_day' => [
+        'label' => 'A send day for a monthly bulletin',
+        'values' => ['frequency' => 'monthly', 'send_day' => 'monday'],
+      ],
+      'weekly_items' => [
+        'label' => 'Eight items in a weekly issue',
+        'values' => ['frequency' => 'weekly', 'items' => 8],
+      ],
+      'monthly_items' => [
+        'label' => 'Eight items in a monthly issue, and no send day',
+        'values' => ['frequency' => 'monthly', 'items' => 8],
+      ],
+    ],
+    'event.press' => [
+      'listed_without_email' => [
+        'label' => 'A public contact with the email cleared',
+        'values' => ['public' => TRUE, 'contact' => ['name' => 'Robin Lee', 'email' => NULL]],
+      ],
+      'unlisted_without_email' => [
+        'label' => 'The same contact, not shown on the press page',
+        'values' => ['public' => FALSE, 'contact' => ['name' => 'Robin Lee', 'email' => NULL]],
+      ],
+      'reviewed_by_nobody' => [
+        'label' => 'A review date with no reviewer',
+        'values' => ['reviewed_on' => '2026-10-19', 'reviewed_by' => NULL],
+      ],
+    ],
+    'event.desk' => [
+      'phone_with_dashes' => [
+        'label' => 'A desk phone the shape refuses',
+        'values' => ['phone' => '555-0199'],
+      ],
+    ],
+    'event.sales' => [
+      'speaker_on_sale' => [
+        'label' => 'Speaker tickets put on sale',
+        'values' => ['on_sale' => ['standard' => TRUE, 'speaker' => TRUE]],
+      ],
+    ],
+    'event.program' => [
+      'check' => [
+        'label' => 'A program checked',
+        'operation' => 'check',
+        'values' => ['headline' => 'Three days of talks', 'sessions' => 12],
+        'dry_run' => FALSE,
+      ],
+      'check_too_many' => [
+        'label' => 'A program with too many sessions, checked',
+        'operation' => 'check',
+        'values' => ['headline' => 'Three days of talks', 'sessions' => 40],
+        'dry_run' => FALSE,
+      ],
+    ],
+    'event.doors' => [
+      'left_out' => [
+        'label' => 'The notes left out: kept',
+        'values' => ['opens' => '19:00', 'days' => ['fri']],
+      ],
+      'null' => [
+        'label' => 'The notes sent null: cleared',
+        'values' => ['opens' => '19:00', 'days' => ['fri'], 'notes' => NULL],
+      ],
+      'value' => [
+        'label' => 'The notes sent a value: replaced',
+        'values' => ['opens' => '19:00', 'days' => ['fri'], 'notes' => 'Doors close at ten.'],
+      ],
+      'always_held' => [
+        'label' => 'The badges sent null: refused, since they are always held',
+        'values' => ['opens' => '19:00', 'days' => ['fri'], 'badges' => NULL],
+      ],
+    ],
+  ];
+
+  /**
+   * Gets the calls of one resource.
+   *
+   * @param string $resource
+   *   The resource id.
+   *
+   * @return array<string, array{label: string, operation?: string, values: array, dry_run?: bool}>
+   *   Its calls, by name; none for a resource with no calls.
+   */
+  public static function of(string $resource): array {
+    return self::CALLS[$resource] ?? [];
+  }
+
+  /**
+   * Names the tool a call is made to.
+   *
+   * @param string $resource
+   *   The resource id.
+   * @param string $call
+   *   The call's name.
+   *
+   * @return string
+   *   The tool id.
+   */
+  public static function tool(string $resource, string $call): string {
+    return 'data_surface:' . $resource . ':' . (self::CALLS[$resource][$call]['operation'] ?? 'configure');
+  }
+
+  /**
+   * Spells one call as the Tool API's Drush command.
+   *
+   * Run as user 1, because tool:run runs as anonymous unless told
+   * otherwise, and every operation here asks for "administer site
+   * configuration". The dry run is a second input, which tool:run reads
+   * as name=value and decodes as JSON, so `true` is a boolean.
+   *
+   * @param string $resource
+   *   The resource id.
+   * @param string $call
+   *   The call's name.
+   *
+   * @return string
+   *   The command.
+   */
+  public static function drush(string $resource, string $call): string {
+    $input = json_encode(['values' => self::CALLS[$resource][$call]['values']], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
+    return sprintf(
+      "drush tool:run %s --uid=1 --input='%s'%s",
+      self::tool($resource, $call),
+      str_replace("'", "'\\''", (string) $input),
+      (self::CALLS[$resource][$call]['dry_run'] ?? TRUE) ? ' --input=dry_run=true' : '',
+    );
+  }
+
+}

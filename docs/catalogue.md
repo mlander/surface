@@ -33,6 +33,16 @@ one thing whole, with a single entity or with every identity key.
 | [`block.data_surface_demo`](#blockdata_surface_demo) | `DemoBlockStructure` | none | none |
 | [`block.data_surface_demo.presentation.grid`](#blockdata_surface_demopresentationgrid) | `GridPresentationStructure` | none | none |
 | [`block.data_surface_demo.presentation.list`](#blockdata_surface_demopresentationlist) | `ListPresentationStructure` | none | none |
+| [`event.bulletin`](#eventbulletin) | `BulletinResource` | none | `configure` |
+| [`event.desk`](#eventdesk) | `InfoDeskResource` | none | `configure` |
+| [`event.doors`](#eventdoors) | `DoorsResource` | none | `configure` |
+| [`event.fees`](#eventfees) | `FeesStructure` | none | none |
+| [`event.person`](#eventperson) | `PersonStructure` | none | none |
+| [`event.press`](#eventpress) | `PressResource` | none | `configure` |
+| [`event.program`](#eventprogram) | `ProgramResource` | none | `configure`, `check` |
+| [`event.review`](#eventreview) | `ReviewStructure` | none | none |
+| [`event.sales`](#eventsales) | `TicketSalesResource` | none | `configure` |
+| [`event.ticket_limit`](#eventticket_limit) | `TicketLimitStructure` | none | none |
 | [`field.instance`](#fieldinstance) | `FieldInstanceResource` | `entity_type_id`, `bundle`, `field_name`, `field_type` | `add`, `reuse`, `edit` |
 | [`field.settings.address`](#fieldsettingsaddress) | `AddressFieldSettingsResource` | none | none |
 | [`field.storage`](#fieldstorage) | `FieldStorageResource` | `field_type` | `add`, `edit` |
@@ -74,6 +84,121 @@ one thing whole, with a single entity or with every identity key.
 ## block.data_surface_demo.presentation.list
 
 `Drupal\data_surface_demo\Structure\ListPresentationStructure`, in `data_surface_demo`.
+
+- Kind: structure
+- Identity: none
+- Storage: none; its host or its parent stores it
+- Access: the operation's permission alone
+
+## event.bulletin
+
+`Drupal\data_surface_examples\Resource\BulletinResource`, in `data_surface_examples`.
+
+- Kind: resource
+- Identity: none
+- Storage: `Drupal\data_surface_examples\Storage\BulletinStorage`
+- Access: the operation's permission alone
+
+| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure the bulletin | nothing | no | `administer site configuration` | yes | yes | `BulletinResource::configure()` (`data_surface_examples`) |
+
+## event.desk
+
+`Drupal\data_surface_examples\Resource\InfoDeskResource`, in `data_surface_examples`.
+
+- Kind: resource
+- Identity: none
+- Storage: `Drupal\data_surface_examples\Storage\InfoDeskStorage`
+- Access: the operation's permission alone
+
+| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure the information desk | nothing | no | `administer site configuration` | yes | yes | `InfoDeskResource::configure()` (`data_surface_examples`) |
+
+## event.doors
+
+`Drupal\data_surface_examples\Resource\DoorsResource`, in `data_surface_examples`.
+
+- Kind: resource
+- Identity: none
+- Storage: `Drupal\data_surface_examples\Storage\DoorsStorage`
+- Access: the operation's permission alone
+
+| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure the doors | nothing | no | `administer site configuration` | yes | yes | `DoorsResource::configure()` (`data_surface_examples`) |
+
+## event.fees
+
+`Drupal\data_surface_examples\Structure\FeesStructure`, in `data_surface_examples`.
+
+- Kind: structure
+- Identity: none
+- Storage: none; its host or its parent stores it
+- Access: `Drupal\data_surface_examples\Access\FeesAccess`
+
+## event.person
+
+`Drupal\data_surface_examples\Structure\PersonStructure`, in `data_surface_examples`.
+
+- Kind: structure
+- Identity: none
+- Storage: none; its host or its parent stores it
+- Access: the operation's permission alone
+
+## event.press
+
+`Drupal\data_surface_examples\Resource\PressResource`, in `data_surface_examples`.
+
+- Kind: resource
+- Identity: none
+- Storage: `Drupal\data_surface_examples\Storage\PressStorage`
+- Access: the operation's permission alone
+
+| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure the press page | nothing | no | `administer site configuration` | yes | yes | `PressResource::configure()` (`data_surface_examples`) |
+
+## event.program
+
+`Drupal\data_surface_examples\Resource\ProgramResource`, in `data_surface_examples`.
+
+- Kind: resource
+- Identity: none
+- Storage: `Drupal\data_surface_examples\Storage\ProgramStorage`
+- Access: the operation's permission alone
+
+| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure the program | nothing | no | `administer site configuration` | yes | yes | `ProgramResource::configure()` (`data_surface_examples`) |
+| `check` | Check a program | nothing | no | `administer site configuration` | yes | no: what it needs leaves room for a new one | `ProgramResource::check()` (`data_surface_examples`) |
+
+## event.review
+
+`Drupal\data_surface_examples\Structure\ReviewStructure`, in `data_surface_examples`.
+
+- Kind: structure
+- Identity: none
+- Storage: none; its host or its parent stores it
+- Access: the operation's permission alone
+
+## event.sales
+
+`Drupal\data_surface_examples\Resource\TicketSalesResource`, in `data_surface_examples`.
+
+- Kind: resource
+- Identity: none
+- Storage: `Drupal\data_surface_examples\Storage\TicketSalesStorage`
+- Access: the operation's permission alone
+
+| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure ticket sales | nothing | no | `administer site configuration` | yes | yes | `TicketSalesResource::configure()` (`data_surface_examples`) |
+
+## event.ticket_limit
+
+`Drupal\data_surface_examples\Structure\TicketLimitStructure`, in `data_surface_examples`.
 
 - Kind: structure
 - Identity: none

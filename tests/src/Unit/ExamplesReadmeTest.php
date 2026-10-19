@@ -66,6 +66,18 @@ class ExamplesReadmeTest extends UnitTestCase {
     $this->assertContains('src/Resource/RegistrationStep2Resource.php', $quoted);
     $this->assertContains('src/Resource/RegistrationStep3Resource.php', $quoted);
     $this->assertContains('../data_surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php', $quoted);
+    $concepts = [
+      'Resource/BulletinResource',
+      'Structure/PersonStructure',
+      'Shape/PhoneNumber',
+      'Keys/TicketTypes',
+      'Access/FeesAccess',
+      'Resource/ProgramResource',
+      'Resource/DoorsResource',
+    ];
+    foreach ($concepts as $class) {
+      $this->assertContains('src/' . $class . '.php', $quoted);
+    }
     foreach ($blocks as [, $path, $code]) {
       $file = self::MODULE . '/' . $path;
       $this->assertFileExists($file);

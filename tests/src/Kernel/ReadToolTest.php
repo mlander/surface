@@ -44,6 +44,12 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
    * The read tools these modules derive, sorted.
    */
   protected const READ_TOOLS = [
+    'data_surface:event.bulletin:configure:read',
+    'data_surface:event.desk:configure:read',
+    'data_surface:event.doors:configure:read',
+    'data_surface:event.press:configure:read',
+    'data_surface:event.program:configure:read',
+    'data_surface:event.sales:configure:read',
     'data_surface:field.instance:edit:read',
     'data_surface:field.storage:edit:read',
     'data_surface:node.type:edit:read',

@@ -77,6 +77,16 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     $committed = $baselines->read($baselines->directory('data_surface'));
     $this->assertSame(array_keys($committed), array_keys($current), 'Every declaration is pinned, and every baseline still declared.');
     $this->assertSame([
+      'event.bulletin',
+      'event.desk',
+      'event.doors',
+      'event.fees',
+      'event.person',
+      'event.press',
+      'event.program',
+      'event.review',
+      'event.sales',
+      'event.ticket_limit',
       'first.newsletter',
       'first.store',
       'registration.compliance',

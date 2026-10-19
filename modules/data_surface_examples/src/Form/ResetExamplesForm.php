@@ -30,9 +30,12 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 final class ResetExamplesForm extends ConfirmFormBase {
 
   /**
-   * The prefix every example's config object shares.
+   * The prefix every config object the examples ship shares.
+   *
+   * Every example's settings, and the ticket types example 9 reads its
+   * keys from.
    */
-  public const PREFIX = 'data_surface_examples.registration_step';
+  public const PREFIX = 'data_surface_examples.';
 
   /**
    * The State keys an example reads, cleared whether or not it is on.
@@ -108,9 +111,10 @@ final class ResetExamplesForm extends ConfirmFormBase {
     foreach ($shipped->listAll(self::PREFIX) as $name) {
       $config = $this->configs->getEditable($name);
       // The installer's own bookkeeping stays: it says where the object
-      // came from, which a reset does not change.
-      $core = $config->get('_core');
-      $config->setData((array) $shipped->read($name) + ($core === NULL ? [] : ['_core' => $core]))->save();
+      // came from, which a reset does not change; so does the language of
+      // a translatable value, which the storage keeps and no file says.
+      $kept = array_intersect_key($config->getRawData(), ['_core' => TRUE, 'langcode' => TRUE]);
+      $config->setData((array) $shipped->read($name) + $kept)->save();
     }
     $this->state->deleteMultiple(self::STATE);
     $this->messenger()->addStatus($this->t('The examples are back to the settings the module ships with.'));

@@ -82,6 +82,16 @@ class ResourceCatalogueTest extends DataSurfaceKernelTestBase {
       'block.data_surface_demo',
       'block.data_surface_demo.presentation.grid',
       'block.data_surface_demo.presentation.list',
+      'event.bulletin',
+      'event.desk',
+      'event.doors',
+      'event.fees',
+      'event.person',
+      'event.press',
+      'event.program',
+      'event.review',
+      'event.sales',
+      'event.ticket_limit',
       'field.instance',
       'field.settings.address',
       'field.storage',
@@ -191,6 +201,8 @@ class ResourceCatalogueTest extends DataSurfaceKernelTestBase {
     foreach (['registration.step1', 'registration.step2', 'registration.step3'] as $surface) {
       $this->assertSame(['configure' => TRUE], $reads($surface), $surface);
     }
+    // An operation that changes nothing has nothing to read first.
+    $this->assertSame(['configure' => TRUE, 'check' => FALSE], $reads('event.program'));
   }
 
   /**

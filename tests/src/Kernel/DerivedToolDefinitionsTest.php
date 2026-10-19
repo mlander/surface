@@ -191,6 +191,19 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
 
     $after = $this->derivedIds();
     $this->assertSame([
+      'data_surface:event.bulletin:configure',
+      'data_surface:event.bulletin:configure:read',
+      'data_surface:event.desk:configure',
+      'data_surface:event.desk:configure:read',
+      'data_surface:event.doors:configure',
+      'data_surface:event.doors:configure:read',
+      'data_surface:event.press:configure',
+      'data_surface:event.press:configure:read',
+      'data_surface:event.program:check',
+      'data_surface:event.program:configure',
+      'data_surface:event.program:configure:read',
+      'data_surface:event.sales:configure',
+      'data_surface:event.sales:configure:read',
       'data_surface:registration.step1:configure',
       'data_surface:registration.step1:configure:read',
       'data_surface:registration.step2:configure',

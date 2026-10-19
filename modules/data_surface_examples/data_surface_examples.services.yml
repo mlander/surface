@@ -14,4 +14,9 @@ services:
   # contract panel, and below it what config schema says today.
   data_surface_examples.panels:
     class: Drupal\data_surface_examples\ExamplePanels
-    arguments: ['@data_surface_tool.contract_panel', '@data_surface_examples.config_schema_panel', '@data_surface.contract_emitter', '@data_surface.resource_registry', '@data_surface.resources']
+    arguments: ['@data_surface_tool.contract_panel', '@data_surface_examples.config_schema_panel', '@data_surface.contract_emitter', '@data_surface.resource_registry', '@data_surface.resources', '@data_surface_examples.concept_panel']
+  # What examples 7 to 11 each show, the part of their documents it is
+  # about, and their tool calls, each a dry run.
+  data_surface_examples.concept_panel:
+    class: Drupal\data_surface_examples\ConceptPanel
+    arguments: ['@data_surface.contract_emitter', '@data_surface.resource_registry', '@data_surface.resources', '@plugin.manager.tool', '@account_switcher', '@class_resolver', '@string_translation']

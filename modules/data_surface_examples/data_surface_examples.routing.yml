@@ -11,6 +11,10 @@
 # controller only to put what config schema says under the form without
 # adding a line to it. Examples 4 and 5 change no resource, so their pages
 # say what to do and where to look.
+#
+# Examples 7 to 11 leave the registration behind: each is one small resource
+# of its own for one or two later concepts, served the same way, with a
+# third panel saying what the page shows and where the docs explain it.
 
 data_surface_examples.index:
   path: '/surface-examples'
@@ -84,3 +88,80 @@ data_surface_examples.step5:
     _title: 'Example 5: same contract, no form'
   requirements:
     _permission: 'administer site configuration'
+
+data_surface_examples.step7:
+  path: '/surface-examples/7'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Example 7: a rule written as data'
+    _data_surface_resource: 'Drupal\data_surface_examples\Resource\BulletinResource'
+    _data_surface_operation: 'configure'
+    _data_surface_panel: 'data_surface_examples.panels'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
+data_surface_examples.step8:
+  path: '/surface-examples/8'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Example 8: one part, used twice'
+    _data_surface_resource: 'Drupal\data_surface_examples\Resource\PressResource'
+    _data_surface_operation: 'configure'
+    _data_surface_panel: 'data_surface_examples.panels'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
+data_surface_examples.step8_desk:
+  path: '/surface-examples/8/desk'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Example 8, the information desk'
+    _data_surface_resource: 'Drupal\data_surface_examples\Resource\InfoDeskResource'
+    _data_surface_operation: 'configure'
+    _data_surface_panel: 'data_surface_examples.panels'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
+data_surface_examples.step9:
+  path: '/surface-examples/9'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Example 9: keys that come from the site'
+    _data_surface_resource: 'Drupal\data_surface_examples\Resource\TicketSalesResource'
+    _data_surface_operation: 'configure'
+    _data_surface_panel: 'data_surface_examples.panels'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
+data_surface_examples.step10:
+  path: '/surface-examples/10'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Example 10: who may change what'
+    _data_surface_resource: 'Drupal\data_surface_examples\Resource\ProgramResource'
+    _data_surface_operation: 'configure'
+    _data_surface_panel: 'data_surface_examples.panels'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
+data_surface_examples.step10_check:
+  path: '/surface-examples/10/check'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Example 10, a check that changes nothing'
+    _data_surface_resource: 'Drupal\data_surface_examples\Resource\ProgramResource'
+    _data_surface_operation: 'check'
+    _data_surface_panel: 'data_surface_examples.panels'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
+data_surface_examples.step11:
+  path: '/surface-examples/11'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Example 11: the stock widgets, and what nothing means'
+    _data_surface_resource: 'Drupal\data_surface_examples\Resource\DoorsResource'
+    _data_surface_operation: 'configure'
+    _data_surface_panel: 'data_surface_examples.panels'
+  requirements:
+    _data_surface_operation_access: 'TRUE'

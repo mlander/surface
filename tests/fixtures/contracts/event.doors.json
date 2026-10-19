@@ -1,0 +1,128 @@
+{
+    "surface": "event.doors",
+    "documents": [
+        {
+            "surface": "event.doors",
+            "situation": "configure",
+            "label": "Configure the doors",
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": "Configure the doors",
+                "x-surface": {
+                    "operation": {
+                        "id": "configure",
+                        "label": "Configure the doors",
+                        "creates": false,
+                        "readOnly": false,
+                        "destructive": false,
+                        "idempotent": true
+                    },
+                    "version": 1
+                },
+                "type": "object",
+                "properties": {
+                    "opens": {
+                        "title": "Doors open at",
+                        "description": "HH:MM, on a 24-hour clock.",
+                        "type": "string",
+                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                        "default": "18:30",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "patternMessage": "Write the time as HH:MM, such as 18:30."
+                        }
+                    },
+                    "days": {
+                        "title": "Days",
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "fri",
+                                    "title": "Friday"
+                                },
+                                {
+                                    "const": "sat",
+                                    "title": "Saturday"
+                                },
+                                {
+                                    "const": "sun",
+                                    "title": "Sunday"
+                                }
+                            ],
+                            "x-surface": {
+                                "locked": false,
+                                "dependsOn": []
+                            }
+                        },
+                        "default": [
+                            "fri",
+                            "sat"
+                        ],
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "badges": {
+                        "title": "Badges",
+                        "type": "string",
+                        "oneOf": [
+                            {
+                                "const": "printed",
+                                "title": "Printed at the door"
+                            },
+                            {
+                                "const": "digital",
+                                "title": "On the phone"
+                            },
+                            {
+                                "const": "none",
+                                "title": "No badges"
+                            }
+                        ],
+                        "default": "printed",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "notes": {
+                        "title": "Notes for the door team",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "greeters": {
+                        "title": "Greeters",
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "x-surface": {
+                                "locked": false,
+                                "dependsOn": []
+                            }
+                        },
+                        "default": [],
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "opens",
+                    "days"
+                ]
+            }
+        }
+    ]
+}

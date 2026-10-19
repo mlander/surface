@@ -1,0 +1,46 @@
+{
+    "surface": "event.ticket_limit",
+    "documents": [
+        {
+            "surface": "event.ticket_limit",
+            "situation": null,
+            "label": null,
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "x-surface": {
+                    "version": 1
+                },
+                "type": "object",
+                "properties": {
+                    "per_order": {
+                        "title": "Per order",
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 1,
+                        "maximum": 10,
+                        "default": 4,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "waiting_list": {
+                        "title": "Waiting list when sold out",
+                        "type": [
+                            "boolean",
+                            "null"
+                        ],
+                        "default": false,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    }
+                },
+                "additionalProperties": false
+            }
+        }
+    ]
+}

@@ -1,0 +1,12 @@
+# The ticket types the site sells: example 9's keys from the site. A type
+# added here is a key of example 9 at the next request.
+types:
+  standard:
+    label: Standard
+    locked: false
+  student:
+    label: Student
+    locked: false
+  speaker:
+    label: Speaker
+    locked: true

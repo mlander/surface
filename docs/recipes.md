@@ -8,7 +8,10 @@ hours (`resource_test.opening_hours`, in
 A test fails if this page and the class differ, and another holds each
 key to what this page says it does. Read
 [Your first resource](first-resource.md) first: a recipe is a few more
-lines in the same method.
+lines in the same method. To try them on a page, example 11 of the
+examples module, `/surface-examples/11`, holds a time, checkboxes,
+radios, a text area and a list of free strings, and shows what a key
+left out, sent null or sent a value does.
 
 This is a page of its own, linked from the first resource and from
 [Concepts](concepts.md), because neither can carry it: the first page is

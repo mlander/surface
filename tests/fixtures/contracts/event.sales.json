@@ -1,0 +1,205 @@
+{
+    "surface": "event.sales",
+    "documents": [
+        {
+            "surface": "event.sales",
+            "situation": "configure",
+            "label": "Configure ticket sales",
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": "Configure ticket sales",
+                "x-surface": {
+                    "operation": {
+                        "id": "configure",
+                        "label": "Configure ticket sales",
+                        "creates": false,
+                        "readOnly": false,
+                        "destructive": false,
+                        "idempotent": true
+                    },
+                    "version": 1
+                },
+                "type": "object",
+                "properties": {
+                    "on_sale": {
+                        "title": "On sale",
+                        "description": "Which ticket types can be bought.",
+                        "allOf": [
+                            {
+                                "$ref": "#/$defs/event.sales.on_sale"
+                            },
+                            {
+                                "properties": {
+                                    "speaker": {
+                                        "default": false,
+                                        "readOnly": true,
+                                        "x-surface": {
+                                            "locked": true,
+                                            "dependsOn": []
+                                        }
+                                    }
+                                }
+                            }
+                        ],
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "limits": {
+                        "title": "Limits",
+                        "allOf": [
+                            {
+                                "$ref": "#/$defs/event.sales.limits"
+                            },
+                            {
+                                "properties": {
+                                    "speaker": {
+                                        "allOf": [
+                                            {
+                                                "$ref": "#/$defs/event.ticket_limit"
+                                            },
+                                            {
+                                                "properties": {
+                                                    "per_order": {
+                                                        "readOnly": true,
+                                                        "x-surface": {
+                                                            "locked": true,
+                                                            "dependsOn": []
+                                                        }
+                                                    },
+                                                    "waiting_list": {
+                                                        "readOnly": true,
+                                                        "x-surface": {
+                                                            "locked": true,
+                                                            "dependsOn": []
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        ],
+                                        "readOnly": true,
+                                        "x-surface": {
+                                            "locked": true,
+                                            "dependsOn": []
+                                        }
+                                    }
+                                }
+                            }
+                        ],
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "$defs": {
+                    "event.sales.on_sale": {
+                        "type": "object",
+                        "properties": {
+                            "standard": {
+                                "title": "Standard",
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ],
+                                "default": false,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "student": {
+                                "title": "Student",
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ],
+                                "default": false,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "speaker": {
+                                "title": "Speaker",
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ],
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "event.ticket_limit": {
+                        "type": "object",
+                        "properties": {
+                            "per_order": {
+                                "title": "Per order",
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ],
+                                "minimum": 1,
+                                "maximum": 10,
+                                "default": 4,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "waiting_list": {
+                                "title": "Waiting list when sold out",
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ],
+                                "default": false,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "event.sales.limits": {
+                        "type": "object",
+                        "properties": {
+                            "standard": {
+                                "title": "Standard",
+                                "$ref": "#/$defs/event.ticket_limit",
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "student": {
+                                "title": "Student",
+                                "$ref": "#/$defs/event.ticket_limit",
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "speaker": {
+                                "title": "Speaker",
+                                "$ref": "#/$defs/event.ticket_limit",
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            }
+                        },
+                        "additionalProperties": false
+                    }
+                }
+            }
+        }
+    ]
+}

@@ -9,6 +9,11 @@ Schema a caller with no form is handed. Below that, collapsed too, is
 the before picture: what the same caller could be told today, from
 config schema alone.
 
+Examples 7 to 11 leave the registration behind: each is a small resource
+of its own for one or two later concepts, a rule written as data, a part
+used twice, keys that come from the site, access, and the stock widgets
+([below](#one-small-resource-per-concept)).
+
 ```bash
 drush pm:install data_surface_examples
 ```
@@ -17,12 +22,14 @@ Then visit `/surface-examples` as an administrator. Every page asks for
 "administer site configuration". Nothing else is needed: the venues and
 rooms are fixed lists inside the module, and each example keeps its
 settings in a config object of its own
-(`data_surface_examples.registration_step1` to `_step3`), so the examples
-never write over each other.
+(`data_surface_examples.registration_step1` to `_step3`, then
+`data_surface_examples.bulletin`, `.press`, `.desk`, `.sales`,
+`.program` and `.doors`), so the examples never write over each other.
 
 To take the examples again from the start, follow **Reset to defaults**
-on the landing page (`/surface-examples/reset`). It puts all three
-config objects back to the files the module ships in `config/install`,
+on the landing page (`/surface-examples/reset`). It puts every config
+object back to the files the module ships in `config/install`, the
+ticket types example 9 reads among them,
 including anything another module stored on them, such as the event
 licence example 4's module adds under example 3, and it opens again
 every room example 4 lets a site close.
@@ -805,11 +812,657 @@ above, [In React](#in-react): the contract served as JSON and drawn by a
 React app. ECA and an AI agent, through the tool of example 5, are yours
 to show on your own site.
 
+## One small resource per concept
+
+Examples 7 to 11 leave the registration behind. Each is a small
+resource of its own, for one or two concepts the registration form does
+not need, served the way examples 1 to 3 are: the generic operation form,
+the contract panel and what config schema can say. Above them, open, a
+third panel says what the example shows, where the docs explain it, the
+part of its documents the concept is about, and what its tool answers.
+Those calls are written down once, in `ConceptCalls`; none of them writes
+anything, so the panel makes them each time it is drawn, and
+`ExamplesConceptsToolTest` makes them on the shipped settings and holds
+this page to their answers.
+
+## Example 7: a rule written as data
+
+`/surface-examples/7`
+
+The event's bulletin goes out weekly or monthly. Two rules read the
+frequency, and each is a condition and an effect, declared beside the
+keys with `narrow()->when()`: a weekly issue holds at most five items,
+and a monthly bulletin has no send day. The send day is declared
+required, as it is wherever it applies; the rule says where it does not
+([Declaring a rule](../../docs/refinement.md#declaring-a-rule),
+[When a key does not apply](../../docs/refinement.md#when-a-key-does-not-apply)).
+
+<!-- code: src/Resource/BulletinResource.php -->
+
+```php
+#[Resource('event.bulletin', storage: BulletinStorage::class)]
+final class BulletinResource implements ResourceInterface {
+
+  /**
+   * Configures the bulletin, whose settings always exist.
+   */
+  #[Operation('configure', label: new TranslatableMarkup('Configure the bulletin'), permission: 'administer site configuration')]
+  public static function configure(): OperationContext {
+    return new OperationContext('configure');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('frequency', 'string', t('Frequency'), default: 'weekly')
+      ->setRequired(TRUE)
+      ->addConstraint('LabeledChoice', [
+        'choices' => ['weekly' => t('Weekly'), 'monthly' => t('Monthly')],
+      ]);
+    $inputs->add('send_day', 'string', t('Send day'), default: 'monday')
+      ->setRequired(TRUE)
+      ->addConstraint('LabeledChoice', [
+        'choices' => ['monday' => t('Monday'), 'wednesday' => t('Wednesday'), 'friday' => t('Friday')],
+      ]);
+    $inputs->add('items', 'integer', t('Items per issue'), default: 5)
+      ->addConstraint('Range', ['min' => 1, 'max' => 20]);
+
+    $inputs->narrow('send_day')
+      ->when(Condition::equals('frequency', 'monthly'))
+      ->doesNotApply();
+    $inputs->narrow('items')
+      ->when(Condition::equals('frequency', 'weekly'))
+      ->constrain('Range', ['max' => 5])
+      ->describe(t('Up to 5 in a weekly issue.'));
+  }
+
+}
+```
+
+Nothing is run to learn either rule. The full schema states each as
+written, an `if`/`then` marked `x-surface.declared`, and the send day as
+`false` under the monthly conditional and `required` under the other:
+the panel shows the rules beside those three conditionals. Choose
+Monthly and the send day is gone from the form, over AJAX; the stored
+Friday is kept for the day the bulletin goes weekly again, which the
+third call's `prepared` shows. Choose Weekly and the items stop at five,
+said under the field: "Up to 5 in a weekly issue."
+
+```bash
+drush tool:run data_surface:event.bulletin:configure --uid=1 --input='{"values":{"frequency":"monthly","send_day":"monday"}}' --input=dry_run=true
+
+drush tool:run data_surface:event.bulletin:configure --uid=1 --input='{"values":{"frequency":"weekly","items":8}}' --input=dry_run=true
+
+drush tool:run data_surface:event.bulletin:configure --uid=1 --input='{"values":{"frequency":"monthly","items":8}}' --input=dry_run=true
+```
+
+```
+1. A send day for a monthly bulletin
+Failed: The values were refused: send_day: Send day does not apply when Frequency is Monthly.
+
+2. Eight items in a weekly issue
+Failed: The values were refused: items: This value should be between 1 and 5 when Frequency is Weekly.
+
+3. Eight items in a monthly issue, and no send day
+Success: Dry run of Configure the bulletin: the values were accepted and prepared, and nothing was written.
+  prepared: {"frequency":"monthly","send_day":"friday","items":8}
+```
+
+## Example 8: one part, used twice
+
+`/surface-examples/8`, and `/surface-examples/8/desk`
+
+A person to contact is one structure, attached by two resources, the
+press page and the information desk. Whether the person is listed
+publicly is the container's to know, so the structure reads it through
+a port, `listed`, and asks for an email while it holds. Each container
+wires the port to a key of its own
+([Ports](../../docs/resources.md#ports)). The phone is a named shape,
+asked for by the person and by the desk itself
+([Named shapes](../../docs/declaring-a-resource.md#named-shapes)).
+
+<!-- code: src/Structure/PersonStructure.php -->
+
+```php
+#[Structure('event.person')]
+final class PersonStructure implements StructureInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->reads('listed', 'boolean');
+    $inputs->add('name', 'string', t('Name'))
+      ->setRequired(TRUE);
+    $inputs->add('email', 'email', t('Email'));
+    $inputs->add('phone', PhoneNumber::class, t('Phone'));
+    $inputs->narrow('email')
+      ->when(Condition::equals('listed', TRUE))
+      ->require()
+      ->describe(t('Required while this person is listed publicly.'));
+  }
+
+}
+```
+
+<!-- code: src/Shape/PhoneNumber.php -->
+
+```php
+#[Shape('event.phone')]
+final class PhoneNumber implements ShapeInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function define(): DataDefinition {
+    $phone = DataDefinition::create('string')
+      ->setLabel(t('Phone'))
+      ->setDescription(t('Digits, with spaces if you like, and a leading + for a country code.'))
+      ->addConstraint('Regex', [
+        'pattern' => '/^\+?[0-9 ]{7,20}$/D',
+        'message' => 'Write the number in digits, such as +1 555 0100.',
+      ]);
+    DefinitionMetadata::setExamples($phone, ['+1 555 0100']);
+    return $phone;
+  }
+
+}
+```
+
+The press page wires the port to `public`, and mixes the review in, so
+the review's two keys are the page's own: stored flat beside `public`,
+drawn among its keys, and named in a refusal as `reviewed_by`, not under
+a parent ([Mixins](../../docs/resources.md#mixins)).
+
+<!-- code: src/Structure/ReviewStructure.php -->
+
+```php
+#[Structure('event.review')]
+final class ReviewStructure implements StructureInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('reviewed_on', 'string', t('Reviewed on'))
+      ->setDescription(t('YYYY-MM-DD.'))
+      ->addConstraint('Regex', [
+        'pattern' => '/^\d{4}-\d{2}-\d{2}$/D',
+        'message' => 'Write the date as YYYY-MM-DD, such as 2026-10-19.',
+      ]);
+    $inputs->add('reviewed_by', 'string', t('Reviewed by'));
+    $inputs->narrow('reviewed_by')
+      ->when(Condition::present('reviewed_on'))
+      ->require()
+      ->describe(t('Required once a review date is set.'));
+  }
+
+}
+```
+
+<!-- code: src/Resource/PressResource.php -->
+
+```php
+#[Resource('event.press', storage: PressStorage::class)]
+final class PressResource implements ResourceInterface {
+
+  /**
+   * Configures the press page, which always exists.
+   */
+  #[Operation('configure', label: new TranslatableMarkup('Configure the press page'), permission: 'administer site configuration')]
+  public static function configure(): OperationContext {
+    return new OperationContext('configure');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('public', 'boolean', t('Show on the press page'), default: TRUE);
+    $inputs->attach('contact', PersonStructure::class, reads: ['listed' => 'public'])
+      ->setLabel(t('Press contact'));
+    $inputs->with(ReviewStructure::class);
+  }
+
+}
+```
+
+The desk wires the port to `in_program`, and holds a collection, up to
+four volunteers, each a person in its own frame, added and removed on
+the form over AJAX. A collection's item is wired by nothing, so a
+volunteer is never asked for an email
+([Collections](../../docs/resources.md#collections)).
+
+<!-- code: src/Resource/InfoDeskResource.php -->
+
+```php
+#[Resource('event.desk', storage: InfoDeskStorage::class)]
+final class InfoDeskResource implements ResourceInterface {
+
+  /**
+   * Configures the information desk, which always exists.
+   */
+  #[Operation('configure', label: new TranslatableMarkup('Configure the information desk'), permission: 'administer site configuration')]
+  public static function configure(): OperationContext {
+    return new OperationContext('configure');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('phone', PhoneNumber::class, t('Desk phone'))
+      ->setRequired(TRUE);
+    $inputs->add('in_program', 'boolean', t('Listed in the printed program'), default: FALSE);
+    $inputs->attach('lead', PersonStructure::class, reads: ['listed' => 'in_program'])
+      ->setLabel(t('Desk lead'));
+    $inputs->attachList('volunteers', PersonStructure::class, max: 4)
+      ->setLabel(t('Volunteers'));
+  }
+
+}
+```
+
+Both documents write the person once, as the def `event.person`, which
+names no container and lists its port; each site refers to it, says
+which key the port reads (`x-surface.reads`), and states the email rule
+on the container, where that key is. The phone is the def `event.phone`
+in both, and the review the def `event.review`, which the press page's
+top refers to from its `allOf`. The panel shows the two sites side by
+side and what each class costs.
+
+```bash
+drush tool:run data_surface:event.press:configure --uid=1 --input='{"values":{"public":true,"contact":{"name":"Robin Lee","email":null}}}' --input=dry_run=true
+
+drush tool:run data_surface:event.press:configure --uid=1 --input='{"values":{"public":false,"contact":{"name":"Robin Lee","email":null}}}' --input=dry_run=true
+
+drush tool:run data_surface:event.press:configure --uid=1 --input='{"values":{"reviewed_on":"2026-10-19","reviewed_by":null}}' --input=dry_run=true
+```
+
+```
+1. A public contact with the email cleared
+Failed: The values were refused: contact.email: Email is required when Show on the press page is on.
+
+2. The same contact, not shown on the press page
+Success: Dry run of Configure the press page: the values were accepted and prepared, and nothing was written.
+  prepared: {"public":false,"contact":{"name":"Robin Lee","email":null,"phone":"+1 555 0100"},"reviewed_on":"2026-10-01","reviewed_by":"Sam Ortiz"}
+
+3. A review date with no reviewer
+Failed: The values were refused: reviewed_by: Reviewed by is required when Reviewed on is set.
+```
+
+```bash
+drush tool:run data_surface:event.desk:configure --uid=1 --input='{"values":{"phone":"555-0199"}}' --input=dry_run=true
+```
+
+```
+1. A desk phone the shape refuses
+Failed: The values were refused: phone: Write the number in digits, such as +1 555 0100.
+```
+
+## Example 9: keys that come from the site
+
+`/surface-examples/9`
+
+One checkbox and one set of limits per ticket type the site sells. The
+class cannot list the ticket types: the site's configuration does, in
+`data_surface_examples.ticket_types`, and a provider reads it
+([Keys that come from the site](../../docs/resources.md#keys-that-come-from-the-site)).
+
+<!-- code: src/Resource/TicketSalesResource.php -->
+
+```php
+#[Resource('event.sales', storage: TicketSalesStorage::class)]
+final class TicketSalesResource implements ResourceInterface {
+
+  /**
+   * Configures ticket sales, which always exist.
+   */
+  #[Operation('configure', label: new TranslatableMarkup('Configure ticket sales'), permission: 'administer site configuration')]
+  public static function configure(): OperationContext {
+    return new OperationContext('configure');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->addEach('on_sale', 'boolean', from: TicketTypes::class, default: FALSE)
+      ->setLabel(t('On sale'))
+      ->setDescription(t('Which ticket types can be bought.'));
+    $inputs->attachEach('limits', TicketLimitStructure::class, from: TicketTypes::class)
+      ->setLabel(t('Limits'));
+  }
+
+}
+```
+
+<!-- code: src/Keys/TicketTypes.php -->
+
+```php
+final class TicketTypes implements KeysFromSiteInterface, ContainerInjectionInterface {
+
+  /**
+   * The configuration object the ticket types are listed in.
+   */
+  public const CONFIG = 'data_surface_examples.ticket_types';
+
+  /**
+   * Constructs the provider.
+   *
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
+   *   The configuration factory.
+   */
+  public function __construct(
+    protected readonly ConfigFactoryInterface $configFactory,
+  ) {}
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container): static {
+    return new static($container->get('config.factory'));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function keys(): KeyedList {
+    $config = $this->configFactory->get(self::CONFIG);
+    $keys = (new KeyedList())->addCacheableDependency($config);
+    foreach ($config->get('types') ?? [] as $id => $type) {
+      $keys->add((string) $id, (string) $type['label'], locked: (bool) ($type['locked'] ?? FALSE));
+    }
+    return $keys;
+  }
+
+}
+```
+
+The provider declares what it read, the configuration's cache tag, so
+the built resource, the form, both documents and the tool listing are
+cached by it. Add a type and reload, with no cache rebuild:
+
+```bash
+drush config:set data_surface_examples.ticket_types types.vip '{label: VIP, locked: false}' --input-format=yaml
+drush config:delete data_surface_examples.ticket_types types.vip
+```
+
+The form has a VIP checkbox and VIP limits at once; the second command
+takes them away again. The speaker type is locked in the configuration:
+its checkbox and its limits are drawn fixed, `readOnly` in both
+documents, and a value a tool sends for it is not taken, which the
+answer says in a note. The panel shows the keys the provider answered,
+its cache tag, and the locked type in both documents.
+
+```bash
+drush tool:run data_surface:event.sales:configure --uid=1 --input='{"values":{"on_sale":{"standard":true,"speaker":true}}}' --input=dry_run=true
+```
+
+```
+1. Speaker tickets put on sale
+Success: Dry run of Configure ticket sales: the values were accepted and prepared, and nothing was written. on_sale.speaker: Speaker is locked and kept as stored; the value sent was not taken.
+  prepared: {"on_sale":{"standard":true,"student":true,"speaker":false},"limits":{"standard":{"per_order":4,"waiting_list":false},"student":{"per_order":1,"waiting_list":true},"speaker":{"per_order":1,"waiting_list":false}}}
+```
+
+## Example 10: who may change what
+
+`/surface-examples/10`, and `/surface-examples/10/check`
+
+The program's fees are a structure whose access class answers whether
+they may be changed. Its answer's kind is read from its cacheability,
+never declared
+([Static and runtime access](../../docs/resources.md#static-and-runtime-access)):
+
+- **Static**, for an account without "set event fees", the module's
+  permission: the fees are locked, read from the account's permissions
+  alone, so the full schema and the tool listing state the lock for that
+  account.
+- **Runtime**, for any other account: once the program is published the
+  fees are fixed, which only what is stored says, read under the
+  program's config tag. The full schema marks the fees `access:
+  "runtime"`, and the schema for these answers, the form and the
+  pipeline settle it. Save the program published and reload: the fees
+  are drawn disabled.
+
+<!-- code: src/Access/FeesAccess.php -->
+
+```php
+final class FeesAccess implements OperationAccessInterface {
+
+  /**
+   * The permission that may change the fees.
+   */
+  public const PERMISSION = 'set event fees';
+
+  /**
+   * Constructs the access class, which the container builds as a service.
+   *
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
+   *   The configuration factory, for the program's stored status.
+   */
+  public function __construct(
+    protected readonly ConfigFactoryInterface $configFactory,
+  ) {}
+
+  /**
+   * {@inheritdoc}
+   */
+  public function access(OperationContext $context, AccountInterface $account): AccessAnswer {
+    $read = (new CacheableMetadata())->addCacheContexts(['user.permissions']);
+    if (!$account->hasPermission(self::PERMISSION)) {
+      // Static: the account alone.
+      return AccessAnswer::locked('Only an account that may set event fees changes them.')->addCacheableDependency($read);
+    }
+    $program = $this->configFactory->get(ProgramStorage::CONFIG);
+    $read->addCacheableDependency($program);
+    if ($program->get('published') === TRUE) {
+      // Runtime: a stored value, under its config tag.
+      return AccessAnswer::locked('The fees are fixed once the program is published.')->addCacheableDependency($read);
+    }
+    return AccessAnswer::open()->addCacheableDependency($read);
+  }
+
+}
+```
+
+<!-- code: src/Structure/FeesStructure.php -->
+
+```php
+#[Structure('event.fees', access: FeesAccess::class)]
+final class FeesStructure implements StructureInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('standard', 'float', t('Standard fee'), default: 20.0)
+      ->addConstraint('Range', ['min' => 0]);
+    $inputs->add('concession', 'float', t('Concession fee'), default: 10.0)
+      ->addConstraint('Range', ['min' => 0]);
+  }
+
+}
+```
+
+<!-- code: src/Resource/ProgramResource.php -->
+
+```php
+#[Resource('event.program', storage: ProgramStorage::class)]
+final class ProgramResource implements ResourceInterface {
+
+  /**
+   * Configures the program, which always exists.
+   */
+  #[Operation('configure', label: new TranslatableMarkup('Configure the program'), permission: 'administer site configuration')]
+  public static function configure(): OperationContext {
+    return new OperationContext('configure');
+  }
+
+  /**
+   * Checks a program against every rule, and writes nothing.
+   */
+  #[Operation('check', label: new TranslatableMarkup('Check a program'), permission: 'administer site configuration', readOnly: TRUE)]
+  public static function check(): OperationContext {
+    return new OperationContext('check');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('headline', 'string', t('Headline'))
+      ->setRequired(TRUE);
+    $inputs->add('sessions', 'integer', t('Sessions'), default: 8)
+      ->addConstraint('Range', ['min' => 1, 'max' => 30]);
+    $inputs->add('published', 'boolean', t('Published'), default: FALSE);
+    $inputs->attach('fees', FeesStructure::class)
+      ->setLabel(t('Fees'));
+  }
+
+}
+```
+
+Each operation also states how a call behaves
+([An operation states how it behaves](../../docs/decisions.md#an-operation-states-how-it-behaves)).
+Configuring changes what exists and may be repeated; checking changes
+nothing, `readOnly: TRUE`, so its form at `/surface-examples/10/check`
+and its tool accept and validate and write nothing, and it has no read
+tool beside it. Both documents state the facts under
+`x-surface.operation`. The panel shows the fees' part of the full schema
+for you and for an account without the permission, and a table of the
+two operations: their facts, the Tool API kind each tool is given, and
+the hints an MCP client reads from that kind. Configuring reaches an MCP
+client as not idempotent: the Tool API has idempotence on the kind, and
+no kind that writes is idempotent.
+
+```bash
+drush tool:run data_surface:event.program:check --uid=1 --input='{"values":{"headline":"Three days of talks","sessions":12}}'
+
+drush tool:run data_surface:event.program:check --uid=1 --input='{"values":{"headline":"Three days of talks","sessions":40}}'
+```
+
+```
+1. A program checked
+Success: Check a program changes nothing: the values were accepted and prepared, and nothing was written.
+  prepared: {"headline":"Three days of talks","sessions":12,"published":false,"fees":{"standard":20.0,"concession":10.0}}
+
+2. A program with too many sessions, checked
+Failed: The values were refused: sessions: This value should be between 1 and 30.
+```
+
+## Example 11: the stock widgets, and what nothing means
+
+`/surface-examples/11`
+
+The live companion of [Common settings recipes](../../docs/recipes.md):
+every stock widget, each chosen by what its key declares. A time input
+for a string that asks for one; checkboxes for a list of three choices;
+radios for one choice that asks for them; a text area for a multiline
+string; and rows with "Add another" for a list of free values
+([Widgets](../../docs/widgets.md#the-stock-widgets)).
+
+<!-- code: src/Resource/DoorsResource.php -->
+
+```php
+#[Resource('event.doors', storage: DoorsStorage::class)]
+final class DoorsResource implements ResourceInterface {
+
+  /**
+   * Configures the doors, which always exist.
+   */
+  #[Operation('configure', label: new TranslatableMarkup('Configure the doors'), permission: 'administer site configuration')]
+  public static function configure(): OperationContext {
+    return new OperationContext('configure');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('opens', 'string', t('Doors open at'), default: '18:30')
+      ->setRequired(TRUE)
+      ->setDescription(t('HH:MM, on a 24-hour clock.'))
+      ->setSetting('widget', 'time')
+      ->addConstraint('Regex', [
+        'pattern' => '/^([01]\d|2[0-3]):[0-5]\d$/D',
+        'message' => 'Write the time as HH:MM, such as 18:30.',
+      ]);
+
+    $day = DataDefinition::create('string')
+      ->addConstraint('LabeledChoice', [
+        'choices' => ['fri' => t('Friday'), 'sat' => t('Saturday'), 'sun' => t('Sunday')],
+      ]);
+    $days = (new ListDataDefinition(['type' => 'list'], $day))
+      ->setLabel(t('Days'))
+      ->setRequired(TRUE);
+    $inputs->addDefinition('days', $days, default: ['fri', 'sat']);
+
+    $inputs->add('badges', 'string', t('Badges'), default: 'printed')
+      ->setSetting('widget', 'radios')
+      ->addConstraint('LabeledChoice', [
+        'choices' => ['printed' => t('Printed at the door'), 'digital' => t('On the phone'), 'none' => t('No badges')],
+      ]);
+
+    $inputs->add('notes', 'string', t('Notes for the door team'))
+      ->setSetting('multiline', TRUE);
+
+    $greeters = (new ListDataDefinition(['type' => 'list'], DataDefinition::create('string')))
+      ->setLabel(t('Greeters'));
+    $inputs->addDefinition('greeters', $greeters, default: []);
+  }
+
+}
+```
+
+The config schema is fully validatable
+([A fully validatable schema](../../docs/storage.md#a-fully-validatable-schema)):
+`FullyValidatable` at its root, every key stored, and `nullable: true`
+on the notes alone. So the storage knows the notes may hold nothing and
+the badges may not: the badges are always held, their radios offer no
+"- None -", and both schemas leave `null` out of their type.
+
+What a call sends for a key means one of three things
+([Absent, null, or a value](../../docs/semantics.md#absent-null-or-a-value)):
+left out, the key keeps what is stored; `null`, it is cleared; a value
+replaces it. The four dry runs show each, and the fourth what null does
+to a key the storage always holds: it is refused, naming the default.
+The panel shows them, and a table of each key's widget and type.
+
+```bash
+drush tool:run data_surface:event.doors:configure --uid=1 --input='{"values":{"opens":"19:00","days":["fri"]}}' --input=dry_run=true
+
+drush tool:run data_surface:event.doors:configure --uid=1 --input='{"values":{"opens":"19:00","days":["fri"],"notes":null}}' --input=dry_run=true
+
+drush tool:run data_surface:event.doors:configure --uid=1 --input='{"values":{"opens":"19:00","days":["fri"],"notes":"Doors close at ten."}}' --input=dry_run=true
+
+drush tool:run data_surface:event.doors:configure --uid=1 --input='{"values":{"opens":"19:00","days":["fri"],"badges":null}}' --input=dry_run=true
+```
+
+```
+1. The notes left out: kept
+Success: Dry run of Configure the doors: the values were accepted and prepared, and nothing was written.
+  prepared: {"opens":"19:00","days":["fri"],"badges":"printed","notes":"Hand out the maps.","greeters":["Ana","Ben"],"langcode":"en"}
+
+2. The notes sent null: cleared
+Success: Dry run of Configure the doors: the values were accepted and prepared, and nothing was written.
+  prepared: {"opens":"19:00","days":["fri"],"badges":"printed","notes":null,"greeters":["Ana","Ben"],"langcode":"en"}
+
+3. The notes sent a value: replaced
+Success: Dry run of Configure the doors: the values were accepted and prepared, and nothing was written.
+  prepared: {"opens":"19:00","days":["fri"],"badges":"printed","notes":"Doors close at ten.","greeters":["Ana","Ben"],"langcode":"en"}
+
+4. The badges sent null: refused, since they are always held
+Failed: The values were refused: badges: Badges cannot be cleared: it always holds a value, Printed at the door (printed) by default. Leave it out to keep what it holds.
+```
+
 ## How this page is kept true
 
 Every code block above is the file it names, from its first attribute
 or its class line to its closing brace, and `ExamplesReadmeTest` fails
-when one drifts. The JSON of example 1's config schema is asserted by
+when one drifts. The Drush commands and answers of examples 7 to 11 are
+asserted by `ExamplesConceptsToolTest`. The JSON of example 1's config schema is asserted by
 `ConfigSchemaContractTest`, which also checks this page quotes it. The tool's three answers are asserted by
 `ExamplesToolTest`, which also checks this page quotes them, and the
 Drush commands are checked against `ExampleCalls`.
@@ -829,3 +1482,6 @@ Drush commands are checked against `ExampleCalls`.
 | `Functional\ServedContractEndpointsTest` | In React: the landing page's links, and example 2's contract, refine and validate over HTTP. |
 | `Functional\ServedSubmitEndpointTest` | In React: example 2 saved over HTTP, refused, and refused after someone else saved. |
 | `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files, and opens every room example 4 closed. |
+| `Kernel\ExamplesConceptsTest` | Examples 7 to 11: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; the panel above each, and none above examples 1 to 3; each class stays screen sized. |
+| `Kernel\ExamplesConceptsToolTest` | Examples 7 to 11: every call `ConceptCalls` writes down, its answer, nothing written, and this page quoting each command and answer. |
+| `Functional\ExamplesConceptsRoutesTest` | Every route of examples 7 to 11 answers an administrator and refuses anonymous; the landing page lists them; each page shows its panel and saves through its form; example 10's check writes nothing. |

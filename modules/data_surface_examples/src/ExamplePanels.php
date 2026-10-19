@@ -13,15 +13,16 @@ use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface\Storage\ConfigObjectStorage;
 
 /**
- * The two panels under an example's form: the contract, and today.
+ * The panels under an example's form: the contract, and today.
  *
  * Named by the examples' routes in `_data_surface_panel` as
  * `data_surface_examples.panels`. An operation form takes one panel, so
  * this is one: the contract panel it is handed, unchanged, and below it
  * what config schema alone can say about the same settings, compared
  * key by key with the full schema the resource emits, the one that reads
- * no value. The form replaces both on every rebuild; only the contract
- * panel has anything new to say then.
+ * no value. Above them, for examples 7 to 11 only, what the example shows
+ * (ConceptPanel). The form replaces them on every rebuild; only the
+ * contract panel has anything new to say then.
  *
  * @see \Drupal\data_surface_tool\ContractPanel
  * @see \Drupal\data_surface_examples\ConfigSchemaPanel
@@ -39,6 +40,11 @@ final class ExamplePanels implements DataSurfaceFormPanelInterface {
   public const TODAY = 'today_panel';
 
   /**
+   * The key the panel saying what examples 7 to 11 show is placed at.
+   */
+  public const CONCEPT = 'concept_panel';
+
+  /**
    * Constructs ExamplePanels.
    *
    * @param \Drupal\data_surface\Form\DataSurfaceFormPanelInterface $contractPanel
@@ -51,6 +57,8 @@ final class ExamplePanels implements DataSurfaceFormPanelInterface {
    *   What discovery found, for the resource's id and its storage.
    * @param \Drupal\data_surface\ResourceBuild\ResourcesInterface $resources
    *   The build step, for the full schema built for the account alone.
+   * @param \Drupal\data_surface_examples\ConceptPanel $conceptPanel
+   *   The panel saying what examples 7 to 11 show.
    */
   public function __construct(
     protected readonly DataSurfaceFormPanelInterface $contractPanel,
@@ -58,6 +66,7 @@ final class ExamplePanels implements DataSurfaceFormPanelInterface {
     protected readonly ContractEmitter $emitter,
     protected readonly ResourceRegistry $registry,
     protected readonly ResourcesInterface $resources,
+    protected readonly ConceptPanel $conceptPanel,
   ) {}
 
   /**
@@ -71,6 +80,11 @@ final class ExamplePanels implements DataSurfaceFormPanelInterface {
       '#weight' => $contract_panel['#weight'] ?? 0,
       self::CONTRACT => ['#weight' => 0] + $contract_panel,
     ];
+    // Examples 7 to 11 say what they show first; 1 to 3 have nothing more.
+    $concept = $this->conceptPanel->build($served, $declared, $values);
+    if ($concept !== NULL) {
+      $panels[self::CONCEPT] = ['#weight' => -1] + $concept;
+    }
     $definition = $this->registry->getDefinition($served->resource);
     $storage = (string) $definition->storage;
     if (is_a($storage, ConfigObjectStorage::class, TRUE)) {
