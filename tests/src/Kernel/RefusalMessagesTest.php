@@ -107,6 +107,22 @@ class RefusalMessagesTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Tests a constraint declared without options crosses to the tool.
+   *
+   * NotNull and NotBlank are declared as NULL; the tool definition keeps
+   * them as they are, with no warning from reading options they have not.
+   */
+  public function testAnOptionsLessConstraintCrosses(): void {
+    $surface = new DataSurface(DefinitionMap::fromArrays(definitions: [
+      'name' => DataDefinition::create('string')->setLabel('Name')->addConstraint('NotNull'),
+    ]));
+    $map = $this->container->get('data_surface_tool.input_definitions')->fromSurface($surface, 'Named', '');
+    $constraints = $map->getPropertyDefinition('name')->getConstraints();
+    $this->assertArrayHasKey('NotNull', $constraints);
+    $this->assertNull($constraints['NotNull']);
+  }
+
+  /**
    * Tests the number field shows the rule's message, not the element's.
    */
   public function testTheRulesMessageReachesTheNumberField(): void {

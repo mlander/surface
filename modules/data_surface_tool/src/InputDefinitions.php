@@ -1015,6 +1015,10 @@ final class InputDefinitions {
     }
     foreach ($constraints as $name => $options) {
       $constraints[$name] = $this->scalarOptions($options, (string) $name);
+      // An options-less constraint (NotNull, NotBlank) is declared as NULL.
+      if (!is_array($constraints[$name])) {
+        continue;
+      }
       foreach ($constraints[$name] as $option => $value) {
         if (is_string($value) && preg_match('/message$/i', (string) $option)) {
           $constraints[$name][$option] = ViolationMessage::drupalPlaceholders($value);
