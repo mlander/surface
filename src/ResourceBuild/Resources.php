@@ -473,6 +473,8 @@ final class Resources implements ResourcesInterface {
       }
     }
 
+    // Decision: see docs/decisions.md#a-resource-evolves-in-the-open.
+    $builder->setVersion($definition->version);
     // Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
     if ($top && ($this->registry->getOperations($definition->name())[$context->id]->readOnly ?? FALSE)) {
       $builder->markChangesNothing();

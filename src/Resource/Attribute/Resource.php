@@ -41,12 +41,20 @@ final class Resource {
    * @param class-string<\Drupal\data_surface\Resource\OperationAccessInterface>|null $access
    *   The run-time part of access, for what depends on the subject. NULL
    *   means the operation's permission is the whole answer.
+   * @param int $version
+   *   Which version of its stored values it describes, 1 unless a breaking
+   *   change was made since values were first stored. Stamped into both
+   *   documents as `x-surface.version`, compared by the contract diff,
+   *   and what stored-value migrations will be keyed by; a version above
+   *   1 is refused until they are built (ROADMAP Phase D item 13).
+   *   Decision: see docs/decisions.md#a-resource-evolves-in-the-open.
    */
   public function __construct(
     public readonly string $id,
     public readonly array $identity = [],
     public readonly ?string $storage = NULL,
     public readonly ?string $access = NULL,
+    public readonly int $version = 1,
   ) {}
 
 }

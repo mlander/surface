@@ -64,10 +64,11 @@ part of a resource or structure has one home:
 | Where its values are stored | `#[Resource(storage:)]`, a `ResourceStorageInterface` in `src/Storage/`; a structure is stored by what holds it |
 | What may refuse once the operation's permission allows | `access:` on either attribute, an `OperationAccessInterface` in `src/Access/` |
 | Its parts | `attach()` and `attachBy()` in `defineInputs()`, and `#[Variant]` on each variant |
+| Which version of its stored values it describes | `version:` on either attribute, 1 until a breaking change is made after values are stored ([Evolving a resource](evolution.md#the-version)) |
 
-`FieldInstanceResource` in `data_surface_tool` uses every row but
-outputs, which the demo formatter declares; the test module's
-`TestBlockStructure`, a structure, uses two.
+`FieldInstanceResource` in `data_surface_tool` uses every row but the
+version, which nothing raises yet, and outputs, which the demo formatter
+declares; the test module's `TestBlockStructure`, a structure, uses two.
 
 - **Everything on the class is static.** `defineInputs()` and
   `defineOutputs()` are static on the interface, and a `#[RefinesInput]`

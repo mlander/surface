@@ -165,6 +165,11 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   protected bool $changesNothing = FALSE;
 
   /**
+   * Which version of its stored values it describes.
+   */
+  protected int $version = 1;
+
+  /**
    * The keys whose access is decided once the subject is known.
    *
    * @var string[]
@@ -307,6 +312,15 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   public function markChangesNothing(): static {
     $this->assertMutable();
     $this->changesNothing = TRUE;
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function setVersion(int $version): static {
+    $this->assertMutable();
+    $this->version = $version;
     return $this;
   }
 
@@ -757,6 +771,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
       $this->watchedValueCheck,
       lockedWhole: $this->lockedWhole,
       changesNothing: $this->changesNothing,
+      version: $this->version,
     );
   }
 

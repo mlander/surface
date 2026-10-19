@@ -74,6 +74,19 @@ the record of the rework that brought the module to the pattern.
   `#[Variant(of:, key:, value:)]`.
 - **Collection**: a list of child instances at a key, `attachList()`.
 - **Contract**: the JSON Schema a built resource or structure emits.
+- **Version**: `#[Resource(version:)]` or `#[Structure(version:)]`, from
+  1, counting the breaking changes made to its stored values; stamped
+  `x-surface.version` at the top of both documents and on a def above 1.
+  A structure versions itself; a shape has none. Refused above 1 until
+  stored-value migrations (`StoredValueMigrationInterface`, designed,
+  not run) are built (`docs/evolution.md`,
+  `docs/decisions.md#a-resource-evolves-in-the-open`).
+- **Contract baseline** and **contract diff**: a module's committed full
+  schemas, `tests/fixtures/contracts/<id>.json`, and the lint that
+  judges today's against them (`Contract\ContractDiff`,
+  `ContractBaselineTest`, `drush data_surface:contract-diff`): a
+  breaking change passes only versioned or allowed with a reason.
+  Regenerate with `--write` after an accepted change; never by hand.
 - **Static and runtime access**: an access answer's kind, read from its
   cacheability and never declared. Static varies by the account's
   permissions or roles alone (`user.permissions`, `user.roles`,
@@ -382,8 +395,10 @@ so the rule is this sentence. `npm test` is not part of
   order, and `FieldToolsComparisonTest`'s drift assertion is the tripwire.
 - `modules/data_surface_tool/COMPARISON.md` and
   `modules/data_surface_demo_node_type_tool/COMPARISON.md` are generated
-  by `scripts/generate-comparison.php`, and `docs/catalogue.md` by
-  `scripts/generate-catalogue.php`. Never edit any of them by hand.
+  by `scripts/generate-comparison.php`, `docs/catalogue.md` by
+  `scripts/generate-catalogue.php`, and the contract baselines under
+  `tests/fixtures/contracts/` by `drush data_surface:contract-diff
+  --write`. Never edit any of them by hand.
 - Commit messages are one line.
 
 ## Naming
@@ -419,7 +434,8 @@ src/Access/              The operation route's access check.
 src/Hook/                #[UsesStructure] into plugin definitions.
 src/Pipeline/            Access, accept, validate, prepare, commit; results.
 src/Storage/             Where accepted values are written; settings layouts.
-src/Contract/            The served contract's emitter (JSON Schema).
+src/Contract/            The served contract's emitter (JSON Schema); the contract diff.
+src/Drush/               The contract diff's Drush command.
 src/Form/                Form builder, host traits, the operation form.
 src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constraints.
 src/Options/             Option sets, the resolver plugin base and manager.

@@ -49,3 +49,4 @@ snippet each.
 | Derived resource, `#[DerivesResources]` | Are the keys the site's (one per bundle, one per field), not the code's? | Your class says every key. |
 | Derived variants | Can a slot's variants be read from a description that exists, such as config schema? | Each variant is a class. |
 | Catalogue | What resources and operations does this site have? ([Catalogue](catalogue.md)) | You know your own. |
+| Version, `version:`, and the contract diff | Will a change I make break the values already stored, or a client that read the contract? Which changes are compatible, and what does a breaking one need? ([Evolving a resource](evolution.md)) | Nothing is stored or read yet: leave it at 1, and pin a baseline so the contract diff says when that stops being true. |

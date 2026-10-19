@@ -1,0 +1,86 @@
+{
+    "surface": "first.newsletter",
+    "documents": [
+        {
+            "surface": "first.newsletter",
+            "situation": "configure",
+            "label": "Configure the newsletter",
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": "Configure the newsletter",
+                "x-surface": {
+                    "operation": {
+                        "id": "configure",
+                        "label": "Configure the newsletter",
+                        "creates": false,
+                        "readOnly": false,
+                        "destructive": false,
+                        "idempotent": true
+                    },
+                    "version": 1
+                },
+                "type": "object",
+                "properties": {
+                    "sender_name": {
+                        "title": "Sender name",
+                        "type": "string",
+                        "maxLength": 64,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "sender_email": {
+                        "title": "Sender email",
+                        "type": "string",
+                        "format": "email",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "frequency": {
+                        "title": "Frequency",
+                        "type": "string",
+                        "oneOf": [
+                            {
+                                "const": "weekly",
+                                "title": "Weekly"
+                            },
+                            {
+                                "const": "monthly",
+                                "title": "Monthly"
+                            }
+                        ],
+                        "default": "weekly",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "max_recipients": {
+                        "title": "Maximum recipients per send",
+                        "description": "Larger lists are sent in batches of this size.",
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 1,
+                        "maximum": 10000,
+                        "default": 500,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "sender_name",
+                    "sender_email",
+                    "frequency"
+                ]
+            }
+        }
+    ]
+}

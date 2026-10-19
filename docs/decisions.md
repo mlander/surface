@@ -2889,3 +2889,121 @@ orphaned room falls back to what is stored when the pricing changes),
 and a Vitest test holds it to recorded `/refine` answers for examples 2
 and 3, keyword for keyword. (`narrow()` in `app/src/contract.ts`,
 `ResourceApiController::schema()`)
+
+## Evolution
+
+### A resource evolves in the open
+
+Decided 2026-10-19, before anyone depends on a resource (the roadmap's
+gate "An evolution design before anyone depends on a resource"). A
+change to a resource or structure is compatible when every value
+already stored still loads, every client that read the old contract
+still gets what it asked for, and the full schema is still never
+stricter than the pipeline, judged on the accepted document after stored
+values are converted. Any other change is breaking, and a breaking
+change is made in the open: the version of what owns it is raised and
+its stored values are migrated, or its contract baseline records why it
+was accepted. The table, change by change, is [Evolving a
+resource](evolution.md#compatible-and-breaking). Each choice, and why:
+
+- **Judged by the pipeline, the authority.** What a client asked for is
+  what value semantics already say: a key left out keeps what it holds,
+  `null` clears, and the pipeline fills defaults. So adding a key that
+  may be left out is compatible (an old document leaves it out; a create
+  gives it its default or nothing, an edit keeps what is stored, and a
+  value stored before it reads its default), and a default, a label or a
+  description changed is a note, never a break. For the inputs, what a
+  client sends, a schema that accepts less is breaking; for the outputs,
+  what a client reads, one that may hand it more. A client reads a
+  document by the schema served with it: the documents are closed, so a
+  full schema cached before a key was added refuses a newer document,
+  and a client fetches it again when the version moves.
+- **A version on the declaration, from 1.** `#[Resource(version:)]` and
+  `#[Structure(version:)]` count the breaking changes made to stored
+  values; a compatible change never moves the number. Both documents
+  stamp it, `x-surface.version`, at the top always and on a def only
+  above 1, so a client compares the number it asked for without knowing
+  a default, and a def that has said nothing yet adds nothing. A named
+  scalar shape has none: its values are its users' keys, so a breaking
+  change to a shape is one to each resource and structure that uses it.
+  A version above 1 is refused at discovery until stored-value
+  migrations are built: it promises that values stored at an older
+  version are converted before anything reads them, and a promise
+  nothing keeps is refused, as storage that would write nothing is.
+- **A structure versions itself.** It is stored by every container that
+  holds it, so a breaking change to it changes every container's stored
+  layout (the roadmap's ports item said so), and only its own
+  declaration knows its keys. Its version and its migrations are its
+  own, run wherever it sits: at an attached key, in each item of a
+  collection, at a mount, and as a mixin's members in the owner's map. A
+  container's version never answers for a structure it holds.
+- **Migrations are pure up-steps on the declaration; the ledger is the
+  storage's.** One static step per version, `migrate(array $stored, int
+  $from): array` on `Resource\StoredValueMigrationInterface`, over the
+  class's own frame in input layout, pure as a static refiner is. The
+  pipeline runs the steps on what `load()` hands it, before `accept()`
+  reads it as what is stored, so every door reads converted values;
+  storage stamps the declared versions at commit, since it owns the
+  layout and so where the stamp lives (`ConfigObjectStorage` beside
+  `_core`, as `_data_surface.versions`). The stamp travels with the data,
+  so an import of an older export is converted again on read and
+  environments converge in recorded order. Only up-steps: going back is
+  a restore. A stored version above the declared one is refused at load.
+  A layout change that leaves the accepted document alone is the
+  storage's own, read both and write the new one, as
+  `EncryptedSettingsLayout` reads plaintext. A content entity's storage
+  will answer the same two questions, where its ledger lives and how it
+  stamps, with no change to the steps or the runner. Designed, not
+  built: ROADMAP.md, Phase D item 13.
+- **Callers are not migrated.** A step converts stored values, never a
+  document a caller sends: a document written for the old version is
+  held to the new one and refused by name. A breaking change is breaking
+  for clients whatever its migration; the version is how they learn.
+- **The contract diff is a test any module runs.** Each resource's and
+  structure's full schema, for the site's first account, is committed
+  as a baseline in `tests/fixtures/contracts/<id>.json` of the module
+  that keeps it, and `Contract\ContractDiff` classifies every difference
+  from it by the table: narrows, widens, adds a key that may be left
+  out, replaces, or notes. A breaking one passes when the version of its
+  owner was raised (the document's id, or the structure whose def the
+  path is inside) or when the baseline allows its path with a reason,
+  and fails otherwise. A keyword it does not read is breaking, so the
+  lint is never more lenient than it can show. `ContractBaselineTest`
+  pins the examples and `data_surface_first`, and `drush
+  data_surface:contract-diff` prints the verdicts and, with `--write`,
+  pins a change once it is accepted. In the main module, because the
+  contract and its emitter are.
+- **What is promised.** `main` promises nothing today. From the first
+  tagged release, every resource and structure of the examples and
+  `data_surface_first` keeps a baseline (as will any the main module
+  ships), a breaking change to one is versioned or allowed with its
+  reason and named in the release notes, and values stored by a tagged
+  release are converted forward once the migrations exist
+  ([Evolving a resource](evolution.md#what-is-promised)).
+
+What we read: Smithy's evolution guide, member optionality rules and
+smithy-diff evaluators; core's update and post-update hooks,
+`ConfigEntityUpdater` and its post-update with `preSave()` idiom; JSON
+Schema under closed content models. Smithy's compatible and breaking
+lists are this table's, but its clients fill defaults, so a default is
+breaking there and a note here, where the pipeline is the authoritative
+server Smithy's `@input` rule trusts. smithy-diff accepts a difference by a
+suppression with a reason, as the allowance does. Core records its
+updates in the site's database, which no export carries, hence a ledger
+in the stored value. A closed schema gains a key backward compatibly,
+never forward, hence a document read by its own version's schema.
+
+Open: a version for an alter's mount, keyed under its module in the
+ledger, since an alter's keys are its module's to migrate; migrating a
+document a caller sends, by a version it names; a ledger for State and
+a plugin's configuration; the eager pass (a command, and a service a
+post-update calls) for code that reads its storage directly; deprecation
+before removal (ROADMAP.md, Phase D item 15); a field a site builder
+removes from a derived resource, a breaking change no code made; and
+baselines for operations that need a subject, which the lint leaves out.
+(`Resource\Attribute\Resource::$version`, `Structure::$version`,
+`ResourceRegistry::versionOf()`, `DataSurfaceInterface::version()`,
+`ContractEmitter::versioned()`, `Resource\StoredValueMigrationInterface`,
+`Contract\ContractDiff`, `Contract\ContractBaselines`,
+`Drush\Commands\ContractDiffCommand`, `ContractBaselineTest`,
+`ContractDiffTest`)

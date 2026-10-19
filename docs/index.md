@@ -174,6 +174,9 @@ hand.
 - **Storing the values somewhere new**: [Storage](storage.md).
 - **Serving a resource to a client with no PHP**: [The served
   contract](served-contract.md).
+- **Changing a resource others depend on**: [Evolving a
+  resource](evolution.md), for which changes are compatible, the
+  version, stored-value migrations and the contract diff.
 - **Reading this as a core proposal**: [Adoption
   catalogue](adoption.md) and [Core gaps](core-gaps.md).
 - **Writing the common keys of a settings page**: [Common settings

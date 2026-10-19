@@ -294,16 +294,42 @@ which serves the real contract.
 ## Phase D: evolution
 
 13. **Shape versioning with pure stored-value migrations** (decided;
-    refined). A version on the attribute; pure shape-to-shape
-    transforms shipped with the definition; the pipeline's accept
-    stage converts stored values forward on read. Borrowed discipline: only
+    refined). DESIGNED 2026-10-19, build when the first adopter needs it
+    (`docs/evolution.md#stored-value-migrations-as-they-will-be`,
+    `docs/decisions.md#a-resource-evolves-in-the-open`). Landed with the
+    design: `version:` on `#[Resource]` and `#[Structure]` (from 1; a
+    structure versions itself, a shape has none), stamped
+    `x-surface.version` in both documents, and refused above 1 at
+    discovery until the runner exists; `StoredValueMigrationInterface`,
+    one pure static step per version on the declaring class, as a stub
+    nothing calls. To build: the pipeline converting what `load()` hands
+    it before `accept()`, step by step from the ledger's version; the
+    ledger as the storage's (`ConfigObjectStorage` keeping
+    `_data_surface.versions` beside `_core`, described for every config
+    object by altering core's `config_object` type; a config entity's in
+    its `third_party_settings.data_surface`); a refusal for a version
+    above 1 on storage that keeps no ledger, and for a stored version
+    above the declared; the eager pass (a command and a service a
+    post-update calls) for code that reads its storage directly; then
+    lifting the discovery refusal. Borrowed discipline: only
     up-transforms are required (down is a restore), and a
     per-destination ledger stamps the applied version at commit so
     environments converge in recorded order.
-14. **Additive-diff lint.** Emit each resource's and structure's
-    schema against a committed snapshot in CI; fail on removed keys,
-    tightened constraints, or type changes without a version bump. The
-    registry's publish-time diff, as a test any module can run.
+14. **Additive-diff lint.** DONE 2026-10-19
+    (`docs/evolution.md#the-contract-diff`): `Contract\ContractDiff`
+    classifies each difference between a committed full schema and
+    today's (narrows, widens, adds an optional key, replaces, notes;
+    inputs and outputs judged the opposite ways round; a keyword it does
+    not read is breaking), a breaking one passing only with its owner's
+    version raised or an allowance with a reason in the baseline;
+    baselines in `tests/fixtures/contracts/<id>.json` of the module that
+    keeps them; `ContractBaselineTest` pins the examples and
+    `data_surface_first`; `drush data_surface:contract-diff` prints the
+    verdicts and pins with `--write`. As planned: emit each resource's
+    and structure's schema against a committed snapshot in CI; fail on
+    removed keys, tightened constraints, or type changes without a
+    version bump. The registry's publish-time diff, as a test any module
+    can run.
 15. **Deprecation as definition metadata.** `deprecated` and sunset
     keys through `DefinitionMetadata`; widgets flag dying options; a
     report enumerates stored usages before removal.
@@ -564,7 +590,10 @@ renames sit in A because they are cheapest before new code exists.
    it depends on the structure's module); alters on the structure apply
    wherever it is used, which a container may want to opt out of (to
    decide); a change to the structure changes every container's stored
-   layout, which is Phase D with an explicit contract to diff.
+   layout, which is Phase D with an explicit contract to diff: settled
+   2026-10-19, a structure versions itself and migrates its own map
+   wherever it is stored, and the contract diff attributes a def's change
+   to the structure (`docs/decisions.md#a-resource-evolves-in-the-open`).
 5. **Mixins: a structure merged flat.** DONE 2026-10-18
    (`docs/decisions.md#a-mixin-is-merged-flat`, `docs/resources.md#mixins`):
    `$inputs->with(TimestampsStructure::class, reads: [...])` on the
@@ -866,6 +895,11 @@ renames sit in A because they are cheapest before new code exists.
       invariant; a breach decided and fixed changes a test on purpose,
       never silently. New doors and new kinds add cases to it.
     - **An evolution design before anyone depends on a resource.**
+      DONE 2026-10-19 (`docs/evolution.md`,
+      `docs/decisions.md#a-resource-evolves-in-the-open`): the
+      compatibility table, the version, the stored-value migrations as
+      designed (Phase D item 13, to build when the first adopter needs
+      it) and the contract diff (Phase D item 14, built). As planned:
       Phase D, written after reading Smithy's defaults-and-model-evolution
       design: which changes to a resource are compatible, what a stored
       value migration looks like, how a contract diff is reported.

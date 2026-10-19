@@ -432,7 +432,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $this->assertNotEmpty($extensions);
     foreach ($extensions as $at => $extension) {
       if ($at === '') {
-        $this->assertSame(['operation'], array_keys($extension), 'The top states how the operation behaves.');
+        $this->assertSame(['operation', 'version'], array_keys($extension), 'The top states how the operation behaves, and the version.');
         continue;
       }
       $this->assertArrayNotHasKey('widget', $extension, $at . ' names no widget.');

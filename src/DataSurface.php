@@ -85,6 +85,8 @@ final class DataSurface implements DataSurfaceInterface {
    *   Why every key is held to what is stored, or NULL.
    * @param bool $changesNothing
    *   Whether it was built for an operation that changes nothing.
+   * @param int $version
+   *   Which version of its stored values it describes.
    *
    * @internal
    *   A data surface is built by the build step, which seals a
@@ -103,7 +105,15 @@ final class DataSurface implements DataSurfaceInterface {
     protected readonly array $portDefinitions = [],
     protected readonly string|\Stringable|null $lockedWhole = NULL,
     protected readonly bool $changesNothing = FALSE,
+    protected readonly int $version = 1,
   ) {
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function version(): int {
+    return $this->version;
   }
 
   /**
@@ -130,7 +140,7 @@ final class DataSurface implements DataSurfaceInterface {
     if ($values === $this->ports && $definitions === $this->portDefinitions) {
       return $this;
     }
-    return new self($this->definitions, $this->cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $values, $definitions, $this->lockedWhole, $this->changesNothing);
+    return new self($this->definitions, $this->cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $values, $definitions, $this->lockedWhole, $this->changesNothing, $this->version);
   }
 
   /**
@@ -402,7 +412,7 @@ final class DataSurface implements DataSurfaceInterface {
       $changed = TRUE;
     }
     return $changed
-      ? new self($definitions, $cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $this->ports, $this->portDefinitions, $this->lockedWhole, $this->changesNothing)
+      ? new self($definitions, $cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $this->ports, $this->portDefinitions, $this->lockedWhole, $this->changesNothing, $this->version)
       : $this;
   }
 

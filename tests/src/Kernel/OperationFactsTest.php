@@ -210,8 +210,8 @@ class OperationFactsTest extends DataSurfaceKernelTestBase {
     ], $registry->getOperation(RegistrationStep3Resource::class, 'configure')->facts(new OperationContext('configure')));
 
     $built = $resources->buildOperation(RegistrationStep3Resource::class, 'configure', []);
-    $this->assertArrayNotHasKey('x-surface', $emitter->emit($built, [], 'registration.step3')->document['schema']);
-    $this->assertArrayNotHasKey('x-surface', $emitter->emitFull($built, 'registration.step3')->document['schema']);
+    $this->assertSame(['version' => 1], $emitter->emit($built, [], 'registration.step3')->document['schema']['x-surface'], 'No operation: only the version.');
+    $this->assertSame(['version' => 1], $emitter->emitFull($built, 'registration.step3')->document['schema']['x-surface'], 'No operation: only the version.');
   }
 
 }

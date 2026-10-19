@@ -240,7 +240,7 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['frequency'], $monthly['schema']['required']);
     $this->assertSame(['frequency' => 'monthly'], $monthly['values']);
     $this->assertArrayNotHasKey('allOf', $monthly['schema']);
-    $this->assertSame(['doesNotApply' => ['send_day' => ['frequency']]], $monthly['schema']['x-surface'], 'Named on the frame, with what to refine on.');
+    $this->assertSame(['version' => 1, 'doesNotApply' => ['send_day' => ['frequency']]], $monthly['schema']['x-surface'], 'Named on the frame, with what to refine on.');
 
     $weekly = $emitter->emit($built, ['frequency' => 'weekly', 'send_day' => 'friday'], 'resource_test.bulletin', 'configure')->document;
     $this->assertSame(['frequency', 'send_day'], array_keys($weekly['schema']['properties']));
@@ -321,7 +321,7 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
     $this->container->get('state')->set(NoticeBoardStructure::CLOSED, TRUE);
     $closed = $emitter->emit($board, ['title' => 'Hall'], 'resource_test.notice_board')->document['schema'];
     $this->assertSame(['title'], array_keys($closed['properties']));
-    $this->assertSame(['doesNotApply' => ['pinned' => []]], $closed['x-surface']);
+    $this->assertSame(['version' => 1, 'doesNotApply' => ['pinned' => []]], $closed['x-surface']);
     $accepted = $this->pipeline()->accept($board, ['title' => 'Hall']);
     $this->assertSame(['title' => 'Hall'], $accepted);
     $this->assertTrue($this->pipeline()->validate($board, $accepted)->isEmpty(), 'Closed: not asked for.');

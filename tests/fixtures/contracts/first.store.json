@@ -1,0 +1,156 @@
+{
+    "surface": "first.store",
+    "documents": [
+        {
+            "surface": "first.store",
+            "situation": "configure",
+            "label": "Configure the store location",
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": "Configure the store location",
+                "x-surface": {
+                    "operation": {
+                        "id": "configure",
+                        "label": "Configure the store location",
+                        "creates": false,
+                        "readOnly": false,
+                        "destructive": false,
+                        "idempotent": true
+                    },
+                    "version": 1
+                },
+                "type": "object",
+                "properties": {
+                    "country": {
+                        "title": "Country",
+                        "type": "string",
+                        "oneOf": [
+                            {
+                                "const": "CA",
+                                "title": "Canada"
+                            },
+                            {
+                                "const": "US",
+                                "title": "United States"
+                            }
+                        ],
+                        "default": "CA",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "region": {
+                        "title": "Region",
+                        "type": "string",
+                        "oneOf": [
+                            {
+                                "const": "CA-BC",
+                                "title": "British Columbia"
+                            },
+                            {
+                                "const": "CA-ON",
+                                "title": "Ontario"
+                            },
+                            {
+                                "const": "CA-QC",
+                                "title": "Quebec"
+                            },
+                            {
+                                "const": "US-CA",
+                                "title": "California"
+                            },
+                            {
+                                "const": "US-NY",
+                                "title": "New York"
+                            },
+                            {
+                                "const": "US-TX",
+                                "title": "Texas"
+                            }
+                        ],
+                        "default": "CA-ON",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [
+                                "country"
+                            ],
+                            "enumerated": true
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "country",
+                    "region"
+                ],
+                "allOf": [
+                    {
+                        "if": {
+                            "properties": {
+                                "country": {
+                                    "const": "CA"
+                                }
+                            },
+                            "required": [
+                                "country"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "region": {
+                                    "oneOf": [
+                                        {
+                                            "const": "CA-BC",
+                                            "title": "British Columbia"
+                                        },
+                                        {
+                                            "const": "CA-ON",
+                                            "title": "Ontario"
+                                        },
+                                        {
+                                            "const": "CA-QC",
+                                            "title": "Quebec"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "country": {
+                                    "const": "US"
+                                }
+                            },
+                            "required": [
+                                "country"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "region": {
+                                    "oneOf": [
+                                        {
+                                            "const": "US-CA",
+                                            "title": "California"
+                                        },
+                                        {
+                                            "const": "US-NY",
+                                            "title": "New York"
+                                        },
+                                        {
+                                            "const": "US-TX",
+                                            "title": "Texas"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}

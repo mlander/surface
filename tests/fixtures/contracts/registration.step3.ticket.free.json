@@ -1,0 +1,32 @@
+{
+    "surface": "registration.step3.ticket.free",
+    "documents": [
+        {
+            "surface": "registration.step3.ticket.free",
+            "situation": null,
+            "label": null,
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "x-surface": {
+                    "version": 1
+                },
+                "type": "object",
+                "properties": {
+                    "note": {
+                        "title": "Note",
+                        "description": "Shown beside the register button, for example \"Donations welcome\".",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    }
+                },
+                "additionalProperties": false
+            }
+        }
+    ]
+}

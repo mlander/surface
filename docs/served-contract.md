@@ -87,7 +87,7 @@ The emitter writes two documents from one data surface, by one code path.
   the schema for these answers settles it
   ([decision](decisions.md#access-is-static-or-runtime-read-from-its-cacheability)).
   Its `x-surface` carries only what holds for
-  any values (`locked`, `access`, `dependsOn`, `enumerated`, `declared`, `dynamic`, `runtime`,
+  any values (`version`, `locked`, `access`, `dependsOn`, `enumerated`, `declared`, `dynamic`, `runtime`,
   a slot's `by` and `variants`, `group`, `after`, `patternMessage`,
   `checkedOnServer`); there is no `refined`, `stale`, `emptyOption` or
   `chosen`, and no `values` or `stale` beside the schema. A child's
@@ -222,16 +222,19 @@ documents alike:
     "readOnly": false,
     "destructive": false,
     "idempotent": true
-  }
+  },
+  "version": 1
 }
 ```
 
 `creates` is the context's answer; `idempotent` is the operation's own,
 derived from `creates` unless declared, which a tool listing cannot
 always say (the Tool API reads idempotence off the operation kind, and
-every kind that writes is not idempotent). Whatever else the top frame
-says under `x-surface` (`doesNotApply`, `ports`) follows it. A document
-asked for in no operation has no `operation`.
+every kind that writes is not idempotent). Then `version`, which
+version of its stored values the resource or structure describes
+([Evolving a resource](evolution.md#the-version)), and whatever else the
+top frame says under `x-surface` (`doesNotApply`, `ports`). A document
+asked for in no operation has no `operation`, and starts with `version`.
 
 Each frame (the top level, an attached part, a slot's variant) is an
 object with `properties` in declaration order, `required`, and
@@ -292,6 +295,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | `reads` | On a site, the property where a child that reads ports is used: each port, mapped to the key of the parent's frame it reads. |
 | `runtime` | Only when `true`: a runtime refiner narrows the key too, by a rule no schema can state ([three markers](#three-markers)). Never in a conditional and never in the full schema; the schema for these answers is refined by it for its values. Written beside `enumerated` or `dynamic` when the key has static refiners as well. |
 | `operation` | At the top only, first: how the operation behaves, `{id, label, creates, readOnly, destructive, idempotent}` ([above](#the-schema)). |
+| `version` | At the top always, after `operation`; on a def only above 1, absent reading as 1: which version of its stored values the resource or structure describes, counting the breaking changes made to them. A compatible change never moves it; a client compares it before trusting a cached document ([Evolving a resource](evolution.md#the-version)). |
 | `doesNotApply` | On an object, the top or a child's frame, never on a property: the keys of it a refiner answered [do not apply](refinement.md#when-a-key-does-not-apply) to these values, each with the keys it depends on, `{"send_day": ["frequency"]}`. They are no properties of it; a client refines when one of those changes. |
 
 ### Reusable subschemas

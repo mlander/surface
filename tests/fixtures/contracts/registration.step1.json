@@ -1,0 +1,66 @@
+{
+    "surface": "registration.step1",
+    "documents": [
+        {
+            "surface": "registration.step1",
+            "situation": "configure",
+            "label": "Configure registration",
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": "Configure registration",
+                "x-surface": {
+                    "operation": {
+                        "id": "configure",
+                        "label": "Configure registration",
+                        "creates": false,
+                        "readOnly": false,
+                        "destructive": false,
+                        "idempotent": true
+                    },
+                    "version": 1
+                },
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "title": "Event title",
+                        "type": "string",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "capacity": {
+                        "title": "Capacity",
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 1,
+                        "maximum": 1000,
+                        "default": 50,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "open": {
+                        "title": "Registration open",
+                        "type": [
+                            "boolean",
+                            "null"
+                        ],
+                        "default": true,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "title"
+                ]
+            }
+        }
+    ]
+}

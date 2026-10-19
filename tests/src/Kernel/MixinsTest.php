@@ -389,7 +389,9 @@ class MixinsTest extends DataSurfaceKernelTestBase {
    */
   public function testTheEmitterComposesTheDefs(): void {
     $full = $this->schema(JournalResource::class);
-    $this->assertSame(['$schema', 'type', 'properties', 'unevaluatedProperties', 'required', 'allOf', '$defs'], array_keys($full));
+    $keys = ['$schema', 'x-surface', 'type', 'properties', 'unevaluatedProperties', 'required', 'allOf', '$defs'];
+    $this->assertSame($keys, array_keys($full));
+    $this->assertSame(['version' => 1], $full['x-surface'], 'Asked for in no operation: the version alone.');
     $this->assertSame(['resource_test.timestamps', 'resource_test.ownership', 'resource_test.archive'], array_keys($full['$defs']), 'The archive\'s stamps first, then what it mixes in.');
     $this->assertSame(self::KEYS, array_keys($full['properties']), 'Every member keeps its place among the owner\'s keys.');
     $this->assertTrue($full['properties']['changed'], 'The def says all there is.');

@@ -1,0 +1,66 @@
+{
+    "surface": "registration.compliance",
+    "documents": [
+        {
+            "surface": "registration.compliance",
+            "situation": null,
+            "label": null,
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "x-surface": {
+                    "version": 1,
+                    "ports": {
+                        "capacity": {
+                            "type": "integer",
+                            "required": true
+                        }
+                    }
+                },
+                "type": "object",
+                "properties": {
+                    "licence": {
+                        "$ref": "#/$defs/event.licence",
+                        "title": "Event licence",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "patternMessage": "A licence number is four digits, such as 2048."
+                        }
+                    },
+                    "stewards": {
+                        "title": "Stewards",
+                        "type": "integer",
+                        "default": 1,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [
+                                "capacity"
+                            ]
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "stewards"
+                ],
+                "$defs": {
+                    "event.licence": {
+                        "title": "Event licence",
+                        "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "pattern": "^\\d{4}$",
+                        "examples": [
+                            "2048"
+                        ],
+                        "x-surface": {
+                            "patternMessage": "A licence number is four digits, such as 2048."
+                        }
+                    }
+                }
+            }
+        }
+    ]
+}

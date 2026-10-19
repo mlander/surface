@@ -311,6 +311,7 @@ Full documentation is under [`docs/`](docs/).
 | [Outputs](docs/outputs.md) | Declaring what a host emits, the Omitted sentinel, conformance, its two consumers, an alter's outputs. |
 | [Storage](docs/storage.md) | What storage is, prepare and commit, the seven engine storage classes (a simple config object first), config schema, settings layouts, secrets, the serialization rule. |
 | [The served contract](docs/served-contract.md) | An operation as JSON Schema with `x-surface`, its refine and validate endpoints, and the React form rendered from it. |
+| [Evolving a resource](docs/evolution.md) | Which changes are compatible, the version, stored-value migrations as designed, and the contract diff that holds a module to its baselines. |
 | [Generated forms](docs/forms.md) | Host families, the merge rule, AJAX, extraction, stale values, the operation form with its panel and cosmetic seam. |
 | [Widgets](docs/widgets.md) | The widget plugin type, and writing one. |
 | [Options and resolvers](docs/options.md) | `LabeledChoice`, the resolver plugin type, the stock resolvers. |

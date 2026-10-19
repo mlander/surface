@@ -68,6 +68,11 @@ services:
   data_surface.contract_emitter:
     class: Drupal\data_surface\Contract\ContractEmitter
     arguments: ['@data_surface.options', '@string_translation']
+  # The additive-diff lint: each module's committed contract baselines,
+  # and today's full schemas judged against them.
+  data_surface.contract_baselines:
+    class: Drupal\data_surface\Contract\ContractBaselines
+    arguments: ['@data_surface.resource_registry', '@data_surface.resources', '@data_surface.contract_emitter', '@extension.list.module']
   # Every discovered resource and structure, its operations, alters and
   # variants, as one array: what docs/catalogue.md is generated from.
   data_surface.resource_catalogue:

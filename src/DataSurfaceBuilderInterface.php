@@ -197,6 +197,18 @@ interface DataSurfaceBuilderInterface {
   public function markChangesNothing(): static;
 
   /**
+   * Records which version of its stored values the data surface describes.
+   *
+   * Decision: see docs/decisions.md#a-resource-evolves-in-the-open.
+   *
+   * @param int $version
+   *   The version its #[Resource] or #[Structure] declares, from 1.
+   *
+   * @return $this
+   */
+  public function setVersion(int $version): static;
+
+  /**
    * Takes a mixed-in structure's member back out, before anything binds it.
    *
    * What a mixed-in structure's access answers when the account may not

@@ -204,6 +204,20 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
   public function changesNothing(): bool;
 
   /**
+   * Gets which version of its stored values it describes.
+   *
+   * The `version` of the #[Resource] or #[Structure] it was built from, 1
+   * for one that declares none and for one no build step made. Both
+   * documents stamp it as `x-surface.version`.
+   *
+   * Decision: see docs/decisions.md#a-resource-evolves-in-the-open.
+   *
+   * @return int
+   *   The version, from 1.
+   */
+  public function version(): int;
+
+  /**
    * Gets how one provider's mounted third-party settings are stored.
    *
    * @param string $provider

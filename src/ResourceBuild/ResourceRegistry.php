@@ -405,6 +405,39 @@ final class ResourceRegistry {
   }
 
   /**
+   * Holds a declared version to what can be honored today.
+   *
+   * A version names the stored values a class describes, and one above 1
+   * says values stored at an older version are converted forward before
+   * anything reads them. Those migrations are designed and not built, so
+   * a version above 1 would be a promise nothing keeps: refused, as
+   * storage that would quietly write nothing is refused.
+   *
+   * Decision: see docs/decisions.md#a-resource-evolves-in-the-open.
+   *
+   * @param class-string $class
+   *   The class.
+   * @param int $version
+   *   The version its attribute declares.
+   *
+   * @return int
+   *   The version.
+   */
+  protected static function versionOf(string $class, int $version): int {
+    if ($version < 1) {
+      throw new \LogicException(sprintf('%s declares version %d. A version counts the breaking changes made to stored values, from 1.', $class, $version));
+    }
+    if ($version > 1) {
+      throw new \LogicException(sprintf(
+        '%s declares version %d. A version above 1 needs its stored-value migrations, which are designed (docs/evolution.md) and not built yet (ROADMAP.md, Phase D item 13). Until then a breaking change is accepted by an allowance recorded in the contract baseline.',
+        $class,
+        $version,
+      ));
+    }
+    return $version;
+  }
+
+  /**
    * Reads every attribute on every discovered class.
    *
    * @param array<class-string, array{module: string, id: string}> $own
@@ -449,6 +482,7 @@ final class ResourceRegistry {
         access: $attribute?->access,
         refiners: self::refinersOf($reflection),
         kind: $kind,
+        version: self::versionOf($class, $attribute->version ?? 1),
       );
       if ($attribute instanceof Resource && $attribute->storage === NULL && $attribute->identity === [] && $plugin_id === NULL && ($this->plugins?->usedBy($class) ?? []) === []) {
         // Decision: see docs/decisions.md#a-resource-has-storage-or-a-host.

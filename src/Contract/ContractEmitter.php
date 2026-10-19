@@ -259,7 +259,7 @@ final class ContractEmitter {
       'surface' => $resource_id,
       'situation' => $operation_id,
       'label' => $label === NULL ? NULL : PlainText::of($label),
-      'schema' => ['$schema' => self::DIALECT] + $title + $this->lockedWhole($surface, $this->operation($operation, $schema)),
+      'schema' => ['$schema' => self::DIALECT] + $title + $this->lockedWhole($surface, $this->operation($operation, $this->versioned($surface, $schema))),
       'values' => $shown,
       'stale' => $stale,
     ];
@@ -347,7 +347,7 @@ final class ContractEmitter {
       'surface' => $resource_id,
       'situation' => $operation_id,
       'label' => $label === NULL ? NULL : PlainText::of($label),
-      'schema' => ['$schema' => self::DIALECT] + $title + $this->lockedWhole($surface, $this->operation($operation, $schema)),
+      'schema' => ['$schema' => self::DIALECT] + $title + $this->lockedWhole($surface, $this->operation($operation, $this->versioned($surface, $schema))),
     ];
     $outputs = $this->outputs($surface, $cacheability);
     if ($outputs !== NULL) {
@@ -380,6 +380,39 @@ final class ContractEmitter {
       return $schema;
     }
     $extension = [self::EXTENSION => ['operation' => $operation] + ($schema[self::EXTENSION] ?? [])];
+    unset($schema[self::EXTENSION]);
+    return $extension + $schema;
+  }
+
+  /**
+   * Stamps which version of its stored values a frame describes.
+   *
+   * At the top always, first under `x-surface` after how the operation
+   * behaves, so a client compares the number it asked for without knowing
+   * a default; on a def only above 1, since a def at 1 has said nothing
+   * since values were first stored, and its absence reads as 1.
+   *
+   * Decision: see docs/decisions.md#a-resource-evolves-in-the-open.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface the frame was described from.
+   * @param array $schema
+   *   The frame.
+   * @param bool $top
+   *   Whether it is the top of a document rather than a def.
+   *
+   * @return array
+   *   The frame, stamped.
+   */
+  protected function versioned(DataSurfaceInterface $surface, array $schema, bool $top = TRUE): array {
+    if (!$top && $surface->version() === 1) {
+      return $schema;
+    }
+    $schema[self::EXTENSION] = ['version' => $surface->version()] + ($schema[self::EXTENSION] ?? []);
+    if (!$top) {
+      return $schema;
+    }
+    $extension = [self::EXTENSION => $schema[self::EXTENSION]];
     unset($schema[self::EXTENSION]);
     return $extension + $schema;
   }
@@ -1596,6 +1629,7 @@ final class ContractEmitter {
       // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
       unset($def['additionalProperties'], $def['unevaluatedProperties']);
     }
+    $def = $this->versioned($child, $def, FALSE);
     return $subschemas->add($id, $def, $child);
   }
 

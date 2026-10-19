@@ -91,6 +91,9 @@ final class ResourceDefinition {
    * @param string $kind
    *   self::RESOURCE or self::STRUCTURE: the attribute the class carries,
    *   or for a derived one, whether it names storage or identity.
+   * @param int $version
+   *   Which version of its stored values it describes: the attribute's,
+   *   or 1 for a derived one and a plugin that carries no attribute.
    */
   public function __construct(
     public readonly ?string $class,
@@ -112,6 +115,7 @@ final class ResourceDefinition {
     public readonly array $notes = [],
     public readonly array $cacheTags = [],
     public readonly string $kind = self::RESOURCE,
+    public readonly int $version = 1,
   ) {}
 
   /**
@@ -190,6 +194,7 @@ final class ResourceDefinition {
       notes: $this->notes,
       cacheTags: $this->cacheTags,
       kind: $this->kind,
+      version: $this->version,
     );
   }
 

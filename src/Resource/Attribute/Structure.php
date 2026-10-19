@@ -30,10 +30,17 @@ final class Structure {
    *   child, whether its keys are open, locked or omitted. NULL means the
    *   permission of the operation it is invoked through is the whole
    *   answer.
+   * @param int $version
+   *   Which version of its stored values it describes, wherever a
+   *   container stores them, as for #[Resource]: 1 unless a breaking
+   *   change was made since values were first stored, and refused above 1
+   *   until stored-value migrations are built.
+   *   Decision: see docs/decisions.md#a-resource-evolves-in-the-open.
    */
   public function __construct(
     public readonly string $id,
     public readonly ?string $access = NULL,
+    public readonly int $version = 1,
   ) {}
 
 }
