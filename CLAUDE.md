@@ -302,6 +302,12 @@ so the rule is this sentence. `npm test` is not part of
   with the container guarded (`Refinement\StaticRefinerContainer`) and the
   emitter asks it twice; `StaticRefinerAgreementTrait` holds conditionals
   to a fresh `refine()` (`docs/refinement.md#enforcing-the-kind`).
+- A rule between keys whose condition and effect a schema can state is
+  declared in the blueprint, `$inputs->narrow($key)->when(Condition::...)`
+  and its effects: a static refiner, bound after its contributor's coded
+  ones, waiting for nothing, only tightening, stated by the full schema
+  as written. A refiner is for an effect that must be computed or a
+  condition that is runtime (`docs/decisions.md#a-rule-declared-as-data`).
 - `#[RefinesInput]` methods narrow a definition, or answer that the key
   does not apply, `DoesNotApply::here()`, which the return type then
   names (`docs/decisions.md#a-key-that-does-not-apply`); an alter adds

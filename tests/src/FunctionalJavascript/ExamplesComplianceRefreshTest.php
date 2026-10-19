@@ -71,7 +71,7 @@ class ExamplesComplianceRefreshTest extends ExamplesWebDriverTestBase {
     $assert->pageTextNotContains('Third party settings');
     $assert->pageTextNotContains('Settings added by other modules.');
 
-    $this->assertStringContainsString('Up to 100 without an event licence. With one, up to 400.', $this->formItemText('surface[capacity]'));
+    $this->assertStringContainsString('Up to 100 without an event licence.', $this->formItemText('surface[capacity]'));
     $this->assertStringContainsString('At least 1 steward for 50 attendees.', $this->formItemText(self::STEWARDS));
     $this->enterLicence('2048');
     $this->assertStringContainsString('Up to 400 for the Main hall.', $this->formItemText('surface[capacity]'));
@@ -127,7 +127,7 @@ class ExamplesComplianceRefreshTest extends ExamplesWebDriverTestBase {
     // And no licence to the capacity.
     $capacity = $assert->fieldExists('surface[capacity]');
     $this->assertSame('100', $capacity->getAttribute('max'));
-    $this->assertStringContainsString('Up to 100 without an event licence. With one, up to 400.', $this->formItemText('surface[capacity]'));
+    $this->assertStringContainsString('Up to 100 without an event licence.', $this->formItemText('surface[capacity]'));
 
     // Corrected, the error goes with the next refresh and the room's own
     // limit comes back.

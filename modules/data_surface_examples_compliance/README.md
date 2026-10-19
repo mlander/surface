@@ -18,13 +18,24 @@ $inputs->describe('third_party_settings.data_surface_examples_compliance', label
 ```
 
 The fieldset is drawn there on the form and in React; its keys are
-still stored and posted under this module's name. Its static
-`#[RefinesInput('capacity')]` method watches the
-licence it added itself: without one, example 3's capacity stops at a
-hundred, and with one the room's limit applies again. Its static
+still stored and posted under this module's name. Its rule on the
+capacity, declared as data in `alterInputs()`, reads the licence it
+added itself:
+
+```php
+$inputs->narrow('capacity')
+  ->when(Condition::absent('licence'))
+  ->constrain('Range', ['max' => 100])
+  ->describe($this->t('Up to 100 without an event licence.'));
+```
+
+Without a licence, example 3's capacity stops at a hundred, and with
+one the room's limit applies again; the full schema states the rule as
+written, so the capacity is exact there. Its static
 `#[RefinesInput('stewards')]` method watches example 3's `capacity`:
-one steward per fifty people, at least one. Both translate with `t()`
-and hold no service, so the served contract runs them ahead of time. Its
+one steward per fifty people, at least one, an effect computed, so a
+refiner. It translates with `t()` and holds no service, so the served
+contract runs it ahead of time where it can. Its
 `#[RefinesInput('room', runtime: TRUE)]` method leaves out the rooms a
 site has closed, which it reads from State through the service the
 alter is built with: a runtime refiner, because what it answers is known
@@ -41,11 +52,11 @@ drush pm:install data_surface_examples_compliance
 
 Then reload `/surface-examples/3`, choose Riverside Hall's main hall,
 and see the Compliance fieldset right under the capacity, and the
-capacity stop at 100, its help text naming both ceilings.
+capacity stop at 100, its help text saying why.
 The licence asks for the four digits after EV- only. Type `2048` and it
 goes back to 400; type `EV-2048` and the licence is refused under the
 field while the capacity stays at 100, because an invalid licence is no
-licence to the refiner. Set the capacity to 150 and the stewards field
+licence to the rule. Set the capacity to 150 and the stewards field
 asks for 3. The licence's help text and placeholder say its format, and
 the panel explains the Regex by its message, never by the pattern.
 
@@ -76,6 +87,7 @@ deletes the key, which opens every room again; so does
 | --- | --- |
 | `Kernel\ExamplesComplianceTest` | The keys appear under the module's name and the label changes; the Compliance fieldset is built where its values post and drawn between the capacity and the pricing, the group it is stored in drawing nothing; the capacity stops at 100 without a licence and at the room's limit with `2048`; `204` is refused with the alter's message; the stewards' minimum is 3 at 150 and 1 at 20, said under the field; the pipeline refuses 150 without a licence and writes it with one; a room closed in State is left out, said in the room's help, and refused on submit; the licence replaces the capacity, the stewards and the panel, the capacity the stewards and the panel; example 5's calls answer as without the module. |
 | `Kernel\ServedContractTest::testClosedRoomIsLeftToTheRuntime` | Nothing closed, nothing changes; with the East room closed the full schema is the same document and still lists it, the schema for these answers leaves it out and says why, a validator holding the full schema accepts it and the pipeline refuses it. |
-| `Kernel\StaticRefinerEnforcementTest::testTheExamplesAgree` | With the module on and a room closed, every conditional the served contract enumerates for example 3 is what refining afresh for its values answers: the static refiners are what they declare. |
+| `Kernel\ServedContractTest::testExampleFourStatesTheCapacityExactly` | The full schema states the capacity per room and its licence rule as written, `x-surface.declared`, and nothing about it `dynamic`; the stewards stay `dynamic`; for no values the rule is evaluated, a hundred. |
+| `Kernel\StaticRefinerEnforcementTest::testTheExamplesAgree` | With the module on and a room closed, every conditional the served contract enumerates for example 3 is what refining afresh for its values answers, and the licence rule's conditional is what refining with the rules alone answers for sampled values of the licence: the static refiners are what they declare. |
 | `Functional\ExamplesFullSubmitTest` | On `/surface-examples/3`, a capacity of 150 is refused at the capacity without a licence and written with `2048` and 3 stewards. |
 | `FunctionalJavascript\ExamplesComplianceRefreshTest` | In a browser: the Compliance fieldset below the capacity and above the pricing, and still there after `2048` and Tab lift the capacity, which, with the stewards, is all the refresh replaced; with the East room closed, choosing Riverside Hall offers the main hall alone. |

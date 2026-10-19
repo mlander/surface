@@ -11,6 +11,7 @@ use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\Refinement\Rule;
 use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
 
 /**
@@ -43,6 +44,13 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * @var array<string, class-string>
    */
   protected array $attachments = [];
+
+  /**
+   * The rules declared through this blueprint, in order.
+   *
+   * @var \Drupal\data_surface\Refinement\Rule[]
+   */
+  protected array $rules = [];
 
   /**
    * The collections attached through this blueprint, keyed by key.
@@ -153,6 +161,29 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
       'extendChoices() was asked to widen "%s" from the owner\'s own blueprint. An owner lists its own values in the key\'s constraint; extendChoices() is how an alter offers more.',
       $key,
     ));
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Recorded here and bound by the build step, which checks the rule
+   * against the shape once every alter has added its keys.
+   */
+  public function narrow(string $key): Rule {
+    if ($this->outputs) {
+      throw new \LogicException(sprintf('narrow() was asked to narrow the output "%s". Outputs are never refined: a rule narrows what may be sent, and nobody sends an output.', $key));
+    }
+    return $this->rules[] = new Rule($key);
+  }
+
+  /**
+   * Gets the rules declared through this blueprint, in order.
+   *
+   * @return \Drupal\data_surface\Refinement\Rule[]
+   *   The rules.
+   */
+  public function rules(): array {
+    return $this->rules;
   }
 
   /**

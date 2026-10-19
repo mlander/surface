@@ -226,7 +226,7 @@ one thing whole, with a single entity or with every identity key.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `configure` | Configure registration | nothing | no | `administer site configuration` | yes | yes | `RegistrationStep3Resource::configure()` (`data_surface_examples`) |
 
-- Altered by `Drupal\data_surface_examples_compliance\Alter\RegistrationComplianceAlter` (`data_surface_examples_compliance`), in every operation; it refines `capacity` (watching `licence`), `room` (watching `venue`) at runtime, `stewards` (watching `capacity`).
+- Altered by `Drupal\data_surface_examples_compliance\Alter\RegistrationComplianceAlter` (`data_surface_examples_compliance`), in every operation; it refines `room` (watching `venue`) at runtime, `stewards` (watching `capacity`).
 
 - Slot `ticket` is filled by: `free` → `Drupal\data_surface_examples\Structure\FreeTicketStructure`, `paid` → `Drupal\data_surface_examples\Structure\PaidTicketStructure`.
 

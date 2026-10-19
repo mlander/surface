@@ -1,8 +1,9 @@
 import type { Contract, Marker, Schema, Settled, Values } from '../contract';
-import { inlineSchema, narrow, narrowingStatus, setAt } from '../contract';
+import { holdsIf, inlineSchema, narrow, narrowingStatus, setAt } from '../contract';
 import example2 from './fixtures/refine-example2.json';
 import example3 from './fixtures/refine-example3.json';
 import compliance from './fixtures/refine-example3-compliance.json';
+import licence from './fixtures/refine-example3-licence.json';
 import bulletin from './fixtures/refine-bulletin.json';
 
 // The page's narrowing held to the server's. Each fixture is what
@@ -33,8 +34,8 @@ function served(contract: Contract): Settled {
  * chain of local changes is held to the server too; one asked continues
  * from the server's answer, as the app does.
  */
-function play(recorded: Recorded, expected: Expected[]): void {
-  const full = inlineSchema(recorded.schema.schema);
+function play(recorded: Recorded, expected: Expected[], fullSchema?: Schema): void {
+  const full = fullSchema ?? inlineSchema(recorded.schema.schema);
   const stored = recorded.contract.values;
   let previous = served(recorded.contract);
   recorded.steps.forEach((step, index) => {
@@ -76,15 +77,53 @@ describe('narrowing here agrees with /refine', () => {
     play(example3 as unknown as Recorded, ['local', 'local', 'local', 'local', 'local', 'local', 'local']);
   });
 
-  it('on example 3 with compliance: the slot here, the room and the capacity by the server', () => {
+  it('on example 3 with compliance: the slot here, the room and the stewards by the server', () => {
+    // The capacity is stated exactly now, its licence rule declared; the
+    // stewards, inside the mount, follow the capacity, a number, and are
+    // dynamic, so a change the capacity depends on is still asked.
     play(compliance as unknown as Recorded, [
       'local',
       { key: 'room', marker: 'runtime' },
       'local',
-      { key: 'capacity', marker: 'dynamic' },
-      { key: 'capacity', marker: 'dynamic' },
+      { key: 'third_party_settings', marker: 'dynamic' },
+      { key: 'third_party_settings', marker: 'dynamic' },
       'local',
     ]);
+  });
+});
+
+describe('a rule declared as data', () => {
+  const recorded = licence as unknown as Recorded;
+  const full = inlineSchema(recorded.schema.schema);
+  const rule = (full.allOf ?? []).find((condition) => condition['x-surface']?.declared === true);
+
+  it('is stated in the compliance full schema as written, and read by its own `if`', () => {
+    expect(full.properties?.capacity['x-surface']).toMatchObject({ enumerated: true, declared: true });
+    expect(full.properties?.capacity['x-surface']?.dynamic).toBeUndefined();
+    expect(rule?.then).toEqual({ properties: { capacity: { description: 'Up to 100 without an event licence.', maximum: 100 } } });
+    const at = (value: unknown): Values => ({ third_party_settings: { data_surface_examples_compliance: { licence: value, stewards: 1 } } });
+    expect(holdsIf(rule?.if, at(null))).toBe(true);
+    expect(holdsIf(rule?.if, at(''))).toBe(true);
+    expect(holdsIf(rule?.if, at('2048'))).toBe(false);
+    expect(holdsIf(rule?.if, {})).toBe(true);
+  });
+
+  it('is narrowed here, keyword for keyword as /refine answers, where nothing dynamic depends on it', () => {
+    // The stewards' rule set aside: what is left of a licence or room
+    // change is the capacity, its room conditionals and its declared rule.
+    const mount = full.properties?.third_party_settings as Schema;
+    const stated = { ...full, properties: { ...full.properties, third_party_settings: { ...mount, 'x-surface': { ...mount['x-surface'], dynamic: undefined } } } } as Schema;
+    play(recorded, ['local', 'local', 'local'], stated);
+  });
+
+  it('reads each word of the vocabulary as JSON Schema does', () => {
+    const number = { properties: { n: { type: 'number', minimum: 2, exclusiveMaximum: 5 } }, required: ['n'] };
+    expect([1, 2, 4, 5, '3', null, undefined].map((n) => holdsIf(number, { n }))).toEqual([false, true, true, false, true, false, false]);
+    expect(holdsIf({ properties: { k: { enum: ['a', 'b'] } }, required: ['k'] }, { k: 'b' })).toBe(true);
+    expect(holdsIf({ not: { properties: { k: { const: 'a' } }, required: ['k'] } }, { k: 'a' })).toBe(false);
+    expect(holdsIf({ anyOf: [{ properties: { k: { const: 'a' } }, required: ['k'] }, { properties: { j: { const: true } }, required: ['j'] }] }, { j: true })).toBe(true);
+    expect(holdsIf({ allOf: [{ properties: { k: { not: { type: 'null' } } }, required: ['k'] }] }, { k: '' })).toBe(false);
+    expect(() => holdsIf({ pattern: '^a' }, {})).toThrow();
   });
 });
 

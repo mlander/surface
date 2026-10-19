@@ -369,13 +369,10 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
       label: $this->t('Compliance'),
       after: 'capacity',
     );
+    $inputs->narrow('capacity')
+      ->when(Condition::absent('licence'))
+      ->constrain('Range', ['max' => 100]);
   }
-
-  #[RefinesInput('capacity')]
-  public static function capacityWithoutLicence(
-    DataDefinition $capacity,
-    ?string $licence,
-  ): DataDefinition { /* stops at 100 */ }
 
 }`,
     contract: `{

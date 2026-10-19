@@ -215,7 +215,7 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Compliance', (string) $group[self::MODULE]['#title']);
     $this->assertSame(['licence', 'stewards'], Element::children($group[self::MODULE]));
     $this->assertSame('At least 1 steward for 50 attendees.', (string) $group[self::MODULE]['stewards']['#description']);
-    $this->assertSame('Up to 100 without an event licence. With one, up to 400.', (string) $form['capacity']['#description']);
+    $this->assertSame('Up to 100 without an event licence.', (string) $form['capacity']['#description']);
 
     $served = $this->container->get('data_surface.contract_emitter')
       ->emit($surface, $stored, 'registration.step3', 'configure', widgets: TRUE)->document['schema']['properties']['third_party_settings'];
@@ -298,23 +298,26 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
     $surface = $this->surface();
     $capacity = $surface->refine(self::EVENT)->getDefinition('capacity');
     $this->assertSame(['min' => 1, 'max' => 100], $capacity->getConstraints()['Range']);
-    $this->assertSame('Up to 100 without an event licence. With one, up to 400.', (string) $capacity->getDescription());
+    $this->assertSame('Up to 100 without an event licence.', (string) $capacity->getDescription());
 
     $capacity = $surface->refine(self::EVENT + self::compliance('2048'))->getDefinition('capacity');
     $this->assertSame(['min' => 1, 'max' => 400], $capacity->getConstraints()['Range']);
     $this->assertSame('Up to 400 for the Main hall.', (string) $capacity->getDescription());
 
-    // A room that seats fewer than a hundred keeps its own limit and its
-    // owner's words either way: a licence would change nothing there.
+    // A room that seats fewer than a hundred keeps its own limit, the
+    // lower one: a rule only tightens, and says why only where it did, so
+    // the room keeps its owner's words, licence or not.
     $small = ['room' => 'library_reading', 'venue' => 'library'] + self::EVENT;
     $capacity = $surface->refine($small)->getDefinition('capacity');
     $this->assertSame(60, $capacity->getConstraints()['Range']['max']);
     $this->assertSame('Up to 60 for the Reading room.', (string) $capacity->getDescription());
+    $capacity = $surface->refine($small + self::compliance('2048'))->getDefinition('capacity');
+    $this->assertSame(60, $capacity->getConstraints()['Range']['max']);
+    $this->assertSame('Up to 60 for the Reading room.', (string) $capacity->getDescription());
 
-    // Elsewhere the text names both ceilings, the room's read off the
-    // owner's refined Range.
+    // A room seating more than a hundred gets the rule's words.
     $deck = ['room' => 'harbour_deck', 'venue' => 'harbour'] + self::EVENT;
-    $this->assertSame('Up to 100 without an event licence. With one, up to 150.', (string) $surface->refine($deck)->getDefinition('capacity')->getDescription());
+    $this->assertSame('Up to 100 without an event licence.', (string) $surface->refine($deck)->getDefinition('capacity')->getDescription());
 
     $this->assertSame([], $this->refusals(['capacity' => 100] + self::compliance(NULL, 2)));
     $this->assertSame(['capacity'], $this->refusals(['capacity' => 150] + self::compliance(NULL, 3)));
@@ -507,7 +510,7 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
     $surface = $this->surface();
     $capacity = $surface->refine(self::EVENT + self::compliance('EV-2048'))->getDefinition('capacity');
     $this->assertSame(['min' => 1, 'max' => 100], $capacity->getConstraints()['Range']);
-    $this->assertSame('Up to 100 without an event licence. With one, up to 400.', (string) $capacity->getDescription());
+    $this->assertSame('Up to 100 without an event licence.', (string) $capacity->getDescription());
 
     // Downstream of it, a capacity above that ceiling is itself refused,
     // so the stewards' minimum is not refined against it.
@@ -571,7 +574,7 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
 
     $capacity = $this->ajaxMarkup($response, $this->wrapperSelector($container['capacity']));
     $this->assertStringContainsString('max="100"', $capacity);
-    $this->assertStringContainsString('Up to 100 without an event licence. With one, up to 400.', $capacity);
+    $this->assertStringContainsString('Up to 100 without an event licence.', $capacity);
 
     $markup = $this->ajaxMarkup($response, $this->wrapperSelector($licence));
     $this->assertSame(1, substr_count($markup, $message));

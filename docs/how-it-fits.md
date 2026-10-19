@@ -87,6 +87,10 @@ build(FieldInstanceResource::class, $context):
          an alter's holds the alter service, whose runtime refiners
          may be instance methods
        a method watching nothing runs now, checked narrower
+     then the rules each declared with narrow() (bindRules), after its
+       contributor's methods: checked against the keys, the wall and
+       the narrowing check as written; the keys a condition reads become
+       edges that gate nothing; one DeclaredRefiner link per contributor
 
   6. the children, each through this same build step in its own frame,
      invoked the way a resource asked on its own is (invokeChild): the
@@ -131,7 +135,8 @@ refine($values)                                  DataSurface::refine()
   mounted, which only that alter watches, is read at its path and not
   waited for): its chain of
   RefinesInputRefiner links (owner's, then alters'), each handed a deep
-  clone and checked narrower; each child refined in its own frame
+  clone and checked narrower; a key's DeclaredRefiner links run whether
+  or not its siblings hold values, reading them as they stand; each child refined in its own frame
 ```
 
 Values never travel in the context. Identity facts in the context

@@ -79,7 +79,7 @@ The emitter writes two documents from one data surface, by one code path.
   `x-surface.dynamic: true`. A runtime refiner is never run for it: the
   key keeps the width its static refiners give it and carries
   `x-surface.runtime: true`. Its `x-surface` carries only what holds for
-  any values (`locked`, `dependsOn`, `enumerated`, `dynamic`, `runtime`,
+  any values (`locked`, `dependsOn`, `enumerated`, `declared`, `dynamic`, `runtime`,
   a slot's `by` and `variants`, `group`, `after`, `patternMessage`,
   `checkedOnServer`); there is no `refined`, `stale`, `emptyOption` or
   `chosen`, and no `values` or `stale` beside the schema. A child's
@@ -248,6 +248,7 @@ each written once, as a def under `$defs`, and referred to
 | `enumerated` | Only when `true`: the key's static refiners have nothing to refine against yet, and what they answer for every value they could be handed is stated as conditionals on the parent ([below](#exact-where-it-can-be)). Captured exactly: the schema is exact for this key with no round trip, less what `runtime` adds. |
 | `dynamic` | Only when `true`: the key's static refiners have nothing to refine against yet, and what they would answer cannot be listed (a watched key with no list of values, or too many combinations). Static by declaration, not captured here: the schema is the unrefined, looser one, wider than the pipeline and never narrower ([decision](decisions.md#two-documents-never-stricter-than-the-runtime)); refine when a `dependsOn` key changes. In [the full schema](#two-documents) every key that cannot be listed carries it. |
 | `list` | Only when `true`, on a collection: an array whose every item is a child, its `items` a reference to the child's def. A renderer draws each item as that def's fieldset, adds and removes items within `minItems` and `maxItems`, and reads `dependsOn` inside each item under its delta (`shelves.1.unit`). |
+| `declared` | Only when `true`, in [the full schema](#two-documents) and in a def: rules declared as data narrow the key ([refinement](refinement.md#declaring-a-rule)), each stated as written, one conditional on the parent with `x-surface: {"declared": true}` beside its `if` and `then`, after the key's enumerated ones. Exact: a client evaluates each `if` and tightens the key by its `then` (the lower maximum, the values both lists offer). The schema for these answers evaluates the rules for its values and writes none. |
 | `runtime` | Only when `true`: a runtime refiner narrows the key too, by a rule no schema can state ([three markers](#three-markers)). Never in a conditional and never in the full schema; the schema for these answers is refined by it for its values. Written beside `enumerated` or `dynamic` when the key has static refiners as well. |
 | `doesNotApply` | On an object, the top or a child's frame, never on a property: the keys of it a refiner answered [do not apply](refinement.md#when-a-key-does-not-apply) to these values, each with the keys it depends on, `{"send_day": ["frequency"]}`. They are no properties of it; a client refines when one of those changes. |
 
@@ -522,9 +523,10 @@ example 2's and example 3's room (per venue, 3 conditionals) and
 capacity (per room, 6); the demo block's `bundle` (per entity type) and
 `field` (per entity type and bundle); the demo formatter's `variant`
 (per casing); the demo extras' `limit` (per presentation; only the grid
-writes one). Dynamic: example 4's capacity, which also watches the
-free-text licence, and its stewards, inside the mount, which watch the
-capacity, a number. Runtime: example 4's room, which its alter narrows
+writes one). Declared: example 4's capacity, whose ceiling without a
+licence is a rule declared as data, stated as written beside its six
+conditionals per room. Dynamic: example 4's stewards, inside the mount,
+which watch the capacity, a number. Runtime: example 4's room, which its alter narrows
 by the rooms a site has closed, read from State; it stays enumerated per
 venue for example 3's own refiner. The field instance's `bundle` would
 be enumerated per entity type, but every operation of it knows the
@@ -843,8 +845,9 @@ itself. The rule, as `data_surface_react` applies it:
 
 Example 2 narrows every change itself. Example 3 does too; with example
 4's module on, a change of the venue asks (the room is `runtime`, for
-the closed rooms), and so does the licence and the room (the capacity is
-`dynamic`, watching free text), while the pricing is still narrowed
+the closed rooms), and so does the licence and the room: the capacity is
+stated exactly, its licence rule declared, but the stewards that follow
+it are `dynamic`, watching a number. The pricing is still narrowed
 here: the ticket is a slot, stated whole.
 
 ## What a write needs

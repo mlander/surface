@@ -304,7 +304,7 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $values['third_party_settings']['data_surface_examples_compliance']['licence'] = 'EV-2048';
     $refined = $this->json($this->post('surface-api/registration.step3/configure/refine', ['values' => $values]));
     $this->assertSame(100, $refined['schema']['properties']['capacity']['maximum']);
-    $this->assertSame('Up to 100 without an event licence. With one, up to 400.', $refined['schema']['properties']['capacity']['description']);
+    $this->assertSame('Up to 100 without an event licence.', $refined['schema']['properties']['capacity']['description']);
     $this->assertSame('EV-2048', $refined['values']['third_party_settings']['data_surface_examples_compliance']['licence']);
     $schema = $refined['schema']['properties']['third_party_settings']['properties']['data_surface_examples_compliance']['properties']['licence'];
     $this->assertSame('^\\d{4}$', $schema['pattern']);

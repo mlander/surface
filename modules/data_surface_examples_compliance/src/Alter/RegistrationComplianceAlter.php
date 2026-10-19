@@ -11,6 +11,7 @@ use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\Refinement\Condition;
 use Drupal\data_surface\Resource\Attribute\Alters;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
@@ -23,11 +24,11 @@ use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
  * Another module's class, naming example 3's resource. It adds two keys,
  * stored under this module's name, titles the fieldset they sit in and
  * draws it right after the capacity its licence lifts, and rewords one
- * of the owner's labels. Without an event licence the
- * owner's capacity stops at a hundred, and the stewards it asks for
- * follow the capacity. A room the site has closed is not offered, which
- * only the site knows when it is asked. Example 3 is not changed and
- * does not know this module exists.
+ * of the owner's labels. Without an event licence the owner's capacity
+ * stops at a hundred, a rule declared as data; the stewards it asks for
+ * follow the capacity, a rule computed in code. A room the site has
+ * closed is not offered, which only the site knows when it is asked.
+ * Example 3 is not changed and does not know this module exists.
  */
 #[Alters(RegistrationStep3Resource::class)]
 final class RegistrationComplianceAlter implements AltersInputsInterface {
@@ -63,34 +64,13 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
     $inputs->add('stewards', 'integer', $this->t('Stewards'), default: 1)->setRequired(TRUE);
     $inputs->describe('title', label: $this->t('Public event title'));
     $inputs->describe('third_party_settings.data_surface_examples_compliance', label: $this->t('Compliance'), after: 'capacity');
-  }
-
-  /**
-   * Without a licence, no more than a hundred, whatever the room seats.
-   *
-   * The owner's refiner has already capped the capacity at the room's
-   * seats, so the description names both ceilings: the hundred this
-   * module sets, and what the room allows once a licence is given. A
-   * room that seats a hundred or fewer is left as the owner said it,
-   * since a licence changes nothing there.
-   *
-   * Any licence this is handed counts: a refiner never sees an invalid
-   * sibling, so a value the licence's own pattern refuses arrives as
-   * NULL, exactly as no licence does.
-   *
-   * @see docs/decisions.md#a-refiner-never-sees-an-invalid-sibling
-   */
-  #[RefinesInput('capacity')]
-  public static function capacityWithoutLicence(DataDefinition $capacity, ?string $licence): DataDefinition {
-    $range = $capacity->getConstraints()['Range'] ?? [];
-    $max = $range['max'] ?? NULL;
-    if ((string) $licence !== '' || ($max !== NULL && $max <= 100)) {
-      return $capacity;
-    }
-    $capacity->addConstraint('Range', array_replace($range, ['max' => 100]));
-    return $capacity->setDescription($max === NULL
-      ? t('Up to 100 without an event licence.')
-      : t('Up to 100 without an event licence. With one, up to @max.', ['@max' => $max]));
+    // Without a licence, no more than a hundred, whatever the room seats.
+    // A licence its own pattern refuses is no licence: a rule never sees
+    // an invalid sibling.
+    $inputs->narrow('capacity')
+      ->when(Condition::absent('licence'))
+      ->constrain('Range', ['max' => 100])
+      ->describe($this->t('Up to 100 without an event licence.'));
   }
 
   /**

@@ -557,8 +557,10 @@ is invisible until the refiner runs, and the full schema and the tool's
 listing must know before anything runs which keys may not apply, or a
 `dynamic` or `runtime` key required in them would be stricter than the
 pipeline. A blueprint declaration, `add(..., appliesWhen:)`, is
-declarative narrowing ([ROADMAP](../ROADMAP.md) item 3), a second idea,
-which cannot state a runtime rule and would need its own enumeration. The
+declarative narrowing ([ROADMAP](../ROADMAP.md) item 3), which cannot
+state a runtime rule; it has since landed as a refiner too, whose
+`doesNotApply()` gives this same answer ([A rule declared as
+data](#a-rule-declared-as-data)). The
 sentinel in the return type is both an answer and a declaration: the
 signature already declares what a refiner watches, and now whether it
 may rule its key out, so the build reads it by reflection (a method that
@@ -639,6 +641,136 @@ array in the accepted document, which a JSON encoder writes as `[]`.
 (`Refinement\DoesNotApply`, `RefinesInputRefiner::invoke()`,
 `DataSurface::refineAgainst()`, `DataSurfacePipeline::accept()`,
 `ContractEmitter::enumerate()`, `narrow()` in `app/src/contract.ts`)
+
+### A rule declared as data
+
+A rule between keys whose condition and effect a schema can state is
+declared, not coded: the blueprint's `narrow()` takes the key, `when()`
+a `Refinement\Condition`, and its effects.
+
+```php
+$inputs->narrow('capacity')
+  ->when(Condition::absent('licence'))
+  ->constrain('Range', ['max' => 100])
+  ->describe($this->t('Up to 100 without an event licence.'));
+```
+
+The guidance: declare the rule when its condition and effect fit the
+vocabulary; write a refiner when the effect must be computed (the
+stewards for a capacity, `ceil($capacity / 50)`, stays coded) or the
+condition is runtime. Each choice, and why:
+
+- **One concept: a declared rule is a refiner, static by construction.**
+  One contributor's rules are one link, `Refinement\DeclaredRefiner`, in
+  the owner's chain of each key they narrow, and the keys a condition
+  reads are refinement edges, so they are `dependsOn`, rebuild a form
+  over AJAX, are held to the cycle check and to "a refiner never sees an
+  invalid sibling", and name themselves in a refusal, as a coded
+  refiner's do. Every answer is held to the narrowing check. A second
+  concept beside refiners would need its own gate, its own enumeration
+  and its own agreement check, and the two would drift.
+- **A rule waits for nothing.** A coded refiner runs once every key it
+  watches holds a value; a rule runs whatever its keys hold, and is
+  handed them as they stand, because `absent` is about a key holding
+  nothing, and because the `if` a schema states is read on any document.
+  A key only a rule reads gates nothing, so a rule on the capacity that
+  reads the licence never holds the room's ceiling back
+  (`Entry::gate()`, `Entry::declaredDependencies()`).
+- **A closed condition vocabulary, each word one exact `if`.** `present`,
+  `absent`, `equals`, `in`, `atLeast`, `atMost`, `above`, `below`,
+  `not`, `allOf`, `anyOf`; no callback, no expression, no string
+  function, since each would be a rule only PHP can read. Exact means
+  exact on the accepted document, which carries every key, `null` for
+  one holding nothing, and leaves out a key that does not apply: so
+  `present` is "there and not `null`", `absent` is `{type: null}`, which a
+  key left out satisfies too, and a bound carries `type: number`, which
+  `null` does not satisfy (JSON Schema reads `minimum` on `null` as
+  met). A value compared with a key is of the key's type, refused at
+  build otherwise, so `const` reads the document as the pipeline reads
+  the values. One class with static constructors, because it reads as a
+  sentence in a blueprint call; eleven classes would be eleven `new`s.
+- **A closed effect vocabulary that only narrows.** `constrain()` a
+  `Range`, `Length` or `Count` bound, a subset of the key's own list
+  (`Choice` or `LabeledChoice`), a `Regex` inside the subset both
+  engines read alike and only where the key has none; `require()`;
+  `doesNotApply()`, the same answer as `DoesNotApply::here()`, beside no
+  other effect, since nothing more is said of a key that does not apply;
+  and `describe()`, because a person filling the form is owed the reason
+  as much as a validator is owed the bound, and a description is an
+  annotation a `then` may carry. A rule's description is said only where
+  its effect tightened the key for these values (a `require()`, a
+  `doesNotApply()` and a description alone always do), so a room already
+  under the rule's bound keeps its own words; the full schema's `then`
+  keeps it, an annotation the schema cannot place. A bound tightens what the key allows by
+  the time the rule runs (the lower maximum, the higher minimum, the
+  values both lists offer), so the pipeline's answer is what a validator
+  applying both conditionals reads. A rule that would widen what the key
+  declares (a maximum above its own, a value its list does not offer, a
+  second pattern) is refused at build, judged by the narrowing check as
+  if written over the key. **Locked is left out**: a key's lock is the
+  context's, settled at build on its entry, and a lock that depended on
+  values would change at refinement what accept() takes from storage and
+  what both documents say is `readOnly`; nothing cheap carries it.
+- **Each contributor's coded refiners, then its rules.** The owner's
+  before an alter's, as for coded refiners; within one contributor, its
+  rules after its methods, in declaration order. A coded refiner writes
+  a bound as it likes and would be refused for widening a tighter one
+  laid before it; a rule only tightens, so after the methods it cannot
+  widen, and the result is the schema's `allOf`. The description a rule
+  writes last is the one shown, as its conditional comes after the
+  enumerated ones in the schema.
+- **Where it is spelled: the blueprint, one spelling.** A rule is part of
+  what a key is, so it is said where keys are said: the owner in
+  `defineInputs()`, an alter in `alterInputs()` through
+  `BlueprintAdditionsInterface`, on the owner's keys and its own mounted
+  ones, read by the owner's keys and its own, under the rule that an
+  alter narrows and never widens. An attribute was weighed and rejected:
+  it needs a method to sit on and a rule has no code; attribute
+  arguments take no static call, so conditions would be nested `new`s
+  of public constructors and descriptions `new TranslatableMarkup`; and
+  two spellings of one rule would be documented twice.
+- **Stated as written.** The full schema and every def state each rule
+  as one conditional, its `then` read the way an enumerated one is (only
+  what changed, `false` where it does not apply, `required` where only
+  there), marked `x-surface.declared` beside its `if`, after the key's
+  enumerated conditionals; the key says `x-surface.declared: true` and is
+  no longer `dynamic` for a rule. Only the coded refiners are enumerated
+  there. The schema for these answers evaluates the rules for its values,
+  as a coded refiner whose gate is open is applied, and writes none.
+  A key a rule may rule out is in no `required`, and a conditional
+  requires it wherever no rule rules it out; a conditional requiring it,
+  a rule's or a coded refiner's, holds only where none does, so no
+  document is held to both `false` and `required`.
+- **Refused where no schema could be exact.** A rule that requires a key
+  a coded or runtime refiner may rule out (where the coded one rules it
+  out is not stated where it cannot be listed, nor ever the runtime
+  one's); a rule on a key holding a child other than ruling it out, and
+  on a collection other than by its Count; a condition on the key
+  itself, a child, a collection or another module's mounted key; an
+  alter's rule on a key it offered more values on, whose rules would run
+  on its slice of the list alone (not built; its refiner says it).
+- **Held to the pipeline.** `StaticRefinerAgreementTrait` samples the
+  values each `if` names, either side of each bound, nothing, and a value
+  the key would hold, and for every document the pipeline could accept
+  requires a fresh refinement with the rules alone to answer the key
+  with the `then` of each conditional a standard validator finds met,
+  tightened over the declared key. The React page reads an `if` by JSON
+  Schema's own rules (`holdsIf()`) and tightens by each `then`; it asks
+  `/refine` for a rule reaching inside a map, and while a key's coded
+  refiners have nothing to refine against.
+
+The first case is example 4's capacity, which was `dynamic` because its
+coded rule watched free text. The rule's text is now one sentence: "With
+one, up to @max" read the room's ceiling off another refiner's answer,
+which is an effect computed, so it stayed with the code it left. In a
+room seating fewer than a hundred the room's ceiling is the lower one,
+and its own sentence stands: the rule tightened nothing. Its stewards stay
+coded and `dynamic` (they watch a number), so the React page still asks
+on a licence change: the stewards depend on the capacity. Phase C item 9
+of the roadmap (dependent effects as data) is this, but `locked`.
+(`Refinement\Condition`, `Refinement\Rule`, `Refinement\DeclaredRefiner`,
+`Resources::bindRules()`, `DataSurface::refinedEntry()`,
+`ContractEmitter::rules()`, `holdsIf()` in `app/src/contract.ts`)
 
 ## Alters
 

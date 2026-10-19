@@ -30,7 +30,7 @@ each role has exactly one permission.
 | Role | When | May | May not |
 | --- | --- | --- | --- |
 | **Contributor** | Build time: an alter's `alterInputs()` | Add keys, mounted under its own module's name; offer more values on a fixed list with `extendChoices()`; reword a label or description with `describe()` | Add bare top-level keys, take anything away, change a key's type, contribute a value somebody already owns |
-| **Refiner** | Refinement, per request: a `#[RefinesInput]` method | Narrow one key, reading the siblings it watches | Touch a value its class did not contribute, hand back a value it was not given |
+| **Refiner** | Refinement, per request: a rule declared with `narrow()`, or a `#[RefinesInput]` method | Narrow one key, reading the siblings it watches | Touch a value its class did not contribute, hand back a value it was not given |
 
 The **owner** of a resource or structure, the `#[Resource]` or
 `#[Structure]` class that declares it, is simply the first contributor.
@@ -79,6 +79,82 @@ third-party settings. A formatter or widget host has one extra rule to
 know about there: it prunes saved settings against its static defaults
 array, so the mounted key has to appear in that array too. See
 [Generated forms](forms.md).
+
+### Declaring a rule
+
+Most rules between keys are a condition and an effect: without a licence
+the capacity stops at a hundred; an insured parcel is signed for; a note
+is for freight alone. Such a rule is declared, in the blueprint, beside
+the keys it is about:
+
+```php
+use Drupal\data_surface\Refinement\Condition;
+
+$inputs->narrow('capacity')
+  ->when(Condition::absent('licence'))
+  ->constrain('Range', ['max' => 100])
+  ->describe($this->t('Up to 100 without an event licence.'));
+```
+
+That is example 4's alter (`RegistrationComplianceAlter`), on example
+3's capacity, reading the licence it mounted itself. Declare the rule
+when its condition and effect fit the vocabulary below; write a refiner
+when the effect must be computed (the stewards for a capacity,
+`ceil($capacity / 50)`, stays coded) or the condition is runtime.
+
+| Condition | Holds when the key | Stated as the `if` |
+| --- | --- | --- |
+| `Condition::present($key)` | holds a value | `{"properties": {k: {"not": {"type": "null"}}}, "required": [k]}` |
+| `Condition::absent($key)` | holds nothing, or does not apply | `{"properties": {k: {"type": "null"}}}` |
+| `Condition::equals($key, $value)` | holds the value | `{"properties": {k: {"const": v}}, "required": [k]}` |
+| `Condition::in($key, $values)` | holds one of them | `{"properties": {k: {"enum": [...]}}, "required": [k]}` |
+| `Condition::atLeast($key, $n)`, `atMost()` | holds a number of at least, at most, n | `{"properties": {k: {"type": "number", "minimum": n}}, "required": [k]}`, `maximum` |
+| `Condition::above($key, $n)`, `below()` | holds a number above, below, n | the same with `exclusiveMinimum`, `exclusiveMaximum` |
+| `Condition::not($c)` | `$c` does not hold | `{"not": c}` |
+| `Condition::allOf(...$cs)`, `anyOf()` | every one, at least one, holds | `{"allOf": [...]}`, `{"anyOf": [...]}` |
+
+| Effect | Does, while the condition holds | Stated as the `then` |
+| --- | --- | --- |
+| `->constrain('Range', ['min' => a, 'max' => b])` | raises the minimum, lowers the maximum | `minimum`, `maximum` |
+| `->constrain('Length', [...])`, `('Count', [...])` | the same, for a text's length, a list's items | `minLength`, `maxLength`; `minItems`, `maxItems` |
+| `->constrain('Choice', ['choices' => [...]])` | keeps only these of the key's own values (`LabeledChoice` reads the same) | `oneOf` of what stays |
+| `->constrain('Regex', ['pattern' => ..., 'message' => ...])` | a pattern, where the key has none | `pattern` |
+| `->require()` | the key must hold a value | `required`, and its type without `null` |
+| `->doesNotApply()` | the key [does not apply](#when-a-key-does-not-apply) | the key `false` |
+| `->describe($text)` | says why, under the field, where the rule's other effects tightened the key for these values (always for `require()`, or for a description alone) | `description`, kept in the `then` whatever the values |
+
+A condition names keys of the frame the narrowed key sits in, by their
+names: the owner's keys, and an alter's own mounted keys by the names it
+added them under (the mount around it is written into the `if`). A value
+it compares with is of the key's type. The condition is a test of values
+as the pipeline accepts them: a key holding nothing is `null` there, and
+a key that does not apply is left out, which `absent` reads alike. The
+test module's parcel (`resource_test.parcel`) declares every word of
+both tables.
+
+A declared rule is a refiner, static by construction: one link per
+contributor in the key's chain, after that contributor's coded refiners,
+the owner's before an alter's; held to the narrowing check, watched for a
+form's AJAX rebuild, and never handed a value its own key refuses. Two
+things set it apart:
+
+- **It waits for nothing.** It runs whatever its keys hold, since
+  `absent` is about a key holding nothing, and a key only a rule reads
+  holds no coded refiner back.
+- **It only tightens.** A bound is the lower maximum and the higher
+  minimum of the rule's and what the key allows by then; a list keeps
+  what both allow. A rule that would widen what the key declares, a
+  maximum above its own or a value its list does not offer, is refused
+  when the resource is built, and so are a condition comparing a key
+  with a value of another type, a rule with no condition, and a rule
+  requiring a key a refiner may rule out.
+
+The full schema states each rule as written, one conditional marked
+`x-surface.declared`, without running anything, and the key carries
+`x-surface.declared: true`
+([served contract](served-contract.md#x-surface)). The schema for one
+set of values evaluates it, as the pipeline does. The decision, with
+what was weighed: [A rule declared as data](decisions.md#a-rule-declared-as-data).
 
 ### Refining
 
@@ -235,7 +311,9 @@ trust; three layers hold a static refiner to it
    refiners alone, answers the declared key with the conditional's
    `then` laid over it, keyword for keyword, attached structures
    included. The examples and the fixtures with enumerated keys run
-   under it.
+   under it, and it holds each declared rule's conditional the other
+   way: for sampled values, refining with the rules alone answers what
+   the conditionals a standard validator finds met say.
 
 None of the three proves purity, and a refiner can still lie in ways
 none sees: a static method reading a static property another class
@@ -505,8 +583,8 @@ contract all see the same five values, narrowed the same way.
   their own names, beside the owner's
   ([Decisions](decisions.md#an-alter-watches-its-own-mounted-key));
   the compliance alter of the examples caps the capacity at a hundred
-  until its own licence is given, and raises its stewards count with the
-  capacity. A watched mounted key is never waited for: it is handed as
+  until its own licence is given, by a declared rule, and raises its
+  stewards count with the capacity. A watched mounted key is never waited for: it is handed as
   it stands, NULL while empty. Another module's mounted key, and any
   key inside a map that is not a mount, still needs the dotted paths.
 - **Storage.** For config-backed values, widening is a schema alter and

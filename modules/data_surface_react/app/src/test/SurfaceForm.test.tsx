@@ -444,7 +444,7 @@ describe('the React form of example 3', () => {
     expect(within(compliance).getByLabelText(/Event licence/)).toHaveValue('');
     expect(within(compliance).getByLabelText(/Stewards/)).toHaveAccessibleDescription('At least 1 steward for 50 attendees.');
     expect(screen.queryByRole('group', { name: /third.party/i })).toBeNull();
-    expect(screen.getByLabelText(/Capacity/)).toHaveAccessibleDescription('Up to 100 without an event licence. With one, up to 400.');
+    expect(screen.getByLabelText(/Capacity/)).toHaveAccessibleDescription('Up to 100 without an event licence.');
   });
 
   it('draws the Compliance fieldset right after the capacity its licence lifts', async () => {
@@ -534,11 +534,11 @@ describe('narrowing here, from the full schema', () => {
     expect(refines(calls)).toHaveLength(1);
   });
 
-  it('asks the server on a licence change of example 3 with compliance: the capacity is dynamic', async () => {
+  it('asks the server on a licence change of example 3 with compliance: the stewards are dynamic', async () => {
     const { calls, fetcher } = recordedServer(compliance as unknown as Recorded, 'registration.step3');
     render(<SurfaceForm settings={{ ...settings, surface: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
     await userEvent.type(await screen.findByLabelText(/Event licence/), '2');
-    expect(narrowingLine()).toBe('Asked the server: capacity depends on a dynamic rule.');
+    expect(narrowingLine()).toBe('Asked the server: third_party_settings depends on a dynamic rule.');
     await waitFor(() => expect(refines(calls)).toHaveLength(1));
   });
 

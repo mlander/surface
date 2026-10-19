@@ -6,6 +6,7 @@ namespace Drupal\data_surface;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Refinement\ApplicabilityInterface;
+use Drupal\data_surface\Refinement\DeclaredRefiner;
 use Drupal\data_surface\Refinement\RuntimeRefiner;
 
 /**
@@ -76,6 +77,12 @@ final class Entry {
    *   definition is then a list whose item is the child's map. The key
    *   is the parent's own, refined by the parent's refiners (its Count)
    *   and locked by the parent; each item is the child's.
+   * @param array<string, int> $watchedBy
+   *   For each key in $dependencies, which kinds of link watch it, as a
+   *   mask of DataSurfaceInterface::CODED, DECLARED and RUNTIME: a key
+   *   only a declared rule reads gates nothing. Empty for an entry built
+   *   by hand, whose every dependency is read as a coded refiner's, a
+   *   runtime one's in $runtimeOnly.
    */
   public function __construct(
     public readonly string $name,
@@ -90,6 +97,7 @@ final class Entry {
     public readonly array $paths = [],
     public readonly array $runtimeOnly = [],
     public readonly ?Collection $list = NULL,
+    public readonly array $watchedBy = [],
   ) {
   }
 
@@ -121,6 +129,7 @@ final class Entry {
       $this->paths,
       $this->runtimeOnly,
       $this->list,
+      $this->watchedBy,
     );
   }
 
@@ -137,6 +146,103 @@ final class Entry {
    */
   public function staticDependencies(): array {
     return $this->runtimeOnly === [] ? $this->dependencies : array_values(array_diff($this->dependencies, $this->runtimeOnly));
+  }
+
+  /**
+   * Gets the sibling keys this key's coded refiners watch.
+   *
+   * What the served contract enumerates the key over: a declared rule is
+   * stated as written and a runtime refiner never ahead of time.
+   *
+   * @return string[]
+   *   The keys, in the order of $dependencies.
+   */
+  public function codedDependencies(): array {
+    return $this->watchedBy === [] ? $this->staticDependencies() : $this->watching(DataSurfaceInterface::CODED);
+  }
+
+  /**
+   * Gets the sibling keys a declared rule of this key reads.
+   *
+   * @return string[]
+   *   The keys, a mounted one by its dotted path, in the order of
+   *   $dependencies.
+   */
+  public function declaredDependencies(): array {
+    return $this->watching(DataSurfaceInterface::DECLARED);
+  }
+
+  /**
+   * Gets what the key's gate waits for, for the kinds of link asked for.
+   *
+   * A coded refiner, or a runtime one, runs once every key it watches
+   * holds a value; a declared rule runs whatever its keys hold, so the
+   * keys only a rule reads hold nothing back.
+   *
+   * Decision: see docs/decisions.md#a-rule-declared-as-data.
+   *
+   * @param int $kinds
+   *   The kinds of link that run, a mask of DataSurfaceInterface::CODED,
+   *   DECLARED and RUNTIME.
+   *
+   * @return string[]
+   *   The keys, in the order of $dependencies.
+   */
+  public function gate(int $kinds): array {
+    if ($this->watchedBy === []) {
+      return $kinds & DataSurfaceInterface::RUNTIME ? $this->dependencies : $this->staticDependencies();
+    }
+    return $this->watching($kinds & (DataSurfaceInterface::CODED | DataSurfaceInterface::RUNTIME));
+  }
+
+  /**
+   * Lists the dependencies a kind of link watches.
+   *
+   * @param int $kinds
+   *   A mask of kinds.
+   *
+   * @return string[]
+   *   The keys watched by any of them, in the order of $dependencies.
+   */
+  protected function watching(int $kinds): array {
+    return array_values(array_filter(
+      $this->dependencies,
+      fn (string $key): bool => (($this->watchedBy[$key] ?? 0) & $kinds) !== 0,
+    ));
+  }
+
+  /**
+   * Tells which kind of link a refiner is.
+   *
+   * @param \Drupal\data_surface\DataSurfaceRefinerInterface $link
+   *   The link.
+   *
+   * @return int
+   *   DataSurfaceInterface::RUNTIME, DECLARED or CODED.
+   */
+  public static function kindOf(DataSurfaceRefinerInterface $link): int {
+    return match (TRUE) {
+      $link instanceof RuntimeRefiner => DataSurfaceInterface::RUNTIME,
+      $link instanceof DeclaredRefiner => DataSurfaceInterface::DECLARED,
+      default => DataSurfaceInterface::CODED,
+    };
+  }
+
+  /**
+   * Returns whether a declared rule narrows this key.
+   *
+   * @return bool
+   *   TRUE when a link of any of its chains is a declared rule's.
+   */
+  public function isDeclared(): bool {
+    foreach ($this->refiners as $chain) {
+      foreach ($chain as $link) {
+        if ($link instanceof DeclaredRefiner) {
+          return TRUE;
+        }
+      }
+    }
+    return FALSE;
   }
 
   /**
@@ -167,19 +273,26 @@ final class Entry {
    *
    * Decision: see docs/decisions.md#a-key-that-does-not-apply.
    *
-   * @param bool|null $runtime
-   *   TRUE for its runtime refiners only, FALSE for its static ones only,
-   *   NULL for both.
+   * @param bool|int|null $runtime
+   *   TRUE for its runtime refiners only, FALSE for its static ones only
+   *   (coded and declared), NULL for every one; or the kinds of link, a
+   *   mask of DataSurfaceInterface::CODED, DECLARED and RUNTIME.
    *
    * @return string[]
    *   '' for the key itself, and the dotted path below it of each mounted
    *   property that may be ruled out; empty when nothing may be.
    */
-  public function mayNotApply(?bool $runtime = NULL): array {
+  public function mayNotApply(bool|int|null $runtime = NULL): array {
+    $kinds = match ($runtime) {
+      NULL => DataSurfaceInterface::EVERY,
+      TRUE => DataSurfaceInterface::RUNTIME,
+      FALSE => DataSurfaceInterface::STATIC,
+      default => $runtime,
+    };
     $paths = [];
     foreach ($this->refiners as $chain) {
       foreach ($chain as $link) {
-        if ($runtime !== NULL && $runtime !== $link instanceof RuntimeRefiner) {
+        if ((static::kindOf($link) & $kinds) === 0) {
           continue;
         }
         if ($link instanceof ApplicabilityInterface) {

@@ -74,6 +74,35 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
   const OWNER = '#owner';
 
   /**
+   * The coded refiners: the #[RefinesInput] methods not declared runtime.
+   *
+   * One of three kinds of link a key's chain holds, which refine() may be
+   * asked to run alone or together. Decision: see
+   * docs/decisions.md#a-rule-declared-as-data.
+   */
+  const CODED = 1;
+
+  /**
+   * The declared rules: conditions and effects stated as data.
+   */
+  const DECLARED = 2;
+
+  /**
+   * The runtime refiners: the #[RefinesInput] methods declared runtime.
+   */
+  const RUNTIME = 4;
+
+  /**
+   * The static refiners, coded and declared: what may be stated ahead.
+   */
+  const STATIC = self::CODED | self::DECLARED;
+
+  /**
+   * Every refiner: what the pipeline holds the values to.
+   */
+  const EVERY = self::STATIC | self::RUNTIME;
+
+  /**
    * Gets everything the data surface advertises, in declaration order.
    *
    * The whole contract in one object: iterate it for name => definition,
@@ -217,19 +246,25 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
    * implementing CacheableDependencyInterface, has it merged into the
    * refined data surface when it runs.
    *
-   * A refiner is static or runtime ($runtime). A runtime refiner's link
+   * A refiner is coded, declared or runtime. A runtime refiner's link
    * runs in its chain like any other, and one that watches nothing runs
-   * whatever the key's gate says, since it has nothing to wait for. Asked
-   * for the static refiners alone, the runtime ones are left out and each
-   * key waits only for what its static refiners watch: what the data surface
-   * can state ahead of time, which is all the served contract's full
-   * schema and its enumerated conditionals may say.
+   * whatever the key's gate says, since it has nothing to wait for. A
+   * declared rule is never gated either: it reads the keys its condition
+   * names as they stand, whatever the key's other refiners wait for.
+   * Asked for the static refiners alone, the runtime ones are left out
+   * and each key waits only for what its coded refiners watch: what the
+   * data surface can state ahead of time, which is all the served
+   * contract's full schema and its conditionals may say. The served
+   * contract asks for the coded ones alone too, since a declared rule is
+   * stated as written, never enumerated.
    *
    * @param array $values
    *   Values keyed by definition key.
-   * @param bool $runtime
+   * @param bool|int $runtime
    *   TRUE, the default, for what the pipeline holds the values to: every
-   *   refiner. FALSE for the static refiners alone.
+   *   refiner (self::EVERY). FALSE for the static refiners alone
+   *   (self::STATIC). Or the kinds to run, of self::CODED,
+   *   self::DECLARED and self::RUNTIME.
    *
    * @return static
    *   A refined data surface, or the same one when nothing refines.
@@ -238,6 +273,6 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
    *   When a refiner returns a definition that accepts more
    *   than the one it was given.
    */
-  public function refine(array $values, bool $runtime = TRUE): static;
+  public function refine(array $values, bool|int $runtime = TRUE): static;
 
 }

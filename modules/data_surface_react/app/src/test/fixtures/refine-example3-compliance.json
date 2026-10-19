@@ -108,7 +108,8 @@
               "room",
               "third_party_settings.data_surface_examples_compliance.licence"
             ],
-            "dynamic": true
+            "enumerated": true,
+            "declared": true
           }
         },
         "pricing": {
@@ -315,6 +316,154 @@
                 ]
               }
             }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "room": {
+                "const": "riverside_main"
+              }
+            },
+            "required": [
+              "room"
+            ]
+          },
+          "then": {
+            "properties": {
+              "capacity": {
+                "description": "Up to 400 for the Main hall.",
+                "maximum": 400
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "room": {
+                "const": "riverside_east"
+              }
+            },
+            "required": [
+              "room"
+            ]
+          },
+          "then": {
+            "properties": {
+              "capacity": {
+                "description": "Up to 120 for the East room.",
+                "maximum": 120
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "room": {
+                "const": "library_reading"
+              }
+            },
+            "required": [
+              "room"
+            ]
+          },
+          "then": {
+            "properties": {
+              "capacity": {
+                "description": "Up to 60 for the Reading room.",
+                "maximum": 60
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "room": {
+                "const": "library_garden"
+              }
+            },
+            "required": [
+              "room"
+            ]
+          },
+          "then": {
+            "properties": {
+              "capacity": {
+                "description": "Up to 30 for the Garden room.",
+                "maximum": 30
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "room": {
+                "const": "harbour_auditorium"
+              }
+            },
+            "required": [
+              "room"
+            ]
+          },
+          "then": {
+            "properties": {
+              "capacity": {
+                "description": "Up to 800 for the Auditorium.",
+                "maximum": 800
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "room": {
+                "const": "harbour_deck"
+              }
+            },
+            "required": [
+              "room"
+            ]
+          },
+          "then": {
+            "properties": {
+              "capacity": {
+                "description": "Up to 150 for the Upper deck.",
+                "maximum": 150
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "third_party_settings": {
+                "properties": {
+                  "data_surface_examples_compliance": {
+                    "properties": {
+                      "licence": {
+                        "type": "null"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "capacity": {
+                "description": "Up to 100 without an event licence.",
+                "maximum": 100
+              }
+            }
+          },
+          "x-surface": {
+            "declared": true
           }
         },
         {
@@ -562,7 +711,7 @@
         },
         "capacity": {
           "title": "Capacity",
-          "description": "Up to 100 without an event licence. With one, up to 400.",
+          "description": "Up to 100 without an event licence.",
           "type": [
             "integer",
             "null"
@@ -1019,7 +1168,7 @@
             },
             "capacity": {
               "title": "Capacity",
-              "description": "Up to 100 without an event licence. With one, up to 400.",
+              "description": "Up to 100 without an event licence.",
               "type": [
                 "integer",
                 "null"
@@ -1480,12 +1629,13 @@
             },
             "capacity": {
               "title": "Capacity",
+              "description": "Up to 100 without an event licence.",
               "type": [
                 "integer",
                 "null"
               ],
               "minimum": 1,
-              "maximum": 1000,
+              "maximum": 100,
               "default": 50,
               "x-surface": {
                 "widget": "number",
@@ -1494,9 +1644,9 @@
                   "room",
                   "third_party_settings.data_surface_examples_compliance.licence"
                 ],
-                "refined": false,
+                "refined": true,
                 "stale": false,
-                "dynamic": true
+                "enumerated": true
               }
             },
             "pricing": {
@@ -1641,6 +1791,46 @@
             "pricing"
           ],
           "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "room": {
+                    "const": "library_reading"
+                  }
+                },
+                "required": [
+                  "room"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "capacity": {
+                    "description": "Up to 60 for the Reading room.",
+                    "maximum": 60
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "room": {
+                    "const": "library_garden"
+                  }
+                },
+                "required": [
+                  "room"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "capacity": {
+                    "description": "Up to 30 for the Garden room.",
+                    "maximum": 30
+                  }
+                }
+              }
+            },
             {
               "if": {
                 "properties": {
@@ -1946,12 +2136,13 @@
             },
             "capacity": {
               "title": "Capacity",
+              "description": "Up to 100 without an event licence.",
               "type": [
                 "integer",
                 "null"
               ],
               "minimum": 1,
-              "maximum": 1000,
+              "maximum": 100,
               "default": 50,
               "x-surface": {
                 "widget": "number",
@@ -1960,9 +2151,9 @@
                   "room",
                   "third_party_settings.data_surface_examples_compliance.licence"
                 ],
-                "refined": false,
+                "refined": true,
                 "stale": false,
-                "dynamic": true
+                "enumerated": true
               }
             },
             "pricing": {
@@ -2107,6 +2298,46 @@
             "pricing"
           ],
           "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "room": {
+                    "const": "library_reading"
+                  }
+                },
+                "required": [
+                  "room"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "capacity": {
+                    "description": "Up to 60 for the Reading room.",
+                    "maximum": 60
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "room": {
+                    "const": "library_garden"
+                  }
+                },
+                "required": [
+                  "room"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "capacity": {
+                    "description": "Up to 30 for the Garden room.",
+                    "maximum": 30
+                  }
+                }
+              }
+            },
             {
               "if": {
                 "properties": {
@@ -2428,7 +2659,7 @@
                 ],
                 "refined": false,
                 "stale": false,
-                "dynamic": true
+                "enumerated": true
               }
             },
             "pricing": {
@@ -2573,6 +2804,46 @@
             "pricing"
           ],
           "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "room": {
+                    "const": "library_reading"
+                  }
+                },
+                "required": [
+                  "room"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "capacity": {
+                    "description": "Up to 60 for the Reading room.",
+                    "maximum": 60
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "room": {
+                    "const": "library_garden"
+                  }
+                },
+                "required": [
+                  "room"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "capacity": {
+                    "description": "Up to 30 for the Garden room.",
+                    "maximum": 30
+                  }
+                }
+              }
+            },
             {
               "if": {
                 "properties": {

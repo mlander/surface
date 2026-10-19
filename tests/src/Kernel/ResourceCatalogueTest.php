@@ -132,11 +132,10 @@ class ResourceCatalogueTest extends DataSurfaceKernelTestBase {
     $this->assertSame([
       ['class' => NodeTypeAlter::class, 'module' => 'data_surface_demo_extras', 'operations' => [], 'refines' => []],
     ], $node_type['alters']);
-    // An alter's methods, each by the key it refines, what it watches,
-    // its own mounted licence by the name it added it under, and whether
-    // it is a runtime refiner.
+    // An alter's methods, each by the key it refines, what it watches
+    // and whether it is a runtime refiner. Its rule on the capacity is
+    // declared in alterInputs(), data the build reads, and no method.
     $this->assertSame([
-      ['key' => 'capacity', 'watches' => ['licence'], 'runtime' => FALSE],
       ['key' => 'room', 'watches' => ['venue'], 'runtime' => TRUE],
       ['key' => 'stewards', 'watches' => ['capacity'], 'runtime' => FALSE],
     ], $catalogue['registration.step3']['alters'][0]['refines']);

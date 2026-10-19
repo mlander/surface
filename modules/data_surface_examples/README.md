@@ -456,17 +456,21 @@ changes it with one class. It adds two keys, an event licence and a
 number of stewards, stored under the module's own name (at
 `third_party_settings.data_surface_examples_compliance.licence` and
 `.stewards`, so example 3's storage never has to know them), and
-rewords the title's label. Its three methods are what you see move.
-The first two are static methods, pure functions of what they watch,
-so the served contract states their answers ahead of time; the third
-reads State, so it is a runtime refiner, the only kind an instance
-method may be:
+rewords the title's label. Its rule and its two methods are what you
+see move. The rule is data, a condition and an effect, which the served
+contract writes down as it is; the first method is static, a pure
+function of what it watches, so the served contract states its answers
+ahead of time where it can; the second reads State, so it is a runtime
+refiner, the only kind an instance method may be:
 
-- **The licence lifts a ceiling on example 3's own key.** The method on
-  `capacity` watches the alter's `licence`. With no licence it caps the
-  capacity at 100 and says so under the field; with one it leaves the
-  capacity alone, so the room's limit, from example 3's own method, is
-  what applies. Both methods narrow the same key, and each only narrows.
+- **The licence lifts a ceiling on example 3's own key.** The rule on
+  `capacity`, `narrow('capacity')->when(Condition::absent('licence'))`,
+  reads the alter's `licence`. With no licence it caps the capacity at
+  100 and says so under the field; with one it leaves the capacity
+  alone, so the room's limit, from example 3's own method, is what
+  applies. Both narrow the same key, the method first and the rule
+  after, and each only narrows: the lower ceiling wins. The full schema
+  states the rule exactly, as an `if` that the licence holds nothing.
 - **The stewards follow the capacity.** The method on the alter's own
   `stewards` watches example 3's `capacity`: one steward per fifty
   people, at least one, and the number under the field says how many.
@@ -519,34 +523,13 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
     $inputs->add('stewards', 'integer', $this->t('Stewards'), default: 1)->setRequired(TRUE);
     $inputs->describe('title', label: $this->t('Public event title'));
     $inputs->describe('third_party_settings.data_surface_examples_compliance', label: $this->t('Compliance'), after: 'capacity');
-  }
-
-  /**
-   * Without a licence, no more than a hundred, whatever the room seats.
-   *
-   * The owner's refiner has already capped the capacity at the room's
-   * seats, so the description names both ceilings: the hundred this
-   * module sets, and what the room allows once a licence is given. A
-   * room that seats a hundred or fewer is left as the owner said it,
-   * since a licence changes nothing there.
-   *
-   * Any licence this is handed counts: a refiner never sees an invalid
-   * sibling, so a value the licence's own pattern refuses arrives as
-   * NULL, exactly as no licence does.
-   *
-   * @see docs/decisions.md#a-refiner-never-sees-an-invalid-sibling
-   */
-  #[RefinesInput('capacity')]
-  public static function capacityWithoutLicence(DataDefinition $capacity, ?string $licence): DataDefinition {
-    $range = $capacity->getConstraints()['Range'] ?? [];
-    $max = $range['max'] ?? NULL;
-    if ((string) $licence !== '' || ($max !== NULL && $max <= 100)) {
-      return $capacity;
-    }
-    $capacity->addConstraint('Range', array_replace($range, ['max' => 100]));
-    return $capacity->setDescription($max === NULL
-      ? t('Up to 100 without an event licence.')
-      : t('Up to 100 without an event licence. With one, up to @max.', ['@max' => $max]));
+    // Without a licence, no more than a hundred, whatever the room seats.
+    // A licence its own pattern refuses is no licence: a rule never sees
+    // an invalid sibling.
+    $inputs->narrow('capacity')
+      ->when(Condition::absent('licence'))
+      ->constrain('Range', ['max' => 100])
+      ->describe($this->t('Up to 100 without an event licence.'));
   }
 
   /**
@@ -603,15 +586,16 @@ React, instead of last. Only where it is drawn moves; the keys are still
 stored and posted at
 `third_party_settings.data_surface_examples_compliance`, and the Tool
 API and the config schema see nothing new. Example 3 ships at Riverside Hall's main hall, which
-seats 400. The capacity stops at 100, and its help text names both
-ceilings: "Up to 100 without an event licence. With one, up to 400." The
+seats 400. The capacity stops at 100, and its help text says why: "Up
+to 100 without an event licence." The
 licence asks for the four digits after EV- only. Type `2048` and the
 capacity goes back to the owner's "Up to 400 for the Main hall."; type
 `204` or `EV-2048` and the licence is refused, in the alter's words,
-under the field, and the capacity stops at 100 again: a refiner never
+under the field, and the capacity stops at 100 again: a rule never
 sees a value its own key refuses, so a licence in the wrong format is no
-licence. In a room that seats 100 or fewer the licence changes nothing,
-and the owner's help text stands. The help text says the format before
+licence. In a room that seats 100 or fewer the licence changes nothing:
+the room's own ceiling is the lower one, and the owner's help text
+stands, since a rule says why only where it tightened. The help text says the format before
 anything is typed, and the box shows
 `2048` as its placeholder: a pattern explains nothing to a person, so
 the Regex carries a message, and the panel's "Allows" column says that.
@@ -745,7 +729,7 @@ Drush commands are checked against `ExampleCalls`.
 | --- | --- |
 | `Kernel\ExamplesStepsTest` | Examples 1 to 3: each form builds and saves, example 1 as its classic twin does; the venue narrows the room and the room the capacity; the ticket slot resolves by pricing; the contact validates its email; the panel's rows as the answers move; each example's class stays screen sized. |
 | `Kernel\ExamplesComplianceTest` | Example 4: the alter's keys and label; its keys in one fieldset titled "Compliance", drawn between the capacity and the pricing; the capacity capped at a hundred without a licence and the room's limit with one; the licence's pattern; the stewards' minimum following the capacity; what the licence and the capacity replace on the form; a room closed in State left out, said in the room's help, and refused on submit; example 5's calls unchanged. |
-| `Kernel\StaticRefinerEnforcementTest` | Examples 2 and 3, without example 4 and with it: every conditional the served contract enumerates, in the full schema and in the schema for no values and for the defaults, is what refining afresh for its values answers. |
+| `Kernel\StaticRefinerEnforcementTest` | Examples 2 and 3, without example 4 and with it: every conditional the served contract enumerates, in the full schema and in the schema for no values and for the defaults, is what refining afresh for its values answers, and example 4's declared licence rule is what refining with the rules alone answers for sampled values. |
 | `Kernel\ExamplesToolTest` | Example 5: the three calls and their answers; what the script prints. |
 | `Kernel\ConfigSchemaContractTest` | What config schema can say: the plain mapping of examples 1 and 3, whole, with no list, no bound, nothing required and no keys for the ticket, the same whatever is stored or mounted; core's answer, a comment and no property; a constraint a schema does declare is said; the JSON this page quotes. |
 | `Kernel\ExamplesTodayPanelTest` | The second panel under examples 1 to 3: its two documents and its table, row by row; its rows read from the resource's full schema, so the pricing, the venue and what is stored leave every row and both documents as they were; example 4's keys on the resource's side only; the classic twin's page. |

@@ -590,11 +590,13 @@ storage and schema never have to know a contributor's keys. Its
 owner's own, and may tighten the keys the alter itself added, named as
 the alter named them. They may watch the owner's keys and the keys the
 alter itself added, the latter named the same way and handed as they
-stand, NULL while unanswered, so the parameter takes NULL. In the
-examples' compliance alter, `#[RefinesInput('capacity')]` watches the
-alter's own `licence` and caps the owner's capacity at a hundred while
-it is empty, and `#[RefinesInput('stewards')]` raises the alter's own
-stewards count with the owner's `capacity`. A watched mounted key is
+stand, NULL while unanswered, so the parameter takes NULL. A rule an
+alter declares with `narrow()` reads and narrows the same keys
+([Declaring a rule](refinement.md#declaring-a-rule)). In the examples'
+compliance alter, a rule reads the alter's own `licence` and caps the
+owner's capacity at a hundred while it is empty, and
+`#[RefinesInput('stewards')]` raises the alter's own stewards count with
+the owner's `capacity`. A watched mounted key is
 known everywhere else by its path, `third_party_settings.<module>.<key>`:
 the capacity's dependencies, its AJAX trigger and its `dependsOn` name
 the licence that way. Another module's mounted key is watched by no

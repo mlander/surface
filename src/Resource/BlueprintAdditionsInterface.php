@@ -8,6 +8,7 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\data_surface\Refinement\Rule;
 
 /**
  * What anyone may do to a blueprint: add to it.
@@ -209,5 +210,41 @@ interface BlueprintAdditionsInterface {
    *   one of the values.
    */
   public function extendChoices(string $key, array $choices): static;
+
+  /**
+   * Declares a rule between keys: how one narrows when others hold values.
+   *
+   * The first spelling of a dependency, where its condition and its
+   * effect fit the closed vocabulary:
+   *
+   * @code
+   * $inputs->narrow('capacity')
+   *   ->when(Condition::absent('licence'))
+   *   ->constrain('Range', ['max' => 100])
+   *   ->describe(t('Up to 100 without an event licence.'));
+   * @endcode
+   *
+   * The rule is a static refiner, stated by the full schema as a JSON
+   * Schema conditional without running anything, evaluated by the
+   * pipeline, and held to the narrowing check: a rule that would widen
+   * what the key declares is refused when the resource is built. An owner
+   * narrows its own keys; an alter narrows the owner's keys and the ones
+   * it mounted, and its conditions read the same. A rule whose effect
+   * must be computed, or whose condition is runtime, is a
+   * #[RefinesInput] method instead.
+   *
+   * @param string $key
+   *   The key to narrow: an owner's key by its name, or, for an alter, a
+   *   key it added by the name it added it under.
+   *
+   * @return \Drupal\data_surface\Refinement\Rule
+   *   The rule, to say when() and what.
+   *
+   * @throws \LogicException
+   *   For outputs, which nobody sends.
+   *
+   * @see docs/refinement.md#declaring-a-rule
+   */
+  public function narrow(string $key): Rule;
 
 }

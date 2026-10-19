@@ -151,7 +151,7 @@ final class ContractPanel implements DataSurfaceFormPanelInterface {
       '#open' => FALSE,
       '#title' => $this->t('The full schema, for any answers'),
       'note' => [
-        '#markup' => '<p>' . $this->t('What the resource states whatever the answers are, as JSON Schema: every key as it is declared, and for each key another key narrows, one conditional per value that other key could take. It reads no value, so it does not change when an answer changes. A key marked <code>dynamic</code> depends on something that cannot be listed: it is shown as declared, and the form still holds it to more. A key marked <code>runtime</code> is also narrowed by a rule only the site can apply when asked, which no schema states.') . '</p>',
+        '#markup' => '<p>' . $this->t('What the resource states whatever the answers are, as JSON Schema: every key as it is declared, and for each key another key narrows, one conditional per value that other key could take, or one per rule declared as data, as written. It reads no value, so it does not change when an answer changes. A key marked <code>dynamic</code> depends on something that cannot be listed: it is shown as declared, and the form still holds it to more. A key marked <code>runtime</code> is also narrowed by a rule only the site can apply when asked, which no schema states.') . '</p>',
       ],
       'json' => $this->json($full->document['schema']),
     ];

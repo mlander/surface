@@ -59,7 +59,7 @@ part of a resource or structure has one home:
 | Its id, and which keys say which thing it is | `#[Resource('id', identity: [...])]`; a structure has an id and no identity, `#[Structure('id')]` |
 | Its keys: type, label, default, constraints | `static defineInputs(BlueprintInterface $inputs)` |
 | What it emits | `static defineOutputs()`, on `HasOutputsInterface`; see [Outputs](outputs.md) |
-| A key whose allowed values depend on another key's value | a static `#[RefinesInput('key')]` method |
+| A key whose allowed values depend on another key's value | a rule, `$inputs->narrow('key')->when(Condition::...)`, in `defineInputs()`; a static `#[RefinesInput('key')]` method where the effect must be computed ([Declaring a rule](refinement.md#declaring-a-rule)) |
 | How much is already known: add, edit, reuse | `#[Operation]` static methods returning an `OperationContext` |
 | Where its values are stored | `#[Resource(storage:)]`, a `ResourceStorageInterface` in `src/Storage/`; a structure is stored by what holds it |
 | What may refuse once the operation's permission allows | `access:` on either attribute, an `OperationAccessInterface` in `src/Access/` |
@@ -76,7 +76,8 @@ outputs, which the demo formatter declares; the test module's
   static holds it to that by the language.
 - **`defineInputs()` is a flat list.** No `if`, no loop, and it never
   mentions a sibling. A constraint written there is fully known with no
-  values. Anything that reads another key's value is a `#[RefinesInput]`
+  values. Anything that reads another key's value is a rule declared
+  with `narrow()`, which is data the build reads, or a `#[RefinesInput]`
   method.
 - **`add()` takes name, type and label** and returns the core
   definition, so the rest is plain core API: `setRequired()`,

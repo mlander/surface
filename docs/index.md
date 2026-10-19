@@ -9,8 +9,8 @@ accept right now, on this site, for this thing) and get the same answer.
 
 | | Blueprint | Values |
 | --- | --- | --- |
-| **Owner**, a `#[Resource]` or `#[Structure]` class in `src/Resource/` or `src/Structure/`, or a plugin that is its own structure | `static defineInputs($inputs)`, optionally `static defineOutputs($outputs)` | static `#[RefinesInput('key')]` methods |
-| **Another module**, an `#[Alters]` class in `src/Alter/` | `alterInputs($inputs)`, optionally `alterOutputs($outputs)` | `#[RefinesInput('key')]` methods |
+| **Owner**, a `#[Resource]` or `#[Structure]` class in `src/Resource/` or `src/Structure/`, or a plugin that is its own structure | `static defineInputs($inputs)`, optionally `static defineOutputs($outputs)` | rules declared with `$inputs->narrow('key')`, static `#[RefinesInput('key')]` methods |
+| **Another module**, an `#[Alters]` class in `src/Alter/` | `alterInputs($inputs)`, optionally `alterOutputs($outputs)` | rules declared with `$inputs->narrow('key')`, `#[RefinesInput('key')]` methods |
 
 **Start with [Your first resource](first-resource.md).** A settings page
 needs four things: a resource class, an operation on it, a storage class
@@ -94,7 +94,7 @@ it](https://www.drupal.org/project/drupal/issues/3622144).
 | **Data surface** | What the build step seals from a resource or structure and a context: an immutable group of data definitions, the map of which key depends on which, and the refiners that narrow them. What the pipeline, the form, the widgets and the emitter read. | `DataSurfaceInterface`, built by `ResourceBuild\ResourcesInterface` (`data_surface.resources`) |
 | **Definition map** | Everything a data surface advertises, as one ordered, validated collection: one entry per key, in declaration order. | `DefinitionMap` of `Entry` |
 | **Definition** | One core `DataDefinitionInterface`: type, label, description, constraints, required, plus the interim default and example metadata. | core, plus `DefinitionMetadata` |
-| **Refinement** | A narrower definition for one key, given the values of the siblings it watches. Checked narrower on every run. | `#[RefinesInput('key')]` methods |
+| **Refinement** | A narrower definition for one key, given the values of the siblings it watches. Checked narrower on every run. | rules declared with `narrow('key')`, `#[RefinesInput('key')]` methods |
 | **Operation** | One way a resource is asked for (add, edit, reuse), returning a context that says what is already known. The context's id is the operation's. Routes and tools are generated from them. | `#[Operation]` static methods, `Resource\OperationContext` |
 | **Alter** | Another module's class that adds keys to a resource or structure, rewords a label, offers more values on a fixed list, and narrows with its own refinements. Never removes. | `#[Alters]` on a class in `src/Alter/` |
 | **Attached structure** | A child at a key, its own class with its own keys: `attach()` for a fixed child, `attachBy()` for a slot a sibling key chooses. A child may be a resource with storage of its own (a field's storage). | `Resource\BlueprintInterface`, `Attachment`, `Slot` |

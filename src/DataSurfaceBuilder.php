@@ -64,6 +64,17 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   protected array $declaredBy = [];
 
   /**
+   * Which kinds of link watch each dependency, by target.
+   *
+   * A mask of DataSurfaceInterface::CODED, DECLARED and RUNTIME per
+   * dependency: what a key's gate waits for is what a coded or runtime
+   * link watches, never what only a declared rule reads.
+   *
+   * @var array<string, array<string, int>>
+   */
+  protected array $watchedBy = [];
+
+  /**
    * Values contributed to a key's choices, keyed by key, then provider.
    *
    * @var array<string, array<string, array>>
@@ -213,7 +224,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
     }
     // A collection's refiners are the parent's, bound before its child
     // was asked, and go with the key.
-    unset($this->definitions[$name], $this->attachments[$name], $this->slots[$name], $this->lists[$name], $this->refinements[$name], $this->refiners[$name], $this->declaredBy[$name], $this->contributions[$name]);
+    unset($this->definitions[$name], $this->attachments[$name], $this->slots[$name], $this->lists[$name], $this->refinements[$name], $this->refiners[$name], $this->declaredBy[$name], $this->watchedBy[$name], $this->contributions[$name]);
     $this->locked = array_values(array_diff($this->locked, [$name]));
     return $this;
   }
@@ -446,11 +457,17 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * {@inheritdoc}
    */
-  public function addRefinement(string $target, array $dependencies, bool $runtime = FALSE): static {
+  public function addRefinement(string $target, array $dependencies, bool $runtime = FALSE, bool $declared = FALSE): static {
     $this->assertMutable();
     $this->refinements[$target] = array_values(array_unique(array_merge($this->refinements[$target] ?? [], $dependencies)));
+    $kind = match (TRUE) {
+      $runtime => DataSurfaceInterface::RUNTIME,
+      $declared => DataSurfaceInterface::DECLARED,
+      default => DataSurfaceInterface::CODED,
+    };
     foreach ($dependencies as $dependency) {
       $this->declaredBy[$target][$dependency] = !$runtime || ($this->declaredBy[$target][$dependency] ?? FALSE);
+      $this->watchedBy[$target][$dependency] = ($this->watchedBy[$target][$dependency] ?? 0) | $kind;
     }
     return $this;
   }
@@ -553,6 +570,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
         slots: $slots,
         staticRefinements: $this->staticRefinements(),
         lists: $this->lists,
+        watchedBy: $this->watchedBy,
       ),
       $this->cacheability,
       DefinitionMap::fromArrays(definitions: $outputs),

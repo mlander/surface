@@ -92,7 +92,7 @@
             },
             "capacity": {
                 "title": "Capacity",
-                "description": "Up to 100 without an event licence. With one, up to 400.",
+                "description": "Up to 100 without an event licence.",
                 "type": [
                     "integer",
                     "null"

@@ -58,6 +58,13 @@ export interface Extension {
    */
   runtime?: boolean;
   /**
+   * In the full schema: the key is narrowed by rules declared as data,
+   * each a conditional on the frame marked `x-surface.declared`, stated as
+   * written. The page evaluates each `if` and tightens the key by its
+   * `then`; the schema for some values was evaluated already.
+   */
+  declared?: boolean;
+  /**
    * On a collection: a list whose every item is a child, `items`
    * referring to the child's def. Each item is drawn as the child's
    * fieldset; the list's own `minItems` and `maxItems` are the parent's.
@@ -78,12 +85,18 @@ export interface Choice {
 }
 
 export interface Conditional {
+  /**
+   * An enumerated conditional's and a slot's: a `const` per key it names.
+   * A declared rule's is any `if` of its vocabulary (holdsIf()).
+   */
   if: { properties: Record<string, { const: unknown }>; required?: string[] };
   /**
    * What holds of one key under the `if`: its narrowing, `false` where it
    * does not apply, and `required` where it is required only here.
    */
   then: { properties?: Record<string, Schema | false>; required?: string[] };
+  /** On a declared rule's conditional: it is stated as written. */
+  'x-surface'?: { declared?: boolean };
 }
 
 export interface Schema {
@@ -373,7 +386,7 @@ export function resolveSlot(parent: Schema, name: string, parentValues: Values):
   }
   const value = parentValues[by];
   for (const condition of parent.allOf ?? []) {
-    const decided = condition.if?.properties[by];
+    const decided = isRule(condition) ? undefined : condition.if?.properties?.[by];
     const branch = condition.then?.properties?.[name];
     if (decided !== undefined && sameValue(decided.const, value) && isVariant(branch)) {
       return branch;
@@ -389,7 +402,220 @@ function isVariant(branch: Schema | false | undefined): branch is Schema {
 
 /** A slot's conditionals that each name a variant. */
 function variantsIn(conditions: Conditional[], name: string): Conditional[] {
-  return conditions.filter((condition) => isVariant(condition.then?.properties?.[name]));
+  return conditions.filter((condition) => !isRule(condition) && isVariant(condition.then?.properties?.[name]));
+}
+
+/** Whether a conditional is a declared rule's, stated as written. */
+function isRule(condition: Conditional): boolean {
+  return condition['x-surface']?.declared === true;
+}
+
+/** The conditionals of one key that the coded refiners' enumeration wrote. */
+function enumeratedOf(conditions: Conditional[], name: string): Conditional[] {
+  return conditions.filter((condition) => !isRule(condition) && conditionalKey(condition) === name);
+}
+
+/** The conditionals of one key that its declared rules wrote. */
+function rulesOf(conditions: Conditional[], name: string): Conditional[] {
+  return conditions.filter((condition) => isRule(condition) && conditionalKey(condition) === name);
+}
+
+/** The dotted paths an `if` reads, each once. */
+function readBy(schema: unknown, prefix = ''): string[] {
+  if (!isObject(schema)) {
+    return [];
+  }
+  const paths: string[] = [];
+  for (const [name, part] of Object.entries(isObject(schema.properties) ? schema.properties : {})) {
+    paths.push(prefix + name, ...readBy(part, `${prefix}${name}.`));
+  }
+  for (const part of [schema.not, ...(Array.isArray(schema.allOf) ? schema.allOf : []), ...(Array.isArray(schema.anyOf) ? schema.anyOf : [])]) {
+    paths.push(...readBy(part, prefix));
+  }
+  for (const name of Array.isArray(schema.required) ? schema.required : []) {
+    paths.push(prefix + String(name));
+  }
+  return [...new Set(paths)];
+}
+
+/**
+ * The keys a key's coded refiners watch: every key it depends on that its
+ * enumerated conditionals name, or that no rule of it reads.
+ */
+function codedDeps(frame: Schema, name: string, deps: string[]): string[] {
+  const conditions = frame.allOf ?? [];
+  const named = new Set(enumeratedOf(conditions, name).flatMap((condition) => Object.keys(condition.if?.properties ?? {})));
+  const read = new Set(rulesOf(conditions, name).flatMap((condition) => readBy(condition.if)));
+  return deps.filter((dep) => named.has(dep) || ![...read].some((path) => path === dep || path.startsWith(`${dep}.`) || dep.startsWith(`${path}.`)));
+}
+
+/** Whether a value is a number, or a number's notation, as the server reads one. */
+function numberOf(value: unknown): number | null {
+  if (typeof value === 'number') {
+    return value;
+  }
+  return typeof value === 'string' && /^\s*[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?\s*$/.test(value) ? Number(value) : null;
+}
+
+/**
+ * Whether a declared rule's `if` holds for a frame's values.
+ *
+ * JSON Schema's own reading of the rules' closed vocabulary
+ * (Refinement\Condition): `properties` and `required`, `const`, `enum`,
+ * `type`, the four bounds, `not`, `allOf` and `anyOf`. A key holding
+ * nothing, null or '', is null to it. Anything else is not read here.
+ */
+export function holdsIf(schema: unknown, value: unknown): boolean {
+  if (typeof schema === 'boolean') {
+    return schema;
+  }
+  if (!isObject(schema)) {
+    throw new Unsettled('', 'unsettled');
+  }
+  const held = value === '' ? null : value;
+  for (const [keyword, operand] of Object.entries(schema)) {
+    switch (keyword) {
+      case 'properties':
+        if (isObject(held) && isObject(operand)) {
+          for (const [name, part] of Object.entries(operand)) {
+            if (held[name] !== undefined && !holdsIf(part, held[name])) {
+              return false;
+            }
+          }
+        }
+        break;
+      case 'required':
+        if (isObject(held) && (operand as string[]).some((name) => held[name] === undefined)) {
+          return false;
+        }
+        break;
+      case 'const':
+        if (held === null || !sameValue(operand, held)) {
+          return false;
+        }
+        break;
+      case 'enum':
+        if (held === null || !(operand as unknown[]).some((option) => sameValue(option, held))) {
+          return false;
+        }
+        break;
+      case 'type': {
+        const types = Array.isArray(operand) ? operand : [operand];
+        const is = (type: unknown): boolean => {
+          switch (type) {
+            case 'null':
+              return held === null;
+            case 'number':
+              return typeof held !== 'boolean' && numberOf(held) !== null;
+            case 'integer':
+              return typeof held !== 'boolean' && Number.isInteger(numberOf(held));
+            case 'string':
+              return typeof held === 'string';
+            case 'boolean':
+              return typeof held === 'boolean';
+            case 'array':
+              return Array.isArray(held);
+            case 'object':
+              return isObject(held);
+            default:
+              throw new Unsettled('', 'unsettled');
+          }
+        };
+        if (!types.some(is)) {
+          return false;
+        }
+        break;
+      }
+      case 'minimum':
+      case 'maximum':
+      case 'exclusiveMinimum':
+      case 'exclusiveMaximum': {
+        const number = typeof held === 'boolean' ? null : numberOf(held);
+        const bound = operand as number;
+        if (number !== null && !(keyword === 'minimum' ? number >= bound : keyword === 'maximum' ? number <= bound : keyword === 'exclusiveMinimum' ? number > bound : number < bound)) {
+          return false;
+        }
+        break;
+      }
+      case 'not':
+        if (holdsIf(operand, held)) {
+          return false;
+        }
+        break;
+      case 'allOf':
+        if (!(operand as unknown[]).every((part) => holdsIf(part, held))) {
+          return false;
+        }
+        break;
+      case 'anyOf':
+        if (!(operand as unknown[]).some((part) => holdsIf(part, held))) {
+          return false;
+        }
+        break;
+      default:
+        throw new Unsettled('', 'unsettled');
+    }
+  }
+  return true;
+}
+
+/**
+ * Lays a declared rule's narrowing over a key, as the pipeline applies it.
+ *
+ * A rule tightens what the key allows by the time it runs (Rule::apply()):
+ * the lower of two maxima, the higher of two minima, the values both lists
+ * offer, in the key's own order; anything else it states replaces what
+ * was there.
+ */
+function tighten(base: Schema, over: Schema): Schema {
+  const tightened: Json = { ...(base as Json) };
+  for (const [keyword, value] of Object.entries(over as Json)) {
+    const before = tightened[keyword];
+    if (typeof before === 'number' && typeof value === 'number' && ['maximum', 'maxLength', 'maxItems'].includes(keyword)) {
+      tightened[keyword] = Math.min(before, value);
+    }
+    else if (typeof before === 'number' && typeof value === 'number' && ['minimum', 'minLength', 'minItems'].includes(keyword)) {
+      tightened[keyword] = Math.max(before, value);
+    }
+    else if (keyword === 'oneOf' && Array.isArray(before) && Array.isArray(value)) {
+      tightened[keyword] = before.filter((choice) => value.some((kept) => sameJson((kept as Json).const, (choice as Json).const)));
+    }
+    else {
+      tightened[keyword] = value;
+    }
+  }
+  return tightened as Schema;
+}
+
+/**
+ * Applies a key's declared rules for a frame's values.
+ *
+ * Each conditional whose `if` holds, in order: one that rules the key out
+ * ends it, one that requires it requires it, and one that narrows it
+ * tightens what the key allows so far, and says why only where it did.
+ */
+function applyRules(rules: Conditional[], name: string, schema: Schema, values: Values): { schema: Schema; ruled: boolean; required: boolean } {
+  let effective = schema;
+  let required = false;
+  for (const rule of rules) {
+    if (!holdsIf(rule.if, values)) {
+      continue;
+    }
+    if (rulesOut(rule, name)) {
+      return { schema: effective, ruled: true, required };
+    }
+    required = required || (rule.then.required ?? []).includes(name);
+    const then = narrowingOf(rule, name);
+    if (then !== null) {
+      // The rule's sentence only where the rest of it did something, or
+      // where it is all the rule says (Rule::apply()).
+      const { description, ...rest } = then;
+      const next = tighten(effective, rest);
+      const did = Object.keys(rest).length === 0 || !sameJson(next, effective);
+      effective = did && description !== undefined ? { ...next, description } : next;
+    }
+  }
+  return { schema: effective, ruled: false, required };
 }
 
 /** What a conditional narrows one key to: its schema, or null where it only rules it out or requires it. */
@@ -724,6 +950,20 @@ function assertReadable(frame: Schema, path: string): void {
   for (const condition of frame.allOf ?? []) {
     // One key a `then` speaks of: narrowed, ruled out, or required here.
     const narrowed = [...new Set([...Object.keys(condition?.then?.properties ?? {}), ...(condition?.then?.required ?? [])])];
+    if (isObject(condition) && isRule(condition)) {
+      // A rule's `if` reads keys of this frame; its `then` speaks of one
+      // key as a whole, not of a key inside a map, which is the server's.
+      const then = narrowed.length === 1 ? condition.then?.properties?.[narrowed[0]] : undefined;
+      if (
+        narrowed.length !== 1
+        || 'else' in condition
+        || readBy(condition.if).some((read) => !(read.split('.')[0] in properties))
+        || (isObject(then) && ('properties' in then || 'required' in then))
+      ) {
+        throw new Unsettled(narrowed.length === 1 ? path + narrowed[0] : '', 'unsettled');
+      }
+      continue;
+    }
     const named = Object.entries(condition?.if?.properties ?? {});
     if (
       narrowed.length !== 1
@@ -912,25 +1152,35 @@ function settle(full: Schema, previous: Schema | null, input: Values, stored: Va
       uncertain.set(name, extension.runtime ? 'runtime' : 'dynamic');
       return UNKNOWN;
     }
+    const rules = extension?.declared ? rulesOf(full.allOf ?? [], name) : [];
+    let schema = declared;
     if (extension?.enumerated) {
-      const held = deps.map((dep) => !isEmpty(getAt(values, dep)));
+      const held = (rules.length > 0 ? codedDeps(full, name, deps) : deps).map((dep) => !isEmpty(getAt(values, dep)));
       if (held.every(Boolean)) {
-        const narrowed = (full.allOf ?? []).filter((condition) => conditionalKey(condition) === name && met(condition, values));
+        const narrowed = enumeratedOf(full.allOf ?? [], name).filter((condition) => met(condition, values));
         if (narrowed.some((condition) => rulesOut(condition, name))) {
           // It does not apply: no list to fall out of.
           return null;
         }
-        return offered(narrowed.reduce<Schema>((schema, condition) => {
+        schema = narrowed.reduce<Schema>((reached, condition) => {
           const branch = narrowingOf(condition, name);
-          return branch === null ? schema : merge(schema as Json, branch as Json) as Schema;
-        }, declared));
+          return branch === null ? reached : merge(reached as Json, branch as Json) as Schema;
+        }, declared);
       }
-      if (held.some(Boolean)) {
+      else if (held.some(Boolean) || rules.length > 0) {
         uncertain.set(name, 'unsettled');
         return UNKNOWN;
       }
     }
-    return offered(declared);
+    if (rules.length > 0) {
+      // Each declared rule that holds, after what the coded ones answer.
+      const applied = applyRules(rules, name, schema, values);
+      if (applied.ruled) {
+        return null;
+      }
+      schema = applied.schema;
+    }
+    return offered(schema);
   };
   const stillStands = (name: string, values: Values): boolean => {
     const declared = properties[name];
@@ -1110,13 +1360,17 @@ function core(full: Schema, previous: Schema | null, values: Values, before: Val
     if (extension?.dynamic) {
       throw new Unsettled(at, 'dynamic');
     }
+    // A key's declared rules, and the keys its coded refiners watch.
+    // Decision: see docs/decisions.md#a-rule-declared-as-data.
+    const rules = extension?.declared ? rulesOf(fullConditions, name) : [];
+    const coded = rules.length > 0 ? codedDeps(full, name, deps) : deps;
     if (extension?.enumerated) {
       // Whether it applies, and whether it is required here, once every
       // key it watches holds a value: a key ruled out is no property, and
       // has no conditional.
-      const holds = deps.map((dep) => !isEmpty(getAt(values, dep)));
+      const holds = coded.map((dep) => !isEmpty(getAt(values, dep)));
       if (holds.every(Boolean)) {
-        const holding = mine(fullConditions, name).filter((condition) => met(condition, values));
+        const holding = enumeratedOf(fullConditions, name).filter((condition) => met(condition, values));
         if (holding.some((condition) => rulesOut(condition, name))) {
           ruled[name] = deps;
           continue;
@@ -1125,14 +1379,26 @@ function core(full: Schema, previous: Schema | null, values: Values, before: Val
           required.add(name);
         }
       }
-      else if (isSlot(declared) || isPart(declared)) {
+      else if (isSlot(declared) || isPart(declared) || rules.length > 0) {
         // Whether a part or a slot applies is stated only for every key
-        // it watches; the rest is the server's to answer.
+        // it watches, and a rule is laid over what those answer; the rest
+        // is the server's to answer.
         throw new Unsettled(at, 'unsettled');
       }
     }
+    if (rules.length > 0) {
+      // Whether a rule rules it out, or requires it, for these values.
+      const applied = applyRules(rules, name, declared, values);
+      if (applied.ruled) {
+        ruled[name] = deps;
+        continue;
+      }
+      if (applied.required) {
+        required.add(name);
+      }
+    }
     if (isSlot(declared)) {
-      properties[name] = extension?.enumerated ? { ...declared, 'x-surface': withoutEnumerated(extension) } : declared;
+      properties[name] = extension?.enumerated || extension?.declared ? { ...declared, 'x-surface': withoutEnumerated(extension) } : declared;
       const by = extension?.by ?? '';
       conditions[name] = variantsIn(fullConditions, name).map((condition) => {
         const variant = narrowingOf(condition, name) as Schema;
@@ -1144,7 +1410,7 @@ function core(full: Schema, previous: Schema | null, values: Values, before: Val
     }
     if (isPart(declared) && !isCollection(declared)) {
       properties[name] = core(declared, null, { ...frameDefaults(declared), ...asValues(held) }, null, `${at}.`, context);
-      if (extension?.enumerated) {
+      if (extension?.enumerated || extension?.declared) {
         properties[name] = { ...properties[name], 'x-surface': withoutEnumerated(properties[name]['x-surface']) };
       }
       conditions[name] = [];
@@ -1156,9 +1422,9 @@ function core(full: Schema, previous: Schema | null, values: Values, before: Val
     let enumerated = Boolean(extension?.enumerated);
     conditions[name] = [];
     if (enumerated) {
-      const holds = deps.map((dep) => !isEmpty(getAt(values, dep)));
+      const holds = coded.map((dep) => !isEmpty(getAt(values, dep)));
       if (holds.every(Boolean)) {
-        for (const condition of mine(fullConditions, name)) {
+        for (const condition of enumeratedOf(fullConditions, name)) {
           const then = narrowingOf(condition, name);
           if (then !== null && met(condition, values)) {
             if (then.type !== undefined && !sameJson(then.type, declared.type) && !(condition.then.required ?? []).includes(name)) {
@@ -1177,7 +1443,7 @@ function core(full: Schema, previous: Schema | null, values: Values, before: Val
         // What the emitter enumerates over: each watched key's list as it
         // stands, so a capacity offers the conditionals of the rooms the
         // venue still offers.
-        conditions[name] = mine(fullConditions, name).filter((condition) => Object.entries(condition.if.properties).every(([dep, { const: value }]) => {
+        conditions[name] = enumeratedOf(fullConditions, name).filter((condition) => Object.entries(condition.if.properties).every(([dep, { const: value }]) => {
           const list = properties[dep] ?? (dep in (full.properties ?? {}) ? undefined : null);
           if (list === null || list === undefined) {
             throw new Unsettled(at, 'unsettled');
@@ -1185,6 +1451,10 @@ function core(full: Schema, previous: Schema | null, values: Values, before: Val
           return (offered(list) ?? []).some((option) => sameValue(option, value));
         }));
       }
+    }
+    if (rules.length > 0) {
+      // Each rule that holds, tightened over what the coded ones answer.
+      effective = applyRules(rules, name, effective, values).schema;
     }
     if (isCollection(declared)) {
       // The items are the child's def, described from nothing: no value
@@ -1195,6 +1465,8 @@ function core(full: Schema, previous: Schema | null, values: Values, before: Val
     if (!enumerated) {
       delete own.enumerated;
     }
+    // Evaluated for these values: no rule is stated in their schema.
+    delete own.declared;
     properties[name] = { ...effective, 'x-surface': own };
   }
   const allOf = Object.keys(full.properties ?? {}).flatMap((name) => conditions[name] ?? []);
@@ -1225,13 +1497,14 @@ function core(full: Schema, previous: Schema | null, values: Values, before: Val
   return frame;
 }
 
-/** A key's `x-surface` once what it watches holds values: no longer enumerated. */
+/** A key's `x-surface` once what it watches holds values: no longer enumerated, its rules evaluated. */
 function withoutEnumerated(extension: Extension | undefined): Extension | undefined {
-  if (extension === undefined || !extension.enumerated) {
+  if (extension === undefined || (!extension.enumerated && !extension.declared)) {
     return extension;
   }
   const own = { ...extension };
   delete own.enumerated;
+  delete own.declared;
   return own;
 }
 

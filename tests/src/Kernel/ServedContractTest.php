@@ -478,7 +478,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
   /**
    * Tests example 4 on example 3: the capacity depends on the licence.
    *
-   * The compliance alter's method on the capacity watches the licence the
+   * The compliance alter's rule on the capacity reads the licence the
    * alter mounted, so the capacity's dependsOn names the licence by its
    * path in the frame, and a contract refined with a licence lifts the
    * hundred back to the room's limit.
@@ -491,7 +491,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $capacity = $contract['schema']['properties']['capacity'];
     $this->assertSame(['room', $licence], $capacity['x-surface']['dependsOn']);
     $this->assertSame(100, $capacity['maximum']);
-    $this->assertSame('Up to 100 without an event licence. With one, up to 400.', $capacity['description']);
+    $this->assertSame('Up to 100 without an event licence.', $capacity['description']);
     $this->assertSame(['capacity'], $contract['schema']['properties']['third_party_settings']['x-surface']['dependsOn']);
     // The mount only groups each module's fieldset: no title of its own,
     // and the module's map titled by its alter.
@@ -564,7 +564,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
   protected function branches(array $schema, string $key): array {
     $branches = [];
     foreach ($schema['allOf'] ?? [] as $condition) {
-      if (!isset($condition['then']['properties'][$key])) {
+      if (!isset($condition['then']['properties'][$key]) || ($condition['x-surface']['declared'] ?? FALSE) === TRUE) {
         continue;
       }
       $when = array_map(static fn (array $value): mixed => $value['const'], $condition['if']['properties']);
@@ -736,28 +736,55 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests example 4's refiners stay dynamic: their answers are not finite.
+   * Tests example 4's capacity is exact, and only its stewards dynamic.
    *
-   * The capacity watches the licence, free text, and the stewards (inside
-   * the mount) watch the capacity, a number; neither can be listed, so
-   * both are marked dynamic, to be asked again, while the room, which
-   * watches only the venue, is still enumerated.
+   * The capacity watches the room, which offers a list, and its licence
+   * rule is declared, so both are stated: one conditional per room, and
+   * the rule as written, an `if` that the licence holds nothing. The
+   * stewards (inside the mount) watch the capacity, a number, which cannot
+   * be listed: dynamic, to be asked again. The room, which watches only
+   * the venue, is still enumerated.
    */
-  public function testExampleFourStaysDynamic(): void {
+  public function testExampleFourStatesTheCapacityExactly(): void {
     $this->enableModules(['data_surface_examples_compliance']);
-    [$contract] = $this->staticContract($this->operationSurface('registration.step3'), 'registration.step3');
-    $schema = $contract['schema'];
+    $schema = $this->full('registration.step3')['schema'];
     $this->assertWellFormed($schema);
     $capacity = $schema['properties']['capacity']['x-surface'];
-    $this->assertTrue($capacity['dynamic']);
-    $this->assertArrayNotHasKey('enumerated', $capacity);
+    $this->assertArrayNotHasKey('dynamic', $capacity);
+    $this->assertTrue($capacity['enumerated']);
+    $this->assertTrue($capacity['declared']);
     $this->assertSame(['room', 'third_party_settings.data_surface_examples_compliance.licence'], $capacity['dependsOn']);
-    $this->assertSame([], $this->branches($schema, 'capacity'));
+    $this->assertCount(6, $this->branches($schema, 'capacity'));
+    $rules = array_values(array_filter($schema['allOf'], static fn (array $condition): bool => ($condition['x-surface']['declared'] ?? FALSE) === TRUE));
+    $absent = ['properties' => ['licence' => ['type' => 'null']]];
+    $ceiling = ['description' => 'Up to 100 without an event licence.', 'maximum' => 100];
+    $this->assertSame([
+      [
+        'if' => ['properties' => ['third_party_settings' => ['properties' => ['data_surface_examples_compliance' => $absent]]]],
+        'then' => ['properties' => ['capacity' => $ceiling]],
+        'x-surface' => ['declared' => TRUE],
+      ],
+    ], $rules);
     $mount = $schema['properties']['third_party_settings']['x-surface'];
     $this->assertTrue($mount['dynamic']);
     $this->assertSame(['capacity'], $mount['dependsOn']);
     $this->assertTrue($schema['properties']['room']['x-surface']['enumerated']);
     $this->assertCount(3, $this->branches($schema, 'room'));
+
+    // For no values at all, the rule is evaluated, not stated: no licence,
+    // so a hundred, and the rooms each lower that where they seat fewer.
+    [$contract] = $this->staticContract($this->operationSurface('registration.step3'), 'registration.step3');
+    $capacity = $contract['schema']['properties']['capacity'];
+    $this->assertSame(100, $capacity['maximum']);
+    $this->assertSame('Up to 100 without an event licence.', $capacity['description']);
+    $this->assertArrayNotHasKey('declared', $capacity['x-surface']);
+    $this->assertTrue($capacity['x-surface']['enumerated']);
+    $ceilings = [];
+    foreach ($this->branches($contract['schema'], 'capacity') as [$when, $then]) {
+      $ceilings[$when['room']] = $then['maximum'];
+    }
+    $this->assertSame(['library_reading' => 60, 'library_garden' => 30], $ceilings);
+    $this->assertSame([], array_filter($contract['schema']['allOf'], static fn (array $condition): bool => isset($condition['x-surface'])));
   }
 
   /**
@@ -891,14 +918,14 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
   /**
    * Tests the full schema leaves what cannot be listed as declared.
    *
-   * With example 4's module on, the capacity also watches a free-text
-   * licence, so its answers cannot be listed: the full schema keeps the
-   * declared thousand and marks it dynamic, wider than the pipeline will
-   * allow and never narrower, while the schema for the stored answers
-   * serves it as it stands, a hundred without a licence. The room beside
-   * it is listed, the ticket is its two conditionals with none chosen,
-   * and an attached structure is described from nothing, not from its
-   * defaults.
+   * With example 4's module on, the stewards watch the capacity, a number,
+   * so their answers cannot be listed: the full schema keeps the declared
+   * minimum and marks them dynamic, wider than the pipeline will allow and
+   * never narrower. The capacity's licence rule is declared, so the full
+   * schema states it exactly: 150 people and no licence fit neither
+   * document. The room beside it is listed, the ticket is its two
+   * conditionals with none chosen, and an attached structure is described
+   * from nothing, not from its defaults.
    */
   public function testFullSchemaLeavesWhatCannotBeListedAsDeclared(): void {
     $this->enableModules(['data_surface_examples_compliance']);
@@ -910,9 +937,10 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $this->assertSame([
       'locked' => FALSE,
       'dependsOn' => ['room', 'third_party_settings.data_surface_examples_compliance.licence'],
-      'dynamic' => TRUE,
+      'enumerated' => TRUE,
+      'declared' => TRUE,
     ], $capacity['x-surface']);
-    $this->assertSame([], $this->branches($schema, 'capacity'));
+    $this->assertCount(6, $this->branches($schema, 'capacity'));
     $this->assertTrue($schema['properties']['third_party_settings']['x-surface']['dynamic']);
     $this->assertTrue($schema['properties']['room']['x-surface']['enumerated']);
     $this->assertSame(Venues::rooms(), $this->titles($schema['properties']['room']));
@@ -925,12 +953,19 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     // The other document, for the stored answers: as it stands.
     $stored = $this->contract('registration.step3', 'configure');
     $this->assertSame(100, $stored['schema']['properties']['capacity']['maximum']);
-    $this->assertSame('Up to 100 without an event licence. With one, up to 400.', $stored['schema']['properties']['capacity']['description']);
-    // Wider where it cannot be exact: 150 people and no licence fit the
-    // full schema, and the schema for these answers refuses them.
+    $this->assertSame('Up to 100 without an event licence.', $stored['schema']['properties']['capacity']['description']);
+    // Exact where the rule is declared: 150 people and no licence fit
+    // neither document; with a licence, both.
     $crowd = ['capacity' => 150] + $stored['values'];
-    $this->assertTrue($this->validates($schema, $crowd));
+    $this->assertFalse($this->validates($schema, $crowd));
     $this->assertFalse($this->validates($stored['schema'], $crowd));
+    $crowd['third_party_settings']['data_surface_examples_compliance']['licence'] = '2048';
+    $crowd['third_party_settings']['data_surface_examples_compliance']['stewards'] = 3;
+    $this->assertTrue($this->validates($schema, $crowd));
+    // Wider where it cannot be exact: one steward for 150 people fits the
+    // full schema, which cannot list the capacity the stewards watch.
+    $crowd['third_party_settings']['data_surface_examples_compliance']['stewards'] = 1;
+    $this->assertTrue($this->validates($schema, $crowd));
     $this->assertFalse($this->validates($schema, ['venue' => 'library'] + $stored['values']), 'What can be listed is still held: the main hall is not the library\'s.');
 
     // A child whose unit defaults to `cm` is not described for `cm`.
@@ -1325,17 +1360,15 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
   /**
    * Value sets for example 3, each with its verdict in three places.
    *
-   * @param bool $compliance
-   *   Whether example 4's module is on: then the capacity also watches a
-   *   free-text licence, so the full schema cannot list its ceilings and
-   *   leaves it at the declared thousand.
+   * The same with example 4's module on: the capacity's licence rule is
+   * declared, so the full schema still states every ceiling.
    *
    * @return array<string, array{0: array, 1: bool, 2: bool, 3: bool}>
    *   The values over EVENT, then whether the pipeline accepts them,
    *   whether the full schema does, and whether the schema emitted for
    *   those values does.
    */
-  protected static function verdicts(bool $compliance): array {
+  protected static function verdicts(): array {
     $paid = ['pricing' => 'paid', 'ticket' => ['price' => 12.5, 'currency' => 'EUR']];
     $garden = ['venue' => 'library', 'room' => 'library_garden'];
     return [
@@ -1350,9 +1383,9 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
       'a contact with no address' => [['contact' => ['email' => NULL, 'phone' => '555']], FALSE, FALSE, FALSE],
       'a contact key nobody declares' => [['contact' => ['fax' => '1'] + self::EVENT['contact']], FALSE, FALSE, FALSE],
       'another venue\'s room' => [['room' => 'library_reading'], FALSE, FALSE, FALSE],
-      'more than the main hall seats' => [['capacity' => 401], FALSE, $compliance, FALSE],
+      'more than the main hall seats' => [['capacity' => 401], FALSE, FALSE, FALSE],
       'the library\'s garden room' => [['capacity' => 30] + $garden, TRUE, TRUE, TRUE],
-      'more than the garden room seats' => [['capacity' => 31] + $garden, FALSE, $compliance, FALSE],
+      'more than the garden room seats' => [['capacity' => 31] + $garden, FALSE, FALSE, FALSE],
     ];
   }
 
@@ -1384,12 +1417,12 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    * the schemas are written in may change and these may not: the full
    * schema and the schema for each value set hold example 3 to what the
    * pipeline holds it to, its attached structures included, with the
-   * compliance module off and on. On, the full schema is wider than the
-   * pipeline where the licence cannot be listed, and only there.
+   * compliance module off and on. On, the licence's rule is declared, so
+   * the full schema holds a crowd with no licence to it as well.
    */
   public function testDocumentsKeepTheirVerdicts(): void {
     foreach ([FALSE, TRUE] as $compliance) {
-      $cases = static::verdicts($compliance);
+      $cases = static::verdicts();
       $event = static::EVENT;
       if ($compliance) {
         $this->enableModules(['data_surface_examples_compliance']);
@@ -1401,7 +1434,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
         $event += $mount(NULL, 1);
         $licensed = $mount('2048', 3);
         $cases += [
-          'a crowd with no licence' => [['capacity' => 150], FALSE, TRUE, FALSE],
+          'a crowd with no licence' => [['capacity' => 150], FALSE, FALSE, FALSE],
           'a crowd with a licence' => [['capacity' => 150] + $licensed, TRUE, TRUE, TRUE],
           'a licence that is not four digits' => [$mount('EV-1', 1), FALSE, FALSE, FALSE],
         ];

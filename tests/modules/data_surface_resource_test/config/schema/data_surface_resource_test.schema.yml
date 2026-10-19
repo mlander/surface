@@ -40,3 +40,68 @@ data_surface_resource_test.bulletin:
     send_day:
       type: string
       label: 'Send day'
+
+# The parcel fixture: every rule between its keys declared as data.
+data_surface_resource_test.parcel:
+  type: config_object
+  label: 'Parcel'
+  mapping:
+    service:
+      type: string
+      label: 'Service'
+    weight:
+      type: integer
+      label: 'Weight in kilograms'
+    insured:
+      type: boolean
+      label: 'Insured'
+    declared_value:
+      type: integer
+      label: 'Declared value'
+      nullable: true
+    reference:
+      type: string
+      label: 'Reference'
+      nullable: true
+    signature:
+      type: string
+      label: 'Signed for by'
+      nullable: true
+    tracking:
+      type: string
+      label: 'Tracking code'
+      nullable: true
+    handling:
+      type: string
+      label: 'Handling'
+      nullable: true
+    labels:
+      type: sequence
+      label: 'Labels'
+      sequence:
+        type: string
+        label: 'Label'
+    note:
+      type: string
+      label: 'Note for the driver'
+      nullable: true
+    third_party_settings:
+      type: sequence
+      label: 'Third party settings'
+      requiredKey: false
+      sequence:
+        type: data_surface_resource_test.parcel.third_party.[%key]
+
+# What ParcelAlter mounts on the parcel, under the module's name.
+data_surface_resource_test.parcel.third_party.data_surface_resource_test:
+  type: mapping
+  label: 'Customs'
+  mapping:
+    courier:
+      type: string
+      label: 'Courier'
+      nullable: true
+    customs:
+      type: string
+      label: 'Customs code'
+      nullable: true

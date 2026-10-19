@@ -9,13 +9,21 @@ use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Cache\RefinableCacheableDependencyInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
+use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\data_surface\DataSurface;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
+use Drupal\data_surface\Refinement\ChoiceSet;
+use Drupal\data_surface\Refinement\Condition;
+use Drupal\data_surface\Refinement\DeclaredRefiner;
+use Drupal\data_surface\Refinement\DoesNotApply;
 use Drupal\data_surface\Refinement\Narrowing;
+use Drupal\data_surface\Refinement\Rule;
 use Drupal\data_surface\Refinement\RuntimeRefiner;
 use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
 use Drupal\data_surface\Resource\AltersOutputsInterface;
@@ -214,10 +222,37 @@ final class Resources implements ResourcesInterface {
         $mounted_by[$key][] = (string) $contributor;
       }
     }
-    foreach ($links as [$instance, $refiners, $module]) {
-      $extended = $module !== NULL && isset($additions[$module][0]) ? $additions[$module][0]->extended() : [];
-      $mounted = $module !== NULL && isset($additions[$module][0]) ? $additions[$module][0]->keys() : [];
-      $this->bindRefiners($builder, $definition, $instance, $refiners, $input_keys, $outputs->keys(), $attached, $ancestry === [] ? NULL : $ancestry[count($ancestry) - 1], $module, $extended, $mounted, $module === NULL ? [] : $mounted_by, $lists);
+    // What a coded or runtime refiner may rule out, which a declared rule
+    // may then not require: the owner's keys by name, an alter's own by
+    // `<module>.<key>`.
+    $ruling = [];
+    foreach ($links as [, $refiners, $module]) {
+      foreach ($refiners as $refiner) {
+        if ($refiner->mayNotApply) {
+          $ruling[] = $module !== NULL && !in_array($refiner->key, $input_keys, TRUE) ? $module . '.' . $refiner->key : $refiner->key;
+        }
+      }
+    }
+    // Each contributor's coded refiners, then the rules it declared, the
+    // owner's before any alter's.
+    // Decision: see docs/decisions.md#a-rule-declared-as-data.
+    $contributors = ['' => NULL];
+    foreach ($links as [, , $module]) {
+      $contributors[$module ?? ''] ??= $module;
+    }
+    foreach ($additions as $module => $blueprints) {
+      $contributors[(string) $module] ??= (string) $module;
+    }
+    foreach ($contributors as $contributor) {
+      $extended = $contributor !== NULL && isset($additions[$contributor][0]) ? $additions[$contributor][0]->extended() : [];
+      $mounted = $contributor !== NULL && isset($additions[$contributor][0]) ? $additions[$contributor][0]->keys() : [];
+      foreach ($links as [$instance, $refiners, $module]) {
+        if ($module === $contributor) {
+          $this->bindRefiners($builder, $definition, $instance, $refiners, $input_keys, $outputs->keys(), $attached, $ancestry === [] ? NULL : $ancestry[count($ancestry) - 1], $module, $extended, $mounted, $module === NULL ? [] : $mounted_by, $lists);
+        }
+      }
+      $rules = $contributor === NULL ? $inputs->rules() : (isset($additions[$contributor][0]) ? $additions[$contributor][0]->rules() : []);
+      $this->bindRules($builder, $definition, $rules, $contributor, $input_keys, $attached, $lists, $extended, $mounted, $contributor === NULL ? [] : $mounted_by, $ruling);
     }
 
     // The children, each through this same build step in its own frame:
@@ -1103,6 +1138,198 @@ final class Resources implements ResourcesInterface {
         continue;
       }
       $builder->setDefinition($refiner->key, $refined);
+    }
+  }
+
+  /**
+   * Checks one contributor's declared rules against the shape, and binds them.
+   *
+   * Each rule is a static refiner of its key: its condition's keys become
+   * refinement edges that gate nothing (Entry::declaredDependencies()),
+   * and the contributor's rules one Refinement\DeclaredRefiner link in the
+   * owner's chain of each key they narrow, after the contributor's coded
+   * refiners. An alter's rule on a key it mounted is bound under the
+   * mount, as its coded refiners are.
+   *
+   * Decision: see docs/decisions.md#a-rule-declared-as-data.
+   *
+   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   *   The builder holding the shape.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource or structure.
+   * @param \Drupal\data_surface\Refinement\Rule[] $rules
+   *   The rules the contributor declared, in order.
+   * @param string|null $module
+   *   The alter's module, or NULL for the owner.
+   * @param string[] $input_keys
+   *   The owner's plain input keys.
+   * @param string[] $attached
+   *   The owner's keys holding an attached child or a slot.
+   * @param string[] $lists
+   *   The owner's collection keys.
+   * @param string[] $extended
+   *   The owner's keys the alter offered more values on.
+   * @param string[] $mounted
+   *   The keys the alter added.
+   * @param array<string, string[]> $mountedBy
+   *   Every key an alter mounted, mapped to the modules that did.
+   * @param string[] $ruling
+   *   The keys a coded or runtime refiner may rule out, an alter's own by
+   *   `<module>.<key>`.
+   *
+   * @throws \LogicException
+   *   Naming the rule and what is wrong with it.
+   */
+  protected function bindRules(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, array $rules, ?string $module, array $input_keys, array $attached, array $lists, array $extended, array $mounted, array $mountedBy, array $ruling): void {
+    if ($rules === []) {
+      return;
+    }
+    $who = $module === NULL ? $definition->id : sprintf('the %s alter of %s', $module, $definition->id);
+    $bound = [];
+    $paths = [];
+    foreach ($rules as $rule) {
+      $name = sprintf('narrow("%s") in %s', $rule->key, $who);
+      $condition = $rule->condition();
+      if ($condition === NULL || !$rule->hasEffect()) {
+        throw new \LogicException(sprintf('%s says %s. A rule is a condition and at least one effect: ->when(Condition::...) and what it does, such as ->constrain(), ->require(), ->doesNotApply() or ->describe().', $name, $condition === NULL ? 'no ->when()' : 'nothing it does'));
+      }
+      $own = $module !== NULL && in_array($rule->key, $mounted, TRUE) && !in_array($rule->key, $input_keys, TRUE);
+      $nested = !$own && in_array($rule->key, $attached, TRUE);
+      $list = !$own && in_array($rule->key, $lists, TRUE);
+      if (!$own && !$nested && !$list && !in_array($rule->key, $input_keys, TRUE)) {
+        throw new \LogicException(sprintf('%s narrows "%s", which %s does not declare as an input%s.', $name, $rule->key, $definition->id, isset($mountedBy[$rule->key]) ? sprintf(' (the %s module mounted it, and an alter narrows only the keys it mounted itself and the owner\'s)', implode(', ', $mountedBy[$rule->key])) : ''));
+      }
+      if (!$own && in_array($rule->key, $extended, TRUE)) {
+        throw new \LogicException(sprintf('%s narrows "%s", a key the alter offered more values on. What it offered is narrowed by a #[RefinesInput] method on the key, handed those values alone; a declared rule of them is not built.', $name, $rule->key));
+      }
+      $constraints = $rule->constraints();
+      if ($nested && !$rule->rulesOut()) {
+        throw new \LogicException(sprintf('%s narrows "%s", which holds a child in %s, other than by ruling it out. A child narrows its own keys, in its own frame; a parent may only say the key does not apply.', $name, $rule->key, $definition->id));
+      }
+      if ($list && (array_diff(array_keys($constraints), ['Count']) !== [] || $rule->requires())) {
+        throw new \LogicException(sprintf('%s constrains "%s", a collection in %s, other than by its Count. The list is the parent\'s to narrow, by its Count; every item is the child\'s.', $name, $rule->key, $definition->id));
+      }
+      $at = $own ? $module . '.' . $rule->key : $rule->key;
+      if ($rule->requires() && in_array($at, $ruling, TRUE)) {
+        throw new \LogicException(sprintf('%s requires "%s", which a #[RefinesInput] method may answer does not apply. No schema can say where a key is required that a coded rule may rule out: say both in one place, the refiner or the rules.', $name, $rule->key));
+      }
+      $advertised = $own ? $builder->getThirdPartyDefinition((string) $module, $rule->key) : $builder->getDefinition($rule->key);
+      assert($advertised !== NULL);
+      static::assertConstrainable($name, $rule, $advertised);
+
+      // The keys the condition reads: siblings in this frame.
+      // Decision: see docs/decisions.md#a-rule-declared-as-data.
+      $watched = [];
+      foreach ($condition->keys() as $key) {
+        $mine = $module !== NULL && in_array($key, $mounted, TRUE) && !in_array($key, $input_keys, TRUE);
+        $problem = match (TRUE) {
+          $key === $rule->key => 'the key the rule narrows: a key does not depend on itself',
+          in_array($key, $attached, TRUE) => 'a key holding a child, whose values are the child\'s',
+          in_array($key, $lists, TRUE) => 'a collection, whose items are each a child',
+          !$mine && !in_array($key, $input_keys, TRUE) => isset($mountedBy[$key])
+            ? sprintf('a key the %s module mounted: an alter reads the keys it mounted itself and the owner\'s', implode(', ', $mountedBy[$key]))
+            : sprintf('no input of %s', $definition->id),
+          default => NULL,
+        };
+        if ($problem !== NULL) {
+          throw new \LogicException(sprintf('%s has a condition on "%s", which is %s.', $name, $key, $problem));
+        }
+        // A port, once ports land, is resolved here, to the key its
+        // container wires it to.
+        $path = $mine ? RefinesInputRefiner::path((string) $module, $key) : $key;
+        if ($mine) {
+          $paths[$key] = $path;
+        }
+        $watched[] = $path;
+        $read = $mine ? $builder->getThirdPartyDefinition((string) $module, $key) : $builder->getDefinition($key);
+        assert($read !== NULL);
+        static::assertReadable($name, $key, $condition, $read);
+      }
+      $builder->addRefinement($own ? RefinesInputRefiner::path((string) $module, $rule->key) : $rule->key, $watched, FALSE, TRUE);
+      $bound[$own ? RefinesInputRefiner::MOUNT : $rule->key][] = $rule;
+    }
+    $link = new DeclaredRefiner($bound, $module, $paths);
+    foreach (array_keys($bound) as $key) {
+      $builder->addRefiner((string) $key, $link);
+    }
+  }
+
+  /**
+   * Refuses a rule's effects the key cannot take, or that would widen it.
+   *
+   * @param string $name
+   *   The rule, in words.
+   * @param \Drupal\data_surface\Refinement\Rule $rule
+   *   The rule.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $advertised
+   *   The key as declared.
+   *
+   * @throws \LogicException
+   *   Naming the rule and what it would widen.
+   */
+  protected static function assertConstrainable(string $name, Rule $rule, DataDefinitionInterface $advertised): void {
+    $type = $advertised->getDataType();
+    foreach (array_keys($rule->constraints()) as $constraint) {
+      $fits = match ($constraint) {
+        'Range' => in_array($type, ['integer', 'float'], TRUE),
+        'Count' => $advertised instanceof ListDataDefinitionInterface,
+        'Choice' => ChoiceSet::of($advertised) !== NULL,
+        default => !$advertised instanceof ComplexDataDefinitionInterface && !$advertised instanceof ListDataDefinitionInterface,
+      };
+      if (!$fits) {
+        throw new \LogicException(sprintf('%s constrains "%s", whose type is %s, by %s, which it cannot take%s.', $name, $rule->key, $type, $constraint === 'Choice' ? 'a list of its values' : $constraint, $constraint === 'Choice' ? ': it declares no list of values' : ''));
+      }
+    }
+    $written = $rule->applyAsWritten(DataSurface::deepClone($advertised));
+    if (DoesNotApply::marks($written)) {
+      return;
+    }
+    $widened = Narrowing::narrowed($written, $advertised);
+    if ($widened !== NULL) {
+      throw new \LogicException(sprintf('%s widens what the key declares: %s. A declared rule may only narrow; declare the key wider, or the rule narrower.', $name, $widened));
+    }
+  }
+
+  /**
+   * Refuses a condition on a key that it cannot read exactly.
+   *
+   * Each value a condition compares with is of the key's type, so the
+   * `if` the full schema states reads the accepted document as the
+   * pipeline does: a number for an integer, TRUE or FALSE for a boolean.
+   *
+   * @param string $name
+   *   The rule, in words.
+   * @param string $key
+   *   The condition key.
+   * @param \Drupal\data_surface\Refinement\Condition $condition
+   *   The whole condition.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $read
+   *   The condition key's definition.
+   *
+   * @throws \LogicException
+   *   Naming the rule, the key and the value.
+   */
+  protected static function assertReadable(string $name, string $key, Condition $condition, DataDefinitionInterface $read): void {
+    $type = $read->getDataType();
+    $plain = !$read instanceof ComplexDataDefinitionInterface && !$read instanceof ListDataDefinitionInterface;
+    foreach ($condition->tests() as $test) {
+      if ($test->key !== $key) {
+        continue;
+      }
+      if ($test->isBound() && !in_array($type, ['integer', 'float'], TRUE)) {
+        throw new \LogicException(sprintf('%s compares "%s" with a number, and its type is %s: a bound reads an integer or a float.', $name, $key, $type));
+      }
+      foreach ($test->operands() as $operand) {
+        $fits = $plain && match ($type) {
+          'integer' => is_int($operand),
+          'float' => is_int($operand) || is_float($operand),
+          'boolean' => is_bool($operand),
+          default => is_string($operand),
+        };
+        if (!$fits) {
+          throw new \LogicException(sprintf('%s compares "%s", whose type is %s, with %s, which it never holds. A condition compares a key with values of its own type, as the accepted document holds them.', $name, $key, $type, var_export($operand, TRUE)));
+        }
+      }
     }
   }
 

@@ -382,13 +382,17 @@ interface DataSurfaceBuilderInterface {
    *   TRUE when only a runtime refiner watches them: refinement still
    *   waits for them, and nothing that states the target ahead of time
    *   reads them (Entry::staticDependencies()).
+   * @param bool $declared
+   *   TRUE when a declared rule reads them: refinement does not wait for
+   *   them, and the rule reads them as they stand
+   *   (Entry::declaredDependencies()).
    *
    * @return $this
    *
    * @throws \LogicException
    *   When the builder is already sealed.
    */
-  public function addRefinement(string $target, array $dependencies, bool $runtime = FALSE): static;
+  public function addRefinement(string $target, array $dependencies, bool $runtime = FALSE, bool $declared = FALSE): static;
 
   /**
    * Appends a refiner to one contribution's chain for a target.

@@ -120,6 +120,10 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * @param array<string, \Drupal\data_surface\Collection> $lists
    *   The collections, each the child its items are, keyed by definition
    *   key.
+   * @param array<string, array<string, int>> $watchedBy
+   *   For each target of $refinements, which kinds of link watch each of
+   *   its dependencies, as a mask of DataSurfaceInterface::CODED,
+   *   DECLARED and RUNTIME. Empty for a map built by hand.
    *
    * @return static
    *   The map.
@@ -138,6 +142,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
     array $slots = [],
     ?array $staticRefinements = NULL,
     array $lists = [],
+    array $watchedBy = [],
   ): static {
     foreach (array_merge(array_keys($refiners), array_keys($contributions), $locked, array_keys($attachments), array_keys($slots), array_keys($lists)) as $key) {
       if (!isset($definitions[$key])) {
@@ -162,6 +167,13 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
       $key = explode('.', (string) $target, 2)[0];
       $static[$key] = array_values(array_unique([...($static[$key] ?? []), ...array_map('strval', $watched)]));
     }
+    $kinds = [];
+    foreach ($watchedBy as $target => $watched) {
+      $key = explode('.', (string) $target, 2)[0];
+      foreach ($watched as $dependency => $mask) {
+        $kinds[$key][(string) $dependency] = ($kinds[$key][(string) $dependency] ?? 0) | $mask;
+      }
+    }
     $entries = [];
     foreach ($definitions as $name => $definition) {
       $entries[] = new Entry(
@@ -177,6 +189,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
         paths: $paths[$name] ?? [],
         runtimeOnly: array_values(array_diff($dependencies[$name] ?? [], $static[$name] ?? [])),
         list: $lists[$name] ?? NULL,
+        watchedBy: $kinds[$name] ?? [],
       );
     }
     return new static($entries);

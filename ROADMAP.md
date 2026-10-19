@@ -258,7 +258,8 @@ which serves the real contract.
      site hiding an owner's key, and an options alter removing an entry
      stored values use; both need the stale rule (item 11).
 9. **A closed vocabulary of dependent effects** (the Laravel negative
-   result made policy). Declared edge effects on the refinement map:
+   result made policy). Landed 2026-10-18 as declared rules (Next,
+   item 3), all but locked-when. Declared edge effects on the refinement map:
    narrow-choices-to, required-when, excluded-when, locked-when, as
    equality-on-dependency data (`required_if` shaped). Serializable,
    emitted, and evaluated by the pipeline, so required-or-not and
@@ -422,7 +423,7 @@ renames sit in A because they are cheapest before new code exists.
   must not crash the form (HTTP 500, "No data surface widget serves the
   map data type").
 - **B, what the contract can say:** inapplicable keys (2, done); declarative
-  narrowing (3); ports (4); mixins (5); named scalar shapes (7).
+  narrowing (3, done); ports (4); mixins (5); named scalar shapes (7).
 - **C, access and the doors:** static and runtime access (8); operation
   behavior facts and the tool door's refusal feedback (9).
 - **D, edges as they bite:** item 10.
@@ -502,11 +503,21 @@ renames sit in A because they are cheapest before new code exists.
    nothing, never a text field. Phase B item 10 (relevance shapes the
    payload) is the older note of the same idea, and its no-silent-loss
    rule is the one kept.
-3. **Declarative narrowing** (Phase C). An author states a condition
-   instead of coding it, for example "a licence is present", and the
-   emitter writes it as a conditional without executing anything. Keys
-   move from `dynamic` to `enumerated`; the compliance capacity is the
-   first case. The static/runtime split made this possible.
+3. **Declarative narrowing** (Phase C): DONE 2026-10-18
+   (`docs/decisions.md#a-rule-declared-as-data`). An author states a
+   condition instead of coding it, for example "a licence is absent",
+   and the emitter writes it as a conditional without executing
+   anything. A blueprint's `narrow($key)->when(Condition::...)` takes a
+   closed vocabulary of conditions (present, absent, equals, in, the four
+   bounds, not, allOf, anyOf) and of effects (a Range, Length or Count
+   bound, a subset of the key's list, a pattern, required, does not
+   apply, a description), each with one exact JSON Schema spelling; the
+   rule is a static refiner in the key's chain, after its contributor's
+   coded ones, waiting for nothing, and only tightening. The full schema
+   states each as written (`x-surface.declared`); the compliance capacity
+   was the first case and is exact now, its stewards still `dynamic`.
+   Left out: a conditional lock, and an alter's rule on values it
+   offered with `extendChoices()`.
 4. **Ports: a structure declares what it reads from its container.**
    The wall says a child never names a parent's key, and structures
    obey it; an alter may watch the owner's keys by name, and the

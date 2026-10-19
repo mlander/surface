@@ -32,11 +32,12 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Modelled on the Tool API's AdvertisedSchemaAcceptanceTest: for each
  * example resource and the test fixtures (every scalar type, a list and a
  * map on the specimen, a slot and an attached part on example 3, a
- * runtime refiner and a mounted key on example 4, collections on the
- * cellar, keys that do not apply on the bulletin and the notice), a table
- * of documents the pipeline accepts and documents it refuses. Each row is
- * asserted three times: against the pipeline (accept(), then validate()
- * over what is stored), against the full
+ * runtime refiner, a declared rule and a mounted key on example 4,
+ * collections on the cellar, keys that do not apply on the bulletin and
+ * the notice, every declared rule's condition and effect on the parcel),
+ * a table of documents the pipeline accepts and documents it refuses.
+ * Each row is asserted three times: against the pipeline (accept(), then
+ * validate() over what is stored), against the full
  * schema (emitFull()) and against the schema for these answers (emit(),
  * built for the document), with a standard validator that asserts no
  * `format` and fills no `default`.
@@ -366,13 +367,15 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Example 4: a mounted key, a dynamic key and a runtime refiner.
+   * Example 4: a mounted key, a declared rule, a dynamic key, a runtime one.
    *
-   * The capacity watches the free-text licence, so the full schema cannot
-   * state its ceiling (`dynamic`) and is wider; the schema for these
-   * answers is refined for them and is exact. The rooms a site closed are
-   * a runtime refiner's: never in the full schema (`runtime`), in the
-   * schema for these answers.
+   * The capacity's ceiling without a licence is a declared rule, which
+   * the full schema states exactly, so it refuses a crowd with no licence
+   * as the pipeline does. The stewards watch the capacity, a number, so
+   * the full schema cannot state their minimum (`dynamic`) and is wider;
+   * the schema for these answers is refined for them and is exact. The
+   * rooms a site closed are a runtime refiner's: never in the full schema
+   * (`runtime`), in the schema for these answers.
    */
   public function testExampleFour(): void {
     $this->enableModules(['data_surface_examples_compliance']);
@@ -382,7 +385,9 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'licensed for 150 with three stewards' => [['capacity' => 150] + self::mounted('2048', 3), TRUE],
       'the licence cleared' => [self::mounted('', 1), TRUE],
       'a licence with a trailing newline' => [['capacity' => 150] + self::mounted("2048\n", 3), FALSE],
-      'over 100 with no licence' => [['capacity' => 150] + self::mounted(NULL, 3), FALSE, TRUE, FALSE],
+      'over 100 with no licence' => [['capacity' => 150] + self::mounted(NULL, 3), FALSE],
+      'over 100 with the licence cleared' => [['capacity' => 150] + self::mounted('', 3), FALSE],
+      'a hundred with no licence' => [['capacity' => 100] + self::mounted(NULL, 2), TRUE],
       'too few stewards for 150' => [['capacity' => 150] + self::mounted('2048', 1), FALSE, TRUE, FALSE],
       'a room the site closed' => [['room' => 'riverside_east'], FALSE, TRUE, FALSE],
     ]);
@@ -432,6 +437,50 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'monthly, a send day' => [['frequency' => 'monthly', 'send_day' => 'monday'], FALSE],
       'weekly, the send day null' => [['send_day' => NULL], FALSE],
       'weekly, a day not offered' => [['send_day' => 'sunday'], FALSE],
+    ]);
+  }
+
+  /**
+   * The parcel: every rule between its keys declared as data.
+   *
+   * Each condition and each effect of the vocabulary, the alter's rules on
+   * its own key and on the owner's among them. A declared rule is stated
+   * exactly, so both documents hold each document to what the pipeline
+   * holds it to, both ways: nothing here is `dynamic`.
+   */
+  public function testParcel(): void {
+    $this->installConfig(['data_surface_resource_test']);
+    $customs = static fn (?string $code): array => [
+      'third_party_settings' => ['data_surface_resource_test' => ['courier' => 'own', 'customs' => $code]],
+    ];
+    $freight = ['service' => 'freight', 'weight' => 40, 'note' => 'Ring twice', 'handling' => 'cold'];
+    $dear = ['weight' => 2, 'declared_value' => 2000, 'reference' => 'R1'];
+    $tracked = ['service' => 'express', 'reference' => 'R1'];
+    $this->assertTable('resource_test.parcel', $this->build('resource_test.parcel'), $this->stored('resource_test.parcel'), [
+      'as stored' => [[], TRUE],
+      'insured and signed for' => [['insured' => TRUE, 'signature' => 'Ann'], TRUE],
+      'insured, signed for by nobody' => [['insured' => TRUE], FALSE],
+      'kept cold by standard' => [['handling' => 'cold'], FALSE],
+      'kept cold by freight, with a customs code' => [$freight + $customs('C1'), TRUE],
+      'freight with no customs code' => [$freight + $customs(NULL), FALSE],
+      'freight with no note' => [['note' => NULL] + $freight + $customs('C1'), FALSE],
+      'a note for a standard parcel' => [['note' => 'Ring twice'], FALSE],
+      'a note left empty for a standard parcel' => [['note' => ''], TRUE],
+      'thirty kilograms by standard' => [['weight' => 30], FALSE],
+      'two labels on a light parcel' => [['labels' => ['dry', 'heavy']], FALSE],
+      'two labels on six kilograms' => [['weight' => 6, 'labels' => ['dry', 'heavy']], TRUE],
+      'worth 600 under two kilograms' => [['declared_value' => 600], FALSE],
+      'worth 600 at two kilograms' => [['weight' => 2, 'declared_value' => 600], TRUE],
+      'worth 6000 with no reference' => [['weight' => 2, 'declared_value' => 6000], FALSE],
+      'worth 6000 with a reference' => [['weight' => 2, 'declared_value' => 6000, 'reference' => 'R1'], TRUE],
+      'worth 2000, signed with an initial' => [['signature' => 'A'] + $dear, FALSE],
+      'worth 2000, signed with a name' => [['signature' => 'Ann'] + $dear, TRUE],
+      'tracked express, a code that is none' => [['tracking' => 'nope'] + $tracked, FALSE],
+      'tracked express, a code' => [['tracking' => 'AB123456'] + $tracked, TRUE],
+      'untracked standard, any text' => [['reference' => 'R1', 'tracking' => 'nope'], TRUE],
+      'a customs code under two kilograms' => [['weight' => 1] + $freight + $customs('C1'), FALSE],
+      'no customs code under two kilograms' => [['weight' => 1] + $freight + $customs(NULL), TRUE],
+      'a customs code and nothing declared' => [['declared_value' => 0] + $freight + $customs('C1'), FALSE],
     ]);
   }
 

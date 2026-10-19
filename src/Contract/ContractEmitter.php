@@ -9,8 +9,11 @@ use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
+use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\data_surface\DataSurface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DefinitionMetadata;
@@ -18,7 +21,9 @@ use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Options\OptionSet;
 use Drupal\data_surface\Pipeline\ValueState;
+use Drupal\data_surface\Refinement\DeclaredRefiner;
 use Drupal\data_surface\Refinement\DoesNotApply;
+use Drupal\data_surface\Refinement\Rule;
 use Drupal\data_surface\Attachment;
 use Drupal\data_surface\ResourceBuild\RefinesInputRefiner;
 use Drupal\data_surface\Entry;
@@ -360,7 +365,7 @@ final class ContractEmitter {
    *   for any values.
    */
   protected function watchesFree(DefinitionMap $advertised, Entry $entry, bool $declaring = FALSE): bool {
-    foreach ($entry->staticDependencies() as $key) {
+    foreach ($entry->codedDependencies() as $key) {
       if ($declaring || !$advertised->isLocked($key)) {
         return TRUE;
       }
@@ -440,15 +445,22 @@ final class ContractEmitter {
     // Decision: see docs/decisions.md#static-by-default-runtime-by-declaration.
     // The present moment is refined by every refiner; the full schema and
     // a def, which are for any values, by the static ones alone.
+    // A declared rule is stated as written, as a conditional of its own,
+    // in the full schema and a def; for one set of values it is evaluated
+    // like any refiner. Decision: see
+    // docs/decisions.md#a-rule-declared-as-data.
     $runtime = !$full && !$declaring;
-    $refined = $declared->refine($values, $runtime);
+    $kinds = $runtime ? DataSurfaceInterface::STATIC : DataSurfaceInterface::CODED;
+    $refined = $declared->refine($values, $runtime ? DataSurfaceInterface::EVERY : $kinds);
     $cacheability->addCacheableDependency($refined);
     $advertised = $declared->getDefinitions();
     $now = $refined->getDefinitions();
     // What the static refiners alone answer for these values, which is
     // all a conditional may state: a runtime refiner is never run ahead.
-    $static = $runtime && $this->refinedAtRuntime($advertised) ? $declared->refine($values, FALSE) : $refined;
+    $static = $runtime && $this->refinedAtRuntime($advertised) ? $declared->refine($values, $kinds) : $refined;
     $ahead = $static->getDefinitions();
+    // What the coded ones alone answer: whether their gate is open yet.
+    $coded = $runtime && $this->hasRules($advertised) ? $declared->refine($values, DataSurfaceInterface::CODED)->getDefinitions() : $ahead;
     $properties = [];
     $required = [];
     $conditions = [];
@@ -458,6 +470,7 @@ final class ContractEmitter {
       $name = (string) $name;
       $current = $now->entry($name) ?? $entry;
       $stated = $ahead->entry($name) ?? $entry;
+      $answered = ($coded->entry($name) ?? $entry) !== $entry;
       // A def is the declaration, which no context has locked.
       $locked = ($entry->locked || $frozen) && !$declaring;
       if ($full && !$entry->isNested() && $this->watchesFree($advertised, $entry, $declaring)) {
@@ -466,6 +479,7 @@ final class ContractEmitter {
         // one declared: what such a refiner answers is one moment's.
         $current = $entry;
         $stated = $entry;
+        $answered = FALSE;
       }
       if (DoesNotApply::marks($current->definition)) {
         // Ruled out for these values: not a property, not required, no
@@ -481,14 +495,15 @@ final class ContractEmitter {
       // yet; while it has not, what it would answer is stated ahead.
       // A key holding a child is refined by the parent only to be ruled
       // out, and a slot's own deciding key is no refiner's.
-      $ahead_of_time = $entry->staticDependencies() !== [] && !$locked && ($entry->isNested() ? $entry->refiners !== [] && !$this->holds($entry, $values) : $stated === $entry);
+      $ahead_of_time = $entry->codedDependencies() !== [] && !$locked && ($entry->isNested() ? $entry->refiners !== [] && !$this->holds($entry, $values) : !$answered);
       $enumerated = NULL;
+      $stating = [];
       if ($entry->slot !== NULL) {
         [$properties[$name], $shown[$name], $branches] = $this->slot($declared, $entry, $values, $prefix . $name, $owner, $cacheability, $stale, $subschemas, $standing, $declaring, $locked, $blank);
         array_push($conditions, ...$branches);
         if ($ahead_of_time) {
           // A parent's refiner of a slot says only whether it applies.
-          $enumerated = $this->enumerate($declared, $static, $entry, $values, $properties[$name], $prefix . $name, $cacheability, TRUE);
+          $enumerated = $this->enumerate($declared, $static, $entry, $values, $properties[$name], $prefix . $name, $cacheability, $kinds, TRUE);
         }
       }
       elseif ($entry->list !== NULL) {
@@ -496,7 +511,7 @@ final class ContractEmitter {
         if ($ahead_of_time) {
           // A parent's refiner of the list watches a sibling that holds
           // nothing yet: its Count for every value that sibling offers.
-          $enumerated = $this->enumerate($declared, $static, $entry, $values, $properties[$name], $prefix . $name, $cacheability);
+          $enumerated = $this->enumerate($declared, $static, $entry, $values, $properties[$name], $prefix . $name, $cacheability, $kinds);
         }
       }
       elseif ($entry->attachment !== NULL) {
@@ -525,7 +540,7 @@ final class ContractEmitter {
         if ($ahead_of_time) {
           // A parent's refiner of an attached key says only whether it
           // applies.
-          $enumerated = $this->enumerate($declared, $static, $entry, $values, $properties[$name], $prefix . $name, $cacheability, TRUE);
+          $enumerated = $this->enumerate($declared, $static, $entry, $values, $properties[$name], $prefix . $name, $cacheability, $kinds, TRUE);
         }
       }
       else {
@@ -568,13 +583,15 @@ final class ContractEmitter {
         // they watch holds nothing yet: what they would answer, for every
         // value they could be handed, or that it can only be asked.
         if ($ahead_of_time) {
-          // Stated over the key as declared: a runtime refiner may have
+          // Stated over the key as its static refiners leave it while
+          // their gate is closed (as declared, less what a declared rule
+          // narrowed for these values): a runtime refiner may have
           // narrowed it for the present moment already, and a conditional
-          // says what the static ones add to the declaration.
+          // says what the coded ones add.
           $ignored = [];
-          $base = $current === $entry ? $properties[$name] : $this->property($entry->definition, NULL, NULL, $prefix . $name, FALSE, [], $cacheability, $ignored)[0];
-          $enumerated = $this->enumerate($declared, $static, $entry, $values, $base, $prefix . $name, $cacheability);
-          if ($enumerated !== NULL && $current === $entry) {
+          $base = $current === $stated ? $properties[$name] : $this->property($stated->definition, NULL, NULL, $prefix . $name, FALSE, [], $cacheability, $ignored)[0];
+          $enumerated = $this->enumerate($declared, $static, $entry, $values, $base, $prefix . $name, $cacheability, $kinds);
+          if ($enumerated !== NULL && $current === $stated) {
             $properties[$name] = $enumerated['base'];
           }
         }
@@ -582,17 +599,25 @@ final class ContractEmitter {
       if ($ahead_of_time) {
         if ($enumerated === NULL) {
           $properties[$name][self::EXTENSION]['dynamic'] = TRUE;
-          // Not stated, so wherever its static refiners may rule it out,
+          // Not stated, so wherever its coded refiners may rule it out,
           // it is not required. Decision: see
           // docs/decisions.md#a-key-that-does-not-apply.
-          [$properties[$name], $requires] = $this->mayNotApply($entry, FALSE, $properties[$name], $requires);
+          [$properties[$name], $requires] = $this->mayNotApply($entry, DataSurfaceInterface::CODED, $properties[$name], $requires);
         }
         else {
           $properties[$name][self::EXTENSION]['enumerated'] = TRUE;
-          array_push($conditions, ...$enumerated['branches']);
+          $stating = $enumerated['branches'];
           $requires = $requires && $enumerated['required'];
         }
       }
+      if (!$runtime && $entry->isDeclared()) {
+        // Each rule as written: a conditional of its own, after what the
+        // coded refiners answer, as the pipeline runs them.
+        // Decision: see docs/decisions.md#a-rule-declared-as-data.
+        [$properties[$name], $stating, $requires] = $this->rules($entry, $current->definition, $properties[$name], $stating, $requires, $prefix . $name, $cacheability);
+        $properties[$name][self::EXTENSION]['declared'] = TRUE;
+      }
+      array_push($conditions, ...$stating);
       if ($entry->isRefinedAtRuntime()) {
         // Declared impossible to capture: never in a conditional, never
         // in the full schema, and only in this one for its values.
@@ -600,7 +625,7 @@ final class ContractEmitter {
         if (!$runtime) {
           // Never run here, so wherever it may rule the key out, the key
           // is not required.
-          [$properties[$name], $requires] = $this->mayNotApply($entry, TRUE, $properties[$name], $requires);
+          [$properties[$name], $requires] = $this->mayNotApply($entry, DataSurfaceInterface::RUNTIME, $properties[$name], $requires);
         }
       }
       if ($requires) {
@@ -636,7 +661,7 @@ final class ContractEmitter {
    *   TRUE when its refiners have run for these values.
    */
   protected function holds(Entry $entry, array $values): bool {
-    foreach ($entry->staticDependencies() as $key) {
+    foreach ($entry->codedDependencies() as $key) {
       if (!str_contains($key, '.') && !ValueState::isConfigured($values[$key] ?? NULL)) {
         return FALSE;
       }
@@ -649,9 +674,9 @@ final class ContractEmitter {
    *
    * @param \Drupal\data_surface\Entry $entry
    *   The key.
-   * @param bool $runtime
-   *   Whether its runtime refiners are the ones not run; FALSE for its
-   *   static ones, when their answers cannot be listed.
+   * @param int $runtime
+   *   The kind of refiner not run: DataSurfaceInterface::RUNTIME, or
+   *   CODED when their answers cannot be listed.
    * @param array $property
    *   Its property schema.
    * @param bool $requires
@@ -661,10 +686,245 @@ final class ContractEmitter {
    *   The property, with what may not apply inside it no longer required,
    *   and whether the frame still requires the key.
    */
-  protected function mayNotApply(Entry $entry, bool $runtime, array $property, bool $requires): array {
+  protected function mayNotApply(Entry $entry, int $runtime, array $property, bool $requires): array {
     $paths = $entry->mayNotApply($runtime);
     $inside = array_values(array_filter($paths, static fn (string $path): bool => $path !== ''));
     return [static::requiringNone($property, $inside), $requires && !in_array('', $paths, TRUE)];
+  }
+
+  /**
+   * Answers whether a declared rule narrows any key of a frame.
+   *
+   * @param \Drupal\data_surface\DefinitionMap $advertised
+   *   The frame's definitions.
+   *
+   * @return bool
+   *   TRUE when one does, so what the coded refiners alone answer has to
+   *   be asked separately.
+   */
+  protected function hasRules(DefinitionMap $advertised): bool {
+    foreach ($advertised->entries() as $entry) {
+      if ($entry->isDeclared()) {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
+
+  /**
+   * States a key's declared rules as written: one conditional each.
+   *
+   * For any values, so in the full schema and a def. Each rule's `if` is
+   * its condition's own spelling, and its `then` what the rule's effects
+   * make of the key as the document states it, by the same reading a
+   * conditional of the enumeration is: only what changed, `false` where
+   * the key does not apply, `required` where it is required only here.
+   * Each carries `x-surface.declared`, beside its `if` and `then`.
+   *
+   * A key a rule may rule out is required nowhere it might not apply: it
+   * leaves the frame's `required` (or its map's, for a key an alter
+   * mounted), and a conditional requires it wherever no rule rules it
+   * out. A conditional that requires it, a rule's or a coded refiner's,
+   * holds only there too, so no document is held to both.
+   *
+   * Decision: see docs/decisions.md#a-rule-declared-as-data.
+   *
+   * @param \Drupal\data_surface\Entry $entry
+   *   The key.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key as the document states it.
+   * @param array $property
+   *   Its property schema.
+   * @param array $branches
+   *   The conditionals the coded refiners state for it.
+   * @param bool $requires
+   *   Whether the frame requires it so far.
+   * @param string $path
+   *   The key's dotted path.
+   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
+   *   Collects what the description depends on.
+   *
+   * @return array{0: array, 1: array, 2: bool}
+   *   The property, the key's conditionals, the coded ones first, and
+   *   whether the frame still requires the key.
+   */
+  protected function rules(Entry $entry, DataDefinitionInterface $definition, array $property, array $branches, bool $requires, string $path, CacheableMetadata $cacheability): array {
+    $name = $entry->name;
+    $applicability = $entry->isNested();
+    $base = $applicability ? [] : $this->stated($entry, $definition, $path, $cacheability);
+    $declared = [];
+    $ruling = [];
+    foreach ($entry->refiners as $chain) {
+      foreach ($chain as $link) {
+        if (!$link instanceof DeclaredRefiner) {
+          continue;
+        }
+        foreach ($link->rulesFor($name) as [$below, $rule]) {
+          $condition = $rule->condition();
+          assert($condition !== NULL);
+          $paths = [];
+          foreach ($condition->keys() as $key) {
+            $paths[$key] = $link->pathOf($key);
+          }
+          $if = $condition->schema($paths);
+          if ($rule->rulesOut()) {
+            $ruling[$below][] = $if;
+            $declared[] = [$below, FALSE, ['if' => $if, 'then' => static::falseAt($name, $below)]];
+            continue;
+          }
+          $then = [];
+          if (!$applicability) {
+            $answer = static::appliedAt(DataSurface::deepClone($definition), $below, $rule);
+            $narrowed = static::onlyAdded($this->narrowed($this->stated($entry, $answer, $path, $cacheability), $base), $base);
+            if ($narrowed !== []) {
+              $then['properties'] = [$name => $narrowed];
+            }
+          }
+          if ($below === '' && $rule->requires() && !$requires) {
+            $then['required'] = [$name];
+          }
+          if ($then !== []) {
+            $declared[] = [$below, $rule->requires(), ['if' => $if, 'then' => $then]];
+          }
+        }
+      }
+    }
+
+    // Required only where no rule rules it out.
+    $unless = array_map(static fn (array $ifs): array => ['not' => count($ifs) === 1 ? $ifs[0] : ['anyOf' => $ifs]], $ruling);
+    $guard = static function (array $branch, string $below) use ($unless): array {
+      if (isset($unless[$below])) {
+        $branch['if'] = ['allOf' => [$branch['if'], $unless[$below]]];
+      }
+      return $branch;
+    };
+    foreach ($branches as $i => $branch) {
+      if (in_array($name, $branch['then']['required'] ?? [], TRUE)) {
+        $branches[$i] = $guard($branch, '');
+      }
+    }
+    foreach ($declared as [$below, $requiring, $branch]) {
+      $branches[] = ($requiring ? $guard($branch, $below) : $branch) + [self::EXTENSION => ['declared' => TRUE]];
+    }
+    foreach ($unless as $below => $not) {
+      if ($below === '') {
+        if ($requires) {
+          $requires = FALSE;
+          $branches[] = ['if' => $not, 'then' => ['required' => [$name]], self::EXTENSION => ['declared' => TRUE]];
+        }
+        continue;
+      }
+      // A key an alter mounted, inside its map.
+      $parents = explode('.', (string) $below);
+      $key = (string) array_pop($parents);
+      $at = [];
+      foreach ($parents as $parent) {
+        array_push($at, 'properties', $parent);
+      }
+      $object = $at === [] ? $property : NestedArray::getValue($property, $at);
+      if (is_array($object) && in_array($key, $object['required'] ?? [], TRUE)) {
+        $property = static::requiringNone($property, [(string) $below]);
+        $then = ['required' => [$key]];
+        foreach (array_reverse($parents) as $parent) {
+          $then = ['properties' => [$parent => $then]];
+        }
+        $branches[] = [
+          'if' => $not,
+          'then' => ['properties' => [$name => $then]],
+          self::EXTENSION => ['declared' => TRUE],
+        ];
+      }
+    }
+    return [$property, $branches, $requires];
+  }
+
+  /**
+   * Spells a key that does not apply, at its place in a `then`.
+   *
+   * @param string $name
+   *   The key.
+   * @param string $below
+   *   The dotted path of a key below it, or '' for the key itself.
+   *
+   * @return array
+   *   The `then`.
+   */
+  protected static function falseAt(string $name, string $below): array {
+    if ($below === '') {
+      return ['properties' => [$name => FALSE]];
+    }
+    $schema = FALSE;
+    foreach (array_reverse(explode('.', $below)) as $segment) {
+      $schema = ['properties' => [$segment => $schema]];
+    }
+    return ['properties' => [$name => $schema]];
+  }
+
+  /**
+   * Applies a rule's effects to a key, or to a key below it.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   A copy of the key.
+   * @param string $below
+   *   The dotted path of a key below it, or '' for the key itself.
+   * @param \Drupal\data_surface\Refinement\Rule $rule
+   *   The rule.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface
+   *   The key with the effects applied where they apply.
+   */
+  protected static function appliedAt(DataDefinitionInterface $definition, string $below, Rule $rule): DataDefinitionInterface {
+    if ($below === '') {
+      $applied = $rule->apply($definition);
+      // An annotation the schema cannot place: kept whether or not the
+      // rule tightens the key for the values it will meet.
+      if ($rule->description() !== NULL && $applied instanceof DataDefinition && !DoesNotApply::marks($applied)) {
+        $applied->setDescription($rule->description());
+      }
+      return $applied;
+    }
+    if (!$definition instanceof MapDataDefinition) {
+      return $definition;
+    }
+    [$first, $rest] = array_pad(explode('.', $below, 2), 2, '');
+    $inner = $definition->getPropertyDefinition($first);
+    if ($inner !== NULL) {
+      $definition->setPropertyDefinition($first, static::appliedAt($inner, $rest, $rule));
+    }
+    return $definition;
+  }
+
+  /**
+   * Keeps of each `required` a narrowing states only the keys it adds.
+   *
+   * JSON Schema holds a document to every `required` it meets, so a
+   * conditional that requires one more key says that key alone; restating
+   * the rest would require again what the frame stopped requiring.
+   *
+   * @param array $narrowed
+   *   What a conditional says about a key.
+   * @param array $base
+   *   The key as the document states it.
+   *
+   * @return array
+   *   The same, each `required` holding only what it adds.
+   */
+  protected static function onlyAdded(array $narrowed, array $base): array {
+    if (isset($narrowed['required']) && is_array($narrowed['required'])) {
+      $added = array_values(array_diff($narrowed['required'], is_array($base['required'] ?? NULL) ? $base['required'] : []));
+      if ($added === []) {
+        unset($narrowed['required']);
+      }
+      else {
+        $narrowed['required'] = $added;
+      }
+    }
+    foreach (is_array($narrowed['properties'] ?? NULL) ? $narrowed['properties'] : [] as $key => $property) {
+      if (is_array($property)) {
+        $narrowed['properties'][$key] = static::onlyAdded($property, is_array($base['properties'][$key] ?? NULL) ? $base['properties'][$key] : []);
+      }
+    }
+    return $narrowed;
   }
 
   /**
@@ -1155,6 +1415,11 @@ final class ContractEmitter {
    *   The key's dotted path.
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
    *   Collects what every list read and every refinement depends on.
+   * @param int $kinds
+   *   The kinds of refiner each combination is answered by: the coded
+   *   ones for the full schema, which states a declared rule as written,
+   *   and the declared ones beside them for one set of values, which a
+   *   declared rule is evaluated for.
    * @param bool $applicability
    *   Whether only whether the key applies is stated: a key holding a
    *   child, whose parent may say nothing else about it.
@@ -1168,9 +1433,9 @@ final class ContractEmitter {
    *   key with no list of values, or it would take more than
    *   ENUMERATION_CAP combinations.
    */
-  protected function enumerate(DataSurfaceInterface $declared, DataSurfaceInterface $refined, Entry $entry, array $values, array $base, string $path, CacheableMetadata $cacheability, bool $applicability = FALSE): ?array {
+  protected function enumerate(DataSurfaceInterface $declared, DataSurfaceInterface $refined, Entry $entry, array $values, array $base, string $path, CacheableMetadata $cacheability, int $kinds = DataSurfaceInterface::STATIC, bool $applicability = FALSE): ?array {
     $order = array_flip($declared->getDefinitions()->names());
-    $watched = $entry->staticDependencies();
+    $watched = $entry->codedDependencies();
     foreach ($watched as $key) {
       if (!isset($order[$key])) {
         // A key an alter mounted, by its dotted path: a free value, or one
@@ -1196,7 +1461,7 @@ final class ContractEmitter {
         }
       }
       foreach ($next as $i => [$combination]) {
-        $next[$i][1] = $declared->refine(array_replace($values, $combination), FALSE);
+        $next[$i][1] = $declared->refine(array_replace($values, $combination), $kinds);
         $cacheability->addCacheableDependency($next[$i][1]);
       }
       $combinations = $next;
@@ -1214,7 +1479,7 @@ final class ContractEmitter {
       $schema = $this->answer($entry, $definition, $path, $cacheability, $applicability);
       // In development and tests only, and for one combination per key:
       // asked again, a static refiner answers the same.
-      assert($i > 0 || $this->answersAgain($declared, $entry, array_replace($values, $combination), $schema, $path, $cacheability, $applicability));
+      assert($i > 0 || $this->answersAgain($declared, $entry, array_replace($values, $combination), $schema, $path, $cacheability, $kinds, $applicability));
       if ($schema === FALSE) {
         $ruled = TRUE;
       }
@@ -1422,6 +1687,8 @@ final class ContractEmitter {
    *   The key's dotted path.
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
    *   Collects what the description depends on.
+   * @param int $kinds
+   *   The kinds of refiner the combination was answered by.
    * @param bool $applicability
    *   Whether only whether the key applies was asked.
    *
@@ -1431,8 +1698,8 @@ final class ContractEmitter {
    * @throws \LogicException
    *   Naming the key's static refiners and the values.
    */
-  protected function answersAgain(DataSurfaceInterface $declared, Entry $entry, array $values, array|false $schema, string $path, CacheableMetadata $cacheability, bool $applicability = FALSE): bool {
-    $again = $this->answer($entry, $declared->refine($values, FALSE)->getDefinition($entry->name) ?? $entry->definition, $path, $cacheability, $applicability);
+  protected function answersAgain(DataSurfaceInterface $declared, Entry $entry, array $values, array|false $schema, string $path, CacheableMetadata $cacheability, int $kinds = DataSurfaceInterface::STATIC, bool $applicability = FALSE): bool {
+    $again = $this->answer($entry, $declared->refine($values, $kinds)->getDefinition($entry->name) ?? $entry->definition, $path, $cacheability, $applicability);
     if (json_encode($again === FALSE ? FALSE : $this->withoutExtension($again)) === json_encode($schema === FALSE ? FALSE : $this->withoutExtension($schema))) {
       return TRUE;
     }
@@ -1448,7 +1715,7 @@ final class ContractEmitter {
       'The refiner %s is declared static but answered differently when run again, for "%s" with %s: a refiner whose answer depends on anything but the siblings it watches must declare runtime: TRUE.',
       $refiners === [] ? 'of "' . $entry->name . '"' : implode(' or ', $refiners),
       $path,
-      json_encode(array_intersect_key($values, array_flip($entry->staticDependencies()))),
+      json_encode(array_intersect_key($values, array_flip($entry->codedDependencies()))),
     ));
   }
 

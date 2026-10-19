@@ -57,3 +57,15 @@ data_surface_resource_test.bulletin:
     _data_surface_operation: 'configure'
   requirements:
     _data_surface_operation_access: 'TRUE'
+
+# The parcel's one operation, served by the generic form: every rule
+# between its keys declared as data, rebuilt over AJAX.
+data_surface_resource_test.parcel:
+  path: '/surface-test/parcel'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Configure the parcel'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Parcel\ParcelResource'
+    _data_surface_operation: 'configure'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
