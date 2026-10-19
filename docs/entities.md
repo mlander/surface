@@ -19,8 +19,12 @@ the derivation is not enough.
 Both are read at discovery and cached with the rest of it, under the
 tags of what they were read from: `entity_field_info`, `entity_bundles`,
 the form display list and the bundle's form display. Saving a field or
-a display clears the entry, and the registry this request already read
-with it.
+a display clears the entry, the registry this request already read with
+it, and the derived tools. They stay derivers, not
+[keys from the site](resources.md#keys-that-come-from-the-site): a bundle
+is a resource of its own, with operations, storage and identity, and a
+field a structure every bundle carrying it shares; keys from the site
+are for one resource asking a value or a group per thing.
 
 The module serves `node.page` at `/surface-entity/node/page/add` and
 `/surface-entity/node/{id}/edit`, through the generic operation form
@@ -283,9 +287,12 @@ done about it.
     reading the cached definitions without an instance still sees the
     discovering account's.
 13. **Tool definitions are cached apart.** The registry clears itself
-    when a field or a display changes; the tool plugin manager's cache
-    does not, so a new field reaches the `add` tool's static definition
-    only at the next cache rebuild. *Open.*
+    when a field or a display changes, and the tool plugin manager's
+    cache did not, so a new field reached the `add` tool's static
+    definition only at the next cache rebuild. Settled 2026-10-19:
+    `data_surface_tool` clears the tool definitions when a tag they were
+    derived from is invalidated
+    ([decision](decisions.md#tool-definitions-after-a-field-changes)).
 14. **The entity's id is storage's.** The add operation knows `id` as
     nothing, so it is locked empty, and the new id is an output the
     storage reads back after the commit. React's `created` used to hold

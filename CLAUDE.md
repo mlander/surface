@@ -73,6 +73,15 @@ the record of the rework that brought the module to the pattern.
 - **Variant**: a structure or resource that fills a slot for one value,
   `#[Variant(of:, key:, value:)]`.
 - **Collection**: a list of child instances at a key, `attachList()`.
+- **Keys from the site**: one key per thing the site has, in a map at a
+  key, `addEach('forms', 'boolean', from: Provider::class)` (a value of
+  a type or shape per thing) or `attachEach('rows', Row::class, from:
+  ...)` (a structure per thing); the provider is a service implementing
+  `KeysFromSiteInterface`, whose `keys()` answers a `KeyedList` (id,
+  label, optional start and lock, and the cacheability of what it read),
+  asked at every build. Refused uncacheable or varying by the account; a
+  locked entry is held to what is stored
+  (`docs/resources.md#keys-that-come-from-the-site`).
 - **Contract**: the JSON Schema a built resource or structure emits.
 - **Version**: `#[Resource(version:)]` or `#[Structure(version:)]`, from
   1, counting the breaking changes made to its stored values; stamped
@@ -194,6 +203,12 @@ owner's frame on its members and its ports, its access locking or
 omitting its members (`docs/resources.md#mixins`). `attachList()` is a collection: a list of
 child instances, the list (its Count) the parent's, each item the
 child's, its entry a `Collection` (`docs/resources.md#collections`).
+
+Keys one resource asks per thing the site has (a checkbox per form) are
+`addEach()` or `attachEach()` with a provider, not a deriver
+(`docs/decisions.md#keys-that-come-from-the-site`); the derived tools are
+cleared when a tag any of them was built with is invalidated
+(`data_surface_tool`'s `ToolDefinitionsInvalidator`).
 
 A resource or structure whose keys are the site's rather than the
 code's (one per bundle, one per field) is derived: a class in `src/Resource/` or `src/Structure/`

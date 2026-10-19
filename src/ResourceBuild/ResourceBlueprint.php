@@ -16,6 +16,7 @@ use Drupal\data_surface\Port;
 use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\DefinesInputsInterface;
 use Drupal\data_surface\Resource\HasOutputsInterface;
+use Drupal\data_surface\Resource\KeysFromSiteInterface;
 
 /**
  * The owner's blueprint: keys land at the top of the data surface.
@@ -42,6 +43,13 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * @var array<string, string>
    */
   protected array $slots = [];
+
+  /**
+   * The maps of keys from the site declared through this blueprint, by key.
+   *
+   * @var array<string, array{each: string, from: class-string<\Drupal\data_surface\Resource\KeysFromSiteInterface>, default: mixed, child: bool}>
+   */
+  protected array $fromSite = [];
 
   /**
    * The ports declared through this blueprint, by name.
@@ -309,6 +317,74 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   }
 
   /**
+   * {@inheritdoc}
+   *
+   * Decision: see docs/decisions.md#keys-that-come-from-the-site.
+   */
+  public function addEach(string $key, string $type, string $from, mixed $default = NULL): MapDataDefinition {
+    $this->assertHoldsNoChild('declares keys from the site', $key);
+    if (str_contains($type, '\\') && !Shapes::isShape($type)) {
+      throw new \LogicException(is_subclass_of($type, DefinesInputsInterface::class)
+        ? sprintf('addEach("%s") was handed %s, a resource or structure: an entry that is a group of keys is a child, attachEach(\'%s\', ...).', $key, $type, $key)
+        : sprintf('addEach("%s") was handed %s, which is no typed data type and no shape: each entry is declared as add() declares a key.', $key, $type));
+    }
+    return $this->reserveEach('addEach', $key, $type, $from, $default, FALSE);
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Decision: see docs/decisions.md#keys-that-come-from-the-site.
+   */
+  public function attachEach(string $key, string $structure, string $from): MapDataDefinition {
+    $this->assertHoldsNoChild('attaches a child per thing the site has', $key);
+    static::assertNoShape('attachEach', $key, $structure);
+    return $this->reserveEach('attachEach', $key, $structure, $from, NULL, TRUE);
+  }
+
+  /**
+   * Holds a key for a map of keys from the site.
+   *
+   * @param string $verb
+   *   addEach or attachEach, for the messages.
+   * @param string $key
+   *   The key.
+   * @param string $each
+   *   What each entry is: a type, a shape, or a structure.
+   * @param string $from
+   *   The provider's class.
+   * @param mixed $default
+   *   What every entry starts from.
+   * @param bool $child
+   *   TRUE when each entry is a child.
+   *
+   * @return \Drupal\Core\TypedData\MapDataDefinition
+   *   The map at the key.
+   *
+   * @throws \LogicException
+   *   When the provider is none.
+   */
+  protected function reserveEach(string $verb, string $key, string $each, string $from, mixed $default, bool $child): MapDataDefinition {
+    if (!is_subclass_of($from, KeysFromSiteInterface::class)) {
+      throw new \LogicException(sprintf('%s("%s") names %s as where its keys come from, which does not implement %s: a provider lists the site\'s things with keys().', $verb, $key, $from, KeysFromSiteInterface::class));
+    }
+    $shell = $this->reserveChild($verb, $key);
+    $this->fromSite[$key] = ['each' => $each, 'from' => $from, 'default' => $default, 'child' => $child];
+    return $shell;
+  }
+
+  /**
+   * Gets the maps of keys from the site declared through this blueprint.
+   *
+   * @return array<string, array{each: string, from: class-string<\Drupal\data_surface\Resource\KeysFromSiteInterface>, default: mixed, child: bool}>
+   *   What each entry is, the provider, the default for every entry, and
+   *   whether each entry is a child, by key, in declaration order.
+   */
+  public function fromSite(): array {
+    return $this->fromSite;
+  }
+
+  /**
    * Refuses a child in a structure being mixed in.
    *
    * @param string $verb
@@ -424,7 +500,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * {@inheritdoc}
    */
   public function declared(): array {
-    return array_merge(parent::declared(), array_keys($this->slots));
+    return array_merge(parent::declared(), array_keys($this->slots), array_keys($this->fromSite));
   }
 
   /**

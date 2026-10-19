@@ -362,3 +362,59 @@ data_surface_resource_test.opening_hours:
     holidays:
       type: string
       label: 'On public holidays'
+
+# The benches the site has: the workshop's keys from the site.
+data_surface_resource_test.benches:
+  type: config_object
+  label: 'Benches'
+  mapping:
+    benches:
+      type: sequence
+      label: 'Benches'
+      sequence:
+        type: mapping
+        label: 'Bench'
+        mapping:
+          label:
+            type: label
+            label: 'Label'
+          locked:
+            type: boolean
+            label: 'Locked'
+
+# The workshop fixture: one bench, one light and one stock code per bench
+# the site lists.
+data_surface_resource_test.workshop:
+  type: config_object
+  label: 'Workshop'
+  mapping:
+    closed:
+      type: boolean
+      label: 'Closed'
+    benches:
+      type: sequence
+      label: 'Benches'
+      sequence:
+        type: mapping
+        label: 'Bench'
+        mapping:
+          enabled:
+            type: boolean
+            label: 'In use'
+          hours:
+            type: integer
+            label: 'Hours a day'
+            nullable: true
+    lights:
+      type: sequence
+      label: 'Lights'
+      sequence:
+        type: boolean
+        label: 'Light'
+    codes:
+      type: sequence
+      label: 'Bench codes'
+      sequence:
+        type: string
+        label: 'Stock code'
+        nullable: true

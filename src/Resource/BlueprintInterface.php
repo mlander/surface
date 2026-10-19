@@ -49,6 +49,79 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
   public function attachBy(string $key, string $by): MapDataDefinition;
 
   /**
+   * A map with one value per thing the site has: keys from the site.
+   *
+   * The keys are not the code's (a select per punctuation character, a
+   * checkbox per form the site has), so a provider lists them, and each
+   * entry becomes a key in the map at $key, declared as add() declares
+   * one: of $type, labeled with the entry's label, starting from the
+   * entry's default or else $default, held to what is stored when the
+   * entry is locked. The provider is asked when the resource is built,
+   * never by the resource; what it read is the built resource's
+   * cacheability, so the form, both schema documents and the tool listing
+   * change when the site does.
+   *
+   * @code
+   * $inputs->addEach('form_settings', 'boolean', from: ProtectedForms::class, default: FALSE)
+   *   ->setLabel(t('Protected forms'));
+   * @endcode
+   *
+   * The map is the owner's key: a rule of the owner's may say it does not
+   * apply, and names nothing inside it, as for an attached child.
+   *
+   * @param string $key
+   *   The key the map sits at.
+   * @param string $type
+   *   What each entry is: a typed data type, or a shape's class.
+   * @param string $from
+   *   The provider's class, implementing KeysFromSiteInterface.
+   * @param mixed $default
+   *   What every entry starts from unless it says otherwise; NULL for
+   *   nothing.
+   *
+   * @return \Drupal\Core\TypedData\MapDataDefinition
+   *   The map at the key, for the owner to label and describe.
+   *
+   * @throws \LogicException
+   *   When the key is taken, for outputs, inside a structure mixed in, or
+   *   when the provider implements no KeysFromSiteInterface.
+   *
+   * @see docs/resources.md#keys-that-come-from-the-site
+   */
+  public function addEach(string $key, string $type, string $from, mixed $default = NULL): MapDataDefinition;
+
+  /**
+   * A map with one child per thing the site has: keys from the site.
+   *
+   * As addEach(), with each entry a child: the structure, built once for
+   * the map and held at every entry's key, with its own keys, refiners,
+   * declared rules, alters and access, as attach() holds one. A locked
+   * entry is that child locked. The structure stores nothing itself and
+   * requires no port, since nothing wires an entry yet.
+   *
+   * @code
+   * $inputs->attachEach('rows', RowStructure::class, from: SiteRows::class)
+   *   ->setLabel(t('Rows'));
+   * @endcode
+   *
+   * @param string $key
+   *   The key the map sits at.
+   * @param string $structure
+   *   The structure each entry is, by class, or a derived one's id.
+   * @param string $from
+   *   The provider's class, implementing KeysFromSiteInterface.
+   *
+   * @return \Drupal\Core\TypedData\MapDataDefinition
+   *   The map at the key, for the owner to label and describe.
+   *
+   * @throws \LogicException
+   *   As addEach() does, and for a shape.
+   *
+   * @see docs/resources.md#keys-that-come-from-the-site
+   */
+  public function attachEach(string $key, string $structure, string $from): MapDataDefinition;
+
+  /**
    * A port: a value this structure reads from its container.
    *
    * A structure never names a key of the container it is attached to (the

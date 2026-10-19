@@ -1514,6 +1514,88 @@ carries a `Collection` (`Entry::$list`), not an attachment, so
 parent's own. A list whose every item chooses its own child,
 `attachListBy()`, is not built.
 
+## Keys that come from the site
+
+Some keys are one per thing the site has: a checkbox per form the site
+has, a select per punctuation character a module may add to. The code
+cannot list them, and they are no resource of their own, so the
+resource declares the map they sit in and names a provider that lists
+the things:
+
+```php
+// HoneypotSettingsResource, in the honeypot port
+$inputs->addEach('form_settings', 'boolean', from: ProtectedForms::class, default: FALSE)
+  ->setLabel(t('Honeypot Enabled Forms'));
+
+// ProtectedForms, a service
+final class ProtectedForms implements KeysFromSiteInterface {
+
+  public function keys(): KeyedList {
+    $keys = (new KeyedList())->addCacheTags(['config:node_type_list', 'config:comment_type_list']);
+    foreach ($this->forms() as $form_id => $label) {
+      $keys->add($form_id, $label);
+    }
+    return $keys;
+  }
+
+}
+```
+
+- **The spelling.** `addEach($key, $type, from:, default:)` declares one
+  value per thing, each as `add()` declares a key: a typed data type or a
+  shape, labeled with the thing's label, starting from the thing's
+  default or else `default:`. `attachEach($key, Structure::class, from:)`
+  holds the structure at every thing, as `attach()` holds one. Both
+  return the map at the key, for the owner to label and describe.
+- **The provider** implements `KeysFromSiteInterface`: `keys()` answers
+  a `KeyedList`, an id and a label per thing in order, and for each
+  optionally what it starts from and whether it is locked. An id becomes
+  a key, so it holds no dot or colon. The provider is built by the class
+  resolver, a service named by its class or a class implementing
+  `ContainerInjectionInterface`, so it may hold the services it reads;
+  the resource only names it, and stays static.
+- **When.** The build step asks the provider every time the resource is
+  built and declares one key per thing in a child sealed at the key, as
+  an options resolver is asked for its list. The owner's storage stores
+  the map under the key. A thing the site no longer has is no key:
+  nothing asks for it, and a storage that writes the map whole, as a
+  config object's does, drops it on save.
+- **Cacheability.** What the provider read is declared on the list, as on
+  a render array: the cache tags of the configuration or the entities it
+  lists (`addCacheableDependency($config)` takes them from a config
+  object). It becomes the built resource's, so the form, both documents
+  and the schema route are cached by it, and `data_surface_tool` clears
+  the tool listing when one of those tags is invalidated: a node type
+  added is a checkbox at the next request, at every door. A list with
+  max-age 0 is refused when the resource is built, and so is one that
+  varies by the account: which keys there are is the site's, and who may
+  change one is access.
+- **A locked thing** (`add($id, $label, locked: TRUE)`) is held to what
+  is stored: drawn fixed on the form, `readOnly` in both documents, locked
+  in the tool listing, and a value posted for it is not taken. A thing
+  holding a structure is that structure locked.
+- **The keys are ordinary keys.** The full schema states every one; the
+  map is a def of the owner's (`resource_test.workshop.benches`), and the
+  structure at the things is one def each refers to. A rule of the
+  owner's may rule the whole map out, as honeypot's does while every
+  form is protected, and names nothing inside it, as for an attached
+  child. A rule on every thing is the structure's own, declared once:
+  the test module's workshop holds a bench at every bench its
+  configuration lists, and a bench out of use has no hours, at each.
+  A shape's alters and a structure's apply at every thing.
+- **Refused**, naming the provider or the key: a provider that implements
+  no `KeysFromSiteInterface`; a structure handed to `addEach()` or a shape
+  to `attachEach()`; a list that cannot be cached or varies by the
+  account; at the things, a structure that names storage or identity, or
+  requires a port (nothing wires one yet), and a thing that says what a
+  structure starts from; either verb from an alter or inside a structure
+  mixed in.
+
+A deriver ([below](#derived-resources)) is for what is a resource or
+structure of its own: operations, storage, identity, or a use at many
+sites. Keys that only one resource asks for, one per thing, are this
+([decision](decisions.md#keys-that-come-from-the-site)).
+
 ## Derived resources
 
 A resource or structure is a class because its keys are a property of
@@ -1583,8 +1665,9 @@ final class ContentEntityResources implements ResourceDeriverInterface {
   as they treat a class ([decision](decisions.md#a-derived-resource-has-no-class)).
 - **Cacheability.** A derived resource names the cache tags of what it
   was read from; the discovery entry carries them, so saving a field or
-  a form display clears it, and `ResourceRegistryInvalidator` clears what
-  the registry already read in this request.
+  a form display clears it, `ResourceRegistryInvalidator` clears what
+  the registry already read in this request, and `data_surface_tool`
+  clears the derived tools.
 - **Alters.** `#[Alters]` names a derived resource or structure by its
   id, or every one a deriver makes by the base id:
   `#[Alters('entity.content')]`.

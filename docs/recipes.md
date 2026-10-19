@@ -1,11 +1,12 @@
 # Common settings recipes
 
-Six things a settings page asks for that no other page shows end to end.
-Each snippet is a key of the test module's opening hours
-(`resource_test.opening_hours`, in
+Seven things a settings page asks for that no other page shows end to
+end. Each snippet but the last is a key of the test module's opening
+hours (`resource_test.opening_hours`, in
 `tests/modules/data_surface_resource_test`), written into its
-`defineInputs()` as shown here; a test fails if this page and the class
-differ, and another holds each key to what this page says it does. Read
+`defineInputs()` as shown here; the last is the same module's workshop.
+A test fails if this page and the class differ, and another holds each
+key to what this page says it does. Read
 [Your first resource](first-resource.md) first: a recipe is a few more
 lines in the same method.
 
@@ -182,3 +183,48 @@ served contract says `x-surface.widget: "list"`. A text area of one
 keyword per line, or a comma separated list, is still a widget of your
 own if you want one ([Writing a widget](widgets.md#writing-a-widget));
 the demo extras module ships the second, `CommaSeparatedListWidget`.
+
+## One key per thing the site has
+
+A checkbox per form the site has, a select per punctuation character: the
+keys are the site's, so a provider lists them and the resource declares
+the map they sit in. The workshop holds a light switch, a stock code and
+a bench per bench its configuration lists:
+
+<!-- excerpt: tests/modules/data_surface_resource_test/src/Resource/Workshop/WorkshopResource.php -->
+
+```php
+$inputs->attachEach('benches', BenchStructure::class, from: WorkshopBenches::class)
+  ->setLabel(t('Benches'));
+$inputs->addEach('lights', 'boolean', from: WorkshopBenches::class, default: FALSE)
+  ->setLabel(t('Lights'))
+  ->setDescription(t('Which benches have their lamp on.'));
+$inputs->addEach('codes', Sku::class, from: WorkshopBenches::class)
+  ->setLabel(t('Bench codes'));
+```
+
+`addEach()` is one value per thing, of a type or a shape; `attachEach()`
+is one structure per thing. The provider is a class of its own, never
+the resource, and says what it read, so the form, both schemas and the
+tool listing change when the configuration does:
+
+<!-- excerpt: tests/modules/data_surface_resource_test/src/Keys/WorkshopBenches.php -->
+
+```php
+public function keys(): KeyedList {
+  $config = $this->configFactory->get(self::CONFIG);
+  $keys = (new KeyedList())->addCacheableDependency($config);
+  foreach ($config->get('benches') ?? [] as $id => $bench) {
+    $keys->add((string) $id, (string) $bench['label'], locked: (bool) ($bench['locked'] ?? FALSE));
+  }
+  return $keys;
+}
+```
+
+A bench added to the configuration is a key at the next request, at
+every door. A bench marked locked there is drawn fixed and keeps what is
+stored. The bench structure's rule, no hours for a bench out of use,
+applies at every bench. Store the map as a `sequence` in config schema.
+A list that cannot be cached is refused: declare the tags of what the
+provider reads ([Keys that come from the
+site](resources.md#keys-that-come-from-the-site)).

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_tool;
 
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
@@ -111,6 +112,13 @@ final class OperationInputs {
     'float' => 'float',
     'bool' => 'boolean',
   ];
+
+  /**
+   * The cache tags of every resource converted into a `values` map so far.
+   *
+   * @var string[]
+   */
+  protected array $listedTags = [];
 
   /**
    * Constructs an OperationInputs.
@@ -340,6 +348,20 @@ final class OperationInputs {
   }
 
   /**
+   * Gets the cache tags of every resource made into a `values` map so far.
+   *
+   * What a listing of the tools was read from: the keys a provider lists
+   * from the site, the option lists, whatever a resource declared it
+   * depends on.
+   *
+   * @return string[]
+   *   The tags.
+   */
+  public function listedCacheTags(): array {
+    return $this->listedTags;
+  }
+
+  /**
    * Answers whether an operation changes a thing that exists.
    *
    * The same reading the catalogue's reads() makes for an operation that
@@ -435,6 +457,7 @@ final class OperationInputs {
    *   The map, required when any of its properties is.
    */
   protected function map(ResourceDefinition $resource, DataSurfaceInterface $built, array $known): MapInputDefinition {
+    $this->listedTags = Cache::mergeTags($this->listedTags, $built->getCacheTags());
     $map = $this->inputDefinitions->fromSurface(
       $built,
       $this->t('@resource values', ['@resource' => $resource->id]),

@@ -272,6 +272,10 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         $locked = $locked || ($chosen !== '' && $slot->variant($chosen)->child->lockedWhole() !== NULL);
       }
       $element = $this->widgetManager->getWidgetFor($definition)->buildElement($definition, $value);
+      $inside = $slot === NULL ? $definitions->entry($name)?->attachment?->child : NULL;
+      if ($inside !== NULL && !$locked) {
+        $element = static::lockedInside($element, $inside);
+      }
       if ($locked) {
         // Visible but fixed: the consumer sees the key and its value and
         // cannot change it — the form-side spelling of const + readOnly.
@@ -2034,6 +2038,44 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
   protected function surfacePreRender(?string $type): array {
     $declared = $type === NULL ? [] : ($this->elementInfo->getInfo($type)['#pre_render'] ?? []);
     return array_merge($declared, [[static::class, 'preRenderSurfaceContainer']]);
+  }
+
+  /**
+   * Draws fixed what a child locked inside itself.
+   *
+   * A child's map is drawn by its widget from the child's definitions,
+   * which do not say what the child locked: an entry of a map of keys
+   * from the site its provider locked, say. Each such element is drawn
+   * fixed as a locked key at the top is, and a child inside is walked the
+   * same way.
+   *
+   * Decision: see docs/decisions.md#keys-that-come-from-the-site.
+   *
+   * @param array $element
+   *   The child's element.
+   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   *   The child.
+   *
+   * @return array
+   *   The element.
+   */
+  protected static function lockedInside(array $element, DataSurfaceInterface $child): array {
+    $definitions = $child->getDefinitions();
+    foreach ($definitions->entries() as $name => $entry) {
+      $name = (string) $name;
+      if (!isset($element[$name]) || !is_array($element[$name])) {
+        continue;
+      }
+      if ($definitions->isLocked($name)) {
+        $element[$name]['#disabled'] = TRUE;
+        $element[$name] = static::describeLocked($element[$name]);
+        continue;
+      }
+      if ($entry->attachment !== NULL && $entry->slot === NULL) {
+        $element[$name] = static::lockedInside($element[$name], $entry->attachment->child);
+      }
+    }
+    return $element;
   }
 
   /**

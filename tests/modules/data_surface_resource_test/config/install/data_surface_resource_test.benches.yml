@@ -1,0 +1,8 @@
+benches:
+  lathe:
+    label: Lathe
+  press:
+    label: 'Drill press'
+    locked: true
+  saw:
+    label: 'Band saw'

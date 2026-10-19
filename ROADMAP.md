@@ -933,9 +933,17 @@ renames sit in A because they are cheapest before new code exists.
     as `allOf` and `anyOf`, and the maxlength message. Not built, each
     with the gate that found it:
     - **Per-option state in a list**: an item shown and locked, as
-      pathauto's entity types with patterns are. (Adopters.)
+      pathauto's entity types with patterns are. (Adopters.) PARTLY DONE
+      2026-10-19: for a map of things, a key per option, a provider locks
+      an entry and it is held to what is stored at every door
+      (`docs/decisions.md#keys-that-come-from-the-site`). Still open: a
+      plain list of choices (a `list` of `string` with a Choice, as
+      pathauto's entity types are), where an option is a value, not a key.
     - **An alter adding entries to a map the owner stores**: pathauto's
       punctuation hook; alters mount only at their own key. (Adopters.)
+      For keys from the site the provider is where a module adds one
+      (pathauto's hook stays inside it); a fixed map an owner declares
+      is still open.
     - **A default from a sibling key**: pathauto's punctuation rows start
       from the separator, in storage `load()` today. (Adopters.)
     - **"- None -" on every optional select**: the original offered no
@@ -956,7 +964,12 @@ renames sit in A because they are cheapest before new code exists.
       widget is DONE 2026-10-19 (`setSetting('widget', 'time')`, a time
       input at both doors); a type of its own is still not built.
     - **Site-derived keys cost a deriver**: 107 lines for pathauto's,
-      against the original's loop of about 20. (Adopters.)
+      against the original's loop of about 20. (Adopters.) DONE
+      2026-10-19: `addEach()` and `attachEach()` with a provider
+      (`docs/decisions.md#keys-that-come-from-the-site`); pathauto's
+      derivation is now 29 code lines (a shape and `keys()`), honeypot's
+      11, where the derivers were 44 and 38. Open: a rule naming one
+      entry, ports on an entry.
     - **Required keys resent on every edit call**: a decision pending
       with the user. (Fresh eyes, 16; adopters.)
 

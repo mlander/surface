@@ -27,3 +27,10 @@ services:
   data_surface_tool.contract_panel:
     class: Drupal\data_surface_tool\ContractPanel
     arguments: ['@data_surface.resource_registry', '@data_surface.options', '@data_surface.contract_emitter', '@plugin.manager.tool', '@tool.definition_serializer', '@string_translation', '@data_surface.resources']
+  # The derived tools are kept by the Tool API until the next cache
+  # rebuild; this clears them when what they were derived from changes.
+  data_surface_tool.tool_definitions_invalidator:
+    class: Drupal\data_surface_tool\ToolDefinitionsInvalidator
+    arguments: ['@service_container']
+    tags:
+      - { name: cache_tags_invalidator }

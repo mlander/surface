@@ -2344,13 +2344,121 @@ may not edit, as core's form does. (`ContentEntityStorage::prepare()`)
 
 ### Tool definitions after a field changes
 
-*Open.* The registry forgets a derived definition when the tags it was
-read from are invalidated, but the Tool API caches its plugin
-definitions apart, so a field added to a bundle reaches the `add` tool's
-static `values` at the next cache rebuild; the `edit` tool refines
-`values` per call and sees it at once. Clearing the tool plugin cache on
-those tags would couple the engine to the Tool API, or need an
-invalidator in `data_surface_tool`.
+*Settled 2026-10-19, with [keys that come from the
+site](#keys-that-come-from-the-site).* The registry forgets a derived
+definition when the tags it was read from are invalidated, and the Tool
+API keeps its plugin definitions apart, with no tags, until a cache
+rebuild. An invalidator in `data_surface_tool` closes the gap without
+coupling the engine to the Tool API: the tool deriver remembers the cache
+tags of every derived definition and of every resource it built, and an
+invalidation of any of them clears the tool definitions, so a field added
+to a bundle reaches the `add` tool's static `values` at the next listing.
+(`ToolDefinitionsInvalidator`, `ResourceOperationToolDeriver`)
+
+### Keys that come from the site
+
+A resource whose keys are one per thing the site has (a select per
+punctuation character, a checkbox per form the site has) declares them
+inline, where a key is declared, and names who lists them:
+
+```php
+$inputs->addEach('punctuation', PunctuationAction::class, from: PunctuationCharacters::class)
+  ->setLabel(t('Punctuation'));
+$inputs->attachEach('benches', BenchStructure::class, from: WorkshopBenches::class)
+  ->setLabel(t('Benches'));
+```
+
+The `from:` class is a provider, `KeysFromSiteInterface::keys()`,
+answering a `KeyedList`: an id and a label per thing, optionally what it
+starts from and whether it is locked, and the cacheability of what it was
+read from. The build step asks it and declares one key per entry in a
+child sealed at the key, which the owner stores: of the type or shape for
+`addEach()`, holding the structure for `attachEach()`. Each choice, and
+why:
+
+- **Inline, by a provider, at build.** The resource stays static: it
+  names a class, as a constraint names an options resolver, and the
+  engine asks; what reads the site is a service. Both adopters wrote a
+  `#[DerivesResources]` deriver, a service, a derived id and an
+  `attach()` by that id for a structure nobody else attaches: 107 code
+  lines for pathauto's punctuation, where the original loop was about
+  twenty. A deriver stays for what is a resource or structure of its own
+  (operations, storage, identity, use at many sites: a bundle, a field).
+  Rejected: a deriver base class taking only the provider, which still
+  costs a class, an id and an attach by that id, and keeps the keys in
+  the discovery cache, apart from the build that reads them; and a
+  `#[StructureEach(from:)]` attribute on a structure, which leaves the
+  owner attaching it by an id nobody wrote down and cannot say one value
+  per thing, which both adopters needed.
+- **Two verbs, as there are two for one key.** `addEach()` is `add()`
+  per entry, a typed data type or a shape: one value per thing, as
+  pathauto's action per character and honeypot's flag per form are, and
+  as their stored layouts are. `attachEach()` is `attach()` per entry, a
+  structure: a group of keys per thing. Each refuses what the other
+  takes, in the words `add()` and `attach()` use.
+- **Still static.** [A resource or structure is
+  static](#a-resource-or-structure-is-static) holds: the build declares
+  the keys once, from what the class says and what the provider lists,
+  and both are cacheable. The keys are ordinary keys: the full schema
+  states every one, the map is a def of the owner's, `<owner>.<key>`, and
+  a structure at the entries is one def every entry refers to.
+- **Cacheability travels.** The list's cacheability is the built
+  resource's, so the form, both documents and the schema route are kept
+  by it, and a thing added to the site is a key at the next request. The
+  tool listing is cleared by `data_surface_tool`'s invalidator when one of
+  the tags it was built with is invalidated ([settled
+  above](#tool-definitions-after-a-field-changes)). A list with max-age 0
+  is refused when the resource is built, naming the provider, always and
+  not only under assertions: it costs one comparison, and a key that
+  cannot be cached cannot be listed. A list that varies by the account
+  (`user`, `user.*`, `session`) is refused too: which keys there are is
+  the site's, the same for every account, and who may change one is
+  access. The static refiners' container guard does not fit: a provider
+  is a service reading injected collaborators, which is its point, and
+  the guard sees only the global container. A provider that reads State
+  or configuration says so in the tags it declares.
+- **Per entry state.** An entry the provider locks is held to what is
+  stored (for `attachEach()`, a locked child): drawn fixed on the form,
+  `readOnly` in both documents, locked in the tool listing, and a value
+  posted for it not taken. That is per-option state for a map of things,
+  a key per option. A plain list of choices, a `list` of `string` with a
+  Choice, still has none: an option there is a value, not a key, and a
+  lock is per key. An entry may say what it starts from, over the
+  blueprint's `default:`; an entry holding a structure may not, since it
+  starts from the structure's own defaults.
+- **Composition.** The map is the owner's key: a rule of the owner's may
+  rule it out, as honeypot's `#states` port does
+  (`narrow('form_settings')->when(...)->doesNotApply()`), and names
+  nothing inside it, as for an attached child. A rule on every entry is
+  the structure's own, declared once and bound in each entry's frame. No
+  wildcard path (`narrow('punctuation.*')`) is added here: an owner's rule
+  reaching into the entries is the dotted path grammar of Phase C, item
+  12, and a value per entry has no rule of its own yet. A shape's alters
+  apply at every entry, and a structure's at every entry as wherever it
+  is attached. An alter neither adds entries nor mounts under the map:
+  the entries are the provider's, and a module that adds one does so
+  where the provider reads (pathauto's alter hook stays inside its
+  provider). The structure at the entries is built once for the map, so
+  its access answers once, as a collection's item's does; it may name no
+  storage or identity, its owner storing it, and require no port, since
+  nothing wires an entry yet, as nothing wires a slot's variant or a
+  collection's item. Neither verb is offered to an alter, or inside a
+  structure mixed in, which holds no children.
+- **The cost.** Ported again, pathauto's punctuation is a shape (20 code
+  lines, the original's select options) and a `keys()` method on the
+  service that lists the characters (9), where the deriver was 44; with
+  the service, 92 against 107. Honeypot's forms are a `keys()` method
+  (11) where the deriver was 38; with the service, 68 against 95. Each
+  resource keeps one line, `addEach()` in place of `attach()`, and its
+  documents and tools are what they were, but for the map's def id, the
+  shape's one def in place of 33 inline lists, and honeypot's documents
+  now kept by the cache tags of the forms it lists.
+
+Open: a per-option lock in a plain list of choices; a rule naming one
+entry; ports on an entry. (`KeysFromSiteInterface`, `KeyedList`,
+`BlueprintInterface::addEach()`, `BlueprintInterface::attachEach()`,
+`Resources::buildEach()`, `Resources::keysFrom()`,
+`DataSurfaceFormBuilder::lockedInside()`, `ToolDefinitionsInvalidator`)
 
 ### Keys an alter adds to a content entity
 

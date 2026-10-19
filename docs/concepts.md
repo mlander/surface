@@ -46,6 +46,7 @@ snippet each.
 | Pipeline, dry run | Do I submit values from my own code? ([The pipeline](pipeline.md)) | The form and the tool submit for you. |
 | Data surface | Do I call the build or the pipeline myself? | You write resources: the build is the module's. |
 | Child operations, `withChild()` | Should a parent's operation hand a child a context of its own, or invoke the child's operation? | No child has storage of its own. |
+| Keys from the site, `addEach()` and `attachEach()` | Is there one key per thing the site has, such as a checkbox per form or a select per character another module may add? ([Resources](resources.md#keys-that-come-from-the-site)) | Your class can list every key; or each thing is a resource of its own, with operations or storage, which a deriver makes. |
 | Derived resource, `#[DerivesResources]` | Are the keys the site's (one per bundle, one per field), not the code's? | Your class says every key. |
 | Derived variants | Can a slot's variants be read from a description that exists, such as config schema? | Each variant is a class. |
 | Catalogue | What resources and operations does this site have? ([Catalogue](catalogue.md)) | You know your own. |

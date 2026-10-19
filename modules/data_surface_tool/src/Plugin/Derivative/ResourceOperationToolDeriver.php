@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface_tool\Plugin\Derivative;
 
 use Drupal\Component\Plugin\Derivative\DeriverBase;
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\Plugin\Discovery\ContainerDeriverInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
@@ -16,6 +17,7 @@ use Drupal\data_surface\ResourceBuild\ResourcePlugins;
 use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface_tool\Plugin\tool\Tool\ResourceOperationReadTool;
 use Drupal\data_surface_tool\OperationInputs;
+use Drupal\data_surface_tool\ToolDefinitionsInvalidator;
 use Drupal\tool\Tool\ToolDefinition;
 use Drupal\tool\Tool\ToolOperation;
 use Psr\Log\LoggerInterface;
@@ -91,6 +93,9 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
    *   The string translation service.
    * @param \Drupal\data_surface\ResourceBuild\ResourceCatalogue $catalogue
    *   Which operations change a thing that exists, and so can be read.
+   * @param \Drupal\data_surface_tool\ToolDefinitionsInvalidator|null $invalidator
+   *   What clears the definitions when what they were read from changes;
+   *   NULL remembers nothing.
    */
   public function __construct(
     protected readonly ResourceRegistry $registry,
@@ -99,6 +104,7 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
     protected readonly ResourcePlugins $plugins,
     TranslationInterface $string_translation,
     protected readonly ResourceCatalogue $catalogue,
+    protected readonly ?ToolDefinitionsInvalidator $invalidator = NULL,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -114,6 +120,7 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
       $container->get('data_surface.resource_plugins'),
       $container->get('string_translation'),
       $container->get('data_surface.resource_catalogue'),
+      $container->get('data_surface_tool.tool_definitions_invalidator'),
     );
   }
 
@@ -123,6 +130,14 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
   public function getDerivativeDefinitions($base_plugin_definition) {
     assert($base_plugin_definition instanceof ToolDefinition);
     $this->derivatives = [];
+    // What the definitions are read from, beside what the Tool API keeps
+    // them by: a derived resource's facts, and every built resource's
+    // cacheability (the keys a provider lists from the site among it).
+    // Decision: see docs/decisions.md#keys-that-come-from-the-site.
+    $tags = [];
+    foreach ($this->registry->getDefinitions() as $resource) {
+      $tags = Cache::mergeTags($tags, $resource->cacheTags);
+    }
     foreach ($this->registry->getDefinitions() as $resource) {
       // A resource or structure with no storage of its own is stored by
       // its parent or by its host; one a plugin names with
@@ -170,6 +185,7 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
         }
       }
     }
+    $this->invalidator?->remember(Cache::mergeTags($tags, $this->operationInputs->listedCacheTags()));
     return $this->derivatives;
   }
 

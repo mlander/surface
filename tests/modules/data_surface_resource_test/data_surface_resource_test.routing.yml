@@ -141,3 +141,15 @@ data_surface_resource_test.storeroom.edit:
     _data_surface_operation: 'edit'
   requirements:
     _data_surface_operation_access: 'TRUE'
+
+# The workshop's one operation, served by the generic form: one bench, one
+# light and one stock code per bench the site lists.
+data_surface_resource_test.workshop:
+  path: '/surface-test/workshop'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Configure the workshop'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Workshop\WorkshopResource'
+    _data_surface_operation: 'configure'
+  requirements:
+    _data_surface_operation_access: 'TRUE'

@@ -40,7 +40,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * keys their storage always holds on the opening hours,
  * a structure's ports on the venue and the hall, structures mixed in on
  * the journal and attached on the ledger, a shape at two keys on the
- * depot, access of both kinds on the exhibit),
+ * depot, access of both kinds on the exhibit, keys that come from the
+ * site on the workshop),
  * a table of documents the pipeline accepts and documents it refuses.
  * Each row is asserted three times: against the pipeline (accept(), then
  * validate() over what is stored), against the full
@@ -628,6 +629,44 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'changed before created' => [['stamps' => ['created' => 5, 'changed' => 4]], FALSE, TRUE, FALSE],
       'created, the changed time cleared' => [['stamps' => ['created' => 5, 'changed' => NULL]], FALSE],
       'an unknown key in the stamps' => [['stamps' => ['fax' => 1]], FALSE],
+    ]);
+  }
+
+  /**
+   * The workshop: keys that come from the site, one per bench it lists.
+   *
+   * A bench structure, a light and a stock code per bench; one bench
+   * locked by its provider, the bench's declared rule at every bench, and
+   * the owner's rule ruling the lights out while the workshop is closed. A
+   * locked entry posted with another value is kept as stored, so its
+   * document is accepted by both; a bench the site does not list is an
+   * unknown key, refused by both.
+   *
+   * @see docs/resources.md#keys-that-come-from-the-site
+   */
+  public function testKeysFromTheSite(): void {
+    $this->installConfig(['data_surface_resource_test']);
+    $this->setUpCurrentUser([], ['administer site configuration']);
+    $benches = [
+      'lathe' => ['enabled' => TRUE, 'hours' => 4],
+      'press' => ['enabled' => TRUE, 'hours' => 2],
+      'saw' => ['enabled' => FALSE],
+    ];
+    $this->assertTable('resource_test.workshop', $this->build('resource_test.workshop'), $this->stored('resource_test.workshop'), [
+      'as stored' => [[], TRUE],
+      'a bench put out of use' => [['benches' => ['lathe' => ['enabled' => FALSE]] + $benches], TRUE],
+      'a bench put to use, six hours' => [['benches' => ['saw' => ['enabled' => TRUE, 'hours' => 6]] + $benches], TRUE],
+      'hours on a bench out of use' => [['benches' => ['saw' => ['enabled' => FALSE, 'hours' => 3]] + $benches], FALSE],
+      'too many hours' => [['benches' => ['lathe' => ['enabled' => TRUE, 'hours' => 13]] + $benches], FALSE],
+      'a bench the site does not list' => [['benches' => ['drill' => ['enabled' => TRUE]] + $benches], FALSE],
+      'the locked bench changed' => [['benches' => ['press' => ['enabled' => FALSE]] + $benches], TRUE],
+      'a light switched off' => [['lights' => ['lathe' => FALSE]], TRUE],
+      'the locked light switched on' => [['lights' => ['press' => TRUE]], TRUE],
+      'a light the site does not list' => [['lights' => ['drill' => TRUE]], FALSE],
+      'a light switched on, the workshop closed' => [['closed' => TRUE, 'lights' => ['saw' => TRUE]], FALSE],
+      'closed, the lights as stored' => [['closed' => TRUE], TRUE],
+      'a stock code for the saw' => [['codes' => ['saw' => 'BS3']], TRUE],
+      'a stock code in lowercase' => [['codes' => ['saw' => 'bs3']], FALSE],
     ]);
   }
 

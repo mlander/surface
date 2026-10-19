@@ -13,6 +13,7 @@ use Drupal\Core\Session\PermissionsHashGeneratorInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\data_surface\DataSurface;
 use Drupal\data_surface\DataSurfaceBuilder;
@@ -32,6 +33,8 @@ use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
 use Drupal\data_surface\Resource\AltersOutputsInterface;
 use Drupal\data_surface\Resource\HasOutputsInterface;
 use Drupal\data_surface\Resource\HasStorageLayoutInterface;
+use Drupal\data_surface\Resource\KeyedList;
+use Drupal\data_surface\Resource\KeysFromSiteInterface;
 use Drupal\data_surface\Resource\KnowsClearableKeysInterface;
 use Drupal\data_surface\Resource\AccessAnswer;
 use Drupal\data_surface\Resource\OperationAccessInterface;
@@ -266,7 +269,7 @@ final class Resources implements ResourcesInterface {
     static::assertShapesNarrowed($definition, $declaring);
 
     $input_keys = $inputs->keys();
-    $attached = array_merge(array_keys($inputs->attachments()), array_keys($inputs->slots()));
+    $attached = array_merge(array_keys($inputs->attachments()), array_keys($inputs->slots()), array_keys($inputs->fromSite()));
     $lists = array_keys($inputs->lists());
     foreach ($definition->identity as $key) {
       if (!in_array($key, $input_keys, TRUE)) {
@@ -411,6 +414,12 @@ final class Resources implements ResourcesInterface {
       if ($runtime) {
         $builder->markRuntimeAccess($key);
       }
+    }
+    // Each map of keys from the site, its entries listed by its provider
+    // now, as an options resolver lists choices.
+    // Decision: see docs/decisions.md#keys-that-come-from-the-site.
+    foreach ($inputs->fromSite() as $key => $each) {
+      $this->buildEach($builder, $definition, (string) $key, $each, $context, $frame, $ancestry, $input_keys, $attached, $lists);
     }
     foreach ($slots as $key => ['by' => $by, 'children' => $children]) {
       $variants = [];
@@ -578,7 +587,7 @@ final class Resources implements ResourcesInterface {
     if (!is_array($held) || !isset($parent['key'])) {
       return NULL;
     }
-    return ['prefix' => $held['prefix'] . $parent['key'] . '.'] + $held;
+    return ['prefix' => $held['prefix'] . ($parent['storedAt'] ?? $parent['key']) . '.'] + $held;
   }
 
   /**
@@ -626,6 +635,10 @@ final class Resources implements ResourcesInterface {
    * @param bool $whole
    *   TRUE for a slot's variant, which a locked answer builds locked whole,
    *   since the parent's key is the slot's and not the variant's alone.
+   * @param string|null $storedAt
+   *   Where the parent's storage keeps the child's keys, by dotted path
+   *   from the parent, when that is not the key: an entry of a map of keys
+   *   from the site, `<key>.<entry>`. NULL for the key.
    *
    * @return array{0: \Drupal\data_surface\Attachment|null, 1: \Drupal\data_surface\Resource\AccessAnswer|null, 2: \Drupal\data_surface\Resource\OperationContext, 3: bool}
    *   The sealed child, or NULL when its access omits it; that access
@@ -634,7 +647,7 @@ final class Resources implements ResourcesInterface {
    *   context the child was invoked in; and whether, built for the account
    *   alone, a runtime answer was set aside, so the key is marked.
    */
-  protected function buildChild(string $child, OperationContext $context, string $key, array $frame, array $ancestry, bool $whole = FALSE): array {
+  protected function buildChild(string $child, OperationContext $context, string $key, array $frame, array $ancestry, bool $whole = FALSE, ?string $storedAt = NULL): array {
     $definition = $this->registry->getDefinition($child);
     [$child_context, $operation] = $this->invokeChild($definition, $context, $key, $frame['id']);
     [$access, $runtime] = $this->childAccess($definition, $operation, $child_context, $this->currentUser, $frame['permission'] ?? NULL);
@@ -642,6 +655,9 @@ final class Resources implements ResourcesInterface {
       return [NULL, $access, $child_context, FALSE];
     }
     $frame['key'] = $key;
+    if ($storedAt !== NULL) {
+      $frame['storedAt'] = $storedAt;
+    }
     return [
       new Attachment(
         $this->buildResource($definition->name(), $child_context, [...$ancestry, $frame], $whole && $access?->isLocked() ? static::lockReason($access) : NULL),
@@ -652,6 +668,131 @@ final class Resources implements ResourcesInterface {
       $child_context,
       $runtime,
     ];
+  }
+
+  /**
+   * Builds a map of keys from the site at its key, from its provider.
+   *
+   * The provider is asked now, and what it read is this data surface's
+   * cacheability. Each entry becomes a key of a child sealed at the key,
+   * which its parent stores: a value of the declared type or shape, held
+   * to what is stored when the entry is locked; or the structure, built
+   * once for the map in this frame and held at every entry's key, its
+   * access answering once for the map, as a collection's child is built
+   * once for the list.
+   *
+   * Decision: see docs/decisions.md#keys-that-come-from-the-site.
+   *
+   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   *   The owner's builder.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The owner.
+   * @param string $key
+   *   The key the map sits at.
+   * @param array{each: string, from: class-string<\Drupal\data_surface\Resource\KeysFromSiteInterface>, default: mixed, child: bool} $each
+   *   What the blueprint recorded for it.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The owner's context.
+   * @param array $frame
+   *   The owner, as buildChild() takes it.
+   * @param array $ancestry
+   *   The owner's own ancestry.
+   * @param string[] $input_keys
+   *   The owner's plain input keys.
+   * @param string[] $attached
+   *   The owner's keys holding a child.
+   * @param string[] $lists
+   *   The owner's collection keys.
+   *
+   * @throws \LogicException
+   *   When the provider's list cannot be cached or varies by the account,
+   *   or an entry of a structure says what it starts from, or the
+   *   structure stores itself or requires a port.
+   */
+  protected function buildEach(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, string $key, array $each, OperationContext $context, array $frame, array $ancestry, array $input_keys, array $attached, array $lists): void {
+    $keys = $this->keysFrom($definition, $key, $each['from']);
+    $builder->addCacheableDependency($keys);
+    $entries = $keys->entries();
+    $map = (new DataSurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
+    $access = NULL;
+    $runtime = FALSE;
+    if ($each['child']) {
+      $structure = $this->registry->getDefinition($each['each']);
+      if ($structure->storage !== NULL || $structure->identity !== []) {
+        throw new \LogicException(sprintf('%s attaches %s at every entry of "%s", which names %s: an entry is stored by its owner, under the key, so it is a structure.', $definition->id, $structure->id, $key, $structure->storage !== NULL ? 'storage of its own' : 'identity keys'));
+      }
+      // Nothing wires an entry's ports yet.
+      $this->assertWiring($builder, $definition, NULL, $key, $each['each'], [], $input_keys, $attached, $lists, 'entry');
+      $first = array_key_first($entries);
+      [$attachment, $access, , $runtime] = $this->buildChild($each['each'], $context, $key, $frame, $ancestry, storedAt: $first === NULL ? NULL : $key . '.' . $first);
+      if ($access !== NULL) {
+        $builder->addCacheableDependency($access);
+      }
+      if ($attachment === NULL) {
+        // Decision: see docs/decisions.md#omitted-is-omitted-both-ways.
+        $builder->omit($key);
+        return;
+      }
+      foreach ($entries as $id => $entry) {
+        if ($entry['default'] !== NULL) {
+          throw new \LogicException(sprintf('%s says what the "%s" entry of "%s" on %s starts from, and each entry there is %s, which starts from its own defaults.', $each['from'], $id, $key, $definition->id, $structure->id));
+        }
+        $map->setDefinition((string) $id, MapDataDefinition::create()->setLabel($entry['label']));
+        $map->attach((string) $id, $attachment);
+        if ($entry['locked']) {
+          $map->lock((string) $id);
+        }
+      }
+    }
+    else {
+      $blueprint = (new ResourceBlueprint($map, $this->typedDataManager))->useShapes($this->shapes());
+      foreach ($entries as $id => $entry) {
+        $blueprint->add((string) $id, $each['each'], $entry['label'], $entry['default'] ?? $each['default']);
+        if ($entry['locked']) {
+          $map->hold((string) $id);
+        }
+      }
+      // Decision: see docs/decisions.md#a-key-its-storage-always-holds.
+      $held = $frame['held'] ?? NULL;
+      $this->markAlwaysHeld($map, array_map('strval', array_keys($entries)), is_array($held) ? ['prefix' => $held['prefix'] . $key . '.'] + $held : NULL);
+    }
+    $builder->attach($key, new Attachment($map->seal()));
+    if ($access !== NULL && $access->isLocked()) {
+      $builder->lock($key);
+    }
+    if ($runtime) {
+      $builder->markRuntimeAccess($key);
+    }
+  }
+
+  /**
+   * Asks a provider for its keys, refusing a list that cannot be kept.
+   *
+   * Decision: see docs/decisions.md#keys-that-come-from-the-site.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The owner, for the messages.
+   * @param string $key
+   *   The key the map sits at, for the messages.
+   * @param class-string<\Drupal\data_surface\Resource\KeysFromSiteInterface> $from
+   *   The provider's class.
+   *
+   * @return \Drupal\data_surface\Resource\KeyedList
+   *   What it listed.
+   *
+   * @throws \LogicException
+   *   When the list cannot be cached, or varies by the account.
+   */
+  protected function keysFrom(ResourceDefinition $definition, string $key, string $from): KeyedList {
+    $keys = $this->instance($from, KeysFromSiteInterface::class)->keys();
+    if ($keys->getCacheMaxAge() === 0) {
+      throw new \LogicException(sprintf('%s lists the keys of "%s" on %s with max-age 0. Keys from the site must be cacheable, since the form, both schema documents and the tool listing are kept with them: declare the cache tags of what it reads (a configuration object\'s, an entity type\'s list) instead.', $from, $key, $definition->id));
+    }
+    $accounts = array_filter($keys->getCacheContexts(), static fn (string $context): bool => $context === 'user' || str_starts_with($context, 'user.') || $context === 'session' || str_starts_with($context, 'session.'));
+    if ($accounts !== []) {
+      throw new \LogicException(sprintf('%s lists the keys of "%s" on %s varying by %s. Which keys there are is the site\'s, the same for every account; an entry an account may not change is access, which the structure\'s access class answers.', $from, $key, $definition->id, implode(', ', $accounts)));
+    }
+    return $keys;
   }
 
   /**
@@ -1121,7 +1262,8 @@ final class Resources implements ResourcesInterface {
    * @param string[] $lists
    *   The owner's collection keys.
    * @param string $as
-   *   How the child is held: attach, variant or collection.
+   *   How the child is held: attach, variant, collection, or entry (of a
+   *   map of keys from the site).
    *
    * @throws \LogicException
    *   Naming the container, the port and what is wrong with the wiring.
@@ -1162,7 +1304,15 @@ final class Resources implements ResourcesInterface {
       }
       throw new \LogicException($as === 'attach'
         ? sprintf('%s attaches %s at "%s" without wiring the "%s" port it requires: attach(\'%s\', ..., reads: [\'%s\' => \'<key>\']) names the key of %s it reads.', $who, $id, $key, $port->name, $key, $port->name, $definition->id)
-        : sprintf('%s fills the "%s" %s of %s and requires the "%s" port, which nothing wires: a port is wired by attach(), and a %s is wired by nothing yet.', $id, $key, $as === 'variant' ? 'slot' : 'collection', $who, $port->name, $as === 'variant' ? 'slot\'s variant' : 'collection\'s item'));
+        : sprintf('%s fills the "%s" %s of %s and requires the "%s" port, which nothing wires: a port is wired by attach(), and a %s is wired by nothing yet.', $id, $key, match ($as) {
+          'variant' => 'slot',
+          'entry' => 'map of keys from the site',
+          default => 'collection',
+        }, $who, $port->name, match ($as) {
+          'variant' => 'slot\'s variant',
+          'entry' => 'map\'s entry',
+          default => 'collection\'s item',
+        }));
     }
   }
 
@@ -2001,7 +2151,12 @@ final class Resources implements ResourcesInterface {
       array_push($mixed, ...$mixin->keys());
     }
     $omitted = [];
-    foreach ([...array_keys($blueprint->attachments()), ...array_keys($blueprint->lists()), ...$mixed] as $key) {
+    $children = [
+      ...array_keys($blueprint->attachments()),
+      ...array_keys($blueprint->lists()),
+      ...array_keys($blueprint->fromSite()),
+    ];
+    foreach ([...$children, ...$mixed] as $key) {
       if ($built->getDefinitions()->entry((string) $key) === NULL) {
         $omitted[] = $prefix . $key;
       }

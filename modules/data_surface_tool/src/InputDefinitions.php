@@ -423,6 +423,11 @@ final class InputDefinitions {
         // child's own values or by a port, is optional in a listing.
         // Decision: see docs/decisions.md#a-key-that-does-not-apply.
         static::optionalWhereRuledOut($converted, $child_entry->mayNotApply());
+        if ($child->getDefinitions()->isLocked((string) $name)) {
+          // As at the top: an entry of a map of keys from the site its
+          // provider locked, say.
+          static::lock($converted);
+        }
         if ($child_entry->runtimeAccess) {
           $this->runtimeAccessNote($converted);
         }
