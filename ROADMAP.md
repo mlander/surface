@@ -845,8 +845,12 @@ renames sit in A because they are cheapest before new code exists.
    definitions, a setter contract, labels on Choice; drafted), then
    operations and access for config objects framed as what entity types
    already have, then third-party settings for simple config, and Form
-   API last. `docs/core-gaps.md` and the proposal document are to be
-   rewritten in the new vocabulary to carry it.
+   API last. Told once, in the new vocabulary, in `docs/core-gaps.md`
+   (rewritten 2026-10-19): five steps, each with the gap in core's
+   terms, what the module does today, the core change, the issue that
+   carries it (the ten drafts, unfiled; steps 2 to 5 not drafted) and
+   what it gives alone. There is no separate proposal document in this
+   repository; the page is the proposal.
 
 13. **Confidence in the direction.** The two risks the design carries
     are weight and the untested half, so these are gates every later
@@ -891,7 +895,7 @@ renames sit in A because they are cheapest before new code exists.
       honoured, and the "today" comparison beside it. Ports, mixins and
       collections all have to hold at once there; nothing else exercises
       them together.
-    - **The audit stays green.** `NeverStricterAuditTest` pins the
+    - **The audit stays green.** the matrix tests (`AdvertisedSchemaAcceptanceTest`, `InputCoercionMatrixTest`) pin the
       invariant; a breach decided and fixed changes a test on purpose,
       never silently. New doors and new kinds add cases to it.
     - **An evolution design before anyone depends on a resource.**
@@ -903,11 +907,24 @@ renames sit in A because they are cheapest before new code exists.
       Phase D, written after reading Smithy's defaults-and-model-evolution
       design: which changes to a resource are compatible, what a stored
       value migration looks like, how a contract diff is reported.
-    - **The core story told once, by an outsider's standard.** Rewrite
-      `docs/core-gaps.md` and the proposal in the new vocabulary, bottom
-      up (definition facts, then operations and access for config, then
-      third-party settings for simple config, Form API last), and have
-      the fresh-eyes reader read that too.
+    - **The core story told once, by an outsider's standard.** DONE
+      2026-10-19 (`docs/core-gaps.md`): five steps bottom-up, each with
+      the gap in core's terms, what the module does today, the core
+      change, the issue that carries it and what it gives alone; there
+      is no separate proposal document. A fresh-eyes reader, an agent
+      reading only that page as a core maintainer, found step 1's first
+      order breaking its own rule (the prototype cache and the setter
+      contract listed after what needs them, and the narrowing rule
+      nowhere), which became the order now on the page with "What
+      narrowing means" as an item of its own; its verdict: step 1 as
+      separate issues, the prototype cache first, the default value held
+      until its name does not collide with field definitions', and
+      conditions and `refined_by` held until narrowing is specified in
+      core terms. As planned: rewrite `docs/core-gaps.md` and the
+      proposal in the new vocabulary, bottom up (definition facts, then
+      operations and access for config, then third-party settings for
+      simple config, Form API last), and have the fresh-eyes reader read
+      that too.
 
 14. **From the gates (2026-10-19).** The two gates of item 13 were folded
     in on 2026-10-19: the recipes page, a whole alter, the cosmetic

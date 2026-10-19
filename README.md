@@ -317,7 +317,7 @@ Full documentation is under [`docs/`](docs/).
 | [Options and resolvers](docs/options.md) | `LabeledChoice`, the resolver plugin type, the stock resolvers. |
 | [Refinement](docs/refinement.md) | An alter offering values and a refiner narrowing them, the narrowing table, cacheability, a worked example, and what it does not reach yet. |
 | [Adoption catalogue](docs/adoption.md) | Where core can adopt this, group by group. |
-| [Core gaps](docs/core-gaps.md) | The interim spellings and the upstream issues. |
+| [Core gaps](docs/core-gaps.md) | The core proposal: what core lacks, bottom-up in the order it could be added, each step with its issue and what it gives alone. |
 
 `data_surface.api.php` documents resource and structure classes,
 alters and the two plugin types for the API reference.

@@ -177,8 +177,10 @@ hand.
 - **Changing a resource others depend on**: [Evolving a
   resource](evolution.md), for which changes are compatible, the
   version, stored-value migrations and the contract diff.
-- **Reading this as a core proposal**: [Adoption
-  catalogue](adoption.md) and [Core gaps](core-gaps.md).
+- **Reading this as a core proposal**: [Core gaps](core-gaps.md), what
+  core lacks in the order it could be added, each step with its issue
+  and what it gives alone; then the [Adoption catalogue](adoption.md)
+  for where core's own forms could adopt it.
 - **Writing the common keys of a settings page**: [Common settings
   recipes](recipes.md).
 
