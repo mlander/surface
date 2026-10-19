@@ -294,6 +294,12 @@ done about it.
 18. **A field is a fieldset.** Every field is a child, so a one-value
     field is a fieldset with one element, both labelled with the field's
     label. The form's cosmetic layer could flatten it; nothing does yet.
+19. **Base fields compose by trait, and the derivation lists them one by
+    one.** An owner, a changed time and a published flag come from
+    `EntityOwnerTrait`, `EntityChangedTrait` and `EntityPublishedTrait`
+    on many entity types; the bundle resource will want each trait's
+    fields as one structure it [mixes in](resources.md#mixins), shared by
+    every entity type that uses the trait. *Open.*
 
 ## Tests
 

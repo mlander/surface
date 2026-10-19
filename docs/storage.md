@@ -109,6 +109,47 @@ site that stores it ([Reusing a structure](resources.md#reusing-a-structure-from
 The test module's `data_surface_resource_test.seating` is one, used by
 the venue's `seating`, the hall's `chairs` and the hall's mount.
 
+### Keys a mixed-in structure brings
+
+A structure [mixed in](resources.md#mixins) stores nothing itself
+either, and its members are the owner's keys, stored flat beside the
+owner's own, so the owner's config schema lists them among its own, as
+any key it declares. A mapping of them cannot be inherited: a simple
+config object's mapping extends `config_object` already, and a mapping
+takes one parent. So the owner repeats the members, and a comment
+naming the structure keeps the two in step; whatever attaches the same
+structure uses one mapping type of its keys, as for any structure
+attached:
+
+```yaml
+# The owner, which mixes the timestamps in:
+data_surface_resource_test.journal:
+  type: config_object
+  mapping:
+    title:
+      type: string
+      label: 'Title'
+    # Mixed in from resource_test.timestamps.
+    created:
+      type: integer
+      label: 'Created'
+      nullable: true
+    changed:
+      type: integer
+      label: 'Changed'
+      nullable: true
+
+# Another, which attaches them under a key:
+data_surface_resource_test.ledger:
+  type: config_object
+  mapping:
+    stamps:
+      type: data_surface_resource_test.timestamps
+```
+
+A member the structure's access omits for the account writing is kept
+as stored, at the owner's level or inside a child the owner stores.
+
 ## What storage is
 
 Two interfaces with the same three verbs. A resource's own storage class

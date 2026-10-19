@@ -57,6 +57,13 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
   private array $ports = [];
 
   /**
+   * The structures mixed into the data surface, in the order mixed in.
+   *
+   * @var \Drupal\data_surface\Mixin[]
+   */
+  private array $mixins = [];
+
+  /**
    * Constructs a DefinitionMap.
    *
    * This is where a data surface's shape is checked, once: afterwards every
@@ -72,12 +79,15 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * @param \Drupal\data_surface\Port[] $ports
    *   The ports the data surface reads from its container: names a
    *   refinement edge may watch that are no key of its own.
+   * @param \Drupal\data_surface\Mixin[] $mixins
+   *   The structures mixed into it, whose members are among the entries.
    *
    * @throws \InvalidArgumentException
-   *   When two entries share a name, a port is named as a key, or a
-   *   refinement edge names a key nothing declares.
+   *   When two entries share a name, a port is named as a key, a
+   *   refinement edge names a key nothing declares, or a mixed-in
+   *   structure brought a key the entries do not hold.
    */
-  public function __construct(array $entries, array $ports = []) {
+  public function __construct(array $entries, array $ports = [], array $mixins = []) {
     foreach ($ports as $port) {
       $this->ports[$port->name] = $port;
     }
@@ -99,6 +109,14 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
         }
       }
     }
+    foreach ($mixins as $mixin) {
+      foreach ($mixin->keys as $key) {
+        if (!isset($this->entries[$key])) {
+          throw new \InvalidArgumentException(sprintf('"%s", which %s brought, is not a data surface definition.', $key, $mixin->structure->id ?? 'a mixed-in structure'));
+        }
+      }
+    }
+    $this->mixins = array_values($mixins);
   }
 
   /**
@@ -146,6 +164,11 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * @param array<string, array<string, \Drupal\data_surface\Attachment>> $mounted
    *   The structures alters attached at their mounts, keyed by the key
    *   holding the mounts, then by the path below it.
+   * @param \Drupal\data_surface\Mixin[] $mixins
+   *   The structures mixed in, in order.
+   * @param string[] $held
+   *   The locked keys that hold what is stored rather than a declared
+   *   value: a mixed-in structure's, which its access locked.
    *
    * @return static
    *   The map.
@@ -167,6 +190,8 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
     array $watchedBy = [],
     array $ports = [],
     array $mounted = [],
+    array $mixins = [],
+    array $held = [],
   ): static {
     foreach (array_merge(array_keys($refiners), array_keys($contributions), $locked, array_keys($attachments), array_keys($slots), array_keys($lists), array_keys($mounted)) as $key) {
       if (!isset($definitions[$key])) {
@@ -215,9 +240,10 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
         list: $lists[$name] ?? NULL,
         watchedBy: $kinds[$name] ?? [],
         mounted: $mounted[$name] ?? [],
+        held: in_array($name, $held, TRUE),
       );
     }
-    return new static($entries, $ports);
+    return new static($entries, $ports, $mixins);
   }
 
   /**
@@ -459,6 +485,34 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    */
   public function ports(): array {
     return $this->ports;
+  }
+
+  /**
+   * Gets the structures mixed into the data surface.
+   *
+   * Their members are entries of this map like any other key; this says
+   * which structure brought which, for the contract, which states each
+   * structure once as a def the owner composes.
+   *
+   * @return \Drupal\data_surface\Mixin[]
+   *   The mixed-in structures, in the order they were mixed in.
+   */
+  public function mixins(): array {
+    return $this->mixins;
+  }
+
+  /**
+   * Answers whether a locked key holds what is stored, not a known value.
+   *
+   * @param string $name
+   *   The key.
+   *
+   * @return bool
+   *   TRUE for a key locked by access, which holds whatever storage holds:
+   *   nothing ahead of time can say what that is.
+   */
+  public function isHeld(string $name): bool {
+    return $this->entries[$name]->held ?? FALSE;
   }
 
   /**

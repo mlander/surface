@@ -140,6 +140,61 @@ interface DataSurfaceBuilderInterface {
   public function omit(string $name): static;
 
   /**
+   * Locks a key to what is stored: its access locked it, not a context.
+   *
+   * The lock lock() makes, except that the key holds whatever storage
+   * holds rather than its declared default, which nothing ahead of time
+   * can state: the form shows the stored value, and neither document
+   * fixes it to a `const` it cannot know. A mixed-in structure's members
+   * are held this way when its access answers locked.
+   *
+   * @param string $name
+   *   The definition key.
+   *
+   * @return $this
+   *
+   * @throws \LogicException
+   *   When the builder is already sealed.
+   */
+  public function hold(string $name): static;
+
+  /**
+   * Takes a mixed-in structure's member back out, before anything binds it.
+   *
+   * What a mixed-in structure's access answers when the account may not
+   * see it: its members leave the owner's keys, as an omitted child's key
+   * does, and storage keeps what it holds under them. Nothing of the
+   * owner's may name a member of a structure with an access class, so
+   * nothing is left reading it.
+   *
+   * @param string $name
+   *   The member.
+   *
+   * @return $this
+   *
+   * @throws \LogicException
+   *   When the builder is already sealed, or the key holds a child.
+   */
+  public function withdraw(string $name): static;
+
+  /**
+   * Records a structure mixed in: which of the keys it brought.
+   *
+   * Its members are declared as the owner's keys already, through the
+   * blueprint; this is what the contract needs to state the structure
+   * once, as a def the owner composes with its own keys.
+   *
+   * @param \Drupal\data_surface\Mixin $mixin
+   *   The structure, built in its own frame, and the keys it brought.
+   *
+   * @return $this
+   *
+   * @throws \LogicException
+   *   When the builder is already sealed.
+   */
+  public function addMixin(Mixin $mixin): static;
+
+  /**
    * Extends an existing definition's declared choices with more values.
    *
    * The contribution API for widening at build time (decision D2): the

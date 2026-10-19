@@ -227,7 +227,11 @@ Two consequences worth stating:
 
 A map, or a property inside one, that is sent nothing holds nothing,
 `NULL`, by [the rule above](#absent-null-or-a-value); left out, it keeps
-what it holds. A complex definition that declares
+what it holds. A child (an attached structure, or a slot's chosen
+variant) sent nothing is each of its keys sent nothing: its optional
+keys clear, a required one is refused in its own words ("Email is
+required.", at `contact.email`), and the accepted value is still a map
+the child's def describes, at every door. A complex definition that declares
 no properties describes nothing to recurse into, so its value passes
 through as it arrived.
 
@@ -475,7 +479,14 @@ may answer that its keys are shown and fixed, or not there at all.
   surface never had. It is omitted in both directions: the read tool does not
   return it, and a write leaves what storage holds under it as it was
   (the storage adapter hands that back to the parent's storage, since
-  the caller could not have seen it).
+  the caller could not have seen it), inside a child the parent stores
+  too, by its path.
+- **A mixed-in structure's members** are locked or omitted by its access
+  the same way, one key at a time, since they are the owner's keys: a
+  locked member holds what is stored, shown and fixed, `readOnly`, with
+  a `const` of what is stored only in the schema for these answers; an
+  omitted member is gone, and storage keeps it
+  ([Mixins](resources.md#mixins)).
 
 ## What each stage decides
 

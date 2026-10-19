@@ -169,3 +169,91 @@ data_surface_resource_test.hall:
 data_surface_resource_test.hall.third_party.data_surface_resource_test:
   type: data_surface_resource_test.seating
   label: 'Overflow seating'
+
+# The timestamps structure's keys, for whatever attaches it: the ledger's
+# stamps and the archive's. Where a structure is mixed in instead, its
+# owner lists the same keys among its own, flat, since a config object's
+# mapping already extends config_object and takes no second parent.
+data_surface_resource_test.timestamps:
+  type: mapping
+  label: 'Timestamps'
+  mapping:
+    created:
+      type: integer
+      label: 'Created'
+      nullable: true
+    changed:
+      type: integer
+      label: 'Changed'
+      nullable: true
+
+# The journal fixture: the ownership and the timestamps mixed in, their
+# members the journal's own keys, listed flat beside its title.
+data_surface_resource_test.journal:
+  type: config_object
+  label: 'Journal'
+  mapping:
+    title:
+      type: string
+      label: 'Title'
+    visibility:
+      type: string
+      label: 'Visibility'
+    # Mixed in from resource_test.ownership.
+    owner:
+      type: string
+      label: 'Owner'
+    shared:
+      type: boolean
+      label: 'Shared with editors'
+      nullable: true
+    # Mixed in from resource_test.timestamps.
+    created:
+      type: integer
+      label: 'Created'
+      nullable: true
+    changed:
+      type: integer
+      label: 'Changed'
+      nullable: true
+    revision:
+      type: integer
+      label: 'Revision'
+      nullable: true
+    published:
+      type: boolean
+      label: 'Published'
+      nullable: true
+    archive:
+      type: mapping
+      label: 'Archive'
+      mapping:
+        shelf:
+          type: string
+          label: 'Shelf'
+        circle:
+          type: string
+          label: 'Circle'
+        # Mixed in from resource_test.ownership.
+        owner:
+          type: string
+          label: 'Owner'
+        shared:
+          type: boolean
+          label: 'Shared with editors'
+          nullable: true
+        stamps:
+          type: data_surface_resource_test.timestamps
+          label: 'Archive stamps'
+
+# The ledger fixture: the timestamps structure attached under a key.
+data_surface_resource_test.ledger:
+  type: config_object
+  label: 'Ledger'
+  mapping:
+    name:
+      type: string
+      label: 'Name'
+    stamps:
+      type: data_surface_resource_test.timestamps
+      label: 'Stamps'

@@ -20,6 +20,7 @@ page needs nothing else. Read a row only when its question is yours.
 | Access class, `access:` | Does who may act depend on the thing itself, not a permission alone? | The operation's permission is the whole answer. |
 | Structure, `#[Structure]` | Is there a group of keys something else holds, or several resources share? | The keys are all one resource's own. |
 | Attached child, `attach()` | Should a group of keys sit under one key, as a fieldset? | Every key is a top level key. |
+| Mixin, `with()` | Are some keys shared members that are part of this thing, such as timestamps or an owner, which other resources have too? ([Resources](resources.md#mixins)) | They are a thing of their own (attach them) or this resource's alone. |
 | Port, `reads()` and `attach(..., reads:)` | Does a structure need a value its container holds, such as the capacity it counts stewards for? ([Resources](resources.md#ports)) | The structure's keys depend only on each other. |
 | Slot and variant, `attachBy()`, `#[Variant]` | Does one key's value choose which further keys apply? | No answer changes which keys there are. |
 | Collection, `attachList()` | Does it hold a list of repeated groups of keys? | Nothing repeats. |

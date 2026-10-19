@@ -717,7 +717,10 @@ Each refusal names the class and method at fault:
   ([Ports](#ports));
 - an alter attaching anywhere but its own mount, beside keys of its own
   there, a collection, or a resource, a structure with children of its
-  own, or one whose access is not open, at its mount.
+  own, or one whose access is not open, at its mount;
+- a structure mixed in that clashes, cycles, holds a child, stores
+  itself, has outputs, is mixed in by an alter, or is wired wrong, and
+  an owner naming what it may not of it ([Mixins](#mixins)).
 
 ## Children
 
@@ -923,6 +926,88 @@ both, the hall at `chairs`, wiring the layout alone, and the hall's
 `HallSeatingAlter` at its own mount, wiring both to other keys of the
 hall (`PortsTest`).
 
+### Mixins
+
+Attaching nests a structure under a key, behind the wall. Mixing it in
+merges its members into the owner's own keys instead, where the call
+stands among them:
+
+```php
+#[Resource('resource_test.journal', storage: JournalStorage::class)]
+final class JournalResource implements ResourceInterface {
+
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('title', 'string', t('Title'))->setRequired(TRUE);
+    $inputs->add('visibility', 'string', t('Visibility'), default: 'staff')
+      ->setRequired(TRUE)
+      ->addConstraint('LabeledChoice', ['choices' => ['public' => t('Public'), 'staff' => t('Staff')]]);
+    $inputs->with(OwnershipStructure::class, reads: ['audience' => 'visibility']);
+    $inputs->with(TimestampsStructure::class);
+    $inputs->add('revision', 'integer', t('Revision'), default: 1);
+    // ...
+    $inputs->narrow('revision')
+      ->when(Condition::absent('created'))
+      ->constrain('Range', ['max' => 1]);
+  }
+
+}
+```
+
+The journal's keys are `title`, `visibility`, `owner`, `shared`,
+`created`, `changed`, `revision`: the ownership's two and the
+timestamps' two are the journal's own.
+
+- **Nest or mix in.** Nest for a thing of its own inside this one (a
+  contact, a ticket, the journal's archive); mix in for shared members
+  that are part of this thing (timestamps, ownership, publishing
+  flags). A mixin is an ordinary `#[Structure]`: the ledger attaches
+  the same timestamps under `stamps`.
+- **The owner's keys.** Stored flat beside the owner's own, described by
+  the owner's config schema ([Storage](storage.md#keys-a-mixed-in-structure-brings)),
+  drawn at the top of the owner's form, accepted, validated and named
+  in a refusal as the owner's (`changed`, not `timestamps.changed`), and
+  flat in the tool's `values` and the read tool's output. A structure
+  mixed in may mix another in, whose members are then the owner's too
+  (the test module's entry mixes in the record, which mixes in the
+  timestamps).
+- **Refined in the owner's frame.** The structure's coded refiners and
+  declared rules are bound in the owner's chain, before the owner's
+  own, and narrow only its own members, watching or reading only those
+  and its ports. A port is declared as for a structure attached
+  (`reads()`) and wired by the owner in the same spelling,
+  `with(..., reads: ['audience' => 'visibility'])`, to one of the
+  owner's keys, of the port's type, that the structure did not bring;
+  every port is wired, required or not, since the structure's refiners
+  read it as that key.
+- **The owner may read and narrow the members**, as its own keys: the
+  journal's rule reads `created`, and another requires it once the
+  journal is published. Two things it may not do: rule a member out,
+  which is the structure's to say, and name a member of a structure that
+  has an access class at all.
+- **Alters.** The owner's alters see the members as the owner's keys. The
+  structure's alters apply wherever it is mixed in, as wherever it is
+  attached, on its members: the test module's `TimestampsAlter` rewords
+  `created` in the journal and the ledger alike. One that would mount a
+  key is refused where the structure is mixed in.
+- **Access.** The structure's access class answers for its members:
+  locked, they hold what is stored, shown and fixed; omitted, they are
+  not there and storage keeps them. The owner's access answers for the
+  rest, and where both answer for the same keys the stricter stands
+  ([decision](decisions.md#a-mixin-is-merged-flat)).
+- **One def.** Both documents write the structure once, as a def, and
+  the owner's frame is `allOf` of a reference to it and the owner's own
+  properties, closed with `unevaluatedProperties`
+  ([the served contract](served-contract.md#a-mixed-in-structure-is-composed)).
+- **Refused at build**, naming the class or the method: a member the
+  owner, or another structure mixed in, declares too; a structure mixed
+  into itself, directly or through another; a structure that attaches a
+  child, declares a slot or a collection; a resource; one with outputs;
+  a `with()` from an alter; an unwired port, one wired to a key the
+  owner does not declare, to one of the structure's own members, or of
+  another type; an owner's refiner or rule ruling a member out, or
+  naming a member of a structure with an access class; a structure's
+  alter that mounts a key.
+
 ### Reusing a structure from another module
 
 A structure declared in one module is attached by another the same way
@@ -934,7 +1019,9 @@ its own module attaches it. The recipe:
    `attach('compliance', ComplianceStructure::class, reads: ['capacity' =>
    'seats'])`, or, from an alter, at the alter's own mount. Every
    required port must be wired, to a key of the container of the port's
-   type.
+   type. Or mix it in, `with(ComplianceStructure::class, reads: [...])`,
+   when its keys are part of the resource rather than a thing of their
+   own ([Mixins](#mixins)).
 3. **Describe its keys in config schema**, since the container's
    storage holds them: the structure stores nothing itself. Under the
    key it sits at for a resource's own config schema, and at the mount

@@ -112,6 +112,8 @@ export interface Schema {
   properties?: Record<string, Schema>;
   required?: string[];
   additionalProperties?: boolean;
+  /** On a frame that mixes structures in, before inlineSchema() flattens it. */
+  unevaluatedProperties?: boolean;
   allOf?: Conditional[];
   items?: Schema;
   oneOf?: Choice[];
@@ -266,6 +268,10 @@ function merge(base: Json, over: Json): Json {
 function resolveAt(schema: Json, root: Json, ancestors: string[]): [Json, string[]] {
   const followed: string[] = [];
   let resolved: Json = {};
+  // A frame that mixes structures in: its own properties beside a bare
+  // reference to each structure's def in its allOf.
+  const frame = isObject(schema.properties);
+  const mixed: Json[] = [];
   const follow = (name: string, reference: string): void => {
     const def = isObject(root.$defs) ? root.$defs[name] : undefined;
     if (ancestors.includes(name) || !isObject(def)) {
@@ -292,6 +298,15 @@ function resolveAt(schema: Json, root: Json, ancestors: string[]): [Json, string
           continue;
         }
         const referred = typeof entry.$ref === 'string' ? defName(entry.$ref) : null;
+        if (referred !== null && Object.keys(entry).length === 1 && frame) {
+          // Its members join this frame: what the frame holds besides is
+          // not inside the def, so the def is no ancestor of it.
+          const def = isObject(root.$defs) ? root.$defs[referred] : undefined;
+          if (isObject(def) && !ancestors.includes(referred)) {
+            mixed.push(resolveAt(def, root, [...ancestors, referred])[0]);
+          }
+          continue;
+        }
         if (referred !== null && Object.keys(entry).length === 1) {
           follow(referred, entry.$ref as string);
           continue;
@@ -305,7 +320,61 @@ function resolveAt(schema: Json, root: Json, ancestors: string[]): [Json, string
     }
     resolved = merge(resolved, { [keyword]: value });
   }
+  for (const def of mixed.reverse()) {
+    resolved = mixIn(resolved, def);
+  }
+  if (resolved.unevaluatedProperties === false && isObject(resolved.properties) && !('$ref' in resolved)) {
+    // Every key is in the frame's own properties now, so it closes them.
+    resolved = Object.fromEntries(Object.entries(resolved).map(([keyword, value]) => [keyword === 'unevaluatedProperties' ? 'additionalProperties' : keyword, value]));
+  }
   return [resolved, [...ancestors, ...followed]];
+}
+
+/**
+ * Lays a frame over the def of a structure it mixes in.
+ *
+ * Each member keeps its place in the frame's properties, the def's schema
+ * for it with what the frame narrows laid over (`true` narrows nothing;
+ * `false`, not applying here, leaves it out, as a flat frame does); the
+ * def's `required` joins the frame's, in the frame's order, and its
+ * conditionals come first, as its rules and refiners run before the
+ * owner's. What the def says of itself as a whole (the ports it reads) is
+ * the structure's, not the frame's. PHP's twin is
+ * `SchemaResolver::mixIn()`.
+ */
+function mixIn(frame: Json, def: Json): Json {
+  const theirs = isObject(def.properties) ? def.properties : {};
+  const own = isObject(frame.properties) ? frame.properties : {};
+  const properties: Json = {};
+  const ruled: string[] = [];
+  for (const [name, property] of Object.entries(own)) {
+    const declared = theirs[name];
+    if (property === false && isObject(declared)) {
+      // Not applying to these values: no property, as a flat frame says it.
+      ruled.push(name);
+      continue;
+    }
+    properties[name] = !isObject(declared) ? property : property === true ? declared : isObject(property) ? merge(declared, property) : property;
+  }
+  for (const [name, property] of Object.entries(theirs)) {
+    if (!(name in properties) && !ruled.includes(name)) {
+      properties[name] = property;
+    }
+  }
+  const mixed: Json = { ...frame, properties };
+  // In the frame's order, as a flat frame lists what it requires.
+  const order = Object.keys(properties);
+  const required = [...new Set([...(Array.isArray(frame.required) ? frame.required : []), ...(Array.isArray(def.required) ? def.required : [])])]
+    .filter((name) => !ruled.includes(name as string))
+    .sort((a, b) => order.indexOf(a as string) - order.indexOf(b as string));
+  if (required.length > 0) {
+    mixed.required = required;
+  }
+  const conditions = [...(Array.isArray(def.allOf) ? def.allOf : []), ...(Array.isArray(frame.allOf) ? frame.allOf : [])];
+  if (conditions.length > 0) {
+    mixed.allOf = conditions;
+  }
+  return mixed;
 }
 
 /**

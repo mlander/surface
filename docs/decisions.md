@@ -1003,6 +1003,123 @@ collection's item, which nothing wires yet. (`Port`, `BlueprintInterface::reads(
 `Attachment::bound()`, `Resources::assertWiring()`, `Resources::wirePorts()`,
 `DataSurface::refine()`, `ContractEmitter::site()`, `ContractEmitter::mounts()`)
 
+### A mixin is merged flat
+
+Composition nested only (attach, behind the wall; an alter's mount under
+its module's name) until a structure could be mixed in: its members
+merged into the owner's own keys, `$inputs->with(TimestampsStructure::class)`,
+or with its ports wired, `$inputs->with(OwnershipStructure::class, reads:
+['audience' => 'visibility'])`. Nest for a thing of its own inside this
+one (a contact, a ticket); mix in for shared members that are part of
+this thing (timestamps, ownership, publishing flags). The test module's
+journal is the first case. Each choice, and why:
+
+- **Spelled on the blueprint, not the attribute.** The members land
+  where the call stands, in order with the other keys, and declaration
+  order is load-bearing (the form, the schema, the stored object); the
+  wiring reads exactly as `attach(..., reads:)` does; and a derived
+  resource, which has no attribute, can call it from its inputs
+  callable. The attribute would have been visible at discovery, so the
+  catalogue could list it without filling a blueprint; it does not list
+  mixins yet (open), and the contract names each one, as a reference.
+- **An ordinary `#[Structure]`, no marker.** The same class is mixed in
+  by one owner and attached by another (the journal mixes the
+  timestamps in, the ledger attaches them), and which composition fits
+  is the owner's choice about its own keys, not a property of the
+  structure. The one thing that differs by use is whether the def is
+  closed, which the emitter reads off the document (below).
+- **Declared by the owner only.** An alter's keys live under its own
+  module's name, so a structure an alter mixed in would put its members
+  at the owner's level, which is what the mount exists to prevent; an
+  alter's `with()` is refused, naming the mount to attach at instead.
+- **Stored flat, described by the owner's config schema.** The members
+  are the owner's keys, so storage holds them beside the owner's own
+  and the owner's config schema lists them. A mapping of the members
+  cannot be inherited, since a config object's mapping already extends
+  `config_object`, so the owner repeats them; whatever attaches the
+  same structure uses one mapping type of them
+  ([Storage](storage.md#keys-a-mixed-in-structure-brings)).
+- **Refused at build.** A member that is a key the owner, or another
+  structure mixed in, declares (named both ways: the owner first, the
+  structure first, two structures), since one name is declared once; a
+  structure mixed into itself, directly or through another; a structure
+  holding a child (a child of the owner at a key the structure named is
+  not built: attach it instead); a resource, which stores itself; one
+  with outputs, which are not merged. A structure may mix another in.
+- **Emitted as a composition, so the def stays reusable.** The frame is
+  `allOf` of a reference to each structure's def and its own
+  `properties`, closed with `unevaluatedProperties: false`. Each member
+  keeps its place in `properties`: `true` where the def says all there
+  is, only what differs where the owner narrows it here (a lock, a
+  context, these values, a port read at the owner's key), `false` where
+  it does not apply to these values. What the def requires and the
+  conditionals it states are not said again. A def is closed with
+  `additionalProperties`, which would refuse the owner's keys beside it,
+  so in a document that mixes a structure in its def is written open,
+  and every other place that uses it closes it with
+  `unevaluatedProperties: false` beside the reference; in a document
+  that only attaches it, it is the closed def it always was, so the
+  examples' documents did not move. `true` rather than `{}`, because
+  `{}` decodes to an empty array in PHP and encodes back as `[]`.
+  `SchemaResolver::inline()` and the React app's `inlineSchema()` lay the
+  frame over each def and close it with `additionalProperties`, so a
+  reader that resolves the references sees the flat frame the pipeline
+  reads.
+- **Refined in the owner's frame.** A structure's coded refiners and
+  declared rules are bound in the owner's chain, before the owner's
+  own, and still narrow only its own members and watch or read only its
+  members and its ports; each port is read at the owner's key it is
+  wired to, which is the edge, the AJAX trigger, the `dependsOn` and
+  the name in a refusal. Every port is wired, required or not: in the
+  owner's frame an unwired port has no key to be read as (open: an
+  optional port left unwired). The owner's refiners and rules, and its
+  alters', may watch and narrow the members: they are the owner's keys
+  now, declared into its blueprint and refined in its frame, so there is
+  no frame between them and nothing to breach. The wall is the boundary
+  between frames, and what keeps the def reusable is kept: the
+  structure's own refiners never see the owner's keys, and whatever
+  the owner adds is stated on its own frame, beside the reference, never
+  in the def. Two exceptions: whether a member applies is the
+  structure's to say (its def, shared by every owner, says where it is
+  required), so the owner may not rule one out; and nothing of the
+  owner's may name a member of a structure that has an access class,
+  since what that access takes away for one account nothing may depend
+  on for every account.
+- **Alters.** An owner's alters see the members as the owner's keys. A
+  structure's alters apply wherever it is mixed in, as wherever it is
+  attached: they reword, narrow and offer more values on its members,
+  through a blueprint that names its members alone; one that mounts a
+  key would mount it on the owner, and is refused there (open). A
+  container cannot opt out of a structure's alters, as for ports (open).
+- **Access.** The structure is built by itself in the owner's context,
+  for its def and its access class. Locked holds its members to what is
+  stored (`Entry::$held`: shown and fixed, `readOnly` in both documents,
+  `const` of what is stored in the schema for these answers and none in
+  the full schema); omitted takes them back out of the owner's keys and
+  storage keeps what it holds under them, by path inside a child the
+  owner stores, which an omitted child inside a stored child now gets
+  too. The owner's access answers for the rest, and where both answer
+  for the same keys the stricter stands: an owner left out takes the
+  members it mixed in with it, an owner locked locks them, whatever the
+  structure answered.
+- **The tool flattens by reading the data surface.** The tool bridge
+  converts the built data surface, where the members are the owner's
+  keys, so `values` is flat; the Tool API's normalizer writes from typed
+  definitions and has no `allOf` to carry.
+
+Open: listing mixins in the catalogue; an optional port a mixin's owner
+leaves unwired; a mixed-in structure's alter that mounts; a mixed-in
+structure holding a child; a container opting out of a structure's
+alters. Found on the way and left: the React page narrows an attached
+child whose def states conditionals of its own to the instance (its
+answered conditionals dropped), where `/refine` inlined carries the
+def's too, the same constraints written twice; the Vitest chain for the
+journal leaves the child's step out for it.
+(`BlueprintAdditionsInterface::with()`, `ResourceBlueprint::with()`,
+`Resources::mixIn()`, `Resources::bindMixin()`,
+`Resources::assertMixinsUnnamed()`, `Mixin`, `ContractEmitter::composed()`,
+`SchemaResolver::mixIn()`, `mixIn()` in `app/src/contract.ts`)
+
 ### An empty variant is an empty map
 
 A slot variant may declare no keys, the spelling of "this choice has
@@ -1965,7 +2082,12 @@ skipped NULL, and an override could not be undone). The
 Tool API itself keeps an absent key and a null apart where the
 difference is a fact, for outputs (`omit_when_null`). Decided
 2026-10-18, after a first reading that collapsed null into "keep" was
-tried and reverted. (`DataSurfacePipeline::acceptKey()`,
+tried and reverted. A child sent `null` (an attached structure, or a
+slot's chosen variant) is each of its keys sent `null`: its optional
+keys clear and a required one is refused in its own words, so the
+accepted document is a map its def describes; until 2026-10-18 the
+pipeline took `contact: null` whole, which the schema refused.
+(`DataSurfacePipeline::acceptKey()`, `DataSurfacePipeline::acceptChild()`,
 `ContractEmitter::nullable()`)
 
 ### A secret is optional, never nullable

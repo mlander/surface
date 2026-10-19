@@ -38,6 +38,7 @@ use Drupal\data_surface\Resource\ResourceStorageInterface;
 use Drupal\data_surface\Attachment;
 use Drupal\data_surface\Entry;
 use Drupal\data_surface\Collection;
+use Drupal\data_surface\Mixin;
 
 /**
  * The build step, over the engine's builder and factory.
@@ -50,7 +51,8 @@ use Drupal\data_surface\Collection;
  *    writes straight into a fresh DataSurfaceBuilder. Neither kind is
  *    ever instantiated: its declarations and its refiners are static, so
  *    the class may as well be a plugin's, as it is for a plugin that is its
- *    own structure.
+ *    own structure. A structure mixed in with with() declares its members
+ *    into the same builder, where the call stands.
  * 2. The alters #[Alters] names for this class, in discovery order,
  *    skipping one whose operations leave this context's id out:
  *    alterInputs() and alterOutputs() over a ResourceBlueprintAdditions,
@@ -66,7 +68,12 @@ use Drupal\data_surface\Collection;
  *    to the narrowing check; each identity key the context knows becomes
  *    that key's default and is locked, which is the engine's lock: the
  *    value fixed to the declared default.
- * 5. The refiners. Every #[RefinesInput] method is checked against the
+ * 5. Each structure mixed in (mixIn()): its ports' wiring checked, built
+ *    by itself for its def and its access, which holds its members to
+ *    what is stored or takes them back out; then what of the owner's names
+ *    its members is checked (assertMixinsUnnamed()), and its refiners,
+ *    rules and alters are bound in the owner's frame first (bindMixin()).
+ * 6. The refiners. Every #[RefinesInput] method is checked against the
  *    shape, then bound: the keys it watches become the engine's
  *    refinement edges with addRefinement(), and its class becomes one
  *    RefinesInputRefiner link in the owner's chain of that key, the
@@ -81,7 +88,7 @@ use Drupal\data_surface\Collection;
  *    but bound ungated, to run on every refinement. Only a runtime
  *    method may be an instance method: a static refiner is a static
  *    method, so it cannot hold the services its class was built with.
- * 6. The children, each through this same build step in its own frame,
+ * 7. The children, each through this same build step in its own frame,
  *    its ports wired to the parent's keys (assertWiring(), wirePorts()),
  *    each invoked the way one asked on its own is: through one of
  *    its own operations when one applies (invokeChild()), otherwise in
@@ -91,7 +98,7 @@ use Drupal\data_surface\Collection;
  *    invoked, and the permission of an operation the build resolved.
  *    A collection's child is built the same way, once for the list, and
  *    its access answers once for the list.
- * 7. The seal.
+ * 8. The seal.
  *
  * The engine's builder is the whole state of a build. Nothing is cached
  * across builds, because a shape describes live site state; what that
@@ -159,8 +166,8 @@ final class Resources implements ResourcesInterface {
     $this->registry->getOperations($definition->name());
 
     $builder = (new DataSurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
-    $inputs = new ResourceBlueprint($builder, $this->typedDataManager);
-    $outputs = new ResourceBlueprint($builder, $this->typedDataManager, TRUE);
+    $inputs = $this->blueprint($builder, $definition);
+    $outputs = $this->blueprint($builder, $definition, TRUE);
     $this->fillBlueprints($definition, $inputs, $outputs);
 
     // The owner's own refiners first, one link per class they are on:
@@ -223,6 +230,27 @@ final class Resources implements ResourcesInterface {
     $frame = ['class' => $definition->name(), 'id' => $definition->id, 'key' => '', 'inputs' => $input_keys];
     $permission = $this->registry->getOperations($definition->name())[$context->id]->permission ?? NULL;
     $frame['permission'] = $permission === NULL ? NULL : static::resolvePermission($permission, $context);
+    // Each structure mixed in, built by itself for its def and its access,
+    // which locks its members or takes them back out; then nothing of the
+    // owner's may name what that access may take away, or rule a member
+    // out.
+    // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
+    $mixins = $this->mixIn($builder, $definition, $inputs, $context, $frame, $input_keys, $attached, $lists);
+    $owned_rules = [$inputs->rules()];
+    $wirings = [];
+    foreach (array_keys($inputs->attachments()) as $key) {
+      $wirings[(string) $key] = $inputs->wiring((string) $key);
+    }
+    foreach ($additions as $contributor => $blueprints) {
+      if (isset($blueprints[0])) {
+        $owned_rules[] = $blueprints[0]->rules();
+        foreach (array_keys($blueprints[0]->attachments()) as $key) {
+          $wirings[(string) $key] = $blueprints[0]->wiring((string) $key);
+        }
+      }
+    }
+    $this->assertMixinsUnnamed($definition, $mixins, $links, array_merge(...$owned_rules), $wirings);
+    $input_keys = array_values(array_filter($input_keys, static fn (string $key): bool => $builder->getDefinition($key) !== NULL));
     // Each alter's structure at its own mount, built before any refiner or
     // rule is bound, since the alter's glue reads its keys.
     // Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
@@ -243,13 +271,20 @@ final class Resources implements ResourcesInterface {
     // What a coded or runtime refiner may rule out, which a declared rule
     // may then not require: the owner's keys by name, an alter's own by
     // `<module>.<key>`.
-    $ruling = [];
+    $ruling = $mixins['ruling'];
     foreach ($links as [, $refiners, $module]) {
       foreach ($refiners as $refiner) {
         if ($refiner->mayNotApply) {
           $ruling[] = $module !== NULL && !in_array($refiner->key, $input_keys, TRUE) ? $module . '.' . $refiner->key : $refiner->key;
         }
       }
+    }
+    // Each structure mixed in first, in the owner's frame: its coded
+    // refiners, its rules and its alters', on its own members, its ports
+    // read at the owner's keys they are wired to.
+    // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
+    foreach ($mixins['bind'] as $mixin) {
+      $this->bindMixin($builder, $definition, $mixin, $context);
     }
     // Each contributor's coded refiners, then the rules it declared, the
     // owner's before any alter's.
@@ -389,6 +424,343 @@ final class Resources implements ResourcesInterface {
       $access,
       $child_context,
     ];
+  }
+
+  /**
+   * Builds each structure mixed in by itself, and settles its members.
+   *
+   * A mixed-in structure's members are the owner's keys already, declared
+   * through its blueprint where with() stands. Here each is checked (its
+   * ports wired to the owner's keys), built by itself in the owner's
+   * context for its def and asked its access: omitted takes its members
+   * back out, locked holds them to what is stored, and what a structure
+   * it mixes in itself answered inside it is read off its own build.
+   *
+   * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
+   *
+   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   *   The owner's builder.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The owner.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
+   *   The owner's input blueprint.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The owner's context.
+   * @param array $frame
+   *   The owner, with the permission its operation asks.
+   * @param string[] $input_keys
+   *   The owner's plain input keys, every structure's members among them.
+   * @param string[] $attached
+   *   The owner's keys holding a child or a slot.
+   * @param string[] $lists
+   *   The owner's collection keys.
+   *
+   * @return array{bind: array<int, array{definition: \Drupal\data_surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\data_surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[]}>, members: array<string, string>, guarded: array<string, string>, ruling: string[]}
+   *   What to bind in the owner's frame, innermost first, each with the
+   *   members still there; every member, and every member of a structure
+   *   with an access class, each mapped to its structure's id; and the
+   *   members a structure's coded refiner may rule out.
+   */
+  protected function mixIn(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, ResourceBlueprint $inputs, OperationContext $context, array $frame, array $input_keys, array $attached, array $lists): array {
+    $mixed = ['bind' => [], 'members' => [], 'guarded' => [], 'ruling' => []];
+    foreach ($inputs->mixins() as ['class' => $class, 'reads' => $reads, 'blueprint' => $blueprint]) {
+      $structure = $this->registry->getDefinition($class);
+      $this->assertMixinWiring($builder, $definition, $structure, $blueprint, $reads, $input_keys, $attached, $lists);
+      $mixed = static::mixedMembers($mixed, $blueprint, $structure, fn (string $name): ResourceDefinition => $this->registry->getDefinition($name));
+      // By itself, as if on its own: what its def is written from, in the
+      // context its owner's hands it, and what its access answers there.
+      $child_context = static::childContext($context, $structure->id);
+      $access = $this->childAccess($structure, NULL, $child_context, $this->currentUser, $frame['permission'] ?? NULL);
+      if ($access !== NULL) {
+        $builder->addCacheableDependency($access);
+      }
+      if ($access !== NULL && $access->isOmitted()) {
+        foreach ($blueprint->keys() as $key) {
+          $builder->withdraw($key);
+        }
+        continue;
+      }
+      $built = $this->buildResource($structure->name(), $child_context, []);
+      $map = $built->getDefinitions();
+      $locked = $access !== NULL && $access->isLocked();
+      $present = [];
+      foreach ($blueprint->keys() as $key) {
+        if (!$map->has($key)) {
+          // A structure it mixes in itself, which that one's access left
+          // out inside it.
+          $builder->withdraw($key);
+          continue;
+        }
+        if ($locked || $map->isHeld($key)) {
+          $builder->hold($key);
+        }
+        $present[] = $key;
+      }
+      $builder->addMixin(new Mixin(new Attachment($built, $structure->name(), $structure->id), $present, $reads));
+      array_push($mixed['bind'], ...$this->mixinBindings($structure, $blueprint, $reads, $present));
+    }
+    return $mixed;
+  }
+
+  /**
+   * Lists a structure's members, and those its access class may take away.
+   *
+   * @param array $mixed
+   *   What mixIn() collects so far.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $blueprint
+   *   The blueprint the structure was declared through.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $structure
+   *   The structure.
+   * @param callable(string): \Drupal\data_surface\ResourceBuild\ResourceDefinition $definitions
+   *   Reads a structure it mixes in itself.
+   *
+   * @return array
+   *   The same, with this structure's members and those of every
+   *   structure it mixes in.
+   */
+  protected static function mixedMembers(array $mixed, ResourceBlueprint $blueprint, ResourceDefinition $structure, callable $definitions): array {
+    foreach ($blueprint->mixins() as ['class' => $class, 'blueprint' => $inner]) {
+      $mixed = static::mixedMembers($mixed, $inner, $definitions($class), $definitions);
+    }
+    foreach ($blueprint->keys() as $key) {
+      $mixed['members'][$key] ??= $structure->id;
+      if ($structure->access !== NULL) {
+        $mixed['guarded'][$key] ??= $structure->id;
+      }
+    }
+    foreach ($structure->refiners as $refiner) {
+      if ($refiner->mayNotApply) {
+        $mixed['ruling'][] = $refiner->key;
+      }
+    }
+    return $mixed;
+  }
+
+  /**
+   * Lists what to bind in the owner's frame for one structure mixed in.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $structure
+   *   The structure.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $blueprint
+   *   The blueprint it was declared through.
+   * @param array<string, string> $reads
+   *   Its ports, wired to the owner's keys.
+   * @param string[] $present
+   *   The members still there.
+   *
+   * @return array<int, array{definition: \Drupal\data_surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\data_surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[]}>
+   *   A structure it mixes in itself first, unless its members are gone,
+   *   then this one.
+   */
+  protected function mixinBindings(ResourceDefinition $structure, ResourceBlueprint $blueprint, array $reads, array $present): array {
+    $bindings = [];
+    foreach ($blueprint->mixins() as ['class' => $class, 'reads' => $inner_reads, 'blueprint' => $inner]) {
+      if (array_diff($inner->keys(), $present) !== []) {
+        continue;
+      }
+      // Its ports are wired to keys of the structure mixing it in, which
+      // are the owner's keys now, under the same names.
+      array_push($bindings, ...$this->mixinBindings($this->registry->getDefinition($class), $inner, $inner_reads, $present));
+    }
+    $bindings[] = [
+      'definition' => $structure,
+      'blueprint' => $blueprint,
+      'reads' => $reads,
+      'keys' => array_values(array_intersect($blueprint->keys(), $present)),
+    ];
+    return $bindings;
+  }
+
+  /**
+   * Refuses a wiring of a mixed-in structure's ports its owner cannot honour.
+   *
+   * Every port is wired, to a plain input of the owner's of the port's
+   * type that the structure did not bring itself: in the owner's frame a
+   * port is read as the key it is wired to, so one left unwired would
+   * have nothing to be read as.
+   *
+   * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
+   *
+   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   *   The owner's builder.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The owner.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $structure
+   *   The structure.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $blueprint
+   *   The blueprint it was declared through.
+   * @param array<string, string> $reads
+   *   The wiring.
+   * @param string[] $input_keys
+   *   The owner's plain input keys.
+   * @param string[] $attached
+   *   The owner's keys holding a child or a slot.
+   * @param string[] $lists
+   *   The owner's collection keys.
+   *
+   * @throws \LogicException
+   *   Naming the owner, the port and what is wrong with the wiring.
+   */
+  protected function assertMixinWiring(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, ResourceDefinition $structure, ResourceBlueprint $blueprint, array $reads, array $input_keys, array $attached, array $lists): void {
+    $ports = $blueprint->ports();
+    foreach ($reads as $port => $wired) {
+      if (!isset($ports[$port])) {
+        throw new \LogicException(sprintf('%s wires the "%s" port of %s, mixed in, which %s does not read; it reads %s.', $definition->id, $port, $structure->id, $structure->id, $ports === [] ? 'no port' : implode(', ', array_keys($ports))));
+      }
+      $problem = match (TRUE) {
+        in_array($wired, $blueprint->keys(), TRUE) => sprintf('which %s brought itself: a port reads a key of the owner it is mixed into, and its members are its own', $structure->id),
+        in_array($wired, $attached, TRUE), in_array($wired, $lists, TRUE) => 'which holds a child: a port reads one value',
+        !in_array($wired, $input_keys, TRUE) => sprintf('which %s does not declare as an input: a port reads a key of its owner, by name', $definition->id),
+        default => NULL,
+      };
+      if ($problem !== NULL) {
+        throw new \LogicException(sprintf('%s wires the "%s" port of %s, mixed in, to "%s", %s.', $definition->id, $port, $structure->id, $wired, $problem));
+      }
+      $type = $builder->getDefinition($wired)?->getDataType();
+      if ($ports[$port]->type !== 'any' && $type !== $ports[$port]->type) {
+        throw new \LogicException(sprintf('%s wires the "%s" port of %s, mixed in, which reads %s %s, to "%s", which holds %s %s.', $definition->id, $port, $structure->id, static::article((string) $ports[$port]->type), $ports[$port]->type, $wired, static::article((string) $type), $type));
+      }
+    }
+    foreach ($ports as $port) {
+      if (!isset($reads[$port->name])) {
+        throw new \LogicException(sprintf(
+          '%s mixes %s in without wiring its "%s" port: with(..., reads: [\'%s\' => \'<key>\']) names the key of %s it reads. A mixed-in structure\'s refiners read each port as the owner\'s key it is wired to, so every port is wired, required or not.',
+          $definition->id,
+          $structure->id,
+          $port->name,
+          $port->name,
+          $definition->id,
+        ));
+      }
+    }
+  }
+
+  /**
+   * Refuses what of the owner's names a member it may not depend on.
+   *
+   * A mixed-in structure's members are the owner's keys, so the owner's
+   * refiners and rules, and its alters', may watch them and narrow them
+   * as their own, with two exceptions. Whether a member applies is the
+   * structure's to say: its def, which every owner shares, says where it
+   * is required. And nothing of the owner's may name a member of a
+   * structure that has an access class: what that access may take away
+   * for one account, nothing may depend on for every account.
+   *
+   * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The owner.
+   * @param array $mixins
+   *   What mixIn() answered.
+   * @param array<int, array{0: object|string, 1: \Drupal\data_surface\ResourceBuild\RefinerDefinition[], 2: string|null}> $links
+   *   The owner's refiners and its alters'.
+   * @param \Drupal\data_surface\Refinement\Rule[] $rules
+   *   The owner's rules and its alters'.
+   * @param array<string, array<string, string>> $wirings
+   *   The ports of each child the owner or an alter attached, wired.
+   *
+   * @throws \LogicException
+   *   Naming what names the member, and the structure.
+   */
+  protected function assertMixinsUnnamed(ResourceDefinition $definition, array $mixins, array $links, array $rules, array $wirings): void {
+    $guarded = $mixins['guarded'];
+    $guard = static fn (string $what, string $key): \LogicException => new \LogicException(sprintf(
+      '%s names "%s", a member of %s, which is mixed into %s and has an access class. What that access may take away for one account, nothing of the owner\'s may depend on: read it inside %s, or drop the access class.',
+      $what,
+      $key,
+      $guarded[$key],
+      $definition->id,
+      $guarded[$key],
+    ));
+    $ruled = static fn (string $what, string $key): \LogicException => new \LogicException(sprintf(
+      '%s may answer that "%s", a member of %s mixed into %s, does not apply. Whether a mixed-in structure\'s member applies is the structure\'s to say: its def, which every owner shares, says where it is required.',
+      $what,
+      $key,
+      $mixins['members'][$key],
+      $definition->id,
+    ));
+    foreach ($links as [, $refiners]) {
+      foreach ($refiners as $refiner) {
+        foreach ([$refiner->key, ...$refiner->watched()] as $key) {
+          if (isset($guarded[$key])) {
+            throw $guard($refiner->describe(), $key);
+          }
+        }
+        if ($refiner->mayNotApply && isset($mixins['members'][$refiner->key])) {
+          throw $ruled($refiner->describe(), $refiner->key);
+        }
+      }
+    }
+    foreach ($rules as $rule) {
+      $name = sprintf('narrow("%s") in %s', $rule->key, $definition->id);
+      foreach ([$rule->key, ...($rule->condition()?->keys() ?? [])] as $key) {
+        if (isset($guarded[$key])) {
+          throw $guard($name, $key);
+        }
+      }
+      if ($rule->rulesOut() && isset($mixins['members'][$rule->key])) {
+        throw $ruled($name, $rule->key);
+      }
+    }
+    foreach ($wirings as $at => $reads) {
+      foreach ($reads as $port => $key) {
+        if (isset($guarded[$key])) {
+          throw $guard(sprintf('The "%s" port of the child at "%s"', $port, $at), $key);
+        }
+      }
+    }
+  }
+
+  /**
+   * Binds one mixed-in structure's refiners and rules in its owner's frame.
+   *
+   * Its coded refiners, its declared rules, then each of its alters' that
+   * applies in the context: refining and narrowing only the structure's
+   * own members, watching and reading only those and its ports, each port
+   * read at the owner's key it is wired to. What the alter rewords or
+   * offers is said through a blueprint that names the structure's members
+   * alone and mounts nothing.
+   *
+   * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
+   *
+   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   *   The owner's builder.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The owner.
+   * @param array{definition: \Drupal\data_surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\data_surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[]} $mixin
+   *   The structure, as mixIn() lists it.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The owner's context, which says which alters apply.
+   */
+  protected function bindMixin(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, array $mixin, OperationContext $context): void {
+    $structure = $mixin['definition'];
+    $keys = $mixin['keys'];
+    $ports = $mixin['blueprint']->ports();
+    $reads = $mixin['reads'];
+    $ruling = [];
+    foreach ($structure->refiners as $refiner) {
+      if ($refiner->mayNotApply) {
+        $ruling[] = $refiner->key;
+      }
+    }
+    $this->bindRefiners($builder, $structure, static::resourceClass($structure), $structure->refiners, $keys, [], ports: $ports, translated: $reads);
+    $this->bindRules($builder, $structure, $mixin['blueprint']->rules(), NULL, $keys, [], [], [], [], [], $ruling, $ports, translated: $reads);
+    foreach ($structure->alters as $alter) {
+      if (!$alter->appliesIn($context->id)) {
+        continue;
+      }
+      $instance = $this->classResolver->getInstanceFromDefinition($alter->class);
+      $within = [$structure->id, $definition->id, $keys];
+      $additions = new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, FALSE, $within);
+      if ($instance instanceof AltersInputsInterface) {
+        $instance->alterInputs($additions);
+      }
+      if ($instance instanceof AltersOutputsInterface) {
+        $instance->alterOutputs(new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, TRUE, $within));
+      }
+      $this->bindRefiners($builder, $structure, $instance, $alter->refiners, $keys, [], [], NULL, $alter->module, $additions->extended(), ports: $ports, translated: $reads);
+      $this->bindRules($builder, $structure, $additions->rules(), $alter->module, $keys, [], [], $additions->extended(), [], [], $ruling, $ports, translated: $reads);
+    }
   }
 
   /**
@@ -585,8 +957,9 @@ final class Resources implements ResourcesInterface {
    *   Its ports, by name, and every key it declares.
    */
   protected function portsOf(string $child): array {
-    $blueprint = new ResourceBlueprint(new DataSurfaceBuilder(), $this->typedDataManager);
-    $this->fillBlueprints($this->registry->getDefinition($child), $blueprint);
+    $definition = $this->registry->getDefinition($child);
+    $blueprint = $this->blueprint(new DataSurfaceBuilder(), $definition);
+    $this->fillBlueprints($definition, $blueprint);
     return [$blueprint->ports(), $blueprint->declared()];
   }
 
@@ -1125,7 +1498,8 @@ final class Resources implements ResourcesInterface {
    */
   public function defaults(string $resource): array {
     $builder = new DataSurfaceBuilder();
-    $this->fillBlueprints($this->registry->getDefinition($resource), new ResourceBlueprint($builder, $this->typedDataManager));
+    $definition = $this->registry->getDefinition($resource);
+    $this->fillBlueprints($definition, $this->blueprint($builder, $definition));
     return $builder->seal()->getDefaultValues();
   }
 
@@ -1187,28 +1561,47 @@ final class Resources implements ResourcesInterface {
   }
 
   /**
-   * Lists the children the build left out, which the parent stores.
+   * Lists what the build left out, which the parent stores.
    *
-   * The keys the owner's blueprint attaches a child or a collection at that
-   * the built resource does not carry: only a child's access omits a key.
-   * The storage keeps what it holds under each, since the caller could
-   * not see it.
+   * The keys the owner's blueprint attaches a child or a collection at, or
+   * a structure it mixes in brought, that the built resource does not
+   * carry: only access omits a key. Inside a child with no storage of its
+   * own, which this storage stores, the same, by dotted path. The storage
+   * keeps what it holds under each, since the caller could not see it.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
-   *   The resource.
+   *   The resource, or a child it stores.
    * @param \Drupal\data_surface\DataSurfaceInterface $built
-   *   The resource as built.
+   *   It as built.
+   * @param string $prefix
+   *   The child's path in the resource, with its trailing dot.
    *
    * @return string[]
-   *   The omitted keys.
+   *   The omitted keys, by dotted path.
    */
-  protected function omittedKeys(ResourceDefinition $definition, DataSurfaceInterface $built): array {
-    $blueprint = new ResourceBlueprint(new DataSurfaceBuilder(), $this->typedDataManager);
+  protected function omittedKeys(ResourceDefinition $definition, DataSurfaceInterface $built, string $prefix = ''): array {
+    $blueprint = $this->blueprint(new DataSurfaceBuilder(), $definition);
     $this->fillBlueprints($definition, $blueprint);
-    return array_values(array_filter(
-      [...array_keys($blueprint->attachments()), ...array_keys($blueprint->lists())],
-      static fn (string $key): bool => $built->getDefinitions()->entry($key) === NULL,
-    ));
+    // A mixed-in structure's members its access took back out, too.
+    // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
+    $mixed = [];
+    foreach ($blueprint->mixins() as ['blueprint' => $mixin]) {
+      array_push($mixed, ...$mixin->keys());
+    }
+    $omitted = [];
+    foreach ([...array_keys($blueprint->attachments()), ...array_keys($blueprint->lists()), ...$mixed] as $key) {
+      if ($built->getDefinitions()->entry((string) $key) === NULL) {
+        $omitted[] = $prefix . $key;
+      }
+    }
+    // And inside a child this storage stores, by its path.
+    foreach ($built->getDefinitions()->entries() as $key => $entry) {
+      $child = $entry->attachment?->source === NULL ? NULL : $this->registry->getDefinition((string) $entry->attachment->source);
+      if ($child !== NULL && $child->storage === NULL) {
+        array_push($omitted, ...$this->omittedKeys($child, $entry->attachment->child, $prefix . $key . '.'));
+      }
+    }
+    return $omitted;
   }
 
   /**
@@ -1347,12 +1740,16 @@ final class Resources implements ResourcesInterface {
    *   For an alter that attached a structure at its mount, the
    *   structure's keys: its methods may watch them, as keys it mounted,
    *   and refine none.
+   * @param array<string, string> $translated
+   *   For a structure mixed into an owner, each of its ports mapped to the
+   *   owner's key it is wired to: a method watching the port is handed
+   *   that key's value, and the edge is the key's.
    *
    * @throws \LogicException
    *   When a method fails a seal-time check, or one that watches nothing
    *   widens what it was given.
    */
-  protected function bindRefiners(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, object|string $instance, array $refiners, array $input_keys, array $output_keys, array $attached = [], ?array $parent = NULL, ?string $module = NULL, array $extended = [], array $mounted = [], array $mountedBy = [], array $lists = [], array $ports = [], array $readable = []): void {
+  protected function bindRefiners(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, object|string $instance, array $refiners, array $input_keys, array $output_keys, array $attached = [], ?array $parent = NULL, ?string $module = NULL, array $extended = [], array $mounted = [], array $mountedBy = [], array $lists = [], array $ports = [], array $readable = [], array $translated = []): void {
     if ($refiners === []) {
       return;
     }
@@ -1387,6 +1784,8 @@ final class Resources implements ResourcesInterface {
       static::assertRefinable($definition, $refiner, $refinable, $output_keys, $watchable);
       // Decision: see docs/decisions.md#an-alter-watches-its-own-mounted-key.
       $watched = static::mountedWatches($definition, $refiner, $input_keys, $module, [...$mounted, ...$readable]);
+      // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
+      $watched += array_intersect_key($translated, array_flip($refiner->watched()));
       $paths += $watched;
       $key = $own ? RefinesInputRefiner::MOUNT : $refiner->key;
       if ($refiner->watched() === []) {
@@ -1489,11 +1888,14 @@ final class Resources implements ResourcesInterface {
    *   For an alter that attached a structure at its mount, the
    *   structure's keys: a condition may name them, and no rule of the
    *   alter's narrows them.
+   * @param array<string, string> $translated
+   *   For a structure mixed into an owner, each of its ports mapped to the
+   *   owner's key it is wired to, where a condition on the port reads.
    *
    * @throws \LogicException
    *   Naming the rule and what is wrong with it.
    */
-  protected function bindRules(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, array $rules, ?string $module, array $input_keys, array $attached, array $lists, array $extended, array $mounted, array $mountedBy, array $ruling, array $ports = [], array $readable = []): void {
+  protected function bindRules(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, array $rules, ?string $module, array $input_keys, array $attached, array $lists, array $extended, array $mounted, array $mountedBy, array $ruling, array $ports = [], array $readable = [], array $translated = []): void {
     if ($rules === []) {
       return;
     }
@@ -1560,8 +1962,13 @@ final class Resources implements ResourcesInterface {
         // A port is read by its own name in this frame; the container that
         // wires it says, at the site, which of its keys that is.
         // Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
-        $path = $mine ? RefinesInputRefiner::path((string) $module, $key) : $key;
-        if ($mine) {
+        $path = match (TRUE) {
+          $mine => RefinesInputRefiner::path((string) $module, $key),
+          // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
+          $port && isset($translated[$key]) => $translated[$key],
+          default => $key,
+        };
+        if ($path !== $key) {
           $paths[$key] = $path;
         }
         $watched[] = $path;
@@ -1956,6 +2363,23 @@ final class Resources implements ResourcesInterface {
       return (string) $value;
     }, $permission);
     return $unknown ? NULL : $resolved;
+  }
+
+  /**
+   * Makes the blueprint a resource or structure declares into.
+   *
+   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   *   The builder it fills.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource or structure.
+   * @param bool $outputs
+   *   TRUE for its outputs' blueprint.
+   *
+   * @return \Drupal\data_surface\ResourceBuild\ResourceBlueprint
+   *   The blueprint, which names a structure mixed in by discovery's id.
+   */
+  protected function blueprint(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, bool $outputs = FALSE): ResourceBlueprint {
+    return new ResourceBlueprint($builder, $this->typedDataManager, $outputs, $this->registry, $definition->name());
   }
 
   /**

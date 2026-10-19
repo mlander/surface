@@ -10,3 +10,15 @@ inspect spice rack:
 hide spice rack:
   title: 'Hide the spice rack'
   description: 'The spice rack fixture is omitted: its keys are not there.'
+inspect ownership:
+  title: 'Inspect the ownership'
+  description: 'The ownership fixture is locked: its members are shown and fixed.'
+hide ownership:
+  title: 'Hide the ownership'
+  description: 'The ownership fixture is omitted: its members are not there.'
+inspect archive:
+  title: 'Inspect the archive'
+  description: 'The archive fixture is locked: its keys are shown and fixed.'
+hide archive:
+  title: 'Hide the archive'
+  description: 'The archive fixture is omitted: its keys are not there.'

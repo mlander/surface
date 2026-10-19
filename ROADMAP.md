@@ -423,7 +423,7 @@ renames sit in A because they are cheapest before new code exists.
   must not crash the form (HTTP 500, "No data surface widget serves the
   map data type").
 - **B, what the contract can say:** inapplicable keys (2, done); declarative
-  narrowing (3, done); ports (4, done); mixins (5); named scalar shapes (7).
+  narrowing (3, done); ports (4, done); mixins (5, done); named scalar shapes (7).
 - **C, access and the doors:** static and runtime access (8); operation
   behavior facts and the tool door's refusal feedback (9).
 - **D, edges as they bite:** item 10.
@@ -467,7 +467,12 @@ renames sit in A because they are cheapest before new code exists.
      checked before they are dropped; `format` stays, as an annotation
      per the spec, with the test validator configured so; the audit's
      one-off pins become matrix tests in the Tool API's shape (advertised
-     schema acceptance, input coercion).
+     schema acceptance, input coercion). Found by the ports unit and fixed
+     with mixins (2026-10-18): a child sent `null` was taken whole by the
+     pipeline where the schema refused it; it is now each of its keys sent
+     `null`, an optional one cleared and a required one refused in its own
+     words, at the form and the tool alike (the "Absent keeps, null
+     clears" decision; matrix rows on example 3 and the ledger).
    - The "never stricter than the runtime" audit, DONE 2026-10-18 (3d43d8f,
      `docs/audit-never-stricter.md`), deferred for the demo:
      the form posts `"50"` as text where the schema says integer; the
@@ -559,7 +564,26 @@ renames sit in A because they are cheapest before new code exists.
    wherever it is used, which a container may want to opt out of (to
    decide); a change to the structure changes every container's stored
    layout, which is Phase D with an explicit contract to diff.
-5. **Mixins: a structure merged flat.** Today composition only nests
+5. **Mixins: a structure merged flat.** DONE 2026-10-18
+   (`docs/decisions.md#a-mixin-is-merged-flat`, `docs/resources.md#mixins`):
+   `$inputs->with(TimestampsStructure::class, reads: [...])` on the
+   owner's blueprint, refused on an alter's; an ordinary `#[Structure]`,
+   no marker; stored flat, the owner's config schema listing the members;
+   clashes, cycles, a child, a resource, outputs refused at build; emitted
+   as `allOf` of the def's `$ref` and the owner's properties under
+   `unevaluatedProperties: false`, each member in its place (`true`, what
+   differs, `false`), the def open in a document that mixes it in and
+   closed where it is attached; refiners and rules in the owner's frame
+   on the structure's members and ports, every port wired; the owner's
+   refiners may read and narrow members, not rule one out nor name one
+   whose structure has an access class; the structure's access locks
+   (held to what is stored) or omits (kept in storage) its members, the
+   stricter answer standing; the tool flat, React and `SchemaResolver`
+   inline flat. Fixtures: the test module's journal (the ownership with a
+   port, the timestamps), its archive, the ledger. Left open: the
+   catalogue listing mixins, an optional port left unwired, a mixed-in
+   structure's alter that mounts or a mixin holding a child, opting out
+   of a structure's alters. As planned: Today composition only nests
    (attach, with its frame and wall; an alter's mount under its module's
    name). A mixin, Smithy's word, merges a structure's members into the
    owner's own keys: declared by the owner only (`with: [Timestamps::class]`),

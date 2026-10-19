@@ -5,6 +5,7 @@ import example3 from './fixtures/refine-example3.json';
 import compliance from './fixtures/refine-example3-compliance.json';
 import licence from './fixtures/refine-example3-licence.json';
 import bulletin from './fixtures/refine-bulletin.json';
+import journal from './fixtures/refine-journal.json';
 
 // The page's narrowing held to the server's. Each fixture is what
 // ResourceApiController answered, as uid 1 after the examples were reset:
@@ -154,6 +155,63 @@ describe('a key that does not apply', () => {
     // Loaded monthly: the send day stored under it was never handed over.
     const monthly = served(recorded.steps[0].answer);
     expect(narrow({ full, previous: monthly, stored: monthly.values, values: { ...monthly.values, frequency: 'weekly' }, stale: [], changed: 'frequency' })).toEqual({ local: false, key: 'send_day', marker: 'stored' });
+  });
+});
+
+describe('structures mixed in', () => {
+  // The test module's journal mixes in the ownership, whose port reads the
+  // journal's visibility, and the timestamps, flat; its archive is
+  // attached, mixes the ownership in itself, and attaches the timestamps.
+  const recorded = journal as unknown as Recorded;
+  const full = inlineSchema(recorded.schema.schema);
+
+  it('reads a composed frame flat: every member in its place, the frame closed', () => {
+    const raw = recorded.schema.schema;
+    expect(raw.unevaluatedProperties).toBe(false);
+    expect((raw.allOf ?? []).slice(0, 2)).toEqual([{ $ref: '#/$defs/resource_test.ownership' }, { $ref: '#/$defs/resource_test.timestamps' }]);
+    expect(Object.keys(full.properties ?? {})).toEqual(['title', 'visibility', 'owner', 'shared', 'created', 'changed', 'revision', 'published', 'archive']);
+    expect(full.additionalProperties).toBe(false);
+    expect(full.unevaluatedProperties).toBeUndefined();
+    expect(full.required).toEqual(['title', 'visibility', 'owner']);
+    expect(full.properties?.owner.title).toBe('Owner');
+    expect(full.properties?.owner['x-surface']?.dependsOn).toEqual(['visibility']);
+    expect(full.properties?.created.description).toBe('Seconds since the epoch.');
+    expect((full.allOf ?? []).every((condition) => 'if' in condition)).toBe(true);
+    const archive = full.properties?.archive;
+    expect(Object.keys(archive?.properties ?? {})).toEqual(['shelf', 'circle', 'owner', 'shared', 'stamps']);
+    expect(archive?.properties?.stamps.additionalProperties).toBe(false);
+    expect(Object.keys(archive?.properties?.stamps.properties ?? {})).toEqual(['created', 'changed']);
+  });
+
+  it('narrows a member reading a port here, and asks about one a number moves', () => {
+    play(recorded, ['local', 'local', { key: 'changed', marker: 'dynamic' }]);
+  });
+
+  it('narrows a member inside an attached child by the child\'s own key', () => {
+    const staff = served(recorded.contract);
+    const values = setAt(staff.values, 'archive.circle', 'public');
+    const open = narrow({ full, previous: staff, stored: staff.values, values, stale: [], changed: 'archive.circle' });
+    expect(open.local).toBe(true);
+    if (!open.local) {
+      return;
+    }
+    const archive = open.settled.schema.properties?.archive;
+    expect(Object.keys(archive?.properties ?? {})).toEqual(['shelf', 'circle', 'owner', 'stamps']);
+    expect(archive?.properties?.owner.maxLength).toBeUndefined();
+    expect(archive?.['x-surface']?.doesNotApply).toEqual({ shared: ['circle'] });
+  });
+
+  it('drops a member that does not apply, from the form and from what is sent', () => {
+    const staff = served(recorded.contract);
+    const open = narrow({ full, previous: staff, stored: staff.values, values: { ...staff.values, visibility: 'public' }, stale: [], changed: 'visibility' });
+    expect(open.local).toBe(true);
+    if (!open.local) {
+      return;
+    }
+    expect(Object.keys(open.settled.schema.properties ?? {})).not.toContain('shared');
+    expect(open.settled.values).not.toHaveProperty('shared');
+    expect(open.settled.schema.properties?.owner.maxLength).toBeUndefined();
+    expect(staff.schema.properties?.owner.maxLength).toBe(32);
   });
 });
 

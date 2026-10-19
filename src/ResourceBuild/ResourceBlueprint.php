@@ -7,10 +7,15 @@ namespace Drupal\data_surface\ResourceBuild;
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Component\Plugin\Exception\PluginNotFoundException;
+use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\Core\TypedData\TypedDataManagerInterface;
+use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Port;
 use Drupal\data_surface\Resource\BlueprintInterface;
+use Drupal\data_surface\Resource\DefinesInputsInterface;
+use Drupal\data_surface\Resource\HasOutputsInterface;
 
 /**
  * The owner's blueprint: keys land at the top of the data surface.
@@ -19,6 +24,13 @@ use Drupal\data_surface\Resource\BlueprintInterface;
  * setDefault(); an output goes through setOutputDefinition(), and a
  * default given for one is written onto it so that the engine refuses it
  * in its own words rather than this class guessing at them.
+ *
+ * A structure mixed in with with() is declared through a blueprint of
+ * its own over the same builder, so its members land among the owner's
+ * keys where the call stands, in order. That blueprint keeps what is the
+ * structure's apart (its ports, which only its own refiners read, and its
+ * rules, which the build step binds as the structure's), and refuses a
+ * child: a mixed-in structure holds keys and maps.
  *
  * @internal
  */
@@ -39,12 +51,281 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   protected array $ports = [];
 
   /**
+   * The structures mixed in through this blueprint, in order.
+   *
+   * @var array<int, array{class: class-string, reads: array<string, string>, blueprint: \Drupal\data_surface\ResourceBuild\ResourceBlueprint}>
+   */
+  protected array $mixins = [];
+
+  /**
+   * The structure that brought each key mixed in, by key, at the owner's.
+   *
+   * @var array<string, string>
+   */
+  protected array $origins = [];
+
+  /**
+   * Constructs a blueprint.
+   *
+   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   *   The engine's builder the blueprint fills.
+   * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
+   *   The typed data manager.
+   * @param bool $outputs
+   *   TRUE when this blueprint describes outputs rather than inputs.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry|null $registry
+   *   What discovery found, which names a structure mixed in and says
+   *   whether it may be; NULL to name it by its class and check nothing.
+   * @param string|null $owner
+   *   The resource or structure declaring through this blueprint, by
+   *   name, for messages and the cycle check.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint|null $into
+   *   For a structure being mixed in, the blueprint it is mixed into;
+   *   NULL for the owner's own.
+   */
+  public function __construct(
+    DataSurfaceBuilderInterface $builder,
+    TypedDataManagerInterface $typedDataManager,
+    bool $outputs = FALSE,
+    protected readonly ?ResourceRegistry $registry = NULL,
+    protected readonly ?string $owner = NULL,
+    protected readonly ?ResourceBlueprint $into = NULL,
+  ) {
+    parent::__construct($builder, $typedDataManager, $outputs);
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
+   */
+  public function with(string $structure, array $reads = []): static {
+    $who = $this->name($this->owner);
+    if ($this->outputs) {
+      throw new \LogicException(sprintf('%s mixes %s into its outputs. A structure is mixed into what is sent; outputs hold no structures yet.', $who, $structure));
+    }
+    static::assertMixinReads($structure, $who, $reads);
+    if (!is_subclass_of($structure, DefinesInputsInterface::class)) {
+      throw new \LogicException(sprintf('%s mixes %s in, which is no resource or structure class: a structure is mixed in by its class.', $who, $structure));
+    }
+    $chain = $this->chain();
+    if (in_array($structure, $chain, TRUE)) {
+      throw new \LogicException(sprintf(
+        '%s mixes %s in, through %s: a structure cannot be mixed into itself, directly or through another.',
+        $who,
+        $this->name($structure),
+        implode(' -> ', array_map($this->name(...), [...$chain, $structure])),
+      ));
+    }
+    $definition = $this->registry?->getDefinition($structure);
+    if ($definition !== NULL && ($definition->storage !== NULL || $definition->identity !== [])) {
+      throw new \LogicException(sprintf(
+        '%s mixes %s in, which names %s. A mixed-in structure\'s members are the owner\'s keys, stored by the owner: mix in a structure, or attach a resource under a key of its own.',
+        $who,
+        $definition->id,
+        $definition->storage !== NULL ? 'storage of its own' : 'identity keys',
+      ));
+    }
+    if (is_subclass_of($structure, HasOutputsInterface::class)) {
+      throw new \LogicException(sprintf('%s mixes %s in, which declares outputs. A structure\'s inputs are mixed in; its outputs are not, yet.', $who, $this->name($structure)));
+    }
+    $mixin = new static($this->builder, $this->typedDataManager, FALSE, $this->registry, $structure, $this);
+    $structure::defineInputs($mixin);
+    $this->mixins[] = ['class' => $structure, 'reads' => $reads, 'blueprint' => $mixin];
+    return $this;
+  }
+
+  /**
+   * Refuses a wiring that is not a port name mapped to a key.
+   *
+   * @param string $structure
+   *   The structure being mixed in.
+   * @param string $who
+   *   The owner, for the message.
+   * @param array $reads
+   *   The wiring, as handed over.
+   *
+   * @throws \InvalidArgumentException
+   *   When an entry is not one.
+   */
+  protected static function assertMixinReads(string $structure, string $who, array $reads): void {
+    foreach ($reads as $port => $wired) {
+      if (!is_string($port) || $port === '' || !is_string($wired) || $wired === '') {
+        throw new \InvalidArgumentException(sprintf('with() was handed reads for %s that do not map a port, by its name, to a key of %s, by its name: [\'port\' => \'key\'].', $structure, $who));
+      }
+    }
+  }
+
+  /**
+   * Gets the structures mixed in through this blueprint.
+   *
+   * @return array<int, array{class: class-string, reads: array<string, string>, blueprint: \Drupal\data_surface\ResourceBuild\ResourceBlueprint}>
+   *   Each structure's class, its ports' wiring, and the blueprint it was
+   *   declared through, which holds its keys (those of a structure it
+   *   mixes in itself among them), its ports and its rules; in order.
+   */
+  public function mixins(): array {
+    return $this->mixins;
+  }
+
+  /**
+   * Answers whether this blueprint is a structure's being mixed in.
+   *
+   * @return bool
+   *   TRUE inside with().
+   */
+  public function isMixedIn(): bool {
+    return $this->into !== NULL;
+  }
+
+  /**
+   * Names a resource or structure for a message.
+   *
+   * @param string|null $name
+   *   Its class, or its id.
+   *
+   * @return string
+   *   Its id where discovery knows it, otherwise what was given.
+   */
+  protected function name(?string $name): string {
+    if ($name === NULL) {
+      return 'This blueprint';
+    }
+    try {
+      return $this->registry?->getDefinition($name)->id ?? $name;
+    }
+    catch (\InvalidArgumentException) {
+      return $name;
+    }
+  }
+
+  /**
+   * Lists the owner and every structure being mixed in on the way here.
+   *
+   * @return string[]
+   *   The outermost first.
+   */
+  protected function chain(): array {
+    $chain = $this->into?->chain() ?? [];
+    if ($this->owner !== NULL) {
+      $chain[] = $this->owner;
+    }
+    return $chain;
+  }
+
+  /**
+   * Gets the owner's blueprint, which every structure mixed in fills.
+   *
+   * @return \Drupal\data_surface\ResourceBuild\ResourceBlueprint
+   *   The outermost blueprint.
+   */
+  protected function root(): ResourceBlueprint {
+    return $this->into?->root() ?? $this;
+  }
+
+  /**
+   * Records a key a structure mixed in brought, at every level above it.
+   *
+   * @param string $key
+   *   The key.
+   * @param string $structure
+   *   The structure that declared it.
+   */
+  protected function adopt(string $key, string $structure): void {
+    $this->keys[] = $key;
+    if ($this->into === NULL) {
+      $this->origins[$key] = $structure;
+      return;
+    }
+    $this->into->adopt($key, $structure);
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * A key is declared once among the owner's and every structure mixed
+   * in, since a structure's members are the owner's keys: a clash is
+   * refused naming both who declared it.
+   */
+  public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): static {
+    $root = $this->root();
+    if (!$this->outputs && ($this->into !== NULL || isset($root->origins[$key])) && $root->isDeclared($key)) {
+      $before = $root->origins[$key] ?? NULL;
+      $owner = $this->name($root->owner);
+      throw new \LogicException(match (TRUE) {
+        $this->into === NULL => sprintf('%s declares "%s", which %s, mixed in, declares already. A mixed-in structure\'s members are the owner\'s keys, so a name is declared once: rename one, or attach the structure under a key of its own.', $owner, $key, $this->name($before)),
+        $before === NULL => sprintf('%s, mixed into %s, declares "%s", which %s declares too. A mixed-in structure\'s members are the owner\'s keys, so a name is declared once: rename one, or attach the structure under a key of its own.', $this->name($this->owner), $owner, $key, $owner),
+        default => sprintf('%s, mixed into %s, declares "%s", which %s, also mixed in, declares too. A mixed-in structure\'s members are the owner\'s keys, so a name is declared once.', $this->name($this->owner), $owner, $key, $this->name($before)),
+      });
+    }
+    parent::addDefinition($key, $definition, $default);
+    if ($this->into !== NULL) {
+      $this->into->adopt($key, (string) $this->owner);
+    }
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function attach(string $key, string $child, array $reads = []): MapDataDefinition {
+    $this->assertHoldsNoChild('attaches ' . $child, $key);
+    return parent::attach($key, $child, $reads);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function attachList(string $key, string $child, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
+    $this->assertHoldsNoChild('attaches a collection of ' . $child, $key);
+    return parent::attachList($key, $child, $min, $max);
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function attachBy(string $key, string $by): MapDataDefinition {
+    $this->assertHoldsNoChild('declares a slot', $key);
     $shell = $this->reserveChild('attachBy', $key);
     $this->slots[$key] = $by;
     return $shell;
+  }
+
+  /**
+   * Refuses a child in a structure being mixed in.
+   *
+   * @param string $verb
+   *   What it did, for the message.
+   * @param string $key
+   *   The key.
+   *
+   * @throws \LogicException
+   *   Inside with().
+   */
+  protected function assertHoldsNoChild(string $verb, string $key): void {
+    if ($this->into === NULL) {
+      return;
+    }
+    throw new \LogicException(sprintf(
+      '%s, mixed into %s, %s at "%s". A mixed-in structure holds keys and maps, not children, for now: attach %s under a key of its own instead.',
+      $this->name($this->owner),
+      $this->name($this->root()->owner),
+      $verb,
+      $key,
+      $this->name($this->owner),
+    ));
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * A structure being mixed in rewords its own members only.
+   */
+  public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL): static {
+    if ($this->into !== NULL && !in_array($key, $this->keys, TRUE)) {
+      throw new \LogicException(sprintf('%s, mixed into %s, rewords "%s", which it does not declare: a mixed-in structure names its own members.', $this->name($this->owner), $this->name($this->root()->owner), $key));
+    }
+    return parent::describe($key, $label, $description, $after);
   }
 
   /**
@@ -56,7 +337,9 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
     if ($this->outputs) {
       throw new \LogicException(sprintf('reads() was asked to read "%s" into outputs. An output is emitted, never refined, so it has nothing to read.', $port));
     }
-    if (isset($this->ports[$port]) || in_array($port, $this->declared(), TRUE) || $this->isDeclared($port)) {
+    // A structure being mixed in reads its ports under names of its own,
+    // which may well be the owner's keys it is wired to.
+    if (isset($this->ports[$port]) || in_array($port, $this->declared(), TRUE) || ($this->into === NULL && $this->isDeclared($port))) {
       throw new \LogicException(sprintf('"%s" is already declared in this blueprint, as %s, so it cannot be read as a port too: a port has a name of its own.', $port, isset($this->ports[$port]) ? 'a port' : 'a key'));
     }
     try {
@@ -66,7 +349,12 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
       throw new \InvalidArgumentException(sprintf('The "%s" port reads a "%s", which is no typed data type.', $port, $type), 0, $e);
     }
     $this->ports[$port] = new Port($port, $type, $required);
-    $this->builder->addPort($this->ports[$port]);
+    if ($this->into === NULL) {
+      // A mixed-in structure's ports are no ports of its owner's: the owner
+      // wires them to its own keys, and only the structure's refiners read
+      // them, under these names.
+      $this->builder->addPort($this->ports[$port]);
+    }
     return $this;
   }
 

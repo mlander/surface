@@ -56,10 +56,15 @@ final class Subschemas {
    *   what is only true of a moment, in the full schema, and the widget
    *   hints, when they were not asked for. A reference site differing
    *   from its def in nothing but these differs in nothing.
+   * @param string[] $open
+   *   The ids of the structures the document mixes in somewhere: each
+   *   one's def is written open, so an owner can compose it with keys of
+   *   its own, and every other place it is used closes it.
    */
   public function __construct(
     public readonly bool $full,
     public readonly array $transient,
+    public readonly array $open = [],
   ) {
     $this->keys = new \SplObjectStorage();
     $this->writing = new \SplObjectStorage();
@@ -139,6 +144,21 @@ final class Subschemas {
    */
   public function get(string $key): ?array {
     return $this->defs[$key] ?? NULL;
+  }
+
+  /**
+   * Answers whether a def is written open, for an owner to mix it in.
+   *
+   * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
+   *
+   * @param string $key
+   *   The def's key: its id, or `<id>@<n>`.
+   *
+   * @return bool
+   *   TRUE for a structure the document mixes in somewhere.
+   */
+  public function isOpen(string $key): bool {
+    return in_array(preg_replace('/@\d+$/', '', $key), $this->open, TRUE);
   }
 
   /**

@@ -1,0 +1,2499 @@
+{
+    "schema": {
+        "surface": "resource_test.journal",
+        "situation": "configure",
+        "label": "Configure the journal",
+        "schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "Configure the journal",
+            "type": "object",
+            "properties": {
+                "title": {
+                    "title": "Title",
+                    "type": "string",
+                    "x-surface": {
+                        "widget": "text",
+                        "locked": false,
+                        "dependsOn": []
+                    }
+                },
+                "visibility": {
+                    "title": "Visibility",
+                    "type": "string",
+                    "oneOf": [
+                        {
+                            "const": "public",
+                            "title": "Public"
+                        },
+                        {
+                            "const": "staff",
+                            "title": "Staff"
+                        }
+                    ],
+                    "default": "staff",
+                    "x-surface": {
+                        "widget": "select",
+                        "locked": false,
+                        "dependsOn": []
+                    }
+                },
+                "owner": {
+                    "x-surface": {
+                        "widget": "text",
+                        "locked": false,
+                        "dependsOn": [
+                            "visibility"
+                        ],
+                        "declared": true
+                    }
+                },
+                "shared": {
+                    "x-surface": {
+                        "widget": "checkbox",
+                        "locked": false,
+                        "dependsOn": [
+                            "visibility"
+                        ],
+                        "enumerated": true
+                    }
+                },
+                "created": {
+                    "x-surface": {
+                        "widget": "number",
+                        "locked": false,
+                        "dependsOn": [
+                            "published"
+                        ],
+                        "declared": true
+                    }
+                },
+                "changed": true,
+                "revision": {
+                    "title": "Revision",
+                    "type": [
+                        "integer",
+                        "null"
+                    ],
+                    "minimum": 1,
+                    "default": 1,
+                    "x-surface": {
+                        "widget": "number",
+                        "locked": false,
+                        "dependsOn": [
+                            "created"
+                        ],
+                        "declared": true
+                    }
+                },
+                "published": {
+                    "title": "Published",
+                    "type": [
+                        "boolean",
+                        "null"
+                    ],
+                    "default": false,
+                    "x-surface": {
+                        "widget": "checkbox",
+                        "locked": false,
+                        "dependsOn": []
+                    }
+                },
+                "archive": {
+                    "title": "Archive",
+                    "$ref": "#/$defs/resource_test.archive",
+                    "x-surface": {
+                        "widget": "fieldset",
+                        "locked": false,
+                        "dependsOn": []
+                    }
+                }
+            },
+            "unevaluatedProperties": false,
+            "required": [
+                "title",
+                "visibility"
+            ],
+            "allOf": [
+                {
+                    "$ref": "#/$defs/resource_test.ownership"
+                },
+                {
+                    "$ref": "#/$defs/resource_test.timestamps"
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "visibility": {
+                                "const": "staff"
+                            }
+                        },
+                        "required": [
+                            "visibility"
+                        ]
+                    },
+                    "then": {
+                        "properties": {
+                            "owner": {
+                                "description": "Up to 32 characters for a staff audience.",
+                                "maxLength": 32
+                            }
+                        }
+                    },
+                    "x-surface": {
+                        "declared": true
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "visibility": {
+                                "const": "public"
+                            }
+                        },
+                        "required": [
+                            "visibility"
+                        ]
+                    },
+                    "then": {
+                        "properties": {
+                            "shared": false
+                        }
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "published": {
+                                "const": true
+                            }
+                        },
+                        "required": [
+                            "published"
+                        ]
+                    },
+                    "then": {
+                        "properties": {
+                            "created": {
+                                "description": "A published journal says when it was created.",
+                                "type": "integer"
+                            }
+                        },
+                        "required": [
+                            "created"
+                        ]
+                    },
+                    "x-surface": {
+                        "declared": true
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "created": {
+                                "type": "null"
+                            }
+                        }
+                    },
+                    "then": {
+                        "properties": {
+                            "revision": {
+                                "description": "A journal never created is on its first revision.",
+                                "maximum": 1
+                            }
+                        }
+                    },
+                    "x-surface": {
+                        "declared": true
+                    }
+                }
+            ],
+            "$defs": {
+                "resource_test.timestamps": {
+                    "type": "object",
+                    "properties": {
+                        "created": {
+                            "title": "Created",
+                            "description": "Seconds since the epoch.",
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "x-surface": {
+                                "widget": "number",
+                                "locked": false,
+                                "dependsOn": []
+                            }
+                        },
+                        "changed": {
+                            "title": "Changed",
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "x-surface": {
+                                "widget": "number",
+                                "locked": false,
+                                "dependsOn": [
+                                    "created"
+                                ],
+                                "dynamic": true,
+                                "declared": true
+                            }
+                        }
+                    },
+                    "allOf": [
+                        {
+                            "if": {
+                                "properties": {
+                                    "created": {
+                                        "not": {
+                                            "type": "null"
+                                        }
+                                    }
+                                },
+                                "required": [
+                                    "created"
+                                ]
+                            },
+                            "then": {
+                                "properties": {
+                                    "changed": {
+                                        "description": "Required once the created time is set.",
+                                        "type": "integer"
+                                    }
+                                },
+                                "required": [
+                                    "changed"
+                                ]
+                            },
+                            "x-surface": {
+                                "declared": true
+                            }
+                        }
+                    ]
+                },
+                "resource_test.ownership": {
+                    "type": "object",
+                    "properties": {
+                        "owner": {
+                            "title": "Owner",
+                            "type": "string",
+                            "x-surface": {
+                                "widget": "text",
+                                "locked": false,
+                                "dependsOn": [
+                                    "audience"
+                                ]
+                            }
+                        },
+                        "shared": {
+                            "title": "Shared with editors",
+                            "type": [
+                                "boolean",
+                                "null"
+                            ],
+                            "default": false,
+                            "x-surface": {
+                                "widget": "checkbox",
+                                "locked": false,
+                                "dependsOn": [
+                                    "audience"
+                                ]
+                            }
+                        }
+                    },
+                    "required": [
+                        "owner"
+                    ],
+                    "x-surface": {
+                        "ports": {
+                            "audience": {
+                                "type": "string",
+                                "required": true
+                            }
+                        }
+                    }
+                },
+                "resource_test.archive": {
+                    "type": "object",
+                    "properties": {
+                        "shelf": {
+                            "title": "Shelf",
+                            "type": "string",
+                            "x-surface": {
+                                "widget": "text",
+                                "locked": false,
+                                "dependsOn": []
+                            }
+                        },
+                        "circle": {
+                            "title": "Circle",
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "public",
+                                    "title": "Public"
+                                },
+                                {
+                                    "const": "staff",
+                                    "title": "Staff"
+                                }
+                            ],
+                            "default": "staff",
+                            "x-surface": {
+                                "widget": "select",
+                                "locked": false,
+                                "dependsOn": []
+                            }
+                        },
+                        "owner": {
+                            "x-surface": {
+                                "widget": "text",
+                                "locked": false,
+                                "dependsOn": [
+                                    "circle"
+                                ],
+                                "declared": true
+                            }
+                        },
+                        "shared": {
+                            "x-surface": {
+                                "widget": "checkbox",
+                                "locked": false,
+                                "dependsOn": [
+                                    "circle"
+                                ],
+                                "enumerated": true
+                            }
+                        },
+                        "stamps": {
+                            "title": "Archive stamps",
+                            "$ref": "#/$defs/resource_test.timestamps",
+                            "unevaluatedProperties": false,
+                            "x-surface": {
+                                "widget": "fieldset",
+                                "locked": false,
+                                "dependsOn": []
+                            }
+                        }
+                    },
+                    "unevaluatedProperties": false,
+                    "required": [
+                        "shelf",
+                        "circle"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/$defs/resource_test.ownership"
+                        },
+                        {
+                            "if": {
+                                "properties": {
+                                    "circle": {
+                                        "const": "staff"
+                                    }
+                                },
+                                "required": [
+                                    "circle"
+                                ]
+                            },
+                            "then": {
+                                "properties": {
+                                    "owner": {
+                                        "description": "Up to 32 characters for a staff audience.",
+                                        "maxLength": 32
+                                    }
+                                }
+                            },
+                            "x-surface": {
+                                "declared": true
+                            }
+                        },
+                        {
+                            "if": {
+                                "properties": {
+                                    "circle": {
+                                        "const": "public"
+                                    }
+                                },
+                                "required": [
+                                    "circle"
+                                ]
+                            },
+                            "then": {
+                                "properties": {
+                                    "shared": false
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    },
+    "contract": {
+        "surface": "resource_test.journal",
+        "situation": "configure",
+        "label": "Configure the journal",
+        "schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "Configure the journal",
+            "type": "object",
+            "properties": {
+                "title": {
+                    "title": "Title",
+                    "type": "string",
+                    "x-surface": {
+                        "widget": "text",
+                        "locked": false,
+                        "dependsOn": [],
+                        "refined": false,
+                        "stale": false
+                    }
+                },
+                "visibility": {
+                    "title": "Visibility",
+                    "type": "string",
+                    "oneOf": [
+                        {
+                            "const": "public",
+                            "title": "Public"
+                        },
+                        {
+                            "const": "staff",
+                            "title": "Staff"
+                        }
+                    ],
+                    "default": "staff",
+                    "x-surface": {
+                        "widget": "select",
+                        "locked": false,
+                        "dependsOn": [],
+                        "refined": false,
+                        "stale": false,
+                        "emptyOption": {
+                            "show": false,
+                            "label": "- Select -"
+                        }
+                    }
+                },
+                "owner": {
+                    "description": "Up to 32 characters for a staff audience.",
+                    "maxLength": 32,
+                    "x-surface": {
+                        "widget": "text",
+                        "locked": false,
+                        "dependsOn": [
+                            "visibility"
+                        ],
+                        "refined": true,
+                        "stale": false
+                    }
+                },
+                "shared": {
+                    "x-surface": {
+                        "widget": "checkbox",
+                        "locked": false,
+                        "dependsOn": [
+                            "visibility"
+                        ],
+                        "refined": false,
+                        "stale": false
+                    }
+                },
+                "created": {
+                    "description": "A published journal says when it was created.",
+                    "type": "integer",
+                    "x-surface": {
+                        "widget": "number",
+                        "locked": false,
+                        "dependsOn": [
+                            "published"
+                        ],
+                        "refined": true,
+                        "stale": false
+                    }
+                },
+                "changed": {
+                    "description": "Required once the created time is set.",
+                    "type": "integer",
+                    "minimum": 1700000000,
+                    "x-surface": {
+                        "widget": "number",
+                        "locked": false,
+                        "dependsOn": [
+                            "created"
+                        ],
+                        "refined": true,
+                        "stale": false
+                    }
+                },
+                "revision": {
+                    "title": "Revision",
+                    "type": [
+                        "integer",
+                        "null"
+                    ],
+                    "minimum": 1,
+                    "default": 1,
+                    "x-surface": {
+                        "widget": "number",
+                        "locked": false,
+                        "dependsOn": [
+                            "created"
+                        ],
+                        "refined": false,
+                        "stale": false
+                    }
+                },
+                "published": {
+                    "title": "Published",
+                    "type": [
+                        "boolean",
+                        "null"
+                    ],
+                    "default": false,
+                    "x-surface": {
+                        "widget": "checkbox",
+                        "locked": false,
+                        "dependsOn": [],
+                        "refined": false,
+                        "stale": false
+                    }
+                },
+                "archive": {
+                    "title": "Archive",
+                    "allOf": [
+                        {
+                            "$ref": "#/$defs/resource_test.archive"
+                        },
+                        {
+                            "properties": {
+                                "owner": {
+                                    "description": "Up to 32 characters for a staff audience.",
+                                    "maxLength": 32,
+                                    "x-surface": {
+                                        "widget": "text",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "circle"
+                                        ],
+                                        "refined": true,
+                                        "stale": false
+                                    }
+                                },
+                                "shared": {
+                                    "x-surface": {
+                                        "widget": "checkbox",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "circle"
+                                        ],
+                                        "refined": false,
+                                        "stale": false
+                                    }
+                                },
+                                "stamps": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "#/$defs/resource_test.timestamps"
+                                        },
+                                        {
+                                            "properties": {
+                                                "changed": {
+                                                    "description": "Required once the created time is set.",
+                                                    "type": "integer",
+                                                    "minimum": 1690000000,
+                                                    "x-surface": {
+                                                        "widget": "number",
+                                                        "locked": false,
+                                                        "dependsOn": [
+                                                            "created"
+                                                        ],
+                                                        "refined": true,
+                                                        "stale": false
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "changed"
+                                            ]
+                                        }
+                                    ],
+                                    "x-surface": {
+                                        "widget": "fieldset",
+                                        "locked": false,
+                                        "dependsOn": [],
+                                        "refined": true,
+                                        "stale": false
+                                    }
+                                }
+                            }
+                        }
+                    ],
+                    "x-surface": {
+                        "widget": "fieldset",
+                        "locked": false,
+                        "dependsOn": [],
+                        "refined": true,
+                        "stale": false
+                    }
+                }
+            },
+            "unevaluatedProperties": false,
+            "required": [
+                "title",
+                "visibility",
+                "created",
+                "changed"
+            ],
+            "allOf": [
+                {
+                    "$ref": "#/$defs/resource_test.ownership"
+                },
+                {
+                    "$ref": "#/$defs/resource_test.timestamps"
+                }
+            ],
+            "$defs": {
+                "resource_test.timestamps": {
+                    "type": "object",
+                    "properties": {
+                        "created": {
+                            "title": "Created",
+                            "description": "Seconds since the epoch.",
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "x-surface": {
+                                "widget": "number",
+                                "locked": false,
+                                "dependsOn": [],
+                                "refined": false,
+                                "stale": false
+                            }
+                        },
+                        "changed": {
+                            "title": "Changed",
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "x-surface": {
+                                "widget": "number",
+                                "locked": false,
+                                "dependsOn": [
+                                    "created"
+                                ],
+                                "refined": false,
+                                "stale": false,
+                                "dynamic": true,
+                                "declared": true
+                            }
+                        }
+                    },
+                    "allOf": [
+                        {
+                            "if": {
+                                "properties": {
+                                    "created": {
+                                        "not": {
+                                            "type": "null"
+                                        }
+                                    }
+                                },
+                                "required": [
+                                    "created"
+                                ]
+                            },
+                            "then": {
+                                "properties": {
+                                    "changed": {
+                                        "description": "Required once the created time is set.",
+                                        "type": "integer"
+                                    }
+                                },
+                                "required": [
+                                    "changed"
+                                ]
+                            },
+                            "x-surface": {
+                                "declared": true
+                            }
+                        }
+                    ]
+                },
+                "resource_test.ownership": {
+                    "type": "object",
+                    "properties": {
+                        "owner": {
+                            "title": "Owner",
+                            "type": "string",
+                            "x-surface": {
+                                "widget": "text",
+                                "locked": false,
+                                "dependsOn": [
+                                    "audience"
+                                ],
+                                "refined": false,
+                                "stale": false
+                            }
+                        },
+                        "shared": {
+                            "title": "Shared with editors",
+                            "type": [
+                                "boolean",
+                                "null"
+                            ],
+                            "default": false,
+                            "x-surface": {
+                                "widget": "checkbox",
+                                "locked": false,
+                                "dependsOn": [
+                                    "audience"
+                                ],
+                                "refined": false,
+                                "stale": false
+                            }
+                        }
+                    },
+                    "required": [
+                        "owner"
+                    ],
+                    "x-surface": {
+                        "ports": {
+                            "audience": {
+                                "type": "string",
+                                "required": true
+                            }
+                        }
+                    }
+                },
+                "resource_test.archive": {
+                    "type": "object",
+                    "properties": {
+                        "shelf": {
+                            "title": "Shelf",
+                            "type": "string",
+                            "x-surface": {
+                                "widget": "text",
+                                "locked": false,
+                                "dependsOn": [],
+                                "refined": false,
+                                "stale": false
+                            }
+                        },
+                        "circle": {
+                            "title": "Circle",
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "public",
+                                    "title": "Public"
+                                },
+                                {
+                                    "const": "staff",
+                                    "title": "Staff"
+                                }
+                            ],
+                            "default": "staff",
+                            "x-surface": {
+                                "widget": "select",
+                                "locked": false,
+                                "dependsOn": [],
+                                "refined": false,
+                                "stale": false,
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
+                            }
+                        },
+                        "owner": {
+                            "x-surface": {
+                                "widget": "text",
+                                "locked": false,
+                                "dependsOn": [
+                                    "circle"
+                                ],
+                                "refined": false,
+                                "stale": false,
+                                "declared": true
+                            }
+                        },
+                        "shared": {
+                            "x-surface": {
+                                "widget": "checkbox",
+                                "locked": false,
+                                "dependsOn": [
+                                    "circle"
+                                ],
+                                "refined": false,
+                                "stale": false,
+                                "enumerated": true
+                            }
+                        },
+                        "stamps": {
+                            "title": "Archive stamps",
+                            "$ref": "#/$defs/resource_test.timestamps",
+                            "unevaluatedProperties": false,
+                            "x-surface": {
+                                "widget": "fieldset",
+                                "locked": false,
+                                "dependsOn": [],
+                                "refined": false,
+                                "stale": false
+                            }
+                        }
+                    },
+                    "unevaluatedProperties": false,
+                    "required": [
+                        "shelf",
+                        "circle"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/$defs/resource_test.ownership"
+                        },
+                        {
+                            "if": {
+                                "properties": {
+                                    "circle": {
+                                        "const": "staff"
+                                    }
+                                },
+                                "required": [
+                                    "circle"
+                                ]
+                            },
+                            "then": {
+                                "properties": {
+                                    "owner": {
+                                        "description": "Up to 32 characters for a staff audience.",
+                                        "maxLength": 32
+                                    }
+                                }
+                            },
+                            "x-surface": {
+                                "declared": true
+                            }
+                        },
+                        {
+                            "if": {
+                                "properties": {
+                                    "circle": {
+                                        "const": "public"
+                                    }
+                                },
+                                "required": [
+                                    "circle"
+                                ]
+                            },
+                            "then": {
+                                "properties": {
+                                    "shared": false
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        "values": {
+            "title": "Field notes",
+            "visibility": "staff",
+            "owner": "ada",
+            "shared": false,
+            "created": 1700000000,
+            "changed": 1700000500,
+            "revision": 3,
+            "published": true,
+            "archive": {
+                "shelf": "B2",
+                "circle": "staff",
+                "owner": "grace",
+                "shared": true,
+                "stamps": {
+                    "created": 1690000000,
+                    "changed": 1690000000
+                }
+            }
+        },
+        "stale": []
+    },
+    "steps": [
+        {
+            "changes": [
+                {
+                    "path": "visibility",
+                    "value": "public"
+                }
+            ],
+            "sent": {
+                "values": {
+                    "title": "Field notes",
+                    "visibility": "public",
+                    "owner": "ada",
+                    "shared": false,
+                    "created": 1700000000,
+                    "changed": 1700000500,
+                    "revision": 3,
+                    "published": true,
+                    "archive": {
+                        "shelf": "B2",
+                        "circle": "staff",
+                        "owner": "grace",
+                        "shared": true,
+                        "stamps": {
+                            "created": 1690000000,
+                            "changed": 1690000000
+                        }
+                    }
+                },
+                "stale": []
+            },
+            "answer": {
+                "surface": "resource_test.journal",
+                "situation": "configure",
+                "label": "Configure the journal",
+                "schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "title": "Configure the journal",
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "title": "Title",
+                            "type": "string",
+                            "x-surface": {
+                                "widget": "text",
+                                "locked": false,
+                                "dependsOn": [],
+                                "refined": false,
+                                "stale": false
+                            }
+                        },
+                        "visibility": {
+                            "title": "Visibility",
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "public",
+                                    "title": "Public"
+                                },
+                                {
+                                    "const": "staff",
+                                    "title": "Staff"
+                                }
+                            ],
+                            "default": "staff",
+                            "x-surface": {
+                                "widget": "select",
+                                "locked": false,
+                                "dependsOn": [],
+                                "refined": false,
+                                "stale": false,
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
+                            }
+                        },
+                        "owner": {
+                            "x-surface": {
+                                "widget": "text",
+                                "locked": false,
+                                "dependsOn": [
+                                    "visibility"
+                                ],
+                                "refined": false,
+                                "stale": false
+                            }
+                        },
+                        "shared": false,
+                        "created": {
+                            "description": "A published journal says when it was created.",
+                            "type": "integer",
+                            "x-surface": {
+                                "widget": "number",
+                                "locked": false,
+                                "dependsOn": [
+                                    "published"
+                                ],
+                                "refined": true,
+                                "stale": false
+                            }
+                        },
+                        "changed": {
+                            "description": "Required once the created time is set.",
+                            "type": "integer",
+                            "minimum": 1700000000,
+                            "x-surface": {
+                                "widget": "number",
+                                "locked": false,
+                                "dependsOn": [
+                                    "created"
+                                ],
+                                "refined": true,
+                                "stale": false
+                            }
+                        },
+                        "revision": {
+                            "title": "Revision",
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "default": 1,
+                            "x-surface": {
+                                "widget": "number",
+                                "locked": false,
+                                "dependsOn": [
+                                    "created"
+                                ],
+                                "refined": false,
+                                "stale": false
+                            }
+                        },
+                        "published": {
+                            "title": "Published",
+                            "type": [
+                                "boolean",
+                                "null"
+                            ],
+                            "default": false,
+                            "x-surface": {
+                                "widget": "checkbox",
+                                "locked": false,
+                                "dependsOn": [],
+                                "refined": false,
+                                "stale": false
+                            }
+                        },
+                        "archive": {
+                            "title": "Archive",
+                            "allOf": [
+                                {
+                                    "$ref": "#/$defs/resource_test.archive"
+                                },
+                                {
+                                    "properties": {
+                                        "owner": {
+                                            "description": "Up to 32 characters for a staff audience.",
+                                            "maxLength": 32,
+                                            "x-surface": {
+                                                "widget": "text",
+                                                "locked": false,
+                                                "dependsOn": [
+                                                    "circle"
+                                                ],
+                                                "refined": true,
+                                                "stale": false
+                                            }
+                                        },
+                                        "shared": {
+                                            "x-surface": {
+                                                "widget": "checkbox",
+                                                "locked": false,
+                                                "dependsOn": [
+                                                    "circle"
+                                                ],
+                                                "refined": false,
+                                                "stale": false
+                                            }
+                                        },
+                                        "stamps": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/$defs/resource_test.timestamps"
+                                                },
+                                                {
+                                                    "properties": {
+                                                        "changed": {
+                                                            "description": "Required once the created time is set.",
+                                                            "type": "integer",
+                                                            "minimum": 1690000000,
+                                                            "x-surface": {
+                                                                "widget": "number",
+                                                                "locked": false,
+                                                                "dependsOn": [
+                                                                    "created"
+                                                                ],
+                                                                "refined": true,
+                                                                "stale": false
+                                                            }
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "changed"
+                                                    ]
+                                                }
+                                            ],
+                                            "x-surface": {
+                                                "widget": "fieldset",
+                                                "locked": false,
+                                                "dependsOn": [],
+                                                "refined": true,
+                                                "stale": false
+                                            }
+                                        }
+                                    }
+                                }
+                            ],
+                            "x-surface": {
+                                "widget": "fieldset",
+                                "locked": false,
+                                "dependsOn": [],
+                                "refined": true,
+                                "stale": false
+                            }
+                        }
+                    },
+                    "unevaluatedProperties": false,
+                    "required": [
+                        "title",
+                        "visibility",
+                        "created",
+                        "changed"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/$defs/resource_test.ownership"
+                        },
+                        {
+                            "$ref": "#/$defs/resource_test.timestamps"
+                        }
+                    ],
+                    "x-surface": {
+                        "doesNotApply": {
+                            "shared": [
+                                "visibility"
+                            ]
+                        }
+                    },
+                    "$defs": {
+                        "resource_test.timestamps": {
+                            "type": "object",
+                            "properties": {
+                                "created": {
+                                    "title": "Created",
+                                    "description": "Seconds since the epoch.",
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
+                                    "minimum": 0,
+                                    "x-surface": {
+                                        "widget": "number",
+                                        "locked": false,
+                                        "dependsOn": [],
+                                        "refined": false,
+                                        "stale": false
+                                    }
+                                },
+                                "changed": {
+                                    "title": "Changed",
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
+                                    "minimum": 0,
+                                    "x-surface": {
+                                        "widget": "number",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "created"
+                                        ],
+                                        "refined": false,
+                                        "stale": false,
+                                        "dynamic": true,
+                                        "declared": true
+                                    }
+                                }
+                            },
+                            "allOf": [
+                                {
+                                    "if": {
+                                        "properties": {
+                                            "created": {
+                                                "not": {
+                                                    "type": "null"
+                                                }
+                                            }
+                                        },
+                                        "required": [
+                                            "created"
+                                        ]
+                                    },
+                                    "then": {
+                                        "properties": {
+                                            "changed": {
+                                                "description": "Required once the created time is set.",
+                                                "type": "integer"
+                                            }
+                                        },
+                                        "required": [
+                                            "changed"
+                                        ]
+                                    },
+                                    "x-surface": {
+                                        "declared": true
+                                    }
+                                }
+                            ]
+                        },
+                        "resource_test.ownership": {
+                            "type": "object",
+                            "properties": {
+                                "owner": {
+                                    "title": "Owner",
+                                    "type": "string",
+                                    "x-surface": {
+                                        "widget": "text",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "audience"
+                                        ],
+                                        "refined": false,
+                                        "stale": false
+                                    }
+                                },
+                                "shared": {
+                                    "title": "Shared with editors",
+                                    "type": [
+                                        "boolean",
+                                        "null"
+                                    ],
+                                    "default": false,
+                                    "x-surface": {
+                                        "widget": "checkbox",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "audience"
+                                        ],
+                                        "refined": false,
+                                        "stale": false
+                                    }
+                                }
+                            },
+                            "required": [
+                                "owner"
+                            ],
+                            "x-surface": {
+                                "ports": {
+                                    "audience": {
+                                        "type": "string",
+                                        "required": true
+                                    }
+                                }
+                            }
+                        },
+                        "resource_test.archive": {
+                            "type": "object",
+                            "properties": {
+                                "shelf": {
+                                    "title": "Shelf",
+                                    "type": "string",
+                                    "x-surface": {
+                                        "widget": "text",
+                                        "locked": false,
+                                        "dependsOn": [],
+                                        "refined": false,
+                                        "stale": false
+                                    }
+                                },
+                                "circle": {
+                                    "title": "Circle",
+                                    "type": "string",
+                                    "oneOf": [
+                                        {
+                                            "const": "public",
+                                            "title": "Public"
+                                        },
+                                        {
+                                            "const": "staff",
+                                            "title": "Staff"
+                                        }
+                                    ],
+                                    "default": "staff",
+                                    "x-surface": {
+                                        "widget": "select",
+                                        "locked": false,
+                                        "dependsOn": [],
+                                        "refined": false,
+                                        "stale": false,
+                                        "emptyOption": {
+                                            "show": false,
+                                            "label": "- Select -"
+                                        }
+                                    }
+                                },
+                                "owner": {
+                                    "x-surface": {
+                                        "widget": "text",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "circle"
+                                        ],
+                                        "refined": false,
+                                        "stale": false,
+                                        "declared": true
+                                    }
+                                },
+                                "shared": {
+                                    "x-surface": {
+                                        "widget": "checkbox",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "circle"
+                                        ],
+                                        "refined": false,
+                                        "stale": false,
+                                        "enumerated": true
+                                    }
+                                },
+                                "stamps": {
+                                    "title": "Archive stamps",
+                                    "$ref": "#/$defs/resource_test.timestamps",
+                                    "unevaluatedProperties": false,
+                                    "x-surface": {
+                                        "widget": "fieldset",
+                                        "locked": false,
+                                        "dependsOn": [],
+                                        "refined": false,
+                                        "stale": false
+                                    }
+                                }
+                            },
+                            "unevaluatedProperties": false,
+                            "required": [
+                                "shelf",
+                                "circle"
+                            ],
+                            "allOf": [
+                                {
+                                    "$ref": "#/$defs/resource_test.ownership"
+                                },
+                                {
+                                    "if": {
+                                        "properties": {
+                                            "circle": {
+                                                "const": "staff"
+                                            }
+                                        },
+                                        "required": [
+                                            "circle"
+                                        ]
+                                    },
+                                    "then": {
+                                        "properties": {
+                                            "owner": {
+                                                "description": "Up to 32 characters for a staff audience.",
+                                                "maxLength": 32
+                                            }
+                                        }
+                                    },
+                                    "x-surface": {
+                                        "declared": true
+                                    }
+                                },
+                                {
+                                    "if": {
+                                        "properties": {
+                                            "circle": {
+                                                "const": "public"
+                                            }
+                                        },
+                                        "required": [
+                                            "circle"
+                                        ]
+                                    },
+                                    "then": {
+                                        "properties": {
+                                            "shared": false
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                },
+                "values": {
+                    "title": "Field notes",
+                    "visibility": "public",
+                    "owner": "ada",
+                    "created": 1700000000,
+                    "changed": 1700000500,
+                    "revision": 3,
+                    "published": true,
+                    "archive": {
+                        "shelf": "B2",
+                        "circle": "staff",
+                        "owner": "grace",
+                        "shared": true,
+                        "stamps": {
+                            "created": 1690000000,
+                            "changed": 1690000000
+                        }
+                    }
+                },
+                "stale": [],
+                "discarded": []
+            }
+        },
+        {
+            "changes": [
+                {
+                    "path": "visibility",
+                    "value": "staff"
+                }
+            ],
+            "sent": {
+                "values": {
+                    "title": "Field notes",
+                    "visibility": "staff",
+                    "owner": "ada",
+                    "created": 1700000000,
+                    "changed": 1700000500,
+                    "revision": 3,
+                    "published": true,
+                    "archive": {
+                        "shelf": "B2",
+                        "circle": "staff",
+                        "owner": "grace",
+                        "shared": true,
+                        "stamps": {
+                            "created": 1690000000,
+                            "changed": 1690000000
+                        }
+                    }
+                },
+                "stale": []
+            },
+            "answer": {
+                "surface": "resource_test.journal",
+                "situation": "configure",
+                "label": "Configure the journal",
+                "schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "title": "Configure the journal",
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "title": "Title",
+                            "type": "string",
+                            "x-surface": {
+                                "widget": "text",
+                                "locked": false,
+                                "dependsOn": [],
+                                "refined": false,
+                                "stale": false
+                            }
+                        },
+                        "visibility": {
+                            "title": "Visibility",
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "public",
+                                    "title": "Public"
+                                },
+                                {
+                                    "const": "staff",
+                                    "title": "Staff"
+                                }
+                            ],
+                            "default": "staff",
+                            "x-surface": {
+                                "widget": "select",
+                                "locked": false,
+                                "dependsOn": [],
+                                "refined": false,
+                                "stale": false,
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
+                            }
+                        },
+                        "owner": {
+                            "description": "Up to 32 characters for a staff audience.",
+                            "maxLength": 32,
+                            "x-surface": {
+                                "widget": "text",
+                                "locked": false,
+                                "dependsOn": [
+                                    "visibility"
+                                ],
+                                "refined": true,
+                                "stale": false
+                            }
+                        },
+                        "shared": {
+                            "x-surface": {
+                                "widget": "checkbox",
+                                "locked": false,
+                                "dependsOn": [
+                                    "visibility"
+                                ],
+                                "refined": false,
+                                "stale": false
+                            }
+                        },
+                        "created": {
+                            "description": "A published journal says when it was created.",
+                            "type": "integer",
+                            "x-surface": {
+                                "widget": "number",
+                                "locked": false,
+                                "dependsOn": [
+                                    "published"
+                                ],
+                                "refined": true,
+                                "stale": false
+                            }
+                        },
+                        "changed": {
+                            "description": "Required once the created time is set.",
+                            "type": "integer",
+                            "minimum": 1700000000,
+                            "x-surface": {
+                                "widget": "number",
+                                "locked": false,
+                                "dependsOn": [
+                                    "created"
+                                ],
+                                "refined": true,
+                                "stale": false
+                            }
+                        },
+                        "revision": {
+                            "title": "Revision",
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "default": 1,
+                            "x-surface": {
+                                "widget": "number",
+                                "locked": false,
+                                "dependsOn": [
+                                    "created"
+                                ],
+                                "refined": false,
+                                "stale": false
+                            }
+                        },
+                        "published": {
+                            "title": "Published",
+                            "type": [
+                                "boolean",
+                                "null"
+                            ],
+                            "default": false,
+                            "x-surface": {
+                                "widget": "checkbox",
+                                "locked": false,
+                                "dependsOn": [],
+                                "refined": false,
+                                "stale": false
+                            }
+                        },
+                        "archive": {
+                            "title": "Archive",
+                            "allOf": [
+                                {
+                                    "$ref": "#/$defs/resource_test.archive"
+                                },
+                                {
+                                    "properties": {
+                                        "owner": {
+                                            "description": "Up to 32 characters for a staff audience.",
+                                            "maxLength": 32,
+                                            "x-surface": {
+                                                "widget": "text",
+                                                "locked": false,
+                                                "dependsOn": [
+                                                    "circle"
+                                                ],
+                                                "refined": true,
+                                                "stale": false
+                                            }
+                                        },
+                                        "shared": {
+                                            "x-surface": {
+                                                "widget": "checkbox",
+                                                "locked": false,
+                                                "dependsOn": [
+                                                    "circle"
+                                                ],
+                                                "refined": false,
+                                                "stale": false
+                                            }
+                                        },
+                                        "stamps": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/$defs/resource_test.timestamps"
+                                                },
+                                                {
+                                                    "properties": {
+                                                        "changed": {
+                                                            "description": "Required once the created time is set.",
+                                                            "type": "integer",
+                                                            "minimum": 1690000000,
+                                                            "x-surface": {
+                                                                "widget": "number",
+                                                                "locked": false,
+                                                                "dependsOn": [
+                                                                    "created"
+                                                                ],
+                                                                "refined": true,
+                                                                "stale": false
+                                                            }
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "changed"
+                                                    ]
+                                                }
+                                            ],
+                                            "x-surface": {
+                                                "widget": "fieldset",
+                                                "locked": false,
+                                                "dependsOn": [],
+                                                "refined": true,
+                                                "stale": false
+                                            }
+                                        }
+                                    }
+                                }
+                            ],
+                            "x-surface": {
+                                "widget": "fieldset",
+                                "locked": false,
+                                "dependsOn": [],
+                                "refined": true,
+                                "stale": false
+                            }
+                        }
+                    },
+                    "unevaluatedProperties": false,
+                    "required": [
+                        "title",
+                        "visibility",
+                        "created",
+                        "changed"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/$defs/resource_test.ownership"
+                        },
+                        {
+                            "$ref": "#/$defs/resource_test.timestamps"
+                        }
+                    ],
+                    "$defs": {
+                        "resource_test.timestamps": {
+                            "type": "object",
+                            "properties": {
+                                "created": {
+                                    "title": "Created",
+                                    "description": "Seconds since the epoch.",
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
+                                    "minimum": 0,
+                                    "x-surface": {
+                                        "widget": "number",
+                                        "locked": false,
+                                        "dependsOn": [],
+                                        "refined": false,
+                                        "stale": false
+                                    }
+                                },
+                                "changed": {
+                                    "title": "Changed",
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
+                                    "minimum": 0,
+                                    "x-surface": {
+                                        "widget": "number",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "created"
+                                        ],
+                                        "refined": false,
+                                        "stale": false,
+                                        "dynamic": true,
+                                        "declared": true
+                                    }
+                                }
+                            },
+                            "allOf": [
+                                {
+                                    "if": {
+                                        "properties": {
+                                            "created": {
+                                                "not": {
+                                                    "type": "null"
+                                                }
+                                            }
+                                        },
+                                        "required": [
+                                            "created"
+                                        ]
+                                    },
+                                    "then": {
+                                        "properties": {
+                                            "changed": {
+                                                "description": "Required once the created time is set.",
+                                                "type": "integer"
+                                            }
+                                        },
+                                        "required": [
+                                            "changed"
+                                        ]
+                                    },
+                                    "x-surface": {
+                                        "declared": true
+                                    }
+                                }
+                            ]
+                        },
+                        "resource_test.ownership": {
+                            "type": "object",
+                            "properties": {
+                                "owner": {
+                                    "title": "Owner",
+                                    "type": "string",
+                                    "x-surface": {
+                                        "widget": "text",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "audience"
+                                        ],
+                                        "refined": false,
+                                        "stale": false
+                                    }
+                                },
+                                "shared": {
+                                    "title": "Shared with editors",
+                                    "type": [
+                                        "boolean",
+                                        "null"
+                                    ],
+                                    "default": false,
+                                    "x-surface": {
+                                        "widget": "checkbox",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "audience"
+                                        ],
+                                        "refined": false,
+                                        "stale": false
+                                    }
+                                }
+                            },
+                            "required": [
+                                "owner"
+                            ],
+                            "x-surface": {
+                                "ports": {
+                                    "audience": {
+                                        "type": "string",
+                                        "required": true
+                                    }
+                                }
+                            }
+                        },
+                        "resource_test.archive": {
+                            "type": "object",
+                            "properties": {
+                                "shelf": {
+                                    "title": "Shelf",
+                                    "type": "string",
+                                    "x-surface": {
+                                        "widget": "text",
+                                        "locked": false,
+                                        "dependsOn": [],
+                                        "refined": false,
+                                        "stale": false
+                                    }
+                                },
+                                "circle": {
+                                    "title": "Circle",
+                                    "type": "string",
+                                    "oneOf": [
+                                        {
+                                            "const": "public",
+                                            "title": "Public"
+                                        },
+                                        {
+                                            "const": "staff",
+                                            "title": "Staff"
+                                        }
+                                    ],
+                                    "default": "staff",
+                                    "x-surface": {
+                                        "widget": "select",
+                                        "locked": false,
+                                        "dependsOn": [],
+                                        "refined": false,
+                                        "stale": false,
+                                        "emptyOption": {
+                                            "show": false,
+                                            "label": "- Select -"
+                                        }
+                                    }
+                                },
+                                "owner": {
+                                    "x-surface": {
+                                        "widget": "text",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "circle"
+                                        ],
+                                        "refined": false,
+                                        "stale": false,
+                                        "declared": true
+                                    }
+                                },
+                                "shared": {
+                                    "x-surface": {
+                                        "widget": "checkbox",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "circle"
+                                        ],
+                                        "refined": false,
+                                        "stale": false,
+                                        "enumerated": true
+                                    }
+                                },
+                                "stamps": {
+                                    "title": "Archive stamps",
+                                    "$ref": "#/$defs/resource_test.timestamps",
+                                    "unevaluatedProperties": false,
+                                    "x-surface": {
+                                        "widget": "fieldset",
+                                        "locked": false,
+                                        "dependsOn": [],
+                                        "refined": false,
+                                        "stale": false
+                                    }
+                                }
+                            },
+                            "unevaluatedProperties": false,
+                            "required": [
+                                "shelf",
+                                "circle"
+                            ],
+                            "allOf": [
+                                {
+                                    "$ref": "#/$defs/resource_test.ownership"
+                                },
+                                {
+                                    "if": {
+                                        "properties": {
+                                            "circle": {
+                                                "const": "staff"
+                                            }
+                                        },
+                                        "required": [
+                                            "circle"
+                                        ]
+                                    },
+                                    "then": {
+                                        "properties": {
+                                            "owner": {
+                                                "description": "Up to 32 characters for a staff audience.",
+                                                "maxLength": 32
+                                            }
+                                        }
+                                    },
+                                    "x-surface": {
+                                        "declared": true
+                                    }
+                                },
+                                {
+                                    "if": {
+                                        "properties": {
+                                            "circle": {
+                                                "const": "public"
+                                            }
+                                        },
+                                        "required": [
+                                            "circle"
+                                        ]
+                                    },
+                                    "then": {
+                                        "properties": {
+                                            "shared": false
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                },
+                "values": {
+                    "title": "Field notes",
+                    "visibility": "staff",
+                    "owner": "ada",
+                    "shared": false,
+                    "created": 1700000000,
+                    "changed": 1700000500,
+                    "revision": 3,
+                    "published": true,
+                    "archive": {
+                        "shelf": "B2",
+                        "circle": "staff",
+                        "owner": "grace",
+                        "shared": true,
+                        "stamps": {
+                            "created": 1690000000,
+                            "changed": 1690000000
+                        }
+                    }
+                },
+                "stale": [],
+                "discarded": []
+            }
+        },
+        {
+            "changes": [
+                {
+                    "path": "created",
+                    "value": 1800000000
+                }
+            ],
+            "sent": {
+                "values": {
+                    "title": "Field notes",
+                    "visibility": "staff",
+                    "owner": "ada",
+                    "shared": false,
+                    "created": 1800000000,
+                    "changed": 1700000500,
+                    "revision": 3,
+                    "published": true,
+                    "archive": {
+                        "shelf": "B2",
+                        "circle": "staff",
+                        "owner": "grace",
+                        "shared": true,
+                        "stamps": {
+                            "created": 1690000000,
+                            "changed": 1690000000
+                        }
+                    }
+                },
+                "stale": []
+            },
+            "answer": {
+                "surface": "resource_test.journal",
+                "situation": "configure",
+                "label": "Configure the journal",
+                "schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "title": "Configure the journal",
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "title": "Title",
+                            "type": "string",
+                            "x-surface": {
+                                "widget": "text",
+                                "locked": false,
+                                "dependsOn": [],
+                                "refined": false,
+                                "stale": false
+                            }
+                        },
+                        "visibility": {
+                            "title": "Visibility",
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "public",
+                                    "title": "Public"
+                                },
+                                {
+                                    "const": "staff",
+                                    "title": "Staff"
+                                }
+                            ],
+                            "default": "staff",
+                            "x-surface": {
+                                "widget": "select",
+                                "locked": false,
+                                "dependsOn": [],
+                                "refined": false,
+                                "stale": false,
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
+                            }
+                        },
+                        "owner": {
+                            "description": "Up to 32 characters for a staff audience.",
+                            "maxLength": 32,
+                            "x-surface": {
+                                "widget": "text",
+                                "locked": false,
+                                "dependsOn": [
+                                    "visibility"
+                                ],
+                                "refined": true,
+                                "stale": false
+                            }
+                        },
+                        "shared": {
+                            "x-surface": {
+                                "widget": "checkbox",
+                                "locked": false,
+                                "dependsOn": [
+                                    "visibility"
+                                ],
+                                "refined": false,
+                                "stale": false
+                            }
+                        },
+                        "created": {
+                            "description": "A published journal says when it was created.",
+                            "type": "integer",
+                            "x-surface": {
+                                "widget": "number",
+                                "locked": false,
+                                "dependsOn": [
+                                    "published"
+                                ],
+                                "refined": true,
+                                "stale": false
+                            }
+                        },
+                        "changed": {
+                            "description": "Required once the created time is set.",
+                            "type": "integer",
+                            "minimum": 1800000000,
+                            "x-surface": {
+                                "widget": "number",
+                                "locked": false,
+                                "dependsOn": [
+                                    "created"
+                                ],
+                                "refined": true,
+                                "stale": false
+                            }
+                        },
+                        "revision": {
+                            "title": "Revision",
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "default": 1,
+                            "x-surface": {
+                                "widget": "number",
+                                "locked": false,
+                                "dependsOn": [
+                                    "created"
+                                ],
+                                "refined": false,
+                                "stale": false
+                            }
+                        },
+                        "published": {
+                            "title": "Published",
+                            "type": [
+                                "boolean",
+                                "null"
+                            ],
+                            "default": false,
+                            "x-surface": {
+                                "widget": "checkbox",
+                                "locked": false,
+                                "dependsOn": [],
+                                "refined": false,
+                                "stale": false
+                            }
+                        },
+                        "archive": {
+                            "title": "Archive",
+                            "allOf": [
+                                {
+                                    "$ref": "#/$defs/resource_test.archive"
+                                },
+                                {
+                                    "properties": {
+                                        "owner": {
+                                            "description": "Up to 32 characters for a staff audience.",
+                                            "maxLength": 32,
+                                            "x-surface": {
+                                                "widget": "text",
+                                                "locked": false,
+                                                "dependsOn": [
+                                                    "circle"
+                                                ],
+                                                "refined": true,
+                                                "stale": false
+                                            }
+                                        },
+                                        "shared": {
+                                            "x-surface": {
+                                                "widget": "checkbox",
+                                                "locked": false,
+                                                "dependsOn": [
+                                                    "circle"
+                                                ],
+                                                "refined": false,
+                                                "stale": false
+                                            }
+                                        },
+                                        "stamps": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/$defs/resource_test.timestamps"
+                                                },
+                                                {
+                                                    "properties": {
+                                                        "changed": {
+                                                            "description": "Required once the created time is set.",
+                                                            "type": "integer",
+                                                            "minimum": 1690000000,
+                                                            "x-surface": {
+                                                                "widget": "number",
+                                                                "locked": false,
+                                                                "dependsOn": [
+                                                                    "created"
+                                                                ],
+                                                                "refined": true,
+                                                                "stale": false
+                                                            }
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "changed"
+                                                    ]
+                                                }
+                                            ],
+                                            "x-surface": {
+                                                "widget": "fieldset",
+                                                "locked": false,
+                                                "dependsOn": [],
+                                                "refined": true,
+                                                "stale": false
+                                            }
+                                        }
+                                    }
+                                }
+                            ],
+                            "x-surface": {
+                                "widget": "fieldset",
+                                "locked": false,
+                                "dependsOn": [],
+                                "refined": true,
+                                "stale": false
+                            }
+                        }
+                    },
+                    "unevaluatedProperties": false,
+                    "required": [
+                        "title",
+                        "visibility",
+                        "created",
+                        "changed"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/$defs/resource_test.ownership"
+                        },
+                        {
+                            "$ref": "#/$defs/resource_test.timestamps"
+                        }
+                    ],
+                    "$defs": {
+                        "resource_test.timestamps": {
+                            "type": "object",
+                            "properties": {
+                                "created": {
+                                    "title": "Created",
+                                    "description": "Seconds since the epoch.",
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
+                                    "minimum": 0,
+                                    "x-surface": {
+                                        "widget": "number",
+                                        "locked": false,
+                                        "dependsOn": [],
+                                        "refined": false,
+                                        "stale": false
+                                    }
+                                },
+                                "changed": {
+                                    "title": "Changed",
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
+                                    "minimum": 0,
+                                    "x-surface": {
+                                        "widget": "number",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "created"
+                                        ],
+                                        "refined": false,
+                                        "stale": false,
+                                        "dynamic": true,
+                                        "declared": true
+                                    }
+                                }
+                            },
+                            "allOf": [
+                                {
+                                    "if": {
+                                        "properties": {
+                                            "created": {
+                                                "not": {
+                                                    "type": "null"
+                                                }
+                                            }
+                                        },
+                                        "required": [
+                                            "created"
+                                        ]
+                                    },
+                                    "then": {
+                                        "properties": {
+                                            "changed": {
+                                                "description": "Required once the created time is set.",
+                                                "type": "integer"
+                                            }
+                                        },
+                                        "required": [
+                                            "changed"
+                                        ]
+                                    },
+                                    "x-surface": {
+                                        "declared": true
+                                    }
+                                }
+                            ]
+                        },
+                        "resource_test.ownership": {
+                            "type": "object",
+                            "properties": {
+                                "owner": {
+                                    "title": "Owner",
+                                    "type": "string",
+                                    "x-surface": {
+                                        "widget": "text",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "audience"
+                                        ],
+                                        "refined": false,
+                                        "stale": false
+                                    }
+                                },
+                                "shared": {
+                                    "title": "Shared with editors",
+                                    "type": [
+                                        "boolean",
+                                        "null"
+                                    ],
+                                    "default": false,
+                                    "x-surface": {
+                                        "widget": "checkbox",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "audience"
+                                        ],
+                                        "refined": false,
+                                        "stale": false
+                                    }
+                                }
+                            },
+                            "required": [
+                                "owner"
+                            ],
+                            "x-surface": {
+                                "ports": {
+                                    "audience": {
+                                        "type": "string",
+                                        "required": true
+                                    }
+                                }
+                            }
+                        },
+                        "resource_test.archive": {
+                            "type": "object",
+                            "properties": {
+                                "shelf": {
+                                    "title": "Shelf",
+                                    "type": "string",
+                                    "x-surface": {
+                                        "widget": "text",
+                                        "locked": false,
+                                        "dependsOn": [],
+                                        "refined": false,
+                                        "stale": false
+                                    }
+                                },
+                                "circle": {
+                                    "title": "Circle",
+                                    "type": "string",
+                                    "oneOf": [
+                                        {
+                                            "const": "public",
+                                            "title": "Public"
+                                        },
+                                        {
+                                            "const": "staff",
+                                            "title": "Staff"
+                                        }
+                                    ],
+                                    "default": "staff",
+                                    "x-surface": {
+                                        "widget": "select",
+                                        "locked": false,
+                                        "dependsOn": [],
+                                        "refined": false,
+                                        "stale": false,
+                                        "emptyOption": {
+                                            "show": false,
+                                            "label": "- Select -"
+                                        }
+                                    }
+                                },
+                                "owner": {
+                                    "x-surface": {
+                                        "widget": "text",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "circle"
+                                        ],
+                                        "refined": false,
+                                        "stale": false,
+                                        "declared": true
+                                    }
+                                },
+                                "shared": {
+                                    "x-surface": {
+                                        "widget": "checkbox",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "circle"
+                                        ],
+                                        "refined": false,
+                                        "stale": false,
+                                        "enumerated": true
+                                    }
+                                },
+                                "stamps": {
+                                    "title": "Archive stamps",
+                                    "$ref": "#/$defs/resource_test.timestamps",
+                                    "unevaluatedProperties": false,
+                                    "x-surface": {
+                                        "widget": "fieldset",
+                                        "locked": false,
+                                        "dependsOn": [],
+                                        "refined": false,
+                                        "stale": false
+                                    }
+                                }
+                            },
+                            "unevaluatedProperties": false,
+                            "required": [
+                                "shelf",
+                                "circle"
+                            ],
+                            "allOf": [
+                                {
+                                    "$ref": "#/$defs/resource_test.ownership"
+                                },
+                                {
+                                    "if": {
+                                        "properties": {
+                                            "circle": {
+                                                "const": "staff"
+                                            }
+                                        },
+                                        "required": [
+                                            "circle"
+                                        ]
+                                    },
+                                    "then": {
+                                        "properties": {
+                                            "owner": {
+                                                "description": "Up to 32 characters for a staff audience.",
+                                                "maxLength": 32
+                                            }
+                                        }
+                                    },
+                                    "x-surface": {
+                                        "declared": true
+                                    }
+                                },
+                                {
+                                    "if": {
+                                        "properties": {
+                                            "circle": {
+                                                "const": "public"
+                                            }
+                                        },
+                                        "required": [
+                                            "circle"
+                                        ]
+                                    },
+                                    "then": {
+                                        "properties": {
+                                            "shared": false
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                },
+                "values": {
+                    "title": "Field notes",
+                    "visibility": "staff",
+                    "owner": "ada",
+                    "shared": false,
+                    "created": 1800000000,
+                    "changed": 1700000500,
+                    "revision": 3,
+                    "published": true,
+                    "archive": {
+                        "shelf": "B2",
+                        "circle": "staff",
+                        "owner": "grace",
+                        "shared": true,
+                        "stamps": {
+                            "created": 1690000000,
+                            "changed": 1690000000
+                        }
+                    }
+                },
+                "stale": [],
+                "discarded": []
+            }
+        }
+    ]
+}

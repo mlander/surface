@@ -201,9 +201,10 @@ same two keys.
 
 Each frame (the top level, an attached part, a slot's variant) is an
 object with `properties` in declaration order, `required`, and
-`additionalProperties: false`; an attached part and a slot's variant are
-each written once, as a def under `$defs`, and referred to
-([reusable subschemas](#reusable-subschemas)).
+`additionalProperties: false` (`unevaluatedProperties: false`, for a
+frame that [mixes structures in](#a-mixed-in-structure-is-composed)); an
+attached part and a slot's variant are each written once, as a def
+under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 
 | The declaration says | The schema says |
 | --- | --- |
@@ -220,6 +221,7 @@ each written once, as a def under `$defs`, and referred to
 | any list of allowed values | `oneOf: [{const, title, description?}]`, read from the options service, so the labels travel; never `enum`. An optional key adds an untitled `{const: null}`, and so does a list of no values, which a required key's type then refuses too: nothing is allowed. |
 | a map | a nested object |
 | an attached part | a reference to its def under `$defs`, beside its label ([reusable subschemas](#reusable-subschemas)) |
+| a structure mixed in, `with()` | a reference to its def in the frame's `allOf`, beside the frame's own `properties` (each member in its place: `true`, what differs, or `false`), the frame closed with `unevaluatedProperties: false` ([below](#a-mixed-in-structure-is-composed)) |
 | a list | `type: array`, `items` |
 | a collection | `type: array`, `items` a reference to the child's def, narrowed by composition only where every item differs from it (a key the child's operation locked, a locked list), `minItems` and `maxItems` from its Count as the parent's refiners left it, and `x-surface.list: true` ([below](#collections)) |
 | a locked key | `readOnly: true` and `const` of the value the operation knows |
@@ -508,6 +510,82 @@ alter's mount, is a site inside `third_party_settings` (`{"title":
 {"reads": {"capacity": "capacity"}, ...}}`); its stewards read a number,
 so nothing about them is stated ahead, and the group stays `dynamic` on
 the capacity.
+
+### A mixed-in structure is composed
+
+A structure [mixed in](resources.md#mixins) is written once, as a def,
+like any child, from the structure built by itself, and the owner's
+frame composes it with its own keys: `allOf` of a reference to each
+structure's def and the frame's own `properties`, closed with
+`unevaluatedProperties: false` in place of `additionalProperties`. Each
+member keeps its place among the owner's properties, so the order is
+the declaration's: `true` where the def says all there is, only what
+differs where the owner narrows it here (a lock, a context, the values
+of this document, what reads a port at the owner's key), and `false`
+where it does not apply to these values. What the def requires and the
+conditionals it states are said there, not again; what depends on a port
+is stated on the owner's `allOf`, as at a site. The journal's full
+schema, abbreviated:
+
+```json
+"properties": {
+  "title": {...}, "visibility": {...},
+  "owner": {"x-surface": {"locked": false, "dependsOn": ["visibility"], "declared": true}},
+  "shared": {"x-surface": {"locked": false, "dependsOn": ["visibility"], "enumerated": true}},
+  "created": {"x-surface": {"locked": false, "dependsOn": ["published"], "declared": true}},
+  "changed": true,
+  "revision": {...}, "published": {...}, "archive": {"title": "Archive", "$ref": "#/$defs/resource_test.archive", ...}
+},
+"unevaluatedProperties": false,
+"required": ["title", "visibility"],
+"allOf": [
+  {"$ref": "#/$defs/resource_test.ownership"},
+  {"$ref": "#/$defs/resource_test.timestamps"},
+  {"if": {"properties": {"visibility": {"const": "staff"}}, "required": ["visibility"]},
+   "then": {"properties": {"owner": {"description": "Up to 32 characters for a staff audience.", "maxLength": 32}}},
+   "x-surface": {"declared": true}},
+  {"if": {"properties": {"visibility": {"const": "public"}}, "required": ["visibility"]},
+   "then": {"properties": {"shared": false}}},
+  ...the journal's own two rules...
+],
+"$defs": {
+  "resource_test.timestamps": {"type": "object",
+    "properties": {"created": {...}, "changed": {..., "x-surface": {"dependsOn": ["created"], "dynamic": true, "declared": true}}},
+    "allOf": [{"if": {"properties": {"created": {"not": {"type": "null"}}}, "required": ["created"]},
+               "then": {"properties": {"changed": {"description": "Required once the created time is set.", "type": "integer"}}, "required": ["changed"]},
+               "x-surface": {"declared": true}}]},
+  "resource_test.ownership": {"type": "object", "properties": {"owner": {...}, "shared": {...}}, "required": ["owner"],
+    "x-surface": {"ports": {"audience": {"type": "string", "required": true}}}},
+  ...
+}
+```
+
+- **A def may compose in turn.** A structure that mixes another in is
+  written the same way in its own def: `allOf` of a reference to the
+  other's def and its own properties, its members `true` where that def
+  says all there is.
+- **A def mixed in is open.** A closed def (`additionalProperties:
+  false`) would refuse the owner's keys beside it, so in a document that
+  mixes a structure in anywhere its def carries neither keyword, and
+  every other place that uses it closes it, `{"$ref": ...,
+  "unevaluatedProperties": false}`: the archive attaches the timestamps
+  the journal mixes in, and its `stamps` is closed so. A document that
+  only attaches the structure, as the ledger's, writes the closed def it
+  always did.
+- **Inline, the frame is flat.** `SchemaResolver::inline()` and the React
+  app's `inlineSchema()` lay the frame over each def, each member in its
+  place (`true` is the def's, a narrowing laid over it, `false` leaves
+  it out), the defs' `required` and conditionals joined to the frame's,
+  and close it with `additionalProperties: false`: what the pipeline
+  reads, and what the page draws and narrows from.
+- **The tool lists it flat.** The tool bridge converts the built data
+  surface, where the members are the owner's keys, so `values` is flat;
+  the Tool API writes its schema from typed definitions and has no
+  `allOf` to carry.
+- **Access.** A member its structure's access locked is `readOnly`, with
+  the stored value as `const` in the schema for these answers and none in
+  the full schema; one it omitted is not there, and neither is the def
+  when every member is gone.
 
 ### Exact where it can be
 

@@ -251,8 +251,9 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         // widget that knows better than to.
         DefinitionMetadata::isSecret($definition) => NULL,
         // A locked identity key holds what the operation knows, its
-        // default; a locked child, what is stored, as given.
-        $definitions->isLocked($name) && !$definitions->entry($name)?->isNested() => $surface->getDefault($name),
+        // default; a locked child, and a key its access locked, what is
+        // stored, as given.
+        $definitions->isLocked($name) && !$definitions->isHeld($name) && !$definitions->entry($name)?->isNested() => $surface->getDefault($name),
         default => $shown[$name] ?? $surface->getDefault($name),
       };
       if ($slot !== NULL) {

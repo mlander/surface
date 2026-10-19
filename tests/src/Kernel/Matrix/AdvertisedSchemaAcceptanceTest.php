@@ -35,7 +35,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * runtime refiner, a declared rule and a mounted key on example 4,
  * collections on the cellar, keys that do not apply on the bulletin and
  * the notice, every declared rule's condition and effect on the parcel,
- * a structure's ports on the venue and the hall),
+ * a structure's ports on the venue and the hall, structures mixed in on
+ * the journal and attached on the ledger),
  * a table of documents the pipeline accepts and documents it refuses.
  * Each row is asserted three times: against the pipeline (accept(), then
  * validate() over what is stored), against the full
@@ -364,6 +365,12 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'another variant\'s key' => [['pricing' => 'free', 'ticket' => ['price' => 5]], FALSE],
       'an unknown key inside the part' => [['contact' => ['email' => 'a@example.com', 'fax' => '1']], FALSE],
       'format is advisory: not an address' => [['contact' => ['email' => 'nobody']], FALSE, TRUE, TRUE],
+      // A child sent null is each of its keys sent null: the optional ones
+      // cleared, a required one refused in its own words.
+      'the contact null, its email required' => [['contact' => NULL], FALSE],
+      'the contact as a form posts nothing' => [['contact' => ''], FALSE],
+      'free, the ticket null clears its note' => [['ticket' => NULL], TRUE],
+      'paid, the ticket null, its price required' => [['pricing' => 'paid', 'ticket' => NULL], FALSE],
     ]);
   }
 
@@ -527,6 +534,48 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'overflow with no aisle, banquet, three hundred guests' => [$banquet(300) + $mount(['aisle' => 'none']), TRUE],
       'overflow with no aisle, banquet, four hundred guests' => [$banquet(400) + $mount(['aisle' => 'none']), FALSE],
       'standing overflow, the aisle left out' => [['style' => 'standing'] + $mount(['aisle' => NULL]), TRUE],
+    ]);
+  }
+
+  /**
+   * The journal and the ledger: one structure mixed in, and attached.
+   *
+   * The journal's frame composes the defs of the structures it mixes in
+   * with its own keys under `unevaluatedProperties`; the timestamps' def
+   * is open there and closed where the archive attaches it, and closed in
+   * the ledger, which only attaches it. Changed is at least created, a
+   * coded refiner watching a number: `dynamic` in the full schema, exact
+   * in the schema for these answers.
+   *
+   * @see docs/resources.md#mixins
+   */
+  public function testMixins(): void {
+    $this->installConfig(['data_surface_resource_test']);
+    $this->setUpCurrentUser([], ['administer site configuration']);
+    $unseen = ['published' => FALSE, 'created' => NULL, 'changed' => NULL];
+    $long = ['visibility' => 'public', 'owner' => str_repeat('a', 40), 'shared' => NULL];
+    $this->assertTable('resource_test.journal', $this->build('resource_test.journal'), $this->stored('resource_test.journal'), [
+      'as stored' => [[], TRUE],
+      'public, a long owner, shared sent nothing' => [$long, TRUE],
+      'public, shared' => [['visibility' => 'public', 'shared' => TRUE], FALSE],
+      'staff, a long owner' => [['owner' => str_repeat('a', 40)], FALSE],
+      'changed before created' => [['changed' => 1600000000], FALSE, TRUE, FALSE],
+      'created, the changed time cleared' => [['changed' => NULL], FALSE],
+      'never created, the third revision' => [$unseen, FALSE],
+      'never created, the first revision' => [['revision' => 1] + $unseen, TRUE],
+      'published, never created' => [['revision' => 1, 'published' => TRUE] + $unseen, FALSE],
+      'an unknown key beside the members' => [['fax' => '1'], FALSE],
+      'the archive public, shared as stored' => [['archive' => ['circle' => 'public', 'shared' => TRUE]], TRUE],
+      'the archive public, shared changed' => [['archive' => ['circle' => 'public', 'shared' => FALSE]], FALSE],
+      'the archive\'s stamps null clears them' => [['archive' => ['stamps' => NULL]], TRUE],
+      'the archive\'s owner null' => [['archive' => ['owner' => NULL]], FALSE],
+    ]);
+    $this->assertTable('resource_test.ledger', $this->build('resource_test.ledger'), $this->stored('resource_test.ledger'), [
+      'as stored' => [[], TRUE],
+      'the stamps null clears them' => [['stamps' => NULL], TRUE],
+      'changed before created' => [['stamps' => ['created' => 5, 'changed' => 4]], FALSE, TRUE, FALSE],
+      'created, the changed time cleared' => [['stamps' => ['created' => 5, 'changed' => NULL]], FALSE],
+      'an unknown key in the stamps' => [['stamps' => ['fax' => 1]], FALSE],
     ]);
   }
 

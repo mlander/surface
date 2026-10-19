@@ -81,3 +81,15 @@ data_surface_resource_test.venue:
     _data_surface_operation: 'configure'
   requirements:
     _data_surface_operation_access: 'TRUE'
+
+# The journal's one operation, served by the generic form: two structures
+# mixed in, their members drawn as the journal's own keys.
+data_surface_resource_test.journal:
+  path: '/surface-test/journal'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Configure the journal'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Journal\JournalResource'
+    _data_surface_operation: 'configure'
+  requirements:
+    _data_surface_operation_access: 'TRUE'

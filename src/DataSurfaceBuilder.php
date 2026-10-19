@@ -148,6 +148,20 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   protected array $mounted = [];
 
   /**
+   * The locked keys that hold what is stored, not a declared value.
+   *
+   * @var string[]
+   */
+  protected array $held = [];
+
+  /**
+   * The structures mixed in, in order.
+   *
+   * @var \Drupal\data_surface\Mixin[]
+   */
+  protected array $mixins = [];
+
+  /**
    * The wirings refinement edges came from, by target, then dependency.
    *
    * @var array<string, array<string, string>>
@@ -247,6 +261,41 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
     // was asked, and go with the key.
     unset($this->definitions[$name], $this->attachments[$name], $this->slots[$name], $this->lists[$name], $this->refinements[$name], $this->refiners[$name], $this->declaredBy[$name], $this->watchedBy[$name], $this->contributions[$name]);
     $this->locked = array_values(array_diff($this->locked, [$name]));
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function hold(string $name): static {
+    $this->lock($name);
+    if (!in_array($name, $this->held, TRUE)) {
+      $this->held[] = $name;
+    }
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function withdraw(string $name): static {
+    $this->assertMutable();
+    if (isset($this->attachments[$name]) || isset($this->slots[$name]) || isset($this->lists[$name])) {
+      throw new \LogicException(sprintf('The "%s" key holds a child: omit() leaves a child out.', $name));
+    }
+    unset($this->definitions[$name], $this->refinements[$name], $this->refiners[$name], $this->declaredBy[$name], $this->watchedBy[$name], $this->contributions[$name]);
+    $this->locked = array_values(array_diff($this->locked, [$name]));
+    $this->held = array_values(array_diff($this->held, [$name]));
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function addMixin(Mixin $mixin): static {
+    $this->assertMutable();
+    $this->mixins[] = $mixin;
+    $this->cacheability->addCacheableDependency($mixin->structure->child);
     return $this;
   }
 
@@ -639,6 +688,8 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
         watchedBy: $this->watchedBy,
         ports: array_values($this->ports),
         mounted: $this->mounted === [] ? [] : ['third_party_settings' => $this->mounted],
+        mixins: $this->mixins,
+        held: $this->held,
       ),
       $this->cacheability,
       DefinitionMap::fromArrays(definitions: $outputs),

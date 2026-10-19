@@ -207,6 +207,54 @@ interface BlueprintAdditionsInterface {
   public function attachList(string $key, string $child, ?int $min = NULL, ?int $max = NULL): ListDataDefinition;
 
   /**
+   * Mixes a structure in: its members become this blueprint's own keys.
+   *
+   * Where attach() nests a structure under a key, behind the wall, this
+   * merges its members into the owner's keys at this point of the
+   * declaration: stored flat, described by the owner's config schema,
+   * refined in the owner's frame, drawn and accepted as the owner's own.
+   * The structure keeps what makes it reusable: its coded refiners and
+   * declared rules (which narrow only its own members and read only its
+   * members and its ports), its alters, its access class (which locks or
+   * omits its members) and its def, one id however many owners mix it in.
+   * What it reads of the owner it declares as ports
+   * (BlueprintInterface::reads()), which $reads wires to the owner's
+   * keys, as attach() wires them; every port is wired.
+   *
+   * Nest for a thing of its own inside this one (a contact, a ticket);
+   * mix in for shared members that are part of this thing (timestamps,
+   * ownership, publishing flags).
+   *
+   * Owner only: an alter's keys live under its own module's name, so an
+   * alter's call is refused; an alter attaches a structure at its own
+   * mount instead.
+   *
+   * @code
+   * $inputs->with(TimestampsStructure::class);
+   * $inputs->with(OwnershipStructure::class, reads: ['audience' => 'visibility']);
+   * @endcode
+   *
+   * @param string $structure
+   *   The structure's class: an ordinary #[Structure], holding keys and
+   *   maps, no child of its own.
+   * @param array<string, string> $reads
+   *   Its ports, each mapped to the owner's key it reads, by name.
+   *
+   * @return $this
+   *
+   * @throws \LogicException
+   *   For an alter, for outputs, for a class that is no resource or
+   *   structure, for a structure mixed into itself (directly or through
+   *   another), for one holding a child, and when one of its members is a
+   *   key this blueprint, or another structure mixed in, declares already.
+   *   The structure, its access and the wiring are checked when the owner
+   *   is built: see docs/resources.md#mixins.
+   *
+   * @see docs/decisions.md#a-mixin-is-merged-flat
+   */
+  public function with(string $structure, array $reads = []): static;
+
+  /**
    * Offers more values on a key someone else declared, as an alter.
    *
    * The one widening verb, and only of a key whose owner declared a fixed

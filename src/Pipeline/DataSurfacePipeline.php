@@ -424,17 +424,21 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * @param string|null $chosen
    *   The chosen variant of a slot; NULL for an attached child.
    *
-   * @return array|null
-   *   The accepted map, or NULL for input that holds nothing.
+   * @return array
+   *   The accepted map.
    *
    * @throws \Drupal\data_surface\Pipeline\ShapeMismatchException
    *   When the input is not a map.
    * @throws \Drupal\data_surface\Pipeline\VariantMismatchException
    *   When the input carries another variant's keys.
    */
-  protected function acceptChild(Entry $entry, DataSurfaceInterface $child, mixed $input, mixed $fallback, string $path, ?string $chosen): ?array {
+  protected function acceptChild(Entry $entry, DataSurfaceInterface $child, mixed $input, mixed $fallback, string $path, ?string $chosen): array {
     if (!ValueState::isConfigured($input)) {
-      return NULL;
+      // Nothing sent for a child is nothing sent for each of its keys: an
+      // optional one is cleared, a required one is refused in its own
+      // words, and the document stays a map the child's def describes.
+      // Decision: see docs/decisions.md#absent-keeps-null-clears.
+      $input = array_fill_keys($child->getDefinitions()->names(), NULL);
     }
     $input = Coercion::decoded($input, FALSE);
     if (!is_array($input)) {

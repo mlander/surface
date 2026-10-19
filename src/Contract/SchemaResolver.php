@@ -23,7 +23,12 @@ namespace Drupal\data_surface\Contract;
  * - merging takes the later schema's value for every keyword it states,
  *   which is right because a narrowing only narrows, with three
  *   exceptions: `properties` are merged one by one, `required` is the
- *   union, and `allOf` the concatenation.
+ *   union, and `allOf` the concatenation;
+ * - a frame's own `properties` beside a bare reference in its `allOf` is
+ *   a frame that mixes a structure in: the def is laid under the frame,
+ *   each member keeping its place in the frame, and the frame, every key
+ *   now its own, is closed with `additionalProperties` in place of
+ *   `unevaluatedProperties`.
  *
  * A reference that leads back into a def being read is left as it is, so
  * a recursive schema ends. This is data_surface_react's `resolveSchema()`
@@ -50,6 +55,11 @@ final class SchemaResolver {
   public static function resolve(array $schema, array $root, array &$followed = []): array {
     $ancestors = $followed;
     $resolved = [];
+    // A frame that mixes structures in holds its own properties beside a
+    // bare reference to each structure's def in its allOf.
+    // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
+    $frame = is_array($schema['properties'] ?? NULL) || ($schema['properties'] ?? NULL) instanceof \stdClass;
+    $mixed = [];
     foreach ($schema as $keyword => $value) {
       if ($keyword === '$ref' && is_string($value) && ($name = self::defName($value)) !== NULL) {
         $resolved = self::follow($resolved, $name, $value, $root, $ancestors, $followed);
@@ -65,6 +75,13 @@ final class SchemaResolver {
           // A reference beside the narrowing is followed in place; a
           // narrowing is resolved on its own and laid over.
           $name = is_string($entry['$ref'] ?? NULL) ? self::defName($entry['$ref']) : NULL;
+          if ($name !== NULL && count($entry) === 1 && $frame) {
+            // Its members join this frame: what the frame holds besides is
+            // not inside the def, so the def is no ancestor of it.
+            $alone = $ancestors;
+            $mixed[] = self::follow([], $name, $entry['$ref'], $root, $ancestors, $alone);
+            continue;
+          }
           if ($name !== NULL && count($entry) === 1) {
             $resolved = self::follow($resolved, $name, $entry['$ref'], $root, $ancestors, $followed);
             continue;
@@ -79,7 +96,75 @@ final class SchemaResolver {
       }
       $resolved = self::merge($resolved, [$keyword => $value]);
     }
+    foreach (array_reverse($mixed) as $def) {
+      $resolved = self::mixIn($resolved, $def);
+    }
+    if (($resolved['unevaluatedProperties'] ?? NULL) === FALSE && isset($resolved['properties']) && !isset($resolved['$ref'])) {
+      // Every key is in the frame's own properties now, so it closes them.
+      $closed = [];
+      foreach ($resolved as $keyword => $value) {
+        $closed[$keyword === 'unevaluatedProperties' ? 'additionalProperties' : $keyword] = $value;
+      }
+      $resolved = $closed;
+    }
     return $resolved;
+  }
+
+  /**
+   * Lays a frame over the def of a structure it mixes in.
+   *
+   * Each member keeps its place in the frame's properties, the def's
+   * schema for it with what the frame narrows laid over (`true` narrows
+   * nothing; `false`, not applying here, leaves it out, as a flat frame
+   * does); the def's `required` joins the frame's, in the frame's order,
+   * and its conditionals come first, as its rules and refiners run before
+   * the owner's. What the def says of itself as a whole (the ports it
+   * reads) is the structure's, not the frame's.
+   *
+   * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
+   *
+   * @param array $frame
+   *   The frame, resolved.
+   * @param array $def
+   *   The structure's def, resolved.
+   *
+   * @return array
+   *   The frame, the structure's members described in it.
+   */
+  protected static function mixIn(array $frame, array $def): array {
+    $theirs = is_array($def['properties'] ?? NULL) ? $def['properties'] : [];
+    $own = is_array($frame['properties'] ?? NULL) ? $frame['properties'] : [];
+    $properties = [];
+    $ruled = [];
+    foreach ($own as $name => $property) {
+      if ($property === FALSE && is_array($theirs[$name] ?? NULL)) {
+        // Not applying to these values: no property, as a flat frame says.
+        $ruled[] = $name;
+        continue;
+      }
+      $properties[$name] = match (TRUE) {
+        !is_array($theirs[$name] ?? NULL) => $property,
+        $property === TRUE => $theirs[$name],
+        is_array($property) => self::merge($theirs[$name], $property),
+        default => $property,
+      };
+    }
+    $properties += array_diff_key($theirs, array_flip($ruled));
+    $frame['properties'] = $properties;
+    // In the frame's order, as a flat frame lists what it requires.
+    $required = array_diff([...($frame['required'] ?? []), ...($def['required'] ?? [])], $ruled);
+    $required = array_values(array_intersect(array_keys($properties), $required));
+    if ($required !== []) {
+      $frame['required'] = $required;
+    }
+    $conditions = [
+      ...(is_array($def['allOf'] ?? NULL) ? $def['allOf'] : []),
+      ...(is_array($frame['allOf'] ?? NULL) ? $frame['allOf'] : []),
+    ];
+    if ($conditions !== []) {
+      $frame['allOf'] = $conditions;
+    }
+    return $frame;
   }
 
   /**

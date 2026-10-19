@@ -47,6 +47,12 @@ the record of the rework that brought the module to the pattern.
   a name of its own with `$inputs->reads('capacity', 'integer')` and
   wired by the container with `attach(..., reads: ['capacity' =>
   'seats'])`; a live sibling value, never stored by the structure.
+- **Mixin**: a structure whose members are merged into the owner's own
+  keys, `$inputs->with(TimestampsStructure::class, reads: [...])`:
+  stored flat, refined in the owner's frame, emitted as `allOf` of its
+  def and the owner's properties; the owner's only, never an alter's.
+  Nest for a thing of its own, mix in for shared members that are part
+  of this thing (`docs/resources.md#mixins`).
 - **Slot**: a child a sibling key chooses, `attachBy()`.
 - **Variant**: a structure or resource that fills a slot for one value,
   `#[Variant(of:, key:, value:)]`.
@@ -139,7 +145,10 @@ whose keys cannot be listed at all is a `#[RefinesInput]` method on an
 through a port it declares, `reads()`, which `attach(..., reads:)` wires
 to a key of the container's; what depends on a port is stated at the
 site, on the container's `allOf`, never in the structure's def
-(`docs/resources.md#ports`). `attachList()` is a collection: a list of
+(`docs/resources.md#ports`). `with()` mixes a structure in: its
+members are the owner's own keys, its refiners and rules bound in the
+owner's frame on its members and its ports, its access locking or
+omitting its members (`docs/resources.md#mixins`). `attachList()` is a collection: a list of
 child instances, the list (its Count) the parent's, each item the
 child's, its entry a `Collection` (`docs/resources.md#collections`).
 

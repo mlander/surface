@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface\ResourceBuild;
 
+use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
@@ -77,9 +78,11 @@ final class StorageAdapter implements DataSurfaceStorageInterface {
    *   The resource's identity keys, which a routed child learns from the
    *   accepted values when it is committed.
    * @param string[] $omitted
-   *   The keys whose child the build left out for this caller, which the
-   *   resource stores: what is stored under each is handed back to the
-   *   storage untouched, because the caller could not see it.
+   *   The keys the build left out for this caller, which the resource
+   *   stores (a child's, a mixed-in structure's members), a key inside a
+   *   child it stores by its dotted path: what is stored under each is
+   *   handed back to the storage untouched, because the caller could not
+   *   see it.
    */
   public function __construct(
     protected ResourceStorageInterface $storage,
@@ -130,9 +133,11 @@ final class StorageAdapter implements DataSurfaceStorageInterface {
     if ($this->omitted !== []) {
       // Decision: see docs/decisions.md#omitted-is-omitted-both-ways.
       $stored = $this->storage->load($this->context);
-      foreach ($this->omitted as $key) {
-        if (array_key_exists($key, $stored)) {
-          $own[$key] = $stored[$key];
+      foreach ($this->omitted as $path) {
+        $parents = explode('.', $path);
+        $inside = count($parents) === 1 || is_array(NestedArray::getValue($own, array_slice($parents, 0, -1)));
+        if ($inside && NestedArray::keyExists($stored, $parents)) {
+          NestedArray::setValue($own, $parents, NestedArray::getValue($stored, $parents), TRUE);
         }
       }
     }

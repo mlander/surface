@@ -46,14 +46,56 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    *   The module the alter is in, which its keys are mounted under.
    * @param bool $outputs
    *   TRUE when this blueprint describes outputs rather than inputs.
+   * @param array{0: string, 1: string, 2: string[]}|null $mixedIn
+   *   For an alter of a structure mixed into an owner, the structure's
+   *   id, the owner's id and the members the structure brought, which are
+   *   all this alter may name there; NULL for an alter of the owner.
    */
   public function __construct(
     DataSurfaceBuilderInterface $builder,
     TypedDataManagerInterface $typed_data_manager,
     protected readonly string $provider,
     bool $outputs = FALSE,
+    protected readonly ?array $mixedIn = NULL,
   ) {
     parent::__construct($builder, $typed_data_manager, $outputs);
+  }
+
+  /**
+   * Refuses what an alter of a mixed-in structure cannot do in its owner.
+   *
+   * Its alters apply wherever the structure is mixed in, on the
+   * structure's members, which are the owner's keys there. A key it would
+   * mount would be the owner's mount, and a key it names beyond the
+   * structure's members would be the owner's own: neither is the
+   * structure's.
+   *
+   * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
+   *
+   * @param string $verb
+   *   What the alter did, for the message.
+   * @param string|null $key
+   *   The key it named, or NULL for a verb that mounts.
+   *
+   * @throws \LogicException
+   *   When it mounts, or names a key the structure did not bring.
+   */
+  protected function assertWithinMixin(string $verb, ?string $key): void {
+    if ($this->mixedIn === NULL || ($key !== NULL && in_array($key, $this->mixedIn[2], TRUE))) {
+      return;
+    }
+    [$structure, $owner] = $this->mixedIn;
+    throw new \LogicException($key === NULL
+      ? sprintf('The %s alter of %s %s, and %s is mixed into %s. An alter of a mixed-in structure narrows and rewords its members where it is mixed in; what it mounts would be mounted on %s, which is not built.', $this->provider, $structure, $verb, $structure, $owner, $owner)
+      : sprintf('The %s alter of %s %s "%s", which %s does not declare. Mixed into %s, it names the structure\'s members alone.', $this->provider, $structure, $verb, $key, $structure, $owner));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL): static {
+    $this->assertWithinMixin('rewords', $key);
+    return parent::describe($key, $label, $description, $after);
   }
 
   /**
@@ -62,6 +104,7 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    * Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
    */
   public function attach(string $key, string $child, array $reads = []): MapDataDefinition {
+    $this->assertWithinMixin('attaches ' . $child, NULL);
     static::assertReads($key, $reads);
     $mount = 'third_party_settings.' . $this->provider;
     if ($this->outputs) {
@@ -104,6 +147,20 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
   }
 
   /**
+   * {@inheritdoc}
+   *
+   * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
+   */
+  public function with(string $structure, array $reads = []): static {
+    throw new \LogicException(sprintf(
+      'The %s alter mixes %s in. Only an owner mixes a structure in: an alter\'s keys live under its own module\'s name, and a mixed-in structure\'s members would be the owner\'s. Attach it at the alter\'s own mount, third_party_settings.%s, instead.',
+      $this->provider,
+      $structure,
+      $this->provider,
+    ));
+  }
+
+  /**
    * The owner's keys this module offered more values on, in order.
    *
    * @var string[]
@@ -118,6 +175,7 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    * the owner's.
    */
   public function extendChoices(string $key, array $choices): static {
+    $this->assertWithinMixin('offers more values on', $key);
     if ($this->outputs) {
       throw new \LogicException(sprintf('The %s alter cannot offer more values on the output "%s": outputs are never sent, so they have nothing to choose from.', $this->provider, $key));
     }
@@ -166,6 +224,7 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    * {@inheritdoc}
    */
   protected function declare(string $key, DataDefinitionInterface $definition, mixed $default): void {
+    $this->assertWithinMixin(sprintf('adds "%s"', $key), NULL);
     if ($this->attachments !== []) {
       throw new \LogicException(sprintf(
         'The %s alter adds "%s" beside the structure it attached at third_party_settings.%s. A mount holding a structure holds its keys alone: the alter is an adapter there, and adds no key of its own.',

@@ -89,6 +89,11 @@ final class Entry {
    *   `third_party_settings` key's alone. The key stays a plain map the
    *   parent refines, accepts and stores; each structure refines its own
    *   keys inside it, in its own frame, and its answer is written there.
+   * @param bool $held
+   *   Whether the key is locked by access rather than by what an
+   *   operation knows: it holds what is stored, which nothing ahead of
+   *   time can state, rather than its declared default. A mixed-in
+   *   structure's members are, when its access answers locked.
    */
   public function __construct(
     public readonly string $name,
@@ -105,6 +110,7 @@ final class Entry {
     public readonly ?Collection $list = NULL,
     public readonly array $watchedBy = [],
     public readonly array $mounted = [],
+    public readonly bool $held = FALSE,
   ) {
   }
 
@@ -138,6 +144,7 @@ final class Entry {
       $this->list,
       $this->watchedBy,
       $this->mounted,
+      $this->held,
     );
   }
 
@@ -374,6 +381,7 @@ final class Entry {
       $this->list,
       $this->watchedBy,
       $mounted + $this->mounted,
+      $this->held,
     );
   }
 

@@ -229,7 +229,7 @@ final class ContractEmitter {
     $stale = [];
     $standing = $values[DataSurfaceFormBuilderInterface::STANDING_KEY] ?? [];
     unset($values[DataSurfaceFormBuilderInterface::STANDING_KEY]);
-    $subschemas = new Subschemas(FALSE, $widgets ? [] : self::WIDGET_HINTS);
+    $subschemas = new Subschemas(FALSE, $widgets ? [] : self::WIDGET_HINTS, $this->mixedIn($surface));
     [$schema, $shown] = $this->frame($surface, $values, '', $resource_id, $cacheability, $stale, $subschemas, is_array($standing) ? $standing : []);
     $schema += $this->definitions($subschemas);
     if (!$widgets) {
@@ -304,7 +304,7 @@ final class ContractEmitter {
   public function emitFull(DataSurfaceInterface $surface, string $resource_id, ?string $operation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE): ServedContract {
     $cacheability = new CacheableMetadata();
     $ignored = [];
-    $subschemas = new Subschemas(TRUE, [...self::PRESENT, ...($widgets ? [] : self::WIDGET_HINTS)]);
+    $subschemas = new Subschemas(TRUE, [...self::PRESENT, ...($widgets ? [] : self::WIDGET_HINTS)], $this->mixedIn($surface));
     [$schema] = $this->frame($surface, $this->known($surface), '', $resource_id, $cacheability, $ignored, $subschemas);
     $schema += $this->definitions($subschemas);
     $schema = $this->withoutPresent($schema);
@@ -341,7 +341,9 @@ final class ContractEmitter {
   protected function known(DataSurfaceInterface $surface): array {
     $known = [];
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
-      if ($entry->locked) {
+      // A key its access locked holds what is stored, which is no value
+      // known ahead of time.
+      if ($entry->locked && !$entry->held) {
         $known[(string) $name] = $surface->getDefault((string) $name);
       }
     }
@@ -367,7 +369,7 @@ final class ContractEmitter {
    */
   protected function watchesFree(DefinitionMap $advertised, Entry $entry, bool $declaring = FALSE): bool {
     foreach ($entry->codedDependencies() as $key) {
-      if ($declaring || !$advertised->isLocked($key)) {
+      if ($declaring || !$advertised->isLocked($key) || $advertised->isHeld($key)) {
         return TRUE;
       }
     }
@@ -532,7 +534,7 @@ final class ContractEmitter {
         $key = $this->define($attachment, $fallback, $cacheability, $subschemas);
         if ($declaring) {
           $instance = $subschemas->get($key) ?? [];
-          $reference = $this->reference($key);
+          $reference = $this->reference($key, NULL, $subschemas);
           $shown[$name] = new \stdClass();
         }
         else {
@@ -579,7 +581,10 @@ final class ContractEmitter {
         $orphan = !$secret && !$locked && array_key_exists($prefix . $name, $standing);
         $value = match (TRUE) {
           $secret, $declaring && $entry->locked => NULL,
-          $entry->locked => $declared->getDefault($name),
+          // Locked by its access, it holds what is stored: nothing, in
+          // the full schema, which reads no stored value.
+          $entry->held && ($full || $blank) => NULL,
+          $entry->locked && !$entry->held => $declared->getDefault($name),
           // Inside a locked child, what it holds: nothing, in the full
           // schema, which reads no stored value, nor for a collection's
           // items, each of which holds its own.
@@ -698,7 +703,120 @@ final class ContractEmitter {
         'required' => $port->required,
       ], $ports);
     }
+    if ($advertised->mixins() !== []) {
+      // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
+      $schema = $this->composed($advertised, $schema, $owner, $cacheability, $subschemas);
+    }
     return [$schema, $shown === [] ? new \stdClass() : $shown];
+  }
+
+  /**
+   * Composes a frame from the structures mixed into it and its own keys.
+   *
+   * The frame is first described flat, every key the data surface holds,
+   * a structure's members among them, as the pipeline reads it. Each
+   * structure mixed in is then written once, as a def, from the structure
+   * built by itself, and the frame becomes `allOf` of a reference to each
+   * def and its own `properties`, closed with `unevaluatedProperties`, so
+   * the def stays reusable with one id. A member keeps its place in the
+   * frame's `properties`: `true` where the def says all there is, what
+   * differs where the owner narrows it here (a lock, a context, the
+   * values of this document, a port read at the owner's key), and
+   * `false` where it does not apply to these values. What the def
+   * requires and the conditionals it states are said there, not again.
+   *
+   * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
+   *
+   * @param \Drupal\data_surface\DefinitionMap $advertised
+   *   The frame's definitions, which say which structures are mixed in.
+   * @param array $schema
+   *   The frame, described flat.
+   * @param string $owner
+   *   The id the frame was built from.
+   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
+   *   Collects what the description depends on.
+   * @param \Drupal\data_surface\Contract\Subschemas $subschemas
+   *   The document's defs.
+   *
+   * @return array
+   *   The frame, composed.
+   */
+  protected function composed(DefinitionMap $advertised, array $schema, string $owner, CacheableMetadata $cacheability, Subschemas $subschemas): array {
+    $flat = is_array($schema['properties']) ? $schema['properties'] : [];
+    $required = $schema['required'] ?? [];
+    $conditions = $schema['allOf'] ?? [];
+    $references = [];
+    $members = [];
+    foreach ($advertised->mixins() as $mixin) {
+      $key = $this->define($mixin->structure, $owner . '.' . $mixin->structure->source, $cacheability, $subschemas);
+      // Read flat: a structure it mixes in itself says its members there.
+      $def = SchemaResolver::inline($subschemas->get($key) ?? [], ['$defs' => $subschemas->all()]);
+      $references[] = ['$ref' => self::DEFS . self::pointer($key)];
+      $declared = is_array($def['properties'] ?? NULL) ? $def['properties'] : [];
+      foreach ($mixin->keys as $name) {
+        $members[$name] = $declared[$name] ?? [];
+      }
+      $required = array_values(array_diff($required, $def['required'] ?? []));
+      $stated = is_array($def['allOf'] ?? NULL) ? $def['allOf'] : [];
+      $conditions = array_values(array_filter($conditions, static fn (mixed $condition): bool => array_filter($stated, static fn (mixed $said): bool => Subschemas::same($said, $condition)) === []));
+    }
+    $properties = [];
+    foreach ($advertised->names() as $name) {
+      if (!array_key_exists($name, $flat)) {
+        if (isset($members[$name])) {
+          // Not applying to these values: the def holds it, so the frame
+          // says it must not be there.
+          $properties[$name] = FALSE;
+        }
+        continue;
+      }
+      if (!isset($members[$name])) {
+        $properties[$name] = $flat[$name];
+        continue;
+      }
+      $narrowing = is_array($flat[$name]) ? $this->narrowing($flat[$name], $members[$name], $subschemas->transient) : $flat[$name];
+      $properties[$name] = $narrowing === [] ? TRUE : $narrowing;
+    }
+    $composed = [
+      'type' => 'object',
+      'properties' => $properties === [] ? new \stdClass() : $properties,
+      'unevaluatedProperties' => FALSE,
+    ];
+    if ($required !== []) {
+      $composed['required'] = $required;
+    }
+    $composed['allOf'] = [...$references, ...$conditions];
+    $composing = ['type', 'properties', 'additionalProperties', 'required', 'allOf'];
+    return $composed + array_diff_key($schema, array_flip($composing));
+  }
+
+  /**
+   * Lists the structures a data surface mixes in, at any depth.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface.
+   *
+   * @return string[]
+   *   Their ids: each one's def is written open in this document.
+   */
+  protected function mixedIn(DataSurfaceInterface $surface): array {
+    $ids = [];
+    foreach ($surface->getDefinitions()->mixins() as $mixin) {
+      $ids[] = (string) ($mixin->structure->id ?? $mixin->structure->source);
+      array_push($ids, ...$this->mixedIn($mixin->structure->child));
+    }
+    foreach ($surface->getDefinitions()->entries() as $entry) {
+      $children = match (TRUE) {
+        $entry->slot !== NULL => $entry->slot->variants,
+        $entry->attachment !== NULL => [$entry->attachment],
+        $entry->list !== NULL => [$entry->list->item],
+        default => [],
+      };
+      foreach ([...$children, ...$entry->mounted] as $child) {
+        array_push($ids, ...$this->mixedIn($child->child));
+      }
+    }
+    return array_values(array_unique($ids));
   }
 
   /**
@@ -1287,7 +1405,7 @@ final class ContractEmitter {
     $fallback = $owner . '.' . $entry->name;
     $key = $this->define($list->item, $fallback, $cacheability, $subschemas);
     if ($declaring) {
-      $items = $this->reference($key);
+      $items = $this->reference($key, NULL, $subschemas);
     }
     else {
       $ignored = [];
@@ -1380,6 +1498,12 @@ final class ContractEmitter {
     $subschemas->begin($id, $child);
     $ignored = [];
     [$def] = $this->frame($child, [], '', $id, $cacheability, $ignored, $subschemas, [], TRUE);
+    if ($subschemas->isOpen($id)) {
+      // Mixed in somewhere in this document: open, so an owner composes it
+      // with keys of its own, and closed by every other place it is used.
+      // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
+      unset($def['additionalProperties'], $def['unevaluatedProperties']);
+    }
     return $subschemas->add($id, $def, $child);
   }
 
@@ -1470,12 +1594,19 @@ final class ContractEmitter {
    */
   protected function reference(string $key, ?array $instance = NULL, ?Subschemas $subschemas = NULL): array {
     $reference = ['$ref' => self::DEFS . self::pointer($key)];
+    // A def written open, for an owner to mix it in, is closed where it is
+    // used whole. Decision: see docs/decisions.md#a-mixin-is-merged-flat.
+    $closed = $subschemas !== NULL && $subschemas->isOpen($key) ? ['unevaluatedProperties' => FALSE] : [];
     $def = $subschemas?->get($key);
     if ($instance === NULL || $def === NULL) {
-      return $reference;
+      return $reference + $closed;
+    }
+    if ($closed !== []) {
+      // The site closes it: the narrowing says only what differs.
+      unset($instance['additionalProperties'], $instance['unevaluatedProperties']);
     }
     $narrowing = $this->narrowing($instance, $def, $subschemas->transient);
-    return $narrowing === [] ? $reference : ['allOf' => [$reference, $narrowing]];
+    return ($narrowing === [] ? $reference : ['allOf' => [$reference, $narrowing]]) + $closed;
   }
 
   /**
@@ -1513,6 +1644,13 @@ final class ContractEmitter {
           if (!array_key_exists($name, $value)) {
             // Ruled out at this site: it must not be there.
             $properties[$name] = FALSE;
+            continue;
+          }
+          if (!is_array($value[$name]) || !is_array($def['properties'][$name] ?? [])) {
+            // A mixed-in structure's member, `true` or `false`, said whole.
+            if (!Subschemas::same($value[$name], $def['properties'][$name] ?? NULL)) {
+              $properties[$name] = $value[$name];
+            }
             continue;
           }
           $changed = $this->narrowing($value[$name], $def['properties'][$name] ?? [], $transient);
@@ -1647,7 +1785,7 @@ final class ContractEmitter {
       $is_chosen = !$full && !$declaring && !$blank && $id === $chosen;
       if ($declaring) {
         $instance = $subschemas->get($key) ?? [];
-        $reference = $this->reference($key);
+        $reference = $this->reference($key, NULL, $subschemas);
       }
       else {
         $own = $is_chosen && $slot->fits($id, $held) ? $held : [];
@@ -2642,7 +2780,9 @@ final class ContractEmitter {
     // An object with no properties holds an empty object here, which
     // iterates as nothing.
     foreach ($schema['properties'] ?? [] as $property) {
-      if (!empty($property[self::EXTENSION]['refined'])) {
+      // A mixed-in structure's member the owner says nothing more of is
+      // `true`, and one ruled out `false`.
+      if (is_array($property) && !empty($property[self::EXTENSION]['refined'])) {
         return TRUE;
       }
     }

@@ -9,6 +9,7 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\data_surface\Contract\ContractEmitter;
+use Drupal\data_surface\Contract\SchemaResolver;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Options\DataSurfaceOptions;
@@ -71,13 +72,19 @@ trait StaticRefinerAgreementTrait {
     assert($emitter instanceof ContractEmitter);
     $served = $values === NULL ? $emitter->emitFull($surface, $label) : $emitter->emit($surface, $values, $label);
     $schema = self::decoded($served->document['schema']);
+    if (isset($schema['unevaluatedProperties'])) {
+      // A frame that mixes structures in, read flat: their members are its
+      // keys, and what their defs state, the frame's.
+      // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
+      $schema = SchemaResolver::inline($schema);
+    }
     $definitions = $surface->getDefinitions();
     // What the full schema itself is refined against: the locked keys,
     // which no value can change.
     $known = $values ?? [];
     if ($values === NULL) {
       foreach ($definitions->entries() as $name => $entry) {
-        if ($entry->locked) {
+        if ($entry->locked && !$entry->held) {
           $known[$name] = $surface->getDefault((string) $name);
         }
       }

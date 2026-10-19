@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
+use Drupal\Core\Form\FormState;
 use Drupal\data_surface_examples\ExampleCalls;
 use Drupal\data_surface_tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -195,6 +196,39 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
       }
     }
     return $defaults;
+  }
+
+  /**
+   * Tests a child sent null is refused alike at the form and the tool.
+   *
+   * Nothing sent for a child is nothing sent for each of its keys, so the
+   * contact sent null clears its phone and is refused at its email, in
+   * the email's own words, wherever it is sent from: the schema refuses
+   * the document too, so neither is stricter than the other.
+   *
+   * @see docs/decisions.md#absent-keeps-null-clears
+   */
+  public function testChildSentNullIsRefusedAtItsRequiredKey(): void {
+    $resources = $this->container->get('data_surface.resources');
+    $surface = $resources->buildOperation('registration.step3', 'configure', []);
+    $stored = $this->config('data_surface_examples.registration_step3')->get();
+    $form = $this->formBuilder()->buildSurfaceForm($surface, array_replace($surface->getDefaultValues(), $stored), new FormState());
+    $form_state = new FormState();
+    $form_state->setValues(['contact' => NULL] + $stored);
+    $accepted = $this->formBuilder()->extractSurfaceValues($surface, $form, $form_state, $stored);
+    $this->assertSame(['email' => NULL, 'phone' => NULL], $accepted['contact']);
+    $messages = [];
+    foreach ($this->pipeline()->validate($surface, $accepted, $stored) as $violation) {
+      $messages[$violation->fullPath()] = PlainTextOutput::renderFromHtml((string) $violation->message);
+    }
+    $this->assertSame(['contact.email' => 'Email is required.'], $messages, 'The form door.');
+
+    $tool = $this->container->get('plugin.manager.tool')->createInstance(ExampleCalls::TOOL);
+    $tool->setInputValue(OperationInputs::VALUES, ExampleCalls::CALLS['valid']['values'] + ['contact' => NULL]);
+    $tool->execute();
+    $this->assertFalse($tool->getResult()->isSuccess(), 'The tool door.');
+    $this->assertSame('The values were refused: contact.email: Email is required.', PlainTextOutput::renderFromHtml((string) $tool->getResult()->getMessage()));
+    $this->assertSame('events@example.com', $this->config('data_surface_examples.registration_step3')->get('contact.email'), 'Nothing was written.');
   }
 
   /**
