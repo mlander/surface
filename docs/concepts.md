@@ -39,7 +39,7 @@ snippet each.
 | Cosmetic layer, `_data_surface_cosmetics` | Does the form need grouping, weights or a borrowed element, with nothing meaning something else? | The generated form is the form you want. |
 | Panel, `_data_surface_panel` | Should the contract be shown beside the form? | Nobody needs to see it there. |
 | Options resolver | Is the list of allowed values the site's (entity types, bundles), not a literal? | It is a literal list: `LabeledChoice`. |
-| Widget plugin | Does a data type need an element no stock widget draws? | The stock widgets draw it. |
+| Widget plugin | Does a key need an element no stock widget draws? Checkboxes, radios, rows for a list of free values and a time input are stock, asked for with `setSetting('widget', ...)` where the rule does not pick them ([Widgets](widgets.md#which-element-a-list-of-choices-is)). | The stock widgets draw it. |
 | Stale values | What happens to a stored value a refiner no longer allows? ([Value semantics](semantics.md#stale-values-the-third-state)) | No refiner narrows a key that has a stored value. |
 | Tool and read tool | Should an agent, MCP or Drush call it? | You do not enable `data_surface_tool`; there is nothing to write either way. |
 | Served contract and React | Will a client with no PHP render or validate it? ([The served contract](served-contract.md)) | The form and the tool are enough. |

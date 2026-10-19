@@ -1,5 +1,5 @@
 import type { Contract, Extension, Marker, Schema, Settled, Values } from '../contract';
-import { holdsIf, inlineSchema, narrow, narrowingStatus, setAt } from '../contract';
+import { holdsValue, holdsIf, inlineSchema, narrow, narrowingStatus, setAt } from '../contract';
 import example2 from './fixtures/refine-example2.json';
 import example3 from './fixtures/refine-example3.json';
 import compliance from './fixtures/refine-example3-compliance.json';
@@ -90,6 +90,62 @@ describe('narrowing here agrees with /refine', () => {
       { key: 'third_party_settings', marker: 'dynamic' },
       'local',
     ]);
+  });
+});
+
+describe('the empty option rule, narrowed here', () => {
+  // Example 2's room asks for radios here: a required key, so no "- None -"
+  // radio whether a valid room is chosen or not, where its select shows
+  // "- Select -" while none is.
+  const recorded = example2 as unknown as Recorded;
+  const radios = (schema: Schema): Schema => {
+    const walk = (node: unknown): unknown => {
+      if (Array.isArray(node)) {
+        return node.map(walk);
+      }
+      if (typeof node !== 'object' || node === null) {
+        return node;
+      }
+      const copy: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(node)) {
+        copy[key] = walk(value);
+      }
+      const properties = copy.properties as Record<string, Schema> | undefined;
+      const room = properties?.room?.['x-surface'];
+      if (room !== undefined) {
+        properties!.room = { ...properties!.room, 'x-surface': { ...room, widget: 'radios' } };
+      }
+      return copy;
+    };
+    return walk(schema) as Schema;
+  };
+
+  it('shows no empty radio for a key that holds a value, and a select its empty option while nothing valid is chosen', () => {
+    const contract = served(recorded.contract);
+    const values = { ...contract.values, venue: 'library' };
+    const asSelect = narrow({ full: inlineSchema(recorded.schema.schema), previous: contract, stored: contract.values, values, stale: [], changed: 'venue' });
+    const asRadios = narrow({
+      full: radios(inlineSchema(recorded.schema.schema)),
+      previous: { ...contract, schema: radios(contract.schema) },
+      stored: contract.values,
+      values,
+      stale: [],
+      changed: 'venue',
+    });
+    expect(asSelect.local && asRadios.local).toBe(true);
+    if (!asSelect.local || !asRadios.local) {
+      return;
+    }
+    expect(asSelect.settled.schema.properties?.room['x-surface']?.emptyOption).toEqual({ show: true, label: '- Select -' });
+    expect(asRadios.settled.schema.properties?.room['x-surface']?.emptyOption).toEqual({ show: false, label: '- None -' });
+  });
+
+  it('reads a key that holds a value off its required list or its type', () => {
+    const choice: Schema = { type: 'string', oneOf: [{ const: 'a', title: 'A' }] };
+    expect(holdsValue(choice, true)).toBe(true);
+    expect(holdsValue(choice, false)).toBe(true);
+    expect(holdsValue({ type: ['string', 'null'], oneOf: [{ const: 'a', title: 'A' }, { const: null }] }, false)).toBe(false);
+    expect(holdsValue({ type: 'string', writeOnly: true }, false)).toBe(false);
   });
 });
 

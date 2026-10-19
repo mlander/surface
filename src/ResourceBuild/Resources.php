@@ -32,6 +32,7 @@ use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
 use Drupal\data_surface\Resource\AltersOutputsInterface;
 use Drupal\data_surface\Resource\HasOutputsInterface;
 use Drupal\data_surface\Resource\HasStorageLayoutInterface;
+use Drupal\data_surface\Resource\KnowsClearableKeysInterface;
 use Drupal\data_surface\Resource\AccessAnswer;
 use Drupal\data_surface\Resource\OperationAccessInterface;
 use Drupal\data_surface\Resource\AltersInputsInterface;
@@ -206,10 +207,10 @@ final class Resources implements ResourcesInterface {
    *   The class, or its id; a derived resource has only its id.
    * @param \Drupal\data_surface\Resource\OperationContext $context
    *   Where it is being asked for.
-   * @param array<int, array{class: string, id: string, key: string, inputs: string[]}> $ancestry
+   * @param array<int, array{class: string, id: string, key: string, inputs: string[], held?: array|null}> $ancestry
    *   The parents this one is being built inside, outermost first, each
-   *   with the key it is attached at and its own input keys; empty for
-   *   one asked for on its own.
+   *   with the key it is attached at, its own input keys and the storage
+   *   that stores them (heldBy()); empty for one asked for on its own.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The sealed data surface.
@@ -291,6 +292,12 @@ final class Resources implements ResourcesInterface {
     $frame = ['class' => $definition->name(), 'id' => $definition->id, 'key' => '', 'inputs' => $input_keys];
     $permission = $this->registry->getOperations($definition->name())[$context->id]->permission ?? NULL;
     $frame['permission'] = $permission === NULL ? NULL : static::resolvePermission($permission, $context);
+    // Which keys the storage always holds, asked of the storage that
+    // stores them: this resource's own, or its parent's, under the key
+    // the parent stores it at.
+    // Decision: see docs/decisions.md#a-key-its-storage-always-holds.
+    $frame['held'] = $this->heldBy($definition, $context, $ancestry);
+    $this->markAlwaysHeld($builder, $input_keys, $frame['held']);
     // Each structure mixed in, built by itself for its def and its access,
     // which locks its members or takes them back out; then nothing of the
     // owner's may name what that access may take away, or rule a member
@@ -458,6 +465,64 @@ final class Resources implements ResourcesInterface {
     }
 
     return $builder->seal();
+  }
+
+  /**
+   * Finds the storage that stores a resource's keys, and where.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource or structure being built.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   Its context.
+   * @param array $ancestry
+   *   Its parents, outermost first, each with what held()'s answer was
+   *   for it.
+   *
+   * @return array{storage: \Drupal\data_surface\Resource\KnowsClearableKeysInterface, context: \Drupal\data_surface\Resource\OperationContext, prefix: string}|null
+   *   The storage, the context it is asked in and the path under which it
+   *   stores these keys; NULL when no storage that can say stores them.
+   */
+  protected function heldBy(ResourceDefinition $definition, OperationContext $context, array $ancestry): ?array {
+    if ($definition->storage !== NULL) {
+      $storage = $this->instance((string) $definition->storage, ResourceStorageInterface::class);
+      return $storage instanceof KnowsClearableKeysInterface
+        ? ['storage' => $storage, 'context' => $context, 'prefix' => '']
+        : NULL;
+    }
+    $parent = $ancestry === [] ? NULL : $ancestry[count($ancestry) - 1];
+    $held = $parent['held'] ?? NULL;
+    if (!is_array($held) || !isset($parent['key'])) {
+      return NULL;
+    }
+    return ['prefix' => $held['prefix'] . $parent['key'] . '.'] + $held;
+  }
+
+  /**
+   * Marks each optional key its storage always holds a value for.
+   *
+   * A plain scalar or list key only: a map holds its keys, which say for
+   * themselves, and a secret keeps what it holds when sent nothing.
+   *
+   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   *   The builder holding the keys.
+   * @param string[] $keys
+   *   The plain input keys.
+   * @param array|null $held
+   *   What heldBy() answered.
+   */
+  protected function markAlwaysHeld(DataSurfaceBuilderInterface $builder, array $keys, ?array $held): void {
+    if ($held === NULL) {
+      return;
+    }
+    foreach ($keys as $key) {
+      $definition = $builder->getDefinition($key);
+      if ($definition === NULL || $definition->isRequired() || $definition instanceof ComplexDataDefinitionInterface || DefinitionMetadata::isSecret($definition)) {
+        continue;
+      }
+      if ($held['storage']->mayClear($held['context'], $held['prefix'] . $key) === FALSE) {
+        DefinitionMetadata::setAlwaysHeld($definition);
+      }
+    }
   }
 
   /**

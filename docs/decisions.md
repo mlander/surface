@@ -1980,7 +1980,10 @@ surface answers with. (`ContractPanel::regex()`,
 ### The empty option rule
 
 A single select shows its empty option according to four points, and
-the stash model under them is unchanged:
+the stash model under them is unchanged. "Required" in them reads "holds
+a value": a required key, or one [its storage always
+holds](#a-key-its-storage-always-holds), which is no less unable to be
+cleared:
 
 1. A stored value no longer among the options is shown as the empty
    option, selected. It is not put back into the list and no option
@@ -2004,9 +2007,21 @@ the stash model under them is unchanged:
    the pipeline's words. A required select standing for a stale value is
    not `#required` to core, since empty there means keep; its label
    keeps the marker.
-4. An optional select keeps its empty option always. Choosing it on a
-   select with nothing stale behind it clears the key; on a stale one it
-   is what was already selected, so it keeps.
+4. A select that may be cleared (an optional key its storage does not
+   always hold) keeps its empty option, `- None -`, always. Choosing it
+   on a select with nothing stale behind it clears the key; on a stale
+   one it is what was already selected, so it keeps. An optional key its
+   storage always holds offers none once a valid choice is selected,
+   the original forms' select with no empty choice for a key that
+   always has a value (the adopters' gate, "Optional grows an empty
+   choice", decided 2026-10-19).
+
+Radios follow the same points with nothing checked where a select shows
+its empty option: `- None -` is a radio only where choosing nothing is
+an answer, a key that may be cleared, and a key that holds a value shows
+no checked radio while it holds no valid choice, a stale value behind it
+on the stash. The served contract says the same in `emptyOption`, for
+radios as for a select, and the React app follows it.
 
 The placeholder option this replaced ("Previous value X is no longer
 available", posting a sentinel from the select) told the person what
@@ -2014,7 +2029,66 @@ was missing, but put an option in the list that was no value of the
 key. Pipeline callers are unaffected: a payload that leaves a key out
 keeps it, one that sends the stored stale value back keeps it with a
 stale entry, as before. (`OptionsWidget::singleSelect()`,
-`DataSurfaceWidgetBase::unstash()`, `DataSurfaceHostTrait::surfaceFormValues()`)
+`RadiosWidget::buildElement()`, `DataSurfaceWidgetBase::unstash()`,
+`DataSurfaceHostTrait::surfaceFormValues()`)
+
+### A widget is chosen from the definition
+
+The stock widgets draw an ordinary settings form with no widget of a
+resource's own, and each is still chosen from the definition and nothing
+else (decided 2026-10-19, from both gates: checkboxes, radios, a list of
+free strings and a time picker):
+
+- **A list of allowed values is checkboxes while it offers at most
+  twelve, a multiple select above that.** A multiple select asks for a
+  modifier key to choose a second value and drops every choice on one
+  stray click, so it is kept for the lists too long for a column of
+  checkboxes to be scanned (a year of months is one column; every
+  country is not). Counted on the definition as it stands, so a refiner
+  that narrows a long list below twelve redraws it as checkboxes; every
+  widget reads either element back, since which widget reads a value is
+  not the one that drew it. Checkboxes post every option, each with its
+  value or 0, and are read back as the list of the values checked: all
+  unchecked is the empty list, which clears the list, and boxes left as
+  drawn keep it. Never `#required`, as a boolean's checkbox is not: a
+  required list must hold a value, and the empty list is one.
+- **One allowed value stays a select unless it asks for radios.** A
+  select already shows every choice on one click and has none of a
+  multiple select's faults; radios spend a line per choice on every key,
+  which is the page's layout and its author's call (pathauto's form draws
+  radios for one key and selects for thirty-three rows beside it), and a
+  count rule would redraw a key as another element when a refiner
+  narrowed its list (a store's regions per country). `first-resource.md`
+  promises a select for a `LabeledChoice`, which stays true.
+- **A list of free values is rows**: one element per item, drawn by the
+  item's own widget, "Remove" beside each and "Add another" under them,
+  rebuilt over AJAX (or a plain submit) replacing the list alone, within
+  the list's Count. Not a text area of one item per line, which the
+  demos' widgets drew: an item's own rules (a Length, a Regex, an
+  example) reach its element, a refusal of one item is shown on its row
+  (`keywords.2`), an item may hold a comma or a line break, and the form
+  draws what both schemas and the React app say, a list. An agent's
+  contract is a list either way; rows are what keeps the form's reading
+  of it the same.
+- **A time of day is a time input when it asks for one**,
+  `setSetting('widget', 'time')` on a string: core's own spelling of a
+  time picker, a `date` element whose input type is `time`, posting the
+  `HH:MM` the key's Regex still checks. Nothing is read off the pattern,
+  which is for machines and which many patterns could spell.
+- **The `widget` setting asks for one by name**, in core's setting
+  spelling and the served contract's words: `radios`, `checkboxes`,
+  `select` (a long or short list alike), `time`. A name that does not
+  fit the definition (radios for a list, a word no widget answers to) is
+  refused when the element is built, naming the widget that would draw
+  it, rather than drawn as something it did not ask for. A widget of a
+  module's own answers to its plugin ID.
+
+The served contract's `x-surface.widget` mirrors each choice by asking
+the same rule (`CheckboxesWidget::drawsList()`,
+`RadiosWidget::drawsOne()`, `TimeWidget::draws()`), and is still written
+only when asked for. (`DataSurfaceWidgetManager::asked()`,
+`DataSurfaceWidgetBase::answersTo()`, `DataSurfaceWidgetBase::checked()`,
+`ListWidget`, `StockWidgetsTest`)
 
 ## Discovery
 
@@ -2449,7 +2523,14 @@ nothing about size: an empty list or map is a value, and "not empty" is
 The Tool API bridge copies the same flag ([Required is the resource's,
 and a listing carries no stored value](#required-is-the-resources-and-a-listing-carries-no-stored-value)); the served contract's
 `values` always carry every key, so presence is never the question
-there. (`ContractEmitter::required()`)
+there. The pipeline holds a required list to the same: core's `NotNull`
+reads an empty list as null, so it is not asked of `[]`, which every
+checkbox unchecked or every row removed sends (until 2026-10-19 a
+required list refused `[]` as "This value should not be null.", which
+this entry and [Declaring a resource](declaring-a-resource.md#required)
+said it did not). Whether a required plain map sent `[]` is held the
+same is *open*: it was not checked. (`ContractEmitter::required()`,
+`DataSurfacePipeline::validateLevel()`)
 
 ### Absent keeps, null clears
 
@@ -2460,12 +2541,15 @@ so a partial update keeps every key it leaves out; `null`, or the empty
 string a form sends for nothing, clears it, so "- None -" on an
 optional select, an emptied text box and a tool's `null` empty a key;
 a value is that value. A required key refuses `null` and `''` as
-missing. A list keeps what it holds when sent nothing and is emptied
+missing, and a key [its storage always holds](#a-key-its-storage-always-holds)
+refuses them as a value it cannot be cleared to: null clears where
+clearing is possible. A list keeps what it holds when sent nothing and is emptied
 with `[]`; a secret keeps what it holds when sent nothing and is
 emptied with its clear marker. The schema says it: an optional key's
 type allows `null` (`["integer", "null"]`, and an optional choice's
 `oneOf` carries an untitled `{const: null}`), a required key's does
-not, and a secret's does not either, since `null` does not clear it.
+not, nor one its storage always holds, and a secret's does not either,
+since `null` does not clear it.
 
 This parts from the Tool API, where a caller's null for an optional
 input means the default. A Tool API default is static, so a null and an
@@ -2483,6 +2567,56 @@ accepted document is a map its def describes; until 2026-10-18 the
 pipeline took `contact: null` whole, which the schema refused.
 (`DataSurfacePipeline::acceptKey()`, `DataSurfacePipeline::acceptChild()`,
 `ContractEmitter::nullable()`)
+
+### A key its storage always holds
+
+Null clears where clearing is possible; where it is not, null is
+refused with a message naming the default. Decided 2026-10-19, from the
+adopters' gate ("Optional grows an empty choice"): an optional select
+offered "- None -" for a key the original form never offered an empty
+choice for, because its config always holds a value, and requiring the
+key instead would make a tool caller send every one of pathauto's
+thirty-three punctuation rows.
+
+Whether a key may hold nothing is a fact of where it is stored, which a
+resource does not know, so storage says it, and only where it honestly
+can. A storage implementing `Resource\KnowsClearableKeysInterface`
+answers `mayClear()` per key, and the build step marks each optional
+scalar or list key it answers FALSE for (`DefinitionMetadata::setAlwaysHeld()`),
+in the resource and in every part its storage stores under the part's
+key. `ConfigObjectStorage` answers by core's own rule, read from the
+config schema with what is stored: a value may be NULL unless the
+object's schema is fully validatable (the `FullyValidatable` constraint
+at its root) and the key does not say `nullable: true`, which is where
+core's schema refuses NULL. A schema that is not fully validatable lets
+any key hold NULL, so its keys may be cleared, as before; a storage that
+does not say, or a key no schema describes, may be cleared too. Opting a
+config object into this is its schema's `FullyValidatable`, which also
+makes its keys required keys, with `nullable: true` on each that may
+hold nothing.
+
+On a key so marked:
+
+- **The pipeline** refuses null and the empty string a form sends for
+  nothing: "On public holidays cannot be cleared: it always holds a
+  value, Closed (closed) by default. Leave it out to keep what it holds."
+  Left out, it keeps; a value is that value. Before, the storage's
+  schema refused the same null with core's "This value should not be
+  null.", after the form had offered it. A list sent null keeps what it
+  holds, as any list does; `[]` empties it.
+- **Both schemas** leave null out of its type and its choices, as for a
+  required key, and keep it out of `required`: absent still keeps.
+- **A select or radios** offer no empty choice once a valid one is
+  chosen ([the empty option rule](#the-empty-option-rule)); while none
+  is, a select shows "- Select -" standing for nothing, as a required
+  one does.
+
+A required key is not marked: it holds a value already. A secret is
+not either: sent nothing it keeps what it holds, whatever its storage.
+(`DefinitionMetadata::holdsValue()`, `Resources::markAlwaysHeld()`,
+`ConfigObjectStorage::mayClear()`, `DataSurfacePipeline::cannotBeCleared()`,
+`ContractEmitter::nullable()`, `StockWidgetsTest::testKeyItsStorageAlwaysHolds()`,
+`AdvertisedSchemaAcceptanceTest::testOpeningHours()`)
 
 ### A secret is optional, never nullable
 

@@ -78,8 +78,9 @@ of audience tags.
   and the storage adapter applies it to this module's settings before
   the content type's storage writes them and after it reads them. The
   tags are a list, with a pattern for each tag and a uniqueness
-  constraint. It brings a comma-separated widget for the list, because
-  the stock widgets draw a list only as a multiple select.
+  constraint. It brings a comma-separated widget for the list, typed
+  as the classic form types it, where the stock list widget would draw
+  a row per tag.
 - **The classic way**, in `Hook\NodeTypeFormHooks`: a
   `hook_form_node_type_form_alter` on core's own content type form, with
   an amount and a unit select whose `#element_validate` turns them into

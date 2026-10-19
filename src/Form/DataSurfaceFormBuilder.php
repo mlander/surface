@@ -124,6 +124,11 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
   protected const GROUPING_TYPES = ['details', 'fieldset', 'container'];
 
   /**
+   * Element types whose options are each an element that triggers.
+   */
+  protected const OPTION_GROUP_TYPES = ['radios', 'checkboxes'];
+
+  /**
    * Element types whose change event fires when they lose focus.
    *
    * Core's own list, the types it marks to refocus-blur in
@@ -1084,12 +1089,18 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     //
     // At any depth: an attached child's own dependency sits inside the
     // child's details, and is as much a trigger as a top level key.
+    $wrapper_id = $element[self::WRAPPER_KEY] ?? NULL;
+    if (is_string($wrapper_id)) {
+      // Each list of free values the list widget drew, at any depth: the
+      // widget cannot know where it sits, and this is the first moment
+      // anything does.
+      static::wireRows($element, [], $wrapper_id);
+    }
     static::limitAjax($element, $element['#parents'] ?? [], !empty($element['#tree']));
     // The wrappers the AJAX callback replaces by. Placed here rather than
     // at build time because the container's id is only final once a host
     // has merged it into its own element, and every wrapper id is derived
     // from it.
-    $wrapper_id = $element[self::WRAPPER_KEY] ?? NULL;
     if (is_string($wrapper_id)) {
       $state = $form_state instanceof SubformStateInterface ? $form_state->getCompleteFormState() : $form_state;
       if ($state->getTemporaryValue([self::RENDERED_OPTIONS, static::containerKey($element)]) === NULL) {
@@ -1196,6 +1207,47 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         $element[$key]['#limit_validation_errors'] = [$child_parents];
       }
       static::limitAjax($element[$key], $child_parents, $child_tree);
+    }
+  }
+
+  /**
+   * Wires each list of free values below an element to the rebuild.
+   *
+   * The list gets a wrapper of its own, which its buttons replace, and
+   * each button a name unique in the form (Form API tells which was
+   * pressed by name and label, and every "Remove" says the same), the
+   * container's AJAX callback, and the path it sits at, which is how a
+   * rebuild finds the container's input and what it replaces.
+   *
+   * @param array $element
+   *   The container, or an element inside it.
+   * @param string[] $path
+   *   The element's path below the container.
+   * @param string $wrapper_id
+   *   The container's id.
+   */
+  protected static function wireRows(array &$element, array $path, string $wrapper_id): void {
+    foreach (static::elementChildren($element) as $key) {
+      $at = [...$path, (string) $key];
+      if (empty($element[$key][self::ROWS_KEY])) {
+        static::wireRows($element[$key], $at, $wrapper_id);
+        continue;
+      }
+      $dotted = implode('.', $at);
+      $element[$key][self::REFRESH_KEY] = $dotted;
+      foreach (static::elementChildren($element[$key]) as $control) {
+        if (!isset($element[$key][$control][self::ROW_CONTROL_KEY])) {
+          continue;
+        }
+        $named = array_map([Html::class, 'getId'], [...$at, (string) $control]);
+        $element[$key][$control]['#name'] = 'data_surface_' . implode('_', $named);
+        $element[$key][$control]['#ajax'] = [
+          'callback' => [static::class, 'refreshSurface'],
+          'wrapper' => $wrapper_id,
+          'submit' => [self::WRAPPER_INPUT => $wrapper_id],
+        ];
+        $element[$key][$control][self::TRIGGER_KEY] = ['path' => [...$at, (string) $control], 'replaces' => [$dotted]];
+      }
     }
   }
 
@@ -1465,7 +1517,13 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         $deltas = $state->getTemporaryValue([self::LIST_DELTAS, static::containerKey($container), $violation->key]) ?? [];
         $segments[0] = (string) ($deltas[(int) $segments[0]] ?? $segments[0]);
       }
-      foreach ($segments as $segment) {
+      foreach ($segments as $position => $segment) {
+        if (!empty($element[self::ROWS_KEY]) && ctype_digit((string) $segment) && isset($element['#array_parents'])) {
+          // An item of a free list is flagged on the row it was drawn as,
+          // which an empty row dropped before it may have moved.
+          $rows = $state->getTemporaryValue([self::ROW_DELTAS, implode('][', $element['#array_parents'])]) ?? [];
+          $segment = $segments[$position] = (string) ($rows[(int) $segment] ?? $segment);
+        }
         if (!isset($element[$segment])) {
           break;
         }
@@ -1509,7 +1567,12 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       return NULL;
     }
     $element = NestedArray::getValue($container, $path);
-    return is_array($element) && isset($element['#array_parents']) && $element['#array_parents'] === ($triggering['#array_parents'] ?? NULL)
+    $parents = $triggering['#array_parents'] ?? NULL;
+    if (is_array($parents) && in_array($element['#type'] ?? NULL, self::OPTION_GROUP_TYPES, TRUE)) {
+      // One radio or checkbox of the group triggered.
+      array_pop($parents);
+    }
+    return is_array($element) && isset($element['#array_parents']) && $element['#array_parents'] === $parents
       ? implode('.', $path)
       : NULL;
   }
@@ -1701,6 +1764,37 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     // A wrapper of its own as well: a trigger is replaced when its own
     // value was refused, so the error is printed under it.
     $element[self::REFRESH_KEY] ??= implode('.', $path);
+    if (in_array($element['#type'], self::OPTION_GROUP_TYPES, TRUE)) {
+      // Each radio or checkbox is what triggers, and Form API copies the
+      // #ajax of the group onto it and nothing else of ours.
+      $declared = $element['#process'] ?? $this->elementInfo->getInfo($element['#type'])['#process'] ?? [];
+      $element['#process'] = array_merge($declared, [[static::class, 'processOptionTrigger']]);
+    }
+    return $element;
+  }
+
+  /**
+   * Gives each radio or checkbox of a trigger what the group carries.
+   *
+   * Which of the group's own triggered is what Form API records, and it
+   * runs a trigger's #limit_validation_errors and our path from it: the
+   * path the rebuild finds the container by and replaces what depends on
+   * it from.
+   *
+   * @param array $element
+   *   The radios or checkboxes, processed into their options.
+   *
+   * @return array
+   *   The same, each option carrying the group's trigger.
+   */
+  public static function processOptionTrigger(array $element): array {
+    foreach (static::elementChildren($element) as $key) {
+      foreach ([self::TRIGGER_KEY, '#limit_validation_errors'] as $property) {
+        if (isset($element[$property]) && is_array($element[$key])) {
+          $element[$key][$property] = $element[$property];
+        }
+      }
+    }
     return $element;
   }
 

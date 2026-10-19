@@ -22,8 +22,8 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
  * defaults populate at every depth, constraint options map onto element
  * properties as hints (Length to a maxlength attribute, Range to
  * #min/#max), and a select offers an empty option whenever no valid
- * choice is selected, and
- * always when optional. Widgets do not coerce: extraction
+ * choice is selected, and always when the key may be cleared. Widgets
+ * do not coerce: extraction
  * hands back the raw submitted value in the definition's shape and the
  * pipeline's accept() casts it, which is what keeps a generated form
  * and a payload from drifting apart.

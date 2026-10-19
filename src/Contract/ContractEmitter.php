@@ -17,6 +17,9 @@ use Drupal\data_surface\DataSurface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\Plugin\DataSurfaceWidget\CheckboxesWidget;
+use Drupal\data_surface\Plugin\DataSurfaceWidget\RadiosWidget;
+use Drupal\data_surface\Plugin\DataSurfaceWidget\TimeWidget;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Options\OptionSet;
@@ -105,13 +108,14 @@ use Drupal\data_surface\Collection;
  * form would: a non-empty option list is a select (a list of them, a
  * multiple select, said by `multiple`); a map with properties is a
  * fieldset; a string is a textarea when its definition says multiline,
- * an email input for the email type, a text input otherwise; a number is
- * a number input; a boolean a checkbox. Two hints have no Form API
- * counterpart here: `slot` for a key a sibling chooses the shape of, and
- * `list` for a list with no option list, which no stock widget claims.
- * `radios` is in the vocabulary for a consumer to honour, and is never
- * chosen by this emitter, because the Form API mapping never renders
- * radios.
+ * a time input when it asks for one, an email input for the email type,
+ * a text input otherwise; a number is a number input; a boolean a
+ * checkbox. A list of values is checkboxes or a multiple select, and one
+ * value radios when it asks for them, by the widgets' own rule
+ * (CheckboxesWidget::drawsList(), RadiosWidget::drawsOne()); a list with
+ * no option list is `list`, rows to add and remove. One hint has no
+ * Form API counterpart here: `slot`, for a key a sibling chooses the
+ * shape of.
  */
 final class ContractEmitter {
 
@@ -2355,7 +2359,13 @@ final class ContractEmitter {
       $ignored = [];
       [$items] = $this->property($item, NULL, NULL, $path . '.*', FALSE, [], $cacheability, $ignored);
       $schema += ['type' => $this->nullable('array', $definition), 'items' => static::neverNull($items)] + $this->keywords($definition, 'array');
-      $extension = $this->extension($listed ? 'select' : 'list', $locked, $depends, $refined) + ($listed ? ['multiple' => TRUE] : []);
+      // Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
+      $checkboxes = $set !== NULL && CheckboxesWidget::drawsList($definition, $set);
+      $extension = match (TRUE) {
+        $checkboxes => $this->extension('checkboxes', $locked, $depends, $refined),
+        $listed => $this->extension('select', $locked, $depends, $refined) + ['multiple' => TRUE],
+        default => $this->extension('list', $locked, $depends, $refined),
+      };
       $shown = is_array($value) ? array_values($value) : $value;
     }
     elseif (!$listed && $definition instanceof ComplexDataDefinitionInterface && $definition->getPropertyDefinitions() !== []) {
@@ -2405,16 +2415,20 @@ final class ContractEmitter {
         $type['type'] = $this->nullable($type['type'], $definition);
       }
       $schema += $type + $this->keywords($definition, $type['type'] ?? NULL);
-      $extension = $this->extension($listed ? 'select' : $this->widget($definition), $locked, $depends, $refined);
+      $radios = $listed && RadiosWidget::drawsOne($definition);
+      $extension = $this->extension($listed ? ($radios ? 'radios' : 'select') : $this->widget($definition), $locked, $depends, $refined);
       if ($listed) {
         $schema['oneOf'] = $this->choices($set, $definition);
         // Decision: see docs/decisions.md#the-empty-option-rule.
         $configured = ValueState::isConfigured($value);
         $chosen = $configured && $set->allows($value);
-        $required = $definition->isRequired();
+        $holds = DefinitionMetadata::holdsValue($definition);
+        // Radios show nothing checked where a select shows its empty
+        // option, so their "- None -" is there only where choosing
+        // nothing is an answer.
         $extension['emptyOption'] = [
-          'show' => !($chosen && $required),
-          'label' => (string) ($required ? $this->t('- Select -') : $this->t('- None -')),
+          'show' => $radios ? !$holds : !($chosen && $holds),
+          'label' => (string) ($holds && !$radios ? $this->t('- Select -') : $this->t('- None -')),
         ];
         if ($configured && !$chosen) {
           // Shown on the empty option, standing for the stored value,
@@ -2695,10 +2709,12 @@ final class ContractEmitter {
    * Allows null beside a type, for an optional key a caller may clear.
    *
    * Null on an optional key clears it, so it is a value the key takes. A
-   * required key never takes it, and neither does a secret, which null
-   * leaves as it is and only its clear marker empties.
+   * required key never takes it, nor one its storage always holds, which
+   * refuses it, and neither does a secret, which null leaves as it is and
+   * only its clear marker empties.
    *
-   * Decision: see docs/decisions.md#absent-keeps-null-clears.
+   * Decision: see docs/decisions.md#absent-keeps-null-clears and
+   * docs/decisions.md#a-key-its-storage-always-holds.
    *
    * @param string|array $type
    *   The JSON type.
@@ -2709,7 +2725,7 @@ final class ContractEmitter {
    *   The type, or the type and null.
    */
   protected function nullable(string|array $type, DataDefinitionInterface $definition): string|array {
-    if ($definition->isRequired() || DefinitionMetadata::isSecret($definition) || is_array($type)) {
+    if (DefinitionMetadata::holdsValue($definition) || DefinitionMetadata::isSecret($definition) || is_array($type)) {
       return $type;
     }
     return [$type, 'null'];
@@ -2759,6 +2775,7 @@ final class ContractEmitter {
   protected function widget(DataDefinitionInterface $definition): ?string {
     $type = $definition->getDataType();
     return match (TRUE) {
+      TimeWidget::draws($definition) => 'time',
       in_array($type, ['string', 'email', 'uri'], TRUE) => match (TRUE) {
         (bool) $definition->getSetting('multiline') => 'textarea',
         $type === 'email' => 'email',
@@ -2952,9 +2969,10 @@ final class ContractEmitter {
       }
       $choices[] = $choice;
     }
-    if ($choices === [] || (!$definition->isRequired() && !DefinitionMetadata::isSecret($definition))) {
-      // Null clears an optional key. A list of no values offers it alone,
-      // which a required key's type refuses too: nothing is allowed.
+    if ($choices === [] || (!DefinitionMetadata::holdsValue($definition) && !DefinitionMetadata::isSecret($definition))) {
+      // Null clears an optional key that may be cleared. A list of no
+      // values offers it alone, which a required key's type refuses too:
+      // nothing is allowed.
       $choices[] = ['const' => NULL];
     }
     return $choices;

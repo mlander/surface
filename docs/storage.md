@@ -58,6 +58,18 @@ so it is the whole of the storage code. What it does:
 - **The object must exist**, from the module's `config/install`, and a
   config schema must describe it: a missing schema is a `\LogicException`
   naming the object, since the storage exists to hold values to it.
+- **`mayClear()`** says which keys the object may hold nothing for, by
+  core's own rule: any key, unless the schema is fully validatable
+  (`constraints: {FullyValidatable: ~}` at its root), where only a key
+  that says `nullable: true` may. A key that may not is always held: a
+  tool's null for it is refused naming its default, both schemas leave
+  null out of its type, and its select offers no `- None -` once a
+  valid choice is selected
+  ([decision](decisions.md#a-key-its-storage-always-holds)). So
+  `nullable: true` matters only in a fully validatable schema, on each
+  optional key that may be emptied; elsewhere it changes nothing. The
+  test module's opening hours (`resource_test.opening_hours`) are such
+  an object.
 
 The values are stored as the resource accepted them, key for key: an
 attached structure is the map at its key, and a slot's variant the map

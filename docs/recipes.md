@@ -17,7 +17,7 @@ when you need it and not how.
 ## A time of day
 
 Core has no data type for a time of day, so a time is a string with a
-pattern:
+pattern, which asks the form for a time picker:
 
 <!-- excerpt: tests/modules/data_surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
 
@@ -25,13 +25,19 @@ pattern:
 $inputs->add('opens', 'string', t('Opens at'), default: '09:00')
   ->setRequired(TRUE)
   ->setDescription(t('HH:MM, on a 24-hour clock.'))
+  ->setSetting('widget', 'time')
   ->addConstraint('Regex', [
     'pattern' => '/^([01]\d|2[0-3]):[0-5]\d$/D',
     'message' => 'Write the time as HH:MM, such as 09:00.',
   ]);
 ```
 
-Prefer the string. What a person types, what an agent sends and what the
+The form draws the browser's time input, the served contract says
+`x-surface.widget: "time"` and React draws the same; the browser posts
+`09:00`, and the pattern is still the rule, at every door
+([Widgets](widgets.md#which-element-a-list-of-choices-is)).
+
+Prefer the string. What a person picks, what an agent sends and what the
 config object stores are the same `09:00`, a refusal is the pattern's
 own message, and the pattern reaches both schemas (it ends in `$` with
 the `D` modifier, which both engines read alike:
@@ -66,7 +72,8 @@ it is fixed. Reach for `narrow()` only when another key's value decides.
 ## A multi-select
 
 A list whose item is a choice: the `LabeledChoice` goes on the item, and
-the list is labeled and required as any key is.
+the list is labeled and required as any key is. Up to twelve choices it
+is drawn as checkboxes.
 
 <!-- excerpt: tests/modules/data_surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
 
@@ -89,16 +96,21 @@ $days = (new ListDataDefinition(['type' => 'list'], $day))
 $inputs->addDefinition('days', $days, default: ['mon', 'tue', 'wed', 'thu', 'fri']);
 ```
 
-The form draws a multiple select, the served contract says
-`x-surface.widget: "select"` with `multiple: true`, React draws its
-multiple select, and the tool lists the days as the items' values. A day
-not on the list is refused by its position ("days.1: The value you
-selected is not a valid choice."). An item is never null in either
-schema: an empty item is dropped before anything reads the list
+The form draws checkboxes, one per day, the served contract says
+`x-surface.widget: "checkboxes"`, React draws its checkboxes, and the
+tool lists the days as the items' values. Every box unchecked is the
+empty list; boxes left as drawn keep the days. A list of more than
+twelve choices is a multiple select, and
+`setSetting('widget', 'checkboxes')` or `setSetting('widget', 'select')`
+on the list asks for one or the other at any length
+([Widgets](widgets.md#which-element-a-list-of-choices-is)). A day not on
+the list is refused by its position ("days.1: The value you selected is
+not a valid choice."). An item is never null in either schema: an empty
+item is dropped before anything reads the list
 ([Value semantics](semantics.md#lists)). Required means configured, so
 an empty list satisfies it
-([Declaring a resource](declaring-a-resource.md#required)). Checkboxes
-are not a stock widget; see the last recipe.
+([Declaring a resource](declaring-a-resource.md#required)), and no box
+is required on the form.
 
 ## A text area
 
@@ -150,71 +162,23 @@ what a form posted without JavaScript keeps:
 ## A list of free strings
 
 A list whose item is a plain string, such as keywords, is a list to the
-tool, both schemas and React, which draws it as rows to add and remove.
-On a Form API form no stock widget draws it: the options widget draws a
-list only as a multiple select, and building a form for a key no widget
-claims is refused. So the form needs a widget of your own, which the key
-asks for with a setting:
+tool, both schemas and React, and on the form too: the stock list widget
+draws it as rows, one text field per keyword, with "Remove" beside each
+and "Add another" under them, each rebuilding the list over AJAX. Nothing
+to declare but the list:
 
 <!-- excerpt: tests/modules/data_surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
 
 ```php
 $keywords = (new ListDataDefinition(['type' => 'list'], DataDefinition::create('string')))
-  ->setLabel(t('Keywords'))
-  ->setSetting(LinesWidget::SETTING, TRUE);
+  ->setLabel(t('Keywords'));
 $inputs->addDefinition('keywords', $keywords, default: []);
 ```
 
-The widget claims only the lists that ask for it, draws a text area, and
-reads the text back in the list's shape, one item per line, deciding
-nothing else: what a keyword may be is the resource's to say.
-
-<!-- excerpt: tests/modules/data_surface_resource_test/src/Plugin/DataSurfaceWidget/LinesWidget.php -->
-
-```php
-#[DataSurfaceWidget(
-  id: 'resource_test_lines',
-  label: new TranslatableMarkup('One item per line'),
-  weight: 0,
-)]
-final class LinesWidget extends DataSurfaceWidgetBase {
-
-  /**
-   * The definition setting that asks for this widget.
-   */
-  public const SETTING = 'resource_test_lines';
-
-  /**
-   * {@inheritdoc}
-   */
-  public function isApplicable(DataDefinitionInterface $definition): bool {
-    return $definition instanceof ListDataDefinitionInterface
-      && $definition->getSetting(self::SETTING) === TRUE
-      && $definition->getItemDefinition()->getDataType() === 'string';
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function buildElement(DataDefinitionInterface $definition, mixed $value): array {
-    return $this->baseElement($definition) + [
-      '#type' => 'textarea',
-      '#default_value' => is_array($value) ? implode("\n", $value) : '',
-    ];
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function extractValue(DataDefinitionInterface $definition, array $element, FormStateInterface $form_state, array $fallback_parents): mixed {
-    $raw = $this->rawValue($element, $form_state, $fallback_parents);
-    return is_string($raw) ? preg_split('/\R/', trim($raw), -1, PREG_SPLIT_NO_EMPTY) : $raw;
-  }
-
-}
-```
-
-The demo extras module ships another, a comma separated list
-(`CommaSeparatedListWidget`). Writing one in full:
-[Widgets](widgets.md#writing-a-widget). A stock widget for it, with
-checkboxes and radios, is the next unit on the roadmap.
+A row left empty is dropped, as the pipeline drops an empty item; what a
+keyword may be (a `Length`, a `Regex` on the item definition) reaches
+each row's field, and a refused keyword is marked on its own row. The
+served contract says `x-surface.widget: "list"`. A text area of one
+keyword per line, or a comma separated list, is still a widget of your
+own if you want one ([Writing a widget](widgets.md#writing-a-widget));
+the demo extras module ships the second, `CommaSeparatedListWidget`.

@@ -61,19 +61,66 @@ function my_module_data_surface_widget_info_alter(array &$definitions): void {
 
 ## The stock widgets
 
-| Widget | Weight | Applies to |
-| --- | --- | --- |
-| `options` | -10 | Any definition whose constraints resolve to a list of allowed values, an empty one included. See [Options and resolvers](options.md). |
-| `map` | 5 | A `ComplexDataDefinitionInterface`. One that declares no property, such as a slot variant for a choice with nothing more to say, renders as an empty container and answers an empty map. |
-| `string` | 10 | `string`, `email`, `uri`. |
-| `number` | 10 | `integer`, `float`. |
-| `boolean` | 10 | `boolean`. |
+| Widget | Weight | Applies to | Element |
+| --- | --- | --- | --- |
+| `checkboxes` | -15 | A list whose item resolves to a list of allowed values, while it offers at most twelve (`CheckboxesWidget::MAXIMUM_OPTIONS`), or that asks for checkboxes. | `checkboxes`, never `#required` |
+| `radios` | -15 | One value that resolves to a list of allowed values and asks for radios. | `radios`; `- None -` a radio only where the key may be cleared |
+| `options` | -10 | Any definition whose constraints resolve to a list of allowed values, an empty one included: one value, and a list the checkboxes leave (more than twelve, or asking for a select). See [Options and resolvers](options.md). | `select`; a list's `#multiple` |
+| `map` | 5 | A `ComplexDataDefinitionInterface`. One that declares no property, such as a slot variant for a choice with nothing more to say, renders as an empty container and answers an empty map. | `details` |
+| `list` | 8 | A list of single values with no list of allowed values, whose item a widget draws: keywords, a list of free strings or numbers. | a `fieldset` of rows, "Remove" beside each, "Add another" under them |
+| `time` | 9 | A `string` that asks for a time. | a time input |
+| `string` | 10 | `string`, `email`, `uri`. | `textfield`, `email`, `url`; `textarea` when multiline; `password` for a secret |
+| `number` | 10 | `integer`, `float`. | `number` |
+| `boolean` | 10 | `boolean`. | `checkbox`, never `#required` |
 
-The weights say the selection rule out loud: the options widget is asked
-first, so a string key carrying a `Choice` renders as a select rather
-than a text field; the map widget comes next, so a complex definition
-that also resolves to options is still a select; and the per-type widgets
-are the fallback.
+The weights say the selection rule out loud: the checkboxes and radios
+are asked first, and each claims only what its rule gives it; the
+options widget next, so a string key carrying a `Choice` renders as a
+select rather than a text field; the map widget comes next, so a complex
+definition that also resolves to options is still a select; the list
+widget takes a list with no choices; and the per-type widgets are the
+fallback.
+
+### Which element a list of choices is
+
+The definition alone does not say whether a list of choices is
+checkboxes or a multiple select, nor one choice a select or radios, so
+the stock widgets have a rule ([decision](decisions.md#a-widget-is-chosen-from-the-definition)):
+
+- **A list of choices is checkboxes up to twelve, a multiple select
+  above.** A multiple select needs a modifier key for a second value and
+  loses every choice on a stray click, so only a list too long to scan
+  as a column of checkboxes is one.
+- **One choice is a select**, whatever its length, unless it asks for
+  radios. A select has none of the multiple select's faults, and radios
+  spend a line per choice on every key, which is the page's to decide.
+- **A list of free values is rows**, each the element the item's own
+  widget draws, added and removed over AJAX. Each item keeps its own
+  element's hints, and a refusal of one is shown on its row.
+
+A definition asks for an element with core's own setting, in the words
+the served contract's `x-surface.widget` uses:
+
+```php
+$inputs->add('handling', 'string', t('Handling'))
+  ->setSetting('widget', 'radios')
+  ->addConstraint('LabeledChoice', ['choices' => [...]]);
+
+$days = (new ListDataDefinition(['type' => 'list'], $day))
+  ->setSetting('widget', 'select');   // a multiple select, at any length
+
+$inputs->add('opens', 'string', t('Opens at'))
+  ->setSetting('widget', 'time');     // the Regex is still the rule
+```
+
+`checkboxes`, `radios`, `select` and `time` are the words the stock
+widgets answer to (`DataSurfaceWidgetBase::answersTo()`). A word the
+widget that claims the definition does not answer to is refused when the
+element is built ("... asks for the radios widget, which does not draw a
+key of type list of string; the select widget does."), rather than drawn
+as something it did not ask for. A widget of a module's own answers to
+its plugin ID, so `setSetting('widget', 'my_module_color')` asks for one
+whose `isApplicable()` reads that setting.
 
 The options widget claims a key whose list is **empty** too. A refiner
 that narrows a list to nothing (`'choices' => []`), or a resolver that
@@ -95,8 +142,12 @@ the rule's message, and the string widget clears `#maxlength`, which
 core checks the same way ("cannot be longer than"), so a refusal says
 what the `Range` or the `Length`, and any message a refiner gave it,
 says ([decision](decisions.md#an-element-hints-and-the-rule-speaks)). A select offers an empty option by [the empty
-option rule](decisions.md#the-empty-option-rule): always when optional,
-and when required only while no valid choice is selected. The string
+option rule](decisions.md#the-empty-option-rule): always when the key
+may be cleared, and when it holds a value (required, or [always held by
+its storage](decisions.md#a-key-its-storage-always-holds)) only while no
+valid choice is selected. Radios show nothing checked where a select
+shows that empty option, and a `- None -` radio only where the key may
+be cleared. The string
 widget picks its element type from the definition (`textarea` when the
 definition carries the `multiline` type setting, otherwise `email`,
 `url` or `textfield` from the data type), and both the string and number
@@ -130,8 +181,12 @@ generated form and a payload carrying the same strings produce the same
 values. The rules are in [Value semantics](semantics.md).
 
 The base class reads the element back for a widget whose element holds
-one value at its own place in the form. A widget that renders several
-elements, as the map widget does, overrides `extractValue()`.
+one value at its own place in the form. It reads checkboxes too, which
+post every option with its value or `0`, as the list of the values
+checked, whichever widget reads them: a list a refiner narrowed may be
+drawn as checkboxes and read back through the definition as advertised.
+A widget that renders several elements, as the map and list widgets do,
+overrides `extractValue()`.
 
 ### The one subtlety in extraction
 
@@ -186,7 +241,7 @@ Three things to hold to:
 
 1. **Declare a weight that says where you belong.** Lower than 10 to
    undercut a per-type widget, lower than -10 to undercut the options
-   widget.
+   widget, lower than -15 to undercut the checkboxes and radios.
 2. **Do not coerce.** Give back what was submitted, in the definition's
    shape.
 3. **Read nothing but the definition.** If you find yourself wanting the

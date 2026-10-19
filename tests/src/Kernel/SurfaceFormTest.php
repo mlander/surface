@@ -313,11 +313,17 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
   /**
    * Builds a data surface holding one list of labeled choices.
    *
+   * @param string|null $widget
+   *   The widget the list asks for, if any.
+   *
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The data surface.
    */
-  protected function tagsSurface(): DataSurfaceInterface {
+  protected function tagsSurface(?string $widget = NULL): DataSurfaceInterface {
     $tags = ListDataDefinition::create('string')->setLabel('Tags');
+    if ($widget !== NULL) {
+      $tags->setSetting('widget', $widget);
+    }
     $tags->getItemDefinition()->addConstraint('LabeledChoice', [
       'choices' => ['news', 'tips', 'events'],
       'labels' => ['news' => 'News', 'tips' => 'Tips', 'events' => 'Events'],
@@ -326,10 +332,14 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests a list of choices renders one select over the item's options.
+   * Tests a list of choices asking for a select renders one multiple select.
+   *
+   * Three choices are checkboxes unless the list asks for a select
+   * (StockWidgetsTest holds the rule).
    */
   public function testListOfChoicesRendersMultipleSelect(): void {
-    $surface = $this->tagsSurface();
+    $this->assertSame('checkboxes', $this->formBuilder()->buildSurfaceForm($this->tagsSurface(), ['tags' => ['tips']], new FormState())['tags']['#type']);
+    $surface = $this->tagsSurface('select');
     $form = $this->formBuilder()->buildSurfaceForm($surface, ['tags' => ['tips']], new FormState());
 
     $this->assertSame('select', $form['tags']['#type']);

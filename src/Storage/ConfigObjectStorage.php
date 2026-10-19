@@ -15,6 +15,7 @@ use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\data_surface\Pipeline\StorageViolationsException;
 use Drupal\data_surface\Pipeline\Violation;
 use Drupal\data_surface\Pipeline\ViolationSet;
+use Drupal\data_surface\Resource\KnowsClearableKeysInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceStorageInterface;
 
@@ -44,6 +45,9 @@ use Drupal\data_surface\Resource\ResourceStorageInterface;
  *   refused, since the schema would otherwise let them through unchecked.
  *   It writes nothing.
  * - commit() writes what prepare() returned.
+ * - mayClear() says which keys the schema lets hold nothing, by core's
+ *   own rule: in a fully validatable object, only those it calls
+ *   nullable.
  *
  * The storage owns `_core`, which the config installer writes, and
  * `langcode`, which core's rule asks for exactly when the schema has a
@@ -56,7 +60,7 @@ use Drupal\data_surface\Resource\ResourceStorageInterface;
  *
  * @see docs/storage.md#a-simple-config-object
  */
-abstract class ConfigObjectStorage implements ResourceStorageInterface {
+abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsClearableKeysInterface {
 
   use DependencySerializationTrait;
   use StringTranslationTrait;
@@ -75,6 +79,13 @@ abstract class ConfigObjectStorage implements ResourceStorageInterface {
    * Where another module's keys are mounted.
    */
   public const THIRD_PARTY = 'third_party_settings';
+
+  /**
+   * What mayClear() answered, by the stored data's hash and the path.
+   *
+   * @var array<string, array<string, bool|null>>
+   */
+  protected array $clearable = [];
 
   /**
    * Constructs a ConfigObjectStorage.
@@ -150,6 +161,41 @@ abstract class ConfigObjectStorage implements ResourceStorageInterface {
       $config->clear('langcode');
     }
     $config->save();
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Core's rule, read from the schema with what is stored, so a type that
+   * resolves through a sibling resolves: a value may be NULL unless the
+   * object's schema is fully validatable (the `FullyValidatable`
+   * constraint at its root) and the key's schema does not say
+   * `nullable: true`. There, the schema refuses NULL, and so the key is
+   * always held. A key no schema describes is not known.
+   *
+   * Decision: see docs/decisions.md#a-key-its-storage-always-holds.
+   */
+  public function mayClear(OperationContext $context, string $path): ?bool {
+    $name = $this->name();
+    if (!$this->typedConfig->hasConfigSchema($name)) {
+      return NULL;
+    }
+    $stored = $this->stored();
+    $hash = hash('xxh64', serialize($stored));
+    if (!array_key_exists($path, $this->clearable[$hash] ?? [])) {
+      $answer = NULL;
+      try {
+        $element = $this->typed($name, $stored)?->get($path);
+        if ($element !== NULL && !$element instanceof Undefined) {
+          $answer = !$element->getDataDefinition()->isRequired();
+        }
+      }
+      catch (\InvalidArgumentException) {
+        // No such property in the schema: nothing to say.
+      }
+      $this->clearable[$hash][$path] = $answer;
+    }
+    return $this->clearable[$hash][$path];
   }
 
   /**

@@ -346,6 +346,29 @@ and an "Add another" button:
 
 A collection inside an item is not drawn yet.
 
+### A list of free values on a form
+
+A list of single values with no list of allowed values (keywords, a
+list of free strings) is drawn by the stock list widget the same way,
+in a `fieldset` of rows rather than a `details` of items
+([decision](decisions.md#a-widget-is-chosen-from-the-definition)):
+
+- **Each row** is the element the item's own widget draws, its title
+  the list's label and the row's number, read by screen readers and not
+  shown, named by delta (`surface[keywords][1]`), with a "Remove" button
+  beside it and "Add another" under all of them.
+- **The widget cannot know where it sits**, so it marks the list and its
+  buttons, and the container's process callback wires them at any depth
+  when the form is processed: the list gets its refresh wrapper, each
+  button a name for its place (`data_surface_keywords_add`,
+  `data_surface_keywords_remove-1`), the container's AJAX callback and
+  the path it sits at. Their submit handlers (`ListWidget::addRow()`,
+  `removeRow()`) rewrite the posted rows and rebuild; nothing is judged.
+- **Bounds and extraction** are a collection's: at least the Count's
+  minimum drawn, the buttons disabled at the bounds, an empty row
+  dropped on extraction, and a refusal of an item flagged on the row it
+  was drawn as.
+
 ### `#limit_validation_errors`
 
 Every `#ajax` the builder attached, at any depth, is limited to **that
@@ -587,7 +610,10 @@ an option:
 
 The whole of the rule for when a single select shows its empty option
 is [a decision](decisions.md#the-empty-option-rule): whenever no valid
-choice is selected, and always on an optional select. A required select
+choice is selected, and always on a select that may be cleared, an
+optional key its storage does not [always
+hold](decisions.md#a-key-its-storage-always-holds). A required select,
+or one its storage always holds,
 with a stored value it still offers, or a declared default it offers,
 has no empty option at all; on first entry it comes up on `- Select -`,
 and a save leaving it there is refused with "@label is required.", set
@@ -834,12 +860,14 @@ message ([decision](decisions.md#an-element-hints-and-the-rule-speaks)).
 A swap must also keep the shape the element posts. The widget that drew
 the element reads the value back from what it posts, in the
 definition's shape, and the cosmetic layer runs after the widget has
-chosen the element, never instead of it. Radios may replace a select:
-both post one value, the chosen option's key. Checkboxes may not replace
-a multiple select: a multiple select posts the list of the values
-chosen, checkboxes post every option, each with its value or `0`, which
-the options widget does not read as a list. A swap that changes what is
-posted is a widget of its own ([Writing a widget](widgets.md#writing-a-widget)).
+chosen the element, never instead of it. Radios and checkboxes need no
+swap at all now: they are stock widgets, asked for on the definition
+(`setSetting('widget', 'radios')`), and a list of a few choices is
+checkboxes unasked ([Widgets](widgets.md#which-element-a-list-of-choices-is)).
+Asked for there, the element is the same at every door: the served
+contract says `radios` or `checkboxes`, and the React app draws them,
+where a swap changes the form alone. A swap that changes what is posted
+is a widget of its own ([Writing a widget](widgets.md#writing-a-widget)).
 
 `data_surface_demo_node_type` is the worked example: two routes and a
 cosmetics service holding core's vertical tabs, the machine name's

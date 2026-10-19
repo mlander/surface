@@ -44,6 +44,33 @@ interface DataSurfaceFormBuilderInterface {
   public const STALE_MARKER_KEY = '@stale';
 
   /**
+   * Marks the element of a list of free values, drawn as rows.
+   *
+   * Written by the list widget, which cannot know where in the form its
+   * element sits; the container's process callback finds every element
+   * carrying it, at any depth, gives it a wrapper the rebuild replaces it
+   * by, and wires its "Add another" and "Remove" buttons, which carry
+   * ROW_CONTROL_KEY, to that rebuild.
+   *
+   * @see \Drupal\data_surface\Plugin\DataSurfaceWidget\ListWidget
+   */
+  public const ROWS_KEY = '#data_surface_rows';
+
+  /**
+   * Marks a button of a list of free values: `add`, or `remove` and a row.
+   */
+  public const ROW_CONTROL_KEY = '#data_surface_row_control';
+
+  /**
+   * Where a request keeps the row each item of a free list was drawn at.
+   *
+   * Temporary form state, keyed by the list element's #array_parents: an
+   * empty row is dropped on extraction, so a violation about an item after
+   * it is flagged on the row it was drawn as.
+   */
+  public const ROW_DELTAS = 'data_surface_row_deltas';
+
+  /**
    * Key in the values a container is built from: what an orphan stood for.
    *
    * A refinement rebuild that moves a dependency can leave a dependent

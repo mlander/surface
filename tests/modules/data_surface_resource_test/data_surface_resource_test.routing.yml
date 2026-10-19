@@ -117,3 +117,15 @@ data_surface_resource_test.exhibit:
     _data_surface_operation: 'configure'
   requirements:
     _data_surface_operation_access: 'TRUE'
+
+# The opening hours' one operation, served by the generic form: the
+# common settings recipes, drawn by the stock widgets (docs/recipes.md).
+data_surface_resource_test.opening_hours:
+  path: '/surface-test/opening-hours'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Configure the opening hours'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Library\OpeningHoursResource'
+    _data_surface_operation: 'configure'
+  requirements:
+    _data_surface_operation_access: 'TRUE'

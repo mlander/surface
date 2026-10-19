@@ -85,6 +85,15 @@ final class DefinitionMetadata {
   protected const SHAPE_KEY = 'data_surface_shape';
 
   /**
+   * The definition array key marking a key its storage always holds.
+   *
+   * Written by the build step, from what the storage says, never by an
+   * author: whether a key may hold nothing is a fact of where it is
+   * stored, which the resource does not know.
+   */
+  protected const ALWAYS_HELD_KEY = 'data_surface_always_held';
+
+  /**
    * Declares the value a definition starts from.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
@@ -461,6 +470,58 @@ final class DefinitionMetadata {
   public static function shapeDefinition(DataDefinitionInterface $definition): ?DataDefinitionInterface {
     $shape = static::shape($definition);
     return $shape === NULL ? NULL : $shape['definition'];
+  }
+
+  /**
+   * Marks a key its storage always holds a value for.
+   *
+   * Null on an optional key clears it, where clearing is possible. Where
+   * the storage cannot hold nothing for the key (a config object whose
+   * schema is fully validatable and does not say the key is nullable),
+   * null is no answer the key takes: the pipeline refuses it naming the
+   * default, both schemas leave null out of its type, and a select or
+   * radios offers no empty choice once a valid one is chosen.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition.
+   *
+   * @see docs/decisions.md#a-key-its-storage-always-holds
+   */
+  public static function setAlwaysHeld(DataDefinitionInterface $definition): void {
+    static::arrayAccess($definition)->offsetSet(static::ALWAYS_HELD_KEY, TRUE);
+  }
+
+  /**
+   * Returns whether a key's storage always holds a value for it.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to read.
+   *
+   * @return bool
+   *   TRUE when null cannot clear it; FALSE when it may be cleared, or
+   *   when its storage says nothing.
+   */
+  public static function isAlwaysHeld(DataDefinitionInterface $definition): bool {
+    return $definition instanceof \ArrayAccess
+      && $definition->offsetExists(static::ALWAYS_HELD_KEY)
+      && (bool) $definition->offsetGet(static::ALWAYS_HELD_KEY);
+  }
+
+  /**
+   * Returns whether a key holds a value whatever is sent.
+   *
+   * A required key, or one its storage always holds: either way null is
+   * no answer it takes, and a choice of it needs no empty option once a
+   * valid one is chosen.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to read.
+   *
+   * @return bool
+   *   TRUE when null cannot clear it.
+   */
+  public static function holdsValue(DataDefinitionInterface $definition): bool {
+    return $definition->isRequired() || static::isAlwaysHeld($definition);
   }
 
   /**

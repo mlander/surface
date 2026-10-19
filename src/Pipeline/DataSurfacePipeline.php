@@ -569,6 +569,12 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         if ($definition->isRequired()) {
           $errors[] = new Violation($name, '', $this->isRequired($surface, $refined, $name, '', $definition->getLabel() ?? $name, $values));
         }
+        elseif (DefinitionMetadata::isAlwaysHeld($definition)) {
+          // Null clears where clearing is possible; here the storage
+          // holds a value whatever is sent, so null is no answer.
+          // Decision: see docs/decisions.md#a-key-its-storage-always-holds.
+          $errors[] = new Violation($name, '', $this->cannotBeCleared($definition, $name));
+        }
         foreach ($missing as $path => $label) {
           $errors[] = new Violation($name, $path, $this->isRequired($surface, $refined, $name, $path, $label, $values));
         }
@@ -594,6 +600,14 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
           ]));
         }
         continue;
+      }
+      if ($definition instanceof ListDataDefinition && $value === [] && $definition->isRequired()) {
+        // Required means configured, and the empty list is: what all
+        // checkboxes unchecked, or every row removed, says. Core's NotNull
+        // reads an empty list as null, so it is not asked here; the data
+        // surface asked whether the key holds a value, above.
+        // Decision: see docs/decisions.md#required-means-must-hold-a-value.
+        $definition = (clone $definition)->setRequired(FALSE);
       }
       $typed_data = DefinitionTypedData::create($this->typedDataManager, $definition, $value, $name);
       $refusals = [];
@@ -788,6 +802,42 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     return $shown === []
       ? $this->t('choose @choice', ['@choice' => $last])
       : $this->t('choose @choices or @last', ['@choices' => implode(', ', $shown), '@last' => $last]);
+  }
+
+  /**
+   * Says that a key its storage always holds cannot be cleared.
+   *
+   * Names the default, an option by its label, so the caller knows what
+   * the key holds when it starts, and that leaving it out keeps it.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key.
+   * @param string $name
+   *   Its name, when it has no label.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   The refusal.
+   */
+  protected function cannotBeCleared(DataDefinitionInterface $definition, string $name): TranslatableMarkup {
+    $label = $definition->getLabel() ?? $name;
+    $default = DefinitionMetadata::hasDefaultValue($definition) ? DefinitionMetadata::getDefaultValue($definition) : NULL;
+    if (!is_scalar($default)) {
+      return $this->t('@label cannot be cleared: it always holds a value. Leave it out to keep what it holds.', ['@label' => $label]);
+    }
+    $set = $this->options->resolve($definition);
+    $value = is_bool($default) ? (int) $default : $default;
+    $shown = match (TRUE) {
+      $set !== NULL && isset($set->options[$value]) => $this->t('@label (@value)', [
+        '@label' => $set->options[$value],
+        '@value' => $value,
+      ]),
+      is_bool($default) => $default ? $this->t('on') : $this->t('off'),
+      default => (string) $default,
+    };
+    return $this->t('@label cannot be cleared: it always holds a value, @default by default. Leave it out to keep what it holds.', [
+      '@label' => $label,
+      '@default' => $shown,
+    ]);
   }
 
   /**

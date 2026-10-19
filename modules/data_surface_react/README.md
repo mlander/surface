@@ -56,17 +56,18 @@ and so on.
   document as served. The main module's
   `Contract\SchemaResolver` is the same resolver in PHP.
 - **Renders** one component per `x-surface.widget`, mirroring the Form
-  API mapping: select with the empty option rule, checkbox, number with
-  its bounds and step, text with its maxlength, textarea, email, a
+  API mapping: select and radios with the empty option rule, checkboxes
+  and a multiple select for a list of choices, checkbox, number with
+  its bounds and step, text with its maxlength, a time input, textarea,
+  email, a
   fieldset for a map or an attached part (none around the modules'
   third-party settings, `x-surface.group`, each module's map being its
   own, as on the form; a module's map carrying `x-surface.after` is
   drawn right after that sibling of the group instead, its values still
   sent under the group), the chosen variant's fieldset for a slot
-  (nothing while it is unresolved), and a minimal repeatable
-  for a list with no option list. Radios are in the vocabulary and the
-  app, and the emitter never asks for them, because the Form API
-  mapping renders none. Locked keys are disabled and say why; a stale
+  (nothing while it is unresolved), and rows to add and remove for a
+  list with no option list, as the list widget draws them. Locked keys
+  are disabled and say why; a stale
   value shows on the empty option and stands for the stored value,
   which stays on the server.
 - **Narrows here, or asks.** On load it fetches the contract and the full

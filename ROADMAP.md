@@ -834,10 +834,21 @@ renames sit in A because they are cheapest before new code exists.
       from the separator, in storage `load()` today. (Adopters.)
     - **"- None -" on every optional select**: the original offered no
       empty choice; requiring the key means sending every row. (Adopters.)
-    - **The widget set, the next unit**: checkboxes, radios, a list of
-      free strings on the Form API door. (Adopters; fresh eyes, 8.)
+      DONE 2026-10-19: a key its storage always holds (a fully
+      validatable config schema that does not call it nullable) offers
+      no empty choice once a valid one is chosen, refuses null naming
+      its default, and both schemas leave null out of it
+      (`docs/decisions.md#a-key-its-storage-always-holds`).
+    - **The widget set**: checkboxes, radios, a list of free strings on
+      the Form API door. (Adopters; fresh eyes, 8.) DONE 2026-10-19:
+      checkboxes for a list of up to twelve choices, radios when asked
+      for, rows to add and remove for a list of free values, a time
+      input, each asked for with `setSetting('widget', ...)`, at both
+      doors (`docs/decisions.md#a-widget-is-chosen-from-the-definition`).
     - **A time-of-day type**: today a string with a Regex, or minutes
-      when a rule compares it (`docs/recipes.md`). (Fresh eyes, 6.)
+      when a rule compares it (`docs/recipes.md`). (Fresh eyes, 6.) The
+      widget is DONE 2026-10-19 (`setSetting('widget', 'time')`, a time
+      input at both doors); a type of its own is still not built.
     - **Site-derived keys cost a deriver**: 107 lines for pathauto's,
       against the original's loop of about 20. (Adopters.)
     - **Required keys resent on every edit call**: a decision pending

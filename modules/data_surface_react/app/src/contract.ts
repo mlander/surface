@@ -7,7 +7,9 @@
 export type Widget =
   | 'select'
   | 'radios'
+  | 'checkboxes'
   | 'checkbox'
+  | 'time'
   | 'number'
   | 'text'
   | 'textarea'
@@ -203,6 +205,22 @@ export function sameValue(a: unknown, b: unknown): boolean {
     return false;
   }
   return String(a) === String(b);
+}
+
+/**
+ * Whether a key holds a value whatever is sent: required in its frame, or
+ * a key whose type and choices leave null out, which its storage always
+ * holds (docs/decisions.md#a-key-its-storage-always-holds). Either way
+ * null is no answer, and a choice of it needs no empty option once a
+ * valid one is chosen.
+ */
+export function holdsValue(schema: Schema, required: boolean): boolean {
+  if (required) {
+    return true;
+  }
+  const types = Array.isArray(schema.type) ? schema.type : schema.type === undefined ? [] : [schema.type];
+  const nullable = types.includes('null') || (schema.oneOf ?? []).some((choice) => choice.const === null && choice.title === undefined);
+  return !nullable && !schema.writeOnly;
 }
 
 /** Whether a value holds nothing, by the module's own rule: null or ''. */
@@ -1161,13 +1179,15 @@ function labels(schema: Schema): Labels {
       return;
     }
     // A frame (an object with its properties and `required`) says which
-    // of its selects are optional: those it does not require.
+    // of its selects may be cleared: those it does not require and whose
+    // choices offer null. Radios say "- None -" whatever they are.
     if (jsonType(node as Schema) === 'object' && isObject(node.properties)) {
       const required = Array.isArray(node.required) ? (node.required as string[]) : [];
       for (const [name, property] of Object.entries(node.properties)) {
-        const option = isObject(property) ? (property['x-surface'] as Extension | undefined)?.emptyOption : undefined;
-        if (option !== undefined && isObject(property) && property.oneOf !== undefined) {
-          found[required.includes(name) ? 'required' : 'optional'] ??= option.label;
+        const extension = isObject(property) ? (property['x-surface'] as Extension | undefined) : undefined;
+        const option = extension?.emptyOption;
+        if (option !== undefined && isObject(property) && property.oneOf !== undefined && extension?.widget === 'select') {
+          found[holdsValue(property as Schema, required.includes(name)) ? 'required' : 'optional'] ??= option.label;
         }
       }
     }
@@ -1700,12 +1720,16 @@ function present(schema: Schema, full: Schema, values: Values, path: string, map
     const own: Extension = { ...extension, stale: false };
     delete own.emptyOption;
     let out: unknown = jsonType(property) === 'array' && Array.isArray(value) ? [...value] : value;
-    if (extension.widget === 'select' && !extension.multiple && jsonType(property) !== 'array' && property.oneOf !== undefined) {
+    if ((extension.widget === 'select' || extension.widget === 'radios') && !extension.multiple && jsonType(property) !== 'array' && property.oneOf !== undefined) {
       const list = offered(property) ?? [];
       const configured = !isEmpty(value);
       const chosen = configured && allows(list, value);
-      const required = (schema.required ?? []).includes(name);
-      own.emptyOption = { show: !(chosen && required), label: required ? context.labels.required : context.labels.optional };
+      // OptionsWidget::singleSelect() and RadiosWidget::buildElement():
+      // radios show nothing checked where a select shows its empty option.
+      const holds = holdsValue(property, (schema.required ?? []).includes(name));
+      own.emptyOption = extension.widget === 'radios'
+        ? { show: !holds, label: context.labels.optional }
+        : { show: !(chosen && holds), label: holds ? context.labels.required : context.labels.optional };
       if (configured && !chosen) {
         own.stale = true;
         stale.push(at);

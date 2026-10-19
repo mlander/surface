@@ -80,14 +80,14 @@ class RecipesTest extends DataSurfaceKernelTestBase {
   public function testEachRecipeDraws(): void {
     $hours = $this->hours();
     $form = $this->formBuilder()->buildSurfaceForm($hours, $hours->getDefaultValues(), new FormState());
-    $this->assertSame('textfield', $form['opens']['#type'], 'A time of day is typed.');
+    $this->assertSame(['date', 'time'], [$form['opens']['#type'], $form['opens']['#attributes']['type']], 'A time of day is a time input.');
     $this->assertSame('number', $form['closes']['#type']);
     $this->assertSame([721, 1439], [$form['closes']['#min'], $form['closes']['#max']]);
-    $this->assertSame('select', $form['days']['#type'], 'A list of choices is a multiple select.');
-    $this->assertTrue($form['days']['#multiple']);
+    $this->assertSame('checkboxes', $form['days']['#type'], 'A list of a few choices is checkboxes.');
     $this->assertSame('textarea', $form['notes']['#type']);
     $this->assertArrayNotHasKey('#type', $form['door_code'], 'No element while after-hours access is off.');
-    $this->assertSame('textarea', $form['keywords']['#type'], 'A list of free strings, drawn by a widget of its own.');
+    $this->assertSame('fieldset', $form['keywords']['#type'], 'A list of free strings is rows to add and remove.');
+    $this->assertSame('Add another', (string) $form['keywords']['add']['#value']);
 
     $open = $this->formBuilder()->buildSurfaceForm($hours, ['after_hours' => TRUE] + $hours->getDefaultValues(), new FormState());
     $this->assertTrue($open['door_code']['#required']);
@@ -96,8 +96,9 @@ class RecipesTest extends DataSurfaceKernelTestBase {
     $this->assertSame('^([01]\d|2[0-3]):[0-5]\d$', $full['properties']['opens']['pattern']);
     $this->assertSame([721, 1439], [$full['properties']['closes']['minimum'], $full['properties']['closes']['maximum']]);
     $this->assertSame('textarea', $full['properties']['notes']['x-surface']['widget']);
-    $days = $full['properties']['days']['x-surface'];
-    $this->assertSame(['select', TRUE], [$days['widget'], $days['multiple']]);
+    $this->assertSame('time', $full['properties']['opens']['x-surface']['widget']);
+    $this->assertSame('checkboxes', $full['properties']['days']['x-surface']['widget']);
+    $this->assertSame('list', $full['properties']['keywords']['x-surface']['widget']);
   }
 
   /**

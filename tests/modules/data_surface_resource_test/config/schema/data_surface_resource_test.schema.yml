@@ -327,9 +327,12 @@ data_surface_resource_test.exhibit:
               nullable: true
 
 # The opening hours fixture: the common settings recipes (docs/recipes.md).
+# Fully validatable, so a key not marked nullable always holds a value.
 data_surface_resource_test.opening_hours:
   type: config_object
   label: 'Opening hours'
+  constraints:
+    FullyValidatable: ~
   mapping:
     opens:
       type: string
@@ -346,15 +349,20 @@ data_surface_resource_test.opening_hours:
     notes:
       type: text
       label: 'Notes'
+      nullable: true
     after_hours:
       type: boolean
       label: 'After-hours access'
     door_code:
       type: string
       label: 'Door code'
+      nullable: true
     keywords:
       type: sequence
       label: 'Keywords'
       sequence:
         type: string
         label: 'Keyword'
+    holidays:
+      type: string
+      label: 'On public holidays'

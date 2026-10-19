@@ -261,6 +261,80 @@ describe('select and the empty option rule', () => {
   });
 });
 
+describe('checkboxes, radios and a time', () => {
+  const days: Schema = {
+    title: 'Days open',
+    type: 'array',
+    items: { type: 'string', oneOf: [{ const: 'mon', title: 'Monday' }, { const: 'tue', title: 'Tuesday' }, { const: 'sat', title: 'Saturday' }] },
+    'x-surface': x('checkboxes'),
+  };
+
+  it('maps `checkboxes` to a box per option, checked by the list, sent in option order', async () => {
+    let seen: Values = {};
+    render(<Form schema={object({ days }, ['days'])} initial={{ days: ['tue'] }} onValues={(values) => (seen = values)} />);
+    expect(screen.getAllByRole('checkbox')).toHaveLength(3);
+    expect(screen.getByLabelText('Tuesday')).toBeChecked();
+    expect(screen.getByLabelText('Monday')).not.toBeChecked();
+    expect(screen.getByLabelText('Monday')).not.toBeRequired();
+    await userEvent.click(screen.getByLabelText('Saturday'));
+    await userEvent.click(screen.getByLabelText('Monday'));
+    expect(seen.days).toEqual(['mon', 'tue', 'sat']);
+  });
+
+  it('sends the empty list when every box is unchecked', async () => {
+    let seen: Values = {};
+    render(<Form schema={object({ days }, ['days'])} initial={{ days: ['tue'] }} onValues={(values) => (seen = values)} />);
+    await userEvent.click(screen.getByLabelText('Tuesday'));
+    expect(seen.days).toEqual([]);
+  });
+
+  it('draws "- None -" as a radio only where the contract shows it, and clears with it', async () => {
+    let seen: Values = {};
+    const handling: Schema = {
+      title: 'Handling',
+      type: ['string', 'null'],
+      oneOf: [{ const: 'fragile', title: 'Fragile' }, { const: 'upright', title: 'This way up' }, { const: null }],
+      'x-surface': x('radios', { emptyOption: { show: true, label: '- None -' } }),
+    };
+    render(<Form schema={object({ handling })} initial={{ handling: 'fragile' }} onValues={(values) => (seen = values)} />);
+    expect(screen.getAllByRole('radio')).toHaveLength(3);
+    await userEvent.click(screen.getByLabelText('- None -'));
+    expect(seen.handling).toBeNull();
+  });
+
+  it('draws no empty radio for a key that holds a value, and nothing checked while it holds no valid choice', () => {
+    const holidays: Schema = {
+      title: 'On public holidays',
+      type: 'string',
+      oneOf: [{ const: 'closed', title: 'Closed' }, { const: 'open', title: 'Open as usual' }],
+      'x-surface': x('radios', { stale: true, emptyOption: { show: false, label: '- None -' } }),
+    };
+    render(<Form schema={object({ holidays })} initial={{ holidays: null }} />);
+    expect(screen.getAllByRole('radio')).toHaveLength(2);
+    expect(screen.queryByLabelText('- None -')).toBeNull();
+    for (const radio of screen.getAllByRole('radio')) {
+      expect(radio).not.toBeChecked();
+    }
+  });
+
+  it('maps `time` to a time input', () => {
+    render(<Form schema={object({ opens: { title: 'Opens at', type: 'string', 'x-surface': x('time') } })} initial={{ opens: '09:00' }} />);
+    const input = screen.getByLabelText(/Opens at/);
+    expect(input).toHaveAttribute('type', 'time');
+    expect(input).toHaveValue('09:00');
+  });
+
+  it('maps `list` to rows to add and remove, each the item\'s own field', async () => {
+    let seen: Values = {};
+    const keywords: Schema = { title: 'Keywords', type: 'array', items: { type: 'string', 'x-surface': x('text') }, 'x-surface': x('list') };
+    render(<Form schema={object({ keywords })} initial={{ keywords: ['maps'] }} onValues={(values) => (seen = values)} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Add keywords' }));
+    expect(seen.keywords).toEqual(['maps', '']);
+    await userEvent.click(screen.getByRole('button', { name: 'Remove 1' }));
+    expect(seen.keywords).toEqual(['']);
+  });
+});
+
 describe('locked', () => {
   it('renders a locked key disabled, saying why', () => {
     render(

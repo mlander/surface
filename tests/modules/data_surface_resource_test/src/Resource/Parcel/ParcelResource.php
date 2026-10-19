@@ -21,7 +21,9 @@ use Drupal\data_surface_resource_test\Storage\ParcelStorage;
  * absent, equals, in, the four bounds, not, allOf, anyOf) and every
  * effect (Range, Length, Count, a subset of a list, a pattern, required,
  * does not apply, a description). ParcelAlter adds a customs code with
- * rules of its own, on its own key and on the owner's.
+ * rules of its own, on its own key and on the owner's. The handling is
+ * drawn as radios, which it asks for, with a "- None -" radio, since it
+ * is optional and may be cleared.
  *
  * @see docs/refinement.md#declaring-a-rule
  */
@@ -61,6 +63,7 @@ final class ParcelResource implements ResourceInterface {
       ->addConstraint('Length', ['max' => 64]);
     $inputs->add('tracking', 'string', t('Tracking code'));
     $inputs->add('handling', 'string', t('Handling'))
+      ->setSetting('widget', 'radios')
       ->addConstraint('LabeledChoice', [
         'choices' => [
           'fragile' => t('Fragile'),

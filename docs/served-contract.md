@@ -243,7 +243,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | The declaration says | The schema says |
 | --- | --- |
 | label, description | `title`, `description`, as plain text: a placeholder's escaping decoded, a line break a new line, every other tag stripped; the form keeps the markup ([decision](decisions.md#a-machine-document-carries-plain-text)) |
-| `string`, `email`, `uri`, `integer`, `float`, `boolean` | `type` (`format: email` / `uri` for those types, advisory); an optional key also allows `null`, which clears it (a secret does not) |
+| `string`, `email`, `uri`, `integer`, `float`, `boolean` | `type` (`format: email` / `uri` for those types, advisory); an optional key also allows `null`, which clears it (a secret does not, nor a key [its storage always holds](decisions.md#a-key-its-storage-always-holds)) |
 | `setRequired(TRUE)` | the key in `required`: present and not null, nothing about size. The contract's `values` always carry every key, so presence is never the question. |
 | a declared default, examples | `default`, `examples` |
 | `Range` | `minimum`, `maximum` |
@@ -253,7 +253,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | `Email` | `format: email`, advisory |
 | `NotBlank` | `minLength: 1` |
 | `Sequentially`, `AtLeastOneOf` | `allOf`, `anyOf` of its parts, each stated as the constraint alone would be; when any part is not, the composite is left to the server ([decision](decisions.md#a-composite-is-its-parts)) |
-| any list of allowed values | `oneOf: [{const, title, description?}]`, read from the options service, so the labels travel; never `enum`. An optional key adds an untitled `{const: null}`, and so does a list of no values, which a required key's type then refuses too: nothing is allowed. |
+| any list of allowed values | `oneOf: [{const, title, description?}]`, read from the options service, so the labels travel; never `enum`. An optional key that may be cleared adds an untitled `{const: null}` (not one its storage always holds), and so does a list of no values, which a required key's type then refuses too: nothing is allowed. |
 | a map | a nested object |
 | an attached part | a reference to its def under `$defs`, beside its label ([reusable subschemas](#reusable-subschemas)) |
 | a structure mixed in, `with()` | a reference to its def in the frame's `allOf`, beside the frame's own `properties` (each member in its place: `true`, what differs, or `false`), the frame closed with `unevaluatedProperties: false` ([below](#a-mixed-in-structure-is-composed)) |
@@ -270,14 +270,14 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 
 | Keyword | Holds |
 | --- | --- |
-| `widget` | Only when the caller asks for widget hints (`data_surface_react` does). The Form API-equivalent hint: `select`, `radios`, `checkbox`, `number`, `text`, `textarea`, `email`, `fieldset`, `slot`, `list` (a collection too); `null` when no widget would claim the key. |
+| `widget` | Only when the caller asks for widget hints (`data_surface_react` does). The Form API-equivalent hint, the stock widget's choice ([the widget mapping](#the-widget-mapping)): `select`, `radios`, `checkboxes`, `checkbox`, `number`, `text`, `textarea`, `email`, `time`, `fieldset`, `slot`, `list` (a list of free values, and a collection); `null` when no widget would claim the key. |
 | `locked` | Identity the operation knows, or a key of a child whose access answered locked: shown, never changed. |
 | `access` | Only `"runtime"`, and only in [the full schema](#two-documents): an access answer that waits for the subject (it read a stored value, State, the `user` context) was set aside for this account, so the key is as the account's static answers leave it and may be locked or left out once the subject is known. A client keeps what the schema for these answers says for it rather than narrowing it from the full schema. On a slot: a variant offered may be withheld. |
 | `dependsOn` | The sibling keys this key's refiners watch, in its own frame; a key an alter mounted, which only that alter may watch, by its dotted path in that frame (`third_party_settings.<module>.<key>`); a port the frame reads, by the port's name. A client refines when one of them changes. |
 | `refined` | Whether the key is narrowed right now, compared with what the resource or structure advertises in this operation. |
 | `stale` | The stored value is no longer offered; the key is shown on its empty option, standing for it. |
-| `emptyOption` | On a single select: `{show, label}`, by [the empty option rule](decisions.md#the-empty-option-rule): always for an optional select (`- None -`), for a required one only while no valid choice is selected (`- Select -`). |
-| `multiple` | With the widget hints, on a list of allowed values: a multiple select. |
+| `emptyOption` | On a single select or radios: `{show, label}`, by [the empty option rule](decisions.md#the-empty-option-rule): always for a select that may be cleared (`- None -`), for one that holds a value (required, or [always held by its storage](decisions.md#a-key-its-storage-always-holds)) only while no valid choice is selected (`- Select -`). On radios: `show` is whether a `- None -` radio is drawn, only where the key may be cleared; one that holds a value shows nothing checked while no valid choice is. |
+| `multiple` | With the widget hints, on a list of allowed values drawn as a select: a multiple select. A list drawn as checkboxes says `checkboxes` and no `multiple`. |
 | `by`, `variants`, `chosen` | On a slot: the deciding key, the values that choose a variant, and the one chosen now. |
 | `variant` | On a slot's conditional, beside the reference to the variant's def: which value it is for. |
 | `group` | Only when `true`, on `third_party_settings`: the object only groups one object per contributing module, each that module's fieldset, so it has no `title` or `description` and a renderer draws nothing around them, as the form does. |
@@ -823,24 +823,30 @@ Riverside Hall and its main hall, as `/surface-api` serves it:
 
 What the emitter's `widget`, when asked for, mirrors is
 `DataSurfaceWidgetManager`'s choice, in its weight order
-([Widgets](widgets.md)).
+([Widgets](widgets.md)): the emitter asks the stock widgets' own rule
+for which element a list of choices is, so the hint and the form never
+disagree ([decision](decisions.md#a-widget-is-chosen-from-the-definition)).
+A definition asks for an element with `setSetting('widget', ...)` in
+the hint's words: `radios`, `checkboxes`, `select`, `time`.
 
 | Definition | Form API element | `x-surface.widget` | React component |
 | --- | --- | --- | --- |
 | any key whose constraints resolve to a list, an empty one included | `select`, empty option by the rule | `select` | `SelectField` |
+| such a key that asks for radios, `setSetting('widget', 'radios')` | `radios`, a `- None -` radio only where the key may be cleared | `radios` | `RadiosField` |
 | a key that does not apply | nothing but its wrapper | (no property) | nothing |
-| a list of such values | `select` `#multiple` | `select`, `multiple: true` | `MultipleSelectField` |
-| — (never emitted) | — | `radios` | `RadiosField` |
+| a list of such values offering at most twelve, or asking for checkboxes | `checkboxes`, never `#required` | `checkboxes` | `CheckboxesField` |
+| a list of such values offering more, or asking for a select | `select` `#multiple` | `select`, `multiple: true` | `MultipleSelectField` |
 | a map with properties, an attached part | `details` | `fieldset` | `FieldsetField` |
 | `third_party_settings`, which only groups each module's map | `container`, no title | `fieldset`, `group: true` | `FieldsetField`, as a plain `div` |
 | a module's map its alter placed | its `details`, drawn after the named key | `fieldset`, `after: "<key>"` | `FieldsetField`, drawn after that sibling of the group |
 | a slot | the chosen variant's `details`; nothing while unresolved | `slot` | `SlotField` |
 | `string` with the `multiline` setting | `textarea`, no maxlength, no placeholder | `textarea` | `TextareaField` |
 | `email` | `email` | `email` | `TextField` (type email) |
+| `string` asking for a time, `setSetting('widget', 'time')` | a time input (`date`, type `time`), the Regex still the rule | `time` | `TextField` (type time) |
 | `string`, `uri` | `textfield`, `url` | `text` | `TextField` (type text, url; password for a secret) |
 | `integer`, `float` | `number`, `#min`/`#max` from Range, `#step` 1 or any | `number` | `NumberField` |
 | `boolean` | `checkbox`, never `#required` | `checkbox` | `CheckboxField` |
-| a list with no allowed values | no stock widget | `list` | `ListField` (add and remove rows) |
+| a list of single values with no allowed values | a `fieldset` of rows, each the item's element, "Remove" beside each and "Add another" under them, over AJAX | `list` | `ListField` (add and remove rows) |
 | a collection | a `details` of item `details`, "Add another" and "Remove" over AJAX | `list`, `list: true` | `ListField`, each item the child's `FieldsetField`, at least `minItems`, at most `maxItems` |
 | a locked key | `#disabled`, "Fixed for this operation." | `locked: true` | disabled, the same note |
 | a locked child | its fieldset `#disabled`, every element inside with it | `locked: true` on the fieldset and on every key inside | a fieldset of disabled keys |

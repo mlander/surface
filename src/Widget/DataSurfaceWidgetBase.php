@@ -65,7 +65,55 @@ abstract class DataSurfaceWidgetBase extends PluginBase implements DataSurfaceWi
    * {@inheritdoc}
    */
   public function extractValue(DataDefinitionInterface $definition, array $element, FormStateInterface $form_state, array $fallback_parents): mixed {
-    return static::unstash($element, $this->rawValue($element, $form_state, $fallback_parents));
+    return static::unstash($element, static::checked($element, $this->rawValue($element, $form_state, $fallback_parents)));
+  }
+
+  /**
+   * Names the widget words a definition's `widget` setting may ask for.
+   *
+   * A definition asks for a stock widget by name, with core's own setting
+   * spelling (`setSetting('widget', 'radios')`), and the manager refuses
+   * a definition whose asked widget did not draw it, rather than draw it
+   * as something it did not ask for. The words are the ones the served
+   * contract's `x-surface.widget` says, so the stock select answers to
+   * `select`; a widget of a module's own answers to its plugin ID.
+   *
+   * Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
+   *
+   * @return string[]
+   *   The words.
+   */
+  public function answersTo(): array {
+    return [$this->getPluginId()];
+  }
+
+  /**
+   * Reads checkboxes back as the list of the values checked.
+   *
+   * Checkboxes post every option, each with its value when checked and
+   * the integer 0 when not (core uses the string '0' for a checked option
+   * keyed 0, so the two never meet). Which widget reads an element back
+   * is not the same question as which built it, as the stash says below:
+   * a list a refiner narrowed is built from the refined definition and
+   * read back through the advertised one, which may have drawn it as a
+   * multiple select. So every widget reads a checkboxes element the same
+   * way, and a list a payload sends, or a multiple select posts, passes
+   * as it is.
+   *
+   * @param array $element
+   *   The element the value was submitted for.
+   * @param mixed $value
+   *   The raw submitted value.
+   *
+   * @return mixed
+   *   The values checked, in option order, for a checkboxes element; the
+   *   raw value otherwise.
+   */
+  protected static function checked(array $element, mixed $value): mixed {
+    if (($element['#type'] ?? NULL) !== 'checkboxes' || !is_array($value)) {
+      return $value;
+    }
+    return array_values(array_filter($value, static fn (mixed $held): bool => $held !== 0 && $held !== NULL && $held !== FALSE));
   }
 
   /**

@@ -12,11 +12,15 @@ use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
-use Drupal\data_surface_resource_test\Plugin\DataSurfaceWidget\LinesWidget;
 use Drupal\data_surface_resource_test\Storage\OpeningHoursStorage;
 
 /**
  * A library's opening hours: the common settings recipes, each a key.
+ *
+ * Its config schema is fully validatable, so a key its schema does not
+ * call nullable is always held: the holidays choice offers no empty
+ * option, and null is refused for it naming its default
+ * (docs/decisions.md#a-key-its-storage-always-holds).
  *
  * The recipes page, docs/recipes.md, quotes these keys, and
  * QuotedCodeDocsTest fails when the page and this class differ;
@@ -40,6 +44,7 @@ final class OpeningHoursResource implements ResourceInterface {
     $inputs->add('opens', 'string', t('Opens at'), default: '09:00')
       ->setRequired(TRUE)
       ->setDescription(t('HH:MM, on a 24-hour clock.'))
+      ->setSetting('widget', 'time')
       ->addConstraint('Regex', [
         'pattern' => '/^([01]\d|2[0-3]):[0-5]\d$/D',
         'message' => 'Write the time as HH:MM, such as 09:00.',
@@ -79,9 +84,17 @@ final class OpeningHoursResource implements ResourceInterface {
       ->doesNotApply();
 
     $keywords = (new ListDataDefinition(['type' => 'list'], DataDefinition::create('string')))
-      ->setLabel(t('Keywords'))
-      ->setSetting(LinesWidget::SETTING, TRUE);
+      ->setLabel(t('Keywords'));
     $inputs->addDefinition('keywords', $keywords, default: []);
+
+    $inputs->add('holidays', 'string', t('On public holidays'), default: 'closed')
+      ->addConstraint('LabeledChoice', [
+        'choices' => [
+          'closed' => t('Closed'),
+          'reduced' => t('Reduced hours'),
+          'open' => t('Open as usual'),
+        ],
+      ]);
   }
 
 }

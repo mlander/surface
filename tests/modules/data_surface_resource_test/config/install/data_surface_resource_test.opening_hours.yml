@@ -8,4 +8,6 @@ days:
   - fri
 notes: ''
 after_hours: false
+door_code: ~
 keywords: []
+holidays: closed

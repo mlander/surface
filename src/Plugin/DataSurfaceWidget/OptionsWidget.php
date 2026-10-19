@@ -4,17 +4,14 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface\Plugin\DataSurfaceWidget;
 
-use Drupal\Core\Cache\CacheableMetadata;
-use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\data_surface\Attribute\DataSurfaceWidget;
-use Drupal\data_surface\Options\DataSurfaceOptions;
+use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Options\OptionSet;
 use Drupal\data_surface\Pipeline\ValueState;
-use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
-use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drupal\data_surface\Widget\ChoiceWidgetBase;
 
 /**
  * Select list for any definition whose constraints name a value list.
@@ -23,7 +20,11 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * asks the options service, which is the one place that reads
  * constraints as options. A definition of a list of such values renders
  * as a multiple select over the same options, read from the item
- * definition.
+ * definition, when the checkboxes widget leaves it: a list of more
+ * options than a column of checkboxes shows, or one that asks for a
+ * select. A single value is a select unless it asks for radios.
+ *
+ * Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
  *
  * @see \Drupal\data_surface\Options\DataSurfaceOptions
  */
@@ -32,40 +33,12 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
   label: new TranslatableMarkup('Options'),
   weight: -10,
 )]
-final class OptionsWidget extends DataSurfaceWidgetBase implements ContainerFactoryPluginInterface {
+final class OptionsWidget extends ChoiceWidgetBase {
 
   /**
    * How many rows a multiple select shows at most.
    */
   protected const MAXIMUM_SIZE = 8;
-
-  /**
-   * Constructs an OptionsWidget.
-   *
-   * @param array $configuration
-   *   The plugin configuration.
-   * @param string $plugin_id
-   *   The plugin ID.
-   * @param mixed $plugin_definition
-   *   The plugin definition.
-   * @param \Drupal\data_surface\Options\DataSurfaceOptions $options
-   *   The options service.
-   */
-  public function __construct(
-    array $configuration,
-    string $plugin_id,
-    mixed $plugin_definition,
-    protected readonly DataSurfaceOptions $options,
-  ) {
-    parent::__construct($configuration, $plugin_id, $plugin_definition);
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition): static {
-    return new static($configuration, $plugin_id, $plugin_definition, $container->get('data_surface.options'));
-  }
 
   /**
    * {@inheritdoc}
@@ -88,13 +61,15 @@ final class OptionsWidget extends DataSurfaceWidgetBase implements ContainerFact
    * {@inheritdoc}
    *
    * One rule decides whether a single select shows its empty option: the
-   * empty option is there whenever no valid choice is selected, and an
-   * optional select keeps it besides, because choosing nothing is one of
-   * its answers. A valid choice is a value the list offers — what is
-   * stored, or failing that the declared default, since the form builder
-   * hands over whichever applies and the shape's author chose the
-   * default. Anything else comes up on the empty option, selected: a key
-   * never answered, and a stored value the list no longer offers.
+   * empty option is there whenever no valid choice is selected, and a
+   * select that may be cleared keeps it besides, because choosing nothing
+   * is one of its answers. A required key may not be cleared, and nor
+   * may one its storage always holds. A valid choice is a value the list
+   * offers — what is stored, or failing that the declared default, since
+   * the form builder hands over whichever applies and the shape's author
+   * chose the default. Anything else comes up on the empty option,
+   * selected: a key never answered, and a stored value the list no longer
+   * offers.
    */
   public function buildElement(DataDefinitionInterface $definition, mixed $value): array {
     $set = $this->optionSet($definition);
@@ -114,15 +89,9 @@ final class OptionsWidget extends DataSurfaceWidgetBase implements ContainerFact
     else {
       $element = $this->singleSelect($element, $definition, $set, $value);
     }
-    if ($set !== NULL) {
-      // The resolver said how long its answer may be reused, and this is
-      // where that answer is rendered: an element built from a list read
-      // out of site state may only be cached for as long as that state
-      // holds. Without this the whole declaration is computed and
-      // dropped. (The data surface's own cacheability is a separate half.)
-      CacheableMetadata::createFromObject($set)->applyTo($element);
-    }
-    return $element;
+    // The resolver said how long its answer may be reused, and this is
+    // where that answer is rendered.
+    return static::cachedBy($element, $set);
   }
 
   /**
@@ -156,7 +125,9 @@ final class OptionsWidget extends DataSurfaceWidgetBase implements ContainerFact
     $configured = ValueState::isConfigured($value);
     $chosen = $configured && $set !== NULL && $set->allows($value);
     $required = $definition->isRequired();
-    if ($chosen && $required) {
+    // Decision: see docs/decisions.md#a-key-its-storage-always-holds.
+    $holds = DefinitionMetadata::holdsValue($definition);
+    if ($chosen && $holds) {
       // A valid choice is selected and emptiness is not an answer: no
       // empty option. Core adds none either, since a default is set.
       $element['#default_value'] = $value;
@@ -164,7 +135,7 @@ final class OptionsWidget extends DataSurfaceWidgetBase implements ContainerFact
     }
     $element['#default_value'] = $chosen ? $value : '';
     $element['#empty_value'] = '';
-    $element['#empty_option'] = $required ? $this->t('- Select -') : $this->t('- None -');
+    $element['#empty_option'] = $holds ? $this->t('- Select -') : $this->t('- None -');
     if ($configured && !$chosen) {
       // Stale: the value travels on the element, so extraction can read
       // an untouched select as the stored value it could not show.
@@ -191,26 +162,10 @@ final class OptionsWidget extends DataSurfaceWidgetBase implements ContainerFact
   }
 
   /**
-   * Resolves the values a definition offers, list or single.
-   *
-   * A list definition offers what one of its items may be, so the
-   * options come from the item definition; anything else offers what it
-   * may be itself.
-   *
-   * The service memoizes its answer per definition object for the rest
-   * of the request, so asking here for applicability and again for the
-   * element costs one resolution, not two.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition to read.
-   *
-   * @return \Drupal\data_surface\Options\OptionSet|null
-   *   The option set, or NULL when the definition names no list.
+   * {@inheritdoc}
    */
-  protected function optionSet(DataDefinitionInterface $definition): ?OptionSet {
-    return $definition instanceof ListDataDefinitionInterface
-      ? $this->options->resolve($definition->getItemDefinition())
-      : $this->options->resolve($definition);
+  public function answersTo(): array {
+    return ['select', $this->getPluginId()];
   }
 
 }

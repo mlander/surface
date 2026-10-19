@@ -37,6 +37,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * runtime refiner, a declared rule and a mounted key on example 4,
  * collections on the cellar, keys that do not apply on the bulletin and
  * the notice, every declared rule's condition and effect on the parcel,
+ * keys their storage always holds on the opening hours,
  * a structure's ports on the venue and the hall, structures mixed in on
  * the journal and attached on the ledger, a shape at two keys on the
  * depot, access of both kinds on the exhibit),
@@ -457,6 +458,38 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'monthly, a send day' => [['frequency' => 'monthly', 'send_day' => 'monday'], FALSE],
       'weekly, the send day null' => [['send_day' => NULL], FALSE],
       'weekly, a day not offered' => [['send_day' => 'sunday'], FALSE],
+    ]);
+  }
+
+  /**
+   * The opening hours: keys their storage always holds, and the new widgets.
+   *
+   * The schema is fully validatable, so a key it does not call nullable
+   * always holds a value: null is refused for it by the pipeline, and
+   * both documents leave null out of its type and its choices; a key it
+   * calls nullable is cleared by null, in all three. A list sent null
+   * keeps what it holds, as any list does.
+   *
+   * @see docs/decisions.md#a-key-its-storage-always-holds
+   */
+  public function testOpeningHours(): void {
+    $this->installConfig(['data_surface_resource_test']);
+    $this->assertTable('resource_test.opening_hours', $this->build('resource_test.opening_hours'), $this->stored('resource_test.opening_hours'), [
+      'as stored' => [[], TRUE],
+      'another holiday answer' => [['holidays' => 'open'], TRUE],
+      'the holidays null, always held' => [['holidays' => NULL], FALSE],
+      'the holidays as a form posts nothing' => [['holidays' => ''], FALSE],
+      'a holiday answer not offered' => [['holidays' => 'weekly'], FALSE],
+      'after-hours null, always held' => [['after_hours' => NULL], FALSE],
+      'after-hours off' => [['after_hours' => FALSE], TRUE],
+      'notes null, nullable' => [['notes' => NULL], TRUE],
+      'notes emptied, nullable' => [['notes' => ''], TRUE],
+      'checkboxes all unchecked: the empty list' => [['days' => []], TRUE],
+      'a day not offered' => [['days' => ['mon', 'xyz']], FALSE],
+      'keywords as rows, one left empty' => [['keywords' => ['maps', '', 'archives']], TRUE],
+      'keywords null keeps the list' => [['keywords' => NULL], TRUE],
+      'a time picked' => [['opens' => '08:30'], TRUE],
+      'not a time' => [['opens' => '9am'], FALSE],
     ]);
   }
 

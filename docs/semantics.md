@@ -57,9 +57,14 @@ that is sent `null`, an emptied text box, or an optional select's
 "- None -" is cleared. Two exceptions keep what they hold when sent
 nothing: a list, which is emptied with `[]` ([Lists](#lists)), and a
 secret, which is emptied with its clear marker
-([Secrets](#secrets-keep-what-they-hold)). The schema says the same:
-an optional key's type allows `null`, a required key's and a secret's
-does not ([served contract](served-contract.md#the-schema)).
+([Secrets](#secrets-keep-what-they-hold)). And null clears only where
+clearing is possible: a key its storage always holds (a config object
+whose fully validatable schema does not call it nullable) refuses null
+and `''` naming its default, and is kept when left out
+([decision](decisions.md#a-key-its-storage-always-holds)). The schema
+says the same: an optional key's type allows `null`, a required key's,
+an always held key's and a secret's does not
+([served contract](served-contract.md#the-schema)).
 
 This is where the module parts from the Tool API, whose rule is that a
 caller's null for an optional input means the default. A tool's
@@ -176,8 +181,10 @@ read as one, a single item is wrapped, keys are dropped, entries that
 hold nothing are dropped, the result is reindexed from zero, and each
 surviving item is coerced through the item definition (recursing when
 the items are complex). So a multiple select submitting
-`['us' => 'us', 'ca' => 'ca']`, a payload sending `['us', 'ca']` and a
-lenient caller sending `'["us","ca"]'` mean the same thing.
+`['us' => 'us', 'ca' => 'ca']`, checkboxes read back as the values
+checked, a payload sending `['us', 'ca']` and a lenient caller sending
+`'["us","ca"]'` mean the same thing. Checkboxes all unchecked, and a
+list of rows with every row removed, send `[]`, which empties the list.
 
 A list that is sent nothing keeps what it holds, required or not: a
 form that rendered no list widget, or a payload that named no list, has
