@@ -29,7 +29,7 @@ trait ContractValidationTrait {
   /**
    * Answers whether a standard validator accepts values under a schema.
    *
-   * @param array $schema
+   * @param array|\stdClass $schema
    *   The schema, as emitted and decoded by a client.
    * @param mixed $values
    *   The values.
@@ -37,7 +37,7 @@ trait ContractValidationTrait {
    * @return bool
    *   Whether they validate.
    */
-  protected function validates(array $schema, mixed $values): bool {
+  protected function validates(array|\stdClass $schema, mixed $values): bool {
     $validator = new CompliantValidator();
     $validator->parser()->setOption('defaultDraft', '2020-12');
     $validator->parser()->setOption('allowFormats', FALSE);

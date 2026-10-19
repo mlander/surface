@@ -160,19 +160,22 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    */
   protected function assertTable(string $id, DataSurfaceInterface $surface, array $stored, array $rows, ?DataSurfaceInterface $declared = NULL): void {
     $emitter = $this->container->get('data_surface.contract_emitter');
-    $full = $this->decoded($emitter->emitFull($declared ?? $surface, $id)->document['schema']);
+    // As a client holds them: an empty object stays one.
+    $full = json_decode((string) json_encode($emitter->emitFull($declared ?? $surface, $id)->document['schema']));
     foreach ($rows as $label => $row) {
       [$input, $accepts] = $row;
       try {
-        $document = $this->pipeline()->accept($surface, $input, $stored);
-        $violations = $this->pipeline()->validate($surface, $document, $stored);
+        $accepted = $this->pipeline()->accept($surface, $input, $stored);
+        $violations = $this->pipeline()->validate($surface, $accepted, $stored);
         $verdict = $violations->isEmpty();
-        $these = $this->decoded($emitter->emit($surface, $document, $id)->document);
+        // As the pipeline writes it: every map an object, an empty one too.
+        $document = $this->pipeline()->document($surface, $accepted);
+        $these = (array) json_decode((string) json_encode($emitter->emit($surface, $accepted, $id)->document));
       }
       catch (UnknownKeysException | TypeMismatchException | VariantMismatchException) {
         $document = $input;
         $verdict = FALSE;
-        $these = $this->decoded($emitter->emit($surface, $this->pipeline()->accept($surface, [], $stored), $id)->document);
+        $these = (array) json_decode((string) json_encode($emitter->emit($surface, $this->pipeline()->accept($surface, [], $stored), $id)->document));
       }
       $this->assertSame($accepts, $verdict, $label . ': the pipeline ' . ($accepts ? 'accepts' : 'refuses') . ' it.');
       $wide_full = $accepts || ($row[2] ?? FALSE);
@@ -504,7 +507,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
   public function testParcel(): void {
     $this->installConfig(['data_surface_resource_test']);
     $customs = static fn (?string $code): array => [
-      'third_party_settings' => ['data_surface_resource_test' => ['courier' => 'own', 'customs' => $code]],
+      'third_party_settings' => ['data_surface_resource_test' => ['customs' => $code]],
     ];
     $freight = ['service' => 'freight', 'weight' => 40, 'note' => 'Ring twice', 'handling' => 'cold'];
     $dear = ['weight' => 2, 'declared_value' => 2000, 'reference' => 'R1'];
@@ -950,6 +953,60 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     // required: neither the stored room nor the null it is served as.
     $this->assertFalse($this->validates($served['schema'], $stored));
     $this->assertFalse($this->validates($served['schema'], $served['values']));
+  }
+
+  /**
+   * The storeroom: a collection inside a collection's item.
+   *
+   * Each aisle holds shelves, each shelf held to its unit by the shelf's
+   * own refiner: both documents describe the list inside the item, and
+   * hold each document to what the pipeline holds it to.
+   */
+  public function testStoreroom(): void {
+    $aisle = static fn (string $label, array $shelves): array => ['label' => $label, 'shelves' => $shelves];
+    $stored = ['name' => 'Back room', 'aisles' => [$aisle('North', [['unit' => 'cm', 'height' => 40]])]];
+    $shelf = static fn (string $unit, int $height): array => [
+      'aisles' => [$aisle('North', [['unit' => $unit, 'height' => $height]])],
+    ];
+    $three = array_fill(0, 3, ['unit' => 'cm', 'height' => 10]);
+    $this->assertTable('resource_test.storeroom', $this->build('resource_test.storeroom', 'edit'), $stored, [
+      'as stored' => [[], TRUE],
+      'a tall shelf in centimeters' => [$shelf('cm', 150), TRUE],
+      'as tall in inches' => [$shelf('in', 150), FALSE],
+      'an aisle with no shelves' => [['aisles' => [$aisle('South', [])]], TRUE],
+      'three shelves in an aisle' => [['aisles' => [$aisle('South', $three)]], FALSE],
+    ]);
+  }
+
+  /**
+   * A required plain map sent empty holds a value, as a required list does.
+   *
+   * Required means present and not null, and the empty map is a value:
+   * the pipeline does not read it as missing, and a key it requires is
+   * refused in its own words, as a child's is.
+   *
+   * @see docs/decisions.md#required-means-must-hold-a-value
+   */
+  public function testRequiredMapSentEmpty(): void {
+    $open = MapDataDefinition::create()->setLabel('Size')->setRequired(TRUE)
+      ->setPropertyDefinition('width', DataDefinition::create('integer')->setLabel('Width'));
+    $this->assertTable('size', $this->surface(['size' => $open]), [], [
+      'the empty map' => [['size' => []], TRUE],
+      'a width' => [['size' => ['width' => 3]], TRUE],
+      'nothing at all' => [['size' => NULL], FALSE],
+    ]);
+    $closed = MapDataDefinition::create()->setLabel('Size')->setRequired(TRUE)
+      ->setPropertyDefinition('width', DataDefinition::create('integer')->setLabel('Width')->setRequired(TRUE));
+    $surface = $this->surface(['size' => $closed]);
+    $this->assertTable('size', $surface, [], [
+      'the empty map' => [['size' => []], FALSE],
+      'a width' => [['size' => ['width' => 3]], TRUE],
+    ]);
+    $said = [];
+    foreach ($this->pipeline()->validate($surface, $this->pipeline()->accept($surface, ['size' => []])) as $violation) {
+      $said[$violation->fullPath()] = (string) $violation->message;
+    }
+    $this->assertSame(['size.width' => 'Width is required.'], $said);
   }
 
   /**

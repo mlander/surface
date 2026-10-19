@@ -205,6 +205,53 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   /**
    * {@inheritdoc}
    */
+  public function document(DataSurfaceInterface $surface, array $values): \stdClass {
+    $document = new \stdClass();
+    foreach ($values as $name => $value) {
+      $entry = $surface->getDefinitions()->entry((string) $name);
+      $child = $entry?->childFor($values);
+      $document->{$name} = match (TRUE) {
+        $entry === NULL || !is_array($value) => $value,
+        $child !== NULL => $this->document($child, $value),
+        $entry->list !== NULL => array_map(fn (mixed $item): mixed => is_array($item) ? $this->document($entry->list->item->child, $item) : $item, array_values($value)),
+        default => static::documentValue($entry->definition, $value),
+      };
+    }
+    return $document;
+  }
+
+  /**
+   * Writes one value of an accepted document with every map an object.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The value's definition.
+   * @param mixed $value
+   *   The value.
+   *
+   * @return mixed
+   *   The value, each map in it an object and each list a list.
+   */
+  protected static function documentValue(DataDefinitionInterface $definition, mixed $value): mixed {
+    if (!is_array($value)) {
+      return $value;
+    }
+    if ($definition instanceof ListDataDefinitionInterface) {
+      return array_map(static fn (mixed $item): mixed => static::documentValue($definition->getItemDefinition(), $item), array_values($value));
+    }
+    if (!$definition instanceof ComplexDataDefinitionInterface) {
+      return $value;
+    }
+    $map = new \stdClass();
+    $properties = $definition->getPropertyDefinitions();
+    foreach ($value as $key => $item) {
+      $map->{$key} = isset($properties[$key]) ? static::documentValue($properties[$key], $item) : $item;
+    }
+    return $map;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function kept(DataSurfaceInterface $surface, array $values, array $current): array {
     $kept = [];
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
@@ -286,6 +333,12 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     // one, and the declared default only when it has none. A stored
     // NULL is a stored value, so array_key_exists rather than ??.
     $fallback = array_key_exists($name, $current) ? $current[$name] : $surface->getDefault($name);
+    if ($fallback === NULL && DefinitionMetadata::isGrouping($entry->definition)) {
+      // The map each module's mounted keys sit in is a map, never null,
+      // even when nothing is stored and no mounted key has a default.
+      // Decision: see docs/decisions.md#a-key-that-does-not-apply.
+      $fallback = [];
+    }
     $chosen = $entry->slot?->chosen($values[$entry->slot->by] ?? NULL);
     if ($chosen !== NULL && !$entry->slot->fits($chosen, $fallback)) {
       // What the slot held was written for another variant, and the
@@ -601,11 +654,14 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         }
         continue;
       }
-      if ($definition instanceof ListDataDefinition && $value === [] && $definition->isRequired()) {
+      if (($definition instanceof ListDataDefinition || $definition instanceof MapDataDefinition) && is_array($value) && $definition->isRequired()) {
         // Required means configured, and the empty list is: what all
-        // checkboxes unchecked, or every row removed, says. Core's NotNull
-        // reads an empty list as null, so it is not asked here; the data
-        // surface asked whether the key holds a value, above.
+        // checkboxes unchecked, or every row removed, says. So is a map
+        // whose keys hold nothing, whose required keys each say so in
+        // their own words ($missing), as a child's do. Core's NotNull
+        // reads an empty list, or a map of nothing, as null, so it is not
+        // asked here; the data surface asked whether the key holds a
+        // value, above.
         // Decision: see docs/decisions.md#required-means-must-hold-a-value.
         $definition = (clone $definition)->setRequired(FALSE);
       }
@@ -1475,13 +1531,18 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * {@inheritdoc}
    */
   public function prepare(DataSurfaceInterface $surface, array $values, DataSurfaceStorageInterface $storage): PreparedValues {
-    return $storage->prepare($surface, $values);
+    $prepared = $storage->prepare($surface, $values);
+    return $surface->changesNothing() ? $prepared->changingNothing() : $prepared;
   }
 
   /**
    * {@inheritdoc}
    */
   public function commit(PreparedValues $prepared, DataSurfaceStorageInterface $storage): void {
+    // Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
+    if ($prepared->changesNothing) {
+      throw new \LogicException('These values were prepared for an operation that changes nothing, and are not written: a read only operation stops after prepare.');
+    }
     $storage->commit($prepared);
   }
 
@@ -1495,6 +1556,15 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       // load is a query, a cache entry and sometimes an entity build.
       // The values come back empty for the same reason.
       return new DataSurfaceResult([], $this->accessViolations($access), access: $access);
+    }
+    // Locked whole: shown and fixed, so nothing posted can move a key and
+    // a write is refused by name rather than written back unchanged.
+    // Decision: see docs/decisions.md#locked-at-the-top.
+    $locked = $surface->lockedWhole();
+    if ($locked !== NULL) {
+      return new DataSurfaceResult([], new ViolationSet([
+        new Violation(self::ACCESS_VIOLATION_KEY, '', $this->t('This may be seen and not changed, so nothing was written: @reason', ['@reason' => $locked])),
+      ]), access: $access);
     }
     $current = $storage->load($surface);
     try {
@@ -1526,7 +1596,9 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     // blocks nothing, so the run is valid and committed, and the stale
     // references it carries are how a caller — a form warning, an
     // agent's dry run — learns what to re-choose.
-    if ($dry_run) {
+    // An operation that changes nothing stops where a dry run does.
+    // Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
+    if ($dry_run || $surface->changesNothing()) {
       return new DataSurfaceResult($values, $violations, $prepared, access: $access);
     }
     $this->commit($prepared, $storage);

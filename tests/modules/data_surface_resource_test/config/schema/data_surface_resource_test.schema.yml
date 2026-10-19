@@ -97,10 +97,6 @@ data_surface_resource_test.parcel.third_party.data_surface_resource_test:
   type: mapping
   label: 'Customs'
   mapping:
-    courier:
-      type: string
-      label: 'Courier'
-      nullable: true
     customs:
       type: string
       label: 'Customs code'

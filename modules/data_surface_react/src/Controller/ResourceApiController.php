@@ -234,7 +234,8 @@ final class ResourceApiController implements ContainerInjectionInterface {
       'valid' => $result->isValid(),
       'violations' => array_map($this->violation(...), iterator_to_array($result->violations, FALSE)),
       'stale' => array_map($this->violation(...), $result->violations->stale()),
-      'values' => $result->values,
+      // Every map an object, an empty one too, as the contract writes it.
+      'values' => $this->pipeline->document($served->surface, $result->values),
       'prepared' => $prepared,
     ]);
     $response->setEncodingOptions(JsonResponse::DEFAULT_ENCODING_OPTIONS | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);

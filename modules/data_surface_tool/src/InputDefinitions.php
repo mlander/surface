@@ -84,6 +84,13 @@ use Drupal\tool\TypedData\OutputDefinitionInterface;
  */
 final class InputDefinitions {
 
+  /**
+   * The key of a secrets tree that holds what is secret inside each item.
+   *
+   * In the "@" namespace, which no definition is named in.
+   */
+  public const EACH = '@each';
+
   use StringTranslationTrait;
 
   /**
@@ -179,7 +186,8 @@ final class InputDefinitions {
    * container it reads, at the site; a stored value is never named. What
    * chooses a slot's variant is said by the slot's own description, and a
    * key that holds a child names nothing its ports read, which the keys
-   * inside it name.
+   * inside it name. Inside a collection's item a key names its siblings
+   * by their keys in the item.
    *
    * Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
    *
@@ -195,7 +203,11 @@ final class InputDefinitions {
     foreach (static::dependencies($surface) as $path => $keys) {
       $target = $map;
       foreach (explode('.', $path) as $property) {
-        $target = $target instanceof MapInputDefinition ? $target->getPropertyDefinition($property) : NULL;
+        $target = match (TRUE) {
+          $target instanceof ListInputDefinition && $property === self::EACH => $target->getItemDefinition(),
+          $target instanceof MapInputDefinition => $target->getPropertyDefinition($property),
+          default => NULL,
+        };
       }
       if (!$target instanceof DataDefinition) {
         continue;
@@ -254,6 +266,13 @@ final class InputDefinitions {
       }
       foreach ($children as [$attachment, $below]) {
         $found += static::dependencies($attachment->child, $below, array_map($resolve, $attachment->reads));
+      }
+      // Inside a collection's item, a key names its siblings by their
+      // keys in the item, the frame a caller sends them in together.
+      if ($entry->list !== NULL) {
+        foreach (static::dependencies($entry->list->item->child) as $path => $keys) {
+          $found[$at . '.' . self::EACH . '.' . $path] = $keys;
+        }
       }
     }
     return $found;
@@ -735,7 +754,9 @@ final class InputDefinitions {
    * child, or in any variant of a slot. A slot's secrets are every
    * variant's, whichever variant the values choose, so a key one variant
    * keeps secret is never returned under that slot, even when another
-   * variant names a plain key the same.
+   * variant names a plain key the same. Inside a list of maps, a
+   * collection's or a plain list's, the secrets of each item are under
+   * EACH, so only they are left out of every item and the list stays.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The data surface.
@@ -754,6 +775,10 @@ final class InputDefinitions {
       }
       foreach ($children as $child) {
         $found = $this->mergeSecrets($found, $this->secrets($child));
+      }
+      $item = $entry->list === NULL ? [] : $this->secrets($entry->list->item->child);
+      if ($item !== []) {
+        $found = $this->mergeSecrets($found, [self::EACH => $item]);
       }
       if ($found !== []) {
         $secrets[(string) $name] = $found;
@@ -774,6 +799,16 @@ final class InputDefinitions {
    *   The values, with no secret in them.
    */
   public function withoutSecrets(array $values, array $secrets): array {
+    // Decision: see docs/decisions.md#a-read-leaves-a-secret-out.
+    $each = $secrets[self::EACH] ?? NULL;
+    unset($secrets[self::EACH]);
+    if (is_array($each)) {
+      foreach ($values as $delta => $item) {
+        if (is_array($item)) {
+          $values[$delta] = $this->withoutSecrets($item, $each);
+        }
+      }
+    }
     foreach ($secrets as $name => $secret) {
       if (!array_key_exists($name, $values)) {
         continue;
@@ -833,11 +868,12 @@ final class InputDefinitions {
       );
     }
     if ($input instanceof ListInputDefinition) {
+      $each = $leave_out[self::EACH] ?? [];
       return new ListOutputDefinition(
         label: $label,
         description: $description,
         required: $required,
-        item_definition: $this->outputFromInput($input->getItemDefinition()),
+        item_definition: $this->outputFromInput($input->getItemDefinition(), is_array($each) ? $each : []),
       );
     }
     return new OutputDefinition(
@@ -857,14 +893,18 @@ final class InputDefinitions {
    *
    * @return true|array
    *   TRUE when it is secret, or a list whose items are; the secrets
-   *   among a map's properties, keyed like them; empty when none.
+   *   among a map's properties, keyed like them, or under EACH among a
+   *   list's items; empty when none.
    */
   protected function secretsOf(DataDefinitionInterface $definition): true|array {
     if (DefinitionMetadata::isSecret($definition)) {
       return TRUE;
     }
     if ($definition instanceof ListDataDefinitionInterface) {
-      return $this->secretsOf($definition->getItemDefinition()) === [] ? [] : TRUE;
+      // A list of secrets is secret; a list of maps keeps each item's
+      // secrets under EACH, and the rest of every item is read.
+      $item = $this->secretsOf($definition->getItemDefinition());
+      return $item === [] || $item === TRUE ? $item : [self::EACH => $item];
     }
     $secrets = [];
     if ($definition instanceof ComplexDataDefinitionInterface) {

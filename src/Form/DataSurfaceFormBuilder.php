@@ -30,7 +30,6 @@ use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\data_surface\Pipeline\ViolationSet;
-use Drupal\data_surface\Attachment;
 use Drupal\data_surface\Entry;
 use Drupal\data_surface\Collection;
 use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
@@ -223,6 +222,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         continue;
       }
       $slot = $definitions->entry($name)?->slot;
+      $locked = $definitions->isLocked($name);
       if ($slot !== NULL && DefinitionMetadata::slotOf($definition) !== NULL) {
         // The values said nothing about the deciding key, so its own
         // default is what the person sees chosen, and the slot is that
@@ -266,9 +266,13 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         // defaults when what is held was written for another one.
         $chosen = (string) $slot->chosen($values[$slot->by] ?? $surface->getDefault($slot->by));
         $value = $slot->fits($chosen, $value) ? $value : $slot->defaultsOf($chosen);
+        // A variant its access locked is offered, and drawn fixed.
+        // Decision: see
+        // docs/decisions.md#a-variant-is-open-locked-or-not-offered.
+        $locked = $locked || ($chosen !== '' && $slot->variant($chosen)->child->lockedWhole() !== NULL);
       }
       $element = $this->widgetManager->getWidgetFor($definition)->buildElement($definition, $value);
-      if ($definitions->isLocked($name)) {
+      if ($locked) {
         // Visible but fixed: the consumer sees the key and its value and
         // cannot change it — the form-side spelling of const + readOnly.
         // A locked child's fieldset passes #disabled on to every element
@@ -377,13 +381,42 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     ];
     foreach ($items as $delta => $item) {
       $held = array_replace($child->getDefaultValues(), is_array($item) ? $item : []);
-      $map = Attachment::mapOf(MapDataDefinition::create(), $child->refine($held));
-      $map->setLabel(static::itemLabel($label, $delta));
+      $refined = $child->refine($held);
       $showing_item = $showing[$delta] ?? $item;
-      $element[$delta] = $this->widgetManager->getWidgetFor($map)->buildElement(
-        $map,
-        array_replace($child->getDefaultValues(), is_array($showing_item) ? $showing_item : []),
-      );
+      $showing_item = array_replace($child->getDefaultValues(), is_array($showing_item) ? $showing_item : []);
+      // A collection inside the item is drawn as one, in its place; the
+      // item's map draws the rest.
+      // Decision: see docs/decisions.md#a-list-of-child-invocations.
+      $map = MapDataDefinition::create()->setLabel(static::itemLabel($label, $delta));
+      $lists = [];
+      foreach ($refined->getDefinitions() as $name => $property) {
+        $inner = $refined->getDefinitions()->entry((string) $name)?->list;
+        if ($inner !== NULL && $property instanceof ListDataDefinitionInterface) {
+          $lists[(string) $name] = $this->buildCollection(
+            $inner,
+            $property,
+            $held[$name] ?? NULL,
+            $showing_item[$name] ?? NULL,
+            $locked || $refined->isLocked((string) $name),
+            [...$path, (string) $delta, (string) $name],
+            $wrapper_id,
+          );
+          continue;
+        }
+        $map->setPropertyDefinition((string) $name, $property);
+      }
+      $element[$delta] = $this->widgetManager->getWidgetFor($map)->buildElement($map, $showing_item);
+      if ($lists !== []) {
+        $drawn = $element[$delta];
+        $ordered = [];
+        foreach ($refined->getDefinitions()->names() as $name) {
+          if (isset($lists[$name]) || isset($drawn[$name])) {
+            $ordered[$name] = $lists[$name] ?? $drawn[$name];
+            unset($drawn[$name]);
+          }
+        }
+        $element[$delta] = $drawn + $ordered;
+      }
       $element[$delta][self::REMOVE_KEY] = $control(self::REMOVE_KEY, [(string) $delta, self::REMOVE_KEY], count($items) <= $min);
       $element[$delta][self::REMOVE_KEY]['#weight'] = 1000;
     }
@@ -1420,26 +1453,49 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    *   The data surface container.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state.
+   * @param string|null $container_key
+   *   The data surface container's key, for a list inside an item, whose
+   *   container is the item; NULL for the container's own.
    *
    * @return array
    *   The items keyed by data surface key, or nothing for a list with no
    *   element.
    */
-  protected function extractCollection(Entry $entry, array $container, FormStateInterface $form_state): array {
+  protected function extractCollection(Entry $entry, array $container, FormStateInterface $form_state, ?string $container_key = NULL): array {
+    $container_key ??= static::containerKey($container);
     $name = $entry->name;
     $element = $container[$name] ?? NULL;
     $item = $entry->definition instanceof ListDataDefinitionInterface ? $entry->definition->getItemDefinition() : NULL;
     if (!is_array($element) || !isset($element[self::LIST_KEY]) || $item === NULL) {
       return [];
     }
-    $widget = $this->widgetManager->getWidgetFor($item);
+    // A collection inside an item is read as one, and the item's map
+    // reads the rest.
+    $child = $entry->list?->child();
+    $inner = [];
+    $map = $item;
+    if ($child !== NULL && $item instanceof ComplexDataDefinitionInterface) {
+      $map = MapDataDefinition::create();
+      foreach ($item->getPropertyDefinitions() as $property => $definition) {
+        $nested = $child->getDefinitions()->entry((string) $property);
+        if ($nested?->list !== NULL) {
+          $inner[] = $nested;
+          continue;
+        }
+        $map->setPropertyDefinition((string) $property, $definition);
+      }
+    }
+    $widget = $this->widgetManager->getWidgetFor($map);
     $items = [];
     $deltas = [];
     foreach (static::elementChildren($element) as $delta) {
       if (!is_int($delta)) {
         continue;
       }
-      $value = $widget->extractValue($item, $element[$delta], $form_state, [$name, $delta]);
+      $value = $widget->extractValue($map, $element[$delta], $form_state, [$name, $delta]);
+      foreach ($inner as $nested) {
+        $value += $this->extractCollection($nested, $element[$delta], $form_state, $container_key);
+      }
       if (Collection::isEmptyItem($value)) {
         continue;
       }
@@ -1447,7 +1503,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       $deltas[] = $delta;
     }
     $state = $form_state instanceof SubformStateInterface ? $form_state->getCompleteFormState() : $form_state;
-    $state->setTemporaryValue([self::LIST_DELTAS, static::containerKey($container), $name], $deltas);
+    $state->setTemporaryValue([self::LIST_DELTAS, $container_key, $element[self::LIST_KEY]], $deltas);
     return [$name => $items];
   }
 
@@ -1511,13 +1567,15 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         continue;
       }
       $element = $container[$violation->key] ?? NULL;
-      if (isset($element[self::LIST_KEY]) && $segments !== [] && ctype_digit((string) $segments[0])) {
-        // An item is flagged where it was drawn, which an empty item
-        // dropped before it may have moved.
-        $deltas = $state->getTemporaryValue([self::LIST_DELTAS, static::containerKey($container), $violation->key]) ?? [];
-        $segments[0] = (string) ($deltas[(int) $segments[0]] ?? $segments[0]);
-      }
       foreach ($segments as $position => $segment) {
+        if (isset($element[self::LIST_KEY]) && ctype_digit((string) $segment)) {
+          // An item is flagged where it was drawn, which an empty item
+          // dropped before it may have moved: at any depth, a list inside
+          // an item too.
+          $list = $element[self::LIST_KEY];
+          $deltas = $state->getTemporaryValue([self::LIST_DELTAS, static::containerKey($container), $list]) ?? [];
+          $segment = $segments[$position] = (string) ($deltas[(int) $segment] ?? $segment);
+        }
         if (!empty($element[self::ROWS_KEY]) && ctype_digit((string) $segment) && isset($element['#array_parents'])) {
           // An item of a free list is flagged on the row it was drawn as,
           // which an empty row dropped before it may have moved.

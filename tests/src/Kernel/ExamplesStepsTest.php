@@ -10,6 +10,7 @@ use Drupal\Core\Render\Element;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
+use Drupal\Core\TypedData\DataDefinition;
 use Drupal\data_surface\Contract\SchemaResolver;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
@@ -22,6 +23,7 @@ use Drupal\data_surface_examples\Form\RegistrationStep1ClassicForm;
 use Drupal\data_surface_examples\Resource\RegistrationStep1Resource;
 use Drupal\data_surface_examples\Resource\RegistrationStep2Resource;
 use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
+use Drupal\data_surface_tool\ContractPanel;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\user\Entity\Role;
 use Drupal\user\RoleInterface;
@@ -420,6 +422,16 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     }
     $this->assertSame('one of Auditorium, Upper deck', (string) $rows['room'][5]['data']['#markup']);
     $this->assertSame('narrowed', (string) $rows['room'][7]);
+
+    // A key a runtime rule checks too: narrowed or not, the rule is said,
+    // and which of them narrowed it is not.
+    $status = new \ReflectionMethod(ContractPanel::class, 'status');
+    $panel = $this->container->get('data_surface_tool.contract_panel');
+    $declared = DataDefinition::create('string')->addConstraint('Choice', ['choices' => ['a', 'b']]);
+    $narrowed = DataDefinition::create('string')->addConstraint('Choice', ['choices' => ['a']]);
+    $this->assertSame('narrowed, and checked at runtime', (string) $status->invoke($panel, $declared, $narrowed, FALSE, TRUE));
+    $this->assertSame('as declared, checked at runtime', (string) $status->invoke($panel, $declared, $declared, FALSE, TRUE));
+    $this->assertSame('narrowed', (string) $status->invoke($panel, $declared, $narrowed, FALSE, FALSE));
   }
 
   /**

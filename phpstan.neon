@@ -1,6 +1,12 @@
 # Configuration file for PHPStan static code checking, see https://phpstan.org .
 # Run it from the Drupal root:
 #   vendor/bin/phpstan analyse -c web/modules/custom/data_surface/phpstan.neon
+# A static #[RefinesInput] method is a pure function of the keys it
+# watches: one that calls \Drupal:: is flagged before it ever runs
+# (tests/src/PHPStan/StaticRefinerRule.php).
+includes:
+  - phpstan-rules.php
+
 parameters:
   level: 6
   reportUnmatchedIgnoredErrors: false
@@ -10,6 +16,9 @@ parameters:
   excludePaths:
     analyseAndScan:
       - */node_modules/*
+      # What the module's own PHPStan rule is tested against: refiners
+      # it must flag.
+      - tests/fixtures/phpstan/*
   fileExtensions:
     - php
     - module
@@ -24,6 +33,11 @@ parameters:
   bootstrapFiles!:
     - phpstan-bootstrap.php
   ignoreErrors:
+    # The broken fixtures exist to be refused when they run; a static
+    # refiner that reaches for the container is one of them.
+    -
+      identifier: dataSurface.staticRefiner
+      path: tests/modules/*/src/*/Broken/*
     - identifier: missingType.iterableValue
     - identifier: missingType.generics
     # Drupal's plugin factory contract is new static(); the resolvers

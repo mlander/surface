@@ -90,7 +90,10 @@ a monthly bulletin. Such a key is read as left out, whatever it is sent:
 Nothing about it is required, and nothing about it is validated. Storage
 keeps what it holds, so the key holds it again when it applies: a weekly
 send day survives a month of monthly sends
-([decision](decisions.md#a-key-that-does-not-apply)).
+([decision](decisions.md#a-key-that-does-not-apply)). Inside a
+collection's item it is not put back: a list sent is written as sent.
+A map whose every key does not apply is an empty map, and its JSON
+document, `DataSurfacePipelineInterface::document()`, writes it `{}`.
 
 A form posted without JavaScript keeps the stored value too. The form
 draws no element for a key that does not apply, and draws it again over

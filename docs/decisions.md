@@ -571,14 +571,17 @@ config is the plain case), and no declaration alone stops it:
 
 None of them proves purity: running a refiner twice proves nothing about
 tomorrow, and a static method can still read a static property something
-else filled from storage. A PHPStan rule is left for later. The module
-has no custom rules to add one beside (`phpstan.neon` configures only
-the level, paths and ignores), and with the structural layer in place
-the rule left to write would flag `\Drupal::` and static state inside a
-static refiner, which the guard already catches whenever a test runs the
-refiner; it would add reach to refiners no test exercises, which is
-worth a rule once there are third-party refiners to hold to it.
-(`RefinesInput`, `Resources::bindRefiners()`, `RuntimeRefiner`,
+else filled from storage. A PHPStan rule adds reach to refiners no test
+exercises (decided 2026-10-19, replacing "left for later"): it flags a
+static refiner whose body calls `\Drupal::`, the one shortcut every
+service and site state read goes through. It is registered by a PHP
+include (`phpstan-rules.php`), because PHPStan compiles its container
+before the bootstrap file teaches it where the rule's class lives, and
+it does not try static state, which a rule cannot tell from a constant
+without false alarms. The broken fixtures, which exist to be refused
+when they run, are ignored by its identifier.
+(`Tests\data_surface\PHPStan\StaticRefinerRule`, `StaticRefinerRuleTest`,
+`RefinesInput`, `Resources::bindRefiners()`, `RuntimeRefiner`,
 `ContractEmitter::frame()`, `ContractEmitter::enumerate()`)
 
 ### A definition is validated as itself
@@ -719,13 +722,30 @@ schema for these answers, and the full schema states it `false` beside
 them. An empty variant is a different answer: the slot applies and has
 nothing to say, its value an empty map.
 
-Open: inside a collection's item a key that does not apply is not put
-back from storage, since an item is accepted over the child's defaults
-and sent whole; and a map whose every key is ruled out is an empty PHP
-array in the accepted document, which a JSON encoder writes as `[]`.
+Inside a collection's item a key that does not apply is not put back
+from storage, by design (decided 2026-10-19): a list is sent whole and
+each item is accepted over the child's defaults, never over what is
+stored at its delta, since an item may have moved and a delta names no
+stored item ([Empty items are dropped](#empty-items-are-dropped)). What
+a list holds is kept when the list is left out, as "absent keeps" says
+of any key; once it is sent, the list written is the list sent.
+
+A map whose every key is ruled out is an empty map, and is written as
+one: `DataSurfacePipelineInterface::document()` writes accepted values
+as their JSON document, every map an object (`{}`, an empty one
+included) and every list a list, as the emitter writes its own `values`,
+and the React `/validate` answers with it (decided 2026-10-19; a JSON
+encoder writes an empty PHP array as `[]`, which `type: object`
+refuses). The emitter's `properties` for such a map is `{}` too. The map
+each module's mounted keys sit in, `third_party_settings`, is never
+null: with nothing stored and no mounted key holding a default it is
+accepted as an empty map, not `null`, which a config object's schema
+refuses (decided 2026-10-19; until then the parcel fixture carried a
+`courier` with a default so its mount was never empty).
 (`Refinement\DoesNotApply`, `RefinesInputRefiner::invoke()`,
 `DataSurface::refineAgainst()`, `DataSurfacePipeline::accept()`,
-`ContractEmitter::enumerate()`, `narrow()` in `app/src/contract.ts`)
+`DataSurfacePipeline::document()`, `ContractEmitter::enumerate()`,
+`narrow()` in `app/src/contract.ts`, `AdvertisedSchemaAcceptanceTest`)
 
 ### A rule declared as data
 
@@ -1242,9 +1262,13 @@ to the child's def in both contracts, a list input of the child's maps
 in the tool, a details of item details on the form. Each item's
 context is carried (`Collection::contextFor()`), and nothing reads an
 item's delta yet: a child that names storage of its own is not routed
-per item, and the parent stores the list. *Open:* routing an item to
-its child's storage, which needs an identity key on the child to say
-which stored item it is. (`Resources::buildResource()`, `Collection`)
+per item, and the parent stores the list. A child may hold a collection
+of its own: every door recurses, and the form draws a list inside an
+item as a list in its place ([A collection on a
+form](forms.md#a-collection-on-a-form), decided 2026-10-19). *Open:*
+routing an item to its child's storage, which needs an identity key on
+the child to say which stored item it is. (`Resources::buildResource()`,
+`Collection`, `DataSurfaceFormBuilder::buildCollection()`)
 
 ### Access once per list
 
@@ -1564,22 +1588,56 @@ the caller never saw. (`DataSurfaceBuilder::omit()`,
 
 ### Locked at the top
 
-*Open.* A whole resource whose access answers locked, asked on its own,
-should render read-only with no save, refuse its write tool and allow
-its read tool. Every caller of `ResourcesInterface::access()` (the route,
-the form's floor, the tools, the React controllers) would have to tell
-locked from allowed, which is more than the child case, so for now a
-locked answer at the top is a refusal, the reading that writes nothing.
-(`Resources::atTheTop()`)
+A resource whose own access class answers locked, asked on its own, is
+shown and fixed: the caller is let in, every key is held to what is
+stored, and nothing is written. Decided 2026-10-19, replacing the
+reading under which a locked answer at the top was a refusal.
 
-### A variant is open or not offered
+- **Access.** `ResourcesInterface::access()` reads locked as allowed at
+  the top, so the route, the form's floor, the read tool and the React
+  page let the caller in, as for a locked child.
+- **The build.** The build asks the access class itself, at the top, and
+  a locked answer locks the resource whole (`lockWhole()`): every key is
+  held to what is stored, as `hold()` holds one, after the slots, so a
+  slot is chosen by what its deciding key holds and not preselected by
+  its default; the sealed data surface says why
+  (`DataSurfaceInterface::lockedWhole()`). A class whose `access()` is
+  declared to return core's answer alone cannot answer locked, so it is
+  not asked here and nothing changes for it. Built for the account
+  alone, a runtime answer is set aside, as a child's is, and nothing is
+  marked: the call itself settles it.
+- **The doors.** The form draws every element disabled, says why above
+  them and offers no Save. The pipeline refuses a submit before storage
+  is loaded, by name ("This may be seen and not changed, so nothing was
+  written: ..."), under `@access`, so the form, the write tool and the
+  React `/submit` and `/validate` refuse alike; the read tool answers.
+  Both documents say `readOnly: true` and `x-surface.locked: true` at
+  the top, beside every key `readOnly`, and the React page offers no
+  Submit for such a document.
 
-A slot's variant invoked through an operation whose access is not open is
+Why refused at the pipeline rather than at access: locked is the
+answer that lets the caller see, so access cannot be the refusal; and a
+submit written back unchanged would report a write that did nothing.
+(`Resources::lockedAtTheTop()`, `Resources::atTheTop()`,
+`DataSurfacePipeline::submit()`, `ContractEmitter::lockedWhole()`,
+`LockedAccessTest`, `LockedAccessFormTest`)
+
+### A variant is open, locked or not offered
+
+A slot's variant invoked through an operation whose access omits it is
 dropped from the slot, so its deciding value can no longer be chosen,
-and no derived variant is put in its place. The engine has no lock per
-variant, and offering a value whose keys could not be changed is the
-same as not offering it. *Open:* a locked variant shown read-only.
-(`Resources::buildResource()`)
+and no derived variant is put in its place. A variant its access locks
+is offered read only (decided 2026-10-19, replacing "not offered"): it
+is built locked whole, every key held to what is stored, so it can be
+chosen and is drawn fixed. Chosen anew, it starts from its own
+defaults, as any variant chosen anew does, and holds them. Its keys are
+`readOnly` and `x-surface.locked` where the slot states it, the form
+draws its fieldset disabled, and a value posted for it is kept as
+stored. A locked variant chosen by a locked deciding key no longer
+refuses its parent ([A chosen variant may
+refuse](#a-chosen-variant-may-refuse)): the parent is written, the
+variant's keys kept. (`Resources::buildResource()`,
+`DataSurfaceFormBuilder::buildSurfaceForm()`)
 
 ### A chosen variant may refuse
 
@@ -1587,10 +1645,11 @@ A slot whose deciding key is locked has its variant chosen by what the
 parent is, as a field's settings are chosen by its type, and the parent
 cannot be written without that variant. Its access class, asked in the
 context it is invoked in however it was invoked, may refuse the whole
-parent, never allow. The build leaves a variant that is not open out of
-the slot ([A variant is open or not
-offered](#a-variant-is-open-or-not-offered)), so it is looked up among
-the slot's declared variants. A field type's settings refuse the field
+parent, never allow; a locked answer is no refusal, since the variant is
+then built locked and kept. The build leaves an omitted variant out of
+the slot ([A variant is open, locked or not
+offered](#a-variant-is-open-locked-or-not-offered)), so it is looked up
+among the slot's declared variants. A field type's settings refuse the field
 they belong to this way, and nothing below a parent can open what its
 own access closed. Every other child's access decided its own keys when
 it was built ([One invocation model for both
@@ -1600,7 +1659,11 @@ not a reason to refuse the entity. This replaces an earlier rule under
 which any child invoking no operation of its own could refuse its
 parent; it was asked nowhere else, and now that its access answers at
 build, refusing the parent as well would turn a hidden field into a
-refused form. (`Resources::access()`, `Resources::childAnswers()`)
+refused form. Since only such a variant may refuse, `access()` builds the
+parent to find its variants only when some declared variant names an
+access class, not whenever anything does (decided 2026-10-19).
+(`Resources::access()`, `Resources::childAnswers()`,
+`Resources::childrenMayAnswer()`)
 
 ### No declared operation, no permission tier
 
@@ -1733,8 +1796,11 @@ value not on its list unexplained.
   under; a port by the container's key it reads, at the site; never a
   stored value. A slot's deciding key is said by the slot's own
   description, and a key that holds a child names nothing its ports
-  read, which the keys inside it name. The read tool's output says
-  nothing about it. The listing stays small: a key that depends on
+  read, which the keys inside it name. Inside a collection's item a key
+  names its siblings by their keys in the item, the frame a caller sends
+  them in together, on the item's own property (decided 2026-10-19;
+  until then keys inside an item said nothing). The read tool's output
+  says nothing about it. The listing stays small: a key that depends on
   nothing says nothing more.
 
 (`DataSurfacePipeline::sayingWhatIsAllowed()`,
@@ -1789,12 +1855,24 @@ operation (`DerivedOperation`).
   there is nothing to read before changing it
   (`ResourceCatalogue::reads()`).
 
-*Open:* nothing yet holds a read only operation to writing nothing: its
-tool and its form submit as any other. Whether a call reaches beyond
+A read only operation writes nothing at any door (decided 2026-10-19,
+closing the point this entry left open): the build marks the data
+surface (`DataSurfaceInterface::changesNothing()`), its pipeline
+accepts, validates and prepares and then stops where a dry run does, and
+`commit()` refuses values prepared for it with a `LogicException`, so a
+caller driving the stages itself cannot write either. Its form and its
+tool say the values were accepted and nothing was written. `prepare()`
+performs no side effects for it as for any operation, which is the
+storage's contract already ([Prepare](resources.md#prepare)). No
+build-time check was added: whether a storage would write is whether
+its `commit()` is called, which no class can be read for ahead of time,
+and the pipeline is the one place that calls it, so the refusal there is
+the cheapest honest check. Whether a call reaches beyond
 the site (MCP's open world) is a fact of the storage, not the
 operation, and a later flag there; the MCP bridge says open world for
 every tool today. (`Operation`, `OperationDefinition::facts()`,
-`ContractEmitter::operation()`, `OperationFactsTest`)
+`ContractEmitter::operation()`, `DataSurfacePipeline::commit()`,
+`OperationFactsTest`, `LockedAccessTest`)
 
 ### A violation summary is plain text
 
@@ -1868,8 +1946,12 @@ A secret is never returned by a read, and is not in its output
 definition either: left out, as the write tool's defaults leave it out,
 rather than sent as an empty placeholder a caller could mistake for the
 value. Under a slot, a key any variant keeps secret is left out
-whichever variant holds. (`InputDefinitions::secrets()`,
-`OperationInputs::stored()`)
+whichever variant holds. Inside a list of maps, a collection's items
+among them, only the secret is left out of each item, and the list and
+the rest of every item are read (decided 2026-10-19; until then a secret
+in an item hid the whole list); a list of secrets is left out whole.
+(`InputDefinitions::secrets()`, `InputDefinitions::EACH`,
+`OperationInputs::stored()`, `ReadToolTest`)
 
 ### A static tool definition is one account's
 
@@ -1908,7 +1990,13 @@ describing the resource as it stands has to follow every change; it is
 handed the values the elements are built with, not a refined data
 surface, so it can tell which variant a slot shows. The
 contract panel lives in `data_surface_tool`, since half of it is the
-derived tool's JSON Schema. (`DataSurfaceOperationForm::surfacePanel()`)
+derived tool's JSON Schema. Its "Right now" column, and the React
+page's, says "narrowed, and checked at runtime" for a key that is
+narrowed and that a runtime rule also checks (decided 2026-10-19,
+replacing "narrowed at runtime", which named the runtime rule as what
+narrowed a key a static refiner had narrowed); neither knows which of
+them narrowed it, so neither says. (`DataSurfaceOperationForm::surfacePanel()`,
+`ContractPanel::status()`, `ContractPanel.tsx`)
 
 ### An error on the trigger renders inline
 
@@ -2528,9 +2616,14 @@ reads an empty list as null, so it is not asked of `[]`, which every
 checkbox unchecked or every row removed sends (until 2026-10-19 a
 required list refused `[]` as "This value should not be null.", which
 this entry and [Declaring a resource](declaring-a-resource.md#required)
-said it did not). Whether a required plain map sent `[]` is held the
-same is *open*: it was not checked. (`ContractEmitter::required()`,
-`DataSurfacePipeline::validateLevel()`)
+said it did not). A required plain map sent `[]` is held the same
+(decided 2026-10-19, by consistency with a child sent null, which is
+each of its keys sent null): the empty map, or a map whose keys hold
+nothing, is a value, so the map is not refused as missing, and a key
+inside it that is required is refused in its own words at its path;
+until then core's `NotNull` read it as null and refused the map itself.
+(`ContractEmitter::required()`, `DataSurfacePipeline::validateLevel()`,
+`AdvertisedSchemaAcceptanceTest::testRequiredMapSentEmpty()`)
 
 ### Absent keeps, null clears
 

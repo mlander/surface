@@ -289,6 +289,14 @@ class CollectionTest extends DataSurfaceKernelTestBase {
     // read through the child.
     $this->assertSame(self::STORED['shelves'], $accepted['shelves']);
 
+    // A list is written as accepted: nothing stored at a delta is put
+    // back into the item there, a key that does not apply included,
+    // since the list is sent whole and an item may have moved.
+    // Decision: see docs/decisions.md#a-key-that-does-not-apply.
+    $sent = $pipeline->accept($edit, ['racks' => [['spices' => '9']]], self::STORED);
+    $stored = ['racks' => [['shelf' => 'low', 'spices' => 1, 'label' => 'Kept', 'brand' => 'Old']]] + self::STORED;
+    $this->assertSame($sent['racks'], $pipeline->kept($edit, $sent, $stored)['racks']);
+
     // Empty items, rows a form added and left blank, are dropped.
     $blank = ['shelf' => '', 'spices' => '', 'label' => ''];
     $accepted = $pipeline->accept($edit, ['racks' => [['spices' => '4'], $blank, [], '']], self::STORED);
@@ -545,6 +553,13 @@ class CollectionTest extends DataSurfaceKernelTestBase {
     // What is stored is what a caller reads as the list's default.
     $this->assertSame(self::STORED['racks'], $racks->getDefaultValue());
     $this->assertInstanceOf(ListInputDefinition::class, $values['shelves']);
+    // A key inside an item says what it depends on, by its sibling's key
+    // in the item; the list itself depends on nothing it says.
+    $shelf = $values['shelves']->getItemDefinition();
+    $this->assertInstanceOf(MapInputDefinition::class, $shelf);
+    $this->assertStringEndsWith('Depends on unit.', (string) $shelf->getPropertyDefinitions()['height']->getDescription());
+    $this->assertStringNotContainsString('Depends on', (string) $shelf->getPropertyDefinitions()['unit']->getDescription());
+    $this->assertStringNotContainsString('Depends on', (string) $values['shelves']->getDescription());
 
     // A write sends the list whole.
     $write = $this->runTool(self::TOOL, [

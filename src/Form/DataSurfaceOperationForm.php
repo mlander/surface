@@ -200,13 +200,21 @@ class DataSurfaceOperationForm extends FormBase {
         $panel->buildPanel($served, $surface, $values),
       );
     }
-    $form['actions'] = [
+    // Locked whole: every element is drawn disabled by its key's lock,
+    // and with nothing to save there is no Save.
+    // Decision: see docs/decisions.md#locked-at-the-top.
+    $locked = $surface->lockedWhole();
+    $form[$locked === NULL ? 'actions' : 'locked'] = $locked === NULL ? [
       '#type' => 'actions',
       '#weight' => 100,
       'submit' => [
         '#type' => 'submit',
         '#value' => $this->t('Save'),
       ],
+    ] : [
+      '#type' => 'item',
+      '#weight' => -100,
+      '#markup' => $this->t('This may be seen and not changed: @reason', ['@reason' => $locked]),
     ];
     $cosmetics = $this->surfaceCosmetics();
     return $cosmetics === NULL
@@ -253,7 +261,9 @@ class DataSurfaceOperationForm extends FormBase {
     $operation = $served->operation->id;
     $cosmetics = $this->surfaceCosmetics();
     $message = $cosmetics?->surfaceFormMessage($result, $operation, $served->subject)
-      ?? $this->t('The changes have been saved.');
+      ?? ($result->committed
+        ? $this->t('The changes have been saved.')
+        : $this->t('The values were accepted. @label changes nothing, so nothing was written.', ['@label' => $served->operation->label]));
     if ((string) $message !== '') {
       $this->messenger()->addStatus($message);
     }

@@ -14,6 +14,7 @@ use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolDefinition;
 use Drupal\tool\Tool\ToolInterface;
 use Drupal\tool\Tool\ToolOperation;
+use Drupal\tool\TypedData\ListOutputDefinition;
 use Drupal\tool\TypedData\MapInputDefinition;
 use Drupal\tool\TypedData\MapOutputDefinition;
 use PHPUnit\Framework\Attributes\Group;
@@ -49,6 +50,7 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
     'data_surface:registration.step1:configure:read',
     'data_surface:registration.step2:configure:read',
     'data_surface:registration.step3:configure:read',
+    'data_surface:tool_test.cabinet:edit:read',
     'data_surface:tool_test.logbook:append:read',
     'data_surface:tool_test.logbook:clear:read',
     'data_surface:tool_test.logbook:configure:read',
@@ -378,7 +380,10 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that a secret is never returned, at the top or in a child.
+   * Tests that a secret is never returned, at the top, in a child or item.
+   *
+   * Inside a collection's items only the secret is left out: the list
+   * and every other key of each item are read.
    */
   public function testSecretIsNeverReturned(): void {
     $write = $this->runTool('data_surface:tool_test.vault:configure', [
@@ -386,6 +391,10 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
         'endpoint' => 'https://vault.example.com',
         'token' => 'top-secret-token',
         'backup' => ['host' => 'backup.example.com', 'password' => 'hunter2'],
+        'mirrors' => [
+          ['host' => 'east.example.com', 'password' => 'mirror-one'],
+          ['host' => 'west.example.com', 'password' => 'mirror-two'],
+        ],
       ],
     ]);
     $this->assertTrue($write['success'], $write['message']);
@@ -393,23 +402,31 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
     $stored = $this->container->get('state')->get(VaultStorage::KEY);
     $this->assertSame('top-secret-token', $stored['token']);
     $this->assertSame('hunter2', $stored['backup']['password']);
+    $this->assertSame('mirror-two', $stored['mirrors'][1]['password']);
 
     $read = $this->runTool('data_surface:tool_test.vault:configure:read');
     $this->assertTrue($read['success'], $read['message']);
     $this->assertSame([
       'endpoint' => 'https://vault.example.com',
       'backup' => ['host' => 'backup.example.com'],
+      'mirrors' => [['host' => 'east.example.com'], ['host' => 'west.example.com']],
     ], $read['values']);
+    $this->assertStringNotContainsString('mirror-', (string) json_encode($read['values']));
     $this->assertStringNotContainsString('top-secret-token', (string) json_encode($read['values']));
     $this->assertStringNotContainsString('hunter2', (string) json_encode($read['values']));
 
     // Nor is it described: the output says what is returned.
     $values = $this->definition('data_surface:tool_test.vault:configure:read')->getOutputDefinition(OperationInputs::VALUES);
     $this->assertInstanceOf(MapOutputDefinition::class, $values);
-    $this->assertSame(['endpoint', 'backup'], self::properties($values));
+    $this->assertSame(['endpoint', 'backup', 'mirrors'], self::properties($values));
     $backup = $values->getPropertyDefinitions()['backup'];
     $this->assertInstanceOf(MapOutputDefinition::class, $backup);
     $this->assertSame(['host'], self::properties($backup));
+    $mirrors = $values->getPropertyDefinitions()['mirrors'];
+    $this->assertInstanceOf(ListOutputDefinition::class, $mirrors);
+    $mirror = $mirrors->getItemDefinition();
+    $this->assertInstanceOf(MapOutputDefinition::class, $mirror);
+    $this->assertSame(['host'], self::properties($mirror));
   }
 
 }

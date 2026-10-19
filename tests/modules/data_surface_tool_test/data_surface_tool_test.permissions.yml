@@ -1,0 +1,9 @@
+keep cabinet:
+  title: 'Keep the cabinet'
+  description: 'The cabinet fixture is open: its keys may be changed.'
+audit cabinet:
+  title: 'Audit the cabinet'
+  description: 'The cabinet fixture is locked whole: shown and fixed.'
+set cabinet codes:
+  title: 'Set cabinet codes'
+  description: 'A code lock is open; without this it is offered locked.'

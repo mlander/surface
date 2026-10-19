@@ -104,7 +104,7 @@ function rows(schema: Schema, values: Values, prefix = ''): Row[] {
           : widget === 'slot'
             ? (extension?.chosen ? `the ${extension.chosen} variant` : 'not chosen yet')
             : extension?.runtime
-              ? (extension.refined ? 'narrowed at runtime' : 'as declared, checked at runtime')
+              ? (extension.refined ? 'narrowed, and checked at runtime' : 'as declared, checked at runtime')
               : extension?.refined ? 'narrowed' : 'as declared',
     });
     if (extension?.list && property.items !== undefined) {

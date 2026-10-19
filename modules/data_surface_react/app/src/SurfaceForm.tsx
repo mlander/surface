@@ -324,12 +324,18 @@ export function SurfaceForm({
           ) : null}
         </div>
       ) : null}
+      {/* Locked whole: every field is fixed, so there is nothing to submit. */}
+      {contract.schema.readOnly ? (
+        <p className="dsr-status">This may be seen and not changed.</p>
+      ) : null}
       <Properties schema={schema} values={values} prefix="" onChange={onChange} errors={errors} />
-      <div className="dsr-actions">
-        <button type="submit" className="dsr-button dsr-button--primary" disabled={submitting}>
-          Submit
-        </button>
-      </div>
+      {contract.schema.readOnly ? null : (
+        <div className="dsr-actions">
+          <button type="submit" className="dsr-button dsr-button--primary" disabled={submitting}>
+            Submit
+          </button>
+        </div>
+      )}
       <ContractPanel contract={contract} full={fullDocument} schema={schema} values={values} narrowing={narrowing} />
     </form>
   );

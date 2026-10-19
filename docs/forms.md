@@ -344,7 +344,15 @@ and an "Add another" button:
   at `racks.2.spices` after a dropped blank row is flagged on the row it
   came from.
 
-A collection inside an item is not drawn yet.
+- **A collection inside an item** is drawn as one, in its place among
+  the item's elements, by the same rules: its elements and buttons are
+  named by both deltas (`surface[aisles][1][shelves][0][height]`,
+  `data_surface_aisles_1_shelves_add`), its buttons replace only that
+  item's list, it is read back into the item it belongs to, and a
+  violation inside it (`aisles.1.shelves.0.height`) is flagged where it
+  was drawn, each delta remembered at each depth (decided 2026-10-19;
+  until then such a list had no widget and the form failed).
+  `NestedCollectionFormTest` is the worked example.
 
 ### A list of free values on a form
 
@@ -770,7 +778,11 @@ The form builds the context with the operation, builds the resource in
 it, loads current values from the resource's composed storage, and
 submits through the pipeline to that storage. A locked identity key
 renders as a disabled element holding the value the operation knows,
-and extraction keeps that value whatever is posted. The form id is
+and extraction keeps that value whatever is posted. A resource its
+access locks at the top renders every element disabled, says why above
+them and has no Save ([Locked at the top](decisions.md#locked-at-the-top));
+an operation that changes nothing says, on submit, that the values were
+accepted and nothing was written. The form id is
 `data_surface_operation_form_<route name>`, so an alter hook can name
 one route's form and two of them on one page cannot share a form state.
 The content type demo's two routes are the worked example, and

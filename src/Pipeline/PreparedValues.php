@@ -26,12 +26,26 @@ final class PreparedValues {
    *   Dependencies the artifact carries, in the shape
    *   calculateDependencies() collects them; empty when the storage has
    *   nothing to declare.
+   * @param bool $changesNothing
+   *   TRUE when prepared for an operation declared read only, which the
+   *   pipeline's commit() refuses.
    */
   public function __construct(
     public readonly array $values,
     public readonly mixed $artifact,
     public readonly array $dependencies = [],
+    public readonly bool $changesNothing = FALSE,
   ) {
+  }
+
+  /**
+   * Returns the same values, prepared for an operation changing nothing.
+   *
+   * @return self
+   *   The values, which the pipeline's commit() refuses.
+   */
+  public function changingNothing(): self {
+    return new self($this->values, $this->artifact, $this->dependencies, TRUE);
   }
 
 }

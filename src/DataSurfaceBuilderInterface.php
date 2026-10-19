@@ -159,6 +159,44 @@ interface DataSurfaceBuilderInterface {
   public function hold(string $name): static;
 
   /**
+   * Holds every key to what is stored: an access answer locked the whole.
+   *
+   * What a resource's own access class answers locked at the top, asked
+   * on its own, or a slot's variant's access class answers locked: every
+   * key is shown and fixed, held as hold() holds one, and the sealed data
+   * surface says why (DataSurfaceInterface::lockedWhole()). Applied at the
+   * seal, after the slots, so a slot is chosen by what its deciding key
+   * holds rather than preselected by its default.
+   *
+   * Decision: see docs/decisions.md#locked-at-the-top.
+   *
+   * @param string|\Stringable $reason
+   *   Why, in a sentence a caller is shown.
+   *
+   * @return $this
+   *
+   * @throws \LogicException
+   *   When the builder is already sealed.
+   */
+  public function lockWhole(string|\Stringable $reason): static;
+
+  /**
+   * Marks a data surface built for an operation declared read only.
+   *
+   * Its pipeline accepts, validates and prepares, and writes nothing:
+   * submit() stops where a dry run does, and commit() refuses what was
+   * prepared for it (DataSurfaceInterface::changesNothing()).
+   *
+   * Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
+   *
+   * @return $this
+   *
+   * @throws \LogicException
+   *   When the builder is already sealed.
+   */
+  public function markChangesNothing(): static;
+
+  /**
    * Takes a mixed-in structure's member back out, before anything binds it.
    *
    * What a mixed-in structure's access answers when the account may not

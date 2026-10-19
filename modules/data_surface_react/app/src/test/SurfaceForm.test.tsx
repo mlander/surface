@@ -328,6 +328,27 @@ describe('submitting example 2', () => {
   });
 });
 
+describe('a resource its access locks whole', () => {
+  it('draws every field disabled and offers no Submit', async () => {
+    // What the emitter writes for it: readOnly at the top and on every key.
+    const contract = example2 as unknown as Contract;
+    const properties = Object.fromEntries(
+      Object.entries(contract.schema.properties ?? {}).map(([name, property]) => [
+        name,
+        { ...property, readOnly: true, 'x-surface': { ...property['x-surface'], locked: true } },
+      ]),
+    );
+    const locked = { ...contract, schema: { ...contract.schema, readOnly: true, properties } } as Contract;
+    const { fetcher } = server({ '/surface-api/registration.step2/configure': () => locked });
+    render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
+
+    expect(await screen.findByLabelText(/Event title/)).toBeDisabled();
+    expect(screen.getByLabelText(/Venue/)).toBeDisabled();
+    expect(screen.getByText('This may be seen and not changed.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Submit' })).toBeNull();
+  });
+});
+
 describe('submitting an operation that creates', () => {
   it('moves to the page where the created thing now lives', async () => {
     const add: Settings = { ...settings, surface: 'node.type', situation: 'add', pageBase: '/base/surface-react' };
@@ -433,7 +454,9 @@ describe('the React form of example 3', () => {
     render(<SurfaceForm settings={{ ...settings, surface: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
     const panel = (await screen.findByText('Contract')).closest('details');
     // Example 4 takes away the rooms a site has closed: a runtime refiner.
-    expect(panel?.querySelector('tr[data-surface-key="room"]')).toHaveTextContent('narrowed at runtime');
+    // Narrowed by the venue, and checked by the runtime rule as well:
+    // which of the two narrowed it is not said.
+    expect(panel?.querySelector('tr[data-surface-key="room"]')).toHaveTextContent('narrowed, and checked at runtime');
     expect(panel?.querySelector('tr[data-surface-key="capacity"]')).not.toHaveTextContent('runtime');
   });
 

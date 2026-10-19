@@ -179,6 +179,31 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
   public function isLocked(string $name): bool;
 
   /**
+   * Says why every key is held to what is stored, if an answer said so.
+   *
+   * Set when an access answer locked the whole: a resource's own, asked on
+   * its own (every key shown and fixed, and a submit refused before
+   * anything is written), or a slot variant's (offered and shown, fixed).
+   *
+   * Decision: see docs/decisions.md#locked-at-the-top.
+   *
+   * @return string|\Stringable|null
+   *   The reason, or NULL when the keys are not locked as a whole.
+   */
+  public function lockedWhole(): string|\Stringable|null;
+
+  /**
+   * Answers whether it was built for an operation that changes nothing.
+   *
+   * Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
+   *
+   * @return bool
+   *   TRUE for an operation declared read only: the pipeline writes
+   *   nothing for it.
+   */
+  public function changesNothing(): bool;
+
+  /**
    * Gets how one provider's mounted third-party settings are stored.
    *
    * @param string $provider

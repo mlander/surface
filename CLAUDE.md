@@ -350,7 +350,8 @@ so the rule is this sentence. `npm test` is not part of
   refiner not declared runtime; with assertions on, a static refiner runs
   with the container guarded (`Refinement\StaticRefinerContainer`) and the
   emitter asks it twice; `StaticRefinerAgreementTrait` holds conditionals
-  to a fresh `refine()` (`docs/refinement.md#enforcing-the-kind`).
+  to a fresh `refine()`; and the module's PHPStan rule flags a static
+  refiner calling `\Drupal::` (`docs/refinement.md#enforcing-the-kind`).
 - A rule between keys whose condition and effect a schema can state is
   declared in the blueprint, `$inputs->narrow($key)->when(Condition::...)`
   and its effects: a static refiner, bound after its contributor's coded

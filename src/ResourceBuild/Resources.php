@@ -177,7 +177,7 @@ final class Resources implements ResourcesInterface {
     $alone = $this->accountAlone;
     $this->accountAlone = FALSE;
     try {
-      return $this->buildResource($resource, $context, []);
+      return $this->buildResource($resource, $context, [], top: TRUE);
     }
     finally {
       $this->accountAlone = $alone;
@@ -193,7 +193,7 @@ final class Resources implements ResourcesInterface {
     $alone = $this->accountAlone;
     $this->accountAlone = TRUE;
     try {
-      return $this->buildResource($resource, $context, []);
+      return $this->buildResource($resource, $context, [], top: TRUE);
     }
     finally {
       $this->accountAlone = $alone;
@@ -211,11 +211,18 @@ final class Resources implements ResourcesInterface {
    *   The parents this one is being built inside, outermost first, each
    *   with the key it is attached at, its own input keys and the storage
    *   that stores them (heldBy()); empty for one asked for on its own.
+   * @param string|\Stringable|null $locked
+   *   Why every key is held to what is stored, for a variant its access
+   *   locked; NULL otherwise.
+   * @param bool $top
+   *   TRUE for the resource an operation is asked of on its own, which
+   *   asks its own access class and states how its operation behaves;
+   *   FALSE for a child, and for a structure mixed in, built by itself.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The sealed data surface.
    */
-  protected function buildResource(string $resource, OperationContext $context, array $ancestry): DataSurfaceInterface {
+  protected function buildResource(string $resource, OperationContext $context, array $ancestry, string|\Stringable|null $locked = NULL, bool $top = FALSE): DataSurfaceInterface {
     $definition = $this->registry->getDefinition($resource);
     // Refuses two providers of one operation id, whichever is asked for.
     $this->registry->getOperations($definition->name());
@@ -412,15 +419,17 @@ final class Resources implements ResourcesInterface {
       foreach ($children as $value => $child) {
         // Nothing wires a variant's ports yet.
         $this->assertWiring($builder, $definition, NULL, $key, $child, [], $input_keys, $attached, $lists, 'variant');
-        [$attachment, $access, , $runtime] = $this->buildChild($child, $context, $key, $frame, $ancestry);
+        [$attachment, $access, , $runtime] = $this->buildChild($child, $context, $key, $frame, $ancestry, TRUE);
         if ($access !== NULL) {
           $builder->addCacheableDependency($access);
         }
         // A variant offered here that only the subject decides may be
         // withheld once it is known: the slot says so.
         $runtime_variant = $runtime_variant || $runtime;
-        // Decision: see docs/decisions.md#a-variant-is-open-or-not-offered.
-        if ($attachment === NULL || ($access !== NULL && !$access->isOpen())) {
+        // A locked variant is offered, built locked whole.
+        // Decision: see
+        // docs/decisions.md#a-variant-is-open-locked-or-not-offered.
+        if ($attachment === NULL) {
           $withheld[] = (string) $value;
           continue;
         }
@@ -464,7 +473,80 @@ final class Resources implements ResourcesInterface {
       }
     }
 
+    // Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
+    if ($top && ($this->registry->getOperations($definition->name())[$context->id]->readOnly ?? FALSE)) {
+      $builder->markChangesNothing();
+    }
+    // Decision: see docs/decisions.md#locked-at-the-top.
+    $locked ??= $top ? $this->lockedAtTheTop($builder, $definition, $context) : NULL;
+    if ($locked !== NULL) {
+      $builder->lockWhole($locked);
+    }
     return $builder->seal();
+  }
+
+  /**
+   * Asks a resource asked for on its own whether its access locks it whole.
+   *
+   * Only a class whose access() may return an AccessAnswer can answer
+   * locked, so one declared to return core's answer is not asked here:
+   * its answer is the route's and the tool's, as before. Built for the
+   * account alone, a runtime answer is set aside, as a child's is.
+   *
+   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   *   The builder, which the answer's cacheability reaches.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   Its context.
+   *
+   * @return string|null
+   *   Why it is locked, or NULL when it is not.
+   */
+  protected function lockedAtTheTop(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, OperationContext $context): ?string {
+    if ($definition->access === NULL || !static::mayLock($definition->access)) {
+      return NULL;
+    }
+    $answer = $this->ask($definition, $context, $this->currentUser);
+    if ($this->accountAlone && !$answer->isStatic()) {
+      return NULL;
+    }
+    $builder->addCacheableDependency($answer);
+    return $answer->isLocked() ? static::lockReason($answer) : NULL;
+  }
+
+  /**
+   * Answers whether an access class can answer locked at all.
+   *
+   * @param string $class
+   *   The access class.
+   *
+   * @return bool
+   *   FALSE when its access() is declared to return core's answer alone.
+   */
+  protected static function mayLock(string $class): bool {
+    $type = (new \ReflectionMethod($class, 'access'))->getReturnType();
+    $named = $type instanceof \ReflectionUnionType ? $type->getTypes() : [$type];
+    foreach ($named as $one) {
+      if (!$one instanceof \ReflectionNamedType || is_a($one->getName(), AccessAnswer::class, TRUE)) {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
+
+  /**
+   * Says why an answer locked, in the sentence a caller is shown.
+   *
+   * @param \Drupal\data_surface\Resource\AccessAnswer $answer
+   *   A locked answer.
+   *
+   * @return string
+   *   Its own reason, or one that says it was locked, untranslated as
+   *   every access reason is.
+   */
+  protected static function lockReason(AccessAnswer $answer): string {
+    return $answer->getReason() ?? 'Its access answered that it may be seen and not changed.';
   }
 
   /**
@@ -539,6 +621,9 @@ final class Resources implements ResourcesInterface {
    *   its own operation asks, resolved.
    * @param array $ancestry
    *   The parent's own ancestry.
+   * @param bool $whole
+   *   TRUE for a slot's variant, which a locked answer builds locked whole,
+   *   since the parent's key is the slot's and not the variant's alone.
    *
    * @return array{0: \Drupal\data_surface\Attachment|null, 1: \Drupal\data_surface\Resource\AccessAnswer|null, 2: \Drupal\data_surface\Resource\OperationContext, 3: bool}
    *   The sealed child, or NULL when its access omits it; that access
@@ -547,7 +632,7 @@ final class Resources implements ResourcesInterface {
    *   context the child was invoked in; and whether, built for the account
    *   alone, a runtime answer was set aside, so the key is marked.
    */
-  protected function buildChild(string $child, OperationContext $context, string $key, array $frame, array $ancestry): array {
+  protected function buildChild(string $child, OperationContext $context, string $key, array $frame, array $ancestry, bool $whole = FALSE): array {
     $definition = $this->registry->getDefinition($child);
     [$child_context, $operation] = $this->invokeChild($definition, $context, $key, $frame['id']);
     [$access, $runtime] = $this->childAccess($definition, $operation, $child_context, $this->currentUser, $frame['permission'] ?? NULL);
@@ -557,7 +642,7 @@ final class Resources implements ResourcesInterface {
     $frame['key'] = $key;
     return [
       new Attachment(
-        $this->buildResource($definition->name(), $child_context, [...$ancestry, $frame]),
+        $this->buildResource($definition->name(), $child_context, [...$ancestry, $frame], $whole && $access?->isLocked() ? static::lockReason($access) : NULL),
         $definition->name(),
         $definition->id,
       ),
@@ -1709,9 +1794,9 @@ final class Resources implements ResourcesInterface {
    * Reads an access class's answer the way one asked on its own is read.
    *
    * Core's answer is the answer. Of the three AccessAnswer answers, open
-   * is allowed and omitted is forbidden; locked is forbidden too, because
-   * a whole resource shown and not saved is not built at the top level
-   * yet, and refusing is the reading that writes nothing.
+   * and locked are allowed and omitted is forbidden: a resource locked at
+   * the top is built locked whole, shown and fixed, and its pipeline
+   * refuses a submit (lockedAtTheTop()).
    *
    * @param \Drupal\Core\Access\AccessResultInterface|\Drupal\data_surface\Resource\AccessAnswer $answer
    *   The access class's answer.
@@ -1724,28 +1809,34 @@ final class Resources implements ResourcesInterface {
       return $answer;
     }
     // Decision: see docs/decisions.md#locked-at-the-top.
-    $result = $answer->isOpen()
+    $result = !$answer->isOmitted()
       ? AccessResult::allowed()
       : AccessResult::forbidden($answer->getReason() ?? sprintf('The access class answered %s.', $answer->answer()));
     return $result->addCacheableDependency($answer);
   }
 
   /**
-   * Says whether anything else discovered has an access class.
+   * Says whether any slot's variant discovered has an access class.
    *
    * Building a resource to find its children costs a build, so it is done
-   * only when some child could have something to say.
+   * only when some child could refuse: a slot's variant chosen by a
+   * locked deciding key is the only child that may (childAnswers()), and
+   * a derived variant has no access class.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure being asked about.
    *
    * @return bool
-   *   TRUE when some other resource or structure names an access class.
+   *   TRUE when some declared variant other than it names an access class.
    */
   protected function childrenMayAnswer(ResourceDefinition $definition): bool {
     foreach ($this->registry->getDefinitions() as $other) {
-      if ($other->name() !== $definition->name() && $other->access !== NULL) {
-        return TRUE;
+      foreach ($other->variants as $variants) {
+        foreach ($variants as $class) {
+          if ($class !== $definition->name() && $this->registry->hasDefinition($class) && $this->registry->getDefinition($class)->access !== NULL) {
+            return TRUE;
+          }
+        }
       }
     }
     return FALSE;

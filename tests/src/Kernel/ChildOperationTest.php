@@ -503,9 +503,10 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['larder', 'note', 'rack'], $edit->getDefinitions()->names());
     $this->assertTrue($edit->isLocked('rack'));
 
-    // Asked on its own, the rack's locked answer is a refusal: a whole
-    // resource shown and not saved is not built at the top level.
-    $this->assertTrue($this->resources()->access(SpiceRackResource::class, SpiceRackResource::browse())->isForbidden());
+    // Asked on its own, the rack's locked answer lets the caller in, to a
+    // rack built locked whole: shown and fixed, never written.
+    $this->assertTrue($this->resources()->access(SpiceRackResource::class, SpiceRackResource::browse())->isAllowed());
+    $this->assertSame('The rack may be looked at.', (string) $this->resources()->build(SpiceRackResource::class, SpiceRackResource::browse())->lockedWhole());
     $this->actAs('stock spice rack');
     $this->assertTrue($this->resources()->access(SpiceRackResource::class, SpiceRackResource::browse())->isAllowed());
   }

@@ -81,6 +81,10 @@ final class DataSurface implements DataSurfaceInterface {
    *   (withPorts()); empty for one no container bound.
    * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $portDefinitions
    *   The container's key each port reads, by port.
+   * @param string|\Stringable|null $lockedWhole
+   *   Why every key is held to what is stored, or NULL.
+   * @param bool $changesNothing
+   *   Whether it was built for an operation that changes nothing.
    *
    * @internal
    *   A data surface is built by the build step, which seals a
@@ -97,7 +101,23 @@ final class DataSurface implements DataSurfaceInterface {
     protected readonly ?WatchedValueCheckInterface $watchedValueCheck = NULL,
     protected readonly array $ports = [],
     protected readonly array $portDefinitions = [],
+    protected readonly string|\Stringable|null $lockedWhole = NULL,
+    protected readonly bool $changesNothing = FALSE,
   ) {
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function changesNothing(): bool {
+    return $this->changesNothing;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function lockedWhole(): string|\Stringable|null {
+    return $this->lockedWhole;
   }
 
   /**
@@ -110,7 +130,7 @@ final class DataSurface implements DataSurfaceInterface {
     if ($values === $this->ports && $definitions === $this->portDefinitions) {
       return $this;
     }
-    return new self($this->definitions, $this->cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $values, $definitions);
+    return new self($this->definitions, $this->cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $values, $definitions, $this->lockedWhole, $this->changesNothing);
   }
 
   /**
@@ -382,7 +402,7 @@ final class DataSurface implements DataSurfaceInterface {
       $changed = TRUE;
     }
     return $changed
-      ? new self($definitions, $cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $this->ports, $this->portDefinitions)
+      ? new self($definitions, $cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $this->ports, $this->portDefinitions, $this->lockedWhole, $this->changesNothing)
       : $this;
   }
 

@@ -198,9 +198,12 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     }
     $stale = $this->staleReferences($result->violations);
     return ExecutableResult::success(
-      $result->committed
-        ? $this->t('@label: the values were accepted and written.', ['@label' => (string) $operation->label])
-        : $this->t('Dry run of @label: the values were accepted and prepared, and nothing was written.', ['@label' => (string) $operation->label]),
+      match (TRUE) {
+        $result->committed => $this->t('@label: the values were accepted and written.', ['@label' => (string) $operation->label]),
+        // Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
+        $built->changesNothing() => $this->t('@label changes nothing: the values were accepted and prepared, and nothing was written.', ['@label' => (string) $operation->label]),
+        default => $this->t('Dry run of @label: the values were accepted and prepared, and nothing was written.', ['@label' => (string) $operation->label]),
+      },
       [
         OperationInputs::VALUES => $result->values,
         OperationInputs::COMMITTED => $result->committed,

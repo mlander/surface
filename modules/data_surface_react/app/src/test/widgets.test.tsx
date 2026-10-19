@@ -592,6 +592,29 @@ describe('a collection', () => {
     expect(screen.queryByRole('group', { name: 'Spice racks 2' })).not.toBeInTheDocument();
   });
 
+  it('draws a collection inside an item as one, each item\'s list its own', async () => {
+    let seen: Values = {};
+    const aisles: Schema = {
+      title: 'Aisles',
+      type: ['array', 'null'],
+      items: {
+        type: 'object',
+        properties: {
+          label: { title: 'Aisle label', type: ['string', 'null'], 'x-surface': x('text') },
+          racks: racks({ minItems: 0 }),
+        },
+        additionalProperties: false,
+      },
+      'x-surface': x('list', { list: true }),
+    };
+    render(<Form schema={object({ aisles })} initial={{ aisles: [{ label: 'North', racks: [{ label: 'Everyday' }] }, { label: 'South', racks: [] }] }} onValues={(values) => (seen = values)} />);
+    const south = screen.getByRole('group', { name: 'Aisles 2' });
+    expect(within(screen.getByRole('group', { name: 'Aisles 1' })).getByLabelText('Label')).toHaveValue('Everyday');
+    await userEvent.click(within(south).getByRole('button', { name: 'Add another' }));
+    await userEvent.type(within(within(south).getByRole('group', { name: 'Spice racks 1' })).getByLabelText('Label'), 'Spare');
+    expect(seen.aisles).toEqual([{ label: 'North', racks: [{ label: 'Everyday' }] }, { label: 'South', racks: [{ label: 'Spare' }] }]);
+  });
+
   it('locks every item and both controls with a locked list', () => {
     render(<Form schema={object({ racks: racks({ readOnly: true }, { locked: true }) })} initial={{ racks: [{ label: 'Everyday' }] }} />);
     expect(within(screen.getByRole('group', { name: 'Spice racks 1' })).getByLabelText('Label')).toBeDisabled();

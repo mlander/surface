@@ -243,6 +243,26 @@ interface DataSurfacePipelineInterface {
   public function commit(PreparedValues $prepared, DataSurfaceStorageInterface $storage): void;
 
   /**
+   * Writes accepted values as the JSON document they are.
+   *
+   * Values are arrays, and an empty PHP array encodes as a JSON list:
+   * here every map is an object, an empty one included (a map whose
+   * every key does not apply, a mount with nothing in it), and every
+   * list a list, as the served contract writes its own `values`.
+   *
+   * Decision: see docs/decisions.md#a-key-that-does-not-apply.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface the values were accepted by.
+   * @param array $values
+   *   What accept() returned.
+   *
+   * @return \stdClass
+   *   The document, ready to encode.
+   */
+  public function document(DataSurfaceInterface $surface, array $values): \stdClass;
+
+  /**
    * Runs every stage: access, accept, validate, prepare, and commit.
    *
    * Stops at the first stage that refuses the values, so a caller reads

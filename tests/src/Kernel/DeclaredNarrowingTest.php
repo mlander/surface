@@ -258,6 +258,31 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Tests a mount with nothing in it is an empty map, written and encoded.
+   *
+   * Under two kilograms the alter's one key does not apply; with nothing
+   * stored for it and no default, the mount is an empty map, not null,
+   * which the config object's schema refuses, and its JSON document is
+   * an object.
+   *
+   * @see docs/decisions.md#a-key-that-does-not-apply
+   */
+  public function testMountWithNothingInItIsAnEmptyMap(): void {
+    $resources = $this->container->get('data_surface.resources');
+    $context = $resources->operation(ParcelResource::class, 'configure');
+    $parcel = $resources->build(ParcelResource::class, $context);
+    $storage = $resources->storage(ParcelResource::class, $context, $parcel);
+    $result = $this->pipeline()->submit($parcel, ['note' => ''], $storage);
+    $this->assertTrue($result->committed);
+    $this->assertSame([], $result->values['third_party_settings']);
+    $this->assertSame([], $this->config('data_surface_resource_test.parcel')->get('third_party_settings'));
+    $result = $this->pipeline()->submit($parcel, ['third_party_settings' => ['data_surface_resource_test' => ['customs' => NULL]]], $storage);
+    $this->assertTrue($result->committed);
+    $this->assertSame(['data_surface_resource_test' => []], $result->values['third_party_settings']);
+    $this->assertSame('{"data_surface_resource_test":{}}', json_encode($this->pipeline()->document($parcel, $result->values)->third_party_settings));
+  }
+
+  /**
    * Tests the pipeline refuses what a rule refuses, naming what it read.
    */
   public function testThePipelineHoldsValuesToTheRules(): void {

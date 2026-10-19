@@ -129,3 +129,15 @@ data_surface_resource_test.opening_hours:
     _data_surface_operation: 'configure'
   requirements:
     _data_surface_operation_access: 'TRUE'
+
+# The storeroom's edit operation, served by the generic form: a list of
+# aisles, each with a list of shelves of its own.
+data_surface_resource_test.storeroom.edit:
+  path: '/surface-test/storeroom'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Edit the storeroom'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Storeroom\StoreroomResource'
+    _data_surface_operation: 'edit'
+  requirements:
+    _data_surface_operation_access: 'TRUE'

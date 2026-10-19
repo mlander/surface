@@ -317,6 +317,14 @@ trust; three layers hold a static refiner to it
    way: for sampled values, refining with the rules alone answers what
    the conditionals a standard validator finds met say.
 
+Before any of them runs, static analysis says it: the module's PHPStan
+configuration carries a rule (`tests/src/PHPStan/StaticRefinerRule.php`,
+registered by `phpstan-rules.php`, run by `scripts/check.sh`) that flags
+a `#[RefinesInput]` static method not declaring `runtime: TRUE` whose
+body calls `\Drupal::`, naming the method, the call and both fixes. A
+module of your own runs it by including that file in its PHPStan
+configuration.
+
 None of the three proves purity, and a refiner can still lie in ways
 none sees: a static method reading a static property another class
 fills from storage, say. What they make is the honest spelling the easy

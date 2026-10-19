@@ -452,7 +452,9 @@ final class ContractPanel implements DataSurfaceFormPanelInterface {
     }
     $narrowed = $declared !== NULL && ($declared->isRequired() !== $refined->isRequired() || $this->allows($declared) !== $this->allows($refined));
     return match (TRUE) {
-      $runtime && $narrowed => $this->t('narrowed at runtime'),
+      // Narrowed by whatever refines it, and a rule only the site applies
+      // checks it too: which of them narrowed it is not known here.
+      $runtime && $narrowed => $this->t('narrowed, and checked at runtime'),
       $runtime => $this->t('as declared, checked at runtime'),
       $narrowed => $this->t('narrowed'),
       default => $this->t('as declared'),

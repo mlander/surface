@@ -191,7 +191,10 @@ already known, and that is a **context**, an `OperationContext`:
   for an operation that appends. A tool carries them to the Tool API,
   which MCP reads as a tool's annotations, and both schema documents
   state them at the top, under `x-surface.operation`
-  ([decision](decisions.md#an-operation-states-how-it-behaves)). The
+  ([decision](decisions.md#an-operation-states-how-it-behaves)). A read
+  only operation writes nothing at any door: its pipeline accepts,
+  validates and prepares, stops where a dry run does, and refuses to
+  commit what it prepared. The
   content type's and the field's operations say nothing: an edit changes
   the keys it is sent, and a key left out keeps its value.
 
@@ -321,7 +324,7 @@ surface, both contracts and the form.
 | Answer | At the top (an operation asked on its own) | At a child, however invoked |
 | --- | --- | --- |
 | open | allowed, as today | as today |
-| locked | denied: a whole resource shown and not saved is not built yet | the parent's key locked: fieldset drawn disabled, every key `readOnly` and `x-surface.locked` in both contracts and locked in the tool's `values`, posted values ignored ([Value semantics](semantics.md#locked-and-omitted-children)) |
+| locked | allowed, built locked whole: every element disabled and no Save, `readOnly` at the top and on every key in both contracts, a submit refused by name at every door, the read tool answering ([Locked at the top](decisions.md#locked-at-the-top)) | the parent's key locked: fieldset drawn disabled, every key `readOnly` and `x-surface.locked` in both contracts and locked in the tool's `values`, posted values ignored ([Value semantics](semantics.md#locked-and-omitted-children)) |
 | omitted | denied (route 403, tool access denied) | the key left out of the built data surface, both contracts, the form, the tool's `values` and the read tool's output; a posted value is an unknown key; a write keeps what is stored under it |
 
 Access composes: the parent's operation access gates the whole data
@@ -1393,9 +1396,12 @@ done with what is there, and only access composes down the tree. Where
 both are asked, the narrower answer stands. An alter naming an
 operation of the child, `#[Alters(Child::class, operations: ['enter'])]`,
 applies only where that operation is invoked. A slot's variant is
-resolved the same way, one variant at a time; a variant whose access is
-not open is not offered, so its deciding value can no longer be chosen,
-and nothing is derived in its place.
+resolved the same way, one variant at a time; a variant whose access
+omits it is not offered, so its deciding value can no longer be chosen,
+and nothing is derived in its place; one whose access locks it is
+offered read only, built locked whole: it can be chosen, and is drawn
+and stated fixed ([A variant is open, locked or not
+offered](decisions.md#a-variant-is-open-locked-or-not-offered)).
 
 The test module's larder is the worked example: one spice rack resource
 attached twice, invoked through its `edit` at one key, matched by the

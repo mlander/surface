@@ -155,6 +155,16 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   protected array $held = [];
 
   /**
+   * Why every key is held to what is stored, or NULL when they are not.
+   */
+  protected string|\Stringable|null $lockedWhole = NULL;
+
+  /**
+   * Whether it was built for an operation that changes nothing.
+   */
+  protected bool $changesNothing = FALSE;
+
+  /**
    * The keys whose access is decided once the subject is known.
    *
    * @var string[]
@@ -279,6 +289,24 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
     if (!in_array($name, $this->held, TRUE)) {
       $this->held[] = $name;
     }
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function lockWhole(string|\Stringable $reason): static {
+    $this->assertMutable();
+    $this->lockedWhole = $reason;
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function markChangesNothing(): static {
+    $this->assertMutable();
+    $this->changesNothing = TRUE;
     return $this;
   }
 
@@ -683,6 +711,18 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
     if ($this->thirdParty !== []) {
       $definitions['third_party_settings'] = $this->mountedMap($this->thirdParty, FALSE);
     }
+    // Locked whole: every key not fixed already holds what is stored. After
+    // the slots, so a slot is chosen by what its deciding key holds, not
+    // preselected by its default.
+    $locked = $this->locked;
+    $held = $this->held;
+    if ($this->lockedWhole !== NULL) {
+      foreach (array_keys($definitions) as $name) {
+        if (!in_array($name, $locked, TRUE)) {
+          $locked[] = $held[] = (string) $name;
+        }
+      }
+    }
     $outputs = $this->outputs;
     // Asked again over everything, because outputs also arrive whole
     // through the constructor, and a declaration that cannot be honored
@@ -697,7 +737,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
       DefinitionMap::fromArrays(
         definitions: $definitions,
         refinements: $this->refinements,
-        locked: $this->locked,
+        locked: $locked,
         refiners: $this->refiners,
         contributions: $this->contributions,
         attachments: $this->attachments,
@@ -708,13 +748,15 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
         ports: array_values($this->ports),
         mounted: $this->mounted === [] ? [] : ['third_party_settings' => $this->mounted],
         mixins: $this->mixins,
-        held: $this->held,
+        held: $held,
         runtimeAccess: array_values(array_intersect($this->runtimeAccess, array_keys($definitions))),
       ),
       $this->cacheability,
       DefinitionMap::fromArrays(definitions: $outputs),
       $this->thirdPartyLayouts,
       $this->watchedValueCheck,
+      lockedWhole: $this->lockedWhole,
+      changesNothing: $this->changesNothing,
     );
   }
 

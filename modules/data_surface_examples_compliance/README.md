@@ -93,7 +93,7 @@ Reload `/surface-examples/3` (or `/surface-react/registration.step3/configure`
 with `data_surface_react` on) and choose Riverside Hall: the room offers
 the main hall alone, its help says "The East room is closed.", and a
 submit choosing the East room is refused at the room. In the contract
-panel the room reads "narrowed at runtime", and both schemas mark it
+panel the room reads "narrowed, and checked at runtime", and both schemas mark it
 `runtime: true` beside `enumerated: true`. The full schema still lists
 the East room under Riverside Hall, since it is stated for any answers
 and a closed room is only known when asked: wider than what the form

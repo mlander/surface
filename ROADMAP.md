@@ -722,14 +722,69 @@ renames sit in A because they are cheapest before new code exists.
    has them; open-world is a later flag on the storage. Tool API gap to
    file: idempotence is a property of the operation kind, not the tool,
    so an edit cannot say it is idempotent while an add says it is not.
-10. **Pattern edges**, each small: a read-only operation form for the
-   top-level locked answer (today read as denied); a view-only slot
-   variant (today not offered); `childrenMayAnswer()` skipping the
-   build when no access class exists; a collection inside an item on
-   the form; a secret inside a collection item hiding the whole list
-   from the read tool; `attachListBy()`; an item routed to its child's
-   own storage; the phpstan rule for static refiners; the "Right now"
-   wording for a key that is both narrowed and under a runtime rule.
+10. **Pattern edges**, each small. Worked through 2026-10-19, each with
+   its decision and its test:
+   - A read-only operation form for the top-level locked answer. DONE:
+     locked at the top lets the caller in to a resource built locked
+     whole, every element disabled and no Save, `readOnly` at the top
+     of both documents, a submit refused by name at every door, the
+     read tool answering (`docs/decisions.md#locked-at-the-top`).
+   - A view-only slot variant. DONE: a variant its access locks is
+     offered, built locked whole, drawn and stated fixed
+     (`docs/decisions.md#a-variant-is-open-locked-or-not-offered`).
+   - `childrenMayAnswer()` skipping the build. DONE: `access()` builds
+     only when some declared variant names an access class, the one
+     child that may refuse (`docs/decisions.md#a-chosen-variant-may-refuse`).
+   - A collection inside an item on the form. DONE: drawn as one in its
+     place, its own buttons, read back into its item, its violations
+     flagged at both deltas (`docs/forms.md#a-collection-on-a-form`).
+   - A secret inside a collection item hiding the whole list from the
+     read tool. DONE: only the secret is left out of each item
+     (`docs/decisions.md#a-read-leaves-a-secret-out`).
+   - `attachListBy()`. Not small, a design question, not built. A list
+     whose items each choose their variant by a key inside the item is
+     expressible today, nested: a collection of a structure that holds
+     the deciding key and an `attachBy()` slot (`{plugin, settings}` per
+     item), which the engine, the pipeline and both documents recurse
+     into. Two things stand between that and `attachListBy()`. The
+     design question: whether the variant's keys sit flat beside the
+     deciding key in each item (a discriminated union, one `oneOf` per
+     item, a slot with no key of its own, which no door has a spelling
+     for) or nested under a slot key (no new concept, one more level).
+     And the form reads a drawn item back through the child's sealed
+     map, where a slot is its placeholder, so a slot inside an item is
+     not read back on the form (read in `extractCollection()`, not yet
+     pinned by a test); that is the first fix whichever spelling wins.
+   - An item routed to its child's own storage. Not small, a design
+     question, not built: an item needs an identity key on the child to
+     say which stored thing it is, removing an item from the list then
+     deletes a stored thing (an operation that destroys, which the
+     parent's edit does not declare), the write order of many children
+     against their parent is unsettled, and the read tool would read
+     each item from its own storage. Recorded under
+     `docs/decisions.md#a-list-of-child-invocations`, still open.
+   - The phpstan rule for static refiners. DONE: the module's PHPStan
+     configuration flags a static `#[RefinesInput]` method calling
+     `\Drupal::`, run by `scripts/check.sh`
+     (`docs/decisions.md#static-by-default-runtime-by-declaration`).
+   - The "Right now" wording for a key both narrowed and under a
+     runtime rule. DONE: "narrowed, and checked at runtime", in the
+     contract panel and the React page
+     (`docs/decisions.md#a-panel-inside-the-operation-form`).
+   - From the open points, DONE the same day: a read only operation
+     writes nothing at any door (its pipeline stops after prepare and
+     refuses `commit()`;
+     `docs/decisions.md#an-operation-states-how-it-behaves`); the map
+     mounted keys sit in is never null, the parcel's `courier`
+     workaround gone, and a map whose every key is ruled out is written
+     `{}` by `DataSurfacePipelineInterface::document()` and the emitter
+     alike; a ruled-out key inside a collection item is not put back,
+     by design (items are sent whole); keys inside a collection's items
+     say what they depend on in the tool listing; a required plain map
+     sent `[]` holds a value, as a required list does
+     (`docs/decisions.md#a-key-that-does-not-apply`,
+     `#a-refusal-names-what-it-depends-on`,
+     `#required-means-must-hold-a-value`).
    Also, DONE 2026-10-19: a text key's `Length` max reached the
    element as `#maxlength`, and on a POST past it core's message showed
    instead of the rule's own (the gap the number widget had; found

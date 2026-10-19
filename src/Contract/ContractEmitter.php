@@ -259,7 +259,7 @@ final class ContractEmitter {
       'surface' => $resource_id,
       'situation' => $operation_id,
       'label' => $label === NULL ? NULL : PlainText::of($label),
-      'schema' => ['$schema' => self::DIALECT] + $title + $this->operation($operation, $schema),
+      'schema' => ['$schema' => self::DIALECT] + $title + $this->lockedWhole($surface, $this->operation($operation, $schema)),
       'values' => $shown,
       'stale' => $stale,
     ];
@@ -347,7 +347,7 @@ final class ContractEmitter {
       'surface' => $resource_id,
       'situation' => $operation_id,
       'label' => $label === NULL ? NULL : PlainText::of($label),
-      'schema' => ['$schema' => self::DIALECT] + $title + $this->operation($operation, $schema),
+      'schema' => ['$schema' => self::DIALECT] + $title + $this->lockedWhole($surface, $this->operation($operation, $schema)),
     ];
     $outputs = $this->outputs($surface, $cacheability);
     if ($outputs !== NULL) {
@@ -382,6 +382,30 @@ final class ContractEmitter {
     $extension = [self::EXTENSION => ['operation' => $operation] + ($schema[self::EXTENSION] ?? [])];
     unset($schema[self::EXTENSION]);
     return $extension + $schema;
+  }
+
+  /**
+   * Says at the top that the whole is locked, when an access answer said so.
+   *
+   * Every key is already `readOnly` and `x-surface.locked`; the top says
+   * it too, so a client reading the document offers no submit.
+   *
+   * Decision: see docs/decisions.md#locked-at-the-top.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface.
+   * @param array $schema
+   *   The top frame.
+   *
+   * @return array
+   *   The top frame, `readOnly` and `x-surface.locked` when locked whole.
+   */
+  protected function lockedWhole(DataSurfaceInterface $surface, array $schema): array {
+    if ($surface->lockedWhole() === NULL) {
+      return $schema;
+    }
+    $schema[self::EXTENSION]['locked'] = TRUE;
+    return ['readOnly' => TRUE] + $schema;
   }
 
   /**
@@ -2386,7 +2410,8 @@ final class ContractEmitter {
       }
       $schema += [
         'type' => $this->nullable('object', $definition),
-        'properties' => $properties,
+        // Every key ruled out leaves an object still.
+        'properties' => $properties === [] ? new \stdClass() : $properties,
         'additionalProperties' => FALSE,
       ];
       if ($required !== []) {

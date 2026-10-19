@@ -17,8 +17,8 @@ use Drupal\data_surface_tool_test\Storage\VaultStorage;
  * Settings that always exist and hold a secret, at the top and below.
  *
  * A standalone operation that changes what exists, so it has a read tool,
- * and a secret at the top and one in an attached child, which the read
- * tool never returns.
+ * and a secret at the top, one in an attached child and one in each item
+ * of a collection, which the read tool never returns.
  */
 #[Resource('tool_test.vault', storage: VaultStorage::class)]
 final class VaultResource implements ResourceInterface {
@@ -40,6 +40,8 @@ final class VaultResource implements ResourceInterface {
     DefinitionMetadata::setSecret($token);
     $inputs->attach('backup', VaultBackupStructure::class)
       ->setLabel(t('Backup'));
+    $inputs->attachList('mirrors', VaultBackupStructure::class)
+      ->setLabel(t('Mirrors'));
   }
 
 }
