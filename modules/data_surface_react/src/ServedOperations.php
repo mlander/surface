@@ -10,6 +10,7 @@ use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Site\Settings;
 use Drupal\data_surface\DataSurfaceAccess;
+use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
@@ -106,6 +107,27 @@ final class ServedOperations {
     $built = $this->resources->build($definition->name(), $context);
     $storage = $definition->storage === NULL ? NULL : $this->resources->storage($definition->name(), $context, $built);
     return new ServedOperation($definition, $found, $parameters, $context, $built, $storage);
+  }
+
+  /**
+   * Builds a served operation for what the account alone decides.
+   *
+   * What the full schema is emitted from: the resource built in the same
+   * context, its static access answers applied and its runtime ones set
+   * aside and marked, so the schema says for the account that asks what
+   * it will find, and the contract settles the rest.
+   *
+   * Decision: see
+   * docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
+   *
+   * @param \Drupal\data_surface_react\ServedOperation $served
+   *   The operation.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The resource, built for the account alone.
+   */
+  public function declared(ServedOperation $served): DataSurfaceInterface {
+    return $this->resources->buildStatic($served->definition->name(), $served->context);
   }
 
   /**

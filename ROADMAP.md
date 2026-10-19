@@ -425,7 +425,7 @@ renames sit in A because they are cheapest before new code exists.
 - **B, what the contract can say:** inapplicable keys (2, done); declarative
   narrowing (3, done); ports (4, done); mixins (5, done); named scalar
   shapes (7, done).
-- **C, access and the doors:** static and runtime access (8); operation
+- **C, access and the doors:** static and runtime access (8, done); operation
   behavior facts and the tool door's refusal feedback (9).
 - **D, edges as they bite:** item 10.
 - **E, the entity side** when resumed: item 11.
@@ -637,7 +637,27 @@ renames sit in A because they are cheapest before new code exists.
    tighten every use on the site; a port can declare it as its type;
    and "shape" takes its Smithy place, resources, structures and named
    scalars all being shapes. Small, additive, after ports.
-8. **Static and runtime access**, the same split as refinement. Static
+8. **Static and runtime access**, the same split as refinement. DONE
+   2026-10-18 (`docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability`,
+   `docs/resources.md#static-and-runtime-access`): the kind is read from
+   an answer's cacheability (only `user.permissions`, `user.roles`,
+   `user.roles:<role>`, no tag, a permanent max-age is static; an answer
+   with no cacheability at all is runtime); `buildStatic()` builds for
+   the account alone, static answers applied, runtime ones set aside and
+   their keys marked; a static answer is asked once per context and
+   account kind and kept, asked again under `assert()` with the container
+   guarded (`StaticRefinerContainer::guardAccess()`), and held to the
+   build by `StaticAccessAgreementTrait`; the full schema (the schema
+   route, the contract panel) and the tool listing, a tool instance
+   listing `values` for the account that asks, state static answers and
+   mark runtime ones (`x-surface.access: "runtime"`, in words in a tool's
+   description); the operation's permission is the first static answer
+   (`OperationDefinition::staticPermission()`); narrowing values by
+   account is a runtime refiner; the React page keeps the server's answer
+   for a marked key. Fixture: the test module's exhibit. Left open: a
+   consumer that lists the cached tool definitions without an instance
+   sees the discovering account's; a State read through an injected
+   service passes the guard. As planned: Static
    access is decidable from the account alone (an operation's
    permission, a role) and is stated in the full schema and the tool
    listing for the account asking. Runtime access depends on the

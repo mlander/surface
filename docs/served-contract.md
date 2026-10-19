@@ -78,8 +78,16 @@ The emitter writes two documents from one data surface, by one code path.
   dependency cannot be listed keeps its declared schema with
   `x-surface.dynamic: true`. A runtime refiner is never run for it: the
   key keeps the width its static refiners give it and carries
-  `x-surface.runtime: true`. Its `x-surface` carries only what holds for
-  any values (`locked`, `dependsOn`, `enumerated`, `declared`, `dynamic`, `runtime`,
+  `x-surface.runtime: true`. Access in it is the account's: it is
+  emitted from the resource built for the account alone
+  (`ResourcesInterface::buildStatic()`), so a key a static access answer
+  locked is `readOnly` and `x-surface.locked`, one it left out is not
+  there, and one a runtime answer may still lock or leave out is there,
+  as the static answers leave it, marked `x-surface.access: "runtime"`;
+  the schema for these answers settles it
+  ([decision](decisions.md#access-is-static-or-runtime-read-from-its-cacheability)).
+  Its `x-surface` carries only what holds for
+  any values (`locked`, `access`, `dependsOn`, `enumerated`, `declared`, `dynamic`, `runtime`,
   a slot's `by` and `variants`, `group`, `after`, `patternMessage`,
   `checkedOnServer`); there is no `refined`, `stale`, `emptyOption` or
   `chosen`, and no `values` or `stale` beside the schema. A child's
@@ -226,6 +234,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | a collection | `type: array`, `items` a reference to the child's def, narrowed by composition only where every item differs from it (a key the child's operation locked, a locked list), `minItems` and `maxItems` from its Count as the parent's refiners left it, and `x-surface.list: true` ([below](#collections)) |
 | a locked key | `readOnly: true` and `const` of the value the operation knows |
 | a child its access locked | `readOnly: true` on the part, and on every key inside it with `const` of what is stored (none in the full schema); an omitted child is not there at all ([Three answers](resources.md#three-answers)) |
+| a key under a runtime access answer, in the full schema | there and writable, as the static answers leave it, with `x-surface.access: "runtime"`: it may be locked or left out once the subject is known; the schema for these answers says which, and marks nothing ([Static and runtime access](resources.md#static-and-runtime-access)) |
 | a secret | `writeOnly: true`, its declared type, never in `required` (left out or `null`, the stored secret stands), no default, `null` in `values` ([decision](decisions.md#a-secret-is-optional-never-nullable)) |
 | a key a refiner answers [does not apply](refinement.md#when-a-key-does-not-apply) for these values | no property, not in `required`, not in `values`; the frame's own `x-surface.doesNotApply` names it with what it depends on. In the full schema, `false` under each conditional that rules it out, and `required` under each where it applies and is required ([decision](decisions.md#a-key-that-does-not-apply)) |
 | any other constraint | named in `x-surface.checkedOnServer`: the schema is not the whole story, ask `/validate` |
@@ -236,6 +245,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | --- | --- |
 | `widget` | Only when the caller asks for widget hints (`data_surface_react` does). The Form API-equivalent hint: `select`, `radios`, `checkbox`, `number`, `text`, `textarea`, `email`, `fieldset`, `slot`, `list` (a collection too); `null` when no widget would claim the key. |
 | `locked` | Identity the operation knows, or a key of a child whose access answered locked: shown, never changed. |
+| `access` | Only `"runtime"`, and only in [the full schema](#two-documents): an access answer that waits for the subject (it read a stored value, State, the `user` context) was set aside for this account, so the key is as the account's static answers leave it and may be locked or left out once the subject is known. A client keeps what the schema for these answers says for it rather than narrowing it from the full schema. On a slot: a variant offered may be withheld. |
 | `dependsOn` | The sibling keys this key's refiners watch, in its own frame; a key an alter mounted, which only that alter may watch, by its dotted path in that frame (`third_party_settings.<module>.<key>`); a port the frame reads, by the port's name. A client refines when one of them changes. |
 | `refined` | Whether the key is narrowed right now, compared with what the resource or structure advertises in this operation. |
 | `stale` | The stored value is no longer offered; the key is shown on its empty option, standing for it. |
@@ -588,7 +598,9 @@ schema, abbreviated:
 - **Access.** A member its structure's access locked is `readOnly`, with
   the stored value as `const` in the schema for these answers and none in
   the full schema; one it omitted is not there, and neither is the def
-  when every member is gone.
+  when every member is gone. A member whose structure's answer waits for
+  the subject is marked `x-surface.access: "runtime"` in the full schema,
+  beside the def.
 
 ### A shape is one def
 
@@ -828,8 +840,11 @@ for the values the operation form would open with, and their
 hints: `surface`, `situation`, `label`, `schema` and, when declared,
 `outputs`; no `values`, `stale` or `fingerprint`. It reads no value, so
 it is the same whatever is stored or typed, and it is the one document
-that may be cached ([below](#cacheability)). The same access as the GET
-contract.
+that may be cached ([below](#cacheability)). It is the account's: built
+for the account alone, its static access answers stated and its runtime
+ones marked `x-surface.access: "runtime"`. The same access as the GET
+contract: an account the operation's permission does not admit is
+refused (403), the operation's first static answer.
 
 **`POST .../refine`**, body `{values, stale}`, answers the document
 re-narrowed against the values, which is what the form's AJAX rebuild
@@ -993,7 +1008,10 @@ long what it loaded holds ([decision](decisions.md#a-served-contract-is-never-st
 The full schema carries the same metadata, and
 `languages:language_interface` for its labels, but is not max-age 0: no
 stored value is in it, so what it says it depends on is all it depends
-on.
+on. Its access is the account's: it varies by what the static answers
+read (`user.permissions`, `user.roles`) and by the cache contexts of
+the runtime answers it set aside, which chose their kind, and never by
+their tags or max-age, since it states none of their answers.
 
 ## A drawing client that narrows locally
 

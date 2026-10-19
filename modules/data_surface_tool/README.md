@@ -290,7 +290,40 @@ each call, and the Tool API has no slot for one that depends on the
 input: such a tool declares none, `tool:info` prints "Permission:
 None", and the tool's own access, which fills the placeholder from the
 parameters, is the only check
-(`ResourceOperationToolDeriver::declaredPermission()`).
+(`ResourceOperationToolDeriver::declaredPermission()`). That is one rule
+with the schema route's refusal: a permission as written is the
+operation's first static access answer, decided by the account alone,
+and one with a placeholder waits for the subject
+(`OperationDefinition::staticPermission()`). The read tool declares the
+same one.
+
+### What the listing says about access
+
+A listing is cached by clients, so it says only what the account's own
+permissions and roles decide, for the account that asks
+([decision](../../docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability)).
+The derived definitions are built for the account alone
+(`ResourcesInterface::buildStatic()`), and a tool instance lists
+`values` again for the current account
+(`OperationInputs::listedValues()`), so `tool:info` and anything that
+normalizes an instance's inputs see the caller's own listing:
+
+- a key a static access answer locks is a locked property, and one it
+  leaves out is not there;
+- a key whose access waits for the thing itself (a stored value, State,
+  the `user` context, or an answer with no cacheability at all) is there
+  and writable, and its description ends with "Whether this may be
+  changed is decided once the thing it belongs to is known: a call may
+  find it locked or left out." The served contract says the same with
+  `x-surface.access: "runtime"`; the Tool API's normalizer writes its
+  schema from typed definitions, which carry a description and no
+  extension keyword, so the listing says it in words.
+
+Once the parameters arrive, `values` is refined from the resource built
+with every answer applied, which is what the pipeline holds a call to.
+A consumer that lists from the cached plugin definitions without making
+an instance, as the MCP bridge's config deriver does, sees the account
+that discovered them.
 
 The tool asks again inside `doExecute()`. `ToolInterface::execute()`
 runs no access check of its own, so a caller reaching a tool directly

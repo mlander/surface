@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_entity\Access;
 
+use Drupal\Core\Access\AccessResultInterface;
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -30,9 +32,19 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * the item inherits when neither of its operations can be invoked (a
  * tool's static definition, built before any subject), has nothing to
  * ask about, and says nothing: the field is described as it may be, and
- * the definition per call, built in the real context, asks.
+ * the definition per call, built in the real context, asks. Saying
+ * nothing, it is runtime: the subject decides.
+ *
+ * Core's answers say which kind each answer is: one that read the entity
+ * carries its cacheability and is runtime, one that read permissions
+ * alone is static. One that read nothing at all (no hook restricts the
+ * field) is the same for every account, which is static, and is said so
+ * with `user.permissions`, the widest the account alone can vary by: an
+ * answer carrying nothing promised nothing and would read runtime.
  *
  * Decision: see docs/decisions.md#field-access-is-child-access.
+ * Decision: see
+ * docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
  */
 final class FieldItemAccess implements OperationAccessInterface, ContainerInjectionInterface {
 
@@ -76,13 +88,35 @@ final class FieldItemAccess implements OperationAccessInterface, ContainerInject
     $handler = $this->entityTypeManager->getAccessControlHandler($entity->getEntityTypeId());
     $edit = $handler->fieldAccess('edit', $items->getFieldDefinition(), $account, $items, TRUE);
     if ($edit->isAllowed()) {
-      return AccessAnswer::open()->addCacheableDependency($edit);
+      return static::read(AccessAnswer::open(), $edit);
     }
     $view = $handler->fieldAccess('view', $items->getFieldDefinition(), $account, $items, TRUE);
     $answer = $view->isAllowed()
       ? AccessAnswer::locked(sprintf('The %s field may be seen and not changed.', $field_name))
       : AccessAnswer::omitted(sprintf('The %s field may not be seen.', $field_name));
-    return $answer->addCacheableDependency($edit)->addCacheableDependency($view);
+    return static::read($answer, $edit, $view);
+  }
+
+  /**
+   * Carries what core's answers read, saying which kind the answer is.
+   *
+   * @param \Drupal\data_surface\Resource\AccessAnswer $answer
+   *   The answer.
+   * @param \Drupal\Core\Access\AccessResultInterface ...$results
+   *   Core's field access answers it was read from.
+   *
+   * @return \Drupal\data_surface\Resource\AccessAnswer
+   *   The answer, depending on what they read; on `user.permissions` when
+   *   they read nothing, which is the same for every account.
+   */
+  protected static function read(AccessAnswer $answer, AccessResultInterface ...$results): AccessAnswer {
+    foreach ($results as $result) {
+      $answer->addCacheableDependency($result);
+    }
+    if ($answer->getCacheContexts() === [] && $answer->getCacheTags() === [] && $answer->getCacheMaxAge() === Cache::PERMANENT) {
+      $answer->addCacheContexts(['user.permissions']);
+    }
+    return $answer;
   }
 
   /**

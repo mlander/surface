@@ -9,6 +9,7 @@ use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Cache\RefinableCacheableDependencyInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Session\PermissionsHashGeneratorInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
@@ -26,6 +27,7 @@ use Drupal\data_surface\Refinement\DoesNotApply;
 use Drupal\data_surface\Refinement\Narrowing;
 use Drupal\data_surface\Refinement\Rule;
 use Drupal\data_surface\Refinement\RuntimeRefiner;
+use Drupal\data_surface\Refinement\StaticRefinerContainer;
 use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
 use Drupal\data_surface\Resource\AltersOutputsInterface;
 use Drupal\data_surface\Resource\HasOutputsInterface;
@@ -99,12 +101,18 @@ use Drupal\data_surface\Port;
  *    current account (childAccess()): its access class however it was
  *    invoked, and the permission of an operation the build resolved.
  *    A collection's child is built the same way, once for the list, and
- *    its access answers once for the list.
+ *    its access answers once for the list. Built for the account alone
+ *    (buildStatic()), an access class's answer that is runtime is set
+ *    aside and its keys marked, and only the static ones apply.
  * 8. The seal.
  *
  * The engine's builder is the whole state of a build. Nothing is cached
  * across builds, because a shape describes live site state; what that
- * state is, a shape or an alter says with addCacheableDependency().
+ * state is, a shape or an alter says with addCacheableDependency(). The
+ * one thing kept is an access class's static answer, which by its own
+ * cacheability depends on nothing but the account: asked once per
+ * context and account kind (the account's roles and permissions), and
+ * reused.
  */
 final class Resources implements ResourcesInterface {
 
@@ -128,11 +136,26 @@ final class Resources implements ResourcesInterface {
    * @param \Drupal\data_surface\Refinement\WatchedValueCheckInterface $watchedValueCheck
    *   What a watched value passes before a refiner is handed it, sealed
    *   into every data surface and every child this step builds.
+   * @param \Drupal\Core\Session\PermissionsHashGeneratorInterface|null $permissionsHashGenerator
+   *   What tells two accounts' permissions apart, which a static access
+   *   answer is kept by; NULL keeps none.
    */
   /**
    * What resolves a shape, with its alters, once asked for.
    */
   protected ?Shapes $shapes = NULL;
+
+  /**
+   * Whether the build under way is for the account alone (buildStatic()).
+   */
+  protected bool $accountAlone = FALSE;
+
+  /**
+   * The static access answers asked so far, by class, context and account kind.
+   *
+   * @var array<string, \Drupal\data_surface\Resource\AccessAnswer>
+   */
+  protected array $staticAnswers = [];
 
   public function __construct(
     protected readonly ResourceRegistry $registry,
@@ -142,6 +165,7 @@ final class Resources implements ResourcesInterface {
     protected readonly OperationArguments $operationArguments,
     protected readonly DerivedVariants $derivedVariants,
     protected readonly WatchedValueCheckInterface $watchedValueCheck,
+    protected readonly ?PermissionsHashGeneratorInterface $permissionsHashGenerator = NULL,
   ) {
   }
 
@@ -149,7 +173,30 @@ final class Resources implements ResourcesInterface {
    * {@inheritdoc}
    */
   public function build(string $resource, OperationContext $context): DataSurfaceInterface {
-    return $this->buildResource($resource, $context, []);
+    $alone = $this->accountAlone;
+    $this->accountAlone = FALSE;
+    try {
+      return $this->buildResource($resource, $context, []);
+    }
+    finally {
+      $this->accountAlone = $alone;
+    }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildStatic(string $resource, OperationContext $context): DataSurfaceInterface {
+    // Decision: see
+    // docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
+    $alone = $this->accountAlone;
+    $this->accountAlone = TRUE;
+    try {
+      return $this->buildResource($resource, $context, []);
+    }
+    finally {
+      $this->accountAlone = $alone;
+    }
   }
 
   /**
@@ -330,7 +377,7 @@ final class Resources implements ResourcesInterface {
       // Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
       $reads = $inputs->wiring((string) $key);
       $this->assertWiring($builder, $definition, NULL, (string) $key, (string) $child, $reads, $input_keys, $attached, $lists);
-      [$attachment, $access] = $this->buildChild((string) $child, $context, $key, $frame, $ancestry);
+      [$attachment, $access, , $runtime] = $this->buildChild((string) $child, $context, $key, $frame, $ancestry);
       if ($access !== NULL) {
         // What the child's access answer read is what this data surface,
         // and everything emitted from it, varies by.
@@ -347,17 +394,24 @@ final class Resources implements ResourcesInterface {
       if ($access !== NULL && $access->isLocked()) {
         $builder->lock($key);
       }
+      if ($runtime) {
+        $builder->markRuntimeAccess($key);
+      }
     }
     foreach ($slots as $key => ['by' => $by, 'children' => $children]) {
       $variants = [];
       $withheld = [];
+      $runtime_variant = FALSE;
       foreach ($children as $value => $child) {
         // Nothing wires a variant's ports yet.
         $this->assertWiring($builder, $definition, NULL, $key, $child, [], $input_keys, $attached, $lists, 'variant');
-        [$attachment, $access] = $this->buildChild($child, $context, $key, $frame, $ancestry);
+        [$attachment, $access, , $runtime] = $this->buildChild($child, $context, $key, $frame, $ancestry);
         if ($access !== NULL) {
           $builder->addCacheableDependency($access);
         }
+        // A variant offered here that only the subject decides may be
+        // withheld once it is known: the slot says so.
+        $runtime_variant = $runtime_variant || $runtime;
         // Decision: see docs/decisions.md#a-variant-is-open-or-not-offered.
         if ($attachment === NULL || ($access !== NULL && !$access->isOpen())) {
           $withheld[] = (string) $value;
@@ -374,6 +428,9 @@ final class Resources implements ResourcesInterface {
         }
       }
       $builder->attachBy($key, $by, $variants);
+      if ($runtime_variant) {
+        $builder->markRuntimeAccess($key);
+      }
     }
     // Each collection's child, built once for the list: every item is
     // invoked in the one context its operation resolves, and its access
@@ -383,7 +440,7 @@ final class Resources implements ResourcesInterface {
     foreach ($inputs->lists() as $key => $child) {
       // Nothing wires an item's ports yet.
       $this->assertWiring($builder, $definition, NULL, $key, $child, [], $input_keys, $attached, $lists, 'collection');
-      [$attachment, $access, $child_context] = $this->buildChild($child, $context, $key, $frame, $ancestry);
+      [$attachment, $access, $child_context, $runtime] = $this->buildChild($child, $context, $key, $frame, $ancestry);
       if ($access !== NULL) {
         $builder->addCacheableDependency($access);
       }
@@ -394,6 +451,9 @@ final class Resources implements ResourcesInterface {
       $builder->attachList($key, new Collection($attachment, $child_context));
       if ($access !== NULL && $access->isLocked()) {
         $builder->lock($key);
+      }
+      if ($runtime) {
+        $builder->markRuntimeAccess($key);
       }
     }
 
@@ -415,18 +475,19 @@ final class Resources implements ResourcesInterface {
    * @param array $ancestry
    *   The parent's own ancestry.
    *
-   * @return array{0: \Drupal\data_surface\Attachment|null, 1: \Drupal\data_surface\Resource\AccessAnswer|null, 2: \Drupal\data_surface\Resource\OperationContext}
+   * @return array{0: \Drupal\data_surface\Attachment|null, 1: \Drupal\data_surface\Resource\AccessAnswer|null, 2: \Drupal\data_surface\Resource\OperationContext, 3: bool}
    *   The sealed child, or NULL when its access omits it; that access
    *   answer, or NULL for a child that invokes no operation of its own and
-   *   has no access class, which is open and was asked nothing; and the
-   *   context the child was invoked in.
+   *   has no access class, which is open and was asked nothing; the
+   *   context the child was invoked in; and whether, built for the account
+   *   alone, a runtime answer was set aside, so the key is marked.
    */
   protected function buildChild(string $child, OperationContext $context, string $key, array $frame, array $ancestry): array {
     $definition = $this->registry->getDefinition($child);
     [$child_context, $operation] = $this->invokeChild($definition, $context, $key, $frame['id']);
-    $access = $this->childAccess($definition, $operation, $child_context, $this->currentUser, $frame['permission'] ?? NULL);
+    [$access, $runtime] = $this->childAccess($definition, $operation, $child_context, $this->currentUser, $frame['permission'] ?? NULL);
     if ($access !== NULL && $access->isOmitted()) {
-      return [NULL, $access, $child_context];
+      return [NULL, $access, $child_context, FALSE];
     }
     $frame['key'] = $key;
     return [
@@ -437,6 +498,7 @@ final class Resources implements ResourcesInterface {
       ),
       $access,
       $child_context,
+      $runtime,
     ];
   }
 
@@ -484,7 +546,7 @@ final class Resources implements ResourcesInterface {
       // By itself, as if on its own: what its def is written from, in the
       // context its owner's hands it, and what its access answers there.
       $child_context = static::childContext($context, $structure->id);
-      $access = $this->childAccess($structure, NULL, $child_context, $this->currentUser, $frame['permission'] ?? NULL);
+      [$access, $runtime] = $this->childAccess($structure, NULL, $child_context, $this->currentUser, $frame['permission'] ?? NULL);
       if ($access !== NULL) {
         $builder->addCacheableDependency($access);
       }
@@ -507,6 +569,11 @@ final class Resources implements ResourcesInterface {
         }
         if ($locked || $map->isHeld($key)) {
           $builder->hold($key);
+        }
+        // Decided once the subject is known, here or by a structure it
+        // mixes in itself: marked, built for the account alone.
+        if ($runtime || $map->isRuntimeAccess($key)) {
+          $builder->markRuntimeAccess($key);
         }
         $present[] = $key;
       }
@@ -1233,6 +1300,11 @@ final class Resources implements ResourcesInterface {
    * operation of its own (a context handed whole, or inherited) is asked
    * no permission, and its access class answers alone.
    *
+   * Built for the account alone (buildStatic()), an access class's answer
+   * that is runtime is set aside: the permission's answer stands alone,
+   * carrying the cache contexts the set-aside answer read, since which
+   * kind it is was decided by them, and the key is marked.
+   *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $child
    *   The child.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition|null $operation
@@ -1246,15 +1318,17 @@ final class Resources implements ResourcesInterface {
    *   asking the same one narrows nothing, its parent's gate having asked
    *   it already.
    *
-   * @return \Drupal\data_surface\Resource\AccessAnswer|null
-   *   Open, locked or omitted, with what the answer read; NULL for a child
-   *   with no operation and no access class, which stays open.
+   * @return array{0: \Drupal\data_surface\Resource\AccessAnswer|null, 1: bool}
+   *   Open, locked or omitted, with what the answer read, or NULL for a
+   *   child with no operation and no access class, which stays open; and
+   *   whether a runtime answer was set aside, which only a build for the
+   *   account alone does.
    */
-  protected function childAccess(ResourceDefinition $child, ?OperationDefinition $operation, OperationContext $context, AccountInterface $account, ?string $gate = NULL): ?AccessAnswer {
+  protected function childAccess(ResourceDefinition $child, ?OperationDefinition $operation, OperationContext $context, AccountInterface $account, ?string $gate = NULL): array {
     // Decision: see docs/decisions.md#access-has-three-answers.
     // Decision: see docs/decisions.md#one-invocation-model-for-both-levels.
     if ($operation === NULL && $child->access === NULL) {
-      return NULL;
+      return [NULL, FALSE];
     }
     $access = AccessAnswer::open();
     // Only an operation the build resolved asks its permission: a parent
@@ -1264,14 +1338,133 @@ final class Resources implements ResourcesInterface {
     if ($resolved !== NULL && $resolved !== $gate) {
       $result = AccessResult::allowedIfHasPermission($account, $resolved);
       if (!$result->isAllowed()) {
-        return AccessAnswer::omitted(sprintf('The "%s" operation needs the "%s" permission.', $operation?->id, $resolved))->addCacheableDependency($result);
+        $omitted = AccessAnswer::omitted(sprintf('The "%s" operation needs the "%s" permission.', $operation?->id, $resolved));
+        return [$omitted->addCacheableDependency($result), FALSE];
       }
       $access->addCacheableDependency($result);
     }
     if ($child->access === NULL) {
-      return $access;
+      return [$access, FALSE];
     }
-    return $access->andIf(AccessAnswer::fromAnswer($this->instance($child->access, OperationAccessInterface::class)->access($context, $account)));
+    $answer = $this->ask($child, $context, $account);
+    // Decision: see
+    // docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
+    if ($this->accountAlone && !$answer->isStatic()) {
+      return [$access->addCacheContexts($answer->getCacheContexts()), TRUE];
+    }
+    return [$access->andIf($answer), FALSE];
+  }
+
+  /**
+   * Asks a resource's or structure's access class, as a child is asked.
+   *
+   * A static answer depends on nothing but the account, so it is asked
+   * once for a context and an account kind (the account's roles and its
+   * permissions) and kept. With assertions on, it is asked a second time
+   * with the global container guarded (StaticRefinerContainer::guardAccess())
+   * and must answer the same, static again, having asked for no service
+   * that reads site state: an answer whose cacheability left out what it
+   * read is refused, naming the class.
+   *
+   * Decision: see
+   * docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource or structure, which names an access class.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   Its context.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account.
+   *
+   * @return \Drupal\data_surface\Resource\AccessAnswer
+   *   The class's answer, read the way a child reads it.
+   *
+   * @throws \LogicException
+   *   With assertions on, when a static answer asked again differs, or
+   *   asks for a service that reads site state.
+   */
+  protected function ask(ResourceDefinition $definition, OperationContext $context, AccountInterface $account): AccessAnswer {
+    $class = (string) $definition->access;
+    $kept = $this->keptAs($class, $context, $account);
+    if ($kept !== NULL && isset($this->staticAnswers[$kept])) {
+      return $this->staticAnswers[$kept];
+    }
+    $instance = $this->instance($class, OperationAccessInterface::class);
+    $answer = AccessAnswer::fromAnswer($instance->access($context, $account));
+    if (!$answer->isStatic()) {
+      return $answer;
+    }
+    assert($this->answersAgain($class, $instance, $context, $account, $answer));
+    if ($kept !== NULL) {
+      $this->staticAnswers[$kept] = $answer;
+    }
+    return $answer;
+  }
+
+  /**
+   * Names what a static access answer is kept by.
+   *
+   * @param string $class
+   *   The access class.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The context it is asked in.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account.
+   *
+   * @return string|null
+   *   The key: the class, the context's id, whether it creates and what
+   *   it knows, and the account's roles and permissions; NULL when none
+   *   can be made, so nothing is kept.
+   */
+  protected function keptAs(string $class, OperationContext $context, AccountInterface $account): ?string {
+    if ($this->permissionsHashGenerator === NULL) {
+      return NULL;
+    }
+    $roles = $account->getRoles();
+    sort($roles);
+    try {
+      $kind = [$roles, $this->permissionsHashGenerator->generate($account)];
+      return hash('sha256', serialize([$class, $context->id, $context->creates, $context->known, $kind]));
+    }
+    catch (\Throwable) {
+      return NULL;
+    }
+  }
+
+  /**
+   * Asks an access class again, guarded, and holds it to its first answer.
+   *
+   * Called inside assert(), so only where assertions are on.
+   *
+   * @param string $class
+   *   The access class.
+   * @param \Drupal\data_surface\Resource\OperationAccessInterface $instance
+   *   The access class as built.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The context.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account.
+   * @param \Drupal\data_surface\Resource\AccessAnswer $first
+   *   What it answered first, which read static.
+   *
+   * @return bool
+   *   TRUE, when it answers the same.
+   *
+   * @throws \LogicException
+   *   When it answers otherwise, or asks for a service reading site state.
+   */
+  protected function answersAgain(string $class, OperationAccessInterface $instance, OperationContext $context, AccountInterface $account, AccessAnswer $first): bool {
+    $again = AccessAnswer::fromAnswer(StaticRefinerContainer::guardAccess($class, static fn (): AccessResultInterface|AccessAnswer => $instance->access($context, $account)));
+    if ($again->answer() !== $first->answer() || !$again->isStatic()) {
+      throw new \LogicException(sprintf(
+        'The access class %s answered %s, static by its cacheability, and asked again for the same account in the same context answered %s, %s. A static answer depends on the account alone and is the same every time it is asked; one that depends on anything else says so in its cacheability.',
+        $class,
+        $first->answer(),
+        $again->answer(),
+        $again->kind(),
+      ));
+    }
+    return TRUE;
   }
 
   /**
@@ -1419,6 +1612,11 @@ final class Resources implements ResourcesInterface {
    */
   protected function ownAccess(ResourceDefinition $definition, OperationContext $context, AccountInterface $account): AccessResultInterface {
     // Decision: see docs/decisions.md#no-declared-operation-no-permission-tier.
+    // The operation's permission is its first static answer: one as
+    // written depends on the account alone, which is why a listing can
+    // declare it (OperationDefinition::staticPermission()).
+    // Decision: see
+    // docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
     $permission = $this->registry->getOperations($definition->name())[$context->id]->permission ?? NULL;
     $result = AccessResult::neutral();
     if ($permission !== NULL) {

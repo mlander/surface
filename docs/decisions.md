@@ -1355,8 +1355,164 @@ levels](#one-invocation-model-for-both-levels)), and the narrower answer
 stands. Locked is the existing lock on the parent's key, so no
 door needs a second mechanism. The answer's cacheability is added to
 the parent's builder, so the contract and the form carry
-`user.permissions` when the answer read permissions.
+`user.permissions` when the answer read permissions. That cacheability
+also says which of two kinds the answer is, static (the account alone
+decides it) or runtime (the subject or site state does), which decides
+where it is stated: [Access is static or runtime, read from its
+cacheability](#access-is-static-or-runtime-read-from-its-cacheability).
 (`AccessAnswer`, `Resources::childAccess()`)
+
+### Access is static or runtime, read from its cacheability
+
+Access is split the way refinement is
+([Static by default, runtime by declaration](#static-by-default-runtime-by-declaration)):
+what the account alone decides is stated ahead of time, for the account
+that asks; what only the subject decides is marked, and settled once it
+is known. Decided 2026-10-18, point by point.
+
+- **Two kinds, read and never declared.** An answer is static when its
+  cacheability names nothing but the account's permissions or roles:
+  every cache context is `user.permissions`, `user.roles` or
+  `user.roles:<role>`, it carries no cache tag, and its max-age is
+  permanent. Anything else is runtime: an entity's or a config object's
+  tag, the `user` context, max-age 0 for a State read
+  (`AccessAnswer::kindOf()`). Core's results and these answers are read
+  alike. Why: Drupal already requires an access result's cacheability to
+  be honest, since the render and page caches are keyed by it, so the
+  fact is there to read; a declared kind would be a second statement of
+  it, free to drift from what the answer really varies by.
+- **An answer with nothing is runtime.** An answer an access class
+  returns with no cacheability at all (`AccessResult::allowed()`, a bare
+  `AccessAnswer::open()`) promised nothing, and is read as runtime
+  whatever is added to it afterwards (`AccessAnswer::fromAnswer()`). For
+  a cache, nothing means "the same for everyone, forever"; for an access
+  class it was mostly an omission (`RecipeAccess` reads its context and
+  says nothing), and reading it as static would state in a cached
+  listing what may not hold, where reading it as runtime costs a marker.
+  The honest spelling of a permission check reads static:
+  `AccessAnswer::locked()->addCacheContexts(['user.permissions'])`, or
+  core's `AccessResult::allowedIfHasPermission()`. An answer the build
+  makes itself from nothing (a child whose only operation permission is
+  the one its parent's gate asked) is static: it read nothing.
+- **Combined, the narrower stands**, static only when both are, except
+  that a static omission settles it: nothing is narrower than left out,
+  so what the other side read cannot change it, and the combination
+  depends on that side alone, as core's `andIf()` reads a forbidden
+  result. A static lock over a runtime answer is runtime: it may still
+  be left out (`AccessAnswer::andIf()`).
+- **Enforced in three layers, as refiners are.** At build:
+  `ResourcesInterface::buildStatic()` builds for the account alone, each
+  static answer applied and each runtime one asked and set aside, its
+  key kept as the static answers leave it and marked
+  (`DefinitionMap::isRuntimeAccess()`); `build()` applies both. A static
+  answer is asked once per context and account kind (the account's roles
+  and its permissions hash) and kept, so a class that lied is wrong
+  visibly rather than now and then (`Resources::ask()`). Under
+  `assert()`: the first asking of a static answer is repeated with the
+  global container guarded and must answer the same, static, having
+  asked for no service that reads site state beside the account
+  (`StaticRefinerContainer::guardAccess()`, `Resources::answersAgain()`).
+  The refiner's guard is reused with another rule for what passes: a
+  refiner may reach nothing but the typed data manager, while an access
+  class is a service with injected collaborators and core's handlers
+  reach the container lazily for theirs (the module handler, the entity
+  field manager), so an allowlist would refuse honest answers; the
+  guard refuses the services that read site state instead (State and
+  key-value stores, configuration, the current user, the time, the
+  request and route, the database). A State read through a service the
+  class was built with passes, as a refiner's static property does.
+  Agreement: `StaticAccessAgreementTrait` holds, for sampled accounts,
+  the full schema to the build it came from, and every key it states
+  without the runtime mark to what `build()` applies in each sampled
+  situation (a stored value changed, a State flag set).
+- **Stated for the account that asks.** The full schema is emitted from
+  `buildStatic()`: a key a static answer locked is `readOnly` and
+  `x-surface.locked`, one it left out is not there, as the schema for
+  these answers always had them; a key a runtime answer may lock or
+  leave out is there, as the static answers leave it, marked
+  `x-surface.access: "runtime"`, and the schema for these answers, from
+  `build()`, settles it and marks nothing. So the full schema is
+  account-dependent only through static answers: its cacheability
+  carries what they read and the cache contexts of the answers set
+  aside (which chose their kind), never those answers' tags or max-age.
+  The schema route serves it so; a child with a marked key inside is
+  described where it sits rather than as a bare reference to its def.
+  The tool listing does the same: the derived definitions are built from
+  `buildStatic()`, and a tool instance lists `values` again for the
+  account that asks (`ResourceOperationTool::create()`,
+  `OperationInputs::listedValues()`), a static lock as a locked
+  property, a static omission left out, and a runtime key's description
+  saying that a call may find it locked or left out. The description,
+  not a keyword: the Tool API's normalizer writes JSON Schema from typed
+  definitions, which carry a description and no extension keyword. Why:
+  a full schema and a listing are what clients cache, so they can only
+  hold what the subject cannot change; an account's own permissions are
+  that, and anything read from the subject would be stale once the
+  subject changes. *Open:* a consumer that lists from the cached plugin
+  definitions without making an instance, as the MCP bridge's config
+  deriver does, sees the account that discovered them ([A static tool
+  definition is one account's](#a-static-tool-definition-is-one-accounts)).
+- **Narrowing by account is a runtime refiner, not access.** Access
+  answers whether keys may be changed, seen, or neither; which of its
+  values a key allows for an account is the key's own definition,
+  narrowed by a refiner that reads the account and so says `runtime:
+  TRUE` (`ExhibitResource::roomsForAccount()`: only an account that may
+  use the vault is offered it). Access has three answers by design and
+  cannot say "fewer values"; a refiner can, and the full schema already
+  keeps such a key wide and marked `runtime`.
+- **The operation's permission is the first static answer.** One
+  permission as written depends on the account alone, so it is static
+  (`OperationDefinition::staticPermission()`); one with a `%key`
+  placeholder names the subject's permission, filled from what the
+  context knows, and is runtime. The same rule makes the schema route
+  refuse an account the operation is not open to (403) and a tool declare
+  its permission to the Tool API, which a listing filters by
+  (`ResourceOperationToolDeriver::declaredPermission()`, which also
+  leaves out a `,` or a `+`, the Tool API's own syntax); the read tool
+  declares the same one. No second mechanism: the permission is asked
+  where it always was, and only where it is stated follows from its
+  kind.
+- **Children, variants, mixins and ports.** An attached structure's
+  access answers in its own frame, its kind with it. A mixed-in
+  structure's access answers for its members in the owner's frame, the
+  stricter of the owner's and its own standing ([A mixin is merged
+  flat](#a-mixin-is-merged-flat)); set aside, each member is marked, and
+  a mark from a structure it mixes in itself is carried through. A slot
+  variant whose answer is runtime is offered in the build for the
+  account alone and the slot marked, since it may be withheld once the
+  subject is known; a variant chosen by a locked deciding key still
+  refuses the whole parent at the top, asked with the subject ([A chosen
+  variant may refuse](#a-chosen-variant-may-refuse)). A port carries no
+  access. The kinds compose by frame: a static lock on a parent over a
+  runtime answer in its child leaves the parent's keys locked by the
+  account alone and the child's key locked with them and marked; a
+  runtime parent over a static child is marked, and the child's static
+  answers are applied inside it.
+
+- **The existing access classes say theirs.** The test module's spice
+  rack, ownership and archive read permissions and say so: static.
+  `FieldItemAccess` carries core's field access answers: one that read
+  the entity is runtime, one that read permissions static, and one core
+  answered with nothing at all (no hook restricts the field), the same
+  for every account, says `user.permissions`, the widest the account
+  alone varies by. A context naming no field, as a tool's static
+  definition for an operation that needs a subject is built in, asks
+  nothing and is runtime, so an entity's edit tool lists every field
+  marked, where it listed them open before. The classes asked only at
+  the top (`NodeTypeAccess`, `FieldInstanceAccess`,
+  `ContentEntityAccess`, the test module's recipe) answer whether the
+  caller gets in at all, which nothing ahead of time states beyond the
+  operation's permission, so their kind changes nothing.
+
+The fixture is the test module's exhibit: one access class
+(`ExhibitAccess`) on the provenance it mixes in and the loan it
+attaches, locking for an account that may inspect it and leaving out
+for an archivist (static), locking once the exhibit is sealed and
+leaving out once it is withdrawn (runtime, a stored value and a State
+flag); the loan's insurance is runtime for everyone
+(`StaticRuntimeAccessTest`). (`AccessAnswer`, `Resources::buildStatic()`,
+`Resources::childAccess()`, `ContractEmitter::frame()`,
+`InputDefinitions::runtimeAccessNote()`)
 
 ### A permission a child cannot name
 
@@ -1579,12 +1735,18 @@ whichever variant holds. (`InputDefinitions::secrets()`,
 
 ### A static tool definition is one account's
 
-*Open.* A derived tool's static definition builds the resource once, at
+A derived tool's static definition builds the resource once, at
 discovery, for whichever account is current then, so a child whose
-access depends on the account is as that account saw it. The `values`
-input is refined for the caller on every call, which is what the
-pipeline holds a payload to, so only the advertised static definition
-can be off. (`OperationInputs::declaredValues()`)
+access depends on the account is as that account saw it. It is built for
+the account alone (`buildStatic()`), so what a runtime answer decides is
+marked, never stated; and a tool instance lists `values` again for the
+account that asks ([Access is static or runtime, read from its
+cacheability](#access-is-static-or-runtime-read-from-its-cacheability)).
+The `values` input is refined for the caller on every call, which is what
+the pipeline holds a payload to. *Open:* a consumer that reads the
+cached definitions without making an instance (the MCP bridge's config
+deriver) still sees the discovering account's.
+(`OperationInputs::declaredValues()`, `OperationInputs::listedValues()`)
 
 ### Reading asks what writing asks
 

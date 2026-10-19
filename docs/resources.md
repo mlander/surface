@@ -317,6 +317,90 @@ whole parent, never allow: a slot's variant chosen by a locked deciding
 key, which the parent cannot be written without ([A chosen variant may
 refuse](decisions.md#a-chosen-variant-may-refuse)).
 
+### Static and runtime access
+
+An answer is one of two kinds, read from what its cacheability says it
+depends on and never declared
+([decision](decisions.md#access-is-static-or-runtime-read-from-its-cacheability)):
+
+- **Static**: it varies by the account's permissions or roles and
+  nothing else (cache contexts `user.permissions`, `user.roles`,
+  `user.roles:<role>`; no cache tag; a permanent max-age). The account
+  alone decides it, so it is stated ahead of time for the account that
+  asks. The operation's permission is the first one: one permission as
+  written is static (`OperationDefinition::staticPermission()`), which
+  is why the schema route refuses an account it does not admit and a
+  tool declares it; one with a `%key` names the subject's permission and
+  is runtime.
+- **Runtime**: anything else, an entity's or a config object's tag, the
+  `user` context, max-age 0 for a State read, or nothing at all, since an
+  answer with no cacheability promised nothing. It waits for the
+  subject.
+
+Write the cacheability your answer really has and the kind follows:
+
+```php
+public function access(OperationContext $context, AccountInterface $account): AccessAnswer {
+  $read = (new CacheableMetadata())->addCacheContexts(['user.permissions']);
+  if ($account->hasPermission('inspect exhibit')) {
+    // Static: the account alone.
+    return AccessAnswer::locked('May be inspected, not changed.')->addCacheableDependency($read);
+  }
+  $exhibit = $this->configFactory->get('data_surface_resource_test.exhibit');
+  $read->addCacheableDependency($exhibit);
+  if ($exhibit->get('status') === 'sealed') {
+    // Runtime: a stored value, under its config tag.
+    return AccessAnswer::locked('The exhibit is sealed.')->addCacheableDependency($read);
+  }
+  return AccessAnswer::open()->addCacheableDependency($read);
+}
+```
+
+Ask the account first, so its answers read nothing else.
+
+What each kind does, by door:
+
+| | Static | Runtime |
+| --- | --- | --- |
+| The build (`build()`), the form, the pipeline, the schema for these answers | applied | applied |
+| The build for the account alone (`buildStatic()`) | applied | asked, set aside: the key kept as the static answers leave it, and marked |
+| The full schema | locked: `readOnly`, `x-surface.locked`; omitted: not there | there and writable, `x-surface.access: "runtime"` |
+| The tool listing | locked: a locked property; omitted: not there | there, its description saying a call may find it locked or left out |
+
+So the full schema and the tool listing, which clients cache, are the
+account's: a static lock or omission is stated for the account that
+asks, and the full schema's cacheability carries the contexts the
+answers read. A static answer is asked once per context and account
+kind and kept. The kind is held, not trusted: with assertions on, a
+static answer is asked again with the global container guarded and must
+answer the same having read no site state, and a test trait holds the
+full schema's marks to the build for sampled accounts
+(`StaticAccessAgreementTrait`).
+
+Composition follows the frames: a child's access answers in its own
+frame, a mixed-in structure's for its members in the owner's (the
+stricter standing), a slot variant answered at runtime is offered and
+the slot marked, and a port carries no access. A static lock on a
+parent over a runtime answer in its child leaves the child's key locked
+with the parent and marked. The exhibit in the test module is the
+worked example (`StaticRuntimeAccessTest`).
+
+**Narrowing by account is not access.** "An editor sees fewer venues"
+narrows the values a key allows, which is a refiner's: it reads the
+current user, so it is a runtime refiner, and the full schema keeps the
+key wide and marked `runtime`. Access only says whether the keys may be
+changed, seen, or neither.
+
+```php
+#[RefinesInput('room', runtime: TRUE)]
+public static function roomsForAccount(DataDefinitionInterface $room): DataDefinitionInterface {
+  if (\Drupal::currentUser()->hasPermission('use the vault')) {
+    return $room;
+  }
+  return $room->addConstraint('LabeledChoice', ['choices' => array_diff_key(self::ROOMS, ['vault' => TRUE])]);
+}
+```
+
 ## Storage
 
 `#[Resource(storage:)]` names a `ResourceStorageInterface` with three

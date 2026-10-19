@@ -94,6 +94,11 @@ final class Entry {
    *   operation knows: it holds what is stored, which nothing ahead of
    *   time can state, rather than its declared default. A mixed-in
    *   structure's members are, when its access answers locked.
+   * @param bool $runtimeAccess
+   *   Whether an access answer for the key is decided once the subject is
+   *   known: in a data surface built for the account alone
+   *   (ResourcesInterface::buildStatic()), such an answer was asked and
+   *   left out, the key kept open, and the full schema marks it.
    */
   public function __construct(
     public readonly string $name,
@@ -111,6 +116,7 @@ final class Entry {
     public readonly array $watchedBy = [],
     public readonly array $mounted = [],
     public readonly bool $held = FALSE,
+    public readonly bool $runtimeAccess = FALSE,
   ) {
   }
 
@@ -145,6 +151,7 @@ final class Entry {
       $this->watchedBy,
       $this->mounted,
       $this->held,
+      $this->runtimeAccess,
     );
   }
 
@@ -382,6 +389,7 @@ final class Entry {
       $this->watchedBy,
       $mounted + $this->mounted,
       $this->held,
+      $this->runtimeAccess,
     );
   }
 

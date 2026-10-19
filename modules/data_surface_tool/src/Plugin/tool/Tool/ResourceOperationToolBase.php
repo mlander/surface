@@ -90,6 +90,26 @@ abstract class ResourceOperationToolBase extends ToolBase {
    *   reports as the caller's input to correct.
    */
   protected function operation(array $values): array {
+    [$resource, $operation] = $this->found();
+    $arguments = [];
+    foreach ($operation->parameters as $parameter) {
+      if (($values[$parameter->name] ?? NULL) !== NULL) {
+        $arguments[$parameter->name] = $values[$parameter->name];
+      }
+    }
+    return [$resource, $operation, $this->resources->operation($resource->name(), $operation->id, $arguments)];
+  }
+
+  /**
+   * Reads which resource and operation this tool is for, off its id.
+   *
+   * @return array{0: \Drupal\data_surface\ResourceBuild\ResourceDefinition, 1: \Drupal\data_surface\ResourceBuild\OperationDefinition}
+   *   The resource and the operation.
+   *
+   * @throws \LogicException
+   *   When the tool is not one of the derived ones.
+   */
+  protected function found(): array {
     $derivative = (string) $this->getDerivativeId();
     if (static::SUFFIX !== '' && str_ends_with($derivative, static::SUFFIX)) {
       $derivative = substr($derivative, 0, -strlen(static::SUFFIX));
@@ -99,14 +119,7 @@ abstract class ResourceOperationToolBase extends ToolBase {
       throw new \LogicException(sprintf('The %s tool is not one of the derived resource tools.', $this->getPluginId()));
     }
     $resource = $this->resourceRegistry->getDefinition(substr($derivative, 0, $separator));
-    $operation = $this->resourceRegistry->getOperation($resource->name(), substr($derivative, $separator + 1));
-    $arguments = [];
-    foreach ($operation->parameters as $parameter) {
-      if (($values[$parameter->name] ?? NULL) !== NULL) {
-        $arguments[$parameter->name] = $values[$parameter->name];
-      }
-    }
-    return [$resource, $operation, $this->resources->operation($resource->name(), $operation->id, $arguments)];
+    return [$resource, $this->resourceRegistry->getOperation($resource->name(), substr($derivative, $separator + 1))];
   }
 
   /**

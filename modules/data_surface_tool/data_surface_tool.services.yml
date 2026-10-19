@@ -26,4 +26,4 @@ services:
   # what the derived tool can advertise of it.
   data_surface_tool.contract_panel:
     class: Drupal\data_surface_tool\ContractPanel
-    arguments: ['@data_surface.resource_registry', '@data_surface.options', '@data_surface.contract_emitter', '@plugin.manager.tool', '@tool.definition_serializer', '@string_translation']
+    arguments: ['@data_surface.resource_registry', '@data_surface.options', '@data_surface.contract_emitter', '@plugin.manager.tool', '@tool.definition_serializer', '@string_translation', '@data_surface.resources']

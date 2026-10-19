@@ -155,6 +155,9 @@ final class InputDefinitions {
         // locked with it.
         static::lock($property);
       }
+      if ($entry->runtimeAccess) {
+        $this->runtimeAccessNote($property);
+      }
       $properties[$name] = $property;
     }
     return new MapInputDefinition(
@@ -268,6 +271,9 @@ final class InputDefinitions {
         // child's own values or by a port, is optional in a listing.
         // Decision: see docs/decisions.md#a-key-that-does-not-apply.
         static::optionalWhereRuledOut($converted, $child_entry->mayNotApply());
+        if ($child_entry->runtimeAccess) {
+          $this->runtimeAccessNote($converted);
+        }
         $map->setPropertyDefinition((string) $name, $converted);
       }
     }
@@ -792,6 +798,32 @@ final class InputDefinitions {
       '@description' => $description,
       '@note' => $note,
     ]);
+  }
+
+  /**
+   * Says on a key that only the subject decides whether it may be changed.
+   *
+   * A key a runtime access answer may lock or leave out, which a listing
+   * built for the account alone keeps open. The Tool API's normalizer
+   * writes JSON Schema from these typed definitions and carries a
+   * description, and no extension keyword, so the description says it:
+   * the served contract's `x-surface.access: "runtime"`, in words.
+   *
+   * Decision: see
+   * docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
+   *
+   * @param \Drupal\tool\TypedData\InputDefinitionInterface $input
+   *   The converted key; changed in place.
+   */
+  protected function runtimeAccessNote(InputDefinitionInterface $input): void {
+    $note = $this->t('Whether this may be changed is decided once the thing it belongs to is known: a call may find it locked or left out.');
+    $description = (string) $this->description($input);
+    if ($input instanceof DataDefinition) {
+      $input->setDescription($description === '' ? $note : $this->t('@description @note', [
+        '@description' => $description,
+        '@note' => $note,
+      ]));
+    }
   }
 
   /**

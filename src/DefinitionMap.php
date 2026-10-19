@@ -169,6 +169,9 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * @param string[] $held
    *   The locked keys that hold what is stored rather than a declared
    *   value: a mixed-in structure's, which its access locked.
+   * @param string[] $runtimeAccess
+   *   The keys an access answer decided once the subject is known would
+   *   lock or leave out, which a build for the account alone kept open.
    *
    * @return static
    *   The map.
@@ -192,6 +195,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
     array $mounted = [],
     array $mixins = [],
     array $held = [],
+    array $runtimeAccess = [],
   ): static {
     foreach (array_merge(array_keys($refiners), array_keys($contributions), $locked, array_keys($attachments), array_keys($slots), array_keys($lists), array_keys($mounted)) as $key) {
       if (!isset($definitions[$key])) {
@@ -241,6 +245,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
         watchedBy: $kinds[$name] ?? [],
         mounted: $mounted[$name] ?? [],
         held: in_array($name, $held, TRUE),
+        runtimeAccess: in_array($name, $runtimeAccess, TRUE),
       );
     }
     return new static($entries, $ports, $mixins);
@@ -513,6 +518,20 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    */
   public function isHeld(string $name): bool {
     return $this->entries[$name]->held ?? FALSE;
+  }
+
+  /**
+   * Answers whether access to a key is decided once the subject is known.
+   *
+   * @param string $name
+   *   The key.
+   *
+   * @return bool
+   *   TRUE for a key a runtime access answer may lock or leave out, which
+   *   a build for the account alone kept open and marked.
+   */
+  public function isRuntimeAccess(string $name): bool {
+    return $this->entries[$name]->runtimeAccess ?? FALSE;
   }
 
   /**

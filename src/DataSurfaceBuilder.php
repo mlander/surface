@@ -155,6 +155,13 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   protected array $held = [];
 
   /**
+   * The keys whose access is decided once the subject is known.
+   *
+   * @var string[]
+   */
+  protected array $runtimeAccess = [];
+
+  /**
    * The structures mixed in, in order.
    *
    * @var \Drupal\data_surface\Mixin[]
@@ -286,6 +293,18 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
     unset($this->definitions[$name], $this->refinements[$name], $this->refiners[$name], $this->declaredBy[$name], $this->watchedBy[$name], $this->contributions[$name]);
     $this->locked = array_values(array_diff($this->locked, [$name]));
     $this->held = array_values(array_diff($this->held, [$name]));
+    $this->runtimeAccess = array_values(array_diff($this->runtimeAccess, [$name]));
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function markRuntimeAccess(string $name): static {
+    $this->assertMutable();
+    if (!in_array($name, $this->runtimeAccess, TRUE)) {
+      $this->runtimeAccess[] = $name;
+    }
     return $this;
   }
 
@@ -690,6 +709,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
         mounted: $this->mounted === [] ? [] : ['third_party_settings' => $this->mounted],
         mixins: $this->mixins,
         held: $this->held,
+        runtimeAccess: array_values(array_intersect($this->runtimeAccess, array_keys($definitions))),
       ),
       $this->cacheability,
       DefinitionMap::fromArrays(definitions: $outputs),

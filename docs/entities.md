@@ -132,6 +132,16 @@ revision log only when the bundle makes new revisions; for anyone else
 those children are locked. The test module locks one field and hides
 another (`ContentEntityAccessTest`).
 
+Each answer is static or runtime by what core's answers read
+([Static and runtime access](resources.md#static-and-runtime-access)):
+`administer nodes` is static, so the full schema and the tool listing
+state those locks for the account that asks; an answer that read the
+entity is runtime, marked there and settled once the entity is known;
+one core gave with nothing at all, no hook restricting the field, is the
+same for every account and is said with `user.permissions`. An edit
+tool's static definition names no entity, so field access has nothing
+to ask, and every field is listed marked.
+
 The parent's own access is the entity's create or update access, so
 the resource never lets anyone write what core's form would not.
 
@@ -266,8 +276,12 @@ done about it.
 12. **A static tool definition is one account's.** Already
     [open](decisions.md#a-static-tool-definition-is-one-accounts); it
     bites harder here, since field access differs by account: the
-    `add` tool's `values`, which no parameter refines, is as whoever
-    caused the tool definitions to be derived saw it.
+    `add` tool's cached `values`, which no parameter refines, is as
+    whoever caused the tool definitions to be derived saw it. A tool
+    instance lists `values` again for the account that asks, its static
+    field access stated and its runtime field access marked; a consumer
+    reading the cached definitions without an instance still sees the
+    discovering account's.
 13. **Tool definitions are cached apart.** The registry clears itself
     when a field or a display changes; the tool plugin manager's cache
     does not, so a new field reaches the `add` tool's static definition

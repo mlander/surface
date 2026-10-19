@@ -321,6 +321,14 @@ fills from storage, say. What they make is the honest spelling the easy
 one: a refiner that needs anything but its arguments is a runtime
 refiner, said on the method.
 
+Access has the same split, read from an answer's cacheability rather
+than declared, and the same three layers: the build for the account
+alone applies only static answers, the guard above asks a static answer
+again with the container guarded (refusing services that read site
+state, since an access class holds injected ones), and
+`StaticAccessAgreementTrait` holds the full schema's access marks to the
+build ([Static and runtime access](resources.md#static-and-runtime-access)).
+
 ## When a key does not apply
 
 Narrowing says which values a key allows. Sometimes the answer is that

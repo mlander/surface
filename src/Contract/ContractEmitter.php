@@ -283,9 +283,16 @@ final class ContractEmitter {
    * - a runtime refiner contributes nothing but `runtime: true` on the key
    *   it narrows: it is never run here, so the key keeps the width its
    *   static refiners give it, wider than the pipeline for some values;
+   * - access is the account's: emitted from a data surface built for the
+   *   account alone (ResourcesInterface::buildStatic()), a key a static
+   *   answer locked is `readOnly` and `x-surface.locked`, one it left out
+   *   is not there, and one a runtime answer may still lock or leave out
+   *   is there, as the static answers leave it, marked
+   *   `x-surface.access: "runtime"`; the schema for these answers settles
+   *   it;
    * - `x-surface` carries only what holds for any values: `locked`,
-   *   `dependsOn`, `enumerated`, `dynamic`, `runtime`, a slot's `by` and
-   *   `variants`, a variant's id, `group`, `after`, `patternMessage`,
+   *   `access`, `dependsOn`, `enumerated`, `dynamic`, `runtime`, a slot's
+   *   `by` and `variants`, a variant's id, `group`, `after`, `patternMessage`,
    *   `checkedOnServer`, and the widget hints when asked for. What is
    *   only true of a moment (`refined`, `stale`, `emptyOption`, a slot's
    *   `chosen`) is not written, and there is no `values` and no `stale`
@@ -295,7 +302,9 @@ final class ContractEmitter {
    * docs/decisions.md#two-documents-never-stricter-than-the-runtime.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The data surface as built in its context, not refined.
+   *   The data surface as built in its context, not refined: for the
+   *   account alone (buildStatic()), so access says what the account
+   *   decides and marks the rest.
    * @param string $resource_id
    *   The `#[Resource]` or `#[Structure]` id it was built from.
    * @param string|null $operation_id
@@ -638,6 +647,15 @@ final class ContractEmitter {
             $properties[$name] = $enumerated['base'];
           }
         }
+      }
+      if ($full && !$declaring && $entry->runtimeAccess) {
+        // An access answer only the subject decides was set aside for the
+        // account alone: the key is as the static answers leave it, and
+        // may be locked or left out once the subject is known, which the
+        // schema for these answers settles.
+        // Decision: see
+        // docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
+        $properties[$name][self::EXTENSION]['access'] = 'runtime';
       }
       if ($at_site) {
         // Not stated here, so wherever its coded refiners may rule it
@@ -1563,11 +1581,14 @@ final class ContractEmitter {
   /**
    * Answers whether a context locked anything in a data surface.
    *
+   * Or whether access marked anything in it as decided at runtime: either
+   * makes a child differ from its def, so it is described where it sits.
+   *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The data surface.
    *
    * @return bool
-   *   TRUE when a key of it, or of a child inside it, is locked.
+   *   TRUE when a key of it, or of a child inside it, is locked or marked.
    */
   protected function locks(DataSurfaceInterface $surface): bool {
     foreach ($surface->getDefinitions()->entries() as $entry) {
@@ -1577,7 +1598,9 @@ final class ContractEmitter {
         $entry->list !== NULL => [$entry->list->item],
         default => [],
       };
-      if ($entry->locked || array_filter($children, fn (Attachment $child): bool => $this->locks($child->child)) !== []) {
+      // A key a runtime access answer may still lock or leave out is
+      // marked at its site, so it is said there too.
+      if ($entry->locked || $entry->runtimeAccess || array_filter($children, fn (Attachment $child): bool => $this->locks($child->child)) !== []) {
         return TRUE;
       }
     }

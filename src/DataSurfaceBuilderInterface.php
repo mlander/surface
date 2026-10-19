@@ -178,6 +178,26 @@ interface DataSurfaceBuilderInterface {
   public function withdraw(string $name): static;
 
   /**
+   * Marks a key whose access is decided once the subject is known.
+   *
+   * In a build for the account alone (ResourcesInterface::buildStatic()),
+   * an access answer that read more than the account (its cacheability
+   * says so) is asked and set aside: the key stays as the static answers
+   * leave it, and is marked, so the full schema says it may be locked or
+   * left out once the subject is known.
+   *
+   * @param string $name
+   *   The key: a child's, a slot's, a collection's, or a mixed-in
+   *   structure's member.
+   *
+   * @return $this
+   *
+   * @throws \LogicException
+   *   When the builder is already sealed.
+   */
+  public function markRuntimeAccess(string $name): static;
+
+  /**
    * Records a structure mixed in: which of the keys it brought.
    *
    * Its members are declared as the owner's keys already, through the

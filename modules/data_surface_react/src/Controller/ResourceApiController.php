@@ -124,8 +124,10 @@ final class ResourceApiController implements ContainerInjectionInterface {
    * fetches it once and narrows from its conditionals where they state
    * the answer. Unlike the contract it may be cached: what it depends on
    * is the option lists' and the refined data surfaces' cacheability, the
-   * access answer's, the query string the parameters arrive in and the
-   * language its labels are in, never what storage holds.
+   * static access answers' (the account's permissions or roles; a runtime
+   * answer is set aside and its key marked `access: runtime`), the
+   * operation's own access, the query string the parameters arrive in and
+   * the language its labels are in, never what storage holds.
    *
    * Decision: see docs/decisions.md#the-page-resolves-what-the-schema-states.
    *
@@ -143,7 +145,11 @@ final class ResourceApiController implements ContainerInjectionInterface {
    */
   public function schema(Request $request, string $resource, string $operation): CacheableJsonResponse {
     $served = $this->served($resource, $operation, $request);
-    $full = $this->emitter->emitFull($served->surface, $served->definition->id, $served->operation->id, $served->operation->label, widgets: TRUE);
+    // Built for the account alone: the full schema varies by the
+    // account's static access answers and by nothing a runtime one read.
+    // Decision: see
+    // docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
+    $full = $this->emitter->emitFull($this->servedOperations->declared($served), $served->definition->id, $served->operation->id, $served->operation->label, widgets: TRUE);
     $response = new CacheableJsonResponse($full->document);
     $response->setEncodingOptions(JsonResponse::DEFAULT_ENCODING_OPTIONS | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     $response->addCacheableDependency($full);

@@ -16,7 +16,9 @@ use Drupal\data_surface\Pipeline\VariantMismatchException;
 use Drupal\data_surface\Storage\StateStorage;
 use Drupal\data_surface_examples_compliance\Alter\RegistrationComplianceAlter;
 use Drupal\data_surface\Resource\OperationContext;
+use Drupal\data_surface_resource_test\Access\ExhibitAccess;
 use Drupal\data_surface_resource_test\Resource\Cellar\CellarResource;
+use Drupal\data_surface_resource_test\Resource\Exhibit\ExhibitResource;
 use Drupal\data_surface_resource_test\Storage\CellarStorage;
 use Drupal\data_surface_resource_test\Structure\Notice\NoticeStructure;
 use Drupal\Tests\data_surface\Kernel\DataSurfaceKernelTestBase;
@@ -37,7 +39,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * the notice, every declared rule's condition and effect on the parcel,
  * a structure's ports on the venue and the hall, structures mixed in on
  * the journal and attached on the ledger, a shape at two keys on the
- * depot),
+ * depot, access of both kinds on the exhibit),
  * a table of documents the pipeline accepts and documents it refuses.
  * Each row is asserted three times: against the pipeline (accept(), then
  * validate() over what is stored), against the full
@@ -150,10 +152,14 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    *   refused one, whether the full schema and the schema for these
    *   answers accept its document anyway (both FALSE, exact, unless
    *   given).
+   * @param \Drupal\data_surface\DataSurfaceInterface|null $declared
+   *   The data surface the full schema is emitted from, built for the
+   *   account alone, when access in it differs from $surface's; NULL for
+   *   $surface.
    */
-  protected function assertTable(string $id, DataSurfaceInterface $surface, array $stored, array $rows): void {
+  protected function assertTable(string $id, DataSurfaceInterface $surface, array $stored, array $rows, ?DataSurfaceInterface $declared = NULL): void {
     $emitter = $this->container->get('data_surface.contract_emitter');
-    $full = $this->decoded($emitter->emitFull($surface, $id)->document['schema']);
+    $full = $this->decoded($emitter->emitFull($declared ?? $surface, $id)->document['schema']);
     foreach ($rows as $label => $row) {
       [$input, $accepts] = $row;
       try {
@@ -577,6 +583,62 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'changed before created' => [['stamps' => ['created' => 5, 'changed' => 4]], FALSE, TRUE, FALSE],
       'created, the changed time cleared' => [['stamps' => ['created' => 5, 'changed' => NULL]], FALSE],
       'an unknown key in the stamps' => [['stamps' => ['fax' => 1]], FALSE],
+    ]);
+  }
+
+  /**
+   * The exhibit: a key under each kind of access answer, posted.
+   *
+   * The full schema is emitted from the exhibit built for the account
+   * alone, as the schema route serves it; the schema for these answers
+   * and the pipeline from the exhibit built with every answer applied. A
+   * locked key, static or runtime, posted with another value is kept as
+   * stored, so its document is accepted by both. An omitted one posted is
+   * an unknown key, refused by both where the omission is static; where
+   * it is runtime the full schema has the key, marked
+   * `x-surface.access: "runtime"`, and accepts it: wider, never narrower.
+   *
+   * @see docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability
+   */
+  public function testStaticAndRuntimeAccess(): void {
+    $this->installConfig(['data_surface_resource_test']);
+    $this->createRole(['keep an exhibit'], ExhibitAccess::ARCHIVIST);
+    $resources = $this->container->get('data_surface.resources');
+    $context = $resources->operation(ExhibitResource::class, 'configure');
+    $base = ['title' => 'Ammonite', 'status' => 'open', 'room' => 'east'];
+    $table = function (array $rows) use ($resources, $context): void {
+      $this->assertTable('resource_test.exhibit', $resources->build(ExhibitResource::class, $context), $this->stored('resource_test.exhibit'), $rows, $resources->buildStatic(ExhibitResource::class, $context));
+    };
+
+    // A static lock: inspecting.
+    $this->setUpCurrentUser([], ['keep an exhibit', 'inspect exhibit']);
+    $table([
+      'as stored' => [[], TRUE],
+      'the provenance posted otherwise is kept' => [['source' => 'Dover', 'acquired' => 1901], TRUE],
+      'the loan posted otherwise is kept' => [['loan' => ['lender' => 'Nobody', 'until' => 1]], TRUE],
+    ]);
+    // A static omission: an archivist.
+    $this->setUpCurrentUser(['roles' => [ExhibitAccess::ARCHIVIST]]);
+    $table([
+      'as stored' => [[], TRUE],
+      'the provenance posted' => [$base + ['source' => 'Dover'], FALSE],
+      'the loan posted' => [$base + ['loan' => ['lender' => 'Nobody']], FALSE],
+    ]);
+    // A runtime lock: the exhibit sealed.
+    $this->setUpCurrentUser([], ['keep an exhibit']);
+    $this->config('data_surface_resource_test.exhibit')->set('status', 'sealed')->save();
+    $table([
+      'as stored' => [[], TRUE],
+      'the provenance posted otherwise is kept' => [['source' => 'Dover'], TRUE],
+      'the loan posted otherwise is kept' => [['loan' => ['lender' => 'Nobody']], TRUE],
+    ]);
+    // A runtime omission: the exhibit withdrawn.
+    $this->config('data_surface_resource_test.exhibit')->set('status', 'open')->save();
+    $this->container->get('state')->set(ExhibitAccess::WITHDRAWN, TRUE);
+    $table([
+      'as stored' => [[], TRUE],
+      'the provenance posted' => [$base + ['source' => 'Dover'], FALSE, TRUE, FALSE],
+      'the loan posted' => [$base + ['loan' => ['lender' => 'Nobody']], FALSE, TRUE, FALSE],
     ]);
   }
 

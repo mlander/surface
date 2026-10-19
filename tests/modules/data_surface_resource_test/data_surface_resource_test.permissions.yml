@@ -22,3 +22,12 @@ inspect archive:
 hide archive:
   title: 'Hide the archive'
   description: 'The archive fixture is omitted: its keys are not there.'
+keep an exhibit:
+  title: 'Keep an exhibit'
+  description: 'The exhibit fixture''s own operation.'
+inspect exhibit:
+  title: 'Inspect the exhibit'
+  description: 'The exhibit fixture''s provenance and loan are locked, by the account alone.'
+use the vault:
+  title: 'Use the vault'
+  description: 'The exhibit fixture''s vault may be chosen: a runtime refiner, not access.'

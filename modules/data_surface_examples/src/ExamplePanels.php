@@ -9,6 +9,7 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Form\DataSurfaceFormPanelInterface;
 use Drupal\data_surface\ResourceBuild\OperationRoute;
 use Drupal\data_surface\ResourceBuild\ResourceRegistry;
+use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface\Storage\ConfigObjectStorage;
 
 /**
@@ -48,12 +49,15 @@ final class ExamplePanels implements DataSurfaceFormPanelInterface {
    *   The main module's contract emitter.
    * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry $registry
    *   What discovery found, for the resource's id and its storage.
+   * @param \Drupal\data_surface\ResourceBuild\ResourcesInterface $resources
+   *   The build step, for the full schema built for the account alone.
    */
   public function __construct(
     protected readonly DataSurfaceFormPanelInterface $contractPanel,
     protected readonly ConfigSchemaPanel $configSchemaPanel,
     protected readonly ContractEmitter $emitter,
     protected readonly ResourceRegistry $registry,
+    protected readonly ResourcesInterface $resources,
   ) {}
 
   /**
@@ -72,7 +76,7 @@ final class ExamplePanels implements DataSurfaceFormPanelInterface {
     if (is_a($storage, ConfigObjectStorage::class, TRUE)) {
       // The full schema the contract panel shows, asked for again rather
       // than read back out of its render array: static against static.
-      $full = $this->emitter->emitFull($declared, $definition->id, $served->operation->id, $served->operation->label);
+      $full = $this->emitter->emitFull($this->resources->buildStatic($served->resource, $served->context), $definition->id, $served->operation->id, $served->operation->label);
       $panels[self::TODAY] = ['#weight' => 1] + $this->configSchemaPanel->build($storage::CONFIG, $full->document['schema']);
     }
     return $panels;

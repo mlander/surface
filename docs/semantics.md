@@ -488,6 +488,18 @@ may answer that its keys are shown and fixed, or not there at all.
   omitted member is gone, and storage keeps it
   ([Mixins](resources.md#mixins)).
 
+What a value is held to does not depend on which kind of access answer
+locked or omitted it: the pipeline, the form and the schema for these
+answers apply a static answer (the account alone decides it) and a
+runtime one (the subject or site state does) alike, and a locked key
+keeps what is stored however it was posted. The kind decides only what
+is said ahead of time: the full schema and the tool listing state a
+static answer for the account that asks and mark a runtime one, its key
+there and writable with `x-surface.access: "runtime"`, so a document
+valid against the full schema may still post a key the runtime answer
+then locks (kept) or omits (refused as an unknown key)
+([Static and runtime access](resources.md#static-and-runtime-access)).
+
 ## What each stage decides
 
 | Stage | Decides |

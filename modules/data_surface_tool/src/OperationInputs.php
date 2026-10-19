@@ -64,6 +64,14 @@ use Drupal\tool\TypedData\OutputDefinition;
  * tool that returns the current values. Once its parameters arrive, the
  * refined `values` (values()) defaults each property to what the storage
  * loads now, for that one request.
+ *
+ * Access in a listing is the account's: the static definitions are built
+ * for the account alone (ResourcesInterface::buildStatic()), so a key a
+ * static answer locks is locked, one it leaves out is not there, and one
+ * whose access only the subject decides is there and says so in its
+ * description; the tool instance lists `values` again for the account
+ * that asks (listedValues()). Once the parameters arrive, the refined
+ * `values` is built with every answer applied.
  */
 final class OperationInputs {
 
@@ -199,7 +207,7 @@ final class OperationInputs {
     $neutral = $this->neutral($resource, $operation);
     // Where the secrets are: the neutral build, or, for an operation that
     // takes nothing, its own.
-    $built = $neutral ?? $this->resources->build($resource->name(), $this->resources->operation($resource->name(), $operation->id));
+    $built = $neutral ?? $this->resources->buildStatic($resource->name(), $this->resources->operation($resource->name(), $operation->id));
     return [
       self::VALUES => $this->inputDefinitions->outputFromInput(
         $this->declaredValues($resource, $operation, $neutral),
@@ -266,6 +274,28 @@ final class OperationInputs {
   }
 
   /**
+   * Gets the `values` map a tool lists, for the account that asks.
+   *
+   * What the static definition declares, built again for the current
+   * account: the derived definitions are cached for every account, and a
+   * tool instance is made for one.
+   *
+   * Decision: see
+   * docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
+   *   The resource.
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   *
+   * @return \Drupal\tool\TypedData\MapInputDefinition
+   *   The map.
+   */
+  public function listedValues(ResourceDefinition $resource, OperationDefinition $operation): MapInputDefinition {
+    return $this->declaredValues($resource, $operation, $this->neutral($resource, $operation));
+  }
+
+  /**
    * Gets the `values` map a tool's static definition declares.
    *
    * An operation that creates lists the declared defaults; one that
@@ -287,11 +317,11 @@ final class OperationInputs {
   protected function declaredValues(ResourceDefinition $resource, OperationDefinition $operation, ?DataSurfaceInterface $neutral): MapInputDefinition {
     if ($operation->needsNothing()) {
       $context = $this->resources->operation($resource->name(), $operation->id);
-      $map = $this->map($resource, $this->resources->build($resource->name(), $context), $this->knownIdentity($resource, $context));
+      $map = $this->map($resource, $this->resources->buildStatic($resource->name(), $context), $this->knownIdentity($resource, $context));
     }
     else {
       // Decision: see docs/decisions.md#identity-before-the-parameters.
-      $map = $this->map($resource, $neutral ?? $this->resources->build($resource->name(), new OperationContext($operation->id)), $this->suppliedIdentity($resource, $operation));
+      $map = $this->map($resource, $neutral ?? $this->resources->buildStatic($resource->name(), new OperationContext($operation->id)), $this->suppliedIdentity($resource, $operation));
     }
     if ($this->changesWhatExists($resource, $operation)) {
       // Decision: see docs/decisions.md#required-is-the-resources-and-a-listing-carries-no-stored-value.
@@ -333,10 +363,11 @@ final class OperationInputs {
    *
    * @return \Drupal\data_surface\DataSurfaceInterface|null
    *   The built resource, in a context that knows the operation's id and
-   *   nothing else, or NULL for an operation that takes no parameters.
+   *   nothing else, for the account alone, or NULL for an operation that
+   *   takes no parameters.
    */
   protected function neutral(ResourceDefinition $resource, OperationDefinition $operation): ?DataSurfaceInterface {
-    return $operation->parameters === [] ? NULL : $this->resources->build($resource->name(), new OperationContext($operation->id));
+    return $operation->parameters === [] ? NULL : $this->resources->buildStatic($resource->name(), new OperationContext($operation->id));
   }
 
   /**

@@ -58,6 +58,14 @@ export interface Extension {
    */
   runtime?: boolean;
   /**
+   * In the full schema: an access answer only the thing itself decides
+   * was set aside for this account, so the key is as its static access
+   * leaves it and may be locked or left out once the thing is known. The
+   * schema for these answers settles it, and the page keeps what that
+   * says rather than narrowing the key from the full schema.
+   */
+  access?: 'runtime';
+  /**
    * In the full schema: the key is narrowed by rules declared as data,
    * each a conditional on the frame marked `x-surface.declared`, stated as
    * written. The page evaluates each `if` and tightens the key by its
@@ -783,7 +791,7 @@ export function fieldId(path: string): string {
 // (ContractEmitter::property()), keyword for keyword.
 
 /** Why a change was asked of the server rather than narrowed here. */
-export type Marker = 'runtime' | 'dynamic' | 'stored' | 'unsettled' | 'pending';
+export type Marker = 'runtime' | 'dynamic' | 'access' | 'stored' | 'unsettled' | 'pending';
 
 /** A change the page cannot narrow by itself, and the key that says why. */
 export class Unsettled extends Error {
@@ -832,6 +840,7 @@ export function narrowingStatus(narrowed: Narrowed): string {
   const why: Record<Marker, string> = {
     runtime: 'depends on a runtime rule',
     dynamic: 'depends on a dynamic rule',
+    access: 'has access only the server decides',
     stored: 'stands for a stored value only the server holds',
     unsettled: 'could not be narrowed here',
     pending: 'changed while an earlier change was being asked',
@@ -1400,6 +1409,26 @@ function core(full: Schema, previous: Schema | null, values: Values, before: Val
     const deps = extension?.dependsOn ?? [];
     const was = previous?.properties?.[name];
     const held = values[name];
+    if (extension?.access === 'runtime') {
+      // Its access is the server's to settle, which the schema for these
+      // answers did: left out there, it stays out; locked there, it stays
+      // as it was; with nothing settled for this frame, the server is asked.
+      if (previous === null) {
+        throw new Unsettled(at, 'access');
+      }
+      if (was === undefined) {
+        required.delete(name);
+        continue;
+      }
+      if (was.readOnly) {
+        properties[name] = was;
+        if (!(previous.required ?? []).includes(name)) {
+          required.delete(name);
+        }
+        conditions[name] = mine(previousConditions, name);
+        continue;
+      }
+    }
     if (was !== undefined && before !== null && deps.every((dep) => sameJson(norm(getAt(values, dep)), norm(getAt(before, dep))))) {
       properties[name] = was;
       if ((previous?.required ?? []).includes(name)) {

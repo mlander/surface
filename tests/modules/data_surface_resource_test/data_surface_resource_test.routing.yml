@@ -105,3 +105,15 @@ data_surface_resource_test.depot:
     _data_surface_operation: 'configure'
   requirements:
     _data_surface_operation_access: 'TRUE'
+
+# The exhibit's one operation, served by the generic form: access of both
+# kinds on a mixed-in structure's members and on an attached child.
+data_surface_resource_test.exhibit:
+  path: '/surface-test/exhibit'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Configure the exhibit'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Exhibit\ExhibitResource'
+    _data_surface_operation: 'configure'
+  requirements:
+    _data_surface_operation_access: 'TRUE'

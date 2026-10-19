@@ -19,6 +19,7 @@ use Drupal\data_surface\Form\DataSurfaceFormPanelInterface;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\ResourceBuild\OperationRoute;
 use Drupal\data_surface\ResourceBuild\ResourceRegistry;
+use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface\Entry;
 use Drupal\tool\Normalizer\ToolDefinitionSerializer;
 use Drupal\tool\Tool\ToolManager;
@@ -86,6 +87,8 @@ final class ContractPanel implements DataSurfaceFormPanelInterface {
    *   The Tool API's definition serializer.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.
+   * @param \Drupal\data_surface\ResourceBuild\ResourcesInterface $resources
+   *   The build step, for the full schema built for the account alone.
    */
   public function __construct(
     protected readonly ResourceRegistry $registry,
@@ -94,6 +97,7 @@ final class ContractPanel implements DataSurfaceFormPanelInterface {
     protected readonly ToolManager $toolManager,
     protected readonly ToolDefinitionSerializer $definitionSerializer,
     TranslationInterface $string_translation,
+    protected readonly ResourcesInterface $resources,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -145,13 +149,17 @@ final class ContractPanel implements DataSurfaceFormPanelInterface {
       ],
       'json' => $this->json($contract->document['schema']),
     ];
-    $full = $this->emitter->emitFull($declared, $resource_id, $served->operation->id, $served->operation->label);
+    // For the account alone: what its static access answers decide, and
+    // what only the subject decides marked.
+    // Decision: see
+    // docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
+    $full = $this->emitter->emitFull($this->resources->buildStatic($served->resource, $served->context), $resource_id, $served->operation->id, $served->operation->label);
     $panel['full'] = [
       '#type' => 'details',
       '#open' => FALSE,
       '#title' => $this->t('The full schema, for any answers'),
       'note' => [
-        '#markup' => '<p>' . $this->t('What the resource states whatever the answers are, as JSON Schema: every key as it is declared, and for each key another key narrows, one conditional per value that other key could take, or one per rule declared as data, as written. It reads no value, so it does not change when an answer changes. A key marked <code>dynamic</code> depends on something that cannot be listed: it is shown as declared, and the form still holds it to more. A key marked <code>runtime</code> is also narrowed by a rule only the site can apply when asked, which no schema states.') . '</p>',
+        '#markup' => '<p>' . $this->t('What the resource states whatever the answers are, as JSON Schema: every key as it is declared, and for each key another key narrows, one conditional per value that other key could take, or one per rule declared as data, as written. It reads no value, so it does not change when an answer changes. A key marked <code>dynamic</code> depends on something that cannot be listed: it is shown as declared, and the form still holds it to more. A key marked <code>runtime</code> is also narrowed by a rule only the site can apply when asked, which no schema states. Access is yours: a key you may only see is read only, one you may not see is not there, and one marked <code>access: runtime</code> may be locked or left out once the thing itself is known, which the schema for these answers says.') . '</p>',
       ],
       'json' => $this->json($full->document['schema']),
     ];

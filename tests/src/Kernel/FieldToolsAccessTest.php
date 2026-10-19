@@ -228,4 +228,28 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($item->surfaceAccess(account: $account)->isForbidden());
   }
 
+  /**
+   * Tests a variant answered at runtime is offered for the account alone.
+   *
+   * The gated type's settings answer from State, at max-age 0: runtime.
+   * Built with every answer applied, a refusal withholds the variant from
+   * the slot; built for the account alone, the variant is offered and the
+   * slot marked, since a variant offered there may be withheld once the
+   * field is known.
+   *
+   * @see docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability
+   */
+  public function testRuntimeVariantIsOfferedForTheAccountAlone(): void {
+    $resources = $this->container->get('data_surface.resources');
+    $arguments = ['entity_type_id' => 'entity_test', 'bundle' => 'entity_test'];
+    $context = $resources->operation('field.instance', 'add', $arguments);
+    $this->setFieldTypeRefusal(TRUE);
+    $built = $resources->build('field.instance', $context)->getDefinitions()->entry('settings');
+    $this->assertArrayNotHasKey('data_surface_gated', $built->slot->variants);
+    $this->assertFalse($built->runtimeAccess);
+    $alone = $resources->buildStatic('field.instance', $context)->getDefinitions()->entry('settings');
+    $this->assertArrayHasKey('data_surface_gated', $alone->slot->variants);
+    $this->assertTrue($alone->runtimeAccess);
+  }
+
 }

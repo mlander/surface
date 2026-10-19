@@ -111,6 +111,29 @@ final class OperationDefinition {
   }
 
   /**
+   * Gets the permission when the account alone decides it.
+   *
+   * Access is static or runtime by what it depends on, and an operation's
+   * permission is its first answer: one permission as written depends on
+   * the account's permissions and nothing else, so it is static, asked
+   * before anything is loaded and stated wherever the account asks (the
+   * schema route's refusal, a tool listing's declared permission). One
+   * with a `%key` placeholder names a different permission for each thing
+   * it is asked of, filled from the identity the context knows, so which
+   * permission is asked waits for the subject: it is never stated ahead.
+   *
+   * Decision: see
+   * docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
+   *
+   * @return string|null
+   *   The permission as written, or NULL when there is none or it names a
+   *   placeholder.
+   */
+  public function staticPermission(): ?string {
+    return $this->permission === NULL || $this->permission === '' || str_contains($this->permission, '%') ? NULL : $this->permission;
+  }
+
+  /**
    * Lists the permission's placeholders no parameter can supply.
    *
    * A `%key` placeholder is filled from the identity the operation's

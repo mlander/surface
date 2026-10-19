@@ -6,6 +6,7 @@ namespace Drupal\data_surface\Resource;
 
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Access\AccessResultReasonInterface;
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Cache\RefinableCacheableDependencyInterface;
 use Drupal\Core\Cache\RefinableCacheableDependencyTrait;
@@ -30,7 +31,18 @@ use Drupal\Core\Cache\RefinableCacheableDependencyTrait;
  * answer depends on, which reaches the data surface and everything
  * emitted from it.
  *
+ * What it depends on also says which of two kinds it is, read and never
+ * declared (kindOf()): static, decidable from the account alone, when it
+ * varies by nothing but the account's permissions or roles; runtime,
+ * decided once the subject is known, when it varies by anything else (a
+ * cache tag, the `user` context, a max-age), or when an access class
+ * returned it with nothing at all, since that promises nothing. The full
+ * schema and a tool's listing state a static answer for the account that
+ * asks and mark a runtime one.
+ *
  * Decision: see docs/decisions.md#access-has-three-answers.
+ * Decision: see
+ * docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
  */
 final class AccessAnswer implements RefinableCacheableDependencyInterface {
 
@@ -55,6 +67,31 @@ final class AccessAnswer implements RefinableCacheableDependencyInterface {
    * How narrow each answer is: a combination keeps the narrower.
    */
   protected const ORDER = [self::OPEN => 0, self::LOCKED => 1, self::OMITTED => 2];
+
+  /**
+   * Decidable from the account alone: stated ahead of time.
+   */
+  public const STATIC = 'static';
+
+  /**
+   * Decided once the subject is known: marked ahead of time.
+   */
+  public const RUNTIME = 'runtime';
+
+  /**
+   * The cache contexts a static answer may vary by: the account's own.
+   *
+   * `user.roles:<role>` is one of them too, read by its prefix.
+   */
+  public const ACCOUNT_CONTEXTS = ['user.permissions', 'user.roles'];
+
+  /**
+   * Whether an access class returned this with no cacheability at all.
+   *
+   * Such an answer promised nothing about what it read, so it is runtime
+   * whatever is added to it afterwards.
+   */
+  protected bool $promisedNothing = FALSE;
 
   /**
    * Constructs an AccessAnswer.
@@ -113,17 +150,97 @@ final class AccessAnswer implements RefinableCacheableDependencyInterface {
    *
    * @return self
    *   Open for allowed and for neutral, omitted for forbidden, with the
-   *   result's cacheability; an answer of this type as it is.
+   *   result's cacheability; an answer of this type as it is, copied.
+   *   One that carried no cacheability at all is remembered as having
+   *   promised nothing, which kindOf() reads as runtime.
    */
   public static function fromAnswer(AccessResultInterface|self $answer): self {
+    $read = match (TRUE) {
+      $answer instanceof self => new self($answer->answer, $answer->reason),
+      $answer->isForbidden() => self::omitted(self::reasonOf($answer)),
+      default => self::open(),
+    };
     if ($answer instanceof self) {
-      return $answer;
+      $read->promisedNothing = $answer->promisedNothing;
     }
-    $read = $answer->isForbidden() ? self::omitted(self::reasonOf($answer)) : self::open();
     if ($answer instanceof CacheableDependencyInterface) {
       $read->addCacheableDependency($answer);
     }
+    // An answer an access class gave with no cacheability at all promised
+    // nothing about what it read: runtime.
+    // Decision: see
+    // docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
+    $read->promisedNothing = $read->promisedNothing || !static::carriesAnything($answer);
     return $read;
+  }
+
+  /**
+   * Reads which kind an answer is from what it depends on.
+   *
+   * Static when it varies by the account's permissions or roles and by
+   * nothing else: every cache context is `user.permissions`, `user.roles`
+   * or `user.roles:<role>`, it carries no cache tag, and its max-age is
+   * permanent. Anything else is runtime: an entity's or a config object's
+   * tag, the `user` context, a max-age of 0 for a State read. Core's
+   * access results and these answers are read alike; an answer an access
+   * class returned with nothing at all is read by fromAnswer(), which
+   * remembers that it promised nothing.
+   *
+   * @param \Drupal\Core\Cache\CacheableDependencyInterface $answer
+   *   The answer.
+   *
+   * @return string
+   *   self::STATIC or self::RUNTIME.
+   */
+  public static function kindOf(CacheableDependencyInterface $answer): string {
+    if ($answer instanceof self && $answer->promisedNothing) {
+      return self::RUNTIME;
+    }
+    if ($answer->getCacheTags() !== [] || $answer->getCacheMaxAge() !== Cache::PERMANENT) {
+      return self::RUNTIME;
+    }
+    foreach ($answer->getCacheContexts() as $context) {
+      if (!in_array($context, self::ACCOUNT_CONTEXTS, TRUE) && !str_starts_with($context, 'user.roles:')) {
+        return self::RUNTIME;
+      }
+    }
+    return self::STATIC;
+  }
+
+  /**
+   * Gets which kind this answer is: static or runtime.
+   *
+   * @return string
+   *   self::STATIC or self::RUNTIME.
+   */
+  public function kind(): string {
+    return static::kindOf($this);
+  }
+
+  /**
+   * Answers whether this answer is decidable from the account alone.
+   *
+   * @return bool
+   *   TRUE for static.
+   */
+  public function isStatic(): bool {
+    return $this->kind() === self::STATIC;
+  }
+
+  /**
+   * Answers whether an answer carries any cacheability at all.
+   *
+   * @param \Drupal\Core\Access\AccessResultInterface|self $answer
+   *   The answer.
+   *
+   * @return bool
+   *   FALSE for one with no cache context, no tag and a permanent max-age.
+   */
+  protected static function carriesAnything(AccessResultInterface|self $answer): bool {
+    if (!$answer instanceof CacheableDependencyInterface) {
+      return FALSE;
+    }
+    return $answer->getCacheContexts() !== [] || $answer->getCacheTags() !== [] || $answer->getCacheMaxAge() !== Cache::PERMANENT;
   }
 
   /**
@@ -179,16 +296,27 @@ final class AccessAnswer implements RefinableCacheableDependencyInterface {
   /**
    * Combines two answers about the same keys: the narrower stands.
    *
+   * The combination depends on both, and is static only when both are,
+   * except where one omits the keys statically: nothing narrower exists,
+   * so what the other read cannot change it, and it depends on that one
+   * alone, as core's andIf() reads a forbidden result.
+   *
    * @param self $other
    *   The other answer.
    *
    * @return self
-   *   A new answer, the narrower of the two, depending on both.
+   *   A new answer, the narrower of the two, depending on both, or on the
+   *   static omission alone where one settles it.
    */
   public function andIf(self $other): self {
-    $narrower = self::ORDER[$other->answer] > self::ORDER[$this->answer] ? $other : $this;
+    $settling = array_values(array_filter([$this, $other], static fn (self $side): bool => $side->isOmitted() && $side->isStatic()));
+    $narrower = $settling[0] ?? (self::ORDER[$other->answer] > self::ORDER[$this->answer] ? $other : $this);
     $combined = new self($narrower->answer, $narrower->reason);
-    return $combined->addCacheableDependency($this)->addCacheableDependency($other);
+    foreach ($settling === [] ? [$this, $other] : $settling as $side) {
+      $combined->addCacheableDependency($side);
+      $combined->promisedNothing = $combined->promisedNothing || $side->promisedNothing;
+    }
+    return $combined;
   }
 
   /**

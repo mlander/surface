@@ -1,4 +1,4 @@
-import type { Contract, Marker, Schema, Settled, Values } from '../contract';
+import type { Contract, Extension, Marker, Schema, Settled, Values } from '../contract';
 import { holdsIf, inlineSchema, narrow, narrowingStatus, setAt } from '../contract';
 import example2 from './fixtures/refine-example2.json';
 import example3 from './fixtures/refine-example3.json';
@@ -212,6 +212,61 @@ describe('structures mixed in', () => {
     expect(open.settled.values).not.toHaveProperty('shared');
     expect(open.settled.schema.properties?.owner.maxLength).toBeUndefined();
     expect(staff.schema.properties?.owner.maxLength).toBe(32);
+  });
+});
+
+describe('a key whose access only the server decides', () => {
+  // The full schema is the account's: a key a runtime access answer may
+  // lock or leave out is there, marked `x-surface.access: "runtime"`, and
+  // the schema for these answers settles it. The journal's full schema with
+  // its archive and its owner so marked stands for one such account.
+  const recorded = journal as unknown as Recorded;
+  const declared = inlineSchema(recorded.schema.schema);
+  const runtime = (schema: Schema): Schema => ({ ...schema, 'x-surface': { ...(schema['x-surface'] as Extension), access: 'runtime' } });
+  const full: Schema = {
+    ...declared,
+    properties: { ...declared.properties, archive: runtime(declared.properties?.archive as Schema), owner: runtime(declared.properties?.owner as Schema) },
+  };
+  const staff = served(recorded.contract);
+
+  it('stays out where the server left it out', () => {
+    const { archive: _archive, ...kept } = staff.schema.properties ?? {};
+    const { archive: _value, ...values } = staff.values;
+    const previous = { ...staff, schema: { ...staff.schema, properties: kept }, values };
+    const open = narrow({ full, previous, stored: values, values: { ...values, visibility: 'public' }, stale: [], changed: 'visibility' });
+    expect(open.local).toBe(true);
+    if (!open.local) {
+      return;
+    }
+    expect(Object.keys(open.settled.schema.properties ?? {})).not.toContain('archive');
+    expect(open.settled.schema.required ?? []).not.toContain('archive');
+    expect(open.settled.values).not.toHaveProperty('archive');
+  });
+
+  it('stays as the server locked it, whatever it depends on', () => {
+    const owner = { ...(staff.schema.properties?.owner as Schema), readOnly: true, const: 'ada' };
+    const previous = { ...staff, schema: { ...staff.schema, properties: { ...staff.schema.properties, owner } } };
+    const open = narrow({ full, previous, stored: staff.values, values: { ...staff.values, visibility: 'public' }, stale: [], changed: 'visibility' });
+    expect(open.local).toBe(true);
+    if (!open.local) {
+      return;
+    }
+    // Unmarked, the owner would lose its staff maximum here; locked by the
+    // server, it is what the server said.
+    expect(open.settled.schema.properties?.owner).toEqual(owner);
+  });
+
+  it('is narrowed from the full schema where the server left it open', () => {
+    const open = narrow({ full, previous: staff, stored: staff.values, values: { ...staff.values, visibility: 'public' }, stale: [], changed: 'visibility' });
+    expect(open.local).toBe(true);
+    if (!open.local) {
+      return;
+    }
+    expect(open.settled.schema.properties?.owner.maxLength).toBeUndefined();
+  });
+
+  it('is asked of the server in a frame nothing has settled yet', () => {
+    expect(narrowingStatus({ local: false, key: 'loan', marker: 'access' })).toBe('Asked the server: loan has access only the server decides');
   });
 });
 

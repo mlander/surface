@@ -74,7 +74,35 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
     $instance = parent::create($container, $configuration, $plugin_id, $plugin_definition);
     $instance->pipeline = $container->get('data_surface.pipeline');
+    $instance->listValuesForTheAccount();
     return $instance;
+  }
+
+  /**
+   * Lists the values input for the account that asks.
+   *
+   * Before any parameter arrives: the derived definition is cached for
+   * every account, built for whichever one discovered it, and access in a
+   * listing is the account's, its static answers stated and its runtime
+   * ones marked (OperationInputs::listedValues()). A definition that
+   * cannot be built keeps the cached one; building it reported why.
+   *
+   * Decision: see
+   * docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
+   */
+  protected function listValuesForTheAccount(): void {
+    $inputs = $this->getInputDefinitions(TRUE);
+    if (!isset($inputs[OperationInputs::VALUES])) {
+      return;
+    }
+    try {
+      [$resource, $operation] = $this->found();
+      $inputs[OperationInputs::VALUES] = $this->operationInputs->listedValues($resource, $operation);
+    }
+    catch (\InvalidArgumentException | \LogicException) {
+      return;
+    }
+    $this->inputDefinitions = $inputs;
   }
 
   /**

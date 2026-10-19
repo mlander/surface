@@ -18,7 +18,7 @@ page needs nothing else. Read a row only when its question is yours.
 | Runtime refiner, `runtime: TRUE` | Does a rule read site state or do a lookup no schema can state, such as uniqueness? | The rule depends only on the values it watches. |
 | Identity and known keys | Is there more than one of it, each with a machine name or id? | It is a singleton, as a settings page is. |
 | Operation context options (`creates`, `known`, `withConstraint()`, `withStarting()`) | Does an operation create, know part of the identity, or narrow by where it is asked? | It is one `new OperationContext('configure')`. |
-| Access class, `access:` | Does who may act depend on the thing itself, not a permission alone? | The operation's permission is the whole answer. |
+| Access class, `access:` | Does who may change or see some keys depend on the account's permissions or roles (static: stated in the full schema and the tool listing for that account), or on the thing itself (runtime: marked there, settled once it is known)? ([Resources](resources.md#static-and-runtime-access)) | The operation's permission is the whole answer; narrowing a key's values by account is a runtime refiner. |
 | Structure, `#[Structure]` | Is there a group of keys something else holds, or several resources share? | The keys are all one resource's own. |
 | Attached child, `attach()` | Should a group of keys sit under one key, as a fieldset? | Every key is a top level key. |
 | Mixin, `with()` | Are some keys shared members that are part of this thing, such as timestamps or an owner, which other resources have too? ([Resources](resources.md#mixins)) | They are a thing of their own (attach them) or this resource's alone. |

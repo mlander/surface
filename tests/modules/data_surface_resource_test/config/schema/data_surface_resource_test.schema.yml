@@ -279,3 +279,49 @@ data_surface_resource_test.depot:
           type: string
           label: 'Label'
           nullable: true
+
+# The exhibit fixture: the provenance mixed in, its members listed flat
+# beside the title; the loan attached, with its insurance inside it.
+data_surface_resource_test.exhibit:
+  type: config_object
+  label: 'Exhibit'
+  mapping:
+    title:
+      type: string
+      label: 'Title'
+    status:
+      type: string
+      label: 'Status'
+    room:
+      type: string
+      label: 'Room'
+      nullable: true
+    # Mixed in from resource_test.provenance.
+    source:
+      type: string
+      label: 'Source'
+      nullable: true
+    acquired:
+      type: integer
+      label: 'Acquired'
+      nullable: true
+    loan:
+      type: mapping
+      label: 'Loan'
+      mapping:
+        lender:
+          type: string
+          label: 'Lender'
+          nullable: true
+        until:
+          type: integer
+          label: 'Until'
+          nullable: true
+        insurance:
+          type: mapping
+          label: 'Insurance'
+          mapping:
+            policy:
+              type: string
+              label: 'Policy'
+              nullable: true

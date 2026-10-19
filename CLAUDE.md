@@ -69,6 +69,18 @@ the record of the rework that brought the module to the pattern.
   `#[Variant(of:, key:, value:)]`.
 - **Collection**: a list of child instances at a key, `attachList()`.
 - **Contract**: the JSON Schema a built resource or structure emits.
+- **Static and runtime access**: an access answer's kind, read from its
+  cacheability and never declared. Static varies by the account's
+  permissions or roles alone (`user.permissions`, `user.roles`,
+  `user.roles:<role>`, no tag, permanent max-age) and is stated in the
+  full schema and the tool listing for the account that asks; runtime
+  (a tag, the `user` context, max-age 0, or no cacheability at all) is
+  marked there, `x-surface.access: "runtime"`, and settled by the schema
+  for these answers. `ResourcesInterface::buildStatic()` builds for the
+  account alone; the operation's permission is the first static answer
+  (`OperationDefinition::staticPermission()`); narrowing a key's values
+  by account is a runtime refiner, not access
+  (`docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability`).
 
 "Data surface" names the project, and the sealed object the build step
 makes (`DataSurfaceInterface`); it is not a third kind. "Shape" is the

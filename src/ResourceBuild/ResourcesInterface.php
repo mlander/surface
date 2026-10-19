@@ -47,6 +47,40 @@ interface ResourcesInterface {
   public function build(string $resource, OperationContext $context): DataSurfaceInterface;
 
   /**
+   * Builds a resource or structure for what the account alone decides.
+   *
+   * The same build, with one difference in what access applies. Every
+   * access answer is asked as build() asks it; one that is static (its
+   * cacheability names nothing but the account's permissions or roles) is
+   * applied, locking or leaving out its keys as build() does, and one that
+   * is runtime (it read the subject, a value or site state) is set aside:
+   * its keys are kept as the static answers leave them and marked
+   * (DefinitionMap::isRuntimeAccess()). It is what the full schema and a
+   * tool's listing are emitted from, which say for the account that asks
+   * what that account will find and mark what only the subject decides;
+   * the form, the pipeline and the schema for one set of values read
+   * build(), which applies both.
+   *
+   * Decision: see
+   * docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
+   *
+   * @param string $resource
+   *   The class, or its #[Resource] or #[Structure] id.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   Where it is being asked for.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The sealed data surface, its cacheability carrying what the static
+   *   answers read and the cache contexts the set-aside ones read.
+   *
+   * @throws \InvalidArgumentException
+   *   When nothing by that name was discovered.
+   * @throws \LogicException
+   *   When it fails a seal-time check, naming the offender.
+   */
+  public function buildStatic(string $resource, OperationContext $context): DataSurfaceInterface;
+
+  /**
    * Builds the context one operation describes.
    *
    * @param string $resource

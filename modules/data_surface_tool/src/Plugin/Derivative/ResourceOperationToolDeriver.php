@@ -243,9 +243,18 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
   /**
    * Answers the permission a tool can declare for an operation.
    *
-   * The Tool API reads a declared permission as a route's `_permission`:
-   * a `,` or a `+` would join names the operation means as one, and a
-   * `%key` placeholder is filled per call, so neither is declared.
+   * The operation's static permission, the first static access answer
+   * (OperationDefinition::staticPermission()), decided for the account
+   * alone, which the Tool API checks before the tool's own access and
+   * which a listing filters by, the way the schema route refuses an
+   * account it is not open to. A `%key` placeholder names the subject's
+   * permission, so it is runtime and declared nowhere; and the Tool API
+   * reads a declared permission as a route's `_permission`, where a `,`
+   * or a `+` would join names the operation means as one, so neither is
+   * declared either.
+   *
+   * Decision: see
+   * docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
    *
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
@@ -255,8 +264,8 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
    *   it is not one fixed permission name.
    */
   public static function declaredPermission(OperationDefinition $operation): ?string {
-    $permission = $operation->permission;
-    return $permission === NULL || $permission === '' || strpbrk($permission, '%,+') !== FALSE ? NULL : $permission;
+    $permission = $operation->staticPermission();
+    return $permission === NULL || strpbrk($permission, ',+') !== FALSE ? NULL : $permission;
   }
 
   /**
