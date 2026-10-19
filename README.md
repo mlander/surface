@@ -128,7 +128,7 @@ would have shown.
 
 ## Glossary
 
-The module uses these fifteen words in exactly one sense each.
+The module uses these twenty-three words in exactly one sense each.
 
 - **Resource**: a thing with identity and storage that operations read
   and write; the form, the tool and the schema are derived from it.
@@ -138,7 +138,8 @@ The module uses these fifteen words in exactly one sense each.
   own, only ever held by something else: attached to a parent, filling a
   slot as a variant, or configuring a plugin, whose host supplies the
   operation and the storage. Declared as a class carrying
-  `#[Structure(id, access:)]`.
+  `#[Structure(id, access:)]`. The six ways one is made of others are
+  side by side in [Which way to compose](docs/resources.md#which-way-to-compose).
 - **Shape**: a named type, in Smithy's sense, of which there are three
   kinds: a resource, a structure, and a named scalar shape, one value
   (its type, label, description, constraints, examples) declared once
@@ -169,10 +170,27 @@ The module uses these fifteen words in exactly one sense each.
 - **Refiner**: a `#[RefinesInput]` method that returns a narrower
   definition for one key given the values of the siblings it watches. A
   refiner may restrict what a definition allows; it may never widen it.
+- **Declared rule**: a rule between keys whose condition and effect a
+  schema can state, written in the blueprint beside the keys it is about,
+  `$inputs->narrow($key)->when(Condition::...)` and its effects. A
+  static refiner by construction that only tightens, stated by the full
+  schema as written ([Declaring a rule](docs/refinement.md#declaring-a-rule)).
+- **A key that does not apply**: a key with no business being there for
+  some values of another, as a send day for a monthly bulletin; not a key
+  narrowed to no values. A refiner answers `DoesNotApply::here()` from a
+  method whose return type names it, or a declared rule says
+  `doesNotApply()`; storage keeps what the key holds
+  ([When a key does not apply](docs/refinement.md#when-a-key-does-not-apply)).
 - **Resolver**: a `DataSurfaceOptionsResolver` plugin that turns a
   constraint into a value/label list with its cacheability, so the list
   that validates a value and the list that is offered as form options are
   the same list, derived rather than repeated.
+- **Keys from the site**: one key per thing the site has, such as a
+  checkbox per form, in a map at a key: `addEach($key, $type, from:)` for
+  a value per thing, `attachEach($key, Structure::class, from:)` for a
+  structure per thing. The provider is a service implementing
+  `KeysFromSiteInterface`, whose `keys()` answers a `KeyedList`, asked
+  at every build ([Keys that come from the site](docs/resources.md#keys-that-come-from-the-site)).
 - **Storage**: where accepted values are written, and the place that
   knows the distance between how a resource asks for its values and
   how the store lays them out (a layout). A resource names its storage class, a
@@ -199,6 +217,14 @@ The module uses these fifteen words in exactly one sense each.
   class, and the pipeline consults that answer before it reads or writes
   anything, so a form, a tool and the agent or Drush command calling it
   resolve one gate rather than several.
+- **Access answer**: what the operation's permission, and then the
+  access class, answer for an account; the access class's is an
+  `AccessAnswer` (open, locked or omitted). Its kind is read from its
+  cacheability and never declared: static varies by the account's
+  permissions or roles alone and is stated in the full schema and the
+  tool listing for that account; runtime is anything else, marked there
+  `x-surface.access: "runtime"` and settled once the thing is known
+  ([Static and runtime access](docs/resources.md#static-and-runtime-access)).
 - **Context**: an `OperationContext`: where a resource or structure is
   being asked for. Its id (the operation id, or a host's own verb such
   as `configure`), whether it creates, which identity keys are known, and
@@ -219,6 +245,25 @@ The module uses these fifteen words in exactly one sense each.
   value, as do derived variants. Until the sibling has a value it is an
   `any` placeholder, which refinement narrows to the chosen variant's
   map. (`attach()` is the fixed kind: one child, always there.)
+- **Collection**: a list of child instances at a key, declared with
+  `attachList($key, Child::class, min:, max:)`: the list and its Count
+  are the parent's, and each item is the child's, refined and validated
+  in its own frame ([Collections](docs/resources.md#collections)).
+- **Mixin**: a structure whose members are merged into the owner's own
+  keys, `$inputs->with(Structure::class, reads: [...])`: stored flat,
+  refined in the owner's frame, and emitted as `allOf` of its def and the
+  owner's properties. Nest for a thing of its own, mix in for shared
+  members that are part of this thing ([Mixins](docs/resources.md#mixins)).
+- **Port**: a value a structure reads from its container, declared under
+  a name of its own with `$inputs->reads($port, $type)` and wired by
+  whatever attaches it, `attach($key, Child::class, reads: [$port =>
+  $key])`. A live sibling value its rules watch, never stored or drawn by
+  the structure ([Ports](docs/resources.md#ports)).
+- **Version**: `#[Resource(version:)]` or `#[Structure(version:)]`, from
+  1, counting the breaking changes made to the values stored for it, so a
+  compatible change never moves it. Stamped `x-surface.version` in both
+  documents, and refused above 1 until stored-value migrations are built
+  ([Evolving a resource](docs/evolution.md#the-version)).
 
 ## Experimental submodules
 
@@ -294,34 +339,74 @@ it.
 
 ## Documentation
 
-Full documentation is under [`docs/`](docs/).
+Full documentation is under [`docs/`](docs/). [Decisions](docs/decisions.md)
+holds the reasons behind each rule, for a reader who wants the why;
+nothing on it is needed to build.
+
+**Start here**
 
 | Page | What it covers |
 | --- | --- |
+| [Home](docs/index.md) | What a resource and a structure are, and where each concept lives in the code. |
 | [Your first resource](docs/first-resource.md) | A settings page from a resource, an operation, a storage and `add()`: the whole module, pinned to `data_surface_first`. |
 | [Your second resource](docs/second-resource.md) | One key whose allowed values depend on another's, with one refiner. |
-| [Concepts](docs/concepts.md) | Every concept, the question that makes you need it, and when to skip it. |
-| [Home](docs/index.md) | What a resource and a structure are, and where each concept lives in the code. |
+| [Concepts](docs/concepts.md) | Every concept, the question that makes you need it, when to skip it, and the page that shows it. |
+| [Common settings recipes](docs/recipes.md) | A time of day, a multi-select, a text area and the other keys a settings page often asks for, one snippet each. |
+| [The examples](modules/data_surface_examples/README.md) | One registration form that grows an idea at a time, then a small resource per later concept, each at `/surface-examples`. |
+
+**Writing a resource**
+
+| Page | What it covers |
+| --- | --- |
+| [Declaring a resource or structure](docs/declaring-a-resource.md) | The class, adopting it on a plugin, defaults, locking, secrets, required. |
+| [Resources and structures](docs/resources.md) | Which way to compose, operations, alters, attached structures and variants, ports, mixins, collections, keys from the site, access, storage, tools, the catalogue. |
+| [Refinement](docs/refinement.md) | An alter offering values and a refiner narrowing them, a rule declared as data, a key that does not apply, the narrowing table, cacheability, a worked example, and what it does not reach yet. |
+| [Options and resolvers](docs/options.md) | `LabeledChoice`, the resolver plugin type, the stock resolvers. |
+| [Storage](docs/storage.md) | What storage is, prepare and commit, the seven engine storage classes (a simple config object first), config schema, settings layouts, secrets, the serialization rule. |
+| [Outputs](docs/outputs.md) | Declaring what a host emits, the Omitted sentinel, conformance, its two consumers, an alter's outputs. |
+| [Widgets](docs/widgets.md) | The widget plugin type, and writing one. |
+| [Generated forms](docs/forms.md) | Host families, the merge rule, AJAX, extraction, stale values, the operation form with its panel and cosmetic seam. |
+| [Content entities](docs/entities.md) | A content entity's create and update form as a derived resource, one structure per field, field access as each child's access. |
+
+**The doors**
+
+| Page | What it covers |
+| --- | --- |
+| [The served contract](docs/served-contract.md) | An operation as JSON Schema with `x-surface`, its refine and validate endpoints, and the React form rendered from it. |
+| [The pipeline](docs/pipeline.md) | Access, accept, validate, prepare, commit; dry runs; exceptions. |
+| [Value semantics](docs/semantics.md) | Configured or not, the coercion table (the Tool API's), secrets, stale values, type mismatches, required, locked keys. |
+| [The Tool API bridge](modules/data_surface_tool/README.md) | One tool per operation and a read tool beside it, who may run them, the contract panel, and what MCP and the Tool API are told. |
+| [The React app](modules/data_surface_react/README.md) | The served contract's endpoints and the React form drawn from them. |
+| [Installation: Tool](docs/installation.md#tool) | Enabling the tool bridge, through which an agent, MCP and Drush call each operation. |
 | [One resource, every door](docs/every-door/index.html) | An interactive 3D model: a resource, its attached structures and an alter, the doors that read its contract, and the same inputs as they are written today. Open the file in a browser. |
+
+**The engine and the record**
+
+| Page | What it covers |
+| --- | --- |
 | [The pattern](docs/pattern.md) | What an author writes, where it goes, and why it is shaped that way. |
 | [How it fits](docs/how-it-fits.md) | One build followed from the caller to a sealed data surface. |
 | [Decisions](docs/decisions.md) | The points the pattern left open, and how the module settled them. |
-| [Installation](docs/installation.md) | Install, integrations, submodules. |
-| [Declaring a resource or structure](docs/declaring-a-resource.md) | The class, adopting it on a plugin, defaults, locking, secrets, required. |
-| [Resources and structures](docs/resources.md) | Operations, alters, attached structures and variants, access, storage, tools, the catalogue. |
 | [Catalogue](docs/catalogue.md) | Every resource and structure the modules here declare, generated from the static layer. |
-| [The pipeline](docs/pipeline.md) | Access, accept, validate, prepare, commit; dry runs; exceptions. |
-| [Value semantics](docs/semantics.md) | Configured or not, the coercion table (the Tool API's), secrets, stale values, type mismatches, required, locked keys. |
-| [Outputs](docs/outputs.md) | Declaring what a host emits, the Omitted sentinel, conformance, its two consumers, an alter's outputs. |
-| [Storage](docs/storage.md) | What storage is, prepare and commit, the seven engine storage classes (a simple config object first), config schema, settings layouts, secrets, the serialization rule. |
-| [The served contract](docs/served-contract.md) | An operation as JSON Schema with `x-surface`, its refine and validate endpoints, and the React form rendered from it. |
 | [Evolving a resource](docs/evolution.md) | Which changes are compatible, the version, stored-value migrations as designed, and the contract diff that holds a module to its baselines. |
-| [Generated forms](docs/forms.md) | Host families, the merge rule, AJAX, extraction, stale values, the operation form with its panel and cosmetic seam. |
-| [Widgets](docs/widgets.md) | The widget plugin type, and writing one. |
-| [Options and resolvers](docs/options.md) | `LabeledChoice`, the resolver plugin type, the stock resolvers. |
-| [Refinement](docs/refinement.md) | An alter offering values and a refiner narrowing them, the narrowing table, cacheability, a worked example, and what it does not reach yet. |
-| [Adoption catalogue](docs/adoption.md) | Where core can adopt this, group by group. |
+| [Installation](docs/installation.md) | Install, integrations, submodules. |
+
+**Evidence**
+
+| Page | What it covers |
+| --- | --- |
+| [Fresh eyes, 2026-10-18](docs/fresh-eyes-2026-10-18.md) | A newcomer builds a newsletter settings page from the documentation alone. |
+| [Fresh eyes, 2026-10-19](docs/fresh-eyes-2026-10-19.md) | A second newcomer builds a library's opening hours, a reused structure and an alter. |
+| [Fresh eyes three, 2026-10-19](docs/fresh-eyes-2026-10-19b.md) | A third newcomer builds a newsletter digest from the documentation alone. |
+| [Two adopters, 2026-10-19](docs/adopters-2026-10-19.md) | Two contributed modules' settings forms, pathauto's and honeypot's, ported as resources. |
+| [Audit: never stricter than the runtime](docs/audit-never-stricter.md) | Where the schema could be stricter than the pipeline, case by case, each verdict pinned by a test. |
+
+**The proposal**
+
+| Page | What it covers |
+| --- | --- |
 | [Core gaps](docs/core-gaps.md) | The core proposal: what core lacks, bottom-up in the order it could be added, each step with its issue and what it gives alone. |
+| [Adoption catalogue](docs/adoption.md) | Where core can adopt this, group by group. |
 
 `data_surface.api.php` documents resource and structure classes,
 alters and the two plugin types for the API reference.

@@ -100,10 +100,12 @@ the record of the rework that brought the module to the pattern.
   `ContractBaselineTest`, `drush data_surface:contract-diff`): a
   breaking change passes only versioned or allowed with a reason.
   Regenerate with `--write` after an accepted change; never by hand.
-- **Static and runtime access**: an access answer's kind, read from its
-  cacheability and never declared. Static varies by the account's
-  permissions or roles alone (`user.permissions`, `user.roles`,
-  `user.roles:<role>`, no tag, permanent max-age) and is stated in the
+- **Access answer**: what the operation's permission, and then the
+  access class, answer for an account; the access class's is an
+  `AccessAnswer` (open, locked or omitted). Its kind, static or runtime,
+  is read from its cacheability and never declared. Static varies by the
+  account's permissions or roles alone (`user.permissions`,
+  `user.roles`, `user.roles:<role>`, no tag, permanent max-age) and is stated in the
   full schema and the tool listing for the account that asks; runtime
   (a tag, the `user` context, max-age 0, or no cacheability at all) is
   marked there, `x-surface.access: "runtime"`, and settled by the schema

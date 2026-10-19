@@ -15,6 +15,28 @@ the short version with the reasoning, [How it fits](how-it-fits.md)
 walks one build, and [Decisions](decisions.md) records each point the
 pattern left open.
 
+## Which way to compose
+
+A resource or structure is made of others in six ways. Each answers a
+different question, keeps the keys in a different place and is stated
+differently in the schema; the examples module shows every one on a
+page of its own.
+
+| The question you are asking | What it gives | The example that shows it | On this page |
+| --- | --- | --- | --- |
+| Is this group of keys a thing of its own? | `attach($key, Child::class)`: a fixed child, its keys stored as a map under the key, behind the wall; the schema refers to the child's def at the key. | The contact, `/surface-examples/3`; the press contact, `/surface-examples/8` | [Children](#children) |
+| Are these keys shared members that are part of this thing? | `with(Structure::class)`: a mixin, its members the owner's own keys, stored flat beside them; the schema is `allOf` of the structure's def and the owner's properties. | The review, `/surface-examples/8` | [Mixins](#mixins) |
+| Does a structure need a value its container holds? | `reads($port, $type)` in the structure, wired by `attach(..., reads: [$port => $key])`: a port, the value kept at the container's key and stored by nothing in the structure; the def lists its ports, and what depends on one is stated on the container's `allOf`. | The person's `listed`, `/surface-examples/8` and `/surface-examples/8/desk` | [Ports](#ports) |
+| Does one key's value choose which further keys apply? | `attachBy($key, by: $sibling)` and a `#[Variant]` per value: a slot, the chosen variant's keys stored under the key; the schema is an `if`/`then` on the sibling for each variant. | The ticket, `/surface-examples/3` | [Children](#children) |
+| Does a group of keys repeat? | `attachList($key, Child::class, min:, max:)`: a collection, a list under the key whose every item is the child's keys; the schema is an array whose `items` refer to the child's def, its Count as `minItems` and `maxItems`. | The volunteers, `/surface-examples/8/desk` | [Collections](#collections) |
+| Is there one key per thing the site has? | `addEach()` or `attachEach()` with a provider: keys from the site, a map under the key with one entry per thing the provider lists at every build; the schema states every entry, the map a def of the owner's. | The ticket types, `/surface-examples/9` | [Keys that come from the site](#keys-that-come-from-the-site) |
+
+The rule of thumb: nest for a thing of its own, mix in for shared
+members that are part of this thing, and read a port for a value the
+container holds. Use a slot when a key chooses the keys, and a
+collection when groups repeat. Use keys from the site when the site,
+not the code, decides how many there are.
+
 ## Where things live
 
 A module has four predictable directories, scanned in every enabled

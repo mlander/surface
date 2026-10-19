@@ -156,41 +156,34 @@ hand.
 
 ## Where to start
 
-- **Writing your first resource**: [Your first
-  resource](first-resource.md), then [Your second
-  resource](second-resource.md) and [Concepts](concepts.md).
-- **Learning the pattern**: [The pattern](pattern.md), then [How it
-  fits](how-it-fits.md); [Decisions](decisions.md) for the points it
-  left open and how they were settled.
-- **Writing a resource or structure**: [Declaring a
-  resource](declaring-a-resource.md) for the class, its keys, defaults,
-  locks and secrets; then [Resources and structures as
-  classes](resources.md) for operations, alters, children, access,
-  storage and the tools generated from them.
-- **Adopting a structure on a plugin you own**: [Declaring a
-  resource](declaring-a-resource.md#on-a-plugin), then [Generated
-  forms](forms.md).
-- **Understanding what a value will become**: [The
-  pipeline](pipeline.md) for the stages, [Value
-  semantics](semantics.md) for the rules each stage applies.
-- **Saying what your host emits, not just what it takes**:
-  [Outputs](outputs.md).
-- **Extending somebody else's resource or structure**: [Refinement and
-  contributions](refinement.md).
-- **Writing a widget or an options resolver**: [Widgets](widgets.md),
-  [Options and resolvers](options.md).
-- **Storing the values somewhere new**: [Storage](storage.md).
-- **Serving a resource to a client with no PHP**: [The served
-  contract](served-contract.md).
-- **Changing a resource others depend on**: [Evolving a
-  resource](evolution.md), for which changes are compatible, the
-  version, stored-value migrations and the contract diff.
-- **Reading this as a core proposal**: [Core gaps](core-gaps.md), what
-  core lacks in the order it could be added, each step with its issue
-  and what it gives alone; then the [Adoption catalogue](adoption.md)
-  for where core's own forms could adopt it.
-- **Writing the common keys of a settings page**: [Common settings
-  recipes](recipes.md).
+The pages fall in the same groups as the README's documentation table.
+
+- **Start here**: [Your first resource](first-resource.md), [Your
+  second resource](second-resource.md), [Concepts](concepts.md),
+  [Common settings recipes](recipes.md), and [the
+  examples](../modules/data_surface_examples/README.md) at
+  `/surface-examples`.
+- **Writing a resource**: [Declaring a resource](declaring-a-resource.md)
+  (and [on a plugin](declaring-a-resource.md#on-a-plugin)), [Resources
+  and structures](resources.md), which opens with [Which way to
+  compose](resources.md#which-way-to-compose), then
+  [Refinement](refinement.md), [Options](options.md),
+  [Storage](storage.md), [Outputs](outputs.md), [Widgets](widgets.md),
+  [Generated forms](forms.md) and [Content entities](entities.md).
+- **The doors**: [The served contract](served-contract.md), [The
+  pipeline](pipeline.md), [Value semantics](semantics.md), [the Tool API
+  bridge](../modules/data_surface_tool/README.md), [the React
+  app](../modules/data_surface_react/README.md), [the Tool
+  integration](installation.md#tool) for an agent, MCP and Drush, and
+  [One resource, every door](every-door/index.html).
+- **The engine and the record**: [The pattern](pattern.md), [How it
+  fits](how-it-fits.md), [Decisions](decisions.md) (the reasons behind
+  each rule, for a reader who wants the why; nothing on it is needed to
+  build), the [Catalogue](catalogue.md), [Evolving a
+  resource](evolution.md) and [Installation](installation.md).
+- **Evidence**: the logs and the audit [below](#evidence).
+- **The proposal**: [Core gaps](core-gaps.md), then the [Adoption
+  catalogue](adoption.md).
 
 The module ships no resources of its own on a production site. It
 provides the model, the pipeline, the two plugin types and the host
@@ -201,13 +194,19 @@ double as the fixtures the tests run against: see
 
 ## Evidence
 
-What the module was held to by people and agents who did not write it,
-each a log of what they met, kept as written:
+What the module was held to: by people and agents who did not write it,
+each a log of what they met, kept as written, and by an audit of the
+promise its two schema documents make:
 
 - [Fresh eyes, 2026-10-18](fresh-eyes-2026-10-18.md): a newcomer builds
   a newsletter settings page from the documentation alone.
 - [Fresh eyes, 2026-10-19](fresh-eyes-2026-10-19.md): a second newcomer
   builds a library's opening hours, a reused structure and an alter.
+- [Fresh eyes three, 2026-10-19](fresh-eyes-2026-10-19b.md): a third
+  newcomer builds a newsletter digest from the documentation alone.
 - [Two adopters, 2026-10-19](adopters-2026-10-19.md): two contributed
   modules' settings forms, pathauto's and honeypot's, ported as
   resources.
+- [Audit: never stricter than the runtime](audit-never-stricter.md):
+  where the schema could be stricter than the pipeline, case by case,
+  each verdict pinned by a test.
