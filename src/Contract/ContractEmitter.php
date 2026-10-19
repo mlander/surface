@@ -155,6 +155,16 @@ final class ContractEmitter {
   public const DEFS = '#/$defs/';
 
   /**
+   * The keyword a key declared with a shape carries until it refers to it.
+   *
+   * Each such key is written whole by property(), and beside it the
+   * shape's id and its def; named() then files the def once under `$defs`
+   * and turns the key into a reference to it with what the key says
+   * differently. Never in a document.
+   */
+  protected const SHAPED = self::EXTENSION . '-shape';
+
+  /**
    * Constraints the schema states in a keyword of its own, or not at all.
    *
    * NotNull is `required`; PrimitiveType, ComplexData and ValidReference
@@ -232,6 +242,7 @@ final class ContractEmitter {
     $subschemas = new Subschemas(FALSE, $widgets ? [] : self::WIDGET_HINTS, $this->mixedIn($surface));
     [$schema, $shown] = $this->frame($surface, $values, '', $resource_id, $cacheability, $stale, $subschemas, is_array($standing) ? $standing : []);
     $schema += $this->definitions($subschemas);
+    $schema = $this->named($schema);
     if (!$widgets) {
       $schema = $this->withoutWidgets($schema);
     }
@@ -307,6 +318,7 @@ final class ContractEmitter {
     $subschemas = new Subschemas(TRUE, [...self::PRESENT, ...($widgets ? [] : self::WIDGET_HINTS)], $this->mixedIn($surface));
     [$schema] = $this->frame($surface, $this->known($surface), '', $resource_id, $cacheability, $ignored, $subschemas);
     $schema += $this->definitions($subschemas);
+    $schema = $this->named($schema);
     $schema = $this->withoutPresent($schema);
     if (!$widgets) {
       $schema = $this->withoutWidgets($schema);
@@ -701,7 +713,7 @@ final class ContractEmitter {
       $schema[self::EXTENSION]['ports'] = array_map(static fn (Port $port): array => [
         'type' => $port->type,
         'required' => $port->required,
-      ], $ports);
+      ] + ($port->shape === NULL ? [] : ['shape' => $port->shape]), $ports);
     }
     if ($advertised->mixins() !== []) {
       // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
@@ -2386,7 +2398,113 @@ final class ContractEmitter {
       unset($schema[self::EXTENSION . '-pattern-message']);
     }
     $schema[self::EXTENSION] = $extension;
+    $shape = DefinitionMetadata::shapeDefinition($definition);
+    if ($shape !== NULL && !isset($schema['properties']) && !isset($schema['items'])) {
+      // Written whole here, so a conditional, a site and a def compare it
+      // keyword by keyword as any key; named() refers to the shape at the
+      // end. Decision: see docs/decisions.md#a-shape-is-a-named-definition.
+      $ignored = [];
+      $schema[self::SHAPED] = [
+        'id' => (string) DefinitionMetadata::shapeOf($definition),
+        'def' => $this->shapeDef($this->property($shape, NULL, NULL, $path, FALSE, [], $cacheability, $ignored)[0]),
+      ];
+    }
     return [$schema, $shown];
+  }
+
+  /**
+   * Keeps what a shape's def says: the shape's own, not a key's.
+   *
+   * The shape is described as an optional key is, so its def allows null,
+   * since whether a key may hold nothing is the key's; a required key's
+   * site says `type` without it. Of `x-surface`, only what the shape
+   * checks is kept: the message of its pattern and what only the server
+   * checks. The widget, the lock and what a key depends on are each
+   * key's.
+   *
+   * @param array $schema
+   *   The shape, described as a key.
+   *
+   * @return array
+   *   Its def.
+   */
+  protected function shapeDef(array $schema): array {
+    $extension = array_intersect_key($schema[self::EXTENSION] ?? [], array_flip(['patternMessage', 'checkedOnServer']));
+    unset($schema[self::EXTENSION]);
+    if ($extension !== []) {
+      $schema[self::EXTENSION] = $extension;
+    }
+    return $schema;
+  }
+
+  /**
+   * Refers every key declared with a shape to the shape's def.
+   *
+   * Each shape is written once, under `$defs` by its id, as its alters
+   * left it, and each key declared with it becomes `$ref` to it first,
+   * then the key's title, then what the key says differently from the
+   * def (its type without null where it is required, a default, a
+   * constraint it narrows, a description of its own) and its whole
+   * `x-surface`, as every property's. `$ref` first, so a reader that lays
+   * the def where the reference stood lays the key over it. A key a
+   * refinement or a conditional narrows is compared as written, so a
+   * `then` says only what it narrows and refers to nothing.
+   *
+   * Decision: see docs/decisions.md#a-shape-is-a-named-definition.
+   *
+   * @param array $schema
+   *   The document's schema, its `$defs` written.
+   *
+   * @return array
+   *   The schema, each shape a def.
+   */
+  protected function named(array $schema): array {
+    $defs = is_array($schema['$defs'] ?? NULL) ? $schema['$defs'] : [];
+    $named = [];
+    $schema = $this->referToShapes($schema, $named, array_keys($defs));
+    if ($named !== []) {
+      $schema['$defs'] = (is_array($schema['$defs'] ?? NULL) ? $schema['$defs'] : []) + $named;
+    }
+    return $schema;
+  }
+
+  /**
+   * Refers the keys declared with a shape, at any depth, to its def.
+   *
+   * @param array $schema
+   *   A schema, or any array inside one.
+   * @param array<string, array> $named
+   *   The shapes' defs filed so far, by key.
+   * @param string[] $taken
+   *   The keys the document's other defs hold.
+   *
+   * @return array
+   *   The same, each such key a reference.
+   */
+  protected function referToShapes(array $schema, array &$named, array $taken): array {
+    foreach ($schema as $keyword => $value) {
+      if (is_array($value) && $keyword !== self::SHAPED) {
+        $schema[$keyword] = $this->referToShapes($value, $named, $taken);
+      }
+    }
+    $shape = $schema[self::SHAPED] ?? NULL;
+    if (!is_array($shape) || !is_string($shape['id'] ?? NULL) || !is_array($shape['def'] ?? NULL)) {
+      return $schema;
+    }
+    ['id' => $id, 'def' => $def] = $shape;
+    unset($schema[self::SHAPED]);
+    $key = $id;
+    for ($n = 2; in_array($key, $taken, TRUE) || (isset($named[$key]) && !Subschemas::same($named[$key], $def)); $n++) {
+      $key = $id . '@' . $n;
+    }
+    $named[$key] ??= $def;
+    $site = ['$ref' => self::DEFS . self::pointer($key)];
+    foreach ($schema as $keyword => $value) {
+      if ($keyword === 'title' || $keyword === self::EXTENSION || !array_key_exists($keyword, $def) || !Subschemas::same($def[$keyword], $value)) {
+        $site[$keyword] = $value;
+      }
+    }
+    return $site;
   }
 
   /**
@@ -2860,7 +2978,7 @@ final class ContractEmitter {
    *   The schema in plain JSON Schema.
    */
   protected function withoutExtension(array $schema): array {
-    unset($schema[self::EXTENSION], $schema[self::EXTENSION . '-checked'], $schema[self::EXTENSION . '-pattern-message']);
+    unset($schema[self::EXTENSION], $schema[self::EXTENSION . '-checked'], $schema[self::EXTENSION . '-pattern-message'], $schema[self::SHAPED]);
     foreach ($schema as $key => $value) {
       if (is_array($value)) {
         $schema[$key] = $this->withoutExtension($value);

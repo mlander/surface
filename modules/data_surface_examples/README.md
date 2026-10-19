@@ -452,10 +452,12 @@ drush pm:install data_surface_examples_compliance
 ```
 
 then reload example 3. A second module, which example 3 does not know,
-changes it with two classes. One is a structure, what compliance asks
-of any event: an event licence and a number of stewards. The other is an
-alter of example 3, an adapter: it attaches the structure at its own
-mount, so the two keys are stored under the module's own name (at
+changes it with three classes. One is a shape, what an event licence is
+wherever it is asked for: four digits, explained in words, declared
+once. One is a structure, what compliance asks of any event: a licence
+of that shape and a number of stewards. The third is an alter of
+example 3, an adapter: it attaches the structure at its own mount, so
+the two keys are stored under the module's own name (at
 `third_party_settings.data_surface_examples_compliance.licence` and
 `.stewards`, so example 3's storage never has to know them), and it
 rewords the title's label. Its rules and its methods are what you see
@@ -493,6 +495,28 @@ only kind an instance method may be:
 
 No form alter, no hook.
 
+<!-- code: ../data_surface_examples_compliance/src/Shape/Licence.php -->
+
+```php
+#[Shape('event.licence')]
+final class Licence implements ShapeInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function define(): DataDefinition {
+    $pattern = ['pattern' => '/^\d{4}$/D', 'message' => 'A licence number is four digits, such as 2048.'];
+    $licence = DataDefinition::create('string')
+      ->setLabel(t('Event licence'))
+      ->setDescription(t('The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.'))
+      ->addConstraint('Regex', $pattern);
+    DefinitionMetadata::setExamples($licence, ['2048']);
+    return $licence;
+  }
+
+}
+```
+
 <!-- code: ../data_surface_examples_compliance/src/Structure/ComplianceStructure.php -->
 
 ```php
@@ -504,11 +528,7 @@ final class ComplianceStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->reads('capacity', 'integer', required: TRUE);
-    $licence = ['pattern' => '/^\d{4}$/D', 'message' => 'A licence number is four digits, such as 2048.'];
-    $licence_key = $inputs->add('licence', 'string', t('Event licence'))
-      ->setDescription(t('The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.'))
-      ->addConstraint('Regex', $licence);
-    DefinitionMetadata::setExamples($licence_key, ['2048']);
+    $inputs->add('licence', Licence::class, t('Event licence'));
     $inputs->add('stewards', 'integer', t('Stewards'), default: 1)->setRequired(TRUE);
   }
 
@@ -613,7 +633,9 @@ at `third_party_settings.data_surface_examples_compliance`, and the Tool
 API and the config schema see nothing new. In the served contract the
 fieldset is the structure's def, `registration.compliance`, referred to
 from the mount, which says which of example 3's keys the port reads
-(`x-surface.reads`). Example 3 ships at Riverside Hall's main hall, which
+(`x-surface.reads`); the licence inside it is the shape's def,
+`event.licence`, written once and referred to from the key, which says
+its own title beside the reference. Example 3 ships at Riverside Hall's main hall, which
 seats 400. The capacity stops at 100, and its help text says why: "Up
 to 100 without an event licence." The
 licence asks for the four digits after EV- only. Type `2048` and the

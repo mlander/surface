@@ -28,6 +28,17 @@ the record of the rework that brought the module to the pattern.
 - **Structure**: a group of keys with no identity or storage of its
   own, held by a parent, a slot or a plugin's host.
   `#[Structure(id, access:)]`.
+- **Shape**: a named type (Smithy's word), of three kinds: resources,
+  structures, and named scalar shapes. The third is `#[Shape(id)]` on a
+  class in `src/Shape/` whose static `define()` returns one scalar
+  `DataDefinition` (no default, not required), used as
+  `$inputs->add('licence', Licence::class, t('Event licence'))`: the key
+  may only narrow it (checked at build), a port may read it
+  (`reads('code', Sku::class)`, wired only to a key of that shape), an
+  `#[Alters(Licence::class)]` tightens it at every key with
+  `narrow('<id>')` and `describe('<id>')`, and both documents write it
+  once as `$defs.<id>`, each key `$ref` first with what it adds beside
+  (`docs/declaring-a-resource.md#named-shapes`).
 - **Operation**: a way a resource is asked for, a static `#[Operation]`
   method returning an `OperationContext` whose `id` is the operation's.
 - **Blueprint**: what a resource or structure declares its members
@@ -61,8 +72,10 @@ the record of the rework that brought the module to the pattern.
 
 "Data surface" names the project, and the sealed object the build step
 makes (`DataSurfaceInterface`); it is not a third kind. "Shape" is the
-general idea of what a thing takes, and in code is reserved for named
-scalar shapes; it never names the blueprint or the layout. Product names
+named type, of which resources, structures and named scalar shapes are
+the three kinds; in code `#[Shape]` names the third, and the word never
+names the blueprint or the layout. A value that arrives of the wrong
+type is a `TypeMismatchException`. Product names
 and on-the-wire identifiers keep the word surface (module, namespaces,
 services, routes and paths, `x-surface`, the contract's `surface` and
 `situation` keys, the `surface[...]` form key, React, the `DataSurface*`
@@ -192,7 +205,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 browser would look for the site in its own container; leave the base URL
 to the environment.
 
-The baseline as of this writing: **1013 tests, 12211 assertions, 0 errors,
+The baseline as of this writing: **1069 tests, 14424 assertions, 0 errors,
 0 failures**. The test and assertion counts drift upward as work lands
 and are not the thing to check. **No test may error and no test may
 fail**, the browser tests included; any error or failure is a real
@@ -228,7 +241,7 @@ Run from the site root (`ROOT` below), which is the parent of `web/`:
 
 ```
 # phpcs — the stored installed_paths point inside the container.
-cd web/modules/custom/data_surface && $ROOT/vendor/bin/phpcs \
+cd web/modules/custom/data_surface && $ROOT/vendor/bin/phpcs -d memory_limit=1G \
   --runtime-set installed_paths \
   "$ROOT/vendor/drupal/coder/coder_sniffer,$ROOT/vendor/slevomat/coding-standard"
 
@@ -359,7 +372,8 @@ so the rule is this sentence. `npm test` is not part of
 
 - A resource class ends in `Resource`, a structure class in
   `Structure`, and the id on either attribute is dotted (`node.type`,
-  `field.instance`); an alter ends in `Alter`, a storage class in
+  `field.instance`); a shape class is named for the value with no
+  suffix (`Licence`, `event.licence`); an alter ends in `Alter`, a storage class in
   `Storage`, an access class in `Access`. A deriver is named in the
   plural for what it derives (`ContentEntityResources`,
   `FieldItemStructures`).
@@ -398,7 +412,7 @@ docs/ scripts/           Published documentation; check.sh and the generators.
 ```
 
 A module that declares its own puts resources in `src/Resource/`,
-structures in `src/Structure/`, alters in `src/Alter/`, storage classes
-in `src/Storage/` and access classes in `src/Access/`; only the first
-three are scanned, and the rest are registered because a resource or
-structure names them.
+structures in `src/Structure/`, shapes in `src/Shape/`, alters in
+`src/Alter/`, storage classes in `src/Storage/` and access classes in
+`src/Access/`; only the first four are scanned, and the rest are
+registered because a resource or structure names them.

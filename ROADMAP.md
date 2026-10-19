@@ -423,7 +423,8 @@ renames sit in A because they are cheapest before new code exists.
   must not crash the form (HTTP 500, "No data surface widget serves the
   map data type").
 - **B, what the contract can say:** inapplicable keys (2, done); declarative
-  narrowing (3, done); ports (4, done); mixins (5, done); named scalar shapes (7).
+  narrowing (3, done); ports (4, done); mixins (5, done); named scalar
+  shapes (7, done).
 - **C, access and the doors:** static and runtime access (8); operation
   behavior facts and the tool door's refusal feedback (9).
 - **D, edges as they bite:** item 10.
@@ -610,9 +611,24 @@ renames sit in A because they are cheapest before new code exists.
    `HasStorageShapeInterface::storageShape()` and `SettingsShapeInterface`,
    which describe how values are laid out in storage, take a name that
    says so (layout). Mechanical, with the snapshot.
-7. **Named scalar shapes.** The one Smithy level the pattern lacks: a
-   named simple shape with its traits, reused anywhere (`string Licence
-   @pattern`). Today a scalar's constraints, message and description are
+7. **Named scalar shapes.** DONE 2026-10-18
+   (`docs/decisions.md#a-shape-is-a-named-definition`,
+   `docs/declaring-a-resource.md#named-shapes`): a `#[Shape('event.licence')]`
+   class in `src/Shape/` whose static `define()` returns a plain
+   `DataDefinition` (a scalar, no default, not required), used as
+   `$inputs->add('licence', Licence::class, t('Event licence'))`; what the
+   key adds is held to the narrowing check against the shape at build; a
+   port may read a shape, wired only to a key declared with it; an alter
+   of the shape tightens it at every key (`narrow('<id>')` with no
+   condition, `describe('<id>')`), and mounting, attaching or offering
+   more is refused; both documents write it once as `$defs.<id>`, each
+   key `$ref` first with what it adds as sibling keywords, the def
+   allowing null; the compliance licence is the first case, its tool
+   definitions unchanged. With it `ShapeMismatchException` became
+   `TypeMismatchException`. Left open: a key opting out of a shape's
+   alters, the catalogue listing shapes. As planned: the one Smithy
+   level the pattern lacks: a named simple shape with its traits, reused
+   anywhere (`string Licence @pattern`). Today a scalar's constraints, message and description are
    written inline at each key, and core's answer, a data type plugin, is
    too heavy for a four-digit string with a label. A `#[Shape('event.licence')]`
    class whose static `define()` returns the data definition, used as

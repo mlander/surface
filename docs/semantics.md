@@ -363,7 +363,7 @@ Two boundaries, both deliberate:
   data surface refuses. The write path, `submit()`, does have both and does
   refuse the invented one.
 
-## Shape mismatches
+## Type mismatches
 
 Coercion is for values that mean the same thing in another notation. A
 value that means nothing in any notation is not coerced, it is refused:
@@ -377,11 +377,11 @@ value that means nothing in any notation is not coerced, it is refused:
 A plain list is never a mismatch: a single item is wrapped, and the item
 is then held to the item definition.
 
-`accept()` throws `ShapeMismatchException`, naming the dotted path of the
+`accept()` throws `TypeMismatchException`, naming the dotted path of the
 offending value and what was expected. `submit()` turns it into a
 violation on that key, the same way it turns an undeclared key
 into one. This is the same bargain as unknown keys: a caller that sends
-the wrong shape learns about it instead of watching the value vanish.
+the wrong type learns about it instead of watching the value vanish.
 
 ## Required
 
@@ -492,7 +492,7 @@ may answer that its keys are shown and fixed, or not there at all.
 
 | Stage | Decides |
 | --- | --- |
-| `accept()` | Whether a key was configured, what type its value takes (the coercion table), whether the shape is acceptable at all, and how input merges over what is stored. Keeps what a key left out, a list or a secret holds; clears an optional key sent nothing. Leaves out a key that does not apply to what it accepted, unless it was sent another value. Refuses undeclared keys and shape mismatches. Asks only the options service, for the values a near miss snaps onto. |
+| `accept()` | Whether a key was configured, what type its value takes (the coercion table), whether its type is acceptable at all, and how input merges over what is stored. Keeps what a key left out, a list or a secret holds; clears an optional key sent nothing. Leaves out a key that does not apply to what it accepted, unless it was sent another value. Refuses undeclared keys and type mismatches. Asks only the options service, for the values a near miss snaps onto. |
 | `validate()` | Whether a required key was answered, and whether the answers satisfy the constraints of the data surface **refined against those same answers**. Given the stored values, it also tells a stale reference from a refusal, and refuses a value sent for a key that does not apply. |
 | `refine()` | Which definitions narrow, given which dependencies are configured. A dependency holding `FALSE` or `[]` is an answer and does narrow. |
 | `prepare()` / `commit()` | Nothing about values; the storage layout and the write. |

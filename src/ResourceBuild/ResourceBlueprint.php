@@ -105,6 +105,9 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
       throw new \LogicException(sprintf('%s mixes %s into its outputs. A structure is mixed into what is sent; outputs hold no structures yet.', $who, $structure));
     }
     static::assertMixinReads($structure, $who, $reads);
+    if (Shapes::isShape($structure)) {
+      throw new \LogicException(sprintf('%s mixes %s in, a shape: a shape is one value, declared at a key with add(\'<key>\', %s::class, ...); with() merges a structure\'s members.', $who, $structure, substr($structure, (int) strrpos($structure, '\\') + 1)));
+    }
     if (!is_subclass_of($structure, DefinesInputsInterface::class)) {
       throw new \LogicException(sprintf('%s mixes %s in, which is no resource or structure class: a structure is mixed in by its class.', $who, $structure));
     }
@@ -129,7 +132,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
     if (is_subclass_of($structure, HasOutputsInterface::class)) {
       throw new \LogicException(sprintf('%s mixes %s in, which declares outputs. A structure\'s inputs are mixed in; its outputs are not, yet.', $who, $this->name($structure)));
     }
-    $mixin = new static($this->builder, $this->typedDataManager, FALSE, $this->registry, $structure, $this);
+    $mixin = (new static($this->builder, $this->typedDataManager, FALSE, $this->registry, $structure, $this))->useShapes($this->shapes);
     $structure::defineInputs($mixin);
     $this->mixins[] = ['class' => $structure, 'reads' => $reads, 'blueprint' => $mixin];
     return $this;
@@ -166,6 +169,20 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    */
   public function mixins(): array {
     return $this->mixins;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * A structure's members mixed in are the owner's keys, so are its keys
+   * declared with a shape.
+   */
+  public function shapedKeys(): array {
+    $shaped = parent::shapedKeys();
+    foreach ($this->mixins as $mixin) {
+      $shaped += $mixin['blueprint']->shapedKeys();
+    }
+    return $shaped;
   }
 
   /**
@@ -342,13 +359,20 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
     if (isset($this->ports[$port]) || in_array($port, $this->declared(), TRUE) || ($this->into === NULL && $this->isDeclared($port))) {
       throw new \LogicException(sprintf('"%s" is already declared in this blueprint, as %s, so it cannot be read as a port too: a port has a name of its own.', $port, isset($this->ports[$port]) ? 'a port' : 'a key'));
     }
+    $shape = NULL;
+    if (Shapes::isShape($type)) {
+      // A port may read a shape: the key wired to it is then of that shape.
+      // Decision: see docs/decisions.md#a-shape-is-a-named-definition.
+      $shape = Shapes::idOf($type);
+      $type = $type::define()->getDataType();
+    }
     try {
       $this->typedDataManager->getDefinition($type);
     }
     catch (PluginNotFoundException $e) {
-      throw new \InvalidArgumentException(sprintf('The "%s" port reads a "%s", which is no typed data type.', $port, $type), 0, $e);
+      throw new \InvalidArgumentException(sprintf('The "%s" port reads a "%s", which is no typed data type and no shape.', $port, $type), 0, $e);
     }
-    $this->ports[$port] = new Port($port, $type, $required);
+    $this->ports[$port] = new Port($port, $type, $required, $shape);
     if ($this->into === NULL) {
       // A mixed-in structure's ports are no ports of its owner's: the owner
       // wires them to its own keys, and only the structure's refiners read

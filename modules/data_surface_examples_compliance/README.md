@@ -5,9 +5,15 @@ module has a say in a resource it does not own.
 
 ## What it shows
 
-Two classes. `Structure\ComplianceStructure` is what compliance asks of
-any event: an event licence and a number of stewards, one per fifty
-people. It is meant for any resource, so it names none: the capacity it
+Three classes. `Shape\Licence` is what an event licence is wherever it
+is asked for, a shape (`#[Shape('event.licence')]`): a string of four
+digits, its pattern explained by a message, its description and its
+example, declared once in a static `define()`. `Structure\ComplianceStructure`
+is what compliance asks of any event: a licence of that shape,
+`$inputs->add('licence', Licence::class, t('Event licence'))`, and a
+number of stewards, one per fifty people. The served contract writes the
+licence once, as the def `event.licence`, and the structure's key refers
+to it. The structure is meant for any resource, so it names none: the capacity it
 counts stewards for it reads through a port, under its own name,
 `$inputs->reads('capacity', 'integer', required: TRUE)`, and its static
 `#[RefinesInput('stewards')]` method watches the port. It translates

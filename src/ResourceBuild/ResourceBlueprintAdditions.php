@@ -104,6 +104,7 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    * Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
    */
   public function attach(string $key, string $child, array $reads = []): MapDataDefinition {
+    static::assertNoShape('attach', $key, $child);
     $this->assertWithinMixin('attaches ' . $child, NULL);
     static::assertReads($key, $reads);
     $mount = 'third_party_settings.' . $this->provider;

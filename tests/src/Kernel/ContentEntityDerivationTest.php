@@ -282,7 +282,7 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
     $cid = 'data_surface:resources:' . hash('xxh3', serialize($classes));
     $cached = $this->container->get('cache.discovery')->get($cid);
     $this->assertNotFalse($cached);
-    $this->assertArrayHasKey('entity.content:node.page', $cached->data);
+    $this->assertArrayHasKey('entity.content:node.page', $cached->data['resources']);
     $tags = [
       'entity_field_info',
       'entity_bundles',

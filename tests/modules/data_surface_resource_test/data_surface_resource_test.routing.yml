@@ -93,3 +93,15 @@ data_surface_resource_test.journal:
     _data_surface_operation: 'configure'
   requirements:
     _data_surface_operation_access: 'TRUE'
+
+# The depot's one operation, served by the generic form: one shape at two
+# keys, each narrowing it its own way.
+data_surface_resource_test.depot:
+  path: '/surface-test/depot'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Configure the depot'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Depot\DepotResource'
+    _data_surface_operation: 'configure'
+  requirements:
+    _data_surface_operation_access: 'TRUE'

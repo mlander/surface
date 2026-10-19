@@ -30,11 +30,15 @@ final class Port {
    *   have: `any` reads any key.
    * @param bool $required
    *   Whether every container must wire it.
+   * @param string|null $shape
+   *   The id of the shape it reads, which the key it is wired to must be
+   *   declared with; NULL for a port that reads a type alone.
    */
   public function __construct(
     public readonly string $name,
     public readonly string $type,
     public readonly bool $required = FALSE,
+    public readonly ?string $shape = NULL,
   ) {
   }
 

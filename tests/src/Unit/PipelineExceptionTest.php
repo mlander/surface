@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Unit;
 
-use Drupal\data_surface\Pipeline\ShapeMismatchException;
+use Drupal\data_surface\Pipeline\TypeMismatchException;
 use Drupal\data_surface\Pipeline\UnknownKeysException;
 use Drupal\data_surface\Pipeline\ViolationSummary;
 use Drupal\Tests\UnitTestCase;
@@ -28,7 +28,7 @@ use PHPUnit\Framework\Attributes\Group;
  * stays on the exception for a caller that wants it.
  *
  * @see \Drupal\data_surface\Pipeline\UnknownKeysException
- * @see \Drupal\data_surface\Pipeline\ShapeMismatchException
+ * @see \Drupal\data_surface\Pipeline\TypeMismatchException
  */
 #[Group('data_surface')]
 class PipelineExceptionTest extends UnitTestCase {
@@ -93,10 +93,10 @@ class PipelineExceptionTest extends UnitTestCase {
   }
 
   /**
-   * Tests the shape mismatch's accessors and sentence.
+   * Tests the type mismatch's accessors and sentence.
    */
-  public function testShapeMismatchNamesPathExpectedAndActual(): void {
-    $exception = new ShapeMismatchException('extras.weight', 'integer', 'array');
+  public function testTypeMismatchNamesPathExpectedAndActual(): void {
+    $exception = new TypeMismatchException('extras.weight', 'integer', 'array');
 
     $this->assertSame('extras.weight', $exception->getPath());
     $this->assertSame('integer', $exception->getExpected());
@@ -112,11 +112,11 @@ class PipelineExceptionTest extends UnitTestCase {
    * Tests the mismatch a top level key raises.
    *
    * The path starts at an input key rather than at the empty string,
-   * because a value always belongs to one: there is no shape to mismatch
+   * because a value always belongs to one: there is no type to mismatch
    * above the keys themselves.
    */
-  public function testShapeMismatchAtTopLevelKey(): void {
-    $exception = new ShapeMismatchException('extras', 'map', 'string');
+  public function testTypeMismatchAtTopLevelKey(): void {
+    $exception = new TypeMismatchException('extras', 'map', 'string');
 
     $this->assertSame('extras', $exception->getPath());
     $this->assertSame(

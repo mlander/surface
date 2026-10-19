@@ -105,10 +105,13 @@ These keep the word, as product names or on-the-wire identifiers:
 - the `Surface` prefix of a class-swap adopter (`SurfaceAddressItem`).
 
 Everything that names a concept uses the new word: resource, structure,
-operation, storage, blueprint, layout, child. In prose, "the surface"
-for a resource or a structure is wrong; "data surface" is the sealed
-object and nothing else; "shape" is the general idea of what a thing
-takes, never the blueprint, the layout or a synonym for a resource.
+shape, operation, storage, blueprint, layout, child. In prose, "the
+surface" for a resource or a structure is wrong; "data surface" is the
+sealed object and nothing else; "shape" is Smithy's, a named type, of
+which resources, structures and named scalar shapes are the three kinds
+([A shape is a named definition](#a-shape-is-a-named-definition)); in
+code `#[Shape]` names the third, and the word never names the blueprint
+or the layout.
 
 Renamed under this decision (2026-10-18), URL paths and wire formats
 unchanged:
@@ -134,17 +137,16 @@ unchanged:
   shapes;
 - the decisions "A shape is static" and "Cacheability on the shape" are
   [A resource or structure is static](#a-resource-or-structure-is-static)
-  and [Cacheability on the blueprint](#cacheability-on-the-blueprint).
+  and [Cacheability on the blueprint](#cacheability-on-the-blueprint);
+- with named scalar shapes, which give the word its code meaning
+  (2026-10-18): `ShapeMismatchException` is `TypeMismatchException`, and
+  the pipeline's `shapeMismatchViolations()` is `typeMismatchViolations()`.
+  What it refuses is a value of a type its definition cannot hold (a
+  list where a string was wanted), which its own message already said;
+  the semantics page's section is "Type mismatches".
 
 Deferred:
 
-- `ShapeMismatchException` and the pipeline's shape mismatch methods
-  use "shape" for the form a value arrives in (a list where a string
-  was wanted), the general sense, against the rule that code keeps the
-  word for named scalar shapes. Renaming them (to a type mismatch)
-  touches the pipeline's public exceptions, two pages and their tests;
-  it waits for named scalar shapes, which give the word its code
-  meaning (`ROADMAP.md`, item 7).
 - The contract's `surface` and `situation` keys: renaming them is a
   wire change, so it waits for a version of the contract.
 - The resource test module's `/surface-test/...` paths and the entity
@@ -177,14 +179,97 @@ the thing a resource or structure declares its members into, as a
 migration declares a table's columns into the table's blueprint. It was
 called a shape, but in Smithy a shape is a named type, and the builder
 its members are declared into is not one; a named scalar shape, a
-`#[Shape]` class reused at many keys, will be, and the two must never
-share a name. How accepted values are laid out in storage, where that
+`#[Shape]` class reused at many keys, is
+([A shape is a named definition](#a-shape-is-a-named-definition)), and
+the two never share a name. How accepted values are laid out in storage, where that
 differs from how they are asked for, is a **layout**:
 `SettingsLayoutInterface`, and `HasStorageLayoutInterface::storageLayout()`
-for an alter's mount. "Shape" stays in prose for the general idea of what
-a thing takes, a resource's shape or the shape of a value, and in code
-is reserved for named scalar shapes. (`ResourceBlueprint`,
+for an alter's mount. "Shape" is the named type, of three kinds, and in
+code names the third, `#[Shape]`. (`ResourceBlueprint`,
 `ResourceBlueprintAdditions`, `BlueprintAdapterBase`)
+
+### A shape is a named definition
+
+A scalar asked for at many keys (a licence, a stock code) was written
+inline at each: its type, its pattern and the words that explain it,
+its description, its examples. A **shape** names it once: a class in
+`src/Shape/` carrying `#[Shape('event.licence')]` and implementing
+`ShapeInterface`, whose static `define()` returns a plain core
+`DataDefinition`, used in the type position of `add()`:
+`$inputs->add('licence', Licence::class, t('Event licence'))`. Resources,
+structures and these named scalars are the three kinds of shape, in
+Smithy's sense of a named type. The compliance licence is the first
+case, the test module's stock code the fixture. Each choice, and why:
+
+- **A named definition, not a data type plugin.** Core's answer to a
+  reusable value is a typed data plugin: a class, a definition class, a
+  plugin id every consumer has to know, and a type nothing outside
+  Drupal reads, which is too heavy for four digits with a label. A shape
+  is the definition itself, named: what a key holds is still a
+  `string`, so the widget, the pipeline's coercion, the Tool API's
+  flattened definitions and the config schema read it as any string,
+  and nothing downstream learns a new type. `define()` returns a plain
+  definition rather than taking a blueprint: one value has nothing to
+  declare into, and the core setters already say all of it.
+- **What is the key's stays the key's.** `define()` declares no default
+  and no required flag, refused when the shape is used, since what a key
+  starts from and whether it must hold a value differ by key; and a
+  scalar only, since a group of keys is a structure. A shape attached,
+  listed or mixed in is refused naming `add()`. Discovery refuses what it
+  refuses for the other kinds: both attributes on one class, an
+  instance `define()`, no interface, and an id another shape, resource
+  or structure claims, since all of them name defs in one `$defs`.
+- **Additions at the key narrow only.** The key starts from a copy of
+  the shape as its alters left it and adds what any key adds: its label,
+  required, a default, a constraint, a description of its own. Once its
+  owner and every alter have declared, the build holds each such key to
+  the narrowing check a refiner's answer is held to, against the shape,
+  and refuses one that widens (a higher maximum, a second pattern, a
+  bound dropped), naming the key, the shape and what widened. Core's
+  `addConstraint()` replaces a constraint of the same name, so a key
+  tightening a bound the shape already has restates the others it keeps.
+- **One def per shape, the key's additions beside the reference.** Both
+  documents write each shape once, as `$defs.<id>`, described as an
+  optional key is: its type allows null, since whether a key may hold
+  nothing is the key's, and its `x-surface` carries only what the shape
+  checks (the pattern's message, what only the server checks). Each key
+  declared with it is `$ref` first, then its title, then only what it
+  says differently (its type without null where it is required, a
+  default, a bound it narrows, its own description) and its whole
+  `x-surface`, which a renderer reads whole at every property. Sibling
+  keywords rather than `allOf`: in 2020-12 a `$ref` beside other
+  keywords is their conjunction, the same narrowing an attached child's
+  site composes, and with `$ref` first `SchemaResolver::inline()` and
+  the React app's `inlineSchema()` lay the def where the reference stood
+  and the key over it, keyword by keyword, which agrees with the
+  conjunction because the key only narrows. A conditional's `then` still
+  says only what it narrows and refers to nothing; the never-stricter
+  invariant is held per key by the matrix (the depot's two keys).
+- **A port may read a shape.** `$inputs->reads('code', Sku::class)`
+  declares a port of the shape's type that only a key declared with the
+  shape may be wired to, narrowed or not: the port's readers may trust
+  the value to be one the shape allows, which a key of the bare type
+  does not promise. A port that reads a type takes a key of a shape of
+  that type, as it takes any key of the type. The def's
+  `x-surface.ports` names the shape.
+- **An alter of a shape tightens it everywhere.** `#[Alters(Sku::class)]`
+  on an alter whose `alterInputs()` is handed the shape, named by its
+  id: `narrow('<id>')` with no condition (a bound tightened, a subset of
+  a list, a pattern where it has none, inside the subset both engines
+  read alike) and `describe('<id>', ...)`. Every key using the shape on
+  the site gets it, and the def carries it. What mounts, attaches, mixes
+  in, offers more values, requires or rules out is refused naming the
+  call; an alter of a shape naming operations, declaring a
+  `#[RefinesInput]` method or not implementing `AltersInputsInterface`
+  is refused at discovery.
+
+Open: a key, or a container, opting out of a shape's alters, as a
+container cannot yet opt out of a structure's; the catalogue listing
+shapes and who uses them. (`Resource\Attribute\Shape`,
+`ShapeInterface`, `ResourceBuild\Shapes`, `ShapeBlueprint`,
+`Resources::assertShapesNarrowed()`, `Resources::unshaped()`,
+`DefinitionMetadata::shapeOf()`, `ContractEmitter::named()`, `isPart()`
+in `app/src/contract.ts`)
 
 ## Authoring
 

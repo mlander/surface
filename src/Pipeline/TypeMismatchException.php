@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Drupal\data_surface\Pipeline;
 
 /**
- * Thrown when input arrives in a shape the definition cannot hold.
+ * Thrown when a value arrives of a type its definition cannot hold.
  *
  * The sibling of UnknownKeysException, and refused for the same reason: a
  * caller that sends a string where the data surface advertised a map, or a
  * map where it advertised a number, has made a mistake that silence would
  * turn into lost data. Casting is for values that mean the same thing in
- * another notation; a shape mismatch means nothing in any notation, so
+ * another notation; a type mismatch means nothing in any notation, so
  * accept() stops rather than guessing.
  *
  * The exception names the dotted path of the offending value and a short
@@ -19,19 +19,19 @@ namespace Drupal\data_surface\Pipeline;
  * either the message or a violation can point at the exact place in a
  * nested payload.
  */
-final class ShapeMismatchException extends \InvalidArgumentException {
+final class TypeMismatchException extends \InvalidArgumentException {
 
   /**
-   * Constructs a ShapeMismatchException.
+   * Constructs a TypeMismatchException.
    *
    * @param string $path
    *   The dotted path of the offending value, starting at a top level
    *   key.
    * @param string $expected
-   *   A short name for the shape the definition holds: a data type such
+   *   A short name for the type the definition holds: a data type such
    *   as 'integer', or 'list' or 'map'.
    * @param string $actual
-   *   A short name for the shape that arrived, as get_debug_type() names
+   *   A short name for the type that arrived, as get_debug_type() names
    *   it.
    */
   public function __construct(
@@ -58,7 +58,7 @@ final class ShapeMismatchException extends \InvalidArgumentException {
   }
 
   /**
-   * Gets the shape the definition holds.
+   * Gets the type the definition holds.
    *
    * @return string
    *   The expected type name.
@@ -68,7 +68,7 @@ final class ShapeMismatchException extends \InvalidArgumentException {
   }
 
   /**
-   * Gets the shape that arrived.
+   * Gets the type that arrived.
    *
    * @return string
    *   The actual type name.

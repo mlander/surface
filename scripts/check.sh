@@ -36,8 +36,9 @@ grep -qE '^(FAILURES|ERRORS)!' "$WORK/phpunit.txt" \
 echo "phpunit: $SUMMARY"
 
 # 2. Coding standards. The stored installed_paths point inside the container.
+# The module outgrew PHP's default memory limit, as phpstan did.
 echo "== phpcs =="
-(cd "$MODULE" && "$ROOT/vendor/bin/phpcs" --runtime-set installed_paths \
+(cd "$MODULE" && "$ROOT/vendor/bin/phpcs" -d memory_limit=1G --runtime-set installed_paths \
   "$ROOT/vendor/drupal/coder/coder_sniffer,$ROOT/vendor/slevomat/coding-standard") \
   || fail "phpcs"
 

@@ -8,7 +8,7 @@ use Drupal\Core\Form\FormState;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\ShapeMismatchException;
+use Drupal\data_surface\Pipeline\TypeMismatchException;
 use Drupal\data_surface\Pipeline\UnknownKeysException;
 use Drupal\data_surface\Pipeline\VariantMismatchException;
 use Drupal\data_surface_tool\OperationInputs;
@@ -99,7 +99,7 @@ class InputCoercionMatrixTest extends DataSurfaceKernelTestBase {
     try {
       $values = $this->formBuilder()->extractSurfaceValues($surface, $form, $form_state, $stored);
     }
-    catch (UnknownKeysException | ShapeMismatchException | VariantMismatchException) {
+    catch (UnknownKeysException | TypeMismatchException | VariantMismatchException) {
       return NULL;
     }
     return $this->pipeline()->validate($surface, $values, $stored)->isEmpty() ? $values : NULL;
@@ -342,7 +342,7 @@ class InputCoercionMatrixTest extends DataSurfaceKernelTestBase {
       $this->pipeline()->accept($this->specimen(), ['size' => '{"width": tru'], $stored);
       $this->fail('Malformed JSON is taken for a map.');
     }
-    catch (ShapeMismatchException $e) {
+    catch (TypeMismatchException $e) {
       $this->assertSame('size', $e->getPath());
     }
     $this->assertNull($this->tool(['name' => 'Specimen', 'size' => '{"width": tru'], $stored));

@@ -87,7 +87,9 @@ outputs, which the demo formatter declares; the test module's
   under the element and the property's description.
   `addDefinition()` is the long form, for a map or a list. The label is
   `t('...')` with a literal string; see [Translatable
-  strings](#translatable-strings).
+  strings](#translatable-strings). The type may be a shape's class, a
+  value declared once for every key that asks for it ([Named
+  shapes](#named-shapes)).
 - **A `#[RefinesInput]` method takes the key's definition first, then one
   parameter per sibling it watches**, matched by name, or listed as
   `watches:` when a renamed parameter should be refused rather than
@@ -99,6 +101,71 @@ outputs, which the demo formatter declares; the test module's
   classes, access classes and alters are autowired services and may hold
   services; an alter's refiners are static methods too, unless they
   declare `runtime: TRUE`, the one kind an instance method may be.
+
+### Named shapes
+
+A value asked for at more than one key, with the same type, the same
+pattern and the same words for it, is declared once as a **shape**: a
+class in the module's `src/Shape/` carrying `#[Shape]`, whose static
+`define()` returns a plain core definition. The examples' event licence:
+
+```php
+#[Shape('event.licence')]
+final class Licence implements ShapeInterface {
+
+  public static function define(): DataDefinition {
+    $pattern = ['pattern' => '/^\d{4}$/D', 'message' => 'A licence number is four digits, such as 2048.'];
+    $licence = DataDefinition::create('string')
+      ->setLabel(t('Event licence'))
+      ->setDescription(t('The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.'))
+      ->addConstraint('Regex', $pattern);
+    DefinitionMetadata::setExamples($licence, ['2048']);
+    return $licence;
+  }
+
+}
+```
+
+A key uses it in the type position of `add()`, with a label of its own:
+
+```php
+$inputs->add('licence', Licence::class, t('Event licence'));
+```
+
+- **The key starts from the shape and may only narrow it.** What `add()`
+  returns is a copy of the shape's definition, so the key adds what any
+  key adds with the core setters: `setRequired()`, a `default:`, a
+  constraint, a description of its own. When its owner is built, the
+  key is held to the shape by the check a refiner's answer is held to;
+  a key that widens it (a higher maximum, a second pattern) is refused,
+  naming the key and the shape. Core's `addConstraint()` replaces a
+  constraint of the same name, so a key that tightens a bound the shape
+  already has restates the bounds it keeps:
+  `addConstraint('Length', ['min' => 4, 'max' => 12])` over a shape
+  allowing twelve.
+- **A shape is a value.** `define()` returns one scalar type, never a
+  map or a list, which is a structure, and declares no default and no
+  required flag, which are each key's. A shape handed to `attach()`,
+  `attachList()` or `with()` is refused.
+- **A port may read one.** `$inputs->reads('code', Sku::class)` reads a
+  value of the shape's type, and a container may wire it only to a key
+  declared with that shape ([Ports](resources.md#ports)).
+- **An alter of the shape tightens it at every key.** An alter naming
+  the shape, `#[Alters(Licence::class)]`, is handed the shape itself in
+  `alterInputs()`, named by its id: `narrow('event.licence')` with no
+  condition and its bounds, a list's subset or a pattern where it has
+  none, and `describe('event.licence', ...)`. It mounts no key and
+  attaches nothing.
+- **The contract writes it once.** Each shape is one def in both
+  documents, `$defs.event.licence`, and each key using it refers to it,
+  saying beside the reference only what the key says differently
+  ([The served contract](served-contract.md#a-shape-is-one-def)).
+
+The test module's stock code, `Shape\Sku`, is used at two keys of the
+depot that narrow it differently, read by the shelf tag's port, and
+tightened by `Alter\SkuAlter`. Why a shape is a named definition rather
+than a data type plugin is in
+[Decisions](decisions.md#a-shape-is-a-named-definition).
 
 ### Nothing live in the blueprint
 
@@ -259,7 +326,9 @@ plugin's class name, and its id is its plugin's,
 `<host type>:<plugin id>`, unless it carries `#[Structure]`. An alter
 ends in `Alter`, a storage class in `Storage`, an access class in
 `Access`, and a deriver is named for what it makes, in the plural
-(`ContentEntityResources`, `FieldItemStructures`).
+(`ContentEntityResources`, `FieldItemStructures`). A shape class is
+named for the value, with no suffix, as a data type is (`Licence` is
+`event.licence`).
 
 **A class-swap adopter prefixes the swapped class with `Surface`, and
 says so in the hook.** Adopting a plugin class you do not own means

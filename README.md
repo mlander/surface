@@ -128,7 +128,7 @@ would have shown.
 
 ## Glossary
 
-The module uses these fourteen words in exactly one sense each.
+The module uses these fifteen words in exactly one sense each.
 
 - **Resource**: a thing with identity and storage that operations read
   and write; the form, the tool and the schema are derived from it.
@@ -139,6 +139,16 @@ The module uses these fourteen words in exactly one sense each.
   slot as a variant, or configuring a plugin, whose host supplies the
   operation and the storage. Declared as a class carrying
   `#[Structure(id, access:)]`.
+- **Shape**: a named type, in Smithy's sense, of which there are three
+  kinds: a resource, a structure, and a named scalar shape, one value
+  (its type, label, description, constraints, examples) declared once
+  and used at many keys. The third is the one the attribute names: a
+  class in `src/Shape/` carrying `#[Shape(id)]`, whose static `define()`
+  returns a plain data definition, used in the type position of
+  `add()`; each key may only narrow it, an alter of it tightens it at
+  every key, and the served contract writes it once, as a def
+  ([Named shapes](docs/declaring-a-resource.md#named-shapes)). Never the
+  blueprint or the layout.
 - **Data surface**: what the build step seals from a resource or
   structure in a context: an immutable group of data definitions, plus
   the map of which definitions depend on which others and the refiners
@@ -297,7 +307,7 @@ Full documentation is under [`docs/`](docs/).
 | [Resources and structures](docs/resources.md) | Operations, alters, attached structures and variants, access, storage, tools, the catalogue. |
 | [Catalogue](docs/catalogue.md) | Every resource and structure the modules here declare, generated from the static layer. |
 | [The pipeline](docs/pipeline.md) | Access, accept, validate, prepare, commit; dry runs; exceptions. |
-| [Value semantics](docs/semantics.md) | Configured or not, the coercion table (the Tool API's), secrets, stale values, shape mismatches, required, locked keys. |
+| [Value semantics](docs/semantics.md) | Configured or not, the coercion table (the Tool API's), secrets, stale values, type mismatches, required, locked keys. |
 | [Outputs](docs/outputs.md) | Declaring what a host emits, the Omitted sentinel, conformance, its two consumers, an alter's outputs. |
 | [Storage](docs/storage.md) | What storage is, prepare and commit, the seven engine storage classes (a simple config object first), config schema, settings layouts, secrets, the serialization rule. |
 | [The served contract](docs/served-contract.md) | An operation as JSON Schema with `x-surface`, its refine and validate endpoints, and the React form rendered from it. |

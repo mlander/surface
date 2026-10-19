@@ -94,7 +94,7 @@ interface DataSurfacePipelineInterface {
    *
    * @throws \Drupal\data_surface\Pipeline\UnknownKeysException
    *   When the input carries a key no definition declares.
-   * @throws \Drupal\data_surface\Pipeline\ShapeMismatchException
+   * @throws \Drupal\data_surface\Pipeline\TypeMismatchException
    *   When the input carries a value in a shape its definition cannot
    *   hold, such as a string where a map was advertised.
    * @throws \Drupal\data_surface\Pipeline\VariantMismatchException

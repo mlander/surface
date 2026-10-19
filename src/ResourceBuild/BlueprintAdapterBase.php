@@ -13,6 +13,7 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Refinement\Rule;
 use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
+use Drupal\data_surface\Resource\DefinesInputsInterface;
 
 /**
  * What every blueprint does: add, over the engine's builder.
@@ -67,6 +68,18 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   protected array $lists = [];
 
   /**
+   * The keys declared with a shape through this blueprint, by key.
+   *
+   * @var array<string, \Drupal\Core\TypedData\DataDefinition>
+   */
+  protected array $shaped = [];
+
+  /**
+   * What resolves a shape and its alters; NULL applies no alter.
+   */
+  protected ?Shapes $shapes = NULL;
+
+  /**
    * Constructs a blueprint over a builder.
    *
    * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
@@ -85,9 +98,33 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   }
 
   /**
+   * Hands the blueprint what resolves shapes and their alters.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\Shapes|null $shapes
+   *   The resolver; NULL declares a shape as it is, with no alter.
+   *
+   * @return $this
+   */
+  public function useShapes(?Shapes $shapes): static {
+    $this->shapes = $shapes;
+    return $this;
+  }
+
+  /**
    * {@inheritdoc}
+   *
+   * The type may be a shape's class: the key then starts from the shape
+   * as its alters left it, and may only narrow it.
+   * Decision: see docs/decisions.md#a-shape-is-a-named-definition.
    */
   public function add(string $key, string $type, string|\Stringable $label, mixed $default = NULL): DataDefinition {
+    if (str_contains($type, '\\')) {
+      $definition = $this->fromShape($key, $type);
+      $definition->setLabel($label);
+      $this->addDefinition($key, $definition, $default);
+      $this->shaped[$key] = $definition;
+      return $definition;
+    }
     $definition = $this->typedDataManager->createDataDefinition($type);
     if (!$definition instanceof DataDefinition) {
       throw new \InvalidArgumentException(sprintf(
@@ -99,6 +136,58 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
     $definition->setLabel($label);
     $this->addDefinition($key, $definition, $default);
     return $definition;
+  }
+
+  /**
+   * Starts a key from the shape a class names.
+   *
+   * @param string $key
+   *   The key, for the messages.
+   * @param string $type
+   *   The class handed to add().
+   *
+   * @return \Drupal\Core\TypedData\DataDefinition
+   *   The key's definition, marked with the shape.
+   *
+   * @throws \LogicException
+   *   When the class is no shape.
+   */
+  protected function fromShape(string $key, string $type): DataDefinition {
+    if (!Shapes::isShape($type)) {
+      throw new \LogicException(is_subclass_of($type, DefinesInputsInterface::class)
+        ? sprintf('add("%s") was handed %s, a resource or structure, as a type: a group of keys is attached at the key, attach(\'%s\', ...), or mixed in, with().', $key, $type, $key)
+        : sprintf('add("%s") was handed %s, which is no typed data type and no shape: a shape implements %s and carries #[Shape].', $key, $type, 'Drupal\data_surface\Resource\ShapeInterface'));
+    }
+    return $this->shapes?->forKey($type) ?? Shapes::unaltered($type);
+  }
+
+  /**
+   * Gets the keys declared with a shape through this blueprint.
+   *
+   * @return array<string, \Drupal\Core\TypedData\DataDefinition>
+   *   Each key's definition, by the key's name in messages.
+   */
+  public function shapedKeys(): array {
+    return $this->shaped;
+  }
+
+  /**
+   * Refuses a shape where a child belongs.
+   *
+   * @param string $verb
+   *   The method, for the message.
+   * @param string $key
+   *   The key.
+   * @param string $child
+   *   What it was handed.
+   *
+   * @throws \LogicException
+   *   When it is a shape.
+   */
+  protected static function assertNoShape(string $verb, string $key, string $child): void {
+    if (Shapes::isShape($child)) {
+      throw new \LogicException(sprintf('%s("%s") was handed %s, a shape: a shape is one value, declared at a key with add(\'%s\', %s::class, ...); %s() holds a resource or structure.', $verb, $key, $child, $key, substr($child, (int) strrpos($child, '\\') + 1), $verb));
+    }
   }
 
   /**
@@ -122,6 +211,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * {@inheritdoc}
    */
   public function attach(string $key, string $child, array $reads = []): MapDataDefinition {
+    static::assertNoShape('attach', $key, $child);
     static::assertReads($key, $reads);
     $shell = $this->reserveChild('attach', $key);
     $this->attachments[$key] = $child;
@@ -177,6 +267,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * {@inheritdoc}
    */
   public function attachList(string $key, string $child, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
+    static::assertNoShape('attachList', $key, $child);
     if (($min !== NULL && $min < 0) || ($max !== NULL && $max < 0) || ($min !== NULL && $max !== NULL && $min > $max)) {
       throw new \InvalidArgumentException(sprintf(
         'attachList() was given %s to %s items for "%s": a collection holds from none upwards, and its fewest cannot be more than its most.',

@@ -17,12 +17,13 @@ pattern left open.
 
 ## Where things live
 
-A module has three predictable directories, scanned in every enabled
+A module has four predictable directories, scanned in every enabled
 module the way core scans `src/Hook`:
 
 | | Owns | Reaches into |
 | --- | --- | --- |
 | **Resources and structures** | `src/Resource/`, `src/Structure/` | `src/Alter/` |
+| **Shapes** | `src/Shape/` | `src/Alter/` |
 
 - A class in `src/Resource/` or `src/Structure/` carrying `#[Resource]`
   is a resource, and one carrying `#[Structure]` is a structure. The
@@ -33,6 +34,9 @@ module the way core scans `src/Hook`:
 - A plugin carrying `#[UsesStructure]` with no argument is its own
   structure, found through its plugin definition rather than a
   directory ([Plugins](#plugins)).
+- A class in `src/Shape/` carrying `#[Shape]` is a shape: one scalar
+  value, declared once and used at many keys ([Named
+  shapes](declaring-a-resource.md#named-shapes)).
 - A class in `src/Alter/` carrying `#[Alters]` is an alter. It is
   registered as an autowired service, so it may hold services.
 - A static method carrying `#[Operation]` in any of the three is an
@@ -729,6 +733,15 @@ class, with its own keys and refiners, and alters can reach it alone.
 A child is usually a structure; it may be a resource with storage of its
 own, as a field's storage is.
 
+A value asked for at several keys is no child: a child is a group of
+keys behind the wall, and one value with its type, pattern and words is
+a shape, declared once in `src/Shape/` and used in the type position of
+`add()`, `$inputs->add('licence', Licence::class, t('Event licence'))`,
+each key narrowing it as it needs and an alter of the shape tightening
+it at all of them ([Named shapes](declaring-a-resource.md#named-shapes)).
+The compliance structure's licence is one; a shape handed to `attach()`
+is refused.
+
 - `attach('key', Child::class)` is a fixed child.
 - `attachBy('key', by: 'sibling')` is a child the sibling's value
   chooses: a **slot**. A slot is always open. The parent never names
@@ -862,7 +875,7 @@ final class ComplianceStructure implements StructureInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->reads('capacity', 'integer', required: TRUE);
-    $inputs->add('licence', 'string', t('Event licence'));
+    $inputs->add('licence', Licence::class, t('Event licence'));
     $inputs->add('stewards', 'integer', t('Stewards'), default: 1)->setRequired(TRUE);
   }
 
@@ -897,7 +910,9 @@ $inputs->attach('third_party_settings.data_surface_examples_compliance', Complia
   required: TRUE)`; an optional port a container leaves unwired holds
   nothing, so a refiner watching it never runs and a rule reads it as
   absent. The type is a typed data type, and the wired key must have it
-  (`any` reads any key).
+  (`any` reads any key); or a shape's class, `reads('code', Sku::class)`,
+  and the wired key must then be declared with that shape, which it may
+  have narrowed ([Named shapes](declaring-a-resource.md#named-shapes)).
 - **The container wires each port** in `attach(..., reads: [port =>
   key])`, naming one of its own plain input keys. The build refuses a
   required port left unwired, a key the container does not declare, a

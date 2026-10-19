@@ -76,6 +76,15 @@ final class DefinitionMetadata {
   protected const PLACED_AFTER_KEY = 'data_surface_placed_after';
 
   /**
+   * The definition array key naming the shape a key was declared with.
+   *
+   * Holds the shape's id and its definition as its alters left it, which
+   * is what the key may only narrow and what its def in the served
+   * contract is written from.
+   */
+  protected const SHAPE_KEY = 'data_surface_shape';
+
+  /**
    * Declares the value a definition starts from.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
@@ -407,6 +416,68 @@ final class DefinitionMetadata {
     }
     $key = $definition->offsetGet(static::PLACED_AFTER_KEY);
     return is_string($key) ? $key : NULL;
+  }
+
+  /**
+   * Marks a definition as a key declared with a shape.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition.
+   * @param string $id
+   *   The shape's id.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $shape
+   *   The shape's definition, as its alters left it: what the key narrows.
+   *
+   * @see docs/decisions.md#a-shape-is-a-named-definition
+   */
+  public static function setShape(DataDefinitionInterface $definition, string $id, DataDefinitionInterface $shape): void {
+    static::arrayAccess($definition)->offsetSet(static::SHAPE_KEY, ['id' => $id, 'definition' => $shape]);
+  }
+
+  /**
+   * Gets the id of the shape a key was declared with.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to read.
+   *
+   * @return string|null
+   *   The shape's id, or NULL for a key declared with a type.
+   */
+  public static function shapeOf(DataDefinitionInterface $definition): ?string {
+    $shape = static::shape($definition);
+    return $shape === NULL ? NULL : $shape['id'];
+  }
+
+  /**
+   * Gets the definition of the shape a key was declared with.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to read.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
+   *   The shape's definition as its alters left it, or NULL for a key
+   *   declared with a type.
+   */
+  public static function shapeDefinition(DataDefinitionInterface $definition): ?DataDefinitionInterface {
+    $shape = static::shape($definition);
+    return $shape === NULL ? NULL : $shape['definition'];
+  }
+
+  /**
+   * Reads the shape a definition carries.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition.
+   *
+   * @return array{id: string, definition: \Drupal\Core\TypedData\DataDefinitionInterface}|null
+   *   The shape, or NULL.
+   */
+  protected static function shape(DataDefinitionInterface $definition): ?array {
+    if (!$definition instanceof \ArrayAccess || !$definition->offsetExists(static::SHAPE_KEY)) {
+      return NULL;
+    }
+    $shape = $definition->offsetGet(static::SHAPE_KEY);
+    return is_array($shape) && is_string($shape['id'] ?? NULL) && ($shape['definition'] ?? NULL) instanceof DataDefinitionInterface ? $shape : NULL;
   }
 
   /**

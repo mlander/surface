@@ -40,7 +40,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   /**
    * The data types that hold one scalar.
    *
-   * An array for one of them is a shape mismatch, refused rather than
+   * An array for one of them is a type mismatch, refused rather than
    * coerced. Every other
    * type ('any', a map that declares no properties, anything a
    * contributed typed data plugin adds) is left alone by both, because a
@@ -121,7 +121,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *
    * @throws \Drupal\data_surface\Pipeline\UnknownKeysException
    *   When an input key is not a definition at any depth.
-   * @throws \Drupal\data_surface\Pipeline\ShapeMismatchException
+   * @throws \Drupal\data_surface\Pipeline\TypeMismatchException
    *   When the input cannot be held by the definition at all.
    * @throws \Drupal\data_surface\Pipeline\VariantMismatchException
    *   When a slot's value is shaped for a variant other than the chosen.
@@ -359,7 +359,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *
    * @throws \Drupal\data_surface\Pipeline\UnknownKeysException
    *   When an item carries a key the child does not declare.
-   * @throws \Drupal\data_surface\Pipeline\ShapeMismatchException
+   * @throws \Drupal\data_surface\Pipeline\TypeMismatchException
    *   When the input is not a list, or an item is not a map.
    */
   protected function acceptCollection(Entry $entry, Collection $list, array $input, mixed $fallback, string $path): mixed {
@@ -385,7 +385,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       $raw = [$raw];
     }
     if (!is_array($raw)) {
-      throw new ShapeMismatchException($path, 'list', get_debug_type($raw));
+      throw new TypeMismatchException($path, 'list', get_debug_type($raw));
     }
     $items = [];
     foreach (array_values($raw) as $item) {
@@ -400,7 +400,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         continue;
       }
       if (!is_array($item)) {
-        throw new ShapeMismatchException($at, 'map', get_debug_type($item));
+        throw new TypeMismatchException($at, 'map', get_debug_type($item));
       }
       $items[] = $this->acceptLevel($child, $item, [], $at);
     }
@@ -427,7 +427,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * @return array
    *   The accepted map.
    *
-   * @throws \Drupal\data_surface\Pipeline\ShapeMismatchException
+   * @throws \Drupal\data_surface\Pipeline\TypeMismatchException
    *   When the input is not a map.
    * @throws \Drupal\data_surface\Pipeline\VariantMismatchException
    *   When the input carries another variant's keys.
@@ -442,7 +442,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     }
     $input = Coercion::decoded($input, FALSE);
     if (!is_array($input)) {
-      throw new ShapeMismatchException($path, 'map', get_debug_type($input));
+      throw new TypeMismatchException($path, 'map', get_debug_type($input));
     }
     if ($entry->slot !== NULL && $chosen !== NULL) {
       $owners = $entry->slot->owners($entry->slot->strangers($chosen, $input), $chosen);
@@ -488,7 +488,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *   The accepted value: the new secret, the fallback when the input
    *   said nothing, or NULL when the input asked for it to be cleared.
    *
-   * @throws \Drupal\data_surface\Pipeline\ShapeMismatchException
+   * @throws \Drupal\data_surface\Pipeline\TypeMismatchException
    *   When the input carries a value the definition cannot hold.
    */
   protected function acceptSecret(DataDefinitionInterface $definition, mixed $input, mixed $fallback, string $path): mixed {
@@ -1310,8 +1310,8 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     catch (UnknownKeysException $e) {
       return new DataSurfaceResult($current, $this->unknownKeyViolations($e), access: $access);
     }
-    catch (ShapeMismatchException $e) {
-      return new DataSurfaceResult($current, $this->shapeMismatchViolations($e), access: $access);
+    catch (TypeMismatchException $e) {
+      return new DataSurfaceResult($current, $this->typeMismatchViolations($e), access: $access);
     }
     catch (VariantMismatchException $e) {
       return new DataSurfaceResult($current, $this->variantMismatchViolations($e), access: $access);
@@ -1368,7 +1368,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *
    * @throws \Drupal\data_surface\Pipeline\UnknownKeysException
    *   When a nested input key is not a property definition.
-   * @throws \Drupal\data_surface\Pipeline\ShapeMismatchException
+   * @throws \Drupal\data_surface\Pipeline\TypeMismatchException
    *   When the input cannot be held by the definition at all.
    */
   protected function acceptValue(DataDefinitionInterface $definition, mixed $input, mixed $fallback, string $path): mixed {
@@ -1386,7 +1386,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     }
     $input = Coercion::decoded($input, FALSE);
     if (!is_array($input)) {
-      throw new ShapeMismatchException($path, 'map', get_debug_type($input));
+      throw new TypeMismatchException($path, 'map', get_debug_type($input));
     }
     $unknown = array_keys(array_diff_key($input, $properties));
     if ($unknown !== []) {
@@ -1461,7 +1461,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *
    * @throws \Drupal\data_surface\Pipeline\UnknownKeysException
    *   When an item's nested input key is not a property definition.
-   * @throws \Drupal\data_surface\Pipeline\ShapeMismatchException
+   * @throws \Drupal\data_surface\Pipeline\TypeMismatchException
    *   When an item cannot be held by the item definition.
    */
   protected function acceptList(ListDataDefinitionInterface $definition, mixed $input, mixed $fallback, string $path): mixed {
@@ -1508,14 +1508,14 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *   The value in the definition's type, or untouched when the table has
    *   no unambiguous reading of it.
    *
-   * @throws \Drupal\data_surface\Pipeline\ShapeMismatchException
+   * @throws \Drupal\data_surface\Pipeline\TypeMismatchException
    *   When an array arrives for a type that holds a single value.
    */
   protected function coerce(DataDefinitionInterface $definition, mixed $value, string $path): mixed {
     $type = $definition->getDataType();
     if (is_array($value)) {
       if (in_array($type, self::SCALAR_TYPES, TRUE)) {
-        throw new ShapeMismatchException($path, $type, get_debug_type($value));
+        throw new TypeMismatchException($path, $type, get_debug_type($value));
       }
       return $value;
     }
@@ -1603,16 +1603,16 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   }
 
   /**
-   * Turns a shape mismatch into a violation, the way unknown keys are.
+   * Turns a type mismatch into a violation, the way unknown keys are.
    *
-   * @param \Drupal\data_surface\Pipeline\ShapeMismatchException $exception
+   * @param \Drupal\data_surface\Pipeline\TypeMismatchException $exception
    *   The refusal from accept().
    *
    * @return \Drupal\data_surface\Pipeline\ViolationSet
    *   One violation, filed under the top level key that carries the
    *   value.
    */
-  protected function shapeMismatchViolations(ShapeMismatchException $exception): ViolationSet {
+  protected function typeMismatchViolations(TypeMismatchException $exception): ViolationSet {
     $segments = explode('.', $exception->getPath());
     $name = array_shift($segments);
     return new ViolationSet([

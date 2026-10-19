@@ -1,6 +1,7 @@
 import type { Schema } from '../contract';
-import { defName, inlineSchema, resolveSchema, resolveSlot, watchedPaths } from '../contract';
+import { defName, inlineSchema, isPart, resolveSchema, resolveSlot, watchedPaths } from '../contract';
 import example3 from './fixtures/example3.json';
+import licence from './fixtures/refine-example3-licence.json';
 
 // The resolver, over schemas shaped as the emitter writes them: each
 // child a def under `$defs`, each site a reference beside its own
@@ -170,5 +171,69 @@ describe('a collection', () => {
   it('watches what refines inside each item, under its delta', () => {
     const watched = watchedPaths(inlineSchema(root), { shelves: [{ unit: 'cm' }, { unit: 'in' }] });
     expect([...watched].sort()).toEqual(['shelves.0.unit', 'shelves.1.unit']);
+  });
+});
+
+describe('a key declared with a shape', () => {
+  // A shape is written once, as a def that allows null (whether a key may
+  // hold nothing is the key's), and each key that uses it refers to it
+  // first, then says its title, what it narrows and its whole x-surface.
+  const text = (dependsOn: string[] = []) => ({ widget: 'text' as const, locked: false, dependsOn, refined: false, stale: false });
+  const code: Schema = {
+    title: 'Stock code',
+    description: 'Letters and digits.',
+    type: ['string', 'null'],
+    maxLength: 12,
+    pattern: '^[A-Z]{2}\\d+$',
+    examples: ['AB12'],
+    'x-surface': { patternMessage: 'A stock code is two capitals and digits, such as AB12.' },
+  } as Schema;
+  const root: Schema = {
+    type: 'object',
+    properties: {
+      sku: { $ref: '#/$defs/resource_test.sku', title: 'Stock code', type: 'string', minLength: 4, 'x-surface': { ...text(), patternMessage: 'A stock code is two capitals and digits, such as AB12.' } },
+      spare: { $ref: '#/$defs/resource_test.sku', title: 'Spare code', description: 'Printed on the back.', maxLength: 6, 'x-surface': { ...text(), patternMessage: 'A stock code is two capitals and digits, such as AB12.' } },
+      tag: { title: 'Tag', $ref: '#/$defs/resource_test.shelf_tag', 'x-surface': fieldset },
+    },
+    required: ['sku'],
+    $defs: {
+      'resource_test.sku': code,
+      'resource_test.shelf_tag': { type: 'object', properties: { label: { title: 'Label', type: ['string', 'null'], 'x-surface': text(['sku']) } }, additionalProperties: false },
+    },
+  };
+
+  it('reads each key as the def with the key laid over it: its type, its bounds, its words', () => {
+    const inline = inlineSchema(root);
+    expect(inline.properties?.sku).toEqual({
+      title: 'Stock code',
+      description: 'Letters and digits.',
+      type: 'string',
+      maxLength: 12,
+      pattern: '^[A-Z]{2}\\d+$',
+      examples: ['AB12'],
+      'x-surface': { ...text(), patternMessage: 'A stock code is two capitals and digits, such as AB12.' },
+      minLength: 4,
+    });
+    expect(inline.properties?.spare).toMatchObject({ title: 'Spare code', description: 'Printed on the back.', type: ['string', 'null'], maxLength: 6, pattern: '^[A-Z]{2}\\d+$' });
+    expect(inline.properties?.spare).not.toHaveProperty('$ref');
+  });
+
+  it('is a value, never a frame: only an attached child is a part', () => {
+    const inline = inlineSchema(root);
+    expect(isPart(inline.properties!.sku)).toBe(false);
+    expect(isPart(inline.properties!.spare)).toBe(false);
+    expect(isPart(inline.properties!.tag)).toBe(true);
+  });
+
+  it('reads the compliance licence the server refers to its def, in both documents', () => {
+    const recorded = licence as unknown as { schema: { schema: Schema }; contract: { schema: Schema } };
+    for (const document of [recorded.schema.schema, recorded.contract.schema]) {
+      expect(document.$defs?.['event.licence']).toMatchObject({ type: ['string', 'null'], pattern: '^\\d{4}$', examples: ['2048'] });
+      const mount = inlineSchema(document).properties?.third_party_settings.properties?.data_surface_examples_compliance as Schema;
+      expect(isPart(mount)).toBe(true);
+      expect(isPart(mount.properties!.licence)).toBe(false);
+      expect(mount.properties?.licence).toMatchObject({ title: 'Event licence', type: ['string', 'null'], pattern: '^\\d{4}$' });
+      expect(mount.properties?.licence['x-surface']).toMatchObject({ widget: 'text', patternMessage: 'A licence number is four digits, such as 2048.' });
+    }
   });
 });

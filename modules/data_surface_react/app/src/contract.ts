@@ -103,7 +103,7 @@ export interface Schema {
   $schema?: string;
   /** A reference to a def, `#/$defs/<id>`; resolved by inlineSchema(). */
   $ref?: string;
-  /** The root's subschemas, one per child, by id. */
+  /** The root's subschemas, one per child and one per shape, by id. */
   $defs?: Record<string, Schema>;
   title?: string;
   description?: string;
@@ -391,7 +391,9 @@ export function resolveSchema(schema: Schema, root: Schema): Schema {
 
 /**
  * The schemas inlineSchema() resolved from a def: each a child's frame,
- * where the parent's `allOf` ends and the child's own begins.
+ * where the parent's `allOf` ends and the child's own begins. A key
+ * declared with a shape refers to a def too, and is no frame: its def is
+ * laid under it, `$ref` first, and the key's own keywords over that.
  */
 const parts = new WeakSet<object>();
 
@@ -414,8 +416,9 @@ export function inlineSchema(schema: Schema, root?: Schema, ancestors: string[] 
   if (root === undefined) {
     delete resolved.$defs;
   }
-  if (followed.length > ancestors.length) {
-    // A child's frame: an attached part, a slot's variant, a collection's item.
+  if (followed.length > ancestors.length && isObject(resolved.properties)) {
+    // A child's frame: an attached part, a slot's variant, a collection's
+    // item. A key that refers to a shape's def is a value, never a frame.
     parts.add(resolved);
   }
   const inline = (inner: unknown): unknown => (isObject(inner) ? inlineSchema(inner as Schema, base as Schema, followed) : inner);

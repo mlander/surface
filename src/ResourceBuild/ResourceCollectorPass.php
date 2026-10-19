@@ -8,32 +8,34 @@ use Drupal\data_surface\Resource\Attribute\Alters;
 use Drupal\data_surface\Resource\Attribute\DerivesResources;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
+use Drupal\data_surface\Resource\Attribute\Shape;
 use Drupal\data_surface\Resource\Attribute\Structure;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 /**
- * Finds resources, structures, alters and operations in every module.
+ * Finds resources, structures, shapes, alters and operations.
  *
  * The precedent is core's HookCollectorPass, which scans src/Hook: this
- * scans src/Resource, src/Structure and src/Alter, recursively, in every
- * module the container is being built for, so nothing is registered by
- * hand and a module that is switched off stops contributing the moment
- * the container is rebuilt without it. The attribute decides the kind,
- * not the directory: a class carrying #[Resource] or #[Structure] is
- * found in either of the first two, which are read as one list, sorted
- * by the class's name below its directory.
+ * scans src/Resource, src/Structure, src/Shape and src/Alter,
+ * recursively, in every module the container is being built for, so
+ * nothing is registered by hand and a module that is switched off stops
+ * contributing the moment the container is rebuilt without it. The
+ * attribute decides the kind, not the directory: a class carrying
+ * #[Resource] or #[Structure] is found in either of the first two, which
+ * are read as one list, sorted by the class's name below its directory,
+ * and one carrying #[Shape] wherever it is scanned.
  *
  * What it keeps is deliberately small: which classes carry #[Resource]
- * or #[Structure], which carry #[Alters], which carry #[DerivesResources],
- * and which have an #[Operation] method, each with the module it came
- * from; and, for each deriver whose attribute names an override
- * attribute, the classes in any src/Resource or src/Structure carrying
- * that attribute. The reading of every attribute on those classes
- * (labels, kind, identity, refiners, watched keys) is the registry's, at
- * run time, and cached the way plugin definitions are, because an
- * operation's label is translatable markup and a container parameter
- * holds scalars only.
+ * or #[Structure], which carry #[Shape], which carry #[Alters], which
+ * carry #[DerivesResources], and which have an #[Operation] method, each
+ * with the module it came from; and, for each deriver whose attribute
+ * names an override attribute, the classes in any src/Resource or
+ * src/Structure carrying that attribute. The reading of every attribute
+ * on those classes (labels, kind, identity, refiners, watched keys) is
+ * the registry's, at run time, and cached the way plugin definitions
+ * are, because an operation's label is translatable markup and a
+ * container parameter holds scalars only.
  *
  * Classes that must be built with services are registered as autowired
  * services here, keyed by class name, the way a hook class is: every
@@ -67,9 +69,9 @@ final class ResourceCollectorPass implements CompilerPassInterface {
    * The directories scanned in each module, relative to its src/.
    *
    * The first two hold resources, structures and derivers alike, and are
-   * read as one list; the last holds alters.
+   * read as one list; the third holds shapes, the last alters.
    */
-  public const DIRECTORIES = ['Resource', 'Structure', 'Alter'];
+  public const DIRECTORIES = ['Resource', 'Structure', 'Shape', 'Alter'];
 
   /**
    * The directories of resources and structures, read as one list.
@@ -81,7 +83,7 @@ final class ResourceCollectorPass implements CompilerPassInterface {
    */
   public function process(ContainerBuilder $container): void {
     $root = $container->hasParameter('app.root') ? $container->getParameter('app.root') . '/' : '';
-    $found = ['resources' => [], 'alters' => [], 'operations' => [], 'derivers' => [], 'overrides' => []];
+    $found = array_fill_keys(['resources', 'shapes', 'alters', 'operations', 'derivers', 'overrides'], []);
     $scanned = [];
     foreach ($container->getParameter('container.modules') as $module => $info) {
       $module_dir = $root . dirname($info['pathname']);
@@ -145,6 +147,9 @@ final class ResourceCollectorPass implements CompilerPassInterface {
           self::registerAutowired($container, $named);
         }
       }
+    }
+    if ($class->getAttributes(Shape::class) !== []) {
+      $found['shapes'][$name] = $module;
     }
     if ($class->getAttributes(Alters::class) !== []) {
       $found['alters'][$name] = $module;

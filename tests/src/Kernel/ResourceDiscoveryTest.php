@@ -13,6 +13,7 @@ use Drupal\data_surface_demo\Structure\DemoBlockStructure;
 use Drupal\data_surface_demo_extras\Alter\DemoBlockAlter;
 use Drupal\data_surface_resource_test\Access\RecipeAccess;
 use Drupal\data_surface_resource_test\OutsideDiscovery\BothKindsClass;
+use Drupal\data_surface_resource_test\Shape\Sku;
 use Drupal\data_surface_resource_test\OutsideDiscovery\HomelessResource;
 use Drupal\data_surface_resource_test\OutsideDiscovery\InstanceDefineInputsStructure;
 use Drupal\data_surface_resource_test\OutsideDiscovery\WrongKindStructure;
@@ -139,8 +140,10 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
     $cid = 'data_surface:resources:' . hash('xxh3', serialize([$classes, $plugins->ownStructures()]));
     $cached = $this->container->get('cache.discovery')->get($cid);
     $this->assertNotFalse($cached);
-    $this->assertArrayHasKey(DemoBlockStructure::class, $cached->data);
-    $this->assertArrayHasKey(StickyNoteBlock::class, $cached->data);
+    // Resources and structures by name, shapes by class, in one entry.
+    $this->assertArrayHasKey(DemoBlockStructure::class, $cached->data['resources']);
+    $this->assertArrayHasKey(StickyNoteBlock::class, $cached->data['resources']);
+    $this->assertSame('resource_test.sku', $cached->data['shapes'][Sku::class]->id);
 
     // A second registry reads the cache rather than the classes.
     $fresh = new ResourceRegistry($classes, $this->container->get('cache.discovery'), $plugins);

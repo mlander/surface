@@ -17,6 +17,7 @@ use Drupal\data_surface\DataSurface;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DataSurfaceInterface;
+use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
 use Drupal\data_surface\Refinement\ChoiceSet;
 use Drupal\data_surface\Refinement\Condition;
@@ -39,6 +40,7 @@ use Drupal\data_surface\Attachment;
 use Drupal\data_surface\Entry;
 use Drupal\data_surface\Collection;
 use Drupal\data_surface\Mixin;
+use Drupal\data_surface\Port;
 
 /**
  * The build step, over the engine's builder and factory.
@@ -127,6 +129,11 @@ final class Resources implements ResourcesInterface {
    *   What a watched value passes before a refiner is handed it, sealed
    *   into every data surface and every child this step builds.
    */
+  /**
+   * What resolves a shape, with its alters, once asked for.
+   */
+  protected ?Shapes $shapes = NULL;
+
   public function __construct(
     protected readonly ResourceRegistry $registry,
     protected readonly TypedDataManagerInterface $typedDataManager,
@@ -185,16 +192,23 @@ final class Resources implements ResourcesInterface {
       }
       $instance = $this->classResolver->getInstanceFromDefinition($alter->class);
       if ($instance instanceof AltersInputsInterface) {
-        $instance->alterInputs($additions[$alter->module][0] ??= new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module));
+        $instance->alterInputs($additions[$alter->module][0] ??= (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module))->useShapes($this->shapes()));
       }
       if ($instance instanceof AltersOutputsInterface) {
-        $instance->alterOutputs($additions[$alter->module][1] ??= new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, TRUE));
+        $instance->alterOutputs($additions[$alter->module][1] ??= (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, TRUE))->useShapes($this->shapes()));
       }
       if ($instance instanceof HasStorageLayoutInterface) {
         $builder->setThirdPartyLayout($alter->module, $instance->storageLayout());
       }
       $links[] = [$instance, $alter->refiners, $alter->module];
     }
+    $declaring = ['' => $inputs, 'output ' => $outputs];
+    foreach ($additions as $module => $blueprints) {
+      foreach ($blueprints as $output => $blueprint) {
+        $declaring[sprintf('%s.%s.', $output === 1 ? DataSurfaceBuilderInterface::THIRD_PARTY_OUTPUTS : 'third_party_settings', $module)] = $blueprint;
+      }
+    }
+    static::assertShapesNarrowed($definition, $declaring);
 
     $input_keys = $inputs->keys();
     $attached = array_merge(array_keys($inputs->attachments()), array_keys($inputs->slots()));
@@ -620,6 +634,10 @@ final class Resources implements ResourcesInterface {
       if ($ports[$port]->type !== 'any' && $type !== $ports[$port]->type) {
         throw new \LogicException(sprintf('%s wires the "%s" port of %s, mixed in, which reads %s %s, to "%s", which holds %s %s.', $definition->id, $port, $structure->id, static::article((string) $ports[$port]->type), $ports[$port]->type, $wired, static::article((string) $type), $type));
       }
+      $unshaped = static::unshaped($ports[$port], $builder->getDefinition($wired));
+      if ($unshaped !== NULL) {
+        throw new \LogicException(sprintf('%s wires the "%s" port of %s, mixed in, to "%s", %s.', $definition->id, $port, $structure->id, $wired, $unshaped));
+      }
     }
     foreach ($ports as $port) {
       if (!isset($reads[$port->name])) {
@@ -751,12 +769,12 @@ final class Resources implements ResourcesInterface {
       }
       $instance = $this->classResolver->getInstanceFromDefinition($alter->class);
       $within = [$structure->id, $definition->id, $keys];
-      $additions = new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, FALSE, $within);
+      $additions = (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, FALSE, $within))->useShapes($this->shapes());
       if ($instance instanceof AltersInputsInterface) {
         $instance->alterInputs($additions);
       }
       if ($instance instanceof AltersOutputsInterface) {
-        $instance->alterOutputs(new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, TRUE, $within));
+        $instance->alterOutputs((new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, TRUE, $within))->useShapes($this->shapes()));
       }
       $this->bindRefiners($builder, $structure, $instance, $alter->refiners, $keys, [], [], NULL, $alter->module, $additions->extended(), ports: $ports, translated: $reads);
       $this->bindRules($builder, $structure, $additions->rules(), $alter->module, $keys, [], [], $additions->extended(), [], [], $ruling, $ports, translated: $reads);
@@ -914,6 +932,10 @@ final class Resources implements ResourcesInterface {
       if ($ports[$port]->type !== 'any' && $type !== $ports[$port]->type) {
         throw new \LogicException(sprintf('%s wires the "%s" port of %s at "%s", which reads %s %s, to "%s", which holds %s %s.', $who, $port, $id, $key, static::article((string) $ports[$port]->type), $ports[$port]->type, $wired, static::article((string) $type), $type));
       }
+      $unshaped = static::unshaped($ports[$port], $builder->getDefinition($wired));
+      if ($unshaped !== NULL) {
+        throw new \LogicException(sprintf('%s wires the "%s" port of %s at "%s" to "%s", %s.', $who, $port, $id, $key, $wired, $unshaped));
+      }
     }
     foreach ($ports as $port) {
       if (!$port->required || isset($reads[$port->name])) {
@@ -923,6 +945,40 @@ final class Resources implements ResourcesInterface {
         ? sprintf('%s attaches %s at "%s" without wiring the "%s" port it requires: attach(\'%s\', ..., reads: [\'%s\' => \'<key>\']) names the key of %s it reads.', $who, $id, $key, $port->name, $key, $port->name, $definition->id)
         : sprintf('%s fills the "%s" %s of %s and requires the "%s" port, which nothing wires: a port is wired by attach(), and a %s is wired by nothing yet.', $id, $key, $as === 'variant' ? 'slot' : 'collection', $who, $port->name, $as === 'variant' ? 'slot\'s variant' : 'collection\'s item'));
     }
+  }
+
+  /**
+   * Says why a key cannot be wired to a port that reads a shape.
+   *
+   * A port that reads a shape is handed a value its readers may trust to
+   * be of that shape, so the key wired to it is declared with the shape:
+   * narrowed or not, it allows nothing the shape refuses. A key of the
+   * shape's type alone could hold anything of that type. A port that reads
+   * a type takes a key of that type, a shape's among them.
+   *
+   * Decision: see docs/decisions.md#a-shape-is-a-named-definition.
+   *
+   * @param \Drupal\data_surface\Port $port
+   *   The port.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $wired
+   *   The key wired to it.
+   *
+   * @return string|null
+   *   Why not, or NULL when it may be.
+   */
+  protected static function unshaped(Port $port, ?DataDefinitionInterface $wired): ?string {
+    if ($port->shape === NULL || $wired === NULL) {
+      return NULL;
+    }
+    $shape = DefinitionMetadata::shapeOf($wired);
+    if ($shape === $port->shape) {
+      return NULL;
+    }
+    return sprintf(
+      'which is declared with %s, and the port reads the shape %s: a port that reads a shape reads a key declared with it, add(\'<key>\', <shape>::class, ...)',
+      $shape === NULL ? 'a type alone' : 'the shape ' . $shape,
+      $port->shape,
+    );
   }
 
   /**
@@ -2379,7 +2435,54 @@ final class Resources implements ResourcesInterface {
    *   The blueprint, which names a structure mixed in by discovery's id.
    */
   protected function blueprint(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, bool $outputs = FALSE): ResourceBlueprint {
-    return new ResourceBlueprint($builder, $this->typedDataManager, $outputs, $this->registry, $definition->name());
+    return (new ResourceBlueprint($builder, $this->typedDataManager, $outputs, $this->registry, $definition->name()))->useShapes($this->shapes());
+  }
+
+  /**
+   * Gets what resolves a shape, with its alters, for a blueprint.
+   *
+   * @return \Drupal\data_surface\ResourceBuild\Shapes
+   *   The resolver.
+   */
+  protected function shapes(): Shapes {
+    return $this->shapes ??= new Shapes($this->registry, $this->classResolver);
+  }
+
+  /**
+   * Refuses a key that widens the shape it was declared with.
+   *
+   * What a key adds to a shape (required, a default, a constraint, a
+   * description) is checked once its owner and every alter have declared,
+   * by the narrowing check a refiner's answer is held to, against the
+   * shape as its alters left it.
+   *
+   * Decision: see docs/decisions.md#a-shape-is-a-named-definition.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource or structure being built.
+   * @param array<string, \Drupal\data_surface\ResourceBuild\BlueprintAdapterBase> $blueprints
+   *   Its blueprints, each keyed by the prefix its keys are named with.
+   *
+   * @throws \LogicException
+   *   Naming the key, the shape and what widened.
+   */
+  protected static function assertShapesNarrowed(ResourceDefinition $definition, array $blueprints): void {
+    foreach ($blueprints as $prefix => $blueprint) {
+      foreach ($blueprint->shapedKeys() as $key => $declared) {
+        $shape = DefinitionMetadata::shapeDefinition($declared);
+        assert($shape !== NULL);
+        $widened = Narrowing::narrowed($declared, $shape);
+        if ($widened !== NULL) {
+          throw new \LogicException(sprintf(
+            '%s declares "%s" with the shape %s and widens it: %s. A key narrows the shape it uses, as a refiner narrows a key: declare a shape of its own, or narrow less.',
+            $definition->id,
+            $prefix . $key,
+            DefinitionMetadata::shapeOf($declared),
+            $widened,
+          ));
+        }
+      }
+    }
   }
 
   /**

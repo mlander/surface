@@ -12,7 +12,7 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Contract\SchemaResolver;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface\Pipeline\ShapeMismatchException;
+use Drupal\data_surface\Pipeline\TypeMismatchException;
 use Drupal\data_surface\Pipeline\UnknownKeysException;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
@@ -328,14 +328,14 @@ class CollectionTest extends DataSurfaceKernelTestBase {
       $pipeline->accept($edit, ['racks' => [['spices' => 1], 'red']], self::STORED);
       $this->fail('An item that is not a map was accepted.');
     }
-    catch (ShapeMismatchException $e) {
+    catch (TypeMismatchException $e) {
       $this->assertSame('racks.1', $e->getPath());
     }
     try {
       $pipeline->accept($edit, ['racks' => 'red'], self::STORED);
       $this->fail('A collection that is not a list was accepted.');
     }
-    catch (ShapeMismatchException $e) {
+    catch (TypeMismatchException $e) {
       $this->assertSame('racks', $e->getPath());
     }
     // Through submit, the same refusals are violations by path.

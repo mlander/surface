@@ -73,7 +73,10 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *   The name the structure reads it by: no key it declares.
    * @param string $type
    *   The typed data type of the value: a key wired to it must have this
-   *   type, or the build refuses the wiring; `any` reads any key.
+   *   type, or the build refuses the wiring; `any` reads any key. Or a
+   *   shape's class: a key wired to it must then be declared with that
+   *   shape, which it may have narrowed.
+   *   See docs/decisions.md#a-shape-is-a-named-definition.
    * @param bool $required
    *   Whether every container attaching the structure must wire it. An
    *   optional port left unwired holds nothing: a refiner watching it
@@ -85,7 +88,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *   For outputs, which read nothing; when the name is a key, or a port,
    *   already declared.
    * @throws \InvalidArgumentException
-   *   When the type is no typed data type.
+   *   When the type is no typed data type and no shape.
    *
    * @see docs/resources.md#ports
    */

@@ -257,3 +257,25 @@ data_surface_resource_test.ledger:
     stamps:
       type: data_surface_resource_test.timestamps
       label: 'Stamps'
+
+# The depot fixture: the stock code shape at two keys, and a shelf tag
+# reading it through a port.
+data_surface_resource_test.depot:
+  type: config_object
+  label: 'Depot'
+  mapping:
+    sku:
+      type: string
+      label: 'Stock code'
+    spare:
+      type: string
+      label: 'Spare code'
+      nullable: true
+    tag:
+      type: mapping
+      label: 'Shelf tag'
+      mapping:
+        label:
+          type: string
+          label: 'Label'
+          nullable: true

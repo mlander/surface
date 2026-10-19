@@ -584,16 +584,8 @@
           "type": "object",
           "properties": {
             "licence": {
+              "$ref": "#/$defs/event.licence",
               "title": "Event licence",
-              "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
-              "type": [
-                "string",
-                "null"
-              ],
-              "pattern": "^\\d{4}$",
-              "examples": [
-                "2048"
-              ],
               "x-surface": {
                 "widget": "text",
                 "locked": false,
@@ -625,6 +617,21 @@
                 "required": true
               }
             }
+          }
+        },
+        "event.licence": {
+          "title": "Event licence",
+          "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}$",
+          "examples": [
+            "2048"
+          ],
+          "x-surface": {
+            "patternMessage": "A licence number is four digits, such as 2048."
           }
         }
       }
@@ -1036,16 +1043,8 @@
           "type": "object",
           "properties": {
             "licence": {
+              "$ref": "#/$defs/event.licence",
               "title": "Event licence",
-              "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
-              "type": [
-                "string",
-                "null"
-              ],
-              "pattern": "^\\d{4}$",
-              "examples": [
-                "2048"
-              ],
               "x-surface": {
                 "widget": "text",
                 "locked": false,
@@ -1081,6 +1080,21 @@
                 "required": true
               }
             }
+          }
+        },
+        "event.licence": {
+          "title": "Event licence",
+          "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}$",
+          "examples": [
+            "2048"
+          ],
+          "x-surface": {
+            "patternMessage": "A licence number is four digits, such as 2048."
           }
         }
       }
@@ -1525,16 +1539,8 @@
               "type": "object",
               "properties": {
                 "licence": {
+                  "$ref": "#/$defs/event.licence",
                   "title": "Event licence",
-                  "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
-                  "type": [
-                    "string",
-                    "null"
-                  ],
-                  "pattern": "^\\d{4}$",
-                  "examples": [
-                    "2048"
-                  ],
                   "x-surface": {
                     "widget": "text",
                     "locked": false,
@@ -1570,6 +1576,21 @@
                     "required": true
                   }
                 }
+              }
+            },
+            "event.licence": {
+              "title": "Event licence",
+              "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^\\d{4}$",
+              "examples": [
+                "2048"
+              ],
+              "x-surface": {
+                "patternMessage": "A licence number is four digits, such as 2048."
               }
             }
           }
@@ -2015,16 +2036,8 @@
               "type": "object",
               "properties": {
                 "licence": {
+                  "$ref": "#/$defs/event.licence",
                   "title": "Event licence",
-                  "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
-                  "type": [
-                    "string",
-                    "null"
-                  ],
-                  "pattern": "^\\d{4}$",
-                  "examples": [
-                    "2048"
-                  ],
                   "x-surface": {
                     "widget": "text",
                     "locked": false,
@@ -2060,6 +2073,21 @@
                     "required": true
                   }
                 }
+              }
+            },
+            "event.licence": {
+              "title": "Event licence",
+              "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^\\d{4}$",
+              "examples": [
+                "2048"
+              ],
+              "x-surface": {
+                "patternMessage": "A licence number is four digits, such as 2048."
               }
             }
           }
@@ -2505,16 +2533,8 @@
               "type": "object",
               "properties": {
                 "licence": {
+                  "$ref": "#/$defs/event.licence",
                   "title": "Event licence",
-                  "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
-                  "type": [
-                    "string",
-                    "null"
-                  ],
-                  "pattern": "^\\d{4}$",
-                  "examples": [
-                    "2048"
-                  ],
                   "x-surface": {
                     "widget": "text",
                     "locked": false,
@@ -2550,6 +2570,21 @@
                     "required": true
                   }
                 }
+              }
+            },
+            "event.licence": {
+              "title": "Event licence",
+              "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^\\d{4}$",
+              "examples": [
+                "2048"
+              ],
+              "x-surface": {
+                "patternMessage": "A licence number is four digits, such as 2048."
               }
             }
           }

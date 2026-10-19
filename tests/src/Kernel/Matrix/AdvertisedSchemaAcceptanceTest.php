@@ -10,7 +10,7 @@ use Drupal\data_surface\Contract\SchemaResolver;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Pipeline\ShapeMismatchException;
+use Drupal\data_surface\Pipeline\TypeMismatchException;
 use Drupal\data_surface\Pipeline\UnknownKeysException;
 use Drupal\data_surface\Pipeline\VariantMismatchException;
 use Drupal\data_surface\Storage\StateStorage;
@@ -36,7 +36,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * collections on the cellar, keys that do not apply on the bulletin and
  * the notice, every declared rule's condition and effect on the parcel,
  * a structure's ports on the venue and the hall, structures mixed in on
- * the journal and attached on the ledger),
+ * the journal and attached on the ledger, a shape at two keys on the
+ * depot),
  * a table of documents the pipeline accepts and documents it refuses.
  * Each row is asserted three times: against the pipeline (accept(), then
  * validate() over what is stored), against the full
@@ -161,7 +162,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
         $verdict = $violations->isEmpty();
         $these = $this->decoded($emitter->emit($surface, $document, $id)->document);
       }
-      catch (UnknownKeysException | ShapeMismatchException | VariantMismatchException) {
+      catch (UnknownKeysException | TypeMismatchException | VariantMismatchException) {
         $document = $input;
         $verdict = FALSE;
         $these = $this->decoded($emitter->emit($surface, $this->pipeline()->accept($surface, [], $stored), $id)->document);
@@ -580,6 +581,35 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * The depot: one shape at two keys, each narrowing it its own way.
+   *
+   * Each key refers to the stock code's def, which allows null and carries
+   * the shape's pattern and the alter's maximum, and says beside it what
+   * it narrows: the stock code is required and at least four long, the
+   * spare code at most six. Both documents are exact, both ways.
+   *
+   * @see docs/decisions.md#a-shape-is-a-named-definition
+   */
+  public function testShapes(): void {
+    $this->installConfig(['data_surface_resource_test']);
+    $this->setUpCurrentUser([], ['administer site configuration']);
+    $this->assertTable('resource_test.depot', $this->build('resource_test.depot'), $this->stored('resource_test.depot'), [
+      'as stored' => [[], TRUE],
+      'another stock code' => [['sku' => 'XY99'], TRUE],
+      'a stock code in lowercase' => [['sku' => 'xy99'], FALSE],
+      'a stock code with a trailing newline' => [['sku' => "XY99\n"], FALSE],
+      'a stock code shorter than its key allows' => [['sku' => 'XY9'], FALSE],
+      'a stock code longer than the shape allows' => [['sku' => 'XY' . str_repeat('9', 11)], FALSE],
+      'the stock code cleared' => [['sku' => NULL], FALSE],
+      'a spare code of three' => [['spare' => 'XY9'], TRUE],
+      'a spare code longer than its key allows' => [['spare' => 'XY99999'], FALSE],
+      'a spare code in lowercase' => [['spare' => 'xy9'], FALSE],
+      'the spare code cleared' => [['spare' => NULL], TRUE],
+      'a label too long for the tag' => [['tag' => ['label' => str_repeat('a', 21)]], FALSE],
+    ]);
+  }
+
+  /**
    * The notice: an attached child, a slot and a mounted key, ruled out.
    */
   public function testNotice(): void {
@@ -748,8 +778,10 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $accepted = $this->pipeline()->accept($step3, $licensed, $this->stored('registration.step3'));
     $this->assertTrue($this->pipeline()->validate($step3, $accepted)->has('third_party_settings'));
     $full = $this->decoded($this->container->get('data_surface.contract_emitter')->emitFull($step3, 'registration.step3')->document['schema']);
-    // The licence is the compliance structure's, defined once.
-    $this->assertSame('^\d{4}$', $full['$defs']['registration.compliance']['properties']['licence']['pattern']);
+    // The licence is a shape, defined once, which the compliance
+    // structure's key refers to.
+    $this->assertSame('#/$defs/event.licence', $full['$defs']['registration.compliance']['properties']['licence']['$ref']);
+    $this->assertSame('^\d{4}$', $full['$defs']['event.licence']['pattern']);
     $this->assertFalse($this->validates($full, $accepted));
   }
 

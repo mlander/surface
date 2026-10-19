@@ -18,7 +18,7 @@ use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Pipeline\DataSurfacePipeline;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
-use Drupal\data_surface\Pipeline\ShapeMismatchException;
+use Drupal\data_surface\Pipeline\TypeMismatchException;
 use Drupal\data_surface\Pipeline\UnknownKeysException;
 use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\Tests\UnitTestCase;
@@ -290,13 +290,13 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
   /**
    * Tests the shapes a definition cannot hold at all.
    */
-  #[DataProvider('shapeMismatches')]
-  public function testShapeMismatchIsRefused(DataDefinitionInterface $definition, mixed $input, string $expected, string $actual): void {
+  #[DataProvider('typeMismatches')]
+  public function testTypeMismatchIsRefused(DataDefinitionInterface $definition, mixed $input, string $expected, string $actual): void {
     try {
       $this->accept($definition, $input);
-      $this->fail('Expected a ShapeMismatchException.');
+      $this->fail('Expected a TypeMismatchException.');
     }
-    catch (ShapeMismatchException $e) {
+    catch (TypeMismatchException $e) {
       $this->assertSame('value', $e->getPath());
       $this->assertSame($expected, $e->getExpected());
       $this->assertSame($actual, $e->getActual());
@@ -310,7 +310,7 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
    *   Rows of definition, raw input, expected type name, actual type
    *   name.
    */
-  public static function shapeMismatches(): \Generator {
+  public static function typeMismatches(): \Generator {
     yield 'an array where a string was advertised' => [
       DataDefinition::create('string'),
       ['a', 'b'],

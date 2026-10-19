@@ -381,7 +381,7 @@ are in [Value semantics](semantics.md#violation-messages-are-objects).
 | Exception | Thrown by | When |
 | --- | --- | --- |
 | `UnknownKeysException` | `accept()` | The input carries a key no definition declares, at any depth. |
-| `ShapeMismatchException` | `accept()` | The input carries a value in a shape its definition cannot hold, such as a string where a map was advertised. Names the dotted path and what was expected. |
+| `TypeMismatchException` | `accept()` | The input carries a value of a type its definition cannot hold, such as a string where a map was advertised. Names the dotted path and what was expected. |
 | `VariantMismatchException` | `accept()` | A slot's value carries keys the chosen variant does not declare and another variant does. Names the slot, the deciding key and the misplaced keys. |
 | `StorageViolationsException` | `prepare()` | What the storage writes to refuses the values; a config schema, usually. |
 

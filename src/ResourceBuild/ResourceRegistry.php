@@ -14,26 +14,29 @@ use Drupal\data_surface\Refinement\DoesNotApply;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
+use Drupal\data_surface\Resource\Attribute\Shape;
 use Drupal\data_surface\Resource\Attribute\Structure;
 use Drupal\data_surface\Resource\Attribute\Variant;
 use Drupal\data_surface\Resource\DerivedOperation;
 use Drupal\data_surface\Resource\HasOutputsInterface;
+use Drupal\data_surface\Resource\AltersInputsInterface;
 use Drupal\data_surface\Resource\ResourceInterface;
+use Drupal\data_surface\Resource\ShapeInterface;
 use Drupal\data_surface\Resource\StructureInterface;
 use Drupal\data_surface\Resource\ResourceDeriverInterface;
 
 /**
- * Every resource and structure, with operations, alters and variants.
+ * Every resource, structure and shape, with operations, alters, variants.
  *
- * The compiler pass lists the classes in src/Resource, src/Structure and
- * src/Alter; the plugin definitions list the plugins that are their own
- * structure (#[UsesStructure] with no argument). This reads their
- * attributes, once, and caches what it read in the discovery bin the way
- * a plugin manager caches its definitions. The cache id carries a hash
- * of both lists, so a container rebuilt with a module more or less, or a
- * plugin more or less, is a different entry and needs no clearing; an
- * attribute edited in place needs a cache rebuild, exactly as a plugin
- * attribute does.
+ * The compiler pass lists the classes in src/Resource, src/Structure,
+ * src/Shape and src/Alter; the plugin definitions list the plugins that
+ * are their own structure (#[UsesStructure] with no argument). This
+ * reads their attributes, once, and caches what it read in the discovery
+ * bin the way a plugin manager caches its definitions. The cache id
+ * carries a hash of both lists, so a container rebuilt with a module
+ * more or less, or a plugin more or less, is a different entry and needs
+ * no clearing; an attribute edited in place needs a cache rebuild,
+ * exactly as a plugin attribute does.
  *
  * A deriver (#[DerivesResources]) is asked for its resources here too,
  * and each is read into a definition with no class, under the id
@@ -68,6 +71,13 @@ final class ResourceRegistry {
    * @var array<class-string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>|null
    */
   protected ?array $definitions = NULL;
+
+  /**
+   * The shapes, keyed by class, once read.
+   *
+   * @var array<class-string, \Drupal\data_surface\ResourceBuild\ShapeDefinition>|null
+   */
+  protected ?array $shapes = NULL;
 
   /**
    * The cache tags what is read depends on, once read.
@@ -119,13 +129,14 @@ final class ResourceRegistry {
     $own = $this->plugins?->ownStructures() ?? [];
     $cid = self::CACHE_PREFIX . hash('xxh3', serialize($own === [] ? $this->classes : [$this->classes, $own]));
     $cached = $this->cache->get($cid);
-    $this->definitions = $cached !== FALSE && is_array($cached->data) ? $cached->data : $this->discover($own);
+    $hit = $cached !== FALSE && is_array($cached->data) && isset($cached->data['resources'], $cached->data['shapes']);
+    ['resources' => $this->definitions, 'shapes' => $this->shapes] = $hit ? $cached->data : $this->discover($own);
     $this->cacheTags = [];
     foreach ($this->definitions as $definition) {
       $this->cacheTags = Cache::mergeTags($this->cacheTags, $definition->cacheTags);
     }
-    if ($cached === FALSE || !is_array($cached->data)) {
-      $this->cache->set($cid, $this->definitions, Cache::PERMANENT, $this->cacheTags);
+    if (!$hit) {
+      $this->cache->set($cid, ['resources' => $this->definitions, 'shapes' => $this->shapes], Cache::PERMANENT, $this->cacheTags);
     }
     return $this->definitions;
   }
@@ -143,6 +154,7 @@ final class ResourceRegistry {
   public function invalidateTags(array $tags): void {
     if ($this->definitions !== NULL && array_intersect($tags, $this->cacheTags) !== []) {
       $this->definitions = NULL;
+      $this->shapes = NULL;
       $this->cacheTags = [];
     }
   }
@@ -181,6 +193,74 @@ final class ResourceRegistry {
    */
   public function hasDefinition(string $resource): bool {
     return $this->find($resource) !== NULL;
+  }
+
+  /**
+   * Gets every discovered shape.
+   *
+   * @return array<class-string, \Drupal\data_surface\ResourceBuild\ShapeDefinition>
+   *   The shapes, keyed by class.
+   */
+  public function getShapes(): array {
+    if ($this->shapes === NULL) {
+      $this->getDefinitions();
+    }
+    return $this->shapes ?? [];
+  }
+
+  /**
+   * Answers whether a shape is discovered, by class or id.
+   *
+   * @param string $shape
+   *   The class, or its #[Shape] id.
+   *
+   * @return bool
+   *   TRUE when discovery found it.
+   */
+  public function hasShape(string $shape): bool {
+    return $this->findShape($shape) !== NULL;
+  }
+
+  /**
+   * Gets one shape, by class or by id.
+   *
+   * @param string $shape
+   *   The class, or its #[Shape] id.
+   *
+   * @return \Drupal\data_surface\ResourceBuild\ShapeDefinition
+   *   The shape.
+   *
+   * @throws \InvalidArgumentException
+   *   When nothing discovered has that class or id.
+   */
+  public function getShape(string $shape): ShapeDefinition {
+    return $this->findShape($shape) ?? throw new \InvalidArgumentException(sprintf(
+      'No shape "%s" was discovered: one is a class carrying #[Shape] and implementing %s in an enabled module\'s src/Shape directory.',
+      $shape,
+      ShapeInterface::class,
+    ));
+  }
+
+  /**
+   * Finds a shape by class, then by id.
+   *
+   * @param string $shape
+   *   The class or id.
+   *
+   * @return \Drupal\data_surface\ResourceBuild\ShapeDefinition|null
+   *   The shape, or NULL.
+   */
+  protected function findShape(string $shape): ?ShapeDefinition {
+    $shapes = $this->getShapes();
+    if (isset($shapes[$shape])) {
+      return $shapes[$shape];
+    }
+    foreach ($shapes as $definition) {
+      if ($definition->id === $shape) {
+        return $definition;
+      }
+    }
+    return NULL;
   }
 
   /**
@@ -331,8 +411,9 @@ final class ResourceRegistry {
    *   The plugins that are their own structure, with the module and the id
    *   their plugin definitions give them.
    *
-   * @return array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>
-   *   The definitions, keyed by name.
+   * @return array{resources: array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>, shapes: array<class-string, \Drupal\data_surface\ResourceBuild\ShapeDefinition>}
+   *   The resources and structures, keyed by name, and the shapes, keyed
+   *   by class.
    */
   protected function discover(array $own = []): array {
     $resources = [];
@@ -377,6 +458,23 @@ final class ResourceRegistry {
           StructureInterface::class,
         ));
       }
+    }
+    // Decision: see docs/decisions.md#a-shape-is-a-named-definition.
+    $shapes = [];
+    foreach ($this->classes['shapes'] ?? [] as $class => $module) {
+      $reflection = new \ReflectionClass($class);
+      self::assertShapeClass($reflection);
+      $id = $reflection->getAttributes(Shape::class)[0]->newInstance()->id;
+      if (isset($ids[$id])) {
+        throw new \LogicException(sprintf(
+          'Two classes claim the id "%s": %s and %s. A shape\'s id names its def in the served contract, beside every resource\'s and structure\'s, so it names one class.',
+          $id,
+          $ids[$id],
+          $class,
+        ));
+      }
+      $ids[$id] = $class;
+      $shapes[$class] = new ShapeDefinition($class, $id, (string) $module);
     }
     $operations = [];
     $bases = [];
@@ -428,9 +526,15 @@ final class ResourceRegistry {
     }
 
     $alters = [];
+    $shape_alters = [];
     foreach ($this->classes['alters'] ?? [] as $class => $module) {
       $reflection = new \ReflectionClass($class);
       $attribute = $reflection->getAttributes(Alters::class)[0]->newInstance();
+      if (isset($shapes[$attribute->resource])) {
+        self::assertShapeAlter($reflection, $attribute, $shapes[$attribute->resource]);
+        $shape_alters[$attribute->resource][] = new AlterDefinition(class: $class, module: $module, operations: [], refiners: []);
+        continue;
+      }
       // A deriver's base names everything it derived.
       $named = $bases[$attribute->resource] ?? [$attribute->resource];
       $alter = new AlterDefinition(
@@ -463,7 +567,94 @@ final class ResourceRegistry {
     foreach ($resources as $class => $definition) {
       $resources[$class] = $definition->with($operations[$class] ?? [], $alters[$class] ?? [], $variants[$class] ?? []);
     }
-    return $resources;
+    foreach ($shapes as $class => $shape) {
+      $shapes[$class] = $shape->withAlters($shape_alters[$class] ?? []);
+    }
+    return ['resources' => $resources, 'shapes' => $shapes];
+  }
+
+  /**
+   * Refuses a #[Shape] class that cannot be one, and says why.
+   *
+   * A shape carries #[Shape] alone, implements ShapeInterface and
+   * declares define() static. PHP refuses a class implementing the
+   * interface with an instance define(), so a class reaching here with one
+   * dropped the interface; it is named for what it is.
+   *
+   * Decision: see docs/decisions.md#a-shape-is-a-named-definition.
+   *
+   * @param \ReflectionClass $class
+   *   The class carrying #[Shape].
+   *
+   * @throws \LogicException
+   *   Naming the class and what it is missing.
+   */
+  protected static function assertShapeClass(\ReflectionClass $class): void {
+    self::assertOneKind($class);
+    if ($class->hasMethod('define') && !$class->getMethod('define')->isStatic()) {
+      throw new \LogicException(sprintf(
+        '%s carries #[Shape] and declares define() as an instance method. What a shape allows belongs to the class: declare it `public static function define(): DataDefinition`, and implement %s.',
+        $class->getName(),
+        ShapeInterface::class,
+      ));
+    }
+    if (!$class->implementsInterface(ShapeInterface::class)) {
+      throw new \LogicException(sprintf('%s carries #[Shape] but does not implement %s.', $class->getName(), ShapeInterface::class));
+    }
+  }
+
+  /**
+   * Refuses a class carrying #[Shape] beside #[Resource] or #[Structure].
+   *
+   * @param \ReflectionClass $class
+   *   The class.
+   *
+   * @throws \LogicException
+   *   When it carries both.
+   */
+  protected static function assertOneKind(\ReflectionClass $class): void {
+    if ($class->getAttributes(Shape::class) === []) {
+      return;
+    }
+    foreach ([Resource::class => 'Resource', Structure::class => 'Structure'] as $attribute => $name) {
+      if ($class->getAttributes($attribute) !== []) {
+        throw new \LogicException(sprintf(
+          '%s carries both #[Shape] and #[%s]. A class is one kind: a shape is one value reused at many keys, a %s holds keys of its own.',
+          $class->getName(),
+          $name,
+          strtolower($name),
+        ));
+      }
+    }
+  }
+
+  /**
+   * Refuses an alter of a shape that says what no shape takes.
+   *
+   * A shape is tightened in alterInputs(), the same at every key that uses
+   * it: so in every operation, and with no #[RefinesInput] method, since a
+   * shape has no siblings to watch and no key to narrow apart from itself.
+   *
+   * @param \ReflectionClass $class
+   *   The alter.
+   * @param \Drupal\data_surface\Resource\Attribute\Alters $attribute
+   *   Its attribute.
+   * @param \Drupal\data_surface\ResourceBuild\ShapeDefinition $shape
+   *   The shape it names.
+   *
+   * @throws \LogicException
+   *   Naming the alter and what it may not say.
+   */
+  protected static function assertShapeAlter(\ReflectionClass $class, Alters $attribute, ShapeDefinition $shape): void {
+    $problem = match (TRUE) {
+      $attribute->operations !== [] => 'names operations, and a shape is the same in every operation of every key that uses it',
+      self::refinersOf($class) !== [] => 'declares a #[RefinesInput] method, and a shape has no siblings to watch: tighten it in alterInputs() with narrow()',
+      !$class->implementsInterface(AltersInputsInterface::class) => sprintf('does not implement %s, whose alterInputs() is where a shape is tightened', AltersInputsInterface::class),
+      default => NULL,
+    };
+    if ($problem !== NULL) {
+      throw new \LogicException(sprintf('%s alters the shape %s and %s.', $class->getName(), $shape->id, $problem));
+    }
   }
 
   /**
@@ -576,6 +767,7 @@ final class ResourceRegistry {
    *   Naming the class and what it is missing.
    */
   protected static function assertResourceClass(\ReflectionClass $class, bool $plugin): string {
+    self::assertOneKind($class);
     $resource = $class->getAttributes(Resource::class) !== [];
     $structure = $class->getAttributes(Structure::class) !== [];
     if ($resource && $structure) {
@@ -640,7 +832,7 @@ final class ResourceRegistry {
     }
     // Decision: see docs/decisions.md#a-class-that-is-not-there.
     $reflection = class_exists($class) ? new \ReflectionClass($class) : NULL;
-    if ($reflection !== NULL && $reflection->getAttributes(Resource::class) === [] && $reflection->getAttributes(Structure::class) === [] && !ResourcePluginHooks::isOwnStructure($class)) {
+    if ($reflection !== NULL && $reflection->getAttributes(Resource::class) === [] && $reflection->getAttributes(Structure::class) === [] && $reflection->getAttributes(Shape::class) === [] && !ResourcePluginHooks::isOwnStructure($class)) {
       throw new \LogicException(sprintf(
         '%s names %s, which is no discovered resource or structure: one carries #[Resource] or #[Structure] and lives in its module\'s src/Resource or src/Structure directory, or is a plugin carrying #[UsesStructure] with no argument.',
         $referrer,

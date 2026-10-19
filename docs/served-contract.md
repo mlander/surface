@@ -251,7 +251,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | `dynamic` | Only when `true`: the key's static refiners have nothing to refine against yet, and what they would answer cannot be listed (a watched key with no list of values, or too many combinations). Static by declaration, not captured here: the schema is the unrefined, looser one, wider than the pipeline and never narrower ([decision](decisions.md#two-documents-never-stricter-than-the-runtime)); refine when a `dependsOn` key changes. In [the full schema](#two-documents) every key that cannot be listed carries it. |
 | `list` | Only when `true`, on a collection: an array whose every item is a child, its `items` a reference to the child's def. A renderer draws each item as that def's fieldset, adds and removes items within `minItems` and `maxItems`, and reads `dependsOn` inside each item under its delta (`shelves.1.unit`). |
 | `declared` | Only when `true`, in [the full schema](#two-documents) and in a def: rules declared as data narrow the key ([refinement](refinement.md#declaring-a-rule)), each stated as written, one conditional on the parent with `x-surface: {"declared": true}` beside its `if` and `then`, after the key's enumerated ones. Exact: a client evaluates each `if` and tightens the key by its `then` (the lower maximum, the values both lists offer). The schema for these answers evaluates the rules for its values and writes none. |
-| `ports` | On an object, a def's or the top's, when the structure reads ports: each port's typed data `type` and whether it is `required`. A port is no property: its value is a key of the container, which the site names ([below](#a-port-is-stated-at-its-site)). |
+| `ports` | On an object, a def's or the top's, when the structure reads ports: each port's typed data `type`, whether it is `required`, and the `shape` it reads, when it reads one. A port is no property: its value is a key of the container, which the site names ([below](#a-port-is-stated-at-its-site)). |
 | `reads` | On a site, the property where a child that reads ports is used: each port, mapped to the key of the parent's frame it reads. |
 | `runtime` | Only when `true`: a runtime refiner narrows the key too, by a rule no schema can state ([three markers](#three-markers)). Never in a conditional and never in the full schema; the schema for these answers is refined by it for its values. Written beside `enumerated` or `dynamic` when the key has static refiners as well. |
 | `doesNotApply` | On an object, the top or a child's frame, never on a property: the keys of it a refiner answered [do not apply](refinement.md#when-a-key-does-not-apply) to these values, each with the keys it depends on, `{"send_day": ["frequency"]}`. They are no properties of it; a client refines when one of those changes. |
@@ -265,6 +265,9 @@ keeps its own refiners and alters
 That makes a child a self-contained subschema, and both documents say
 so with JSON Schema 2020-12's own `$defs` and `$ref`, through the one
 code path they share (`ContractEmitter::define()` and `reference()`):
+
+A [shape](#a-shape-is-one-def) is a def too, one per shape, which each
+key declared with it refers to.
 
 1. **One def per child.** Every attached child and every slot's
    variant is written once, under the root's `$defs`, keyed by the id on
@@ -586,6 +589,59 @@ schema, abbreviated:
   the stored value as `const` in the schema for these answers and none in
   the full schema; one it omitted is not there, and neither is the def
   when every member is gone.
+
+### A shape is one def
+
+A key declared with a [shape](declaring-a-resource.md#named-shapes) is
+written as a reference to it. Each shape is one def in both documents,
+under its id, as its alters left it, described as an optional key is:
+its type allows `null`, since whether a key may hold nothing is the
+key's, and its `x-surface` carries only what the shape checks, the
+message of its pattern and what only the server checks. Each key that
+uses it is `$ref` first, then its title, then only what it says
+differently from the def, and its whole `x-surface`. Example 4's
+compliance structure, in its def:
+
+```json
+"licence": {
+  "$ref": "#/$defs/event.licence",
+  "title": "Event licence",
+  "x-surface": {"widget": "text", "locked": false, "dependsOn": [],
+                "patternMessage": "A licence number is four digits, such as 2048."}
+}
+```
+
+and the shape beside it under `$defs`:
+
+```json
+"event.licence": {
+  "title": "Event licence",
+  "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
+  "type": ["string", "null"],
+  "pattern": "^\\d{4}$",
+  "examples": ["2048"],
+  "x-surface": {"patternMessage": "A licence number is four digits, such as 2048."}
+}
+```
+
+- **What a key adds is beside the reference.** The test module's depot
+  uses one stock code at two keys: `sku` is required and at least four
+  long, so it says `"type": "string"` and `"minLength": 4` beside the
+  reference; `spare` says its own description, `"maxLength": 6` and its
+  default. A key only narrows its shape, so the two together are what
+  the pipeline accepts, and the matrix holds each to it.
+- **Sibling keywords, `$ref` first.** In 2020-12 a `$ref` beside other
+  keywords is their conjunction, and with the reference first a reader
+  that lays the def where the reference stood (`SchemaResolver::inline()`,
+  the React app's `inlineSchema()`) lays the key over it, keyword by
+  keyword, to the same schema. A key resolved from a shape's def is a
+  value, never a child's frame.
+- **A conditional narrows the key, not the shape.** A `then` on a key
+  declared with a shape says only what it narrows, as on any key, and
+  refers to nothing.
+- **A port names the shape it reads.** In a structure's def,
+  `x-surface.ports.<port>.shape` is the id of the shape a port reads,
+  beside its `type`.
 
 ### Exact where it can be
 

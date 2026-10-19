@@ -32,10 +32,18 @@ interface BlueprintAdditionsInterface {
    * Returns the core definition, so the rest (required, constraints,
    * description) is plain core API.
    *
+   * The type may be a shape's class, `add('licence', Licence::class,
+   * t('Event licence'))`: the key then starts from the shape as its
+   * alters left it, and what it adds (required, a default, a constraint,
+   * a description) may only narrow the shape, which its owner's build
+   * checks.
+   *
    * @param string $key
    *   The key.
    * @param string $type
-   *   The typed data type, as core's typed data manager names it.
+   *   The typed data type, as core's typed data manager names it, or the
+   *   class of a shape.
+   *   See docs/declaring-a-resource.md#named-shapes.
    * @param string|\Stringable $label
    *   The label.
    * @param mixed $default
@@ -45,6 +53,11 @@ interface BlueprintAdditionsInterface {
    *
    * @return \Drupal\Core\TypedData\DataDefinition
    *   The definition, already part of the blueprint.
+   *
+   * @throws \LogicException
+   *   For a class that is no shape, a shape that declares what only a key
+   *   may (a default, required) or a map or list, and, for an alter of a
+   *   shape, always: a shape has no keys to add to.
    */
   public function add(string $key, string $type, string|\Stringable $label, mixed $default = NULL): DataDefinition;
 

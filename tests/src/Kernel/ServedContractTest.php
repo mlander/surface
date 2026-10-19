@@ -9,7 +9,7 @@ use Drupal\data_surface\Contract\SchemaResolver;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
-use Drupal\data_surface\Pipeline\ShapeMismatchException;
+use Drupal\data_surface\Pipeline\TypeMismatchException;
 use Drupal\data_surface\Pipeline\UnknownKeysException;
 use Drupal\data_surface\Pipeline\VariantMismatchException;
 use Drupal\data_surface\Resource\OperationContext;
@@ -1018,12 +1018,12 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
         $at = ($compliance ? 'With compliance, ' : '') . $which;
         $this->assertWellFormed($schema);
         // With compliance, the structure its alter attaches at its mount
-        // is a def too.
+        // is a def too, and so is the licence, a shape its key refers to.
         $parts = [
           'registration.step3.ticket.free',
           'registration.step3.ticket.paid',
           'registration.contact',
-          ...($compliance ? ['registration.compliance'] : []),
+          ...($compliance ? ['registration.compliance', 'event.licence'] : []),
         ];
         $this->assertSame($parts, array_keys($schema['$defs']), $at);
 
@@ -1434,7 +1434,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     try {
       $accepted = $this->pipeline()->accept($surface, $values);
     }
-    catch (UnknownKeysException | ShapeMismatchException | VariantMismatchException) {
+    catch (UnknownKeysException | TypeMismatchException | VariantMismatchException) {
       return FALSE;
     }
     return iterator_count($this->pipeline()->validate($surface, $accepted)) === 0;
