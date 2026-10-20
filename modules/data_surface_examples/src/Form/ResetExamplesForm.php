@@ -25,7 +25,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * written down here, so a shipped value that changes is reset to the new
  * one without touching this form. The rooms example 4 lets a site close,
  * which it keeps in State rather than in any example's settings, are
- * opened again too.
+ * opened again too, and example 10's workflow state is cleared.
  */
 final class ResetExamplesForm extends ConfirmFormBase {
 
@@ -40,10 +40,11 @@ final class ResetExamplesForm extends ConfirmFormBase {
   /**
    * The State keys an example reads, cleared whether or not it is on.
    *
-   * Named here rather than read from the compliance module's class, which
-   * is not loaded while that module is off.
+   * Named here rather than read from the other modules' classes, which
+   * are not loaded while those modules are off: the rooms example 4 closes,
+   * and example 10's workflow state.
    */
-  public const STATE = ['data_surface_examples_compliance.closed_rooms'];
+  public const STATE = ['data_surface_examples_compliance.closed_rooms', 'data_surface_examples_workflow.state'];
 
   /**
    * Constructs the form.
@@ -53,7 +54,8 @@ final class ResetExamplesForm extends ConfirmFormBase {
    * @param \Drupal\Core\Extension\ModuleExtensionList $moduleList
    *   The module list, which knows where this module's files are.
    * @param \Drupal\Core\State\StateInterface $state
-   *   The State, where example 4 lists the rooms a site has closed.
+   *   The State, where example 4 lists the rooms a site has closed and
+   *   example 10's workflow module keeps its state.
    */
   public function __construct(
     protected readonly ConfigFactoryInterface $configs,

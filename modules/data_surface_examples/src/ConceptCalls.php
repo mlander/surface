@@ -26,7 +26,9 @@ final class ConceptCalls {
    *
    * Each says what it shows, the operation it calls (configure unless it
    * says), the values it sends, and whether it is a dry run (unless it
-   * says).
+   * says). A call that shows another module's part names the module, made
+   * only where it is enabled, and the State it is made in, set for the
+   * call and put back after it.
    */
   public const CALLS = [
     'event.bulletin' => [
@@ -82,6 +84,12 @@ final class ConceptCalls {
         'values' => ['headline' => 'Three days of talks', 'sessions' => 40],
         'dry_run' => FALSE,
       ],
+      'published_in_workflow' => [
+        'label' => 'A new headline, once the workflow module has published the program',
+        'values' => ['headline' => 'Four days of talks'],
+        'module' => 'data_surface_examples_workflow',
+        'state' => ['data_surface_examples_workflow.state' => 'published'],
+      ],
     ],
     'event.doors' => [
       'left_out' => [
@@ -108,12 +116,15 @@ final class ConceptCalls {
    *
    * @param string $resource
    *   The resource id.
+   * @param string[]|null $modules
+   *   The modules enabled, to leave out a call whose module is not; NULL
+   *   for every call.
    *
-   * @return array<string, array{label: string, operation?: string, values: array, dry_run?: bool}>
+   * @return array<string, array{label: string, operation?: string, values: array, dry_run?: bool, module?: string, state?: array<string, mixed>}>
    *   Its calls, by name; none for a resource with no calls.
    */
-  public static function of(string $resource): array {
-    return self::CALLS[$resource] ?? [];
+  public static function of(string $resource, ?array $modules = NULL): array {
+    return array_filter(self::CALLS[$resource] ?? [], static fn (array $call): bool => $modules === NULL || !isset($call['module']) || in_array($call['module'], $modules, TRUE));
   }
 
   /**
@@ -137,7 +148,8 @@ final class ConceptCalls {
    * Run as user 1, because tool:run runs as anonymous unless told
    * otherwise, and every operation here asks for "administer site
    * configuration". The dry run is a second input, which tool:run reads
-   * as name=value and decodes as JSON, so `true` is a boolean.
+   * as name=value and decodes as JSON, so `true` is a boolean. A call made
+   * in a State of its own sets it first and deletes it after.
    *
    * @param string $resource
    *   The resource id.
@@ -149,12 +161,17 @@ final class ConceptCalls {
    */
   public static function drush(string $resource, string $call): string {
     $input = json_encode(['values' => self::CALLS[$resource][$call]['values']], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
-    return sprintf(
+    $command = sprintf(
       "drush tool:run %s --uid=1 --input='%s'%s",
       self::tool($resource, $call),
       str_replace("'", "'\\''", (string) $input),
       (self::CALLS[$resource][$call]['dry_run'] ?? TRUE) ? ' --input=dry_run=true' : '',
     );
+    $state = self::CALLS[$resource][$call]['state'] ?? [];
+    foreach (array_reverse($state, TRUE) as $key => $value) {
+      $command = sprintf("drush state:set %s %s\n%s\ndrush state:delete %s", $key, $value, $command, $key);
+    }
+    return $command;
   }
 
 }

@@ -138,6 +138,8 @@ one thing whole, with a single entity or with every identity key.
 - Storage: none; its host or its parent stores it
 - Access: `Drupal\data_surface_examples\Access\FeesAccess`
 
+- Altered by `Drupal\data_surface_examples_workflow\Alter\FeesWorkflowAlter` (`data_surface_examples_workflow`), in every operation; it answers access.
+
 ## event.person
 
 `Drupal\data_surface_examples\Structure\PersonStructure`, in `data_surface_examples`.
@@ -173,6 +175,8 @@ one thing whole, with a single entity or with every identity key.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `configure` | Configure the program | nothing | no | `administer site configuration` | yes | yes | `ProgramResource::configure()` (`data_surface_examples`) |
 | `check` | Check a program | nothing | no | `administer site configuration` | yes | no: what it needs leaves room for a new one | `ProgramResource::check()` (`data_surface_examples`) |
+
+- Altered by `Drupal\data_surface_examples_workflow\Alter\ProgramWorkflowAlter` (`data_surface_examples_workflow`), in `configure`; it answers access.
 
 ## event.review
 

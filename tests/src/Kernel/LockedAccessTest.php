@@ -9,6 +9,8 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\ResourceBuild\Resources;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
+use Drupal\data_surface_resource_test\Resource\Gallery\GalleryResource;
+use Drupal\data_surface_resource_test\Structure\Gallery\OilFinishStructure;
 use Drupal\data_surface_tool\OperationInputs;
 use Drupal\data_surface_tool_test\Resource\CabinetResource;
 use Drupal\data_surface_tool_test\Storage\CabinetStorage;
@@ -304,7 +306,9 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
     // The code lock is a variant with an access class.
     $this->assertTrue($may->invoke($resources, $registry->getDefinition(CabinetResource::class)));
 
-    // Without this module, the access classes left are none of a variant's.
+    // Without this module, the access classes left are none of a variant's,
+    // and the one variant answered for is the gallery's oil finish, by an
+    // alter: it alone could refuse, so nothing else is built for it.
     $this->installSchema('user', ['users_data']);
     $this->container->get('module_installer')->uninstall(['data_surface_tool_test']);
     $this->container->get('module_installer')->install(['data_surface_resource_test']);
@@ -312,9 +316,20 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
     $registry = $this->container->get('data_surface.resource_registry');
     $access = array_filter($registry->getDefinitions(), static fn ($definition): bool => $definition->access !== NULL);
     $this->assertNotEmpty($access, 'Some resource or structure names an access class.');
+    $answered = [];
     foreach ($registry->getDefinitions() as $definition) {
-      $this->assertFalse($may->invoke($resources, $definition), $definition->id);
+      foreach ($definition->variants as $variants) {
+        foreach ($variants as $class) {
+          if ($registry->getDefinition($class)->answersAccess()) {
+            $answered[] = $registry->getDefinition($class)->id;
+          }
+        }
+      }
     }
+    $this->assertSame(['resource_test.gallery.finish.oil'], $answered);
+    $this->assertNull($registry->getDefinition(OilFinishStructure::class)->access, 'Answered for by an alter, with no access class.');
+    $this->assertTrue($may->invoke($resources, $registry->getDefinition(GalleryResource::class)));
+    $this->assertFalse($may->invoke($resources, $registry->getDefinition(OilFinishStructure::class)), 'Nothing but itself answers.');
   }
 
   /**

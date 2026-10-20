@@ -218,7 +218,8 @@ The module uses these twenty-three words in exactly one sense each.
   anything, so a form, a tool and the agent or Drush command calling it
   resolve one gate rather than several.
 - **Access answer**: what the operation's permission, and then the
-  access class, answer for an account; the access class's is an
+  access class, answer for an account, then each alter that answers
+  access, the stricter standing; the access class's is an
   `AccessAnswer` (open, locked or omitted). Its kind is read from its
   cacheability and never declared: static varies by the account's
   permissions or roles alone and is stated in the full schema and the
@@ -236,9 +237,11 @@ The module uses these twenty-three words in exactly one sense each.
   `#[Alters]`. It adds keys to a resource or structure (mounted under
   `third_party_settings.<module>`), rewords a label with `describe()`,
   offers more values on a fixed list with `extendChoices()`, and narrows
-  with `#[RefinesInput]` methods, on the owner's keys or its own. It
-  never removes a key or a value, never retypes, and attaches a
-  structure only at its own mount.
+  with `#[RefinesInput]` methods, on the owner's keys or its own, and
+  may answer access after the owner (`AltersAccessInterface`), locking
+  or leaving out and never opening. It never removes a key or a value
+  from the declaration, never retypes, and attaches a structure only at
+  its own mount.
 - **Slot**: an attached structure a sibling key chooses, declared with
   `attachBy($key, by: $sibling)`. Always open: the parent names no
   child, and every class marked `#[Variant]` for it fills it for one
@@ -327,6 +330,11 @@ their configuration may change without a deprecation path.
   (`data_surface_examples_compliance`): example 4, a compliance
   structure and the one alter that attaches it to example 3's resource,
   which does not know it.
+- **Data Surface Examples - Workflow**
+  (`data_surface_examples_workflow`): example 10, extended, two alters
+  that answer access for the program and its fees, which do not know
+  them: the fees left out for an account that may not see them, and the
+  program fixed once its workflow publishes it.
 - **Data Surface - React** (`data_surface_react`): the served contract,
   an operation as JSON Schema 2020-12 with an `x-surface` extension, a
   refine endpoint that re-narrows it as answers change, a validate

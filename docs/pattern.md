@@ -408,7 +408,10 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   owner's away (`DemoFormatterAlter`).
 - An alter that only tightens implements no interface: the attribute is
   what makes it an alter.
-- An alter never touches access.
+- An alter may answer access, implementing `AltersAccessInterface`: it
+  is asked after the owner's answer and the stricter stands, so it locks
+  or leaves out and never opens
+  ([decision](decisions.md#an-alter-may-answer-access-and-the-stricter-stands)).
 
 [Refinement and contributions](refinement.md) has the rules.
 

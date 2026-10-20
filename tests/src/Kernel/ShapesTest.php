@@ -17,6 +17,7 @@ use Drupal\data_surface\ResourceBuild\ShapeBlueprint;
 use Drupal\data_surface\ResourceBuild\Shapes;
 use Drupal\data_surface_resource_test\Alter\MountingShapeAlter;
 use Drupal\data_surface_resource_test\Alter\SkuAlter;
+use Drupal\data_surface_resource_test\OutsideDiscovery\AccessShapeAlter;
 use Drupal\data_surface_resource_test\OutsideDiscovery\ClashingShape;
 use Drupal\data_surface_resource_test\OutsideDiscovery\InstanceDefineShape;
 use Drupal\data_surface_resource_test\OutsideDiscovery\OperationsShapeAlter;
@@ -220,6 +221,10 @@ class ShapesTest extends DataSurfaceKernelTestBase {
       'an alter in one operation' => [
         ['shapes' => [Sku::class => $module], 'alters' => [OperationsShapeAlter::class => $module]],
         OperationsShapeAlter::class . ' alters the shape resource_test.sku and names operations, and a shape is the same in every operation of every key that uses it.',
+      ],
+      'an alter answering access' => [
+        ['shapes' => [Sku::class => $module], 'alters' => [AccessShapeAlter::class => $module]],
+        AccessShapeAlter::class . ' alters the shape resource_test.sku and implements Drupal\data_surface\Resource\AltersAccessInterface, and a shape is one value with no access of its own: answer for the resource or structure that asks for it.',
       ],
     ] as $case => [$classes, $message]) {
       try {

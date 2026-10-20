@@ -22,7 +22,8 @@
                         "default": 20,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": []
+                            "dependsOn": [],
+                            "access": "runtime"
                         }
                     },
                     "concession": {
@@ -35,7 +36,8 @@
                         "default": 10,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": []
+                            "dependsOn": [],
+                            "access": "runtime"
                         }
                     }
                 },

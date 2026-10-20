@@ -10,6 +10,7 @@ use Drupal\data_surface_demo_node_type\Resource\NodeTypeResource;
 use Drupal\data_surface_demo_node_type\Storage\NodeTypeStorage;
 use Drupal\data_surface_address\Resource\AddressFieldSettingsResource;
 use Drupal\data_surface_demo\Plugin\Field\FieldFormatter\DataSurfaceDemoFormatter;
+use Drupal\data_surface_examples_workflow\Alter\ProgramWorkflowAlter;
 use Drupal\data_surface_tool\Resource\FieldInstanceResource;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -51,6 +52,7 @@ class ResourceCatalogueTest extends DataSurfaceKernelTestBase {
     'data_surface_tool',
     'data_surface_examples',
     'data_surface_examples_compliance',
+    'data_surface_examples_workflow',
     'data_surface_entity',
     'data_surface_first',
   ];
@@ -141,8 +143,24 @@ class ResourceCatalogueTest extends DataSurfaceKernelTestBase {
       ],
     ], $node_type['operations']);
     $this->assertSame([
-      ['class' => NodeTypeAlter::class, 'module' => 'data_surface_demo_extras', 'operations' => [], 'refines' => []],
+      [
+        'class' => NodeTypeAlter::class,
+        'module' => 'data_surface_demo_extras',
+        'operations' => [],
+        'access' => FALSE,
+        'refines' => [],
+      ],
     ], $node_type['alters']);
+    // An alter that answers access says so.
+    $this->assertSame([
+      [
+        'class' => ProgramWorkflowAlter::class,
+        'module' => 'data_surface_examples_workflow',
+        'operations' => ['configure'],
+        'access' => TRUE,
+        'refines' => [],
+      ],
+    ], $catalogue['event.program']['alters']);
     // An alter's methods, each by the key it refines, what it watches
     // and whether it is a runtime refiner. Its rule on the capacity is
     // declared in alterInputs(), data the build reads, and no method; the

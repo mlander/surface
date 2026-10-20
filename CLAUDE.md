@@ -60,7 +60,10 @@ the record of the rework that brought the module to the pattern.
   from how they are asked for, `SettingsLayoutInterface`; an alter hands
   one for its mount with `HasStorageLayoutInterface::storageLayout()`.
 - **Alter**: another module's class that adds keys to a resource or
-  structure and narrows it, `#[Alters]` in `src/Alter/`.
+  structure and narrows it, `#[Alters]` in `src/Alter/`; one that
+  implements `AltersAccessInterface` answers access for it too, after
+  the owner, the stricter standing
+  (`docs/decisions.md#an-alter-may-answer-access-and-the-stricter-stands`).
 - **Attach**: a fixed child at a key, `attach()`; an alter attaches only
   at its own mount, `third_party_settings.<module>`, as an adapter.
 - **Port**: a value a structure reads from its container, declared under
@@ -100,9 +103,10 @@ the record of the rework that brought the module to the pattern.
   `ContractBaselineTest`, `drush data_surface:contract-diff`): a
   breaking change passes only versioned or allowed with a reason.
   Regenerate with `--write` after an accepted change; never by hand.
-- **Access answer**: what the operation's permission, and then the
-  access class, answer for an account; the access class's is an
-  `AccessAnswer` (open, locked or omitted). Its kind, static or runtime,
+- **Access answer**: what the operation's permission, then the access
+  class, then each alter that answers access, answer for an account,
+  combined with `andIf()` so the stricter stands; the access class's is
+  an `AccessAnswer` (open, locked or omitted). Its kind, static or runtime,
   is read from its cacheability and never declared. Static varies by the
   account's permissions or roles alone (`user.permissions`,
   `user.roles`, `user.roles:<role>`, no tag, permanent max-age) and is stated in the
@@ -256,7 +260,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 browser would look for the site in its own container; leave the base URL
 to the environment.
 
-The baseline as of this writing: **1069 tests, 14424 assertions, 0 errors,
+The baseline as of this writing: **1221 tests, 19381 assertions, 0 errors,
 0 failures**. The test and assertion counts drift upward as work lands
 and are not the thing to check. **No test may error and no test may
 fail**, the browser tests included; any error or failure is a real
@@ -461,7 +465,7 @@ src/Form/                Form builder, host traits, the operation form.
 src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constraints.
 src/Options/             Option sets, the resolver plugin base and manager.
 src/Refinement/          Narrowing and choice sets.
-modules/                 Twelve experimental submodules; each has its own README.
+modules/                 Thirteen experimental submodules; each has its own README.
 tests/src/               Unit, Kernel, Functional, FunctionalJavascript.
 docs/ scripts/           Published documentation; check.sh and the generators.
 ```

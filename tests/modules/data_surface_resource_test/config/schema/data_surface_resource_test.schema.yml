@@ -424,3 +424,76 @@ data_surface_resource_test.workshop:
         type: string
         label: 'Stock code'
         nullable: true
+
+# The gallery fixture: access answered by alters. The plaque is mixed in,
+# its members flat beside the name; a wall attached twice; a finish typed
+# by the medium; a room per entry the site lists.
+data_surface_resource_test.gallery:
+  type: config_object
+  label: 'Gallery'
+  mapping:
+    name:
+      type: string
+      label: 'Name'
+    # Mixed in from resource_test.plaque.
+    caption:
+      type: string
+      label: 'Caption'
+      nullable: true
+    credit:
+      type: string
+      label: 'Credit'
+      nullable: true
+    north:
+      type: data_surface_resource_test.gallery.wall
+      label: 'North wall'
+    south:
+      type: data_surface_resource_test.gallery.wall
+      label: 'South wall'
+    medium:
+      type: string
+      label: 'Medium'
+    finish:
+      type: data_surface_resource_test.gallery.finish.[%parent.medium]
+      label: 'Finish'
+    rooms:
+      type: sequence
+      label: 'Rooms'
+      sequence:
+        type: mapping
+        label: 'Room'
+        mapping:
+          lights:
+            type: boolean
+            label: 'Lights'
+
+data_surface_resource_test.gallery.wall:
+  type: mapping
+  label: 'Wall'
+  mapping:
+    artwork:
+      type: string
+      label: 'Artwork'
+      nullable: true
+    height:
+      type: integer
+      label: 'Height'
+      nullable: true
+
+data_surface_resource_test.gallery.finish.oil:
+  type: mapping
+  label: 'Oil finish'
+  mapping:
+    varnish:
+      type: string
+      label: 'Varnish'
+      nullable: true
+
+data_surface_resource_test.gallery.finish.print:
+  type: mapping
+  label: 'Print finish'
+  mapping:
+    edition:
+      type: integer
+      label: 'Edition'
+      nullable: true

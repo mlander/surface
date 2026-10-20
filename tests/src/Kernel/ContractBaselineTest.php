@@ -46,6 +46,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     'data_surface_tool',
     'data_surface_examples',
     'data_surface_examples_compliance',
+    'data_surface_examples_workflow',
     'data_surface_first',
   ];
 

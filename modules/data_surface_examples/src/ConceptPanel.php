@@ -6,8 +6,10 @@ namespace Drupal\data_surface_examples;
 
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
+use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Session\AccountSwitcherInterface;
 use Drupal\Core\Session\UserSession;
+use Drupal\Core\State\StateInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\data_surface\Contract\ContractEmitter;
@@ -75,6 +77,7 @@ final class ConceptPanel {
     'event.program' => [
       'docs/resources.md#static-and-runtime-access',
       'docs/decisions.md#an-operation-states-how-it-behaves',
+      'docs/resources.md#an-alters-answer',
     ],
     'event.doors' => [
       'docs/recipes.md',
@@ -82,6 +85,11 @@ final class ConceptPanel {
       'docs/storage.md#a-fully-validatable-schema',
     ],
   ];
+
+  /**
+   * Example 10's other module, whose alters answer for the program too.
+   */
+  public const WORKFLOW = 'data_surface_examples_workflow';
 
   /**
    * Example 9: the command that adds a ticket type to the site.
@@ -110,6 +118,10 @@ final class ConceptPanel {
    *   The class resolver, which builds a provider of keys from the site.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.
+   * @param \Drupal\Core\Extension\ModuleHandlerInterface $moduleHandler
+   *   The module handler, for the calls another module's part needs.
+   * @param \Drupal\Core\State\StateInterface $state
+   *   The State, set for a call that needs it and put back after.
    */
   public function __construct(
     protected readonly ContractEmitter $emitter,
@@ -119,6 +131,8 @@ final class ConceptPanel {
     protected readonly AccountSwitcherInterface $accountSwitcher,
     protected readonly ClassResolverInterface $classResolver,
     TranslationInterface $string_translation,
+    protected readonly ModuleHandlerInterface $moduleHandler,
+    protected readonly StateInterface $state,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -296,6 +310,8 @@ final class ConceptPanel {
   /**
    * Example 10: the fees for two accounts, and how each operation behaves.
    *
+   * With the workflow module on, says what its alters answer too.
+   *
    * @param \Drupal\data_surface\ResourceBuild\OperationRoute $served
    *   What the form serves.
    *
@@ -347,12 +363,19 @@ final class ConceptPanel {
         self::yesNo($this->toolManager->hasDefinition($tool_id . ':read')),
       ];
     }
+    // Another module answering too, after the program's own answers.
+    // Decision: see
+    // docs/decisions.md#an-alter-may-answer-access-and-the-stricter-stands.
+    $workflow = $this->moduleHandler->moduleExists(self::WORKFLOW)
+      ? $this->t('Another module, @module, answers as well, with two alters and no change to the program, each asked after the program\'s own answers, the stricter standing. An account without "see event fees" does not see the fees at all, which the account alone decides, so the full schema above leaves them out for it, where before they were locked. Once the module\'s workflow state is published the program is locked whole, its headline and its fees with everything else, which only what is stored decides: the full schema marks every key of the program <code>access: runtime</code>, and the last call below, made in that state, is refused by name.', ['@module' => self::WORKFLOW])
+      : $this->t('Enable @module and reload: another module then answers for the program and its fees as well, with no change to the program.', ['@module' => self::WORKFLOW]);
     return [
       'accounts' => $this->details(
         $this->t('The fees in the full schema, for two accounts'),
         $this->t('For you, and for an account without "@permission". Static answers are stated for the account that asks: locked, <code>readOnly</code>. A runtime answer is marked <code>access: runtime</code>, and the schema for these answers says whether it holds now.', ['@permission' => FeesAccess::PERMISSION]),
         $this->json(['you' => $yours, 'without the permission' => $theirs]),
       ),
+      'workflow' => ['#markup' => '<p>' . $workflow . '</p>'],
       'facts' => [
         '#type' => 'table',
         '#caption' => $this->t('How each operation behaves: what both documents state under <code>x-surface.operation</code>, its kind first (a create, an update or a read, derived from whether it is read only and whether it creates), the Tool API kind its tool is given, and the hints an MCP client reads from that kind. The Tool API has idempotence on the kind, not the tool, and no kind that writes is idempotent, so configuring, idempotent in both documents, reaches an MCP client as not.'),
@@ -433,7 +456,7 @@ final class ConceptPanel {
       'note' => ['#markup' => '<p>' . $this->t('Each call made now, as this page was drawn, and none writes anything: a dry run accepts, validates and prepares the values and stops, and an operation that changes nothing stops there by itself. The command asks the same from Drush.') . '</p>'],
     ];
     foreach ($ids as $resource) {
-      foreach (ConceptCalls::of($resource) as $name => $call) {
+      foreach (ConceptCalls::of($resource, array_keys($this->moduleHandler->getModuleList())) as $name => $call) {
         $calls[$resource . ':' . $name] = [
           'label' => ['#markup' => '<h3>' . htmlspecialchars($call['label']) . '</h3>'],
           'command' => $this->pre(ConceptCalls::drush($resource, $name)),
@@ -461,11 +484,21 @@ final class ConceptPanel {
     if (!$this->toolManager->hasDefinition($tool_id)) {
       return (string) $this->t('There is no tool @tool on this site.', ['@tool' => $tool_id]);
     }
-    $tool = $this->toolManager->createInstance($tool_id);
-    $tool->setInputValue(OperationInputs::VALUES, ConceptCalls::CALLS[$resource][$name]['values']);
-    $tool->setInputValue(OperationInputs::DRY_RUN, ConceptCalls::CALLS[$resource][$name]['dry_run'] ?? TRUE);
-    $tool->execute();
-    $result = $tool->getResult();
+    // The State a call is made in, set for it and put back after.
+    $state = ConceptCalls::CALLS[$resource][$name]['state'] ?? [];
+    $was = $this->state->getMultiple(array_keys($state));
+    $this->state->setMultiple($state);
+    try {
+      $tool = $this->toolManager->createInstance($tool_id);
+      $tool->setInputValue(OperationInputs::VALUES, ConceptCalls::CALLS[$resource][$name]['values']);
+      $tool->setInputValue(OperationInputs::DRY_RUN, ConceptCalls::CALLS[$resource][$name]['dry_run'] ?? TRUE);
+      $tool->execute();
+      $result = $tool->getResult();
+    }
+    finally {
+      $this->state->deleteMultiple(array_keys(array_diff_key($state, $was)));
+      $this->state->setMultiple($was);
+    }
     $lines = [($result->isSuccess() ? 'Success: ' : 'Failed: ') . PlainTextOutput::renderFromHtml((string) $result->getMessage())];
     foreach ($result->getContextValues() as $output => $value) {
       if ($output === OperationInputs::PREPARED && is_array($value)) {

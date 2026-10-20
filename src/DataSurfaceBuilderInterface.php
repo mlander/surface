@@ -248,6 +248,24 @@ interface DataSurfaceBuilderInterface {
   public function markRuntimeAccess(string $name): static;
 
   /**
+   * Marks every key of the data surface as decided once the subject is known.
+   *
+   * For a resource asked for on its own whose access, built for the
+   * account alone, gave a runtime answer that was set aside: any of its
+   * keys may then be found locked, the whole of it, so each is marked, as
+   * markRuntimeAccess() marks one. Applied at seal, over every key there
+   * is then.
+   *
+   * Decision: see docs/decisions.md#locked-at-the-top.
+   *
+   * @return $this
+   *
+   * @throws \LogicException
+   *   When the builder is already sealed.
+   */
+  public function markRuntimeAccessWhole(): static;
+
+  /**
    * Records a structure mixed in: which of the keys it brought.
    *
    * Its members are declared as the owner's keys already, through the

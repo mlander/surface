@@ -188,7 +188,7 @@ The pages fall in the same groups as the README's documentation table.
 The module ships no resources of its own on a production site. It
 provides the model, the pipeline, the two plugin types and the host
 adoption layer; resources and structures come from the modules that
-declare them. Twelve experimental submodules demonstrate the model and
+declare them. Thirteen experimental submodules demonstrate the model and
 double as the fixtures the tests run against: see
 [Installation](installation.md).
 

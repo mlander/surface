@@ -6,6 +6,7 @@ namespace Drupal\data_surface\ResourceBuild;
 
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
+use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Cache\RefinableCacheableDependencyInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\Session\AccountInterface;
@@ -38,6 +39,7 @@ use Drupal\data_surface\Resource\KeysFromSiteInterface;
 use Drupal\data_surface\Resource\KnowsClearableKeysInterface;
 use Drupal\data_surface\Resource\AccessAnswer;
 use Drupal\data_surface\Resource\OperationAccessInterface;
+use Drupal\data_surface\Resource\AltersAccessInterface;
 use Drupal\data_surface\Resource\AltersInputsInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\DefinesInputsInterface;
@@ -102,8 +104,9 @@ use Drupal\data_surface\Port;
  *    its own operations when one applies (invokeChild()), otherwise in
  *    the context its parent's hands it or in its parent's own. Its access
  *    then decides whether the child is open, locked or left out for the
- *    current account (childAccess()): its access class however it was
- *    invoked, and the permission of an operation the build resolved.
+ *    current account (childAccess()): the permission of an operation the
+ *    build resolved, its access class however it was invoked, then each
+ *    of its alters that answers access, the stricter standing.
  *    A collection's child is built the same way, once for the list, and
  *    its access answers once for the list. Built for the account alone
  *    (buildStatic()), an access class's answer that is runtime is set
@@ -113,7 +116,8 @@ use Drupal\data_surface\Port;
  * The engine's builder is the whole state of a build. Nothing is cached
  * across builds, because a shape describes live site state; what that
  * state is, a shape or an alter says with addCacheableDependency(). The
- * one thing kept is an access class's static answer, which by its own
+ * one thing kept is a static access answer, an access class's or an
+ * alter's, which by its own
  * cacheability depends on nothing but the account: asked once per
  * context and account kind (the account's roles and permissions), and
  * reused.
@@ -501,8 +505,11 @@ final class Resources implements ResourcesInterface {
    *
    * Only a class whose access() may return an AccessAnswer can answer
    * locked, so one declared to return core's answer is not asked here:
-   * its answer is the route's and the tool's, as before. Built for the
-   * account alone, a runtime answer is set aside, as a child's is.
+   * its answer is the route's and the tool's, as before. Its access class
+   * is asked first, then each alter that answers access, the stricter
+   * standing. Built for the account alone, a runtime answer is set aside,
+   * as a child's is, and every key is marked, since any of them may be
+   * found locked once the subject is known.
    *
    * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
    *   The builder, which the answer's cacheability reaches.
@@ -515,11 +522,21 @@ final class Resources implements ResourcesInterface {
    *   Why it is locked, or NULL when it is not.
    */
   protected function lockedAtTheTop(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, OperationContext $context): ?string {
-    if ($definition->access === NULL || !static::mayLock($definition->access)) {
+    $answering = static::answering($definition, $context, TRUE);
+    if ($answering === []) {
       return NULL;
     }
-    $answer = $this->ask($definition, $context, $this->currentUser);
-    if ($this->accountAlone && !$answer->isStatic()) {
+    // Decision: see
+    // docs/decisions.md#an-alter-may-answer-access-and-the-stricter-stands.
+    [$answer, $aside, $contexts] = $this->answers($answering, $context, $this->currentUser);
+    if ($aside) {
+      // Set aside, a runtime answer may still lock the whole of it once
+      // the subject is known: every key is marked, the cache contexts it
+      // read kept, as a child's.
+      $builder->markRuntimeAccessWhole();
+      $builder->addCacheableDependency((new CacheableMetadata())->addCacheContexts($contexts));
+    }
+    if ($answer === NULL) {
       return NULL;
     }
     $builder->addCacheableDependency($answer);
@@ -530,7 +547,7 @@ final class Resources implements ResourcesInterface {
    * Answers whether an access class can answer locked at all.
    *
    * @param string $class
-   *   The access class.
+   *   The access class, or an alter that answers access.
    *
    * @return bool
    *   FALSE when its access() is declared to return core's answer alone.
@@ -824,14 +841,15 @@ final class Resources implements ResourcesInterface {
    * @param string[] $lists
    *   The owner's collection keys.
    *
-   * @return array{bind: array<int, array{definition: \Drupal\data_surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\data_surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[]}>, members: array<string, string>, guarded: array<string, string>, ruling: string[]}
+   * @return array{bind: array<int, array{definition: \Drupal\data_surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\data_surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[]}>, members: array<string, string>, guarded: array<string, string>, answeredBy: array<string, string>, ruling: string[]}
    *   What to bind in the owner's frame, innermost first, each with the
    *   members still there; every member, and every member of a structure
-   *   with an access class, each mapped to its structure's id; and the
-   *   members a structure's coded refiner may rule out.
+   *   with an access answer (an access class, or an alter's), each mapped
+   *   to its structure's id, with what answers for each such structure;
+   *   and the members a structure's coded refiner may rule out.
    */
   protected function mixIn(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, ResourceBlueprint $inputs, OperationContext $context, array $frame, array $input_keys, array $attached, array $lists): array {
-    $mixed = ['bind' => [], 'members' => [], 'guarded' => [], 'ruling' => []];
+    $mixed = ['bind' => [], 'members' => [], 'guarded' => [], 'answeredBy' => [], 'ruling' => []];
     foreach ($inputs->mixins() as ['class' => $class, 'reads' => $reads, 'blueprint' => $blueprint]) {
       $structure = $this->registry->getDefinition($class);
       $this->assertMixinWiring($builder, $definition, $structure, $blueprint, $reads, $input_keys, $attached, $lists);
@@ -898,8 +916,9 @@ final class Resources implements ResourcesInterface {
     }
     foreach ($blueprint->keys() as $key) {
       $mixed['members'][$key] ??= $structure->id;
-      if ($structure->access !== NULL) {
+      if ($structure->answersAccess()) {
         $mixed['guarded'][$key] ??= $structure->id;
+        $mixed['answeredBy'][$structure->id] = $structure->access !== NULL ? 'an access class' : 'an alter answering its access';
       }
     }
     foreach ($structure->refiners as $refiner) {
@@ -1043,12 +1062,14 @@ final class Resources implements ResourcesInterface {
   protected function assertMixinsUnnamed(ResourceDefinition $definition, array $mixins, array $links, array $rules, array $wirings): void {
     $guarded = $mixins['guarded'];
     $guard = static fn (string $what, string $key): \LogicException => new \LogicException(sprintf(
-      '%s names "%s", a member of %s, which is mixed into %s and has an access class. What that access may take away for one account, nothing of the owner\'s may depend on: read it inside %s, or drop the access class.',
+      '%s names "%s", a member of %s, which is mixed into %s and has %s. What that access may take away for one account, nothing of the owner\'s may depend on: read it inside %s, or drop %s.',
       $what,
       $key,
       $guarded[$key],
       $definition->id,
+      $mixins['answeredBy'][$guarded[$key]] ?? 'an access class',
       $guarded[$key],
+      ($mixins['answeredBy'][$guarded[$key]] ?? 'an access class') === 'an access class' ? 'the access class' : 'the alter\'s access',
     ));
     $ruled = static fn (string $what, string $key): \LogicException => new \LogicException(sprintf(
       '%s may answer that "%s", a member of %s mixed into %s, does not apply. Whether a mixed-in structure\'s member applies is the structure\'s to say: its def, which every owner shares, says where it is required.',
@@ -1629,7 +1650,8 @@ final class Resources implements ResourcesInterface {
   protected function childAccess(ResourceDefinition $child, ?OperationDefinition $operation, OperationContext $context, AccountInterface $account, ?string $gate = NULL): array {
     // Decision: see docs/decisions.md#access-has-three-answers.
     // Decision: see docs/decisions.md#one-invocation-model-for-both-levels.
-    if ($operation === NULL && $child->access === NULL) {
+    $answering = static::answering($child, $context);
+    if ($operation === NULL && $answering === []) {
       return [NULL, FALSE];
     }
     $access = AccessAnswer::open();
@@ -1645,20 +1667,100 @@ final class Resources implements ResourcesInterface {
       }
       $access->addCacheableDependency($result);
     }
-    if ($child->access === NULL) {
+    if ($answering === []) {
       return [$access, FALSE];
     }
-    $answer = $this->ask($child, $context, $account);
+    // Its access class, then each alter that answers access, the stricter
+    // standing; built for the account alone, each runtime answer is set
+    // aside.
     // Decision: see
     // docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
-    if ($this->accountAlone && !$answer->isStatic()) {
-      return [$access->addCacheContexts($answer->getCacheContexts()), TRUE];
+    // Decision: see
+    // docs/decisions.md#an-alter-may-answer-access-and-the-stricter-stands.
+    [$applied, $aside, $contexts] = $this->answers($answering, $context, $account);
+    if ($applied !== NULL) {
+      $access = $access->andIf($applied);
     }
-    return [$access->andIf($answer), FALSE];
+    return [$aside ? $access->addCacheContexts($contexts) : $access, $aside];
   }
 
   /**
-   * Asks a resource's or structure's access class, as a child is asked.
+   * Lists what answers access for a resource or structure, in order.
+   *
+   * Its access class first, then each of its alters that answers access
+   * (AltersAccessInterface) and applies in the context, in discovery
+   * order.
+   *
+   * Decision: see
+   * docs/decisions.md#an-alter-may-answer-access-and-the-stricter-stands.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource or structure.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The context it is built in, which says which alters apply.
+   * @param bool $locking
+   *   TRUE to list only those that can answer locked (mayLock()), as the
+   *   top asks.
+   *
+   * @return array<int, array{0: class-string, 1: class-string}>
+   *   Each class that answers, with the interface it answers through.
+   */
+  protected static function answering(ResourceDefinition $definition, OperationContext $context, bool $locking = FALSE): array {
+    $answering = [];
+    if ($definition->access !== NULL && (!$locking || static::mayLock($definition->access))) {
+      $answering[] = [$definition->access, OperationAccessInterface::class];
+    }
+    foreach ($definition->alters as $alter) {
+      if ($alter->answersAccess && $alter->appliesIn($context->id) && (!$locking || static::mayLock($alter->class))) {
+        $answering[] = [$alter->class, AltersAccessInterface::class];
+      }
+    }
+    return $answering;
+  }
+
+  /**
+   * Asks everything that answers access for one thing, and combines it.
+   *
+   * Each answer keeps its own kind: built for the account alone, a runtime
+   * answer is set aside and the static ones apply; otherwise every one
+   * applies. The ones applied combine with AccessAnswer::andIf(), the
+   * stricter standing, so nothing asked later opens what was locked or
+   * left out before it. A static omission settles it: nothing set aside
+   * could narrow it further.
+   *
+   * @param array<int, array{0: class-string, 1: class-string}> $answering
+   *   What answering() listed.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The context.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account.
+   *
+   * @return array{0: \Drupal\data_surface\Resource\AccessAnswer|null, 1: bool, 2: string[]}
+   *   The answers applied, combined, or NULL when none was; whether a
+   *   runtime answer was set aside; and the cache contexts the answers set
+   *   aside read, which chose their kind.
+   */
+  protected function answers(array $answering, OperationContext $context, AccountInterface $account): array {
+    $applied = NULL;
+    $aside = FALSE;
+    $contexts = [];
+    foreach ($answering as [$class, $interface]) {
+      $answer = $this->ask($class, $interface, $context, $account);
+      if ($this->accountAlone && !$answer->isStatic()) {
+        $aside = TRUE;
+        array_push($contexts, ...$answer->getCacheContexts());
+        continue;
+      }
+      $applied = $applied === NULL ? $answer : $applied->andIf($answer);
+    }
+    if ($applied !== NULL && $applied->isOmitted() && $applied->isStatic()) {
+      return [$applied, FALSE, []];
+    }
+    return [$applied, $aside, array_values(array_unique($contexts))];
+  }
+
+  /**
+   * Asks an access class, or an alter that answers access, as a child is.
    *
    * A static answer depends on nothing but the account, so it is asked
    * once for a context and an account kind (the account's roles and its
@@ -1671,10 +1773,13 @@ final class Resources implements ResourcesInterface {
    * Decision: see
    * docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
-   *   The resource or structure, which names an access class.
+   * @param class-string $class
+   *   The access class, or the alter.
+   * @param class-string $interface
+   *   What it answers through: OperationAccessInterface for an access
+   *   class, AltersAccessInterface for an alter.
    * @param \Drupal\data_surface\Resource\OperationContext $context
-   *   Its context.
+   *   The context of what it answers for.
    * @param \Drupal\Core\Session\AccountInterface $account
    *   The account.
    *
@@ -1685,13 +1790,13 @@ final class Resources implements ResourcesInterface {
    *   With assertions on, when a static answer asked again differs, or
    *   asks for a service that reads site state.
    */
-  protected function ask(ResourceDefinition $definition, OperationContext $context, AccountInterface $account): AccessAnswer {
-    $class = (string) $definition->access;
+  protected function ask(string $class, string $interface, OperationContext $context, AccountInterface $account): AccessAnswer {
     $kept = $this->keptAs($class, $context, $account);
     if ($kept !== NULL && isset($this->staticAnswers[$kept])) {
       return $this->staticAnswers[$kept];
     }
-    $instance = $this->instance($class, OperationAccessInterface::class);
+    $instance = $this->instance($class, $interface);
+    assert($instance instanceof OperationAccessInterface || $instance instanceof AltersAccessInterface);
     $answer = AccessAnswer::fromAnswer($instance->access($context, $account));
     if (!$answer->isStatic()) {
       return $answer;
@@ -1739,9 +1844,9 @@ final class Resources implements ResourcesInterface {
    * Called inside assert(), so only where assertions are on.
    *
    * @param string $class
-   *   The access class.
-   * @param \Drupal\data_surface\Resource\OperationAccessInterface $instance
-   *   The access class as built.
+   *   The access class, or the alter.
+   * @param \Drupal\data_surface\Resource\OperationAccessInterface|\Drupal\data_surface\Resource\AltersAccessInterface $instance
+   *   It, as built.
    * @param \Drupal\data_surface\Resource\OperationContext $context
    *   The context.
    * @param \Drupal\Core\Session\AccountInterface $account
@@ -1755,11 +1860,12 @@ final class Resources implements ResourcesInterface {
    * @throws \LogicException
    *   When it answers otherwise, or asks for a service reading site state.
    */
-  protected function answersAgain(string $class, OperationAccessInterface $instance, OperationContext $context, AccountInterface $account, AccessAnswer $first): bool {
+  protected function answersAgain(string $class, OperationAccessInterface|AltersAccessInterface $instance, OperationContext $context, AccountInterface $account, AccessAnswer $first): bool {
     $again = AccessAnswer::fromAnswer(StaticRefinerContainer::guardAccess($class, static fn (): AccessResultInterface|AccessAnswer => $instance->access($context, $account)));
     if ($again->answer() !== $first->answer() || !$again->isStatic()) {
       throw new \LogicException(sprintf(
-        'The access class %s answered %s, static by its cacheability, and asked again for the same account in the same context answered %s, %s. A static answer depends on the account alone and is the same every time it is asked; one that depends on anything else says so in its cacheability.',
+        'The %s %s answered %s, static by its cacheability, and asked again for the same account in the same context answered %s, %s. A static answer depends on the account alone and is the same every time it is asked; one that depends on anything else says so in its cacheability.',
+        $instance instanceof OperationAccessInterface ? 'access class' : 'alter',
         $class,
         $first->answer(),
         $again->answer(),
@@ -1935,11 +2041,44 @@ final class Resources implements ResourcesInterface {
         return $result;
       }
     }
-    if ($definition->access === NULL) {
-      return $result;
+    if ($definition->access !== NULL) {
+      $answer = static::atTheTop($this->instance($definition->access, OperationAccessInterface::class)->access($context, $account));
+      $result = $permission === NULL ? $answer : $result->andIf($answer);
     }
-    $answer = static::atTheTop($this->instance($definition->access, OperationAccessInterface::class)->access($context, $account));
-    return $permission === NULL ? $answer : $result->andIf($answer);
+    // Then each alter that answers access, which may refuse and never
+    // allow what was refused: core's andIf() keeps a refusal.
+    // Decision: see
+    // docs/decisions.md#an-alter-may-answer-access-and-the-stricter-stands.
+    return $this->alteredAtTheTop($result, $definition, $context, $account);
+  }
+
+  /**
+   * Adds each alter's access answer to an answer read at the top.
+   *
+   * An alter only narrows: its answer is read as a child's is (neutral is
+   * open), then as one asked on its own (omitted is a refusal), and
+   * combined with core's andIf(), so a refusal stands and nothing opens
+   * what was refused.
+   *
+   * @param \Drupal\Core\Access\AccessResultInterface $result
+   *   The answer so far.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource or structure.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The context.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account.
+   *
+   * @return \Drupal\Core\Access\AccessResultInterface
+   *   The answer with every alter's.
+   */
+  protected function alteredAtTheTop(AccessResultInterface $result, ResourceDefinition $definition, OperationContext $context, AccountInterface $account): AccessResultInterface {
+    foreach (static::answering($definition, $context) as [$class, $interface]) {
+      if ($interface === AltersAccessInterface::class && !$result->isForbidden()) {
+        $result = $result->andIf(static::atTheTop($this->ask($class, $interface, $context, $account)));
+      }
+    }
+    return $result;
   }
 
   /**
@@ -1968,7 +2107,7 @@ final class Resources implements ResourcesInterface {
   }
 
   /**
-   * Says whether any slot's variant discovered has an access class.
+   * Says whether any slot's variant discovered has an access answer.
    *
    * Building a resource to find its children costs a build, so it is done
    * only when some child could refuse: a slot's variant chosen by a
@@ -1979,13 +2118,14 @@ final class Resources implements ResourcesInterface {
    *   The resource or structure being asked about.
    *
    * @return bool
-   *   TRUE when some declared variant other than it names an access class.
+   *   TRUE when some declared variant other than it names an access class
+   *   or has an alter that answers access.
    */
   protected function childrenMayAnswer(ResourceDefinition $definition): bool {
     foreach ($this->registry->getDefinitions() as $other) {
       foreach ($other->variants as $variants) {
         foreach ($variants as $class) {
-          if ($class !== $definition->name() && $this->registry->hasDefinition($class) && $this->registry->getDefinition($class)->access !== NULL) {
+          if ($class !== $definition->name() && $this->registry->hasDefinition($class) && $this->registry->getDefinition($class)->answersAccess()) {
             return TRUE;
           }
         }
@@ -2032,8 +2172,9 @@ final class Resources implements ResourcesInterface {
         }
         $variant = $this->registry->getDefinition($class);
         [$variant_context] = $this->invokeChild($variant, $context, $key, $parent->id);
-        if ($variant->access !== NULL) {
-          $answer = static::atTheTop($this->instance($variant->access, OperationAccessInterface::class)->access($variant_context, $account));
+        if ($variant->answersAccess()) {
+          $answer = $variant->access === NULL ? AccessResult::allowed() : static::atTheTop($this->instance($variant->access, OperationAccessInterface::class)->access($variant_context, $account));
+          $answer = $this->alteredAtTheTop($answer, $variant, $variant_context, $account);
           $answers[] = $answer;
           if ($answer->isForbidden()) {
             continue;

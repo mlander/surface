@@ -63,7 +63,8 @@ final class ResourceCatalogue {
    *   slot, where the variants of every other value come from. An
    *   alter's `refines` lists its #[RefinesInput] methods by the key each
    *   refines and the keys it watches, named as the alter names them: a
-   *   key it mounted itself by that key's own name.
+   *   key it mounted itself by that key's own name; its `access` says
+   *   whether it answers access too (AltersAccessInterface).
    */
   public function describe(): array {
     $catalogue = [];
@@ -95,6 +96,7 @@ final class ResourceCatalogue {
           'class' => $alter->class,
           'module' => $alter->module,
           'operations' => $alter->operations,
+          'access' => $alter->answersAccess,
           'refines' => array_map(static fn (RefinerDefinition $refiner): array => [
             'key' => $refiner->key,
             'watches' => $refiner->watched(),

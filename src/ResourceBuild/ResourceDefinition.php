@@ -140,6 +140,25 @@ final class ResourceDefinition {
   }
 
   /**
+   * Answers whether anything answers access for it beside its operations.
+   *
+   * @return bool
+   *   TRUE when it names an access class, or an alter of it answers
+   *   access in some operation.
+   */
+  public function answersAccess(): bool {
+    if ($this->access !== NULL) {
+      return TRUE;
+    }
+    foreach ($this->alters as $alter) {
+      if ($alter->answersAccess) {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
+
+  /**
    * Answers whether a deriver made it.
    *
    * @return bool

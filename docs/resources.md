@@ -308,7 +308,8 @@ has the rest.
 
 ## Access
 
-Two tiers, and alters never touch either:
+Two tiers, and another module's alter may answer after both
+([An alter's answer](#an-alters-answer)):
 
 - **The operation's permission**, on `#[Operation(permission:)]`: the
   static part, answerable with nothing loaded. A `%key` in it is filled
@@ -427,8 +428,18 @@ frame, a mixed-in structure's for its members in the owner's (the
 stricter standing), a slot variant answered at runtime is offered and
 the slot marked, and a port carries no access. A static lock on a
 parent over a runtime answer in its child leaves the child's key locked
-with the parent and marked. The exhibit in the test module is the
-worked example (`StaticRuntimeAccessTest`).
+with the parent and marked. At the top, a runtime answer set aside
+marks every key, since the whole may be found locked. The exhibit in
+the test module is the worked example (`StaticRuntimeAccessTest`).
+
+An alter's answer has its kind read the same way, each answer by
+itself: built for the account alone, the static answers of the owner
+and its alters apply together and each runtime one is set aside, so a
+static lock from the owner beside a runtime answer from an alter leaves
+the key locked and marked. A permission-based answer of an alter
+removes or locks keys in the full schema and the tool listing for the
+account; a state-based one is settled at call time
+([An alter's answer](#an-alters-answer)).
 
 **Narrowing by account is not access.** "An editor sees fewer venues"
 narrows the values a key allows, which is a refiner's: it reads the
@@ -838,9 +849,63 @@ another module's mount, an output mount, which is never drawn) is
 refused, as is a key the owner's blueprint does not declare at its top
 level.
 
-Nothing an alter does removes: it cannot take a key or a value away
-from the owner. A site policy that hides an owner's key is a later
-concept, not a verb here.
+Nothing an alter declares removes: it cannot take a key or a value away
+from the owner's declaration. A site policy that hides an owner's key
+for everyone is a later concept, not a verb here. What an alter may do
+is answer access, below, which locks or leaves out keys for an account
+or once the thing is known, as any access answer does.
+
+### An alter's answer
+
+An alter that implements `AltersAccessInterface` answers access for the
+resource or structure it names, with the access class's method on the
+alter itself, `access(OperationContext $context, AccountInterface
+$account)`, returning an `AccessAnswer` or core's result. It is asked
+after the owner's own answers (the operation's permission, then the
+access class), each alter in discovery order, and the stricter answer
+stands (`AccessAnswer::andIf()`): an alter can lock or leave out the
+keys of what it alters, its own mounted keys among them, and can never
+open what the owner or an earlier alter locked or left out. Open, or
+core's neutral, changes nothing. The operation's permission stays the
+owner's; an alter that wants a further permission answers locked or
+omitted for an account without it, with the `user.permissions` context.
+
+It answers wherever the thing appears, in the frame it is built in: at
+the top (locked builds it locked whole, omitted refuses the caller), as
+a child, at each site of a structure attached twice, as one slot
+variant, for a mixed-in structure's members in the owner's frame, for a
+collection's item and at every entry of keys from the site; only in the
+operations its `#[Alters]` names. Each answer's kind is its own,
+read from its cacheability ([Static and runtime
+access](#static-and-runtime-access)). The examples' workflow module is
+the case on a site: two alters answer for example 10's program and its
+fees, with no change to the program.
+
+```php
+#[Alters(FeesStructure::class)]
+final class FeesWorkflowAlter implements AltersAccessInterface {
+
+  public function access(OperationContext $context, AccountInterface $account): AccessAnswer {
+    $read = (new CacheableMetadata())->addCacheContexts(['user.permissions']);
+    if (!$account->hasPermission('see event fees')) {
+      // Static: the account alone.
+      return AccessAnswer::omitted('Only an account that may see event fees sees them.')->addCacheableDependency($read);
+    }
+    // Runtime: a stored value, read now.
+    $read->setCacheMaxAge(0);
+    // ...
+  }
+
+}
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+An alter of a shape that implements it is refused at discovery: a shape
+is one value with no access of its own. An alter answers for a whole
+resource or structure, never for one key of it; a key that needs an
+answer of its own is a structure
+([decision](decisions.md#an-alter-may-answer-access-and-the-stricter-stands)).
 
 ### A whole alter
 
@@ -1327,7 +1392,8 @@ timestamps' two are the journal's own.
   attached, on its members: the test module's `TimestampsAlter` rewords
   `created` in the journal and the ledger alike. One that would mount a
   key is refused where the structure is mixed in.
-- **Access.** The structure's access class answers for its members:
+- **Access.** The structure's access class answers for its members,
+  and so does an alter of the structure that answers access, after it:
   locked, they hold what is stored, shown and fixed; omitted, they are
   not there and storage keeps them. The owner's access answers for the
   rest, and where both answer for the same keys the stricter stands

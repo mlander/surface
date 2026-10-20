@@ -15,7 +15,9 @@ use Drupal\Core\Session\AccountInterface;
  * runs only when it passes. Registered as an autowired service when the
  * class naming it is discovered, the way a hook class is, so it may hold
  * services.
- * Alters never touch access.
+ * Another module's alter may answer as well, after this class
+ * (AltersAccessInterface): the stricter answer stands, so an alter
+ * narrows and never opens what this answered.
  *
  * The same class answers at both levels. At the top, for an operation
  * asked on its own, it decides whether the caller gets in at all. At a

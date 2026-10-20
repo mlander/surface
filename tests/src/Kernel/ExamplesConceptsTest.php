@@ -462,6 +462,8 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $accounts = json_decode(htmlspecialchars_decode((string) $panel['accounts']['content']['#value']), TRUE);
     $this->assertSame('runtime', $accounts['you']['property'][ContractEmitter::EXTENSION]['access']);
     $this->assertTrue($accounts['without the permission']['property']['readOnly']);
+    $this->assertStringContainsString('Enable data_surface_examples_workflow and reload', (string) $panel['workflow']['#markup'], 'Without the workflow module, the panel says how to see its answers.');
+    $this->assertArrayNotHasKey('event.program:published_in_workflow', $panel['calls'], 'A call another module\'s part needs is made only where it is on.');
     $this->assertSame(['configure', 'update'], array_slice($panel['facts']['#rows'][0], 0, 2));
     $this->assertSame([
       'check',

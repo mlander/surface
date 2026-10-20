@@ -27,7 +27,8 @@
                         "type": "string",
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": []
+                            "dependsOn": [],
+                            "access": "runtime"
                         }
                     },
                     "sessions": {
@@ -41,7 +42,8 @@
                         "default": 8,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": []
+                            "dependsOn": [],
+                            "access": "runtime"
                         }
                     },
                     "published": {
@@ -53,7 +55,8 @@
                         "default": false,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": []
+                            "dependsOn": [],
+                            "access": "runtime"
                         }
                     },
                     "fees": {

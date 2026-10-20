@@ -908,8 +908,8 @@ change to the owner's storage or to anything that reads it. The
 alter's glue may read the structure's keys by their names, as it reads
 any key it mounted, and may not narrow them: what they allow is the
 structure's. A resource or a structure with children of its own, or
-whose access answers locked or omitted, is refused at a mount; each is
-open. *Changed for ports: until then `attach()` and `attachList()` on
+whose access answers locked or omitted (its access class, or an alter
+that answers for it), is refused at a mount; each is open. *Changed for ports: until then `attach()` and `attachList()` on
 an alter were both refused, an attached structure inside the mount not
 being built.*
 (`ResourceBlueprintAdditions::attach()`, `ResourceBlueprintAdditions::attachList()`,
@@ -1208,7 +1208,10 @@ journal is the first case. Each choice, and why:
   too. The owner's access answers for the rest, and where both answer
   for the same keys the stricter stands: an owner left out takes the
   members it mixed in with it, an owner locked locks them, whatever the
-  structure answered.
+  structure answered. An alter of the structure that answers access
+  answers for its members too, after the structure's own, in the
+  owner's frame ([An alter may answer
+  access](#an-alter-may-answer-access-and-the-stricter-stands)).
 - **The tool flattens by reading the data surface.** The tool bridge
   converts the built data surface, where the members are the owner's
   keys, so `values` is flat; the Tool API's normalizer writes from typed
@@ -1403,6 +1406,9 @@ also says which of two kinds the answer is, static (the account alone
 decides it) or runtime (the subject or site state does), which decides
 where it is stated: [Access is static or runtime, read from its
 cacheability](#access-is-static-or-runtime-read-from-its-cacheability).
+Another module's alter may answer as well, after the owner, the stricter
+standing: [An alter may answer access, and the stricter
+stands](#an-alter-may-answer-access-and-the-stricter-stands).
 (`AccessAnswer`, `Resources::childAccess()`)
 
 ### Access is static or runtime, read from its cacheability
@@ -1557,6 +1563,113 @@ flag); the loan's insurance is runtime for everyone
 `Resources::childAccess()`, `ContractEmitter::frame()`,
 `InputDefinitions::runtimeAccessNote()`)
 
+### An alter may answer access, and the stricter stands
+
+Until this, a resource or structure had exactly one access answer, the
+class its attribute names, beside the operation's permission, and
+another module's alter could add keys and rules but no answer. So a
+workflow, group or field permissions module could not lock or leave out
+keys of a resource it does not own unless that resource was a content
+entity, whose access class asks core's handlers. Decided 2026-10-20,
+closing that gap (found 2026-10-19), point by point.
+
+- **The spelling.** An `#[Alters]` class implements
+  `AltersAccessInterface`, whose `access(OperationContext $context,
+  AccountInterface $account): AccessAnswer|AccessResultInterface` is an
+  access class's method, on the alter. One spelling, an instance method,
+  as an access class has: an alter is an autowired service, so it may
+  hold what it reads the subject with (State, configuration), and a
+  static method could read the subject only through the global
+  container. A static spelling beside it would also be a second way to
+  say what the answer's cacheability already says, and would read as
+  "a static answer", which is the cacheability's to decide. Implementing
+  the interface is what makes an alter answer, as implementing
+  `AltersInputsInterface` makes it add; nothing is declared beside it.
+  An alter of a shape that implements it is refused at discovery: a
+  shape is one value with no access of its own. An alter that adds,
+  narrows and answers nothing is not refused, as before; only a
+  shape's alter must add.
+- **Where it is asked.** For the resource or structure the alter names,
+  in the frame where that thing is built, wherever it appears: at the
+  top, where locked builds it locked whole and omitted refuses the
+  caller; as an attached child; as a slot's variant, offered, offered
+  read only or not offered, and refusing its parent as a chosen variant
+  may ([A chosen variant may refuse](#a-chosen-variant-may-refuse)); a
+  mixed-in structure's members, held in the owner's frame; a
+  collection's item, once for the list; every entry of keys from the
+  site. A structure attached twice, or by two resources, gets the
+  alter's answer at each site. It applies in the operations its
+  `#[Alters]` names, as the rest of the alter does.
+- **Composition: the stricter stands.** The operation's permission,
+  then the owner's access class, then each alter's answer in discovery
+  order, combined with `AccessAnswer::andIf()`. Two reasons. Two answers
+  about the same keys already combine this way: a child's operation
+  permission and its access class, a mixed-in structure's access and its
+  owner's ([A mixin is merged flat](#a-mixin-is-merged-flat)). And an
+  answer applies wherever the thing appears, the field permissions
+  rationale: access to a field is the field's, on every entity form and
+  through every door it is reached by, so a module answering for a
+  structure answers for it at every site. So an alter can lock or leave
+  out the keys of what it alters (its own mounted keys and a structure
+  it attached at its mount among them), and can never open what the
+  owner or an earlier alter locked or left out: an alter answering open,
+  or core's neutral, changes nothing (the narrowing invariant). At the
+  top an alter's answer is read as a child's is, neutral as open, then
+  as one asked on its own, omitted as a refusal, and combined with
+  core's `andIf()`, which keeps a refusal. The order matters only for
+  the reason a combined answer carries: of two answers as narrow, the
+  earlier one's.
+- **The operation's permission stays the owner's.** The tool declares
+  it and the schema route asks it, as before. An alter that wants a
+  further permission answers locked or omitted for an account without
+  it, with the `user.permissions` context, which reads static: stated in
+  the full schema and the tool listing for that account.
+- **Each answer keeps its kind.** Built for the account alone
+  (`buildStatic()`), each answer is applied or set aside by its own
+  cacheability: the static ones combine and apply, and each runtime one
+  is set aside and the key marked. A static lock from the owner beside a
+  runtime answer from an alter leaves the key locked and marked, where
+  the two combined first and read once would have been runtime and set
+  aside whole, taking the static lock with them. A static omission
+  settles it: nothing set aside could narrow it further, so nothing is
+  marked. An alter's static answer is kept per class, context and
+  account kind, and asked again guarded under `assert()`, as an access
+  class's is; `StaticAccessAgreementTrait` holds the full schema to the
+  build with alters answering, as it does without.
+- **At the top, set aside marks every key.** A runtime answer set aside
+  at the top, an access class's or an alter's, now marks every key of
+  the resource (`x-surface.access: "runtime"` in the full schema, the
+  words in the tool listing), since the whole of it may be found locked
+  once the subject is known. *Changed with this decision: until then
+  nothing was marked, and the full schema stated open keys the build
+  would lock, which the agreement trait found on example 10 with its
+  workflow module.* (`DataSurfaceBuilderInterface::markRuntimeAccessWhole()`)
+- **Read by the wall.** Like any access answer, an alter's is the
+  site's, never the def's: the def stays the widest reading of the
+  child ([The wall is the reference
+  boundary](#the-wall-is-the-reference-boundary)). Nothing of an owner's
+  may name a member of a mixed-in structure an alter answers for, as for
+  one with an access class: what the answer takes away for one account
+  nothing may depend on for every account.
+
+The fixture is the test module's gallery, which names no access class
+but its wall's: alters answer for the gallery (in its curating
+operation), the plaque it mixes in, the wall it attaches twice and the
+annex once, the oil finish one of its slot's variants is, and the room
+at every entry of its keys from the site; one more alter tries to open
+the wall (`AlterAccessTest`, `AlterAccessFormTest`). The first case on
+a site is example 10's workflow module, `data_surface_examples_workflow`.
+*Open:* an alter cannot answer for one key of its owner, since an answer
+is about a resource or structure, and a key that needs an answer of its
+own is a structure, as a field is; a structure at a mount that an
+alter answers locked or left out is refused, as one whose access class
+does ([An alter attaches at its own mount](#an-alter-attaches-at-its-own-mount));
+a reason an alter gives at a child is not shown, as no child's is.
+(`AltersAccessInterface`, `AlterDefinition::$answersAccess`,
+`ResourceDefinition::answersAccess()`, `Resources::answering()`,
+`Resources::answers()`, `Resources::alteredAtTheTop()`,
+`Resources::lockedAtTheTop()`)
+
 ### A permission a child cannot name
 
 A child operation's permission whose `%key` the child's context cannot
@@ -1605,9 +1718,12 @@ reading under which a locked answer at the top was a refusal.
   its default; the sealed data surface says why
   (`DataSurfaceInterface::lockedWhole()`). A class whose `access()` is
   declared to return core's answer alone cannot answer locked, so it is
-  not asked here and nothing changes for it. Built for the account
-  alone, a runtime answer is set aside, as a child's is, and nothing is
-  marked: the call itself settles it.
+  not asked here and nothing changes for it; an alter that answers
+  access is asked after it, the stricter standing. Built for the account
+  alone, a runtime answer is set aside, as a child's is, and every key
+  is marked, since the whole may be found locked: the call settles it
+  (*changed 2026-10-20: nothing was marked; [An alter may answer
+  access](#an-alter-may-answer-access-and-the-stricter-stands)*).
 - **The doors.** The form draws every element disabled, says why above
   them and offers no Save. The pipeline refuses a submit before storage
   is loaded, by name ("This may be seen and not changed, so nothing was

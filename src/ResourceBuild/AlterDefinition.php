@@ -23,12 +23,15 @@ final class AlterDefinition {
    *   The operations it applies in; empty for all.
    * @param \Drupal\data_surface\ResourceBuild\RefinerDefinition[] $refiners
    *   Its #[RefinesInput] methods.
+   * @param bool $answersAccess
+   *   Whether it answers access too (AltersAccessInterface).
    */
   public function __construct(
     public readonly string $class,
     public readonly string $module,
     public readonly array $operations,
     public readonly array $refiners,
+    public readonly bool $answersAccess = FALSE,
   ) {}
 
   /**

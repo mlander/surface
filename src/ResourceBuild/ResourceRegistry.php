@@ -19,6 +19,7 @@ use Drupal\data_surface\Resource\Attribute\Structure;
 use Drupal\data_surface\Resource\Attribute\Variant;
 use Drupal\data_surface\Resource\DerivedOperation;
 use Drupal\data_surface\Resource\HasOutputsInterface;
+use Drupal\data_surface\Resource\AltersAccessInterface;
 use Drupal\data_surface\Resource\AltersInputsInterface;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface\Resource\ShapeInterface;
@@ -579,6 +580,7 @@ final class ResourceRegistry {
         module: $module,
         operations: array_values($attribute->operations),
         refiners: self::refinersOf($reflection),
+        answersAccess: $reflection->implementsInterface(AltersAccessInterface::class),
       );
       foreach ($named as $altered) {
         if (!isset($bases[$attribute->resource]) && self::isUndiscovered($altered, $resources, sprintf('#[Alters] on %s', $class))) {
@@ -686,6 +688,7 @@ final class ResourceRegistry {
     $problem = match (TRUE) {
       $attribute->operations !== [] => 'names operations, and a shape is the same in every operation of every key that uses it',
       self::refinersOf($class) !== [] => 'declares a #[RefinesInput] method, and a shape has no siblings to watch: tighten it in alterInputs() with narrow()',
+      $class->implementsInterface(AltersAccessInterface::class) => sprintf('implements %s, and a shape is one value with no access of its own: answer for the resource or structure that asks for it', AltersAccessInterface::class),
       !$class->implementsInterface(AltersInputsInterface::class) => sprintf('does not implement %s, whose alterInputs() is where a shape is tightened', AltersInputsInterface::class),
       default => NULL,
     };

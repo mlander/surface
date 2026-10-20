@@ -54,6 +54,16 @@ final class ExamplesController extends ControllerBase {
   public const COMPLIANCE_STRUCTURE = 'src/Structure/ComplianceStructure.php';
 
   /**
+   * The module whose alters answer for example 10's program and fees.
+   */
+  public const WORKFLOW = 'data_surface_examples_workflow';
+
+  /**
+   * The alters of that module, relative to it.
+   */
+  public const WORKFLOW_ALTERS = ['src/Alter/ProgramWorkflowAlter.php', 'src/Alter/FeesWorkflowAlter.php'];
+
+  /**
    * The module serving examples 1 to 3 as React forms.
    */
   public const REACT = 'data_surface_react';
@@ -287,12 +297,13 @@ final class ExamplesController extends ControllerBase {
       ],
       10 => [
         'title' => $this->t('who may change what'),
-        'sentence' => $this->t('Fees locked for an account without a permission, stated ahead of time for that account, and once the program is published, settled only by what is stored; and a check that changes nothing, and says so.'),
+        'sentence' => $this->t('Fees locked for an account without a permission, stated ahead of time for that account, and once the program is published, settled only by what is stored; and a check that changes nothing, and says so. With @module enabled, another module answers too, with no change to the program: the fees left out for an account that may not see them, and the whole program fixed once its workflow publishes it.', ['@module' => self::WORKFLOW]),
         'items' => [
           $this->route('data_surface_examples.step10'),
           $this->route('data_surface_examples.step10_check'),
           $this->react('event.program'),
           $this->lines(ProgramResource::class),
+          $this->t('The two alters of the workflow module: @lines lines of code.', ['@lines' => $this->workflowLines()]),
         ],
       ],
       11 => [
@@ -367,6 +378,17 @@ final class ExamplesController extends ControllerBase {
   protected function complianceLines(): int {
     $path = DRUPAL_ROOT . '/' . $this->moduleList->getPath(self::COMPLIANCE) . '/';
     return CodeLines::count($path . self::COMPLIANCE_STRUCTURE) + CodeLines::count($path . self::COMPLIANCE_ALTER);
+  }
+
+  /**
+   * Counts the lines of example 10's workflow alters, enabled or not.
+   *
+   * @return int
+   *   The lines of code.
+   */
+  protected function workflowLines(): int {
+    $path = DRUPAL_ROOT . '/' . $this->moduleList->getPath(self::WORKFLOW) . '/';
+    return array_sum(array_map(static fn (string $file): int => CodeLines::count($path . $file), self::WORKFLOW_ALTERS));
   }
 
   /**

@@ -90,6 +90,8 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
     // Example 4's closed rooms live in State, not in any example's
     // settings, and are opened again too.
     $this->container->get('state')->set('data_surface_examples_compliance.closed_rooms', ['riverside_east']);
+    // So does example 10's workflow state, which is cleared.
+    $this->container->get('state')->set('data_surface_examples_workflow.state', 'published');
     // Examples 7 to 11 too, and the ticket types example 9 reads.
     $this->config('data_surface_examples.bulletin')->set('frequency', 'monthly')->save();
     $this->config('data_surface_examples.ticket_types')->set('types.vip', ['label' => 'VIP', 'locked' => FALSE])->save();
@@ -110,6 +112,7 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
     }
     $this->assertArrayNotHasKey('third_party_settings', $this->stored($three));
     $this->assertNull($this->container->get('state')->get('data_surface_examples_compliance.closed_rooms'));
+    $this->assertNull($this->container->get('state')->get('data_surface_examples_workflow.state'));
     // Riverside Hall's main hall seats 400, more than example 4 allows
     // without a licence, so its ceiling is what the shipped room shows.
     foreach ([$two, $three] as $name) {

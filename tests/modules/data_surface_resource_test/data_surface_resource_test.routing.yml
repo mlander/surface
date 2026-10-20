@@ -118,6 +118,18 @@ data_surface_resource_test.exhibit:
   requirements:
     _data_surface_operation_access: 'TRUE'
 
+# The gallery's one operation, served by the generic form: access answered
+# by alters, after the owner's.
+data_surface_resource_test.gallery:
+  path: '/surface-test/gallery'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Configure the gallery'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Gallery\GalleryResource'
+    _data_surface_operation: 'configure'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
 # The opening hours' one operation, served by the generic form: the
 # common settings recipes, drawn by the stock widgets (docs/recipes.md).
 data_surface_resource_test.opening_hours:

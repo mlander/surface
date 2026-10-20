@@ -974,6 +974,18 @@ renames sit in A because they are cheapest before new code exists.
       entry, ports on an entry.
     - **Required keys resent on every edit call**: a decision pending
       with the user. (Fresh eyes, 16; adopters.)
+    - **Third-party access**: a workflow, group or field permissions
+      module could not lock or leave out keys of a resource it does not
+      own unless that resource was a content entity. (Found by the user,
+      2026-10-19.) DONE 2026-10-20: an alter implementing
+      `AltersAccessInterface` answers access for what it alters, after
+      the owner, the stricter standing, each answer's kind its own, in
+      every frame the thing is built in; a runtime answer set aside at
+      the top marks every key; example 10's workflow module is the case
+      on a site
+      (`docs/decisions.md#an-alter-may-answer-access-and-the-stricter-stands`).
+      Open: an answer for one key of an owner; a structure at a mount
+      an alter locks.
 
 ## Rejected, on the record
 

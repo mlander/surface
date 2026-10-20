@@ -32,7 +32,8 @@ object back to the files the module ships in `config/install`, the
 ticket types example 9 reads among them,
 including anything another module stored on them, such as the event
 licence example 4's module adds under example 3, and it opens again
-every room example 4 lets a site close.
+every room example 4 lets a site close and clears example 10's workflow
+state.
 
 ## What a resource is, in one paragraph
 
@@ -1364,6 +1365,131 @@ Success: Check a program changes nothing: the values were accepted and prepared,
 Failed: The values were refused: sessions: This value should be between 1 and 30.
 ```
 
+### Another module answers too
+
+```bash
+drush pm:install data_surface_examples_workflow
+```
+
+then reload example 10. A second module, which example 10 does not
+know, answers access for the program and its fees with two alters,
+each implementing `AltersAccessInterface`. Its answers are asked after
+the program's own (the operation's permission, then the fees' access
+class), and the stricter answer stands, so it can lock or leave out
+and can never open what the fees' own access locked
+([An alter's answer](../../docs/resources.md#an-alters-answer)). Each
+answer's kind is read from its cacheability, as any answer's is:
+
+- **Static**, for an account without "see event fees", the module's
+  permission: the fees are left out, read from the account's
+  permissions alone, so the full schema and the tool listing for that
+  account have no fees at all, where before they were locked.
+- **Runtime**, once the module's workflow state, which it keeps in
+  State, is published: the program is locked whole in the operation
+  that changes it, its headline and its fees with every other key, and
+  the fees are fixed wherever else they appear. Only what is stored
+  says so, so the full schema marks every key of the program `access:
+  "runtime"`, and a call is refused by name.
+
+<!-- code: ../data_surface_examples_workflow/src/Alter/FeesWorkflowAlter.php -->
+
+```php
+#[Alters(FeesStructure::class)]
+final class FeesWorkflowAlter implements AltersAccessInterface {
+
+  /**
+   * The permission that may see the fees.
+   */
+  public const PERMISSION = 'see event fees';
+
+  /**
+   * Constructs the alter, which the container builds as a service.
+   *
+   * @param \Drupal\Core\State\StateInterface $state
+   *   The State, where the workflow state is kept.
+   */
+  public function __construct(
+    protected readonly StateInterface $state,
+  ) {}
+
+  /**
+   * {@inheritdoc}
+   */
+  public function access(OperationContext $context, AccountInterface $account): AccessAnswer {
+    $read = (new CacheableMetadata())->addCacheContexts(['user.permissions']);
+    if (!$account->hasPermission(self::PERMISSION)) {
+      // Static: the account alone.
+      return AccessAnswer::omitted('Only an account that may see event fees sees them.')->addCacheableDependency($read);
+    }
+    // Runtime: a stored value, read now.
+    $read->setCacheMaxAge(0);
+    if ($this->state->get(ProgramWorkflowAlter::STATE) === ProgramWorkflowAlter::PUBLISHED) {
+      return AccessAnswer::locked('The fees are fixed once the program is published in its workflow.')->addCacheableDependency($read);
+    }
+    return AccessAnswer::open()->addCacheableDependency($read);
+  }
+
+}
+```
+
+<!-- code: ../data_surface_examples_workflow/src/Alter/ProgramWorkflowAlter.php -->
+
+```php
+#[Alters(ProgramResource::class, operations: ['configure'])]
+final class ProgramWorkflowAlter implements AltersAccessInterface {
+
+  /**
+   * The State key holding the program's workflow state.
+   */
+  public const STATE = 'data_surface_examples_workflow.state';
+
+  /**
+   * The workflow state that fixes the program.
+   */
+  public const PUBLISHED = 'published';
+
+  /**
+   * Constructs the alter, which the container builds as a service.
+   *
+   * @param \Drupal\Core\State\StateInterface $state
+   *   The State, where the workflow state is kept.
+   */
+  public function __construct(
+    protected readonly StateInterface $state,
+  ) {}
+
+  /**
+   * {@inheritdoc}
+   */
+  public function access(OperationContext $context, AccountInterface $account): AccessAnswer {
+    $answer = $this->state->get(self::STATE) === self::PUBLISHED
+      ? AccessAnswer::locked('The program is published in its workflow, so it is fixed.')
+      : AccessAnswer::open();
+    // Runtime: a stored value, read now.
+    return $answer->mergeCacheMaxAge(0);
+  }
+
+}
+```
+
+The panel above the form then says what the module answers, and its
+last call is made with the workflow state published, set for the call
+and put back after it:
+
+```bash
+drush state:set data_surface_examples_workflow.state published
+drush tool:run data_surface:event.program:configure --uid=1 --input='{"values":{"headline":"Four days of talks"}}' --input=dry_run=true
+drush state:delete data_surface_examples_workflow.state
+```
+
+```
+3. A new headline, once the workflow module has published the program
+Failed: The values were refused: @access: This may be seen and not changed, so nothing was written: The program is published in its workflow, so it is fixed.
+```
+
+Neither the program nor the fees changed, and Reset to defaults clears
+the workflow state.
+
 ## Example 11: the stock widgets, and what nothing means
 
 `/surface-examples/11`
@@ -1495,5 +1621,6 @@ Drush commands are checked against `ExampleCalls`.
 | `Functional\ServedSubmitEndpointTest` | In React: example 2 saved over HTTP, refused, and refused after someone else saved. |
 | `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files, and opens every room example 4 closed. |
 | `Kernel\ExamplesConceptsTest` | Examples 7 to 11: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; the panel above each, and none above examples 1 to 3; each class stays screen sized. |
+| `Kernel\ExamplesWorkflowTest` | Example 10 with the workflow module: the fees left out of the full schema, the tool listing and the read tool for an account without "see event fees" and kept for one with it; the program locked whole once the workflow state is published, settled at call time and left unmarked in the full schema; checking still answers; the panel's paragraph, with the module and without it. |
 | `Kernel\ExamplesConceptsToolTest` | Examples 7 to 11: every call `ConceptCalls` writes down, its answer, nothing written, and this page quoting each command and answer. |
 | `Functional\ExamplesConceptsRoutesTest` | Every route of examples 7 to 11 answers an administrator and refuses anonymous; the landing page lists them; each page shows its panel and saves through its form; example 10's check writes nothing. |

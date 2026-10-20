@@ -66,6 +66,8 @@ class ExamplesReadmeTest extends UnitTestCase {
     $this->assertContains('src/Resource/RegistrationStep2Resource.php', $quoted);
     $this->assertContains('src/Resource/RegistrationStep3Resource.php', $quoted);
     $this->assertContains('../data_surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php', $quoted);
+    $this->assertContains('../data_surface_examples_workflow/src/Alter/FeesWorkflowAlter.php', $quoted);
+    $this->assertContains('../data_surface_examples_workflow/src/Alter/ProgramWorkflowAlter.php', $quoted);
     $concepts = [
       'Resource/BulletinResource',
       'Structure/PersonStructure',

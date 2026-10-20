@@ -536,8 +536,10 @@ may answer that its keys are shown and fixed, or not there at all.
   omitted member is gone, and storage keeps it
   ([Mixins](resources.md#mixins)).
 
-What a value is held to does not depend on which kind of access answer
-locked or omitted it: the pipeline, the form and the schema for these
+What a value is held to does not depend on whose answer locked or
+omitted it, the access class's or an alter's
+([An alter's answer](resources.md#an-alters-answer)), nor on which kind
+of access answer it was: the pipeline, the form and the schema for these
 answers apply a static answer (the account alone decides it) and a
 runtime one (the subject or site state does) alike, and a locked key
 keeps what is stored however it was posted. The kind decides only what

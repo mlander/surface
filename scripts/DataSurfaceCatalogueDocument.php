@@ -91,7 +91,8 @@ final class DataSurfaceCatalogueDocument {
         );
         $document .= "\n- Altered by `" . $alter['class'] . '` (`' . $alter['module'] . '`), '
           . ($alter['operations'] === [] ? 'in every operation' : 'in ' . self::codes($alter['operations']))
-          . ($refines === [] ? '' : '; it refines ' . implode(', ', $refines)) . ".\n";
+          . ($refines === [] ? '' : '; it refines ' . implode(', ', $refines))
+          . (($alter['access'] ?? FALSE) ? '; it answers access' : '') . ".\n";
       }
       foreach ($resource['variants'] as $key => $variants) {
         $document .= "\n- Slot `" . $key . '` is filled by: ';

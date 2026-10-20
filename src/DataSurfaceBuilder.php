@@ -160,6 +160,11 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   protected string|\Stringable|null $lockedWhole = NULL;
 
   /**
+   * Whether every key is marked as decided once the subject is known.
+   */
+  protected bool $runtimeAccessWhole = FALSE;
+
+  /**
    * Whether it was built for an operation that changes nothing.
    */
   protected bool $changesNothing = FALSE;
@@ -347,6 +352,15 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
     if (!in_array($name, $this->runtimeAccess, TRUE)) {
       $this->runtimeAccess[] = $name;
     }
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function markRuntimeAccessWhole(): static {
+    $this->assertMutable();
+    $this->runtimeAccessWhole = TRUE;
     return $this;
   }
 
@@ -763,7 +777,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
         mounted: $this->mounted === [] ? [] : ['third_party_settings' => $this->mounted],
         mixins: $this->mixins,
         held: $held,
-        runtimeAccess: array_values(array_intersect($this->runtimeAccess, array_keys($definitions))),
+        runtimeAccess: $this->runtimeAccessWhole ? array_map('strval', array_keys($definitions)) : array_values(array_intersect($this->runtimeAccess, array_keys($definitions))),
       ),
       $this->cacheability,
       DefinitionMap::fromArrays(definitions: $outputs),

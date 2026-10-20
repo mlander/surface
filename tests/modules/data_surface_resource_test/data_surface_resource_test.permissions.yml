@@ -31,3 +31,18 @@ inspect exhibit:
 use the vault:
   title: 'Use the vault'
   description: 'The exhibit fixture''s vault may be chosen: a runtime refiner, not access.'
+keep a gallery:
+  title: 'Keep a gallery'
+  description: 'The gallery fixture''s own operation.'
+inspect gallery:
+  title: 'Inspect the gallery'
+  description: 'The gallery fixture is locked whole, by an alter''s answer.'
+inspect walls:
+  title: 'Inspect the walls'
+  description: 'The gallery fixture''s walls are locked, by their own access class.'
+freeze walls:
+  title: 'Freeze the walls'
+  description: 'The gallery fixture''s walls and oil finish are locked, by alters'' answers.'
+hide plaques:
+  title: 'Hide the plaques'
+  description: 'The gallery fixture''s plaque is left out, by an alter''s answer.'

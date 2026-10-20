@@ -17,8 +17,11 @@ use Drupal\data_surface\Storage\StateStorage;
 use Drupal\data_surface_examples_compliance\Alter\RegistrationComplianceAlter;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface_resource_test\Access\ExhibitAccess;
+use Drupal\data_surface_resource_test\Alter\PlaqueAlter;
+use Drupal\data_surface_resource_test\Alter\WallAlter;
 use Drupal\data_surface_resource_test\Resource\Cellar\CellarResource;
 use Drupal\data_surface_resource_test\Resource\Exhibit\ExhibitResource;
+use Drupal\data_surface_resource_test\Resource\Gallery\GalleryResource;
 use Drupal\data_surface_resource_test\Storage\CellarStorage;
 use Drupal\data_surface_resource_test\Structure\Notice\NoticeStructure;
 use Drupal\Tests\data_surface\Kernel\DataSurfaceKernelTestBase;
@@ -40,8 +43,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * keys their storage always holds on the opening hours,
  * a structure's ports on the venue and the hall, structures mixed in on
  * the journal and attached on the ledger, a shape at two keys on the
- * depot, access of both kinds on the exhibit, keys that come from the
- * site on the workshop),
+ * depot, access of both kinds on the exhibit and an alter's on the
+ * gallery, keys that come from the site on the workshop),
  * a table of documents the pipeline accepts and documents it refuses.
  * Each row is asserted three times: against the pipeline (accept(), then
  * validate() over what is stored), against the full
@@ -723,6 +726,55 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'as stored' => [[], TRUE],
       'the provenance posted' => [$base + ['source' => 'Dover'], FALSE, TRUE, FALSE],
       'the loan posted' => [$base + ['loan' => ['lender' => 'Nobody']], FALSE, TRUE, FALSE],
+    ]);
+  }
+
+  /**
+   * The gallery: a key under each kind of an alter's access answer, posted.
+   *
+   * The same as the exhibit, with every answer an alter's, asked after the
+   * owner's: a wall the wall's alter locks keeps what is stored though a
+   * later alter answers open, and a plaque its alter leaves out is an
+   * unknown key, refused by both where the omission is static; where it
+   * is runtime the full schema has the key, marked, and accepts it.
+   *
+   * @see docs/decisions.md#an-alter-may-answer-access-and-the-stricter-stands
+   */
+  public function testAnAltersAccess(): void {
+    $this->installConfig(['data_surface_resource_test']);
+    $resources = $this->container->get('data_surface.resources');
+    $context = $resources->operation(GalleryResource::class, 'configure');
+    $base = ['name' => 'The long gallery', 'medium' => 'oil'];
+    $table = function (array $rows) use ($resources, $context): void {
+      $this->assertTable('resource_test.gallery', $resources->build(GalleryResource::class, $context), $this->stored('resource_test.gallery'), $rows, $resources->buildStatic(GalleryResource::class, $context));
+    };
+
+    // An alter's static lock, under an alter that answers open.
+    $this->setUpCurrentUser([], ['keep a gallery', 'freeze walls']);
+    $table([
+      'as stored' => [[], TRUE],
+      'the north wall posted otherwise is kept' => [['north' => ['artwork' => 'Nothing', 'height' => 1]], TRUE],
+      'the caption posted' => [['caption' => 'Landscapes'], TRUE],
+    ]);
+    // An alter's static omission.
+    $this->setUpCurrentUser([], ['keep a gallery', 'hide plaques']);
+    $table([
+      'as stored' => [[], TRUE],
+      'the caption posted' => [$base + ['caption' => 'Landscapes'], FALSE],
+    ]);
+    // An alter's runtime lock: the plaques fixed.
+    $this->setUpCurrentUser([], ['keep a gallery']);
+    $this->container->get('state')->set(PlaqueAlter::FIXED, TRUE);
+    $table([
+      'as stored' => [[], TRUE],
+      'the caption posted otherwise is kept' => [['caption' => 'Landscapes'], TRUE],
+    ]);
+    // An alter's runtime omission: the walls down.
+    $this->container->get('state')->set(PlaqueAlter::FIXED, FALSE);
+    $this->container->get('state')->set(WallAlter::DOWN, TRUE);
+    $table([
+      'as stored' => [[], TRUE],
+      'the north wall posted' => [$base + ['north' => ['artwork' => 'Nothing']], FALSE, TRUE, FALSE],
     ]);
   }
 

@@ -13,7 +13,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Tests the tool calls of examples 7 to 11, and the README quoting them.
  *
  * Makes every call ConceptCalls writes down, on the settings the module
- * ships, the way each example's panel makes it: what each answers is
+ * ships, the way each example's panel makes it, with example 10's
+ * workflow module on for the call that needs it: what each answers is
  * pinned here for the rule it shows, the README must quote every command
  * and every answer as made, and none of the calls writes anything.
  */
@@ -35,6 +36,7 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
     'data_surface',
     'data_surface_tool',
     'data_surface_examples',
+    'data_surface_examples_workflow',
   ];
 
   /**
@@ -90,6 +92,8 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
     $this->assertStringContainsString('"speaker":false', $answers['event.sales']['speaker_on_sale']);
     $this->assertSame('Success: Check a program changes nothing: the values were accepted and prepared, and nothing was written.', $first($answers['event.program']['check']));
     $this->assertSame('Failed: The values were refused: sessions: This value should be between 1 and 30.', $first($answers['event.program']['check_too_many']));
+    $this->assertSame('Failed: The values were refused: @access: This may be seen and not changed, so nothing was written: The program is published in its workflow, so it is fixed.', $first($answers['event.program']['published_in_workflow']));
+    $this->assertNull($this->container->get('state')->get('data_surface_examples_workflow.state'), 'The State the call was made in is put back.');
     $this->assertStringContainsString('"notes":"Hand out the maps."', $answers['event.doors']['left_out'], 'Left out: kept.');
     $this->assertStringContainsString('"notes":null', $answers['event.doors']['null'], 'Null: cleared.');
     $this->assertStringContainsString('"notes":"Doors close at ten."', $answers['event.doors']['value'], 'A value: replaced.');
