@@ -13,7 +13,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\data_surface\ResourceBuild\OperationDefinition;
-use Drupal\data_surface\ResourceBuild\ResourceCatalogue;
+use Drupal\data_surface\ResourceBuild\ResourceCatalog;
 use Drupal\data_surface\ResourceBuild\ResourceDefinition;
 use Drupal\data_surface\ResourceBuild\ResourcePlugins;
 use Drupal\data_surface\ResourceBuild\ResourceRegistry;
@@ -36,8 +36,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * `data_surface:node.type:add`: the address the pattern gives an
  * operation.
  *
- * Two rules say which operations are not tools, and the catalogue
- * applies the same ones (ResourceCatalogue::standalone()). A resource or
+ * Two rules say which operations are not tools, and the catalog
+ * applies the same ones (ResourceCatalog::standalone()). A resource or
  * structure that names no storage, or that a plugin names with
  * #[UsesStructure], has no tool: its host supplies the storage (a
  * parent, or a plugin's configuration), and only the host holds it. And
@@ -76,8 +76,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * An operation that changes a thing that exists has a read tool beside
  * its write tool, `<resource id>:<operation id>:read`, of the class
  * ResourceOperationReadTool: its parameters as inputs, the stored values
- * as its output. Which operations those are is the catalogue's to say
- * (ResourceCatalogue::reads()), as which can be asked at all is.
+ * as its output. Which operations those are is the catalog's to say
+ * (ResourceCatalog::reads()), as which can be asked at all is.
  *
  * @see \Drupal\data_surface_tool\OperationInputs
  * @see \Drupal\data_surface_tool\Plugin\tool\Tool\ResourceOperationTool
@@ -99,7 +99,7 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
    *   Which plugins name which structure with #[UsesStructure].
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceCatalogue $catalogue
+   * @param \Drupal\data_surface\ResourceBuild\ResourceCatalog $catalog
    *   Which operations change a thing that exists, and so can be read.
    * @param \Drupal\data_surface_tool\ToolDefinitionsInvalidator|null $invalidator
    *   What clears the definitions when what they were read from changes;
@@ -113,7 +113,7 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
     protected readonly LoggerInterface $logger,
     protected readonly ResourcePlugins $plugins,
     TranslationInterface $string_translation,
-    protected readonly ResourceCatalogue $catalogue,
+    protected readonly ResourceCatalog $catalog,
     protected readonly ?ToolDefinitionsInvalidator $invalidator = NULL,
     protected readonly ?AccountSwitcherInterface $accountSwitcher = NULL,
   ) {
@@ -130,7 +130,7 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
       $container->get('logger.channel.data_surface'),
       $container->get('data_surface.resource_plugins'),
       $container->get('string_translation'),
-      $container->get('data_surface.resource_catalogue'),
+      $container->get('data_surface.resource_catalog'),
       $container->get('data_surface_tool.tool_definitions_invalidator'),
       $container->get('account_switcher'),
     );
@@ -191,7 +191,7 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
         continue;
       }
       foreach ($operations as $operation) {
-        if (!ResourceCatalogue::standalone($resource, $operation, $plugins)) {
+        if (!ResourceCatalog::standalone($resource, $operation, $plugins)) {
           continue;
         }
         $id = $resource->id . ':' . $operation->id;
@@ -215,7 +215,7 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
           continue;
         }
         $this->derivatives[$id] = $definition;
-        if ($this->catalogue->reads($resource, $operation, $plugins)) {
+        if ($this->catalog->reads($resource, $operation, $plugins)) {
           $this->read($base_plugin_definition, $resource, $operation);
         }
       }

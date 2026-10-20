@@ -28,7 +28,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * values that narrow differently, in both orders: each call gets the
  * verdict its own values call for. Three keys are asked about: the
  * stewards the alter mounted and narrows by the capacity, the owner's
- * capacity the alter narrows without a licence, and the owner's
+ * capacity the alter narrows without a license, and the owner's
  * capacity the owner narrows by the room. The first was held to the
  * first call's minimum by every later call in the process, through
  * core's typed data prototypes; the other two are top-level keys and
@@ -90,7 +90,7 @@ class RefinementIsolationTest extends DataSurfaceKernelTestBase {
     ],
     'the alter narrows the owner\'s key' => [
       'narrow' => [['capacity' => 150, 'third_party_settings' => [self::MODULE => ['stewards' => 3]]], ['capacity']],
-      'wide' => ['capacity' => 150, 'third_party_settings' => [self::MODULE => ['licence' => '2048', 'stewards' => 3]]],
+      'wide' => ['capacity' => 150, 'third_party_settings' => [self::MODULE => ['license' => '2048', 'stewards' => 3]]],
     ],
     'the owner narrows its own key' => [
       'narrow' => [

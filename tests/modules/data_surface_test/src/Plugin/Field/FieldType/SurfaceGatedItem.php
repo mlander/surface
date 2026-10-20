@@ -25,8 +25,8 @@ use Drupal\data_surface_test\Structure\GatedFieldSettingsStructure;
  * The settings are GatedFieldSettingsStructure, named with
  * #[UsesStructure], and the refusal is that structure's access class.
  * The field type host reads both, and so do the derived field tools,
- * because the same structure fills the field instance resource's
- * settings slot for this field type. The class writes nothing else but
+ * because the same structure is the field instance resource's settings
+ * variant for this field type. The class writes nothing else but
  * the static defaults its host protocol asks of it.
  *
  * @see \Drupal\data_surface_test\Structure\GatedFieldSettingsStructure

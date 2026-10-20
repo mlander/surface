@@ -33,8 +33,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * type's own host, which Field UI asks.
  *
  * The derived tools reach the field type's structure as the field
- * instance resource's settings slot, resolved by the field type the
- * operation knows; a slot variant its locked deciding key chose may
+ * instance resource's settings variant, chosen by the field type the
+ * operation knows; a variant its locked deciding key chose may
  * refuse its parent through its access class.
  *
  * @see \Drupal\data_surface_test\Structure\GatedFieldSettingsStructure
@@ -233,8 +233,8 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
    *
    * The gated type's settings answer from State, at max-age 0: runtime.
    * Built with every answer applied, a refusal withholds the variant from
-   * the slot; built for the account alone, the variant is offered and the
-   * slot marked, since a variant offered there may be withheld once the
+   * the variants; built for the account alone, the variant is offered and
+   * the key marked, since a variant offered there may be withheld once the
    * field is known.
    *
    * @see docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability
@@ -245,10 +245,10 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
     $context = $resources->operation('field.instance', 'add', $arguments);
     $this->setFieldTypeRefusal(TRUE);
     $built = $resources->build('field.instance', $context)->getDefinitions()->entry('settings');
-    $this->assertArrayNotHasKey('data_surface_gated', $built->slot->variants);
+    $this->assertArrayNotHasKey('data_surface_gated', $built->variants->variants);
     $this->assertFalse($built->runtimeAccess);
     $alone = $resources->buildStatic('field.instance', $context)->getDefinitions()->entry('settings');
-    $this->assertArrayHasKey('data_surface_gated', $alone->slot->variants);
+    $this->assertArrayHasKey('data_surface_gated', $alone->variants->variants);
     $this->assertTrue($alone->runtimeAccess);
   }
 

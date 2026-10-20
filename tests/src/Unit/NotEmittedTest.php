@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Unit;
 
-use Drupal\data_surface\Pipeline\Omitted;
+use Drupal\data_surface\Pipeline\NotEmitted;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -12,22 +12,22 @@ use PHPUnit\Framework\Attributes\Group;
  * The sentinel that says an output key is not emitted.
  *
  * Three claims, and the first is the one everything else rests on:
- * Omitted is not NULL and is not any value a producer could
+ * NotEmitted is not NULL and is not any value a producer could
  * accidentally have meant. NULL is a value — emitted, and held to the
  * definition — and absence is the other thing entirely.
  *
- * @see \Drupal\data_surface\Pipeline\Omitted
+ * @see \Drupal\data_surface\Pipeline\NotEmitted
  * @see docs/outputs.md
  */
 #[Group('data_surface')]
-class OmittedTest extends UnitTestCase {
+class NotEmittedTest extends UnitTestCase {
 
   /**
    * Tests that the sentinel is one object, recognized by identity.
    */
   public function testTheSentinelIsOneObject(): void {
-    $this->assertSame(Omitted::value(), Omitted::value());
-    $this->assertTrue(Omitted::is(Omitted::value()));
+    $this->assertSame(NotEmitted::value(), NotEmitted::value());
+    $this->assertTrue(NotEmitted::is(NotEmitted::value()));
   }
 
   /**
@@ -38,8 +38,8 @@ class OmittedTest extends UnitTestCase {
    * not, and no consumer can tell them apart if NULL is the marker.
    */
   public function testNothingElseIsTheSentinel(): void {
-    foreach ([NULL, FALSE, 0, '', '0', [], 'Omitted', new \stdClass()] as $value) {
-      $this->assertFalse(Omitted::is($value), sprintf('%s is not the sentinel.', get_debug_type($value)));
+    foreach ([NULL, FALSE, 0, '', '0', [], 'NotEmitted', new \stdClass()] as $value) {
+      $this->assertFalse(NotEmitted::is($value), sprintf('%s is not the sentinel.', get_debug_type($value)));
     }
   }
 
@@ -50,7 +50,7 @@ class OmittedTest extends UnitTestCase {
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('recognized by identity');
     // @phpstan-ignore expr.resultUnused
-    clone Omitted::value();
+    clone NotEmitted::value();
   }
 
   /**
@@ -63,13 +63,13 @@ class OmittedTest extends UnitTestCase {
       'nothing' => NULL,
       'false' => FALSE,
       'list' => [],
-    ], Omitted::strip([
+    ], NotEmitted::strip([
       'text' => 'hello',
       'empty' => '',
       'nothing' => NULL,
       'false' => FALSE,
       'list' => [],
-      'gone' => Omitted::value(),
+      'gone' => NotEmitted::value(),
     ]));
   }
 
@@ -82,11 +82,11 @@ class OmittedTest extends UnitTestCase {
   public function testStrippingReachesNestedKeys(): void {
     $this->assertSame(
       ['meta' => ['count' => 2, 'deeper' => ['kept' => TRUE]]],
-      Omitted::strip([
+      NotEmitted::strip([
         'meta' => [
           'count' => 2,
-          'tag' => Omitted::value(),
-          'deeper' => ['kept' => TRUE, 'gone' => Omitted::value()],
+          'tag' => NotEmitted::value(),
+          'deeper' => ['kept' => TRUE, 'gone' => NotEmitted::value()],
         ],
       ]),
     );
@@ -102,12 +102,12 @@ class OmittedTest extends UnitTestCase {
   public function testStrippingReindexesLists(): void {
     $this->assertSame(
       ['tags' => ['a', 'c']],
-      Omitted::strip(['tags' => ['a', Omitted::value(), 'c']]),
+      NotEmitted::strip(['tags' => ['a', NotEmitted::value(), 'c']]),
     );
     // A map whose keys happen to be strings keeps every one of them.
     $this->assertSame(
       ['map' => ['b' => 2]],
-      Omitted::strip(['map' => ['a' => Omitted::value(), 'b' => 2]]),
+      NotEmitted::strip(['map' => ['a' => NotEmitted::value(), 'b' => 2]]),
     );
   }
 

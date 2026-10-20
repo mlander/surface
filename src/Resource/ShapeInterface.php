@@ -15,8 +15,8 @@ use Drupal\Core\TypedData\DataDefinition;
  * description, constraints and examples. Whatever belongs to the key that
  * uses it stays the key's: whether it is required, its default, and
  * anything it narrows further. A shape is used in the type position of
- * add(), `$inputs->add('licence', Licence::class, t('Event licence'))`, or
- * of a port, `$inputs->reads('code', Licence::class)`.
+ * add(), `$inputs->add('license', License::class, t('Event license'))`, or
+ * of a port, `$inputs->reads('code', License::class)`.
  *
  * @see \Drupal\data_surface\Resource\Attribute\Shape
  * @see docs/declaring-a-resource.md#named-shapes

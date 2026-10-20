@@ -2,13 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Storage;
+namespace Drupal\data_surface\Pipeline\Storage;
 
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\Field\FieldConfigInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
 use Drupal\data_surface\Pipeline\PreparedValues;
+use Drupal\data_surface\Storage\EncryptedStorageLayout;
+use Drupal\data_surface\Storage\SecretCodecInterface;
+use Drupal\data_surface\Storage\StorageLayoutInterface;
 
 /**
  * Stores a data surface's values in one field's instance settings.
@@ -25,7 +28,7 @@ use Drupal\data_surface\Pipeline\PreparedValues;
  * and keeps a deprecated key that silently wins over the current one.
  * Those transforms exist already, scattered between a form's validate
  * handler and the item class's accessors. Given to this storage as a
- * SettingsLayoutInterface they are one named object with one name on each
+ * StorageLayoutInterface they are one named object with one name on each
  * direction, which is what lets the resource describe the input layout
  * rather than the storage layout.
  *
@@ -35,14 +38,14 @@ use Drupal\data_surface\Pipeline\PreparedValues;
  * entity rather than saving behind the form's back.
  *
  * Encryption rides that same layout. A data surface that declares a
- * secret key has its layout wrapped in an EncryptedSettingsLayout before
+ * secret key has its layout wrapped in an EncryptedStorageLayout before
  * either direction runs, so the field's stored settings hold ciphertext
  * and the pipeline is handed plaintext, which is what makes a partial
  * update of the settings beside a secret leave the secret intact. A data
  * surface with no secret key is not wrapped and nothing about it changes.
  *
- * @see \Drupal\data_surface\Storage\SettingsLayoutInterface
- * @see \Drupal\data_surface\Storage\EncryptedSettingsLayout
+ * @see \Drupal\data_surface\Storage\StorageLayoutInterface
+ * @see \Drupal\data_surface\Storage\EncryptedStorageLayout
  * @see docs/storage.md
  */
 final class FieldSettingsStorage implements DataSurfaceStorageInterface {
@@ -59,7 +62,7 @@ final class FieldSettingsStorage implements DataSurfaceStorageInterface {
    *
    * @param \Drupal\Core\Field\FieldConfigInterface $field
    *   The field config entity whose settings the data surface describes.
-   * @param \Drupal\data_surface\Storage\SettingsLayoutInterface|null $layout
+   * @param \Drupal\data_surface\Storage\StorageLayoutInterface|null $layout
    *   The translation between input layout and storage layout. Omitted
    *   when the input layout is the storage layout.
    * @param \Drupal\data_surface\Storage\SecretCodecInterface|null $codec
@@ -71,7 +74,7 @@ final class FieldSettingsStorage implements DataSurfaceStorageInterface {
    */
   public function __construct(
     protected readonly FieldConfigInterface $field,
-    protected readonly ?SettingsLayoutInterface $layout = NULL,
+    protected readonly ?StorageLayoutInterface $layout = NULL,
     protected readonly ?SecretCodecInterface $codec = NULL,
   ) {
   }
@@ -109,14 +112,14 @@ final class FieldSettingsStorage implements DataSurfaceStorageInterface {
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The data surface being read or written.
    *
-   * @return \Drupal\data_surface\Storage\SettingsLayoutInterface|null
+   * @return \Drupal\data_surface\Storage\StorageLayoutInterface|null
    *   The layout, or NULL when there is nothing to translate.
    */
-  protected function layoutFor(DataSurfaceInterface $surface): ?SettingsLayoutInterface {
+  protected function layoutFor(DataSurfaceInterface $surface): ?StorageLayoutInterface {
     $codec = $this->secretCodec();
     return $codec === NULL
       ? $this->layout
-      : EncryptedSettingsLayout::forSurface($surface, $codec, $this->layout);
+      : EncryptedStorageLayout::forSurface($surface, $codec, $this->layout);
   }
 
   /**

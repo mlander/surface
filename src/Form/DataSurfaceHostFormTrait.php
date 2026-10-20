@@ -10,7 +10,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DataSurfaceHostTrait;
 use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
-use Drupal\data_surface\Storage\PluginConfigurationStorage;
+use Drupal\data_surface\Pipeline\Storage\PluginConfigurationStorage;
 
 /**
  * The three form stages a configurable plugin's structure goes through.

@@ -30,12 +30,12 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests children: attach(), attachBy(), and what each does.
+ * Tests children: attach(), attachVariants(), and what each does.
  *
  * The pantry fixture has one of everything: a shelf attached by class
  * with a refiner and an alter of its own, a label attached by class with
- * a storage class of its own, and an open slot of kind settings filled by
- * a jar (stored by the pantry) and a tin (stored apart). The wall between
+ * a storage class of its own, and kind settings with two variants, a jar
+ * (stored by the pantry) and a tin (stored apart). The wall between
  * a parent and its child is tested by the broken fixtures in
  * ResourceBuildTest; what passes through the one door, identity in the
  * child's context, is tested here with the storage classes.
@@ -142,21 +142,21 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests the open slot: filled from discovery, advertised as a table.
+   * Tests open variants: found by discovery, advertised as a table.
    */
-  public function testOpenSlotIsAdvertisedAndResolves(): void {
+  public function testOpenVariantsAreAdvertisedAndResolve(): void {
     $surface = $this->pantry();
     $entry = $surface->getDefinitions()->entry('kind_settings');
-    $this->assertSame('kind', $entry->slot->by);
-    $this->assertEqualsCanonicalizing(['jar', 'tin'], $entry->slot->variantIds());
-    $this->assertSame(JarStructure::class, $entry->slot->variant('jar')->source);
-    $this->assertSame(TinResource::class, $entry->slot->variant('tin')->source);
+    $this->assertSame('kind', $entry->variants->by);
+    $this->assertEqualsCanonicalizing(['jar', 'tin'], $entry->variants->variantIds());
+    $this->assertSame(JarStructure::class, $entry->variants->variant('jar')->source);
+    $this->assertSame(TinResource::class, $entry->variants->variant('tin')->source);
 
-    // Unresolved, it is a placeholder that says it is a slot, and which
+    // Unresolved, it is a placeholder that says it holds variants, and which
     // key decides; its label and description are the owner's describe().
     $placeholder = $surface->getDefinition('kind_settings');
     $this->assertSame('any', $placeholder->getDataType());
-    $this->assertSame('kind', DefinitionMetadata::slotOf($placeholder));
+    $this->assertSame('kind', DefinitionMetadata::variantsBy($placeholder));
     $this->assertSame('Kind settings', (string) $placeholder->getLabel());
     // The deciding key gained the variants as its choices, narrower than
     // what it declared: a sack has no settings, so it is not offered.
@@ -165,12 +165,12 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
     // It starts as the variant the deciding key starts on.
     $this->assertSame(['lid' => 'screw', 'volume' => 500], $surface->getDefault('kind_settings'));
 
-    // Resolved, it is exactly that variant's map, under the slot's label.
+    // Resolved, it is exactly that variant's map, under the key's label.
     $tin = $surface->refine(['kind' => 'tin'])->getDefinition('kind_settings');
     $this->assertInstanceOf(MapDataDefinition::class, $tin);
     $this->assertSame(['opener', 'volume'], array_keys($tin->getPropertyDefinitions()));
     $this->assertSame('Kind settings', (string) $tin->getLabel());
-    $this->assertNull(DefinitionMetadata::slotOf($tin));
+    $this->assertNull(DefinitionMetadata::variantsBy($tin));
     $jar = $surface->refine(['kind' => 'jar'])->getDefinition('kind_settings');
     $this->assertInstanceOf(MapDataDefinition::class, $jar);
     $this->assertSame(['lid', 'volume'], array_keys($jar->getPropertyDefinitions()));
@@ -221,9 +221,9 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that a changed deciding key resets what the slot held.
+   * Tests that a changed deciding key resets what the variant held.
    */
-  public function testDecidingKeyResetsTheSlot(): void {
+  public function testDecidingKeyResetsTheVariant(): void {
     $surface = $this->pantry();
     $current = ['pantry' => 'a', 'kind' => 'jar', 'kind_settings' => ['lid' => 'clip', 'volume' => 900]];
 
@@ -239,8 +239,8 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
     ], $current);
     $this->assertSame(['opener' => TRUE, 'volume' => 400], $accepted['kind_settings']);
 
-    // A slot holding a value while its deciding key holds nothing has no
-    // shape to be read by, and says so.
+    // Variants holding a value while their deciding key holds nothing have
+    // no shape to be read by, and say so.
     $violations = $this->pipeline()->validate($surface, [
       'pantry' => 'a',
       'kind' => NULL,
@@ -264,7 +264,7 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
     $parent = new DataSurfaceBuilder();
     $parent->setDefinition('kind', DataDefinition::create('string'));
     $parent->attach('child', new Attachment($child->seal()));
-    $parent->attachBy('slot', 'kind', ['big' => new Attachment($variant->seal())]);
+    $parent->attachVariants('variants', 'kind', ['big' => new Attachment($variant->seal())]);
     $surface = $parent->seal();
 
     $this->assertContains('child_list', $surface->getCacheTags());

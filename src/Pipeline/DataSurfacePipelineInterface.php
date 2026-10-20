@@ -98,8 +98,8 @@ interface DataSurfacePipelineInterface {
    *   When the input carries a value in a shape its definition cannot
    *   hold, such as a string where a map was advertised.
    * @throws \Drupal\data_surface\Pipeline\VariantMismatchException
-   *   When a slot's input carries keys of a variant its deciding key did
-   *   not choose.
+   *   When the input at a key with variants carries keys of a variant
+   *   its deciding key did not choose.
    */
   public function accept(DataSurfaceInterface $surface, array $input, array $current = []): array;
 
@@ -153,7 +153,7 @@ interface DataSurfacePipelineInterface {
    * held to it, by its own tests and by anything generating them.
    *
    * What it does, in order:
-   * 1. Strips every Omitted key, at every depth. A producer says "not
+   * 1. Strips every NotEmitted key, at every depth. A producer says "not
    *    emitted" with the sentinel, and after this step that is the same
    *    thing as never having sent the key.
    * 2. Refuses keys no output definition declares, at any depth, in the
@@ -169,7 +169,7 @@ interface DataSurfacePipelineInterface {
    * producer, and reporting it is the whole point.
    *
    * Presence, stated once: an absent key — never sent, or sent as
-   * Omitted — is legal exactly when its definition is not required.
+   * NotEmitted — is legal exactly when its definition is not required.
    * NULL is a value, not an absence: it is checked against the
    * definition like any other value, so a required key emitted as NULL
    * is refused and an optional one is not.
@@ -177,14 +177,14 @@ interface DataSurfacePipelineInterface {
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The data surface whose outputs the values are held to.
    * @param array $output
-   *   The emitted values, keyed by output key, Omitted included.
+   *   The emitted values, keyed by output key, NotEmitted included.
    *
    * @return \Drupal\data_surface\Pipeline\ViolationSet
    *   The violations, each carrying its output key, the property path
    *   within that key and an unrendered message. Empty when the emitted
    *   values conform.
    *
-   * @see \Drupal\data_surface\Pipeline\Omitted
+   * @see \Drupal\data_surface\Pipeline\NotEmitted
    * @see docs/outputs.md
    */
   public function conformOutput(DataSurfaceInterface $surface, array $output): ViolationSet;

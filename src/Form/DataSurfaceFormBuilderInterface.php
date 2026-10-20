@@ -104,10 +104,11 @@ interface DataSurfaceFormBuilderInterface {
   /**
    * Render key holding the DOM id of an element's own AJAX wrapper.
    *
-   * Set on every refinement target, every slot and every element placed
-   * with placeRefreshed() when the container is processed: derived from
-   * the container's id and the element's path, so it is unique wherever
-   * the container's is and stays the same on every rebuild.
+   * Set on every refinement target, every key with variants and every
+   * element placed with placeRefreshed() when the container is processed:
+   * derived from the container's id and the element's path, so it is
+   * unique wherever the container's is and stays the same on every
+   * rebuild.
    */
   public const REFRESH_ID_KEY = '#data_surface_refresh_id';
 
@@ -158,7 +159,7 @@ interface DataSurfaceFormBuilderInterface {
   /**
    * Render key marking an element drawn as nothing but its wrapper.
    *
-   * A slot nothing has chosen, or a key that does not apply to the values
+   * Variants nothing has chosen, or a key that does not apply to the values
    * it is drawn for: no element is offered, so nothing is read back from
    * it, and the wrapper is where a rebuild puts the element once there is
    * one.
@@ -225,7 +226,7 @@ interface DataSurfaceFormBuilderInterface {
    *
    * @return string[]
    *   The data surface keys whose input is to be dropped, and, inside an
-   *   attached child or a chosen slot variant, the dotted paths of the
+   *   attached child or a chosen variant, the dotted paths of the
    *   child's own keys its own refiners orphaned. A chain settles in one
    *   call: discarding a dependency's input invalidates whatever refines
    *   against it, however many links deep, and so does a dependency
@@ -408,8 +409,8 @@ interface DataSurfaceFormBuilderInterface {
    * with one exception: a trigger whose own value was refused is
    * replaced by its own wrapper, rendered with the error under it, and
    * replaced once more on its next request, which takes a fixed error
-   * away. A slot whose deciding key moved is replaced whole, by its
-   * wrapper.
+   * away. A key whose variants' deciding key moved is replaced whole, by
+   * its wrapper.
    *
    * When a dependent cannot be found in the rebuilt container — a host
    * or a cosmetic layer took it out — the whole container is returned

@@ -16,9 +16,7 @@ KEYBYTES
 langcode
 libsodium
 MACBYTES
-licence
 mkdocs
-Neighbourhood
 NONCEBYTES
 opis
 pymdownx

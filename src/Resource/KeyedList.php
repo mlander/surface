@@ -56,7 +56,7 @@ final class KeyedList implements RefinableCacheableDependencyInterface {
   /**
    * Adds an entry.
    *
-   * @param string $id
+   * @param string $key
    *   The key it becomes: no dot, no colon, not empty.
    * @param string|\Stringable $label
    *   The key's label.
@@ -72,14 +72,14 @@ final class KeyedList implements RefinableCacheableDependencyInterface {
    * @throws \InvalidArgumentException
    *   When the id is empty, holds a dot or a colon, or was added already.
    */
-  public function add(string $id, string|\Stringable $label, mixed $default = NULL, bool $locked = FALSE): static {
-    if ($id === '' || strpbrk($id, '.:') !== FALSE) {
-      throw new \InvalidArgumentException(sprintf('"%s" cannot be the id of an entry: it becomes a key, which is not empty and holds no dot or colon.', $id));
+  public function add(string $key, string|\Stringable $label, mixed $default = NULL, bool $locked = FALSE): static {
+    if ($key === '' || strpbrk($key, '.:') !== FALSE) {
+      throw new \InvalidArgumentException(sprintf('"%s" cannot be the id of an entry: it becomes a key, which is not empty and holds no dot or colon.', $key));
     }
-    if (isset($this->entries[$id])) {
-      throw new \InvalidArgumentException(sprintf('The "%s" entry was added to this list already: one key per thing.', $id));
+    if (isset($this->entries[$key])) {
+      throw new \InvalidArgumentException(sprintf('The "%s" entry was added to this list already: one key per thing.', $key));
     }
-    $this->entries[$id] = ['label' => $label, 'default' => $default, 'locked' => $locked];
+    $this->entries[$key] = ['label' => $label, 'default' => $default, 'locked' => $locked];
     return $this;
   }
 

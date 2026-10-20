@@ -17,7 +17,7 @@ namespace Drupal\data_surface\Resource;
  * A derivative is a whole resource (or a structure, when it names
  * neither storage nor identity): the registry ids it
  * `<base>:<derivative>`, and the build step, the alters (which may name
- * the base to alter every derivative), the routes, the catalogue and the
+ * the base to alter every derivative), the routes, the catalog and the
  * derived tools treat it as they treat a class. What it does not have is
  * a class of its own; its inputs and operations are methods it names.
  *
@@ -31,7 +31,7 @@ interface ResourceDeriverInterface {
    *
    * @param array<class-string, string> $overrides
    *   The classes in an enabled module's src/Resource or src/Structure
-   *   carrying the attribute #[DerivesResources(overrides:)] names,
+   *   carrying the attribute #[DerivesResources(overriddenBy:)] names,
    *   valued with their module: what replaces the derivation where one
    *   was written by hand. Empty when it names none.
    *

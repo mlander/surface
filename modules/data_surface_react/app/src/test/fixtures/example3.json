@@ -104,7 +104,7 @@
             },
             "capacity": {
                 "title": "Capacity",
-                "description": "Up to 100 without an event licence.",
+                "description": "Up to 100 without an event license.",
                 "type": [
                     "integer",
                     "null"
@@ -117,7 +117,7 @@
                     "locked": false,
                     "dependsOn": [
                         "room",
-                        "third_party_settings.data_surface_examples_compliance.licence"
+                        "third_party_settings.data_surface_examples_compliance.license"
                     ],
                     "refined": true,
                     "stale": false
@@ -415,16 +415,16 @@
             "registration.compliance": {
                 "type": "object",
                 "properties": {
-                    "licence": {
-                        "$ref": "#/$defs/event.licence",
-                        "title": "Event licence",
+                    "license": {
+                        "$ref": "#/$defs/event.license",
+                        "title": "Event license",
                         "x-surface": {
                             "widget": "text",
                             "locked": false,
                             "dependsOn": [],
                             "refined": false,
                             "stale": false,
-                            "patternMessage": "A licence number is four digits, such as 2048."
+                            "patternMessage": "A license number is four digits, such as 2048."
                         }
                     },
                     "stewards": {
@@ -455,9 +455,9 @@
                     }
                 }
             },
-            "event.licence": {
-                "title": "Event licence",
-                "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
+            "event.license": {
+                "title": "Event license",
+                "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
                 "type": [
                     "string",
                     "null"
@@ -467,7 +467,7 @@
                     "2048"
                 ],
                 "x-surface": {
-                    "patternMessage": "A licence number is four digits, such as 2048."
+                    "patternMessage": "A license number is four digits, such as 2048."
                 }
             }
         }
@@ -488,7 +488,7 @@
         },
         "third_party_settings": {
             "data_surface_examples_compliance": {
-                "licence": null,
+                "license": null,
                 "stewards": 1
             }
         }

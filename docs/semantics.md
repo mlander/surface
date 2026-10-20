@@ -264,7 +264,7 @@ Two consequences worth stating:
 
 A map, or a property inside one, that is sent nothing holds nothing,
 `NULL`, by [the rule above](#absent-null-or-a-value); left out, it keeps
-what it holds. A child (an attached structure, or a slot's chosen
+what it holds. A child (an attached structure, or the chosen
 variant) sent nothing is each of its keys sent nothing: its optional
 keys clear, a required one is refused in its own words ("Email is
 required.", at `contact.email`), and the accepted value is still a map
@@ -518,7 +518,7 @@ key, or the mounted property the refusal is about, is watched by a
 refiner and the refiners changed its constraints for these values; a
 rule the key declared itself names no condition. A watched value its
 own key refused was handed over as nothing, and is said so: "... This
-applies when Room is Main hall and Event licence is empty (EV-2048 was
+applies when Room is Main hall and Event license is empty (EV-2048 was
 refused)." A value not on its key's list is followed by what may be
 chosen, as refined for the values sent, each label with its value, at
 most ten and then how many more: "The value you selected is not a

@@ -160,14 +160,14 @@ class ReadWriteRoundTripTest extends DataSurfaceKernelTestBase {
     // A key storage never held reads as its default: sent as that
     // default, as a form posts every element it drew, it changes nothing;
     // sent another value, it is written.
-    $compliance = ['data_surface_examples_compliance' => ['licence' => '', 'stewards' => 1]];
+    $compliance = ['data_surface_examples_compliance' => ['license' => '', 'stewards' => 1]];
     [, $outputs] = $this->write(['capacity' => 50, 'third_party_settings' => $compliance]);
     $this->assertSame(['capacity'], $outputs[OperationInputs::CHANGES]);
     $this->assertNull($this->config(self::CONFIG)->get('third_party_settings'));
-    $compliance = ['data_surface_examples_compliance' => ['licence' => '2048', 'stewards' => 1]];
+    $compliance = ['data_surface_examples_compliance' => ['license' => '2048', 'stewards' => 1]];
     [, $outputs] = $this->write(['third_party_settings' => $compliance]);
     $this->assertSame(['third_party_settings'], $outputs[OperationInputs::CHANGES]);
-    $this->assertSame('2048', $this->config(self::CONFIG)->get('third_party_settings.data_surface_examples_compliance.licence'));
+    $this->assertSame('2048', $this->config(self::CONFIG)->get('third_party_settings.data_surface_examples_compliance.license'));
   }
 
 }

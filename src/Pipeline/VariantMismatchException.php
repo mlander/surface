@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace Drupal\data_surface\Pipeline;
 
 /**
- * Thrown when a slot's value is shaped for a variant nobody chose.
+ * Thrown when a key's value is shaped for a variant nobody chose.
  *
  * The value carries keys the chosen variant does not declare and another
  * variant does, so it was written for a different answer to the deciding
  * key. Refused rather than read: taking the keys the chosen variant
  * knows and dropping the rest would store a value the caller never
  * meant. The pipeline turns it into one violation per misplaced key,
- * each on its own path inside the slot, naming the variant the key
+ * each on its own path inside the key, naming the variant the key
  * belongs to.
  */
 final class VariantMismatchException extends \InvalidArgumentException {
@@ -21,7 +21,7 @@ final class VariantMismatchException extends \InvalidArgumentException {
    * Constructs a VariantMismatchException.
    *
    * @param string $path
-   *   The dotted path of the slot.
+   *   The dotted path of the key with variants.
    * @param string $by
    *   The deciding key.
    * @param string $chosen
@@ -45,7 +45,7 @@ final class VariantMismatchException extends \InvalidArgumentException {
   }
 
   /**
-   * Gets the dotted path of the slot.
+   * Gets the dotted path of the key with variants.
    *
    * @return string
    *   The path.

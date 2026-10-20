@@ -35,7 +35,7 @@ use Symfony\Component\HttpFoundation\Request;
  * Examples 1 to 3, the content type resource in both its operations, and
  * the demo block's structure built the way its host builds it. What is
  * asserted is what a client reads: titles from labels, allowed values as
- * `oneOf` with their labels, bounds, the dependency edges, the slot as a
+ * `oneOf` with their labels, bounds, the dependency edges, the variants as a
  * conditional on the deciding key, the locked machine name, and the
  * x-surface reading of each key, widget hints included where the React
  * renderer asks for them and left out otherwise. Every schema is then
@@ -139,42 +139,42 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Finds what a slot's conditional says about the slot for one variant.
+   * Finds what the variants' conditional says of their key for one variant.
    *
    * @param array $schema
-   *   The object schema holding the slot.
+   *   The object schema holding the key with variants.
    * @param string $by
    *   The deciding key.
    * @param string $value
    *   The deciding value.
-   * @param string $slot
-   *   The slot key.
+   * @param string $key
+   *   The key the variants sit at.
    *
    * @return array
-   *   The `then` schema of the slot, as written: a reference to the
-   *   variant's def, beside the slot's label.
+   *   The `then` schema of the key, as written: a reference to the
+   *   variant's def, beside the key's label.
    */
-  protected function conditional(array $schema, string $by, string $value, string $slot): array {
+  protected function conditional(array $schema, string $by, string $value, string $key): array {
     foreach ($schema['allOf'] ?? [] as $condition) {
-      if (($condition['if']['properties'][$by]['const'] ?? NULL) === $value && isset($condition['then']['properties'][$slot])) {
+      if (($condition['if']['properties'][$by]['const'] ?? NULL) === $value && isset($condition['then']['properties'][$key])) {
         $this->assertSame([$by], $condition['if']['required']);
-        return $condition['then']['properties'][$slot];
+        return $condition['then']['properties'][$key];
       }
     }
-    $this->fail(sprintf('No conditional gives %s its %s shape.', $slot, $value));
+    $this->fail(sprintf('No conditional gives %s its %s shape.', $key, $value));
   }
 
   /**
-   * Finds the shape a slot's conditional gives one variant, inline.
+   * Finds the shape the variants' conditional gives one variant, inline.
    *
    * @param array $schema
-   *   The object schema holding the slot.
+   *   The object schema holding the key with variants.
    * @param string $by
    *   The deciding key.
    * @param string $value
    *   The deciding value.
-   * @param string $slot
-   *   The slot key.
+   * @param string $key
+   *   The key the variants sit at.
    * @param array|null $root
    *   The document's root schema, which holds `$defs`, when $schema is
    *   not it.
@@ -182,8 +182,8 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    * @return array
    *   The variant's effective schema, its references resolved.
    */
-  protected function variant(array $schema, string $by, string $value, string $slot, ?array $root = NULL): array {
-    return SchemaResolver::inline($this->conditional($schema, $by, $value, $slot), $root ?? $schema);
+  protected function variant(array $schema, string $by, string $value, string $key, ?array $root = NULL): array {
+    return SchemaResolver::inline($this->conditional($schema, $by, $value, $key), $root ?? $schema);
   }
 
   /**
@@ -241,7 +241,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests example 2: labelled choices, and the venue narrowing the room.
+   * Tests example 2: labeled choices, and the venue narrowing the room.
    */
   public function testExampleTwo(): void {
     $contract = $this->contract('registration.step2', 'configure');
@@ -339,7 +339,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests example 3: the ticket slot's conditional, and the contact part.
+   * Tests example 3: the ticket variants' conditional, and the contact part.
    */
   public function testExampleThree(): void {
     $contract = $this->contract('registration.step3', 'configure');
@@ -351,7 +351,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['free', 'paid'], $ticket['x-surface']['variants']);
     $this->assertSame('free', $ticket['x-surface']['chosen']);
     $this->assertSame(['pricing'], $ticket['x-surface']['dependsOn']);
-    $this->assertArrayNotHasKey('properties', $ticket, 'The slot itself fixes no shape; the conditionals do.');
+    $this->assertArrayNotHasKey('properties', $ticket, 'The key itself fixes no shape; the conditionals do.');
 
     $free = $this->variant($schema, 'pricing', 'free', 'ticket');
     $this->assertSame(['note'], array_keys($free['properties']));
@@ -384,7 +384,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     // the pipeline's own Email check is the one that refuses this.
     $this->assertTrue($this->validates($schema, ['contact' => ['email' => 'nobody', 'phone' => '']] + $contract['values']));
 
-    // Choosing paid resolves the slot to the paid ticket, from its defaults.
+    // Choosing paid makes the ticket the paid one, from its defaults.
     $chosen = $this->contract('registration.step3', 'configure', [], ['pricing' => 'paid']);
     $this->assertSame('paid', $chosen['schema']['properties']['ticket']['x-surface']['chosen']);
     $this->assertSame(['price' => NULL, 'currency' => 'EUR'], $chosen['values']['ticket']);
@@ -482,22 +482,22 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests example 4 on example 3: the capacity depends on the licence.
+   * Tests example 4 on example 3: the capacity depends on the license.
    *
-   * The compliance alter's rule on the capacity reads the licence the
-   * alter mounted, so the capacity's dependsOn names the licence by its
-   * path in the frame, and a contract refined with a licence lifts the
+   * The compliance alter's rule on the capacity reads the license the
+   * alter mounted, so the capacity's dependsOn names the license by its
+   * path in the frame, and a contract refined with a license lifts the
    * hundred back to the room's limit.
    */
-  public function testExampleFourWatchesTheLicence(): void {
+  public function testExampleFourWatchesTheLicense(): void {
     $this->enableModules(['data_surface_examples_compliance']);
-    $licence = 'third_party_settings.data_surface_examples_compliance.licence';
+    $license = 'third_party_settings.data_surface_examples_compliance.license';
     $room = ['venue' => 'riverside', 'room' => 'riverside_main'];
     $contract = $this->contract('registration.step3', 'configure', [], $room);
     $capacity = $contract['schema']['properties']['capacity'];
-    $this->assertSame(['room', $licence], $capacity['x-surface']['dependsOn']);
+    $this->assertSame(['room', $license], $capacity['x-surface']['dependsOn']);
     $this->assertSame(100, $capacity['maximum']);
-    $this->assertSame('Up to 100 without an event licence.', $capacity['description']);
+    $this->assertSame('Up to 100 without an event license.', $capacity['description']);
     $this->assertSame(['capacity'], $contract['schema']['properties']['third_party_settings']['x-surface']['dependsOn']);
     // The mount only groups each module's fieldset: no title of its own,
     // and the module's map titled by its alter.
@@ -517,7 +517,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
 
     $licensed = $this->contract('registration.step3', 'configure', [], $room + [
       'capacity' => 150,
-      'third_party_settings' => ['data_surface_examples_compliance' => ['licence' => '2048', 'stewards' => 3]],
+      'third_party_settings' => ['data_surface_examples_compliance' => ['license' => '2048', 'stewards' => 3]],
     ]);
     $capacity = $licensed['schema']['properties']['capacity'];
     $this->assertSame(400, $capacity['maximum']);
@@ -744,9 +744,9 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
   /**
    * Tests example 4's capacity is exact, and only its stewards dynamic.
    *
-   * The capacity watches the room, which offers a list, and its licence
+   * The capacity watches the room, which offers a list, and its license
    * rule is declared, so both are stated: one conditional per room, and
-   * the rule as written, an `if` that the licence holds nothing. The
+   * the rule as written, an `if` that the license holds nothing. The
    * stewards (inside the mount) watch the capacity, a number, which cannot
    * be listed: dynamic, to be asked again. The room, which watches only
    * the venue, is still enumerated.
@@ -759,11 +759,11 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $this->assertArrayNotHasKey('dynamic', $capacity);
     $this->assertTrue($capacity['enumerated']);
     $this->assertTrue($capacity['declared']);
-    $this->assertSame(['room', 'third_party_settings.data_surface_examples_compliance.licence'], $capacity['dependsOn']);
+    $this->assertSame(['room', 'third_party_settings.data_surface_examples_compliance.license'], $capacity['dependsOn']);
     $this->assertCount(6, $this->branches($schema, 'capacity'));
     $rules = array_values(array_filter($schema['allOf'], static fn (array $condition): bool => ($condition['x-surface']['declared'] ?? FALSE) === TRUE));
-    $absent = ['properties' => ['licence' => ['type' => 'null']]];
-    $ceiling = ['description' => 'Up to 100 without an event licence.', 'maximum' => 100];
+    $absent = ['properties' => ['license' => ['type' => 'null']]];
+    $ceiling = ['description' => 'Up to 100 without an event license.', 'maximum' => 100];
     $this->assertSame([
       [
         'if' => ['properties' => ['third_party_settings' => ['properties' => ['data_surface_examples_compliance' => $absent]]]],
@@ -777,12 +777,12 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($schema['properties']['room']['x-surface']['enumerated']);
     $this->assertCount(3, $this->branches($schema, 'room'));
 
-    // For no values at all, the rule is evaluated, not stated: no licence,
+    // For no values at all, the rule is evaluated, not stated: no license,
     // so a hundred, and the rooms each lower that where they seat fewer.
     [$contract] = $this->staticContract($this->operationSurface('registration.step3'), 'registration.step3');
     $capacity = $contract['schema']['properties']['capacity'];
     $this->assertSame(100, $capacity['maximum']);
-    $this->assertSame('Up to 100 without an event licence.', $capacity['description']);
+    $this->assertSame('Up to 100 without an event license.', $capacity['description']);
     $this->assertArrayNotHasKey('declared', $capacity['x-surface']);
     $this->assertTrue($capacity['x-surface']['enumerated']);
     $ceilings = [];
@@ -794,9 +794,9 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests slots keep their conditionals, and a variant enumerates inside.
+   * Tests variants keep their conditionals, and enumerate inside them.
    */
-  public function testSlotVariantsEnumerateInsideTheirConditional(): void {
+  public function testVariantsEnumerateInsideTheirConditional(): void {
     [$contract] = $this->staticContract($this->operationSurface('registration.step3'), 'registration.step3');
     $schema = $contract['schema'];
     $this->assertSame(['note'], array_keys($this->variant($schema, 'pricing', 'free', 'ticket')['properties']));
@@ -928,8 +928,8 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    * With example 4's module on, the stewards watch the capacity, a number,
    * so their answers cannot be listed: the full schema keeps the declared
    * minimum and marks them dynamic, wider than the pipeline will allow and
-   * never narrower. The capacity's licence rule is declared, so the full
-   * schema states it exactly: 150 people and no licence fit neither
+   * never narrower. The capacity's license rule is declared, so the full
+   * schema states it exactly: 150 people and no license fit neither
    * document. The room beside it is listed, the ticket is its two
    * conditionals with none chosen, and an attached structure is described
    * from nothing, not from its defaults.
@@ -943,7 +943,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $this->assertArrayNotHasKey('description', $capacity);
     $this->assertSame([
       'locked' => FALSE,
-      'dependsOn' => ['room', 'third_party_settings.data_surface_examples_compliance.licence'],
+      'dependsOn' => ['room', 'third_party_settings.data_surface_examples_compliance.license'],
       'enumerated' => TRUE,
       'declared' => TRUE,
     ], $capacity['x-surface']);
@@ -960,13 +960,13 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     // The other document, for the stored answers: as it stands.
     $stored = $this->contract('registration.step3', 'configure');
     $this->assertSame(100, $stored['schema']['properties']['capacity']['maximum']);
-    $this->assertSame('Up to 100 without an event licence.', $stored['schema']['properties']['capacity']['description']);
-    // Exact where the rule is declared: 150 people and no licence fit
-    // neither document; with a licence, both.
+    $this->assertSame('Up to 100 without an event license.', $stored['schema']['properties']['capacity']['description']);
+    // Exact where the rule is declared: 150 people and no license fit
+    // neither document; with a license, both.
     $crowd = ['capacity' => 150] + $stored['values'];
     $this->assertFalse($this->validates($schema, $crowd));
     $this->assertFalse($this->validates($stored['schema'], $crowd));
-    $crowd['third_party_settings']['data_surface_examples_compliance']['licence'] = '2048';
+    $crowd['third_party_settings']['data_surface_examples_compliance']['license'] = '2048';
     $crowd['third_party_settings']['data_surface_examples_compliance']['stewards'] = 3;
     $this->assertTrue($this->validates($schema, $crowd));
     // Wider where it cannot be exact: one steward for 150 people fits the
@@ -1025,12 +1025,12 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
         $at = ($compliance ? 'With compliance, ' : '') . $which;
         $this->assertWellFormed($schema);
         // With compliance, the structure its alter attaches at its mount
-        // is a def too, and so is the licence, a shape its key refers to.
+        // is a def too, and so is the license, a shape its key refers to.
         $parts = [
           'registration.step3.ticket.free',
           'registration.step3.ticket.paid',
           'registration.contact',
-          ...($compliance ? ['registration.compliance', 'event.licence'] : []),
+          ...($compliance ? ['registration.compliance', 'event.license'] : []),
         ];
         $this->assertSame($parts, array_keys($schema['$defs']), $at);
 
@@ -1371,9 +1371,9 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['entity_type'], $schema['properties']['bundle']['x-surface']['dependsOn']);
     $this->assertSame(['entity_type', 'bundle'], $schema['properties']['field']['x-surface']['dependsOn']);
     $this->assertSame(['integer'], (array) $schema['properties']['limit']['type']);
-    $slot = $schema['properties']['presentation_settings'];
-    $this->assertSame('slot', $slot['x-surface']['widget']);
-    $this->assertSame('list', $slot['x-surface']['chosen']);
+    $variants = $schema['properties']['presentation_settings'];
+    $this->assertSame('slot', $variants['x-surface']['widget']);
+    $this->assertSame('list', $variants['x-surface']['chosen']);
     $grid = $this->variant($schema, 'presentation', 'grid', 'presentation_settings');
     $this->assertSame(1, $grid['properties']['columns']['minimum']);
     $this->assertSame(6, $grid['properties']['columns']['maximum']);
@@ -1397,7 +1397,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
   /**
    * Value sets for example 3, each with its verdict in three places.
    *
-   * The same with example 4's module on: the capacity's licence rule is
+   * The same with example 4's module on: the capacity's license rule is
    * declared, so the full schema still states every ceiling.
    *
    * @return array<string, array{0: array, 1: bool, 2: bool, 3: bool}>
@@ -1454,8 +1454,8 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    * the schemas are written in may change and these may not: the full
    * schema and the schema for each value set hold example 3 to what the
    * pipeline holds it to, its attached structures included, with the
-   * compliance module off and on. On, the licence's rule is declared, so
-   * the full schema holds a crowd with no licence to it as well.
+   * compliance module off and on. On, the license's rule is declared, so
+   * the full schema holds a crowd with no license to it as well.
    */
   public function testDocumentsKeepTheirVerdicts(): void {
     foreach ([FALSE, TRUE] as $compliance) {
@@ -1463,17 +1463,17 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
       $event = static::EVENT;
       if ($compliance) {
         $this->enableModules(['data_surface_examples_compliance']);
-        $mount = static fn (?string $licence, int $stewards): array => [
+        $mount = static fn (?string $license, int $stewards): array => [
           'third_party_settings' => [
-            'data_surface_examples_compliance' => ['licence' => $licence, 'stewards' => $stewards],
+            'data_surface_examples_compliance' => ['license' => $license, 'stewards' => $stewards],
           ],
         ];
         $event += $mount(NULL, 1);
         $licensed = $mount('2048', 3);
         $cases += [
-          'a crowd with no licence' => [['capacity' => 150], FALSE, FALSE, FALSE],
-          'a crowd with a licence' => [['capacity' => 150] + $licensed, TRUE, TRUE, TRUE],
-          'a licence that is not four digits' => [$mount('EV-1', 1), FALSE, FALSE, FALSE],
+          'a crowd with no license' => [['capacity' => 150], FALSE, FALSE, FALSE],
+          'a crowd with a license' => [['capacity' => 150] + $licensed, TRUE, TRUE, TRUE],
+          'a license that is not four digits' => [$mount('EV-1', 1), FALSE, FALSE, FALSE],
         ];
       }
       $emitter = $this->container->get('data_surface.contract_emitter');

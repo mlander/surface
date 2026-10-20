@@ -10,16 +10,16 @@ use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\data_surface\Resource\Attribute\Structure;
 use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\StructureInterface;
-use Drupal\data_surface_examples_compliance\Shape\Licence;
+use Drupal\data_surface_examples_compliance\Shape\License;
 
 /**
- * What compliance asks of any event: a licence and enough stewards.
+ * What compliance asks of any event: a license and enough stewards.
  *
  * A structure, so any resource can attach it, and an alter can attach it
  * at its own mount, as RegistrationComplianceAlter does on example 3. It
  * names no key of any of them: the capacity it needs it reads through a
  * port, under its own name, which whoever attaches it wires to a key of
- * its own. The licence is a shape, Licence, declared once.
+ * its own. The license is a shape, License, declared once.
  */
 #[Structure('registration.compliance')]
 final class ComplianceStructure implements StructureInterface {
@@ -29,7 +29,7 @@ final class ComplianceStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->reads('capacity', 'integer', required: TRUE);
-    $inputs->add('licence', Licence::class, t('Event licence'));
+    $inputs->add('license', License::class, t('Event license'));
     $inputs->add('stewards', 'integer', t('Stewards'), default: 1)->setRequired(TRUE);
   }
 

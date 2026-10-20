@@ -71,7 +71,7 @@ class DataSurfaceDemoFormTest extends BrowserTestBase {
     $assert_session->fieldValueEquals('surface[headline]', 'Featured content');
     $assert_session->fieldValueEquals('surface[limit]', '10');
     $assert_session->fieldValueEquals('surface[presentation]', 'list');
-    // The presentation slot, rendered as the list it starts on.
+    // The presentation's variants, rendered as the list they start on.
     $assert_session->checkboxChecked('surface[presentation_settings][show_summary]');
     $assert_session->fieldNotExists('surface[presentation_settings][columns]');
     // The declared entity type already narrowed the bundle on the first

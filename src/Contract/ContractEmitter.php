@@ -46,9 +46,9 @@ use Drupal\data_surface\Collection;
  * - allowed values as `oneOf: [{const, title}]`, labels included, read
  *   from the options service: the same list a generated select renders
  *   and the pipeline validates against;
- * - a slot as a real conditional on its parent, one `if` naming the
- *   deciding key's `const` and one `then` naming the slot's shape per
- *   variant, so the union is stated where JSON Schema can state it;
+ * - variants as real conditionals on their parent: per variant, one `if`
+ *   naming the deciding key's `const` and one `then` naming its shape,
+ *   so the union is stated where JSON Schema can state it;
  * - per key, what the data surface knows about it beyond its shape
  *   (`x-surface`): whether it is locked, which siblings its refiners
  *   watch, whether it is narrowed right now, whether a select shows its
@@ -56,7 +56,7 @@ use Drupal\data_surface\Collection;
  *   has gone stale;
  * - where a key's static refiners have nothing to refine against yet,
  *   what they would answer for every value their watched siblings could
- *   take, as conditionals on the parent beside the slots' (enumerate()),
+ *   take, as conditionals on the parent beside the variants' (enumerate()),
  *   so a static contract is exact wherever the answers are finite; where
  *   they are not, that the key is `dynamic`, to be asked again; and where
  *   a runtime refiner narrows it too, that the key is `runtime`, which no
@@ -73,7 +73,7 @@ use Drupal\data_surface\Collection;
  * watch the parent, the child keeps its own refiners and alters) makes a
  * child self-contained, so it is written once under the root's `$defs`,
  * keyed by its own id, as its own frame declares it for no values
- * (define()). Each place it is used, an attached key or a slot's
+ * (define()). Each place it is used, an attached key or a variant's
  * conditional, refers to it, beside what that place says about it: its
  * label, its `x-surface`. Where the child here says more than its def (a
  * key its context locked, a key refined for the values in this
@@ -115,8 +115,9 @@ use Drupal\data_surface\Collection;
  * value radios when it asks for them, by the widgets' own rule
  * (CheckboxesWidget::drawsList(), RadiosWidget::drawsOne()); a list with
  * no option list is `list`, rows to add and remove. One hint has no
- * Form API counterpart here: `slot`, for a key a sibling chooses the
- * shape of.
+ * Form API counterpart here: `slot`, for a key with variants, whose shape
+ * a sibling chooses. `slot` is the wire's word, kept until the contract's
+ * version changes (docs/decisions.md#variants-not-slots).
  */
 final class ContractEmitter {
 
@@ -287,7 +288,7 @@ final class ContractEmitter {
    * - a key whose answers cannot be listed keeps its declared schema and
    *   is `dynamic`: wider than what the pipeline will allow for some
    *   values, never narrower, and to be asked about with values;
-   * - a slot is its conditionals, and every child's frame is described
+   * - variants are their conditionals, and every child's frame is described
    *   by the same rule, from nothing, not from the child's defaults;
    * - a runtime refiner contributes nothing but `runtime: true` on the key
    *   it narrows: it is never run here, so the key keeps the width its
@@ -300,12 +301,12 @@ final class ContractEmitter {
    *   `x-surface.access: "runtime"`; the schema for these answers settles
    *   it;
    * - `x-surface` carries only what holds for any values: `locked`,
-   *   `access`, `dependsOn`, `enumerated`, `dynamic`, `runtime`, a slot's
+   *   `access`, `dependsOn`, `enumerated`, `dynamic`, `runtime`, the variants'
    *   `by` and `variants`, a variant's id, `group`, `after`, `patternMessage`,
    *   `checkedOnServer`, and the widget hints when asked for. What is
-   *   only true of a moment (`refined`, `stale`, `emptyOption`, a slot's
-   *   `chosen`) is not written, and there is no `values` and no `stale`
-   *   beside the schema.
+   *   only true of a moment (`refined`, `stale`, `emptyOption`, the
+   *   variants' `chosen`) is not written, and there is no `values` and no
+   *   `stale` beside the schema.
    *
    * Decision: see
    * docs/decisions.md#two-documents-never-stricter-than-the-runtime.
@@ -620,7 +621,8 @@ final class ContractEmitter {
       // Whether a static refiner has something to refine the key against
       // yet; while it has not, what it would answer is stated ahead.
       // A key holding a child is refined by the parent only to be ruled
-      // out, and a slot's own deciding key is no refiner's.
+      // out, and the variants' own deciding key is no
+      // refiner's.
       $ahead_of_time = $entry->codedDependencies() !== [] && !$locked && ($entry->isNested() ? $entry->refiners !== [] && !$this->holds($entry, $values) : !$answered);
       // What a key reading a port that holds nothing answers is said where
       // the port is wired, at the site, never here: a def is reused, and
@@ -629,11 +631,12 @@ final class ContractEmitter {
       $ahead_of_time = $ahead_of_time && !$at_site;
       $enumerated = NULL;
       $stating = [];
-      if ($entry->slot !== NULL) {
-        [$properties[$name], $shown[$name], $branches] = $this->slot($declared, $entry, $values, $prefix . $name, $owner, $cacheability, $stale, $subschemas, $standing, $declaring, $locked, $blank);
+      if ($entry->variants !== NULL) {
+        [$properties[$name], $shown[$name], $branches] = $this->variants($declared, $entry, $values, $prefix . $name, $owner, $cacheability, $stale, $subschemas, $standing, $declaring, $locked, $blank);
         array_push($conditions, ...$branches);
         if ($ahead_of_time) {
-          // A parent's refiner of a slot says only whether it applies.
+          // A parent's refiner of a key with variants says only whether
+          // it applies.
           $enumerated = $this->enumerate($declared, $static, $entry, $values, $properties[$name], $prefix . $name, $cacheability, $kinds, TRUE);
         }
       }
@@ -933,7 +936,7 @@ final class ContractEmitter {
     }
     foreach ($surface->getDefinitions()->entries() as $entry) {
       $children = match (TRUE) {
-        $entry->slot !== NULL => $entry->slot->variants,
+        $entry->variants !== NULL => $entry->variants->variants,
         $entry->attachment !== NULL => [$entry->attachment],
         $entry->list !== NULL => [$entry->list->item],
         default => [],
@@ -1690,7 +1693,7 @@ final class ContractEmitter {
   protected function locks(DataSurfaceInterface $surface): bool {
     foreach ($surface->getDefinitions()->entries() as $entry) {
       $children = match (TRUE) {
-        $entry->slot !== NULL => $entry->slot->variants,
+        $entry->variants !== NULL => $entry->variants->variants,
         $entry->attachment !== NULL => [$entry->attachment],
         $entry->list !== NULL => [$entry->list->item],
         default => [],
@@ -1839,28 +1842,28 @@ final class ContractEmitter {
   }
 
   /**
-   * Describes a slot: a placeholder, and one conditional per variant.
+   * Describes variants: a placeholder, and one conditional per variant.
    *
-   * The slot's own property says only what holds whatever is chosen: its
+   * The key's own property says only what holds whatever is chosen: its
    * label, that it is an object, and, under `x-surface`, which key
    * decides and which variant is chosen now. Each variant's shape is a
    * `then` on the parent, under an `if` naming the deciding key's value
    * as a `const`, so a validator, and the React app, read the shape the
    * chosen value selects. The `then` refers to the variant's def, beside
-   * the slot's label; the chosen variant is described refined against
-   * what the slot holds, which narrows its reference where that differs,
+   * the key's label; the chosen variant is described refined against
+   * what the key holds, which narrows its reference where that differs,
    * and the others as they are advertised.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $declared
-   *   The data surface the slot belongs to.
+   *   The data surface the variants belong to.
    * @param \Drupal\data_surface\Entry $entry
-   *   The slot's entry.
+   *   The entry of the key the variants are attached at.
    * @param array $values
-   *   The values of the slot's frame.
+   *   The values of the variants' frame.
    * @param string $path
-   *   The slot's dotted path.
+   *   The key's dotted path.
    * @param string $owner
-   *   The id of the resource or structure the slot belongs to.
+   *   The id of the resource or structure the variants belong to.
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
    *   Collects what the description depends on.
    * @param string[] $stale
@@ -1873,43 +1876,45 @@ final class ContractEmitter {
    *   The orphans of a refinement, by dotted path from the top; only the
    *   chosen variant's are its own.
    * @param bool $declaring
-   *   Whether the slot is part of a def: every variant is then a bare
+   *   Whether the variants are part of a def: every variant is then a bare
    *   reference, and a locked deciding key chooses nothing.
    * @param bool $frozen
-   *   Whether the slot is inside a child locked whole: every variant is
+   *   Whether the variants are inside a child locked whole: every variant is
    *   then described locked.
    * @param bool $blank
-   *   Whether the slot is inside a collection's items: no variant is
+   *   Whether the variants are inside a collection's items: no variant is
    *   then chosen, and every one is described from its locked keys.
    *
    * @return array{0: array, 1: mixed, 2: array}
-   *   The slot's property schema, its value as shown, and the
+   *   The key's property schema, its value as shown, and the
    *   conditionals for the parent's `allOf`.
    */
-  protected function slot(DataSurfaceInterface $declared, Entry $entry, array $values, string $path, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing = [], bool $declaring = FALSE, bool $frozen = FALSE, bool $blank = FALSE): array {
+  protected function variants(DataSurfaceInterface $declared, Entry $entry, array $values, string $path, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing = [], bool $declaring = FALSE, bool $frozen = FALSE, bool $blank = FALSE): array {
     $full = $subschemas->full;
-    $slot = $entry->slot;
-    assert($slot !== NULL);
-    $by = $declared->getDefinitions()->get($slot->by);
-    $deciding = $values[$slot->by] ?? ($declaring && $declared->isLocked($slot->by) ? NULL : $declared->getDefault($slot->by));
-    $chosen = $slot->chosen($deciding);
+    $variants = $entry->variants;
+    assert($variants !== NULL);
+    $by = $declared->getDefinitions()->get($variants->by);
+    $deciding = $values[$variants->by] ?? ($declaring && $declared->isLocked($variants->by) ? NULL : $declared->getDefault($variants->by));
+    $chosen = $variants->chosen($deciding);
     $held = $values[$entry->name] ?? NULL;
-    $shell = $this->describe($slot->shell);
-    $property = $shell + ['type' => $this->nullable('object', $slot->shell)];
-    $depends = array_values(array_unique([$slot->by, ...$entry->dependencies]));
+    $shell = $this->describe($variants->shell);
+    $property = $shell + ['type' => $this->nullable('object', $variants->shell)];
+    $depends = array_values(array_unique([$variants->by, ...$entry->dependencies]));
     if ($frozen) {
       $property['readOnly'] = TRUE;
     }
+    // `slot` is the wire's word for this widget hint, kept until the
+    // contract's version changes (docs/decisions.md#variants-not-slots).
     $property[self::EXTENSION] = $this->extension('slot', $frozen, $depends, $chosen !== NULL) + [
-      'by' => $slot->by,
-      'variants' => $slot->variantIds(),
+      'by' => $variants->by,
+      'variants' => $variants->variantIds(),
       'chosen' => $chosen,
     ];
-    // A slot nothing has chosen keeps what it holds: it has no element,
-    // so it says nothing about it.
+    // Variants nothing has chosen keep what the key holds: it has no
+    // element, so it says nothing about it.
     $shown = $held;
     $branches = [];
-    foreach ($slot->variants as $id => $variant) {
+    foreach ($variants->variants as $id => $variant) {
       $id = (string) $id;
       $child = $variant->child;
       $fallback = $owner . '.' . $entry->name . '.' . $id;
@@ -1920,7 +1925,7 @@ final class ContractEmitter {
         $reference = $this->reference($key, NULL, $subschemas);
       }
       else {
-        $own = $is_chosen && $slot->fits($id, $held) ? $held : [];
+        $own = $is_chosen && $variants->fits($id, $held) ? $held : [];
         $variant_stale = [];
         $inside = $full || $blank ? $this->known($child) : array_replace($child->getDefaultValues(), $own);
         [$instance, $variant_values] = $this->instance($child, $key, $inside, $path . '.', $variant->id ?? $fallback, $cacheability, $variant_stale, $subschemas, $is_chosen ? $standing : [], $frozen, $blank);
@@ -1934,8 +1939,8 @@ final class ContractEmitter {
       $schema[self::EXTENSION] = $this->extension('fieldset', FALSE, [], $is_chosen && $this->anyRefined($instance)) + ['variant' => $id];
       $branches[] = [
         'if' => [
-          'properties' => [$slot->by => ['const' => $by === NULL ? $id : $this->cast($id, $by)]],
-          'required' => [$slot->by],
+          'properties' => [$variants->by => ['const' => $by === NULL ? $id : $this->cast($id, $by)]],
+          'required' => [$variants->by],
         ],
         'then' => [
           'properties' => [$entry->name => $schema],
@@ -3150,7 +3155,7 @@ final class ContractEmitter {
    *
    * @return array
    *   The schema, its `x-surface` keywords without `refined`, `stale`,
-   *   `emptyOption` and a slot's `chosen`.
+   *   `emptyOption` and the variants' `chosen`.
    */
   protected function withoutPresent(array $schema): array {
     foreach ($schema as $key => $value) {

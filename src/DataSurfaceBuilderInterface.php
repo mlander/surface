@@ -8,7 +8,7 @@ use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
-use Drupal\data_surface\Storage\SettingsLayoutInterface;
+use Drupal\data_surface\Storage\StorageLayoutInterface;
 
 /**
  * The mutable stage a data surface passes through before it is sealed.
@@ -166,11 +166,11 @@ interface DataSurfaceBuilderInterface {
    * Holds every key to what is stored: an access answer locked the whole.
    *
    * What a resource's own access class answers locked at the top, asked
-   * on its own, or a slot's variant's access class answers locked: every
+   * on its own, or a variant's access class answers locked: every
    * key is shown and fixed, held as hold() holds one, and the sealed data
    * surface says why (DataSurfaceInterface::lockedWhole()). Applied at the
-   * seal, after the slots, so a slot is chosen by what its deciding key
-   * holds rather than preselected by its default.
+   * seal, after the variants, so a variant is chosen by what its deciding
+   * key holds rather than preselected by its default.
    *
    * Decision: see docs/decisions.md#locked-at-the-top.
    *
@@ -241,8 +241,8 @@ interface DataSurfaceBuilderInterface {
    * left out once the subject is known.
    *
    * @param string $name
-   *   The key: a child's, a slot's, a collection's, or a mixed-in
-   *   structure's member.
+   *   The key: a child's, one with variants, a collection's, or a
+   *   mixed-in structure's member.
    *
    * @return $this
    *
@@ -370,14 +370,14 @@ interface DataSurfaceBuilderInterface {
    * way in and fromStorage() on the way out, and to nothing else.
    *
    * The layout sees the provider's settings only, keyed by the keys the
-   * provider mounted, and must be pure (the SettingsLayoutInterface
+   * provider mounted, and must be pure (the StorageLayoutInterface
    * contract), because the data surface carrying it is serialized with every
    * form that renders it.
    *
    * @param string $provider
    *   The module whose mounted settings the layout translates. It must
    *   mount at least one definition before the data surface is sealed.
-   * @param \Drupal\data_surface\Storage\SettingsLayoutInterface $layout
+   * @param \Drupal\data_surface\Storage\StorageLayoutInterface $layout
    *   The translation.
    *
    * @return $this
@@ -385,9 +385,9 @@ interface DataSurfaceBuilderInterface {
    * @throws \LogicException
    *   When the builder is already sealed.
    *
-   * @see \Drupal\data_surface\Storage\ConfigEntityStorage
+   * @see \Drupal\data_surface\Pipeline\Storage\ConfigEntityStorage
    */
-  public function setThirdPartyLayout(string $provider, SettingsLayoutInterface $layout): static;
+  public function setThirdPartyLayout(string $provider, StorageLayoutInterface $layout): static;
 
   /**
    * Gives the sealed data surface the check its watched values pass.
@@ -435,7 +435,7 @@ interface DataSurfaceBuilderInterface {
    * - An output carries no default. A default is what a value starts
    *   from when nobody sent one, and nobody sends an output; a key the
    *   producer has nothing to say about is absent, which is what the
-   *   Omitted sentinel spells. A definition carrying 'default_value',
+   *   NotEmitted sentinel spells. A definition carrying 'default_value',
    *   at any depth, is refused.
    * - An output cannot be locked. Locking narrows what a caller may
    *   send, and nothing sends an output.
@@ -674,14 +674,14 @@ interface DataSurfaceBuilderInterface {
   public function attach(string $key, Attachment $attachment): static;
 
   /**
-   * Declares a slot: an attached structure a sibling key chooses.
+   * Attaches variants: the structures a sibling key chooses between.
    *
-   * Advertised as an `any` placeholder marked as a slot until the deciding
-   * key holds a value, and as exactly the chosen variant's map once it
+   * Advertised as an `any` placeholder marked as variants until the
+   * deciding key holds a value, and as exactly the chosen variant's map once it
    * does, or from the start, when the deciding key is locked. The
    * deciding key gains a Choice over the variant ids, checked narrower
    * against any list of values it already declares, and becomes a
-   * refinement dependency of the slot, so a form rebuilds on it and the
+   * refinement dependency of the key, so a form rebuilds on it and the
    * discard cascade resets a variant it orphaned.
    *
    * @param string $key
@@ -689,19 +689,19 @@ interface DataSurfaceBuilderInterface {
    * @param string $by
    *   The sibling key whose value chooses the variant.
    * @param array<string, \Drupal\data_surface\Attachment> $variants
-   *   One sealed child per value of the deciding key. May be empty: an
-   *   open slot nothing has filled offers nothing to choose.
+   *   One sealed child per value of the deciding key. May be empty:
+   *   variants nothing declares offer nothing to choose.
    *
    * @return $this
    *
    * @throws \InvalidArgumentException
-   *   When the deciding key is the slot itself, is not declared, holds a
+   *   When the deciding key is the key itself, is not declared, holds a
    *   list or a map, or the key already holds anything but an empty map.
    * @throws \LogicException
    *   When the key already holds an attached child, or a variant names a
    *   value the deciding key does not allow.
    */
-  public function attachBy(string $key, string $by, array $variants): static;
+  public function attachVariants(string $key, string $by, array $variants): static;
 
   /**
    * Declares a collection: a key whose value is a list of child instances.

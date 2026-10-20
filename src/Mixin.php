@@ -17,7 +17,7 @@ namespace Drupal\data_surface;
  * owner's `allOf`, so one def serves every owner it is mixed into and
  * every place it is attached.
  *
- * @see \Drupal\data_surface\Resource\BlueprintAdditionsInterface::with()
+ * @see \Drupal\data_surface\Resource\BlueprintAdditionsInterface::mixIn()
  * @see docs/resources.md#mixins
  */
 final class Mixin {

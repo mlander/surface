@@ -322,8 +322,8 @@ class ShapesTest extends DataSurfaceKernelTestBase {
         'calls attachList("tags"). A shape is one value',
       ],
       'mixing in' => [
-        static fn () => $blueprint()->with(ShelfTagStructure::class),
-        'calls with(). A shape is one value',
+        static fn () => $blueprint()->mixIn(ShelfTagStructure::class),
+        'calls mixIn(). A shape is one value',
       ],
       'offering more' => [
         static fn () => $blueprint()->extendChoices('resource_test.sku', ['x']),

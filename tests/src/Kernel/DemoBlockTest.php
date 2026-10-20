@@ -8,7 +8,7 @@ use Drupal\Core\Form\EnforcedResponseException;
 use Drupal\Core\Form\FormState;
 use Drupal\block\Entity\Block;
 use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\Storage\PluginConfigurationStorage;
+use Drupal\data_surface\Pipeline\Storage\PluginConfigurationStorage;
 use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
 use Drupal\data_surface_demo\Plugin\Block\DataSurfaceDemoBlock;
 use Drupal\data_surface_demo\Structure\DemoBlockStructure;
@@ -94,7 +94,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
       'field' => NULL,
       'limit' => 10,
       'presentation' => 'list',
-      // The slot starts as the variant its deciding key starts on.
+      // The variants start as the one their deciding key starts on.
       'presentation_settings' => ['show_summary' => TRUE],
     ], $this->createBlock()->defaultConfiguration());
   }
@@ -325,7 +325,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     // Submitted strings arrived as the definitions' native types.
     $this->assertSame('Latest articles', $configuration['headline']);
     $this->assertSame(5, $configuration['limit']);
-    // At every depth: the list's checkbox, inside the slot, too.
+    // At every depth: the list's checkbox, inside the variant, too.
     $this->assertSame(['show_summary' => FALSE], $configuration['presentation_settings']);
     $this->assertSame('article', $configuration['bundle']);
     $this->assertSame('title', $configuration['field']);
@@ -336,15 +336,15 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests the presentation slot: the form rebuilds as the chosen variant.
+   * Tests the presentation's variants: the form rebuilds as the chosen one.
    *
-   * The presentation is a refinement dependency of its slot, so it
+   * The presentation is a refinement dependency of its variants, so it
    * carries the AJAX rebuild. Moved from list to grid, the settings the
    * person left in the list's checkbox answer a question no longer on
-   * the form: the discard cascade drops that input, and the slot comes
+   * the form: the discard cascade drops that input, and the key comes
    * back as the grid, from the grid's own defaults.
    */
-  public function testPresentationSlotRebuildsAsTheChosenVariant(): void {
+  public function testPresentationVariantsRebuildAsTheChosenVariant(): void {
     $stored = ['presentation' => 'list', 'presentation_settings' => ['show_summary' => FALSE]];
     $form = $this->createBlock($stored)->buildConfigurationForm([], new FormState());
     $this->assertArrayHasKey('#ajax', $form['presentation']);
@@ -385,7 +385,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the slot's value has to fit the chosen presentation.
+   * Tests that the presentation settings have to fit the presentation.
    */
   public function testPresentationSettingsFitThePresentation(): void {
     $block = $this->createBlock();

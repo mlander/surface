@@ -172,7 +172,7 @@ final class OperationDefinition {
    *
    * @return bool
    *   TRUE when every parameter is optional, so the context can be built
-   *   before anything is known: what a generated tool or a catalogue can
+   *   before anything is known: what a generated tool or a catalog can
    *   do without a caller.
    */
   public function needsNothing(): bool {

@@ -5,20 +5,20 @@ declare(strict_types=1);
 namespace Drupal\data_surface\ResourceBuild;
 
 /**
- * Fills one open slot for the values no #[Variant] fills.
+ * Derives the variants at one key for the values no #[Variant] covers.
  *
- * An open slot is filled by every structure marked #[Variant] for it. A
- * slot whose deciding values come from somewhere no class answers for
- * (every field type a site has, most of which declare no settings
- * structure) can still say what each of them holds, from a
+ * The variants at a key are every structure marked #[Variant] for it,
+ * from any module. Variants whose deciding values come from somewhere no
+ * class answers for (every field type a site has, most of which declare
+ * no settings structure) can still say what each of them holds, from a
  * description that already exists: a field type's config schema. An
  * implementation is that description, read as plain core definitions;
  * the build step seals each value's definitions into a child, in the
- * slot's variant table beside the declared ones, emitted the same way.
+ * key's variant table beside the declared ones, emitted the same way.
  *
  * A derived child is a shape and nothing else: no operations, no alters,
  * no refiners, no storage and no access class. Its values are stored by
- * the parent under the slot's key, and a declared variant always wins
+ * the parent under the variants' key, and a declared variant always wins
  * over a derived one for the same value.
  *
  * A service tagged `data_surface.derived_variants`.
@@ -26,15 +26,15 @@ namespace Drupal\data_surface\ResourceBuild;
 interface DerivedVariantsInterface {
 
   /**
-   * Names the slot this fills.
+   * Names the key whose variants this derives.
    *
    * @return array{0: class-string<\Drupal\data_surface\Resource\DefinesInputsInterface>, 1: string}
-   *   The class with the slot, and the slot's key.
+   *   The class with the variants, and the key they are attached at.
    */
-  public function slot(): array;
+  public function variantsAt(): array;
 
   /**
-   * Says where the derived variants come from, for the catalogue.
+   * Says where the derived variants come from, for the catalog.
    *
    * @return string
    *   One phrase, such as "the config schema of each field type's

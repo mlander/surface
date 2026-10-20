@@ -90,7 +90,7 @@ final class ParcelResource implements ResourceInterface {
     $inputs->narrow('signature')
       ->when(Condition::equals('insured', TRUE))
       ->require()
-      ->describe(t('An insured parcel is signed for.'));
+      ->because(t('An insured parcel is signed for.'));
     // Standard and express carry no cold parcel.
     $inputs->narrow('handling')
       ->when(Condition::in('service', ['standard', 'express']))
@@ -107,7 +107,7 @@ final class ParcelResource implements ResourceInterface {
     $inputs->narrow('declared_value')
       ->when(Condition::below('weight', 2))
       ->constrain('Range', ['max' => 500])
-      ->describe(t('Up to 500 for a parcel under 2 kilograms.'));
+      ->because(t('Up to 500 for a parcel under 2 kilograms.'));
     // With no reference, a value no higher than 5000.
     $inputs->narrow('declared_value')
       ->when(Condition::absent('reference'))
@@ -117,7 +117,7 @@ final class ParcelResource implements ResourceInterface {
     $inputs->narrow('declared_value')
       ->when(Condition::equals('insured', TRUE))
       ->constrain('Range', ['max' => 2000])
-      ->describe(t('Up to 2000 for an insured parcel.'));
+      ->because(t('Up to 2000 for an insured parcel.'));
     // Above 1000, a signature is a name, not an initial.
     $inputs->narrow('signature')
       ->when(Condition::above('declared_value', 1000))

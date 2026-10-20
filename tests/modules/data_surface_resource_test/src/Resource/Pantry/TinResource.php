@@ -11,10 +11,10 @@ use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_resource_test\Storage\PantryTinStorage;
 
 /**
- * A tin's settings: fills the pantry's open slot, stored apart.
+ * A tin's settings: one of the pantry's variants, stored apart.
  */
 #[Resource('resource_test.pantry.tin', storage: PantryTinStorage::class)]
-#[Variant(of: PantryResource::class, key: 'kind_settings', value: 'tin')]
+#[Variant(of: PantryResource::class, at: 'kind_settings', for: 'tin')]
 final class TinResource implements ResourceInterface {
 
   /**

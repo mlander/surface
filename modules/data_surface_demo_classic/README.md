@@ -73,12 +73,12 @@ Five of those rows are worth a sentence.
   which the classic version has no way to offer.
 - The **block plugin** is four files on the Data Surface side: the plugin,
   which only renders; `DemoBlockStructure`, which its `#[UsesStructure]`
-  names; and the two presentation structures its slot names,
+  names; and the two presentation structures that are its variants,
   `ListPresentationStructure` and `GridPresentationStructure`. None holds a
-  service. The slot is where the classic block grew most: a third
+  service. The variants are where the classic block grew most: a third
   AJAX-wired select, a details element whose children depend on it,
   per-presentation defaults, and storage written per presentation, all
-  by hand. On the Data Surface side it is one `attachBy()` and two classes of
+  by hand. On the Data Surface side it is one `attachVariants()` and two classes of
   a few lines each.
 - The **field list** is where the services went. A refiner points at a
   list rather than fetching it, and no core constraint names a bundle's
@@ -109,7 +109,7 @@ approach changes.
 | Label lists kept in step with the form | 1 | 0 |
 | Live option lists read from the site | 3 | 1 |
 | Constraint naming a list, with its validator | 0 | 1 |
-| Structure classes (the block's, and its slot's two children) | 0 | 3 |
+| Structure classes (the block's, and its two variants) | 0 | 3 |
 | Refiner methods pointing at those lists | 0 | 2 |
 | Config schema files | 1 | 1 |
 | **Distinct mechanisms in play** | **9** | **5** |

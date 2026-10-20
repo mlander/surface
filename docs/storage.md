@@ -159,8 +159,8 @@ data_surface_resource_test.opening_hours:
 ```
 
 The values are stored as the resource accepted them, key for key: an
-attached structure is the map at its key, and a slot's variant the map
-its deciding key chose.
+attached structure is the map at its key, and the variants at a key
+are the map of the variant the deciding key chose.
 
 ### Keys another module mounts
 
@@ -188,9 +188,9 @@ my_module.settings.third_party.other_module:
   type: mapping
   label: 'Other module settings'
   mapping:
-    licence:
+    license:
       type: string
-      label: 'Event licence'
+      label: 'Event license'
 ```
 
 Config validation lets data no schema describes through without a word,
@@ -299,9 +299,9 @@ below where one already says the translation: `NodeTypeStorage` writes
 a content type's title label and workflow defaults through
 `BaseFieldOverrideStorage`.
 
-A slot variant derived from a config schema has no class and so no
-storage of its own: its values are stored by its parent under the slot's
-key, as `FieldStorageStorage` stores a string's derived `max_length`
+A variant derived from a config schema has no class and so no
+storage of its own: its values are stored by its parent under the
+variants' key, as `FieldStorageStorage` stores a string's derived `max_length`
 among the field storage's settings.
 
 ## Getting one
@@ -423,6 +423,16 @@ accepted values instead ([decision](decisions.md#every-door-projects-what-the-re
 written the same class: the examples' three, and the one the first
 fresh-eyes reader had to write ([the log](fresh-eyes-2026-10-18.md)).
 
+The namespace says which kind a class is. A class in `Storage\` is one
+you name on `#[Resource(storage:)]` or extend: `ConfigObjectStorage`,
+and beside it what such a class works with, the layouts, the secret
+codec and `SchemaViolations`. The other six implement the pipeline's
+`DataSurfaceStorageInterface` and live beside it in `Pipeline\Storage\`
+(`use Drupal\data_surface\Pipeline\Storage\StateStorage;`): a plugin's
+host supplies one, and a resource's storage class may delegate to one,
+but `#[Resource(storage: StateStorage::class)]` is refused, since it is
+no `ResourceStorageInterface`.
+
 A few things each of them is opinionated about:
 
 - **`ConfigEntityStorage`** maps an input key to an entity property
@@ -461,8 +471,8 @@ A few things each of them is opinionated about:
   earlier one to have happened: base field overrides belong to a bundle,
   so on an add operation the storage that creates the bundle must be
   listed first. A resource's own children are composed by
-  `StorageAdapter` instead, which routes a slot by its sibling's
-  value; a composite hands each child only the keys it claims.
+  `StorageAdapter` instead, which routes variants by their deciding
+  key's value; a composite hands each child only the keys it claims.
 
 ## Config schema, and whose violation it is
 
@@ -496,9 +506,9 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 Config with no schema at all is not an error. Plenty of config still has
 none, and storage that insisted would be unusable there.
 
-## SettingsLayoutInterface
+## StorageLayoutInterface
 
-`Drupal\data_surface\Storage\SettingsLayoutInterface` has two methods,
+`Drupal\data_surface\Storage\StorageLayoutInterface` has two methods,
 `toStorage(array $values): array` and `fromStorage(array $settings):
 array`. `FieldSettingsStorage` takes one, optionally; without one the
 input layout is the storage layout. It is also where encryption sits,
@@ -511,7 +521,7 @@ a single-key array, and keeps a deprecated key that silently wins over
 the current one. That translation already exists today, half of it in a
 settings form's validate handler and half in the item class's accessors,
 which is exactly why only a form can write those settings correctly.
-`AddressSettingsLayout` is the same translation with a name, so a form, a
+`AddressStorageLayout` is the same translation with a name, so a form, a
 kernel test, a config action and an agent all go through it.
 
 An implementation must be pure layout: no services, no current user, no
@@ -523,8 +533,8 @@ cannot the implementation says so in its own documentation.
 An alter that adds keys may ask for a value in one layout and store it
 in another. It does not own the storage, so it hands the translation to
 the data surface instead, by implementing
-`HasStorageLayoutInterface`, whose `storageLayout()` returns a
-`SettingsLayoutInterface`.
+`AltersStorageLayoutInterface`, whose `storageLayout()` returns a
+`StorageLayoutInterface`.
 
 The sealed data surface carries the layout, refinement keeps it, and
 `getThirdPartyLayout($module)` answers it. It is applied to that
@@ -552,7 +562,7 @@ never reaches storage from any caller. Two small pieces do it:
 | Piece | What it is |
 | --- | --- |
 | `SecretCodecInterface` | `encrypt()`, `decrypt()`, `isEncrypted()`. A service, so a deployment can replace it. |
-| `EncryptedSettingsLayout` | A `SettingsLayoutInterface` decorator that wraps another layout, or none, and enciphers the secret keys of the data surface it was made for. |
+| `EncryptedStorageLayout` | A `StorageLayoutInterface` decorator that wraps another layout, or none, and enciphers the secret keys of the data surface it was made for. |
 
 The shipped codec, `SodiumSecretCodec`, is a **reference
 implementation**: libsodium's `crypto_secretbox` with a fresh random
@@ -578,9 +588,9 @@ is ciphertext.
 
 It takes its key list at construction rather than reading a data
 surface at call time, because a layout has no data surface and is not
-going to get one: `SettingsLayoutInterface` is pure layout, built once and
+going to get one: `StorageLayoutInterface` is pure layout, built once and
 reused for every instance of a field type.
-`EncryptedSettingsLayout::forSurface()` is the one line that reads the
+`EncryptedStorageLayout::forSurface()` is the one line that reads the
 flags off a data surface and hands back the inner layout unchanged when
 there are none.
 
@@ -594,7 +604,7 @@ available, and leaves everything else exactly as it was.
 **The other storage classes do not, and that is the honest state of
 it.** The state storage, the config entity storage, the base field
 override storage and the plugin configuration storage write values that
-never pass through a `SettingsLayoutInterface`, so there is nowhere for
+never pass through a `StorageLayoutInterface`, so there is nowhere for
 the decorator to sit. Generalizing it to a decorator around any storage
 class is the follow-up, and it is not a rename: storage that writes
 config holds its artifact to the config schema, which would be

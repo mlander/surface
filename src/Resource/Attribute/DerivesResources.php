@@ -20,14 +20,14 @@ final class DerivesResources {
    *
    * @param string $base
    *   The base id, dotted like a resource id, with no colon.
-   * @param class-string|null $overrides
+   * @param class-string|null $overriddenBy
    *   An attribute class: every class in an enabled module's src/Resource
    *   or src/Structure carrying it is handed to the deriver, as what
    *   replaces its derivation where someone wrote one by hand.
    */
   public function __construct(
     public readonly string $base,
-    public readonly ?string $overrides = NULL,
+    public readonly ?string $overriddenBy = NULL,
   ) {}
 
 }

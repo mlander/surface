@@ -14,7 +14,7 @@ use Drupal\data_surface\Refinement\Rule;
  * What anyone may do to a blueprint: add to it.
  *
  * Handed to alterInputs() and alterOutputs(). The owner gets
- * BlueprintInterface, which adds attachBy().
+ * BlueprintInterface, which adds attachVariants().
  *
  * Neither the owner nor an alter may add a key twice: adding is never
  * replacing, so nothing an owner declared can be changed by adding. The
@@ -32,8 +32,8 @@ interface BlueprintAdditionsInterface {
    * Returns the core definition, so the rest (required, constraints,
    * description) is plain core API.
    *
-   * The type may be a shape's class, `add('licence', Licence::class,
-   * t('Event licence'))`: the key then starts from the shape as its
+   * The type may be a shape's class, `add('license', License::class,
+   * t('Event license'))`: the key then starts from the shape as its
    * alters left it, and what it adds (required, a default, a constraint,
    * a description) may only narrow the shape, which its owner's build
    * checks.
@@ -64,7 +64,9 @@ interface BlueprintAdditionsInterface {
   /**
    * Adds a key, the long form.
    *
-   * For a definition that is not one simple type: a list, a map.
+   * For a definition that is not one simple type: a list, a map. Like
+   * every declaring verb, it returns what it declared, for the owner to
+   * go on labeling with the core setters.
    *
    * @param string $key
    *   The key.
@@ -73,9 +75,14 @@ interface BlueprintAdditionsInterface {
    * @param mixed $default
    *   The default value; NULL declares none.
    *
-   * @return $this
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface
+   *   The definition declared, the one handed in.
+   *
+   * @template T of \Drupal\Core\TypedData\DataDefinitionInterface
+   * @phpstan-param T $definition
+   * @phpstan-return T
    */
-  public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): static;
+  public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): DataDefinitionInterface;
 
   /**
    * Rewords a key anyone declared.
@@ -243,8 +250,8 @@ interface BlueprintAdditionsInterface {
    * mount instead.
    *
    * @code
-   * $inputs->with(TimestampsStructure::class);
-   * $inputs->with(OwnershipStructure::class, reads: ['audience' => 'visibility']);
+   * $inputs->mixIn(TimestampsStructure::class);
+   * $inputs->mixIn(OwnershipStructure::class, reads: ['audience' => 'visibility']);
    * @endcode
    *
    * @param string $structure
@@ -265,7 +272,29 @@ interface BlueprintAdditionsInterface {
    *
    * @see docs/decisions.md#a-mixin-is-merged-flat
    */
+  public function mixIn(string $structure, array $reads = []): static;
+
+  // No drupal.org issue tracks the rename yet: the project page stands in.
+  // phpcs:disable Drupal.Commenting.Deprecated.DeprecatedWrongSeeUrlFormat
+
+  /**
+   * Mixes a structure in: the earlier name of mixIn().
+   *
+   * @param string $structure
+   *   The structure's class.
+   * @param array<string, string> $reads
+   *   Its ports, each mapped to the owner's key it reads, by name.
+   *
+   * @return $this
+   *
+   * @deprecated in data_surface:1.0.0 and is removed from data_surface:2.0.0.
+   *   Use ::mixIn() instead.
+   *
+   * @see https://www.drupal.org/project/data_surface
+   */
   public function with(string $structure, array $reads = []): static;
+
+  // phpcs:enable
 
   /**
    * Offers more values on a key someone else declared, as an alter.
@@ -302,9 +331,9 @@ interface BlueprintAdditionsInterface {
    *
    * @code
    * $inputs->narrow('capacity')
-   *   ->when(Condition::absent('licence'))
+   *   ->when(Condition::absent('license'))
    *   ->constrain('Range', ['max' => 100])
-   *   ->describe(t('Up to 100 without an event licence.'));
+   *   ->because(t('Up to 100 without an event license.'));
    * @endcode
    *
    * The rule is a static refiner, stated by the full schema as a JSON

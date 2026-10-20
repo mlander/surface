@@ -58,9 +58,9 @@ final class Entry {
    * @param \Drupal\data_surface\Attachment|null $attachment
    *   The child fixed at this key, when the key holds an attached
    *   structure: its definition is then the child's definitions as a map.
-   * @param \Drupal\data_surface\Slot|null $slot
-   *   The variant table, when the key is a slot whose shape a sibling
-   *   chooses: its definition is then the `any` placeholder until the
+   * @param \Drupal\data_surface\Variants|null $variants
+   *   The variant table, when the key has variants a sibling chooses
+   *   between: its definition is then the `any` placeholder until the
    *   sibling holds a value, and that variant's map afterwards.
    * @param array<string, string[]> $paths
    *   For a key refined one property at a time (the mount, one property
@@ -113,7 +113,7 @@ final class Entry {
     public readonly array $refiners = [],
     public readonly array $contributions = [],
     public readonly ?Attachment $attachment = NULL,
-    public readonly ?Slot $slot = NULL,
+    public readonly ?Variants $variants = NULL,
     public readonly array $paths = [],
     public readonly array $runtimeOnly = [],
     public readonly ?Collection $list = NULL,
@@ -149,7 +149,7 @@ final class Entry {
       $this->refiners,
       $this->contributions,
       $this->attachment,
-      $this->slot,
+      $this->variants,
       $this->paths,
       $this->runtimeOnly,
       $this->list,
@@ -371,27 +371,28 @@ final class Entry {
    * Gets the child answering for this key's value, if any.
    *
    * An attached child always, reading its ports from the given values;
-   * a slot's only once the deciding key, read from the given values,
-   * names a variant. Everything that hands a nested value to the data
+   * the chosen variant only once the deciding key, read from the given
+   * values, names a variant. Everything that hands a nested value to the data
    * surface describing it (accept, validate, refine, the form) asks this
    * one question.
    *
    * @param array $values
    *   The values of the data surface this key belongs to, which is where a
-   *   slot's deciding key and an attached child's wired ports are read.
+   *   variants' deciding key and an attached child's wired ports are read.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface|null
-   *   The child, or NULL for a plain key and for an unresolved slot.
+   *   The child, or NULL for a plain key and for variants nothing has
+   *   chosen yet.
    */
   public function childFor(array $values): ?DataSurfaceInterface {
     if ($this->attachment !== NULL) {
       return $this->attachment->bound($values);
     }
-    if ($this->slot === NULL) {
+    if ($this->variants === NULL) {
       return NULL;
     }
-    $chosen = $this->slot->chosen($values[$this->slot->by] ?? NULL);
-    return $chosen === NULL ? NULL : $this->slot->variant($chosen)->child;
+    $chosen = $this->variants->chosen($values[$this->variants->by] ?? NULL);
+    return $chosen === NULL ? NULL : $this->variants->variant($chosen)->child;
   }
 
   /**
@@ -424,7 +425,7 @@ final class Entry {
       $this->refiners,
       $this->contributions,
       $attachment ?? $this->attachment,
-      $this->slot,
+      $this->variants,
       $this->paths,
       $this->runtimeOnly,
       $this->list,
@@ -437,17 +438,17 @@ final class Entry {
   }
 
   /**
-   * Returns whether this key holds a child: attached or a slot.
+   * Returns whether this key holds a child: attached or variants.
    *
    * A collection is not nested in this sense: its value is a list, not a
    * map one child answers for, and the key itself is the parent's to
    * refine and lock. Its items are; see $list.
    *
    * @return bool
-   *   TRUE for an attached child or a slot.
+   *   TRUE for an attached child or variants.
    */
   public function isNested(): bool {
-    return $this->attachment !== NULL || $this->slot !== NULL;
+    return $this->attachment !== NULL || $this->variants !== NULL;
   }
 
   /**

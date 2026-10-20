@@ -13,7 +13,7 @@ use Drupal\data_surface\Resource\Attribute\UsesStructure;
  * attribute, where the host's definition alter recorded it, so nothing
  * is instantiated. A structure some plugin uses is that plugin's
  * configuration: its host supplies the context and the storage, so it
- * is configured through the host, and the catalogue and the tool
+ * is configured through the host, and the catalog and the tool
  * deriver both ask here.
  *
  * It is also where a plugin that is its own structure is found: one

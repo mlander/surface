@@ -18,7 +18,7 @@ use Drupal\data_surface\Resource\Attribute\Shape;
 use Drupal\data_surface\Resource\Attribute\Structure;
 use Drupal\data_surface\Resource\Attribute\Variant;
 use Drupal\data_surface\Resource\DerivedOperation;
-use Drupal\data_surface\Resource\HasOutputsInterface;
+use Drupal\data_surface\Resource\DefinesOutputsInterface;
 use Drupal\data_surface\Resource\AltersAccessInterface;
 use Drupal\data_surface\Resource\AltersInputsInterface;
 use Drupal\data_surface\Resource\ResourceInterface;
@@ -202,7 +202,7 @@ final class ResourceRegistry {
   /**
    * Lists the derivers discovered, by base id.
    *
-   * @return array<string, array{class: class-string, module: string, overrides: class-string|null, overridden: array<class-string, string>}>
+   * @return array<string, array{class: class-string, module: string, overriddenBy: class-string|null, overridden: array<class-string, string>}>
    *   Each deriver's class and module, the attribute an override of its
    *   derivation carries and the classes that carry it, keyed by base id
    *   and sorted.
@@ -214,7 +214,7 @@ final class ResourceRegistry {
       $derivers[$attribute->base] = [
         'class' => $class,
         'module' => (string) $module,
-        'overrides' => $attribute->overrides,
+        'overriddenBy' => $attribute->overriddenBy,
         'overridden' => $this->classes['overrides'][$class] ?? [],
       ];
     }
@@ -402,15 +402,15 @@ final class ResourceRegistry {
   }
 
   /**
-   * Gets the structures marked as variants for one slot of one class.
+   * Gets the structures marked as variants at one key of one class.
    *
-   * What fills an open slot: one declared with attachBy() and no
-   * children, which the build step fills from here.
+   * The variants any module may add to: attachVariants() names no
+   * children, so the build step fills them from here.
    *
    * @param string $resource
-   *   The class or id holding the slot.
+   *   The class or id holding the variants.
    * @param string $key
-   *   The slot key.
+   *   The key the variants are attached at.
    *
    * @return array<string, class-string>
    *   The variant classes, keyed by the deciding value.
@@ -604,13 +604,13 @@ final class ResourceRegistry {
     foreach ($this->classes['alters'] ?? [] as $class => $module) {
       $reflection = new \ReflectionClass($class);
       $attribute = $reflection->getAttributes(Alters::class)[0]->newInstance();
-      if (isset($shapes[$attribute->resource])) {
-        self::assertShapeAlter($reflection, $attribute, $shapes[$attribute->resource]);
-        $shape_alters[$attribute->resource][] = new AlterDefinition(class: $class, module: $module, operations: [], refiners: []);
+      if (isset($shapes[$attribute->of])) {
+        self::assertShapeAlter($reflection, $attribute, $shapes[$attribute->of]);
+        $shape_alters[$attribute->of][] = new AlterDefinition(class: $class, module: $module, operations: [], refiners: []);
         continue;
       }
       // A deriver's base names everything it derived.
-      $named = $bases[$attribute->resource] ?? [$attribute->resource];
+      $named = $bases[$attribute->of] ?? [$attribute->of];
       $alter = new AlterDefinition(
         class: $class,
         module: $module,
@@ -619,7 +619,7 @@ final class ResourceRegistry {
         answersAccess: $reflection->implementsInterface(AltersAccessInterface::class),
       );
       foreach ($named as $altered) {
-        if (!isset($bases[$attribute->resource]) && self::isUndiscovered($altered, $resources, sprintf('#[Alters] on %s', $class))) {
+        if (!isset($bases[$attribute->of]) && self::isUndiscovered($altered, $resources, sprintf('#[Alters] on %s', $class))) {
           continue;
         }
         $alters[$altered][] = $alter;
@@ -634,7 +634,7 @@ final class ResourceRegistry {
       foreach ((new \ReflectionClass($class))->getAttributes(Variant::class) as $attribute) {
         $variant = $attribute->newInstance();
         if (!self::isUndiscovered($variant->of, $resources, sprintf('#[Variant] on %s', $class))) {
-          $variants[$variant->of][$variant->key][$variant->value] = $class;
+          $variants[$variant->of][$variant->at][$variant->for] = $class;
         }
       }
     }
@@ -862,7 +862,7 @@ final class ResourceRegistry {
       $structure => 'carries #[Structure]',
       default => 'is its own structure, by #[UsesStructure] with no argument,',
     };
-    foreach (['defineInputs' => $interface, 'defineOutputs' => HasOutputsInterface::class] as $method => $needed) {
+    foreach (['defineInputs' => $interface, 'defineOutputs' => DefinesOutputsInterface::class] as $method => $needed) {
       if ($class->hasMethod($method) && !$class->getMethod($method)->isStatic()) {
         throw new \LogicException(sprintf(
           '%s %s and declares %s() as an instance method. What a class declares belongs to the class, and the method takes nothing but the blueprint to fill: declare it `public static function %s(BlueprintInterface $%s): void`, and implement %s.',

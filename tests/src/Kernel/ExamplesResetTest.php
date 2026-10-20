@@ -14,7 +14,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Tests the examples' reset puts every example back to the shipped files.
  *
  * For a retake: whatever was saved, and whatever another module stored
- * on an example — the compliance module's licence under example 3's third
+ * on an example — the compliance module's license under example 3's third
  * party settings — goes, and the files in config/install are what is
  * left.
  */
@@ -84,7 +84,7 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
     $this->config($two)->set('venue', 'harbour')->set('room', 'harbour_deck')->set('capacity', 120)->save();
     $this->config($three)
       ->set('title', 'Changed')
-      ->set('third_party_settings', ['data_surface_examples_compliance' => ['licence' => '2048', 'stewards' => 3]])
+      ->set('third_party_settings', ['data_surface_examples_compliance' => ['license' => '2048', 'stewards' => 3]])
       ->save();
     $this->assertSame('harbour_deck', $this->stored($two)['room']);
     // Example 4's closed rooms live in State, not in any example's
@@ -114,7 +114,7 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
     $this->assertNull($this->container->get('state')->get('data_surface_examples_compliance.closed_rooms'));
     $this->assertNull($this->container->get('state')->get('data_surface_examples_workflow.state'));
     // Riverside Hall's main hall seats 400, more than example 4 allows
-    // without a licence, so its ceiling is what the shipped room shows.
+    // without a license, so its ceiling is what the shipped room shows.
     foreach ([$two, $three] as $name) {
       $stored = $this->stored($name);
       $this->assertSame(['riverside', 'riverside_main', 50], [$stored['venue'], $stored['room'], $stored['capacity']], $name);

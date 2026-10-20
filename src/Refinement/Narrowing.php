@@ -49,7 +49,7 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
  *
  * 'any' is the declared escape hatch: it advertises nothing, so every
  * type is narrower than it. That is also the one way a shape may appear
- * during refinement: a slot's placeholder resolving to the map of the
+ * during refinement: the variants' placeholder resolving to the map of the
  * variant its deciding key chose, or a refiner on an `any` key returning
  * a map itself, for a child that cannot be enumerated statically.
  *
@@ -89,7 +89,7 @@ final class Narrowing {
    *   refiner that breaks the contract has to be findable.
    * @param string $contributor
    *   Who did it, in words: the declaring class, a named contribution, an
-   *   operation or a slot.
+   *   operation or a key's variants.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $before
    *   The definition handed to the refiner.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $after

@@ -1,5 +1,5 @@
 import type { Schema, Values } from '../contract';
-import { fieldId, isObject, jsonType, resolveSlot } from '../contract';
+import { fieldId, isObject, jsonType, resolveVariants } from '../contract';
 import {
   CheckboxesField,
   CheckboxField,
@@ -19,7 +19,7 @@ import { Description, Errors, isLocked, RequiredMarker, type FieldProps } from '
  * them to checkboxes or a multiple select, a map to a fieldset, a string
  * to a text input, a time input or a textarea, a number to a number
  * input, a boolean to a checkbox, a list of free values to rows; and the
- * one the Form API has no element for, a slot.
+ * one the Form API has no element for, variants (the widget hint `slot`).
  */
 export function Field(props: FieldProps): JSX.Element | null {
   const extension = props.schema['x-surface'];
@@ -43,7 +43,7 @@ export function Field(props: FieldProps): JSX.Element | null {
     case 'fieldset':
       return <FieldsetField {...props} />;
     case 'slot':
-      return <SlotField {...props} />;
+      return <VariantsField {...props} />;
     case 'list':
       return <ListField {...props} />;
     default:
@@ -160,7 +160,7 @@ export function Properties({
 }
 
 /**
- * A map, an attached part, or a resolved slot: a fieldset whose legend is
+ * A map, an attached part, or a chosen variant: a fieldset whose legend is
  * its title, holding one field per property. An object that only groups
  * (`x-surface.group`, the modules' third-party settings) is its fields
  * and nothing around them, as the form draws it.
@@ -202,14 +202,15 @@ export function FieldsetField(props: FieldProps): JSX.Element {
 }
 
 /**
- * A slot: the fieldset of the variant its deciding key chose, read from
- * the parent's conditionals, and nothing at all while nothing is chosen,
- * as the form builder renders no element for an unresolved slot. A
- * variant that declares no keys (a choice with nothing more to say) is
- * drawn as nothing too, as the form builder draws it.
+ * Variants (the widget hint `slot`): the fieldset of the variant their
+ * deciding key chose, read from the parent's conditionals, and nothing
+ * at all while nothing is chosen, as the form builder renders no element
+ * for variants nothing has chosen yet. A variant that declares no keys
+ * (a choice with nothing more to say) is drawn as nothing too, as the
+ * form builder draws it.
  */
-export function SlotField(props: FieldProps): JSX.Element | null {
-  const variant = props.parent === undefined ? null : resolveSlot(props.parent, props.name, props.parentValues ?? {});
+export function VariantsField(props: FieldProps): JSX.Element | null {
+  const variant = props.parent === undefined ? null : resolveVariants(props.parent, props.name, props.parentValues ?? {});
   if (variant === null || Object.keys(variant.properties ?? {}).length === 0) {
     return null;
   }

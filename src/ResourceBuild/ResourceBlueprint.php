@@ -15,7 +15,7 @@ use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Port;
 use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\DefinesInputsInterface;
-use Drupal\data_surface\Resource\HasOutputsInterface;
+use Drupal\data_surface\Resource\DefinesOutputsInterface;
 use Drupal\data_surface\Resource\KeysFromSiteInterface;
 
 /**
@@ -26,7 +26,7 @@ use Drupal\data_surface\Resource\KeysFromSiteInterface;
  * default given for one is written onto it so that the engine refuses it
  * in its own words rather than this class guessing at them.
  *
- * A structure mixed in with with() is declared through a blueprint of
+ * A structure mixed in with mixIn() is declared through a blueprint of
  * its own over the same builder, so its members land among the owner's
  * keys where the call stands, in order. That blueprint keeps what is the
  * structure's apart (its ports, which only its own refiners read, and its
@@ -38,11 +38,13 @@ use Drupal\data_surface\Resource\KeysFromSiteInterface;
 final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintInterface {
 
   /**
-   * The slots declared through this blueprint, keyed by key.
+   * The deciding keys of the variants attached through this blueprint.
+   *
+   * Keyed by the key the variants are attached at.
    *
    * @var array<string, string>
    */
-  protected array $slots = [];
+  protected array $variants = [];
 
   /**
    * The maps of keys from the site declared through this blueprint, by key.
@@ -107,14 +109,14 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
    */
-  public function with(string $structure, array $reads = []): static {
+  public function mixIn(string $structure, array $reads = []): static {
     $who = $this->name($this->owner);
     if ($this->outputs) {
       throw new \LogicException(sprintf('%s mixes %s into its outputs. A structure is mixed into what is sent; outputs hold no structures yet.', $who, $structure));
     }
     static::assertMixinReads($structure, $who, $reads);
     if (Shapes::isShape($structure)) {
-      throw new \LogicException(sprintf('%s mixes %s in, a shape: a shape is one value, declared at a key with add(\'<key>\', %s::class, ...); with() merges a structure\'s members.', $who, $structure, substr($structure, (int) strrpos($structure, '\\') + 1)));
+      throw new \LogicException(sprintf('%s mixes %s in, a shape: a shape is one value, declared at a key with add(\'<key>\', %s::class, ...); mixIn() merges a structure\'s members.', $who, $structure, substr($structure, (int) strrpos($structure, '\\') + 1)));
     }
     if (!is_subclass_of($structure, DefinesInputsInterface::class)) {
       throw new \LogicException(sprintf('%s mixes %s in, which is no resource or structure class: a structure is mixed in by its class.', $who, $structure));
@@ -137,7 +139,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
         $definition->storage !== NULL ? 'storage of its own' : 'identity keys',
       ));
     }
-    if (is_subclass_of($structure, HasOutputsInterface::class)) {
+    if (is_subclass_of($structure, DefinesOutputsInterface::class)) {
       throw new \LogicException(sprintf('%s mixes %s in, which declares outputs. A structure\'s inputs are mixed in; its outputs are not, yet.', $who, $this->name($structure)));
     }
     $mixin = (new static($this->builder, $this->typedDataManager, FALSE, $this->registry, $structure, $this))->useShapes($this->shapes);
@@ -162,7 +164,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   protected static function assertMixinReads(string $structure, string $who, array $reads): void {
     foreach ($reads as $port => $wired) {
       if (!is_string($port) || $port === '' || !is_string($wired) || $wired === '') {
-        throw new \InvalidArgumentException(sprintf('with() was handed reads for %s that do not map a port, by its name, to a key of %s, by its name: [\'port\' => \'key\'].', $structure, $who));
+        throw new \InvalidArgumentException(sprintf('mixIn() was handed reads for %s that do not map a port, by its name, to a key of %s, by its name: [\'port\' => \'key\'].', $structure, $who));
       }
     }
   }
@@ -197,7 +199,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * Answers whether this blueprint is a structure's being mixed in.
    *
    * @return bool
-   *   TRUE inside with().
+   *   TRUE inside mixIn().
    */
   public function isMixedIn(): bool {
     return $this->into !== NULL;
@@ -272,7 +274,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * in, since a structure's members are the owner's keys: a clash is
    * refused naming both who declared it.
    */
-  public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): static {
+  public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): DataDefinitionInterface {
     $root = $this->root();
     if (!$this->outputs && ($this->into !== NULL || isset($root->origins[$key])) && $root->isDeclared($key)) {
       $before = $root->origins[$key] ?? NULL;
@@ -287,7 +289,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
     if ($this->into !== NULL) {
       $this->into->adopt($key, (string) $this->owner);
     }
-    return $this;
+    return $definition;
   }
 
   /**
@@ -309,10 +311,10 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * {@inheritdoc}
    */
-  public function attachBy(string $key, string $by): MapDataDefinition {
-    $this->assertHoldsNoChild('declares a slot', $key);
-    $shell = $this->reserveChild('attachBy', $key);
-    $this->slots[$key] = $by;
+  public function attachVariants(string $key, string $by): MapDataDefinition {
+    $this->assertHoldsNoChild('attaches variants', $key);
+    $shell = $this->reserveChild('attachVariants', $key);
+    $this->variants[$key] = $by;
     return $shell;
   }
 
@@ -393,7 +395,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *   The key.
    *
    * @throws \LogicException
-   *   Inside with().
+   *   Inside mixIn().
    */
   protected function assertHoldsNoChild(string $verb, string $key): void {
     if ($this->into === NULL) {
@@ -486,21 +488,22 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   }
 
   /**
-   * Gets the slots declared through this blueprint.
+   * Gets the variants attached through this blueprint.
    *
    * @return array<string, string>
-   *   The deciding key of each slot, keyed by key, in declaration order.
+   *   The deciding key of the variants at each key, keyed by key, in
+   *   declaration order.
    *   Discovery's #[Variant] classes fill them.
    */
-  public function slots(): array {
-    return $this->slots;
+  public function variants(): array {
+    return $this->variants;
   }
 
   /**
    * {@inheritdoc}
    */
   public function declared(): array {
-    return array_merge(parent::declared(), array_keys($this->slots), array_keys($this->fromSite));
+    return array_merge(parent::declared(), array_keys($this->variants), array_keys($this->fromSite));
   }
 
   /**

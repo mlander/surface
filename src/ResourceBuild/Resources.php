@@ -32,8 +32,8 @@ use Drupal\data_surface\Refinement\RuntimeRefiner;
 use Drupal\data_surface\Refinement\StaticRefinerContainer;
 use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
 use Drupal\data_surface\Resource\AltersOutputsInterface;
-use Drupal\data_surface\Resource\HasOutputsInterface;
-use Drupal\data_surface\Resource\HasStorageLayoutInterface;
+use Drupal\data_surface\Resource\DefinesOutputsInterface;
+use Drupal\data_surface\Resource\AltersStorageLayoutInterface;
 use Drupal\data_surface\Resource\KeyedList;
 use Drupal\data_surface\Resource\KeysFromSiteInterface;
 use Drupal\data_surface\Resource\KnowsClearableKeysInterface;
@@ -61,7 +61,7 @@ use Drupal\data_surface\Port;
  *    writes straight into a fresh DataSurfaceBuilder. Neither kind is
  *    ever instantiated: its declarations and its refiners are static, so
  *    the class may as well be a plugin's, as it is for a plugin that is its
- *    own structure. A structure mixed in with with() declares its members
+ *    own structure. A structure mixed in with mixIn() declares its members
  *    into the same builder, where the call stands.
  * 2. The alters #[Alters] names for this class, in discovery order,
  *    skipping one whose operations leave this context's id out:
@@ -140,7 +140,7 @@ final class Resources implements ResourcesInterface {
    *   What turns a route's or a tool's values into an operation's
    *   arguments, an entity's id into the entity among them.
    * @param \Drupal\data_surface\ResourceBuild\DerivedVariants $derivedVariants
-   *   What fills an open slot for the values no declared variant fills.
+   *   What derives variants for the values no declared variant covers.
    * @param \Drupal\data_surface\Refinement\WatchedValueCheckInterface $watchedValueCheck
    *   What a watched value passes before a refiner is handed it, sealed
    *   into every data surface and every child this step builds.
@@ -294,7 +294,7 @@ final class Resources implements ResourcesInterface {
       if ($instance instanceof AltersOutputsInterface) {
         $instance->alterOutputs($additions[$alter->module][1] ??= (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, TRUE))->useShapes($this->shapes()));
       }
-      if ($instance instanceof HasStorageLayoutInterface) {
+      if ($instance instanceof AltersStorageLayoutInterface) {
         $builder->setThirdPartyLayout($alter->module, $instance->storageLayout());
       }
       $links[] = [$instance, $alter->refiners, $alter->module];
@@ -308,7 +308,7 @@ final class Resources implements ResourcesInterface {
     static::assertShapesNarrowed($definition, $declaring);
 
     $input_keys = $inputs->keys();
-    $attached = array_merge(array_keys($inputs->attachments()), array_keys($inputs->slots()), array_keys($inputs->fromSite()));
+    $attached = array_merge(array_keys($inputs->attachments()), array_keys($inputs->variants()), array_keys($inputs->fromSite()));
     $lists = array_keys($inputs->lists());
     foreach ($definition->identity as $key) {
       if (!in_array($key, $input_keys, TRUE)) {
@@ -334,7 +334,7 @@ final class Resources implements ResourcesInterface {
         ));
       }
     }
-    $slots = $this->slotsOf($definition, $inputs, $input_keys);
+    $variantKeys = $this->variantKeysOf($definition, $inputs, $input_keys);
 
     $this->applyContext($builder, $definition, $context, $input_keys, $attached, $lists);
     $ports = $inputs->ports();
@@ -460,7 +460,7 @@ final class Resources implements ResourcesInterface {
     foreach ($inputs->fromSite() as $key => $each) {
       $this->buildEach($builder, $definition, (string) $key, $each, $context, $frame, $ancestry, $input_keys, $attached, $lists);
     }
-    foreach ($slots as $key => ['by' => $by, 'children' => $children]) {
+    foreach ($variantKeys as $key => ['by' => $by, 'children' => $children]) {
       $variants = [];
       $withheld = [];
       $runtime_variant = FALSE;
@@ -472,7 +472,7 @@ final class Resources implements ResourcesInterface {
           $builder->addCacheableDependency($access);
         }
         // A variant offered here that only the subject decides may be
-        // withheld once it is known: the slot says so.
+        // withheld once it is known: the variants say so.
         $runtime_variant = $runtime_variant || $runtime;
         // A locked variant is offered, built locked whole.
         // Decision: see
@@ -491,7 +491,7 @@ final class Resources implements ResourcesInterface {
           $variants[(string) $value] ??= new Attachment((new DataSurfaceBuilder($definitions))->setWatchedValueCheck($this->watchedValueCheck)->seal());
         }
       }
-      $builder->attachBy($key, $by, $variants);
+      $builder->attachVariants($key, $by, $variants);
       if ($runtime_variant) {
         $builder->markRuntimeAccess($key);
       }
@@ -685,8 +685,8 @@ final class Resources implements ResourcesInterface {
    * @param array $ancestry
    *   The parent's own ancestry.
    * @param bool $whole
-   *   TRUE for a slot's variant, which a locked answer builds locked whole,
-   *   since the parent's key is the slot's and not the variant's alone.
+   *   TRUE for a variant, which a locked answer builds locked whole, since
+   *   the parent's key holds all the variants and not this one alone.
    * @param string|null $storedAt
    *   Where the parent's storage keeps the child's keys, by dotted path
    *   from the parent, when that is not the key: an entry of a map of keys
@@ -851,7 +851,7 @@ final class Resources implements ResourcesInterface {
    * Builds each structure mixed in by itself, and settles its members.
    *
    * A mixed-in structure's members are the owner's keys already, declared
-   * through its blueprint where with() stands. Here each is checked (its
+   * through its blueprint where mixIn() stands. Here each is checked (its
    * ports wired to the owner's keys), built by itself in the owner's
    * context for its def and asked its access: omitted takes its members
    * back out, locked holds them to what is stored, and what a structure
@@ -872,7 +872,7 @@ final class Resources implements ResourcesInterface {
    * @param string[] $input_keys
    *   The owner's plain input keys, every structure's members among them.
    * @param string[] $attached
-   *   The owner's keys holding a child or a slot.
+   *   The owner's keys holding a child or variants.
    * @param string[] $lists
    *   The owner's collection keys.
    *
@@ -1000,7 +1000,7 @@ final class Resources implements ResourcesInterface {
   }
 
   /**
-   * Refuses a wiring of a mixed-in structure's ports its owner cannot honour.
+   * Refuses a wiring of a mixed-in structure's ports its owner cannot honor.
    *
    * Every port is wired, to a plain input of the owner's of the port's
    * type that the structure did not bring itself: in the owner's frame a
@@ -1022,7 +1022,7 @@ final class Resources implements ResourcesInterface {
    * @param string[] $input_keys
    *   The owner's plain input keys.
    * @param string[] $attached
-   *   The owner's keys holding a child or a slot.
+   *   The owner's keys holding a child or variants.
    * @param string[] $lists
    *   The owner's collection keys.
    *
@@ -1229,7 +1229,7 @@ final class Resources implements ResourcesInterface {
    * @param string[] $input_keys
    *   The owner's plain input keys.
    * @param string[] $attached
-   *   The owner's keys holding a child or a slot.
+   *   The owner's keys holding a child or variants.
    * @param string[] $lists
    *   The owner's collection keys.
    *
@@ -1238,7 +1238,7 @@ final class Resources implements ResourcesInterface {
    *
    * @throws \LogicException
    *   For a resource with storage or identity, a structure holding a
-   *   child, a wiring the owner cannot honour, or an access answer other
+   *   child, a wiring the owner cannot honor, or an access answer other
    *   than open.
    */
   protected function mountStructure(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, string $module, string $key, string $child, array $reads, OperationContext $context, array $frame, array $ancestry, array $input_keys, array $attached, array $lists): array {
@@ -1263,7 +1263,7 @@ final class Resources implements ResourcesInterface {
         $key,
         $module,
         $definition->id,
-        $access?->answer() ?? 'omitted',
+        $access?->getAnswer() ?? 'omitted',
       ));
     }
     if ($access !== NULL) {
@@ -1289,12 +1289,12 @@ final class Resources implements ResourcesInterface {
   }
 
   /**
-   * Refuses a wiring of a child's ports that its container cannot honour.
+   * Refuses a wiring of a child's ports that its container cannot honor.
    *
    * Each port wired is one the child reads, to a key of the container's
    * own (an owner's plain input, by name) outside the child, of the
-   * port's type; every port the child requires is wired. A slot's variant
-   * and a collection's item are wired by nothing yet, so neither may
+   * port's type; every port the child requires is wired. A variant and a
+   * collection's item are wired by nothing yet, so neither may
    * require a port.
    *
    * Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
@@ -1314,7 +1314,7 @@ final class Resources implements ResourcesInterface {
    * @param string[] $input_keys
    *   The owner's plain input keys.
    * @param string[] $attached
-   *   The owner's keys holding a child or a slot.
+   *   The owner's keys holding a child or variants.
    * @param string[] $lists
    *   The owner's collection keys.
    * @param string $as
@@ -1361,11 +1361,11 @@ final class Resources implements ResourcesInterface {
       throw new \LogicException($as === 'attach'
         ? sprintf('%s attaches %s at "%s" without wiring the "%s" port it requires: attach(\'%s\', ..., reads: [\'%s\' => \'<key>\']) names the key of %s it reads.', $who, $id, $key, $port->name, $key, $port->name, $definition->id)
         : sprintf('%s fills the "%s" %s of %s and requires the "%s" port, which nothing wires: a port is wired by attach(), and a %s is wired by nothing yet.', $id, $key, match ($as) {
-          'variant' => 'slot',
+          'variant' => 'variants',
           'entry' => 'map of keys from the site',
           default => 'collection',
         }, $who, $port->name, match ($as) {
-          'variant' => 'slot\'s variant',
+          'variant' => 'variant',
           'entry' => 'map\'s entry',
           default => 'collection\'s item',
         }));
@@ -1578,7 +1578,7 @@ final class Resources implements ResourcesInterface {
     // The parent's id is a hint, and so is the default: either is
     // passed over when the parent knows too little to invoke it, as a
     // context that knows nothing yet, which a static tool definition or
-    // a catalogue builds, does.
+    // a catalog builds, does.
     $candidates = isset($operations[$context->id]) ? [$operations[$context->id]] : [];
     foreach ($operations as $candidate) {
       if ($candidate->default && $candidate->id !== $context->id) {
@@ -1920,13 +1920,13 @@ final class Resources implements ResourcesInterface {
    */
   protected function answersAgain(string $class, OperationAccessInterface|AltersAccessInterface $instance, OperationContext $context, AccountInterface $account, AccessAnswer $first): bool {
     $again = AccessAnswer::fromAnswer(StaticRefinerContainer::guardAccess($class, static fn (): AccessResultInterface|AccessAnswer => $instance->access($context, $account)));
-    if ($again->answer() !== $first->answer() || !$again->isStatic()) {
+    if ($again->getAnswer() !== $first->getAnswer() || !$again->isStatic()) {
       throw new \LogicException(sprintf(
         'The %s %s answered %s, static by its cacheability, and asked again for the same account in the same context answered %s, %s. A static answer depends on the account alone and is the same every time it is asked; one that depends on anything else says so in its cacheability.',
         $instance instanceof OperationAccessInterface ? 'access class' : 'alter',
         $class,
-        $first->answer(),
-        $again->answer(),
+        $first->getAnswer(),
+        $again->getAnswer(),
         $again->kind(),
       ));
     }
@@ -1961,41 +1961,42 @@ final class Resources implements ResourcesInterface {
   }
 
   /**
-   * Resolves each slot's children and checks its deciding key.
+   * Resolves the variants at each key and checks their deciding key.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
-   *   The resource or structure with the slots.
+   *   The resource or structure with the variants.
    * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
    *   The owner's input blueprint.
    * @param string[] $input_keys
    *   The owner's plain input keys.
    *
    * @return array<string, array{by: string, children: array<string, class-string>}>
-   *   The slots, each filled from discovery's variants.
+   *   The variants at each key, filled from discovery's #[Variant]
+   *   classes.
    *
    * @throws \LogicException
    *   When a deciding key is not a plain input of the owner.
    */
-  protected function slotsOf(ResourceDefinition $definition, ResourceBlueprint $inputs, array $input_keys): array {
-    $slots = [];
-    foreach ($inputs->slots() as $key => $by) {
+  protected function variantKeysOf(ResourceDefinition $definition, ResourceBlueprint $inputs, array $input_keys): array {
+    $variantKeys = [];
+    foreach ($inputs->variants() as $key => $by) {
       if (!in_array($by, $input_keys, TRUE)) {
         throw new \LogicException(sprintf(
-          'In %s, the "%s" slot is chosen by "%s", which its shape never declares as a plain input: a slot is chosen by a sibling that holds one value.',
+          'In %s, the variants at "%s" are chosen by "%s", which it never declares as a plain input: variants are chosen by a sibling that holds one value.',
           $definition->id,
           $key,
           $by,
         ));
       }
-      // Every structure whose #[Variant] names this class and key
-      // fills it; the parent names none.
-      // Decision: see docs/decisions.md#a-slot-nothing-fills.
-      $slots[$key] = [
+      // Every structure whose #[Variant] names this class and key is
+      // one of the variants; the parent names none.
+      // Decision: see docs/decisions.md#variants-nothing-declares.
+      $variantKeys[$key] = [
         'by' => $by,
         'children' => $this->registry->getVariants($definition->name(), $key),
       ];
     }
-    return $slots;
+    return $variantKeys;
   }
 
   /**
@@ -2171,16 +2172,16 @@ final class Resources implements ResourcesInterface {
     // Decision: see docs/decisions.md#locked-at-the-top.
     $result = !$answer->isOmitted()
       ? AccessResult::allowed()
-      : AccessResult::forbidden($answer->getReason() ?? sprintf('The access class answered %s.', $answer->answer()));
+      : AccessResult::forbidden($answer->getReason() ?? sprintf('The access class answered %s.', $answer->getAnswer()));
     return $result->addCacheableDependency($answer);
   }
 
   /**
-   * Says whether any slot's variant discovered has an access answer.
+   * Says whether any variant discovered has an access answer.
    *
    * Building a resource to find its children costs a build, so it is done
-   * only when some child could refuse: a slot's variant chosen by a
-   * locked deciding key is the only child that may (childAnswers()), and
+   * only when some child could refuse: a variant chosen by a locked
+   * deciding key is the only child that may (childAnswers()), and
    * a derived variant has no access class.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
@@ -2204,13 +2205,13 @@ final class Resources implements ResourcesInterface {
   }
 
   /**
-   * Asks each slot variant the parent's identity has chosen for its access.
+   * Asks each variant the parent's identity has chosen for its access.
    *
-   * A slot whose deciding key is locked has its variant chosen by what
-   * the parent is (a field's settings by its type), and the parent cannot
+   * Variants whose deciding key is locked have their variant chosen by
+   * what the parent is (a field's settings by its type), and the parent cannot
    * be written without it. That variant's access class, asked in the
    * context it is invoked in however it was invoked, may refuse the
-   * parent, never allow. It is looked up among the slot's declared
+   * parent, never allow. It is looked up among the declared
    * variants, since the build leaves out one whose access is not open.
    * Every other child's access shaped its own keys when it was built, and
    * refuses nothing above it. Recursively, through every child the build
@@ -2233,8 +2234,8 @@ final class Resources implements ResourcesInterface {
     foreach ($built->getDefinitions()->entries() as $key => $entry) {
       $key = (string) $key;
       $attachment = $entry->attachment ?? $entry->list?->item;
-      if ($attachment === NULL && $entry->slot !== NULL && $built->isLocked($entry->slot->by)) {
-        $value = $built->getDefault($entry->slot->by);
+      if ($attachment === NULL && $entry->variants !== NULL && $built->isLocked($entry->variants->by)) {
+        $value = $built->getDefault($entry->variants->by);
         $class = is_string($value) || is_int($value) ? ($this->registry->getVariants($parent->name(), $key)[$value] ?? NULL) : NULL;
         if ($class === NULL) {
           continue;
@@ -2249,7 +2250,7 @@ final class Resources implements ResourcesInterface {
             continue;
           }
         }
-        $attachment = $entry->slot->variants[(string) $value] ?? NULL;
+        $attachment = $entry->variants->variants[(string) $value] ?? NULL;
         if ($attachment !== NULL) {
           array_push($answers, ...$this->childAnswers($variant, $variant_context, $account, $attachment->child));
         }
@@ -2297,8 +2298,8 @@ final class Resources implements ResourcesInterface {
    * Each child whose class names storage of its own is routed to it, in
    * the context it is invoked in (invokeChild()), and recursively for the
    * child's own children; a child without it stays in its parent's
-   * values, stored by the parent under its key. A slot routes per
-   * variant, by what its deciding key holds.
+   * values, stored by the parent under its key. A key with variants
+   * routes per variant, by what its deciding key holds.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
    *   The resource, which has storage.
@@ -2315,7 +2316,7 @@ final class Resources implements ResourcesInterface {
     foreach ($built->getDefinitions()->entries() as $key => $entry) {
       $children = $entry->attachment !== NULL
         ? [StorageAdapter::ATTACHED => $entry->attachment]
-        : ($entry->slot !== NULL ? $entry->slot->variants : []);
+        : ($entry->variants !== NULL ? $entry->variants->variants : []);
       foreach ($children as $id => $attachment) {
         $child = $attachment->source === NULL ? NULL : $this->registry->getDefinition($attachment->source);
         if ($child?->storage !== NULL) {
@@ -2393,7 +2394,7 @@ final class Resources implements ResourcesInterface {
    * @param string[] $input_keys
    *   The owner's input keys.
    * @param string[] $attached
-   *   The owner's keys holding an attached child or a slot.
+   *   The owner's keys holding an attached child or variants.
    * @param string[] $lists
    *   The owner's collection keys, which a context may narrow and not
    *   start.
@@ -2440,17 +2441,17 @@ final class Resources implements ResourcesInterface {
       }
     };
 
-    if ($context->starting !== []) {
+    if ($context->defaults !== []) {
       if (!$context->creates) {
         throw new \LogicException(sprintf(
           'The "%s" context carries starting values for %s but does not create. Starting values are where a new thing begins; a thing that exists begins from what its storage loads.',
           $context->id,
-          implode(', ', array_keys($context->starting)),
+          implode(', ', array_keys($context->defaults)),
         ));
       }
       // A starting value is the value a caller sees before choosing, and
       // may replace: exactly what a declared default is to the engine.
-      foreach ($context->starting as $key => $value) {
+      foreach ($context->defaults as $key => $value) {
         $assert_input((string) $key, 'starting value');
         $builder->setDefault((string) $key, $value);
       }
@@ -2493,7 +2494,7 @@ final class Resources implements ResourcesInterface {
    * @param string[] $output_keys
    *   The owner's output keys.
    * @param string[] $attached
-   *   The owner's keys holding an attached child or a slot.
+   *   The owner's keys holding an attached child or variants.
    * @param array{class: class-string, id: string, key: string, inputs: string[]}|null $parent
    *   The parent this one is attached inside, or NULL.
    * @param string|null $module
@@ -2646,7 +2647,7 @@ final class Resources implements ResourcesInterface {
    * @param string[] $input_keys
    *   The owner's plain input keys.
    * @param string[] $attached
-   *   The owner's keys holding an attached child or a slot.
+   *   The owner's keys holding an attached child or variants.
    * @param string[] $lists
    *   The owner's collection keys.
    * @param string[] $extended
@@ -3005,7 +3006,7 @@ final class Resources implements ResourcesInterface {
    * @param string[] $input_keys
    *   Its own plain input keys.
    * @param string[] $attached
-   *   Its keys holding an attached child or a slot.
+   *   Its keys holding an attached child or variants.
    * @param array{class: class-string, id: string, key: string, inputs: string[]}|null $parent
    *   The parent this one is attached inside, or NULL.
    * @param string[] $lists
@@ -3232,7 +3233,7 @@ final class Resources implements ResourcesInterface {
     // Decision: see docs/decisions.md#a-resource-or-structure-is-static.
     $owner = static::resourceClass($definition);
     $owner::defineInputs($inputs);
-    if ($outputs !== NULL && is_subclass_of($owner, HasOutputsInterface::class)) {
+    if ($outputs !== NULL && is_subclass_of($owner, DefinesOutputsInterface::class)) {
       $owner::defineOutputs($outputs);
     }
   }

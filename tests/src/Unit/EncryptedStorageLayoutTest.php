@@ -8,9 +8,9 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\data_surface\DataSurface;
 use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Storage\EncryptedSettingsLayout;
+use Drupal\data_surface\Storage\EncryptedStorageLayout;
 use Drupal\data_surface\Storage\SecretCodecException;
-use Drupal\data_surface\Storage\SettingsLayoutInterface;
+use Drupal\data_surface\Storage\StorageLayoutInterface;
 use Drupal\data_surface\Storage\SodiumSecretCodec;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
@@ -26,10 +26,10 @@ use PHPUnit\Framework\Attributes\Group;
  * enciphered on the next write rather than double-enciphered or
  * refused.
  *
- * @see \Drupal\data_surface\Storage\EncryptedSettingsLayout
+ * @see \Drupal\data_surface\Storage\EncryptedStorageLayout
  */
 #[Group('data_surface')]
-class EncryptedSettingsLayoutTest extends UnitTestCase {
+class EncryptedStorageLayoutTest extends UnitTestCase {
 
   /**
    * Builds the data surface the layout reads its secret keys from.
@@ -64,8 +64,8 @@ class EncryptedSettingsLayoutTest extends UnitTestCase {
    */
   public function testSecretKeysAreEncrypted(): void {
     $codec = $this->codec();
-    $layout = EncryptedSettingsLayout::forSurface($this->surface(), $codec);
-    $this->assertInstanceOf(EncryptedSettingsLayout::class, $layout);
+    $layout = EncryptedStorageLayout::forSurface($this->surface(), $codec);
+    $this->assertInstanceOf(EncryptedStorageLayout::class, $layout);
 
     $stored = $layout->toStorage(['endpoint' => 'https://example.com', 'token' => 'sk-1234']);
 
@@ -93,16 +93,16 @@ class EncryptedSettingsLayoutTest extends UnitTestCase {
     ]));
     $inner = $this->passThroughLayout();
 
-    $this->assertNull(EncryptedSettingsLayout::forSurface($surface, $this->codec()));
-    $this->assertSame($inner, EncryptedSettingsLayout::forSurface($surface, $this->codec(), $inner));
-    $this->assertSame(['token'], EncryptedSettingsLayout::secretKeys($this->surface()));
+    $this->assertNull(EncryptedStorageLayout::forSurface($surface, $this->codec()));
+    $this->assertSame($inner, EncryptedStorageLayout::forSurface($surface, $this->codec(), $inner));
+    $this->assertSame(['token'], EncryptedStorageLayout::secretKeys($this->surface()));
   }
 
   /**
    * Tests that nothing is enciphered when there is no secret to keep.
    */
   public function testEmptyValuesAreStoredAsThemselves(): void {
-    $layout = EncryptedSettingsLayout::forSurface($this->surface(), $this->codec());
+    $layout = EncryptedStorageLayout::forSurface($this->surface(), $this->codec());
 
     $this->assertSame(['token' => NULL], $layout->toStorage(['token' => NULL]));
     $this->assertSame(['token' => ''], $layout->toStorage(['token' => '']));
@@ -120,7 +120,7 @@ class EncryptedSettingsLayoutTest extends UnitTestCase {
    */
   public function testPreexistingPlaintextIsDetected(): void {
     $codec = $this->codec();
-    $layout = EncryptedSettingsLayout::forSurface($this->surface(), $codec);
+    $layout = EncryptedStorageLayout::forSurface($this->surface(), $codec);
 
     $values = $layout->fromStorage(['endpoint' => 'https://example.com', 'token' => 'sk-legacy']);
     $this->assertSame('sk-legacy', $values['token']);
@@ -135,7 +135,7 @@ class EncryptedSettingsLayoutTest extends UnitTestCase {
    */
   public function testCiphertextIsNotDoubleEncrypted(): void {
     $codec = $this->codec();
-    $layout = EncryptedSettingsLayout::forSurface($this->surface(), $codec);
+    $layout = EncryptedStorageLayout::forSurface($this->surface(), $codec);
     $ciphertext = $codec->encrypt('sk-1234');
 
     $this->assertSame($ciphertext, $layout->toStorage(['token' => $ciphertext])['token']);
@@ -149,8 +149,8 @@ class EncryptedSettingsLayoutTest extends UnitTestCase {
    */
   public function testInnerLayoutStillTranslates(): void {
     $codec = $this->codec();
-    $layout = EncryptedSettingsLayout::forSurface($this->surface(), $codec, $this->wrappingLayout());
-    $this->assertInstanceOf(EncryptedSettingsLayout::class, $layout);
+    $layout = EncryptedStorageLayout::forSurface($this->surface(), $codec, $this->wrappingLayout());
+    $this->assertInstanceOf(EncryptedStorageLayout::class, $layout);
 
     $stored = $layout->toStorage(['endpoint' => 'https://example.com', 'token' => 'sk-1234']);
 
@@ -171,7 +171,7 @@ class EncryptedSettingsLayoutTest extends UnitTestCase {
    * exactly the silent failure the flag exists to prevent.
    */
   public function testNonStringSecretIsRefused(): void {
-    $layout = EncryptedSettingsLayout::forSurface($this->surface(), $this->codec());
+    $layout = EncryptedStorageLayout::forSurface($this->surface(), $this->codec());
 
     $this->expectException(SecretCodecException::class);
     $this->expectExceptionMessage('"token"');
@@ -181,11 +181,11 @@ class EncryptedSettingsLayoutTest extends UnitTestCase {
   /**
    * Builds a layout that translates nothing, to be identical by identity.
    *
-   * @return \Drupal\data_surface\Storage\SettingsLayoutInterface
+   * @return \Drupal\data_surface\Storage\StorageLayoutInterface
    *   The layout.
    */
-  protected function passThroughLayout(): SettingsLayoutInterface {
-    return new class implements SettingsLayoutInterface {
+  protected function passThroughLayout(): StorageLayoutInterface {
+    return new class implements StorageLayoutInterface {
 
       /**
        * {@inheritdoc}
@@ -211,11 +211,11 @@ class EncryptedSettingsLayoutTest extends UnitTestCase {
    * single-key array each: a translation that moves values without
    * looking into them.
    *
-   * @return \Drupal\data_surface\Storage\SettingsLayoutInterface
+   * @return \Drupal\data_surface\Storage\StorageLayoutInterface
    *   The layout.
    */
-  protected function wrappingLayout(): SettingsLayoutInterface {
-    return new class implements SettingsLayoutInterface {
+  protected function wrappingLayout(): StorageLayoutInterface {
+    return new class implements StorageLayoutInterface {
 
       /**
        * {@inheritdoc}

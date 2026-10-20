@@ -16,7 +16,7 @@ namespace Drupal\data_surface\Pipeline;
  * producer that assembles its outputs in one literal — which is what a
  * readable formatValue() or doExecute() looks like — cannot say "and
  * this one is not emitted" without breaking the literal apart. This
- * sentinel is how it says it: return Omitted::value() for the key, and
+ * sentinel is how it says it: return NotEmitted::value() for the key, and
  * conformance strips the key before anything else looks at the array.
  *
  * @code
@@ -24,14 +24,14 @@ namespace Drupal\data_surface\Pipeline;
  *   'text' => $text,
  *   // Nothing about this run selects a variant, so no variant is
  *   // emitted — as opposed to a variant that is emitted and empty.
- *   'classes' => $variant === NULL ? Omitted::value() : ['v-' . $variant],
+ *   'classes' => $variant === NULL ? NotEmitted::value() : ['v-' . $variant],
  * ];
  * @endcode
  *
  * The rules, in three lines:
- * - Conformance strips every Omitted key, at every depth, before it
+ * - Conformance strips every NotEmitted key, at every depth, before it
  *   checks anything.
- * - An absent key — never sent, or sent as Omitted — is legal exactly
+ * - An absent key — never sent, or sent as NotEmitted — is legal exactly
  *   when its output definition is not required.
  * - NULL is a value and is checked against the definition, so a
  *   required key sent as NULL is a violation and an optional one is
@@ -44,19 +44,19 @@ namespace Drupal\data_surface\Pipeline;
  * @see \Drupal\data_surface\Pipeline\DataSurfacePipelineInterface::conformOutput()
  * @see docs/outputs.md
  */
-final class Omitted {
+final class NotEmitted {
 
   /**
    * The one instance.
    *
-   * @var \Drupal\data_surface\Pipeline\Omitted|null
+   * @var \Drupal\data_surface\Pipeline\NotEmitted|null
    */
   private static ?self $instance = NULL;
 
   /**
    * Constructs the sentinel.
    *
-   * Private: there is one Omitted, and code that holds it holds that
+   * Private: there is one NotEmitted, and code that holds it holds that
    * one, so an identity comparison is a safe way to recognize it.
    */
   private function __construct() {
@@ -120,7 +120,7 @@ final class Omitted {
    *   Always.
    */
   public function __clone() {
-    throw new \LogicException('The Omitted sentinel cannot be cloned: it is recognized by identity, and a copy of it would be a value nothing recognizes.');
+    throw new \LogicException('The NotEmitted sentinel cannot be cloned: it is recognized by identity, and a copy of it would be a value nothing recognizes.');
   }
 
 }

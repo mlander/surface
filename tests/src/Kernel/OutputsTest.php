@@ -10,7 +10,7 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\Omitted;
+use Drupal\data_surface\Pipeline\NotEmitted;
 use Drupal\data_surface\Pipeline\ViolationSet;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
@@ -23,7 +23,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * emits, in the same vocabulary, on the same collection type, and is never
  * refined. What is new is the third state: an output key
  * is present with a value, present with NULL — which is a value — or
- * **absent**, which is what a producer says with the Omitted sentinel
+ * **absent**, which is what a producer says with the NotEmitted sentinel
  * and what conformance judges against the required flag.
  *
  * @see \Drupal\data_surface\DataSurfaceInterface::getOutputDefinitions()
@@ -285,7 +285,7 @@ class OutputsTest extends DataSurfaceKernelTestBase {
    *
    * Outputs are never refined: a refinement narrows what may be sent,
    * and nobody sends an output. An output whose shape depends on an
-   * input value is a variant, declared with attachBy() on that input.
+   * input value is a variant, declared with attachVariants() on that input.
    */
   public function testOutputsAreNeverRefined(): void {
     $surface = $this->outputSurface();
@@ -297,7 +297,7 @@ class OutputsTest extends DataSurfaceKernelTestBase {
    * Tests every rule conformance applies, one row at a time.
    *
    * @param array $emitted
-   *   What the producer emitted, Omitted included.
+   *   What the producer emitted, NotEmitted included.
    * @param array $expected
    *   The full paths expected to be refused, in order.
    */
@@ -319,10 +319,10 @@ class OutputsTest extends DataSurfaceKernelTestBase {
       // Presence: absent, omitted and NULL, against required and not.
       'a required output that is emitted' => [['text' => 'hi'], []],
       'a required output that is absent' => [[], ['text']],
-      'a required output that is omitted' => [['text' => Omitted::value()], ['text']],
+      'a required output that is omitted' => [['text' => NotEmitted::value()], ['text']],
       'a required output emitted as NULL' => [['text' => NULL], ['text']],
       'an optional output that is absent' => [['text' => 'hi'], []],
-      'an optional output that is omitted' => [['text' => 'hi', 'note' => Omitted::value()], []],
+      'an optional output that is omitted' => [['text' => 'hi', 'note' => NotEmitted::value()], []],
       'an optional output emitted as NULL' => [['text' => 'hi', 'note' => NULL], []],
       // Keys nobody declared, at the top and inside a map.
       'an output nobody declared' => [['text' => 'hi', 'extra' => 1], ['extra']],

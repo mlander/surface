@@ -243,7 +243,7 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
     $this->assertContains('storage', $field);
 
     // Step 3 needs nothing and takes nothing, and its map nests as the
-    // write tool's does: the slot, the attached contact, and the keys the
+    // write tool's does: the variants, the attached contact, and the keys the
     // compliance module mounts under third_party_settings.
     $step3 = $this->definition(ExampleCalls::READ_TOOL);
     $this->assertSame([], $step3->getInputDefinitions(TRUE));
@@ -268,8 +268,8 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
     $this->assertInstanceOf(MapOutputDefinition::class, $mount);
     $compliance = $mount->getPropertyDefinitions()[self::COMPLIANCE];
     $this->assertInstanceOf(MapOutputDefinition::class, $compliance);
-    $this->assertSame(['licence', 'stewards'], self::properties($compliance));
-    $this->assertSame('Event licence', (string) $compliance->getPropertyDefinitions()['licence']->getLabel());
+    $this->assertSame(['license', 'stewards'], self::properties($compliance));
+    $this->assertSame('Event license', (string) $compliance->getPropertyDefinitions()['license']->getLabel());
   }
 
   /**
@@ -298,7 +298,7 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
         'capacity' => 150,
         'pricing' => 'paid',
         'ticket' => ['price' => 12.5, 'currency' => 'EUR'],
-        'third_party_settings' => [self::COMPLIANCE => ['licence' => '2048', 'stewards' => 3]],
+        'third_party_settings' => [self::COMPLIANCE => ['license' => '2048', 'stewards' => 3]],
       ],
     ]);
     $this->assertTrue($write['success'], $write['message']);
@@ -309,7 +309,7 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
     $this->assertSame('harbour_auditorium', $read['values']['room']);
     $this->assertSame(150, $read['values']['capacity']);
     $this->assertEquals(['price' => 12.5, 'currency' => 'EUR'], $read['values']['ticket']);
-    $this->assertSame([self::COMPLIANCE => ['licence' => '2048', 'stewards' => 3]], $read['values']['third_party_settings']);
+    $this->assertSame([self::COMPLIANCE => ['license' => '2048', 'stewards' => 3]], $read['values']['third_party_settings']);
     // Reading wrote nothing.
     $this->assertSame('Harbour night', $this->config('data_surface_examples.registration_step3')->get('title'));
   }

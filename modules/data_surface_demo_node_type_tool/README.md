@@ -148,9 +148,9 @@ thing, so it was written to be:
 
 The resource asks for the deadline the way a person says it, an amount
 and a unit, and stores the seconds core's form stores. The conversion is
-`ReviewDeadlineLayout`, a `SettingsLayoutInterface` the extras module's
+`ReviewDeadlineLayout`, a `StorageLayoutInterface` the extras module's
 alter, `NodeTypeAlter`, hands the resource by implementing
-`HasStorageLayoutInterface`. The built resource carries it, and the
+`AltersStorageLayoutInterface`. The built resource carries it, and the
 storage adapter applies it to that module's settings and nothing else:
 `toStorage()` before `NodeTypeStorage` writes them, `fromStorage()` after
 it reads them, so an edit reads 604800 back as one week. Business days

@@ -34,7 +34,7 @@ data_surface_examples.registration_step3:
     pricing:
       type: string
       label: 'Pricing'
-    # The slot: its shape is the chosen pricing's.
+    # The variants' key: its shape is the chosen pricing's.
     ticket:
       type: data_surface_examples.ticket.[%parent.pricing]
       label: 'Ticket'

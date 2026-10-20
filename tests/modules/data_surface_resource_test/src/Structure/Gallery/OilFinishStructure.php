@@ -14,7 +14,7 @@ use Drupal\data_surface_resource_test\Resource\Gallery\GalleryResource;
  * The finish of an oil painting: a variant OilFinishAlter answers for.
  */
 #[Structure('resource_test.gallery.finish.oil')]
-#[Variant(of: GalleryResource::class, key: 'finish', value: 'oil')]
+#[Variant(of: GalleryResource::class, at: 'finish', for: 'oil')]
 final class OilFinishStructure implements StructureInterface {
 
   /**

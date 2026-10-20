@@ -6,7 +6,7 @@ namespace Drupal\data_surface_address;
 
 use CommerceGuys\Addressing\AddressFormat\AddressField;
 use CommerceGuys\Addressing\AddressFormat\FieldOverride;
-use Drupal\data_surface\Storage\SettingsLayoutInterface;
+use Drupal\data_surface\Storage\StorageLayoutInterface;
 
 /**
  * Translates address field settings between input layout and storage.
@@ -35,7 +35,7 @@ use Drupal\data_surface\Storage\SettingsLayoutInterface;
  * Stateless, as the interface requires: it consults no services and no
  * site state, so one instance can serve every field of the type.
  */
-final class AddressSettingsLayout implements SettingsLayoutInterface {
+final class AddressStorageLayout implements StorageLayoutInterface {
 
   /**
    * {@inheritdoc}

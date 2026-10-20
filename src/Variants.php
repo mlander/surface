@@ -10,34 +10,42 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Pipeline\ValueState;
 
 /**
- * A key whose shape a sibling chooses: the variant table of a slot.
+ * Variants: the structures a sibling key chooses between at one key.
  *
- * Refinement narrows values and cannot swap a shape, so when what a key
- * holds depends on another key's answer (a list's settings or a grid's,
- * an address field's settings or a link field's), the shape is declared
- * statically as a union: the deciding sibling, the complete set of
- * values it may take, and one sealed child structure per value. Everything
+ * The variant table. Refinement narrows values and cannot swap a shape,
+ * so when what a key holds depends on another key's answer (a list's
+ * settings or a grid's, an address field's settings or a link field's),
+ * the shape is declared statically as a tagged union whose tag is a
+ * sibling key: the deciding sibling, the complete set of values it may
+ * take, and one sealed child structure, a variant, per value. Everything
  * a reader needs about every variant is here before anything is chosen;
- * choosing only picks one.
+ * choosing only picks one. Until the deciding key holds a value, the key
+ * is an `any` placeholder; once it does, the key is the chosen variant's
+ * map.
  *
- * Carried on the slot's Entry for the whole life of the data surface,
+ * Through a blueprint the variants are always open: the parent names
+ * none, and any module may declare one with #[Variant] or derive some
+ * (DerivedVariantsInterface). This table is what the build sealed from
+ * them.
+ *
+ * Carried on the key's Entry for the whole life of the data surface,
  * refined or not, so an emitter can read the table off any data surface and
  * the pipeline can always find the child that answers for the chosen
  * variant.
  *
- * @see \Drupal\data_surface\DataSurfaceBuilderInterface::attachBy()
+ * @see \Drupal\data_surface\DataSurfaceBuilderInterface::attachVariants()
  */
-final class Slot {
+final class Variants {
 
   /**
-   * Constructs a Slot.
+   * Constructs a Variants.
    *
    * @param string $by
    *   The sibling key whose value chooses the variant.
    * @param \Drupal\Core\TypedData\MapDataDefinition $shell
-   *   The map describing the slot key itself — label, description,
-   *   required flag — which every resolved variant wears. It declares no
-   *   properties: those are the variant's.
+   *   The map describing the key the variants are attached at (label,
+   *   description, required flag), which every chosen variant wears. It
+   *   declares no properties: those are the variant's.
    * @param array<string, \Drupal\data_surface\Attachment> $variants
    *   The variants, keyed by the value of the deciding key that chooses
    *   each, in declaration order.
@@ -67,7 +75,7 @@ final class Slot {
    *
    * @return string|null
    *   The variant id, or NULL when the value holds nothing or names no
-   *   variant, in which case the slot stays unresolved.
+   *   variant, in which case nothing is chosen yet.
    */
   public function chosen(mixed $value): ?string {
     if (!ValueState::isConfigured($value) || !(is_string($value) || is_int($value))) {
@@ -86,17 +94,17 @@ final class Slot {
    *   The variant.
    *
    * @throws \InvalidArgumentException
-   *   When the slot has no such variant.
+   *   When there is no such variant.
    */
   public function variant(string $id): Attachment {
     return $this->variants[$id]
-      ?? throw new \InvalidArgumentException(sprintf('The slot chosen by "%s" has no "%s" variant.', $this->by, $id));
+      ?? throw new \InvalidArgumentException(sprintf('The variants chosen by "%s" have no "%s" variant.', $this->by, $id));
   }
 
   /**
-   * Builds the definition the slot has once a variant is chosen.
+   * Builds the definition the key has once a variant is chosen.
    *
-   * Exactly that variant's map, wearing the slot's own label and
+   * Exactly that variant's map, wearing the key's own label and
    * description: the one move from the placeholder to a concrete shape
    * refinement allows, because every shape was declared before anything
    * was chosen.
@@ -104,7 +112,7 @@ final class Slot {
    * @param string $id
    *   The chosen variant.
    * @param \Drupal\data_surface\DataSurfaceInterface|null $child
-   *   The variant refined against the slot's value, or NULL for the
+   *   The variant refined against the key's value, or NULL for the
    *   variant as advertised.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
@@ -182,7 +190,7 @@ final class Slot {
   }
 
   /**
-   * Gets what the slot starts from when a variant is chosen.
+   * Gets what the key starts from when a variant is chosen.
    *
    * @param string $id
    *   The variant.
@@ -195,12 +203,13 @@ final class Slot {
   }
 
   /**
-   * Builds the placeholder the slot advertises before anything is chosen.
+   * Builds the placeholder the key advertises before anything is chosen.
    *
    * Typed `any`, because until the deciding key holds a value every
    * variant is possible and the only true statement about the type is
-   * "one of them". It says it is a slot, and which key decides, through
-   * DefinitionMetadata; the variant table itself is on the entry.
+   * "one of them". It says it is the variants' placeholder, and which key
+   * decides, through DefinitionMetadata; the variant table itself is on
+   * the entry.
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface
    *   The placeholder.
@@ -210,7 +219,7 @@ final class Slot {
     $placeholder->setLabel($this->shell->getLabel());
     $placeholder->setDescription($this->shell->getDescription());
     $placeholder->setRequired((bool) $this->shell->isRequired());
-    DefinitionMetadata::setSlot($placeholder, $this->by);
+    DefinitionMetadata::setVariantsBy($placeholder, $this->by);
     return $placeholder;
   }
 

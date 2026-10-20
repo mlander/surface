@@ -12,12 +12,12 @@ use Drupal\data_surface\Resource\StructureInterface;
 /**
  * What the demo block needs to know when it renders a grid.
  *
- * The other child of the block's presentation slot.
+ * The other variant of the block's presentation settings.
  *
  * @see \Drupal\data_surface_demo\Structure\DemoBlockStructure
  */
 #[Structure('block.data_surface_demo.presentation.grid')]
-#[Variant(of: DemoBlockStructure::class, key: 'presentation_settings', value: 'grid')]
+#[Variant(of: DemoBlockStructure::class, at: 'presentation_settings', for: 'grid')]
 final class GridPresentationStructure implements StructureInterface {
 
   /**

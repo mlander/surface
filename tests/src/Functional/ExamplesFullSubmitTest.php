@@ -19,7 +19,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * refused on the room; the other moves the venue, its room and the
  * ticket's variant at once, all valid, and has to be written. Each says
  * what happened: an error on the element, or the status message. With
- * example 4's module on, a large event is refused without its licence
+ * example 4's module on, a large event is refused without its license
  * and written with one.
  */
 #[Group('data_surface')]
@@ -51,7 +51,7 @@ class ExamplesFullSubmitTest extends BrowserTestBase {
    * Posts the form at a path with raw field names, as a browser would.
    *
    * Raw rather than through submitForm(), which only fills fields the
-   * page already shows: a slot flipped in the same request sends keys the
+   * page already shows: variants flipped in the same request send keys the
    * page was not rendered with, which is the case under test.
    *
    * @param string $path
@@ -139,7 +139,7 @@ class ExamplesFullSubmitTest extends BrowserTestBase {
       'surface[pricing]' => 'paid',
       'surface[contact][email]' => 'gala@example.com',
       'surface[contact][phone]' => '',
-      'surface[third_party_settings][data_surface_examples_compliance][licence]' => '',
+      'surface[third_party_settings][data_surface_examples_compliance][license]' => '',
       'surface[third_party_settings][data_surface_examples_compliance][stewards]' => '1',
     ];
 
@@ -169,12 +169,12 @@ class ExamplesFullSubmitTest extends BrowserTestBase {
   }
 
   /**
-   * Tests step 3 refuses a large event without a licence, and writes one.
+   * Tests step 3 refuses a large event without a license, and writes one.
    *
    * Example 4's module caps the capacity at a hundred until an event
-   * licence is given, and asks for a steward per fifty people.
+   * license is given, and asks for a steward per fifty people.
    */
-  public function testStepThreeNeedsLicenceAboveOneHundred(): void {
+  public function testStepThreeNeedsLicenseAboveOneHundred(): void {
     $fields = [
       'surface[title]' => 'Festival',
       'surface[capacity]' => '150',
@@ -187,23 +187,23 @@ class ExamplesFullSubmitTest extends BrowserTestBase {
       'surface[contact][phone]' => '',
       'surface[third_party_settings][data_surface_examples_compliance][stewards]' => '3',
     ];
-    $licence = 'surface[third_party_settings][data_surface_examples_compliance][licence]';
+    $license = 'surface[third_party_settings][data_surface_examples_compliance][license]';
 
     $before = $this->stored('step3');
-    $this->rawPost('surface-examples/3', $fields + [$licence => '']);
+    $this->rawPost('surface-examples/3', $fields + [$license => '']);
     $assert = $this->assertSession();
     $assert->statusCodeEquals(200);
     $assert->elementExists('css', 'input[name="surface[capacity]"][aria-invalid="true"]');
-    $assert->elementNotExists('css', 'input[name="' . $licence . '"][aria-invalid="true"]');
+    $assert->elementNotExists('css', 'input[name="' . $license . '"][aria-invalid="true"]');
     $assert->pageTextNotContains('The changes have been saved.');
     $this->assertSame($before, $this->stored('step3'));
 
-    $this->rawPost('surface-examples/3', $fields + [$licence => '2048']);
+    $this->rawPost('surface-examples/3', $fields + [$license => '2048']);
     $assert->statusCodeEquals(200);
     $assert->pageTextContains('The changes have been saved.');
     $stored = $this->stored('step3');
     $this->assertSame(150, $stored['capacity']);
-    $this->assertSame(['licence' => '2048', 'stewards' => 3], $stored['third_party_settings']['data_surface_examples_compliance']);
+    $this->assertSame(['license' => '2048', 'stewards' => 3], $stored['third_party_settings']['data_surface_examples_compliance']);
   }
 
 }

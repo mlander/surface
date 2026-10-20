@@ -20,7 +20,7 @@ final class RecipeOperations {
   public static function clone(string $kitchen, string $course, string $dish): OperationContext {
     return RecipeResource::add($kitchen)
       ->withId('clone')
-      ->withStarting(['course' => $course, 'dish' => $dish]);
+      ->withDefaults(['course' => $course, 'dish' => $dish]);
   }
 
   /**

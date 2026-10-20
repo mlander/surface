@@ -151,8 +151,8 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
    *
    * By the path a caller sends each under: the stewards, inside the
    * structure example 4 mounts, depend on the capacity its port reads at
-   * the site. A slot's deciding key is said by the slot's own description,
-   * and the read tool's output names nothing.
+   * the site. The deciding key of variants is said by their key's own
+   * description, and the read tool's output names nothing.
    */
   public function testTheListingNamesWhatEachKeyDependsOn(): void {
     $manager = $this->container->get('plugin.manager.tool');
@@ -165,7 +165,7 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
     $required = ' Required; a value already stored stands when left out.';
     $expected = [
       'room' => 'Depends on venue.' . $required,
-      'capacity' => 'Depends on room, ' . self::COMPLIANCE . '.licence.',
+      'capacity' => 'Depends on room, ' . self::COMPLIANCE . '.license.',
       self::COMPLIANCE . '.stewards' => 'Depends on capacity.' . $required,
     ];
     foreach ($listings as $which => $values) {
@@ -175,7 +175,7 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
       foreach ($said as $path => $description) {
         $this->assertSame(1, substr_count($description, 'Depends on'), $which . ': once at ' . $path);
       }
-      $this->assertStringNotContainsString('Depends on', (string) $values->getPropertyDefinition('ticket')->getDescription(), 'The slot says what chooses it in its own words.');
+      $this->assertStringNotContainsString('Depends on', (string) $values->getPropertyDefinition('ticket')->getDescription(), 'The variants say what chooses them in their own words.');
     }
     $this->assertStringContainsString('Its keys depend on pricing.', (string) $listings['the cached definition']->getPropertyDefinition('ticket')->getDescription());
 
@@ -251,11 +251,11 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
       ],
       'a bound siblings set' => [
         ['capacity' => 500] + $event,
-        'capacity: This value should be between 1 and 100. This applies when Room is East room and Event licence is empty.',
+        'capacity: This value should be between 1 and 100. This applies when Room is East room and Event license is empty.',
       ],
       'a pattern' => [
-        $compliance(['licence' => 'EV-2048', 'stewards' => 1]) + $event,
-        self::COMPLIANCE . '.licence: A licence number is four digits, such as 2048.',
+        $compliance(['license' => 'EV-2048', 'stewards' => 1]) + $event,
+        self::COMPLIANCE . '.license: A license number is four digits, such as 2048.',
       ],
       'a bound through a port' => [
         $compliance(['stewards' => 1]) + ['capacity' => 100] + $event,
@@ -334,7 +334,7 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
       'room' => 'riverside_main',
       'capacity' => 120,
       'pricing' => 'free',
-      'third_party_settings' => ['data_surface_examples_compliance' => ['licence' => '2048', 'stewards' => 3]],
+      'third_party_settings' => ['data_surface_examples_compliance' => ['license' => '2048', 'stewards' => 3]],
     ];
     $loop = [
       'the venue, by name' => [static fn (array $values): array => $values, 'Riverside Hall'],

@@ -17,8 +17,8 @@ use Drupal\data_surface\Resource\StructureInterface;
  * What the demo block can be configured with.
  *
  * No storage and no operations: the block host supplies both, because
- * only it holds the plugin instance. Its presentation settings are a
- * slot: a list and a grid need different things, so each is a structure
+ * only it holds the plugin instance. Its presentation settings are
+ * variants: a list and a grid need different things, so each is a structure
  * of its own, chosen by the presentation key, and stored by the block
  * under presentation_settings because neither names storage of its own.
  *
@@ -71,13 +71,13 @@ final class DemoBlockStructure implements StructureInterface {
       ->setRequired(TRUE)
       ->addConstraint('Range', ['min' => 1, 'max' => 50]);
 
-    // How the items are laid out, and what that layout needs: a slot the
-    // presentation chooses, filled by every #[Variant] for it.
+    // How the items are laid out, and what that layout needs: variants the
+    // presentation chooses between, one per #[Variant] declared for it.
     $inputs->add('presentation', 'string', t('Presentation'), default: 'list')
       ->setDescription(t('How the items are laid out.'))
       ->setRequired(TRUE)
       ->addConstraint('Choice', ['choices' => ['list', 'grid']]);
-    $inputs->attachBy('presentation_settings', by: 'presentation')
+    $inputs->attachVariants('presentation_settings', by: 'presentation')
       ->setLabel(t('Presentation settings'))
       ->setDescription(t('What the chosen presentation needs.'));
   }

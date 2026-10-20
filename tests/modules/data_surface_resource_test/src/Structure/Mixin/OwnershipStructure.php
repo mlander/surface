@@ -39,7 +39,7 @@ final class OwnershipStructure implements StructureInterface {
     $inputs->narrow('owner')
       ->when(Condition::equals('audience', 'staff'))
       ->constrain('Length', ['max' => 32])
-      ->describe(t('Up to 32 characters for a staff audience.'));
+      ->because(t('Up to 32 characters for a staff audience.'));
   }
 
   /**

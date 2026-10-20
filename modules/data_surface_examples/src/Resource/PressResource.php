@@ -38,7 +38,7 @@ final class PressResource implements ResourceInterface {
     $inputs->add('public', 'boolean', t('Show on the press page'), default: TRUE);
     $inputs->attach('contact', PersonStructure::class, reads: ['listed' => 'public'])
       ->setLabel(t('Press contact'));
-    $inputs->with(ReviewStructure::class);
+    $inputs->mixIn(ReviewStructure::class);
   }
 
 }

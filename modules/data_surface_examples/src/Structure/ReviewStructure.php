@@ -12,7 +12,7 @@ use Drupal\data_surface\Resource\StructureInterface;
 /**
  * Example 8: who reviewed a page and when, members a resource mixes in.
  *
- * Mixed in with with(), its two keys are the resource's own: stored flat
+ * Mixed in with mixIn(), its two keys are the resource's own: stored flat
  * beside the others, drawn among them, and named in a refusal by their
  * own names. Its rule is bound in that resource's frame.
  */
@@ -33,7 +33,7 @@ final class ReviewStructure implements StructureInterface {
     $inputs->narrow('reviewed_by')
       ->when(Condition::present('reviewed_on'))
       ->require()
-      ->describe(t('Required once a review date is set.'));
+      ->because(t('Required once a review date is set.'));
   }
 
 }

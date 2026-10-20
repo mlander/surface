@@ -178,7 +178,7 @@ class DefinitionMetadataTest extends UnitTestCase {
   }
 
   /**
-   * Tests that a secret is refused where it could not be honoured.
+   * Tests that a secret is refused where it could not be honored.
    *
    * A secret holds one scalar value: the keep rule in accept() and the
    * codec both act on one value, so a list or a map is refused when it

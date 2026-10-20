@@ -60,12 +60,12 @@ part of a resource or structure has one home:
 | --- | --- |
 | Its id, and which keys say which thing it is | `#[Resource('id', identity: [...])]`; a structure has an id and no identity, `#[Structure('id')]` |
 | Its keys: type, label, default, constraints | `static defineInputs(BlueprintInterface $inputs)` |
-| What it emits | `static defineOutputs()`, on `HasOutputsInterface`; see [Outputs](outputs.md) |
+| What it emits | `static defineOutputs()`, on `DefinesOutputsInterface`; see [Outputs](outputs.md) |
 | A key whose allowed values depend on another key's value | a rule, `$inputs->narrow('key')->when(Condition::...)`, in `defineInputs()`; a static `#[RefinesInput('key')]` method where the effect must be computed ([Declaring a rule](refinement.md#declaring-a-rule)) |
 | How much is already known: add, edit, reuse | `#[Operation]` static methods returning an `OperationContext` |
 | Where its values are stored | `#[Resource(storage:)]`, a `ResourceStorageInterface` in `src/Storage/`; a structure is stored by what holds it |
 | What may refuse once the operation's permission allows | `access:` on either attribute, an `OperationAccessInterface` in `src/Access/` |
-| Its parts | `attach()` and `attachBy()` in `defineInputs()`, and `#[Variant]` on each variant |
+| Its parts | `attach()` and `attachVariants()` in `defineInputs()`, and `#[Variant]` on each variant |
 | Which version of its stored values it describes | `version:` on either attribute, 1 until a breaking change is made after values are stored ([Evolving a resource](evolution.md#the-version)) |
 
 `FieldInstanceResource` in `data_surface_tool` uses every row but the
@@ -110,20 +110,20 @@ declares; the test module's `TestBlockStructure`, a structure, uses two.
 A value asked for at more than one key, with the same type, the same
 pattern and the same words for it, is declared once as a **shape**: a
 class in the module's `src/Shape/` carrying `#[Shape]`, whose static
-`define()` returns a plain core definition. The examples' event licence:
+`define()` returns a plain core definition. The examples' event license:
 
 ```php
-#[Shape('event.licence')]
-final class Licence implements ShapeInterface {
+#[Shape('event.license')]
+final class License implements ShapeInterface {
 
   public static function define(): DataDefinition {
-    $pattern = ['pattern' => '/^\d{4}$/D', 'message' => t('A licence number is four digits, such as 2048.')];
-    $licence = DataDefinition::create('string')
-      ->setLabel(t('Event licence'))
-      ->setDescription(t('The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.'))
+    $pattern = ['pattern' => '/^\d{4}$/D', 'message' => t('A license number is four digits, such as 2048.')];
+    $license = DataDefinition::create('string')
+      ->setLabel(t('Event license'))
+      ->setDescription(t('The four digits after EV- on the license, such as 2048. Required to host more than 100 people.'))
       ->addConstraint('Regex', $pattern);
-    DefinitionMetadata::setExamples($licence, ['2048']);
-    return $licence;
+    DefinitionMetadata::setExamples($license, ['2048']);
+    return $license;
   }
 
 }
@@ -133,14 +133,14 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 A constraint's message is a sentence a person reads, so a translator
 should find it beside every label: a message option may be written with
-`t()`, as the licence's is; the build hands Symfony its source string,
+`t()`, as the license's is; the build hands Symfony its source string,
 which core's validator translates when it refuses a value ([Violation
 messages are objects](semantics.md#violation-messages-are-objects)).
 
 A key uses it in the type position of `add()`, with a label of its own:
 
 ```php
-$inputs->add('licence', Licence::class, t('Event licence'));
+$inputs->add('license', License::class, t('Event license'));
 ```
 
 - **The key starts from the shape and may only narrow it.** What `add()`
@@ -157,18 +157,18 @@ $inputs->add('licence', Licence::class, t('Event licence'));
 - **A shape is a value.** `define()` returns one scalar type, never a
   map or a list, which is a structure, and declares no default and no
   required flag, which are each key's. A shape handed to `attach()`,
-  `attachList()` or `with()` is refused.
+  `attachList()` or `mixIn()` is refused.
 - **A port may read one.** `$inputs->reads('code', Sku::class)` reads a
   value of the shape's type, and a container may wire it only to a key
   declared with that shape ([Ports](resources.md#ports)).
 - **An alter of the shape tightens it at every key.** An alter naming
-  the shape, `#[Alters(Licence::class)]`, is handed the shape itself in
-  `alterInputs()`, named by its id: `narrow('event.licence')` with no
+  the shape, `#[Alters(License::class)]`, is handed the shape itself in
+  `alterInputs()`, named by its id: `narrow('event.license')` with no
   condition and its bounds, a list's subset or a pattern where it has
-  none, and `describe('event.licence', ...)`. It mounts no key and
+  none, and `describe('event.license', ...)`. It mounts no key and
   attaches nothing.
 - **The contract writes it once.** Each shape is one def in both
-  documents, `$defs.event.licence`, and each key using it refers to it,
+  documents, `$defs.event.license`, and each key using it refers to it,
   saying beside the reference only what the key says differently
   ([The served contract](served-contract.md#a-shape-is-one-def)).
 
@@ -240,7 +240,7 @@ static methods a structure class has, beside the plugin's own code:
   field_types: ['string'],
 )]
 #[UsesStructure]
-final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements StructureInterface, HasOutputsInterface {
+final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements StructureInterface, DefinesOutputsInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('prefix', 'string', t('Prefix'))
@@ -260,7 +260,7 @@ final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements
 
 Discovery finds it through the plugin definition, not a directory. Its
 id is `<host type>:<plugin id>`, `field_formatter:data_surface_demo_string`,
-unless the class also carries `#[Structure]`; the catalogue lists it as
+unless the class also carries `#[Structure]`; the catalog lists it as
 used by that same plugin; an alter names it by the plugin class. The
 demo module keeps both spellings side by side: its block names
 `DemoBlockStructure`, its formatter is its own. A separate class reads
@@ -306,7 +306,7 @@ What a host supplies, and why the structure does not:
   `ResourcesInterface::defaults()`: the structure's own declaration alone,
   with no alter, context or refiner.
 
-`#[UsesStructure]` is copied into the plugin definition, so the catalogue
+`#[UsesStructure]` is copied into the plugin definition, so the catalog
 lists which plugins use a structure without instantiating one, and
 whatever a plugin uses is never generated as a tool of its own.
 
@@ -340,8 +340,8 @@ plugin's class name, and its id is its plugin's,
 ends in `Alter`, a storage class in `Storage`, an access class in
 `Access`, and a deriver is named for what it makes, in the plural
 (`ContentEntityResources`, `FieldItemStructures`). A shape class is
-named for the value, with no suffix, as a data type is (`Licence` is
-`event.licence`).
+named for the value, with no suffix, as a data type is (`License` is
+`event.license`).
 
 **A class-swap adopter prefixes the swapped class with `Surface`, and
 says so in the hook.** Adopting a plugin class you do not own means
@@ -355,7 +355,7 @@ on the one line that replaces it rather than on a `use` statement with
 no explanation. `AddressResourceHooks::fieldInfoAlter()` is the pattern
 to copy.
 
-**The catalogue names a plugin `<host type>:<plugin id>`**:
+**The catalog names a plugin `<host type>:<plugin id>`**:
 `block:data_surface_demo`, `field_formatter:data_surface_demo_string`,
 `field_type:address`. The host type keeps two plugins of different
 kinds that share an id apart.
@@ -420,7 +420,7 @@ $inputs->addDefinition('field_overrides', $overrides, default: []);
 
 `AddressFieldSettingsResource` is the worked example. A map whose
 properties are another class's keys is a child instead: `attach()` or
-`attachBy()`.
+`attachVariants()`.
 
 A list is constructed around its item definition rather than described
 into one, so write `new ListDataDefinition(['type' => 'list'], $item)`
@@ -453,7 +453,7 @@ one: the data surface's `getDefault()` and
 `getDefaultValues()` read it, `accept()` merges it under the stored
 values, and the string and number widgets render the first example as
 `#placeholder`. An operation that creates may give starting values with
-`withStarting()`, which become the key's defaults in that context.
+`withDefaults()`, which become the key's defaults in that context.
 
 Two consequences worth knowing before you declare one. A map's declared
 default merges *over* the defaults its properties declare rather than
@@ -501,7 +501,7 @@ author does:
 | --- | --- |
 | The generated form | A `password` element, with no `#default_value`, no `#placeholder`, no `#required`, and the note "Leave blank to keep the current value." The form builder does not hand the value to the widget at all, so no stored secret reaches the render array. |
 | `accept()` | Input that holds nothing keeps the stored value, required or not. See [Value semantics](semantics.md#secrets-keep-what-they-hold) for the rule and for how a caller clears one on purpose. |
-| The storage layout | `EncryptedSettingsLayout` encrypts the value on its way to storage and decrypts it on the way back. See [Storage](storage.md#secrets-at-the-codec). |
+| The storage layout | `EncryptedStorageLayout` encrypts the value on its way to storage and decrypts it on the way back. See [Storage](storage.md#secrets-at-the-codec). |
 | The tool bridge | The converted input is optional, carries no default and says "Write only" in its description. |
 
 A secret holds **one scalar value**. Marking a list or a map secret is

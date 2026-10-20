@@ -101,8 +101,8 @@ class ExamplesAjaxRefreshTest extends ExamplesWebDriverTestBase {
     $this->assertTrue($currency->isVisible());
     $this->assertSame('EUR', $currency->getValue());
     $assert->fieldNotExists('surface[ticket][note]');
-    // The slot is replaced whole; its deciding key and the contact beside
-    // it are not.
+    // The variants are replaced whole; their deciding key and the contact
+    // beside them are not.
     $this->assertTrue($this->stillProbed('surface[pricing]'));
     $this->assertTrue($this->stillProbed('surface[contact][email]'));
     $assert->elementNotExists('css', '.messages');

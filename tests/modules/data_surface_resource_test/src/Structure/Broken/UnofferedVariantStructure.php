@@ -9,9 +9,9 @@ use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\StructureInterface;
 
 /**
- * Is filled by a variant its deciding key does not allow.
+ * Has a variant its deciding key does not allow.
  *
- * UnofferedTinStructure fills the slot for `tin`, which `kind` refuses.
+ * UnofferedTinStructure is the variant for `tin`, which `kind` refuses.
  */
 #[Structure('resource_test.broken.unoffered_variant')]
 final class UnofferedVariantStructure implements StructureInterface {
@@ -21,7 +21,7 @@ final class UnofferedVariantStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('kind', 'string', 'Kind')->addConstraint('Choice', ['choices' => ['jar']]);
-    $inputs->attachBy('settings', by: 'kind');
+    $inputs->attachVariants('settings', by: 'kind');
   }
 
 }

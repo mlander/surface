@@ -11,10 +11,10 @@ use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\StructureInterface;
 
 /**
- * A jar's settings: fills the pantry's open slot, stored by the pantry.
+ * A jar's settings: one of the pantry's variants, stored by the pantry.
  */
 #[Structure('resource_test.pantry.jar')]
-#[Variant(of: PantryResource::class, key: 'kind_settings', value: 'jar')]
+#[Variant(of: PantryResource::class, at: 'kind_settings', for: 'jar')]
 final class JarStructure implements StructureInterface {
 
   /**

@@ -19,7 +19,7 @@ final class MixinClashLateStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->with(TimestampsStructure::class);
+    $inputs->mixIn(TimestampsStructure::class);
     $inputs->add('changed', 'string', 'Changed');
   }
 

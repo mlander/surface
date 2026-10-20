@@ -14,7 +14,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * Tests a slot variant that declares no keys.
+ * Tests a variant that declares no keys.
  *
  * "This choice has no extra settings" is a variant with nothing in it: a
  * daily digest has no send day. The first fresh-eyes run found that one

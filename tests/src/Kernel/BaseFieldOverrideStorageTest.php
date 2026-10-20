@@ -7,7 +7,7 @@ namespace Drupal\Tests\data_surface\Kernel;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Storage\BaseFieldOverrideStorage;
+use Drupal\data_surface\Pipeline\Storage\BaseFieldOverrideStorage;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -62,7 +62,7 @@ class BaseFieldOverrideStorageTest extends DataSurfaceKernelTestBase {
    * @param array $map
    *   The override map, defaulting to the name base field's label.
    *
-   * @return \Drupal\data_surface\Storage\BaseFieldOverrideStorage
+   * @return \Drupal\data_surface\Pipeline\Storage\BaseFieldOverrideStorage
    *   The storage.
    */
   protected function storage(array $map = ['name_label' => ['field' => 'name']]): BaseFieldOverrideStorage {

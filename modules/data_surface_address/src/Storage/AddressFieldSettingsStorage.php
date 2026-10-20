@@ -10,7 +10,7 @@ use Drupal\Core\Field\FieldConfigInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceStorageInterface;
 use Drupal\data_surface\Storage\SchemaViolations;
-use Drupal\data_surface_address\AddressSettingsLayout;
+use Drupal\data_surface_address\AddressStorageLayout;
 
 /**
  * An address field's settings live on its field config entity.
@@ -18,7 +18,7 @@ use Drupal\data_surface_address\AddressSettingsLayout;
  * Loads by the identity its context knows (entity type, bundle and field
  * name, which the field instance resource hands its settings child as the
  * one door through the wall between them) and translates through
- * AddressSettingsLayout, so the resource is the input layout and the field
+ * AddressStorageLayout, so the resource is the input layout and the field
  * goes on storing exactly what it always stored. Settings the layout does
  * not produce, a key some other code wrote, survive.
  *
@@ -51,7 +51,7 @@ final class AddressFieldSettingsStorage implements ResourceStorageInterface {
    */
   public function load(OperationContext $context): array {
     $field = $this->field($context);
-    return $field === NULL ? [] : (new AddressSettingsLayout())->fromStorage($field->getSettings());
+    return $field === NULL ? [] : (new AddressStorageLayout())->fromStorage($field->getSettings());
   }
 
   /**
@@ -68,7 +68,7 @@ final class AddressFieldSettingsStorage implements ResourceStorageInterface {
     if ($field === NULL && !$context->creates) {
       throw $this->noField($context);
     }
-    $settings = (new AddressSettingsLayout())->toStorage($values) + ($field?->getSettings() ?? []);
+    $settings = (new AddressStorageLayout())->toStorage($values) + ($field?->getSettings() ?? []);
     $keys = ['available_countries', 'langcode_override', 'field_overrides'];
     SchemaViolations::check($this->typedConfig, self::SCHEMA, $settings, array_combine($keys, $keys));
     return $settings;

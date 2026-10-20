@@ -7,7 +7,7 @@ namespace Drupal\data_surface\Resource\Attribute;
 /**
  * On a class in src/Alter: which resource or structure it alters.
  *
- * Static, like #[Variant(of:)] and #[Operation(of:)], so a catalogue can
+ * Static, like #[Variant(of:)] and #[Operation(of:)], so a catalog can
  * say who alters what without running anything. An alter reaches both
  * kinds. The class is registered as an autowired service, the way a hook
  * class is, so it may hold services.
@@ -23,7 +23,7 @@ final class Alters {
   /**
    * Constructs an Alters attribute.
    *
-   * @param string $resource
+   * @param string $of
    *   What this class alters: the class of a resource or a structure, or
    *   for a derived one its id, or a deriver's base id for everything it
    *   derives.
@@ -31,7 +31,7 @@ final class Alters {
    *   Apply only in these operations. Empty means all.
    */
   public function __construct(
-    public readonly string $resource,
+    public readonly string $of,
     public readonly array $operations = [],
   ) {}
 

@@ -5,18 +5,18 @@ declare(strict_types=1);
 namespace Drupal\data_surface\ResourceBuild;
 
 /**
- * Every DerivedVariantsInterface service, found by the slot it fills.
+ * Every DerivedVariantsInterface service, found by the variants it adds to.
  *
  * @internal
  */
 final class DerivedVariants {
 
   /**
-   * The derivers, keyed by the class with the slot and then by slot key.
+   * The derivers, keyed by the class with the variants, then by their key.
    *
    * @var array<string, array<string, \Drupal\data_surface\ResourceBuild\DerivedVariantsInterface>>|null
    */
-  protected ?array $bySlot = NULL;
+  protected ?array $byKey = NULL;
 
   /**
    * Constructs the collection.
@@ -30,31 +30,31 @@ final class DerivedVariants {
   }
 
   /**
-   * Gets the deriver filling one slot, if any.
+   * Gets the deriver for the variants at one key, if any.
    *
    * @param class-string $resource
-   *   The class with the slot.
+   *   The class with the variants.
    * @param string $key
-   *   The slot's key.
+   *   The key the variants are attached at.
    *
    * @return \Drupal\data_surface\ResourceBuild\DerivedVariantsInterface|null
-   *   The deriver, or NULL when nothing derives variants for the slot.
+   *   The deriver, or NULL when nothing derives variants for the key.
    *
    * @throws \LogicException
-   *   When two derivers name the same slot.
+   *   When two derivers name the same key.
    */
   public function for(string $resource, string $key): ?DerivedVariantsInterface {
     return $this->all()[$resource][$key] ?? NULL;
   }
 
   /**
-   * Says where each of a class's derived slots is filled from.
+   * Says where each of a class's derived variants come from.
    *
    * @param class-string $resource
-   *   The class with the slots.
+   *   The class with the variants.
    *
    * @return array<string, string>
-   *   The source phrase, keyed by slot key.
+   *   The source phrase, keyed by the key the variants are attached at.
    */
   public function sources(string $resource): array {
     return array_map(
@@ -64,30 +64,30 @@ final class DerivedVariants {
   }
 
   /**
-   * Indexes the derivers by the slot each fills.
+   * Indexes the derivers by the variants each adds to.
    *
    * @return array<string, array<string, \Drupal\data_surface\ResourceBuild\DerivedVariantsInterface>>
    *   The derivers.
    */
   protected function all(): array {
-    if ($this->bySlot !== NULL) {
-      return $this->bySlot;
+    if ($this->byKey !== NULL) {
+      return $this->byKey;
     }
-    $this->bySlot = [];
+    $this->byKey = [];
     foreach ($this->derivers as $deriver) {
-      [$holder, $key] = $deriver->slot();
-      if (isset($this->bySlot[$holder][$key])) {
+      [$holder, $key] = $deriver->variantsAt();
+      if (isset($this->byKey[$holder][$key])) {
         throw new \LogicException(sprintf(
-          'Both %s and %s derive the variants for %s, at its "%s" slot; one slot has one deriver.',
-          get_class($this->bySlot[$holder][$key]),
+          'Both %s and %s derive the variants for %s, at its "%s" key; the variants at one key have one deriver.',
+          get_class($this->byKey[$holder][$key]),
           get_class($deriver),
           $holder,
           $key,
         ));
       }
-      $this->bySlot[$holder][$key] = $deriver;
+      $this->byKey[$holder][$key] = $deriver;
     }
-    return $this->bySlot;
+    return $this->byKey;
   }
 
 }

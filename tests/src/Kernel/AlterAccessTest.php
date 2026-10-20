@@ -32,7 +32,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * The gallery names no access class; its alters answer for it, for the
  * plaque it mixes in, for the wall it attaches twice (and the annex once),
- * for one of its slot's variants and for the room at every entry of its
+ * for one of its variants and for the room at every entry of its
  * keys from the site. The wall has an access class of its own, asked
  * first, and an alter that tries to open it, asked last.
  *
@@ -215,7 +215,7 @@ class AlterAccessTest extends DataSurfaceKernelTestBase {
     // Nothing the opening alter answers makes the combination wider.
     $open = AccessAnswer::open()->addCacheContexts(['user.permissions']);
     foreach (['locked' => AccessAnswer::locked(), 'omitted' => AccessAnswer::omitted()] as $narrow => $answer) {
-      $this->assertSame($narrow, $answer->addCacheContexts(['user.permissions'])->andIf($open)->answer());
+      $this->assertSame($narrow, $answer->addCacheContexts(['user.permissions'])->andIf($open)->getAnswer());
     }
   }
 
@@ -309,16 +309,16 @@ class AlterAccessTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($alone->isRuntimeAccess('caption') && $alone->isRuntimeAccess('credit'));
     $this->flag(PlaqueAlter::FIXED, FALSE);
 
-    // One slot variant, and not the other.
+    // One variant, and not the other.
     $this->actAs('freezer');
-    $variants = $this->gallery()->getDefinitions()->entry('finish')->slot->variants;
+    $variants = $this->gallery()->getDefinitions()->entry('finish')->variants->variants;
     $this->assertNotNull($variants['oil']->child->lockedWhole(), 'Offered read only.');
     $this->assertNull($variants['print']->child->lockedWhole());
     $this->actAs('keeper');
     $this->flag(OilFinishAlter::BANNED);
-    $this->assertSame(['print'], array_keys($this->gallery()->getDefinitions()->entry('finish')->slot->variants));
+    $this->assertSame(['print'], array_keys($this->gallery()->getDefinitions()->entry('finish')->variants->variants));
     $alone = $this->gallery(TRUE)->getDefinitions();
-    $this->assertSame(['oil', 'print'], array_keys($alone->entry('finish')->slot->variants));
+    $this->assertSame(['oil', 'print'], array_keys($alone->entry('finish')->variants->variants));
     $this->assertTrue($alone->isRuntimeAccess('finish'));
     $this->flag(OilFinishAlter::BANNED, FALSE);
 

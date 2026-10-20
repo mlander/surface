@@ -152,7 +152,7 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    *
    * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
    */
-  public function with(string $structure, array $reads = []): static {
+  public function mixIn(string $structure, array $reads = []): static {
     throw new \LogicException(sprintf(
       'The %s alter mixes %s in. Only an owner mixes a structure in: an alter\'s keys live under its own module\'s name, and a mixed-in structure\'s members would be the owner\'s. Attach it at the alter\'s own mount, third_party_settings.%s, instead.',
       $this->provider,

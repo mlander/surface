@@ -120,7 +120,7 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
     );
     $this->assertSame(['edit'], $this->registry()->getAlters(RecipeResource::class)[0]->operations);
 
-    // The variant fills the slot it names.
+    // The variant is found at the key it names, for its value.
     $this->assertSame(['herb' => HerbGarnishStructure::class], $this->registry()->getVariants(RecipeResource::class, 'garnish_settings'));
 
     // Storage and access classes are autowired services too.

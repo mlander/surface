@@ -115,7 +115,7 @@
                             "locked": false,
                             "dependsOn": [
                                 "room",
-                                "third_party_settings.data_surface_examples_compliance.licence"
+                                "third_party_settings.data_surface_examples_compliance.license"
                             ],
                             "enumerated": true,
                             "declared": true
@@ -415,7 +415,7 @@
                                     "properties": {
                                         "data_surface_examples_compliance": {
                                             "properties": {
-                                                "licence": {
+                                                "license": {
                                                     "type": "null"
                                                 }
                                             }
@@ -427,7 +427,7 @@
                         "then": {
                             "properties": {
                                 "capacity": {
-                                    "description": "Up to 100 without an event licence.",
+                                    "description": "Up to 100 without an event license.",
                                     "maximum": 100
                                 }
                             }
@@ -580,13 +580,13 @@
                     "registration.compliance": {
                         "type": "object",
                         "properties": {
-                            "licence": {
-                                "$ref": "#/$defs/event.licence",
-                                "title": "Event licence",
+                            "license": {
+                                "$ref": "#/$defs/event.license",
+                                "title": "Event license",
                                 "x-surface": {
                                     "locked": false,
                                     "dependsOn": [],
-                                    "patternMessage": "A licence number is four digits, such as 2048."
+                                    "patternMessage": "A license number is four digits, such as 2048."
                                 }
                             },
                             "stewards": {
@@ -614,9 +614,9 @@
                             }
                         }
                     },
-                    "event.licence": {
-                        "title": "Event licence",
-                        "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
+                    "event.license": {
+                        "title": "Event license",
+                        "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
                         "type": [
                             "string",
                             "null"
@@ -626,11 +626,23 @@
                             "2048"
                         ],
                         "x-surface": {
-                            "patternMessage": "A licence number is four digits, such as 2048."
+                            "patternMessage": "A license number is four digits, such as 2048."
                         }
                     }
                 }
             }
+        }
+    ],
+    "allowed": [
+        {
+            "path": "configure#/allOf/9",
+            "change": "rule added",
+            "reason": "A rename to US spelling (2026-10-20): the examples' own key and its def are spelled license now, a compatible rename for them; no stored value held the old key, and only the examples read it."
+        },
+        {
+            "path": "configure#/$defs/registration.compliance/properties/licence",
+            "change": "key removed",
+            "reason": "A rename to US spelling (2026-10-20): the examples' own key and its def are spelled license now, a compatible rename for them; no stored value held the old key, and only the examples read it."
         }
     ]
 }

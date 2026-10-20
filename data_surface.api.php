@@ -65,7 +65,7 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  * \Drupal\data_surface\Resource\ResourceInterface and carrying
  * \Drupal\data_surface\Resource\Attribute\Resource. A structure is a group
  * of keys with no identity or storage of its own, only ever held by
- * something else (attached to a parent, filling a slot as a variant, or
+ * something else (attached to a parent, as one of the variants at a key, or
  * configuring a plugin): a class implementing
  * \Drupal\data_surface\Resource\StructureInterface and carrying
  * \Drupal\data_surface\Resource\Attribute\Structure. Either is found in a
@@ -99,7 +99,7 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  *   both autowired services. A structure names no storage: whatever holds
  *   it stores it.
  * - What it emits, in static defineOutputs(), on
- *   \Drupal\data_surface\Resource\HasOutputsInterface. Never refined.
+ *   \Drupal\data_surface\Resource\DefinesOutputsInterface. Never refined.
  *
  * @code
  * #[Resource('example.thing',
@@ -146,15 +146,15 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  * }
  * @endcode
  *
- * Children are attach() for a fixed child, attachBy() for a slot a sibling
- * key chooses and attachList() for a collection. attach() and attachBy()
- * return the map definition at the key, which the owner labels with the
- * core setters. A slot is always open: every structure carrying
- * \Drupal\data_surface\Resource\Attribute\Variant for it
- * fills it, and the deciding key's allowed values become exactly those. A
- * service tagged data_surface.derived_variants implementing
- * \Drupal\data_surface\ResourceBuild\DerivedVariantsInterface fills it for
- * the values no variant class fills.
+ * Children are attach() for a fixed child, attachVariants() for variants a
+ * sibling key chooses between and attachList() for a collection. attach()
+ * and attachVariants() return the map definition at the key, which the
+ * owner labels with the core setters. Variants are always open: every
+ * structure carrying \Drupal\data_surface\Resource\Attribute\Variant for
+ * the key is one, and the deciding key's allowed values become exactly
+ * those. A service tagged data_surface.derived_variants implementing
+ * \Drupal\data_surface\ResourceBuild\DerivedVariantsInterface adds
+ * variants for the values no variant class declares.
  *
  * A plugin whose configuration is a structure names it with
  * \Drupal\data_surface\Resource\Attribute\UsesStructure and extends the host
@@ -275,7 +275,7 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  * \Drupal\data_surface\Resource\AltersOutputsInterface: an output the alter
  * adds lands at third_party_outputs.<module>.<key>. An alter whose keys
  * are asked for in one layout and stored in another implements
- * \Drupal\data_surface\Resource\HasStorageLayoutInterface. Another module's
+ * \Drupal\data_surface\Resource\AltersStorageLayoutInterface. Another module's
  * operation for a resource is a static method carrying #[Operation] with
  * of: naming the resource, in that module's src/Alter/.
  *

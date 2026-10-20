@@ -16,16 +16,16 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests the catalogue of resources and structures, and docs/catalogue.md.
+ * Tests the catalog of resources and structures, and docs/catalog.md.
  *
  * The first reader of the static layer: every resource and structure the
  * shipped modules declare, with what each operation needs, read without
  * building anything. The document is written by
- * scripts/generate-catalogue.php.
+ * scripts/generate-catalog.php.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
-class ResourceCatalogueTest extends DataSurfaceKernelTestBase {
+class ResourceCatalogTest extends DataSurfaceKernelTestBase {
 
   /**
    * Every module here that declares or alters a resource or structure.
@@ -62,24 +62,24 @@ class ResourceCatalogueTest extends DataSurfaceKernelTestBase {
    */
   protected function setUp(): void {
     parent::setUp();
-    require_once dirname(__DIR__, 3) . '/scripts/DataSurfaceCatalogueDocument.php';
+    require_once dirname(__DIR__, 3) . '/scripts/DataSurfaceCatalogDocument.php';
   }
 
   /**
-   * Gets the catalogue.
+   * Gets the catalog.
    *
    * @return array
-   *   What ResourceCatalogue::describe() returns.
+   *   What ResourceCatalog::describe() returns.
    */
-  protected function catalogue(): array {
-    return $this->container->get('data_surface.resource_catalogue')->describe();
+  protected function catalog(): array {
+    return $this->container->get('data_surface.resource_catalog')->describe();
   }
 
   /**
-   * Tests what the catalogue says about the content type resource.
+   * Tests what the catalog says about the content type resource.
    */
   public function testTheCatalogueReadsTheStaticLayer(): void {
-    $catalogue = $this->catalogue();
+    $catalog = $this->catalog();
     $this->assertSame([
       'block.data_surface_demo',
       'block.data_surface_demo.presentation.grid',
@@ -108,9 +108,9 @@ class ResourceCatalogueTest extends DataSurfaceKernelTestBase {
       'registration.step3',
       'registration.step3.ticket.free',
       'registration.step3.ticket.paid',
-    ], array_keys($catalogue));
+    ], array_keys($catalog));
 
-    $node_type = $catalogue['node.type'];
+    $node_type = $catalog['node.type'];
     $this->assertSame(NodeTypeResource::class, $node_type['class']);
     $this->assertSame('data_surface_demo_node_type', $node_type['module']);
     $this->assertSame(['type'], $node_type['identity']);
@@ -160,16 +160,16 @@ class ResourceCatalogueTest extends DataSurfaceKernelTestBase {
         'access' => TRUE,
         'refines' => [],
       ],
-    ], $catalogue['event.program']['alters']);
+    ], $catalog['event.program']['alters']);
     // An alter's methods, each by the key it refines, what it watches
     // and whether it is a runtime refiner. Its rule on the capacity is
     // declared in alterInputs(), data the build reads, and no method; the
     // stewards are the compliance structure's, which it attaches.
     $this->assertSame([
       ['key' => 'room', 'watches' => ['venue'], 'runtime' => TRUE],
-    ], $catalogue['registration.step3']['alters'][0]['refines']);
+    ], $catalog['registration.step3']['alters'][0]['refines']);
 
-    $field = $catalogue['field.instance'];
+    $field = $catalog['field.instance'];
     $this->assertSame(['add', 'reuse', 'edit'], array_column($field['operations'], 'id'));
     $this->assertSame(['FieldStorageConfigInterface $storage', 'string $bundle'], $field['operations'][1]['parameters']);
     $this->assertSame(['settings' => ['address' => AddressFieldSettingsResource::class]], $field['variants']);
@@ -182,22 +182,22 @@ class ResourceCatalogueTest extends DataSurfaceKernelTestBase {
    *
    * An operation whose permission names a placeholder no parameter can
    * supply is never allowed on its own; a resource or structure a plugin
-   * uses is that plugin's configuration. The catalogue says both, and
+   * uses is that plugin's configuration. The catalog says both, and
    * which plugins.
    */
   public function testTheCatalogueSaysWhatCanBeAskedOnItsOwn(): void {
-    $catalogue = $this->catalogue();
-    $storage = array_column($catalogue['field.storage']['operations'], NULL, 'id');
+    $catalog = $this->catalog();
+    $storage = array_column($catalog['field.storage']['operations'], NULL, 'id');
     $this->assertSame(['entity_type_id'], $storage['add']['unresolvable']);
     $this->assertFalse($storage['add']['standalone']);
     $this->assertTrue($storage['edit']['standalone']);
 
-    $this->assertSame(['block:data_surface_demo'], $catalogue['block.data_surface_demo']['plugins']);
+    $this->assertSame(['block:data_surface_demo'], $catalog['block.data_surface_demo']['plugins']);
     // A plugin that is its own structure is used by itself.
-    $this->assertSame(['field_formatter:data_surface_demo_string'], $catalogue['field_formatter:data_surface_demo_string']['plugins']);
-    $this->assertSame(DataSurfaceDemoFormatter::class, $catalogue['field_formatter:data_surface_demo_string']['class']);
-    $this->assertSame(['field_type:address'], $catalogue['field.settings.address']['plugins']);
-    $this->assertSame([], $catalogue['block.data_surface_demo.presentation.list']['plugins']);
+    $this->assertSame(['field_formatter:data_surface_demo_string'], $catalog['field_formatter:data_surface_demo_string']['plugins']);
+    $this->assertSame(DataSurfaceDemoFormatter::class, $catalog['field_formatter:data_surface_demo_string']['class']);
+    $this->assertSame(['field_type:address'], $catalog['field.settings.address']['plugins']);
+    $this->assertSame([], $catalog['block.data_surface_demo.presentation.list']['plugins']);
   }
 
   /**
@@ -211,8 +211,8 @@ class ResourceCatalogueTest extends DataSurfaceKernelTestBase {
    * no read either.
    */
   public function testTheCatalogueSaysWhatCanBeRead(): void {
-    $catalogue = $this->catalogue();
-    $reads = static fn (string $surface): array => array_column($catalogue[$surface]['operations'], 'reads', 'id');
+    $catalog = $this->catalog();
+    $reads = static fn (string $surface): array => array_column($catalog[$surface]['operations'], 'reads', 'id');
     $this->assertSame(['add' => FALSE, 'edit' => TRUE], $reads('node.type'));
     $this->assertSame(['add' => FALSE, 'reuse' => FALSE, 'edit' => TRUE], $reads('field.instance'));
     $this->assertSame(['add' => FALSE, 'edit' => TRUE], $reads('field.storage'));
@@ -224,22 +224,22 @@ class ResourceCatalogueTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the checked-in catalogue still matches the generator.
+   * Tests that the checked-in catalog still matches the generator.
    *
    * Running with DATA_SURFACE_WRITE_CATALOGUE=1 writes the new document
-   * first, which is what scripts/generate-catalogue.php does.
+   * first, which is what scripts/generate-catalog.php does.
    */
   public function testCatalogueHasNotDrifted(): void {
-    $document = \DataSurfaceCatalogueDocument::render($this->catalogue(), $this->container->get('data_surface.resource_catalogue')->derivers());
-    $path = dirname(__DIR__, 3) . '/' . \DataSurfaceCatalogueDocument::PATH;
-    if (getenv(\DataSurfaceCatalogueDocument::WRITE_VARIABLE) === '1') {
+    $document = \DataSurfaceCatalogDocument::render($this->catalog(), $this->container->get('data_surface.resource_catalog')->derivers());
+    $path = dirname(__DIR__, 3) . '/' . \DataSurfaceCatalogDocument::PATH;
+    if (getenv(\DataSurfaceCatalogDocument::WRITE_VARIABLE) === '1') {
       file_put_contents($path, $document);
     }
     $this->assertFileExists($path);
     $this->assertSame(
       $document,
       (string) file_get_contents($path),
-      \DataSurfaceCatalogueDocument::PATH . ' is out of date. Regenerate it with scripts/generate-catalogue.php.',
+      \DataSurfaceCatalogDocument::PATH . ' is out of date. Regenerate it with scripts/generate-catalog.php.',
     );
   }
 

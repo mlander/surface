@@ -10,7 +10,7 @@ use Drupal\Core\Entity\EntityInterface;
  * One parameter of an #[Operation] method, as discovery read it.
  *
  * What an operation needs is its own signature, so this is the whole of
- * what a route, a tool or a catalogue knows about how to ask for it: a
+ * what a route, a tool or a catalog knows about how to ask for it: a
  * route parameter or a tool input of the same name, of this type.
  *
  * @internal

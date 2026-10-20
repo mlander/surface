@@ -13,7 +13,7 @@ namespace Drupal\data_surface\Resource;
  * for. How the values tighten each other is beside the keys, one
  * #[RefinesInput] method per refined key, so the class is the whole
  * contract. One that also answers with something adds
- * HasOutputsInterface.
+ * DefinesOutputsInterface.
  *
  * Neither kind is ever instantiated. Its keys are a property of the class,
  * so defineInputs() is static and the build step calls it on the class;

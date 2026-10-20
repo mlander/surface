@@ -74,7 +74,7 @@ of audience tags.
   unit (hours, days, weeks or business days) with a constraint on the
   pair that refuses anything past thirty days on the amount, and
   `ReviewDeadlineLayout` turns the pair into seconds and back; the alter
-  hands it to the resource by implementing `HasStorageLayoutInterface`,
+  hands it to the resource by implementing `AltersStorageLayoutInterface`,
   and the storage adapter applies it to this module's settings before
   the content type's storage writes them and after it reads them. The
   tags are a list, with a pattern for each tag and a uniqueness

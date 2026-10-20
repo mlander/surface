@@ -16,7 +16,7 @@ use Drupal\data_surface\Resource\Attribute\UsesStructure;
  * invisible to anything that reads definitions. Copying it in here puts
  * the structure class in the cached definition, under
  * UsesStructure::DEFINITION_KEY, where a host reads it and a tool or the
- * catalogue can list the plugins that use a structure without
+ * catalog can list the plugins that use a structure without
  * instantiating one. A plugin that is its own structure records its own
  * class there, which is how discovery finds that structure.
  *
@@ -30,7 +30,7 @@ final class ResourcePluginHooks {
   /**
    * The plugin hosts that read #[UsesStructure], and their managers.
    *
-   * Keyed by host type, the prefix the catalogue lists a plugin under
+   * Keyed by host type, the prefix the catalog lists a plugin under
    * (`block:<plugin id>`).
    */
   public const HOSTS = [

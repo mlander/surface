@@ -31,14 +31,14 @@ class RebuildAnnouncesTest extends ExamplesWebDriverTestBase {
   ];
 
   /**
-   * The licence element's name, in example 3 with the compliance alter.
+   * The license element's name, in example 3 with the compliance alter.
    */
-  protected const LICENCE = 'surface[third_party_settings][data_surface_examples_compliance][licence]';
+  protected const LICENSE = 'surface[third_party_settings][data_surface_examples_compliance][license]';
 
   /**
-   * The constraint message a malformed licence earns.
+   * The constraint message a malformed license earns.
    */
-  protected const MESSAGE = 'A licence number is four digits, such as 2048.';
+  protected const MESSAGE = 'A license number is four digits, such as 2048.';
 
   /**
    * Tests example 7's frequency: Send day goes, Items per issue widens.
@@ -85,19 +85,19 @@ class RebuildAnnouncesTest extends ExamplesWebDriverTestBase {
     $this->drupalGet('surface-examples/3');
     $this->recordAnnouncements();
 
-    $licence = $assert->fieldExists(self::LICENCE);
-    $licence->setValue('EV-2048');
-    $licence->blur();
+    $license = $assert->fieldExists(self::LICENSE);
+    $license->setValue('EV-2048');
+    $license->blur();
     $assert->assertWaitOnAjaxRequest();
 
-    $licence = $assert->fieldExists(self::LICENCE);
-    $id = $licence->getAttribute('id');
+    $license = $assert->fieldExists(self::LICENSE);
+    $id = $license->getAttribute('id');
     $error = $assert->elementExists('css', '#' . $id . '--error');
     $this->assertSame(self::MESSAGE, trim($error->getText()));
-    $described = explode(' ', (string) $licence->getAttribute('aria-describedby'));
+    $described = explode(' ', (string) $license->getAttribute('aria-describedby'));
     $this->assertContains($id . '--error', $described);
     // Printed once, under the field.
-    $this->assertSame(1, substr_count($this->formItemText(self::LICENCE), self::MESSAGE));
+    $this->assertSame(1, substr_count($this->formItemText(self::LICENSE), self::MESSAGE));
     $assert->elementNotExists('css', '.messages');
 
     // Announced once, named for the field it is about.
@@ -107,11 +107,11 @@ class RebuildAnnouncesTest extends ExamplesWebDriverTestBase {
 
     // Corrected, the error and its id go.
     $this->recordAnnouncements();
-    $licence->setValue('2048');
-    $licence->blur();
+    $license->setValue('2048');
+    $license->blur();
     $assert->assertWaitOnAjaxRequest();
-    $licence = $assert->fieldExists(self::LICENCE);
-    $this->assertStringNotContainsString('--error', (string) $licence->getAttribute('aria-describedby'));
+    $license = $assert->fieldExists(self::LICENSE);
+    $this->assertStringNotContainsString('--error', (string) $license->getAttribute('aria-describedby'));
     $assert->elementNotExists('css', '[id$="--error"]');
   }
 

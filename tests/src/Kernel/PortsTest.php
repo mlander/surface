@@ -233,7 +233,7 @@ class PortsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests each wiring the build cannot honour is refused, naming it.
+   * Tests each wiring the build cannot honor is refused, naming it.
    */
   public function testEachWiringRefusal(): void {
     $refusals = [

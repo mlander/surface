@@ -465,13 +465,13 @@ describe('the React form of example 3', () => {
     const { fetcher } = server({ '/surface-api/registration.step3/configure': () => example3 as unknown as Contract });
     render(<SurfaceForm settings={{ ...settings, surface: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
     const compliance = await screen.findByRole('group', { name: 'Compliance' });
-    expect(within(compliance).getByLabelText(/Event licence/)).toHaveValue('');
+    expect(within(compliance).getByLabelText(/Event license/)).toHaveValue('');
     expect(within(compliance).getByLabelText(/Stewards/)).toHaveAccessibleDescription('At least 1 steward for 50 attendees.');
     expect(screen.queryByRole('group', { name: /third.party/i })).toBeNull();
-    expect(screen.getByLabelText(/Capacity/)).toHaveAccessibleDescription('Up to 100 without an event licence.');
+    expect(screen.getByLabelText(/Capacity/)).toHaveAccessibleDescription('Up to 100 without an event license.');
   });
 
-  it('draws the Compliance fieldset right after the capacity its licence lifts', async () => {
+  it('draws the Compliance fieldset right after the capacity its license lifts', async () => {
     const { fetcher } = server({ '/surface-api/registration.step3/configure': () => example3 as unknown as Contract });
     render(<SurfaceForm settings={{ ...settings, surface: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
     const compliance = await screen.findByRole('group', { name: 'Compliance' });
@@ -531,7 +531,7 @@ describe('narrowing here, from the full schema', () => {
     expect(refines(calls)).toHaveLength(0);
   });
 
-  it('narrows example 3\'s ticket here on a pricing change: the slot', async () => {
+  it('narrows example 3\'s ticket here on a pricing change: the variants', async () => {
     const { calls, fetcher } = recordedServer(compliance as unknown as Recorded, 'registration.step3');
     render(<SurfaceForm settings={{ ...settings, surface: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
     await userEvent.selectOptions(await screen.findByLabelText(/Pricing/), 'paid');
@@ -552,16 +552,16 @@ describe('narrowing here, from the full schema', () => {
     await waitFor(() => expect(screen.getByLabelText(/Room/)).toHaveDisplayValue('- Select -'));
     expect(JSON.parse(String(refines(calls)[0].init?.body)).values.venue).toBe('library');
 
-    // The pricing after it is still the slot's, narrowed here.
+    // The pricing after it still chooses the ticket variant, narrowed here.
     await userEvent.selectOptions(screen.getByLabelText(/Pricing/), 'paid');
     expect(narrowingLine()).toBe('Narrowed here: ticket.');
     expect(refines(calls)).toHaveLength(1);
   });
 
-  it('asks the server on a licence change of example 3 with compliance: the stewards are dynamic', async () => {
+  it('asks the server on a license change of example 3 with compliance: the stewards are dynamic', async () => {
     const { calls, fetcher } = recordedServer(compliance as unknown as Recorded, 'registration.step3');
     render(<SurfaceForm settings={{ ...settings, surface: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
-    await userEvent.type(await screen.findByLabelText(/Event licence/), '2');
+    await userEvent.type(await screen.findByLabelText(/Event license/), '2');
     expect(narrowingLine()).toBe('Asked the server: third_party_settings depends on a dynamic rule.');
     await waitFor(() => expect(refines(calls)).toHaveLength(1));
   });

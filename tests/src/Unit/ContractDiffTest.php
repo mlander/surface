@@ -177,7 +177,7 @@ class ContractDiffTest extends UnitTestCase {
       ],
       'a key removed' => [['properties/code' => self::REMOVE], ContractDiff::BREAKS, $breaking],
       'a key renamed' => [
-        ['properties/code' => self::REMOVE, 'properties/licence' => ['title' => 'Code', 'type' => ['string', 'null']]],
+        ['properties/code' => self::REMOVE, 'properties/license' => ['title' => 'Code', 'type' => ['string', 'null']]],
         ContractDiff::BREAKS,
         $breaking,
       ],

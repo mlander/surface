@@ -32,6 +32,8 @@ use Drupal\data_surface\Resource\DefinesInputsInterface;
  */
 abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
 
+  use DeprecatedWithTrait;
+
   /**
    * The keys added through this blueprint, in order.
    *
@@ -155,7 +157,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   protected function fromShape(string $key, string $type): DataDefinition {
     if (!Shapes::isShape($type)) {
       throw new \LogicException(is_subclass_of($type, DefinesInputsInterface::class)
-        ? sprintf('add("%s") was handed %s, a resource or structure, as a type: a group of keys is attached at the key, attach(\'%s\', ...), or mixed in, with().', $key, $type, $key)
+        ? sprintf('add("%s") was handed %s, a resource or structure, as a type: a group of keys is attached at the key, attach(\'%s\', ...), or mixed in, mixIn().', $key, $type, $key)
         : sprintf('add("%s") was handed %s, which is no typed data type and no shape: a shape implements %s and carries #[Shape].', $key, $type, 'Drupal\data_surface\Resource\ShapeInterface'));
     }
     return $this->shapes?->forKey($type) ?? Shapes::unaltered($type);
@@ -193,7 +195,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    */
-  public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): static {
+  public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): DataDefinitionInterface {
     $this->assertNoPort($key);
     if (in_array($key, $this->declared(), TRUE) || $this->isDeclared($key)) {
       throw new \LogicException(sprintf(
@@ -204,7 +206,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
     }
     $this->declare($key, $definition, $default);
     $this->keys[] = $key;
-    return $this;
+    return $definition;
   }
 
   /**
@@ -364,7 +366,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   }
 
   /**
-   * Refuses a placement describe() cannot honour.
+   * Refuses a placement describe() cannot honor.
    *
    * A placement says where one module's fieldset is drawn, so it is the
    * module's own to make, of its own input mount, and it names a key the
@@ -418,7 +420,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * Gets the plain keys added through this blueprint, in order.
    *
    * Keys holding a child are not among them: they are attachments(), and
-   * the slots of the owner's blueprint.
+   * the keys the owner's blueprint attaches variants at.
    *
    * @return string[]
    *   The keys.
@@ -463,12 +465,12 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    *
    * The child is built after the context is applied, so the key is
    * declared now as an empty map: that keeps it where defineInputs()
-   * put it, and is what attach() and attachBy() hand back for the owner
+   * put it, and is what attach() and attachVariants() hand back for the owner
    * to label and describe with the core setters. The engine keeps that
    * same map as the shell the child is advertised in.
    *
    * @param string $verb
-   *   attach or attachBy, for the message.
+   *   attach or attachVariants, for the message.
    * @param string $key
    *   The key.
    *

@@ -21,7 +21,7 @@ use Psr\Http\Message\ResponseInterface;
  * narrows the room by the venue and shows an orphaned room stale; and
  * validate refuses a room of another venue and a capacity above the
  * room's, accepts a valid payload, and writes nothing either way. On
- * example 3, with example 4's module on, refine follows the licence the
+ * example 3, with example 4's module on, refine follows the license the
  * module's alter mounted.
  */
 #[Group('data_surface')]
@@ -280,39 +280,39 @@ class ServedContractEndpointsTest extends BrowserTestBase {
   }
 
   /**
-   * Tests refine follows the licence example 4's alter mounted on step 3.
+   * Tests refine follows the license example 4's alter mounted on step 3.
    *
-   * The capacity's dependsOn names the licence by its path, which is
+   * The capacity's dependsOn names the license by its path, which is
    * what the app watches; refined without one the capacity stops at a
    * hundred, and with one it is the room's again.
    */
-  public function testRefineFollowsTheMountedLicence(): void {
+  public function testRefineFollowsTheMountedLicense(): void {
     $this->drupalLogin($this->drupalCreateUser(['administer site configuration']));
-    $licence = 'third_party_settings.data_surface_examples_compliance.licence';
+    $license = 'third_party_settings.data_surface_examples_compliance.license';
     $values = ['venue' => 'riverside', 'room' => 'riverside_main', 'capacity' => 150];
     $refined = $this->json($this->post('surface-api/registration.step3/configure/refine', ['values' => $values]));
     $capacity = $refined['schema']['properties']['capacity'];
-    $this->assertSame(['room', $licence], $capacity['x-surface']['dependsOn']);
+    $this->assertSame(['room', $license], $capacity['x-surface']['dependsOn']);
     $this->assertSame(100, $capacity['maximum']);
 
-    $values['third_party_settings'] = ['data_surface_examples_compliance' => ['licence' => '2048', 'stewards' => 3]];
+    $values['third_party_settings'] = ['data_surface_examples_compliance' => ['license' => '2048', 'stewards' => 3]];
     $refined = $this->json($this->post('surface-api/registration.step3/configure/refine', ['values' => $values]));
     $this->assertSame(400, $refined['schema']['properties']['capacity']['maximum']);
-    $this->assertSame('2048', $refined['values']['third_party_settings']['data_surface_examples_compliance']['licence']);
+    $this->assertSame('2048', $refined['values']['third_party_settings']['data_surface_examples_compliance']['license']);
 
-    // A licence in the wrong format is no licence to the refiner: the
+    // A license in the wrong format is no license to the refiner: the
     // ceiling of 100 again, the typed value handed back as it was, and
     // the pattern explained by its message.
-    $values['third_party_settings']['data_surface_examples_compliance']['licence'] = 'EV-2048';
+    $values['third_party_settings']['data_surface_examples_compliance']['license'] = 'EV-2048';
     $refined = $this->json($this->post('surface-api/registration.step3/configure/refine', ['values' => $values]));
     $this->assertSame(100, $refined['schema']['properties']['capacity']['maximum']);
-    $this->assertSame('Up to 100 without an event licence.', $refined['schema']['properties']['capacity']['description']);
-    $this->assertSame('EV-2048', $refined['values']['third_party_settings']['data_surface_examples_compliance']['licence']);
-    // The licence is the compliance structure's, defined once.
+    $this->assertSame('Up to 100 without an event license.', $refined['schema']['properties']['capacity']['description']);
+    $this->assertSame('EV-2048', $refined['values']['third_party_settings']['data_surface_examples_compliance']['license']);
+    // The license is the compliance structure's, defined once.
     $site = $refined['schema']['properties']['third_party_settings']['properties']['data_surface_examples_compliance'];
-    $schema = SchemaResolver::inline($site, $refined['schema'])['properties']['licence'];
+    $schema = SchemaResolver::inline($site, $refined['schema'])['properties']['license'];
     $this->assertSame('^\\d{4}$', $schema['pattern']);
-    $this->assertSame('A licence number is four digits, such as 2048.', $schema['x-surface']['patternMessage']);
+    $this->assertSame('A license number is four digits, such as 2048.', $schema['x-surface']['patternMessage']);
   }
 
   /**

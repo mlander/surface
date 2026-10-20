@@ -63,22 +63,22 @@ describe('text, textarea and email', () => {
   });
 
   it('never puts a Regex on the input as a bare pattern: the server says what is wrong, in its message', () => {
-    const message = 'A licence number is four digits, such as 2048.';
+    const message = 'A license number is four digits, such as 2048.';
     render(
       <Form
         schema={object({
-          licence: {
-            title: 'Event licence',
+          license: {
+            title: 'Event license',
             type: 'string',
             pattern: '^\\d{4}$',
             examples: ['2048'],
             'x-surface': x('text', { patternMessage: message }),
           },
         })}
-        initial={{ licence: 'EV-2048' }}
+        initial={{ license: 'EV-2048' }}
       />,
     );
-    const input = screen.getByLabelText(/Event licence/);
+    const input = screen.getByLabelText(/Event license/);
     // A bare pattern makes the browser ask for "the requested format",
     // which is vaguer than the message the server answers with.
     expect(input).not.toHaveAttribute('pattern');
@@ -381,8 +381,8 @@ describe('locked', () => {
   });
 });
 
-describe('fieldset, slot and list', () => {
-  const ticketSlot: Schema = { title: 'Ticket', type: 'object', 'x-surface': x('slot', { by: 'pricing', variants: ['free', 'paid'], dependsOn: ['pricing'] }) };
+describe('fieldset, variants and list', () => {
+  const ticketVariants: Schema = { title: 'Ticket', type: 'object', 'x-surface': x('slot', { by: 'pricing', variants: ['free', 'paid'], dependsOn: ['pricing'] }) };
   const branches: Schema['allOf'] = [
     {
       if: { properties: { pricing: { const: 'free' } }, required: ['pricing'] },
@@ -426,25 +426,25 @@ describe('fieldset, slot and list', () => {
     const compliance: Schema = {
       title: 'Compliance',
       type: 'object',
-      properties: { licence: { title: 'Event licence', type: ['string', 'null'], 'x-surface': x('text') } },
+      properties: { license: { title: 'Event license', type: ['string', 'null'], 'x-surface': x('text') } },
       'x-surface': x('fieldset'),
     };
     render(
       <Form
         schema={object({ third_party_settings: { type: 'object', properties: { compliance }, 'x-surface': x('fieldset', { group: true }) } })}
-        initial={{ third_party_settings: { compliance: { licence: '2048' } } }}
+        initial={{ third_party_settings: { compliance: { license: '2048' } } }}
       />,
     );
     const groups = screen.getAllByRole('group');
     expect(groups.map((group) => group.querySelector('legend')?.textContent)).toEqual(['Compliance']);
-    expect(within(groups[0]).getByLabelText('Event licence')).toHaveValue('2048');
+    expect(within(groups[0]).getByLabelText('Event license')).toHaveValue('2048');
   });
 
   it('draws a placed fieldset after the sibling it names, and posts its values under its group', async () => {
     const compliance: Schema = {
       title: 'Compliance',
       type: 'object',
-      properties: { licence: { title: 'Event licence', type: ['string', 'null'], 'x-surface': x('text') } },
+      properties: { license: { title: 'Event license', type: ['string', 'null'], 'x-surface': x('text') } },
       'x-surface': x('fieldset', { after: 'capacity' }),
     };
     const badges: Schema = {
@@ -462,7 +462,7 @@ describe('fieldset, slot and list', () => {
           pricing: { title: 'Pricing', type: 'string', 'x-surface': x('text') },
           third_party_settings: { type: 'object', properties: { compliance, badges }, 'x-surface': x('fieldset', { group: true }) },
         })}
-        initial={{ title: 'Meetup', capacity: 50, pricing: 'free', third_party_settings: { compliance: { licence: '' }, badges: { badge: 'star' } } }}
+        initial={{ title: 'Meetup', capacity: 50, pricing: 'free', third_party_settings: { compliance: { license: '' }, badges: { badge: 'star' } } }}
         onValues={(values) => seen.push(values)}
       />,
     );
@@ -476,17 +476,17 @@ describe('fieldset, slot and list', () => {
     expect(group).not.toContainElement(placed);
     // Its id is its path's, as everything inside it is.
     expect(placed.id).toBe('dsr-third_party_settings-compliance');
-    await userEvent.type(within(placed).getByLabelText('Event licence'), '2048');
+    await userEvent.type(within(placed).getByLabelText('Event license'), '2048');
     expect(seen[seen.length - 1]).toEqual({
       title: 'Meetup',
       capacity: 50,
       pricing: 'free',
-      third_party_settings: { compliance: { licence: '2048' }, badges: { badge: 'star' } },
+      third_party_settings: { compliance: { license: '2048' }, badges: { badge: 'star' } },
     });
   });
 
   it('renders the variant the deciding key chose, and switches with it', async () => {
-    render(<Form schema={object({ pricing, ticket: ticketSlot }, [], branches)} initial={{ pricing: 'free', ticket: { note: 'Donations welcome' } }} />);
+    render(<Form schema={object({ pricing, ticket: ticketVariants }, [], branches)} initial={{ pricing: 'free', ticket: { note: 'Donations welcome' } }} />);
     expect(screen.getByRole('group', { name: 'Ticket' })).toBeInTheDocument();
     expect(screen.getByLabelText('Note')).toHaveValue('Donations welcome');
     await userEvent.selectOptions(screen.getByLabelText('Pricing'), 'paid');
@@ -515,8 +515,8 @@ describe('fieldset, slot and list', () => {
     expect(screen.queryByRole('group')).not.toBeInTheDocument();
   });
 
-  it('renders nothing for a slot nothing has chosen', () => {
-    render(<Form schema={object({ pricing, ticket: ticketSlot }, [], branches)} initial={{ pricing: null, ticket: null }} />);
+  it('renders nothing for variants nothing has chosen yet', () => {
+    render(<Form schema={object({ pricing, ticket: ticketVariants }, [], branches)} initial={{ pricing: null, ticket: null }} />);
     expect(screen.queryByRole('group', { name: 'Ticket' })).not.toBeInTheDocument();
   });
 
@@ -648,7 +648,7 @@ describe('the contract panel', () => {
   });
 
   it('explains a Regex by its message, and only a Regex without one by its pattern, in code', () => {
-    const message = 'A licence number is four digits, such as 2048.';
+    const message = 'A license number is four digits, such as 2048.';
     render(
       <ContractPanel
         contract={{
@@ -658,16 +658,16 @@ describe('the contract panel', () => {
           stale: [],
           values: {},
           schema: object({
-            licence: { title: 'Event licence', type: 'string', pattern: '^\\d{4}$', 'x-surface': x('text', { patternMessage: message }) },
+            license: { title: 'Event license', type: 'string', pattern: '^\\d{4}$', 'x-surface': x('text', { patternMessage: message }) },
             code: { title: 'Code', type: 'string', pattern: '^[a-z]+$', 'x-surface': x('text') },
           }),
         }}
         values={{}}
       />,
     );
-    const licence = document.querySelector('tr[data-surface-key="licence"]') as HTMLElement;
-    expect(within(licence).getByText(message)).toBeInTheDocument();
-    expect(licence.textContent).not.toContain('\\d{4}');
+    const license = document.querySelector('tr[data-surface-key="license"]') as HTMLElement;
+    expect(within(license).getByText(message)).toBeInTheDocument();
+    expect(license.textContent).not.toContain('\\d{4}');
     const code = document.querySelector('tr[data-surface-key="code"]') as HTMLElement;
     expect(code.textContent).toContain('matches a required format: ^[a-z]+$');
     expect(within(code).getByText('^[a-z]+$').tagName).toBe('CODE');

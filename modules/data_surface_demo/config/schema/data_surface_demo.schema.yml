@@ -24,8 +24,8 @@ block.settings.data_surface_demo:
     presentation:
       type: string
       label: 'Presentation'
-    # The slot: its shape is the chosen presentation's, so the schema
-    # picks the mapping by the sibling's value.
+    # The variants' key: its shape is the chosen presentation's, so the
+    # schema picks the mapping by the sibling's value.
     presentation_settings:
       type: block.settings.data_surface_demo.presentation.[%parent.presentation]
       label: 'Presentation settings'

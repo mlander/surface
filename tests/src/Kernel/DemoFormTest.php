@@ -89,8 +89,8 @@ class DemoFormTest extends DataSurfaceKernelTestBase {
     $this->assertSame('select', $form['surface']['entity_type']['#type']);
     $this->assertSame('number', $form['surface']['limit']['#type']);
     $this->assertSame('select', $form['surface']['presentation']['#type']);
-    // The slot, rendered as the variant the presentation starts on: the
-    // list's own checkbox, inside the slot's details.
+    // The variants, rendered as the one the presentation starts on: the
+    // list's own checkbox, inside the key's details.
     $this->assertSame('details', $form['surface']['presentation_settings']['#type']);
     $this->assertSame('checkbox', $form['surface']['presentation_settings']['show_summary']['#type']);
     $this->assertArrayNotHasKey('columns', $form['surface']['presentation_settings']);

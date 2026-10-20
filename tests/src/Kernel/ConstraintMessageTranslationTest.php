@@ -7,7 +7,7 @@ namespace Drupal\Tests\data_surface\Kernel;
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\ResourceBuild\Shapes;
-use Drupal\data_surface_examples_compliance\Shape\Licence;
+use Drupal\data_surface_examples_compliance\Shape\License;
 use Drupal\Tests\data_surface\Kernel\Fixture\FakeLanguageTranslator;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -67,9 +67,9 @@ class ConstraintMessageTranslationTest extends DataSurfaceKernelTestBase {
     $built = $this->container->get('data_surface.resources')->buildOperation('event.doors', 'configure');
     $this->assertSame(self::MESSAGE, $built->getDefinitions()->get('opens')->getConstraints()['Regex']['message'], 'The message written with t() is its source string.');
 
-    $licence = DefinitionMetadata::shapeDefinition(Shapes::unaltered(Licence::class));
-    $this->assertNotNull($licence);
-    $this->assertSame('A licence number is four digits, such as 2048.', $licence->getConstraints()['Regex']['message'], 'The shape a document writes once carries the source too.');
+    $license = DefinitionMetadata::shapeDefinition(Shapes::unaltered(License::class));
+    $this->assertNotNull($license);
+    $this->assertSame('A license number is four digits, such as 2048.', $license->getConstraints()['Regex']['message'], 'The shape a document writes once carries the source too.');
 
     $values = ['opens' => '25:00'] + $built->getDefaultValues();
     $refused = fn (): array => array_map(

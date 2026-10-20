@@ -14,9 +14,9 @@ export interface FieldProps {
   onChange: (path: string, value: unknown) => void;
   /** Violation messages, by dotted path. */
   errors: Record<string, string[]>;
-  /** The object schema it sits in: where a slot's conditionals are. */
+  /** The object schema it sits in: where the variants' conditionals are. */
   parent?: Schema;
-  /** The values of the object it sits in: where a slot's deciding key is. */
+  /** The values of the object it sits in: where the variants' deciding key is. */
   parentValues?: Values;
   /** Set when an enclosing fieldset is locked. */
   disabled?: boolean;
@@ -83,7 +83,7 @@ export function describedBy(props: FieldProps, id: string): string | undefined {
 }
 
 /**
- * A labelled form item: label, the control, description, violations.
+ * A labeled form item: label, the control, description, violations.
  *
  * `marker` is whether the label carries the required marker, which is not
  * always the same as the control being required: a stale required select

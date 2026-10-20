@@ -14,7 +14,7 @@ use Drupal\data_surface_resource_test\Resource\Gallery\GalleryResource;
  * The finish of a print: a variant nothing answers for.
  */
 #[Structure('resource_test.gallery.finish.print')]
-#[Variant(of: GalleryResource::class, key: 'finish', value: 'print')]
+#[Variant(of: GalleryResource::class, at: 'finish', for: 'print')]
 final class PrintFinishStructure implements StructureInterface {
 
   /**

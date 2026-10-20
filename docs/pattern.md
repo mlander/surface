@@ -18,7 +18,8 @@ the content entity. Nothing in a resource's class says which of these
 it is; its storage class does.
 
 A structure is the other kind: a group of keys with no identity or
-storage of its own, held by a parent, a slot or a plugin's host.
+storage of its own, held by a parent (attached or as a variant) or a
+plugin's host.
 
 This page is the pattern: what an author writes, where it goes, and why
 it is shaped that way. [Resources and structures as
@@ -73,13 +74,13 @@ modules/data_surface_tool/src/
 modules/data_surface_demo/src/
   Plugin/Block/DataSurfaceDemoBlock.php    a plugin: #[UsesStructure], and build()
   Structure/DemoBlockStructure.php         its configuration, as a structure
-  Structure/ListPresentationStructure.php  fill the block's presentation slot
+  Structure/ListPresentationStructure.php  the block's presentation variants
   Structure/GridPresentationStructure.php
   Plugin/Field/FieldFormatter/DataSurfaceDemoFormatter.php
                                            a plugin that is its own structure
 
 modules/data_surface_address/src/
-  Resource/AddressFieldSettingsResource.php  fills the field's settings slot
+  Resource/AddressFieldSettingsResource.php  a variant at the field's settings
   Storage/AddressFieldSettingsStorage.php    and stores them itself
 
 modules/data_surface_demo_node_type/src/
@@ -109,7 +110,7 @@ method.
   static, so the language holds them to that: the build step calls them
   on the class and never makes an instance. The owner gets
   `BlueprintInterface`; an alter gets `BlueprintAdditionsInterface`, which is
-  the same minus `attachBy()` and `reads()`, and whose `attach()` places a
+  the same minus `attachVariants()` and `reads()`, and whose `attach()` places a
   structure at the alter's own mount and nowhere else, while
   `attachList()` refuses by name for now: an alter's keys are mounted
   under its module, and a collection inside a mount is not built
@@ -165,7 +166,7 @@ final class FieldInstanceResource implements ResourceInterface {
     // Its parts.
     $inputs->attach('storage', FieldStorageResource::class)
       ->setLabel(t('Field storage'));
-    $inputs->attachBy('settings', by: 'field_type')
+    $inputs->attachVariants('settings', by: 'field_type')
       ->setLabel(t('Field settings'));
   }
 
@@ -210,7 +211,7 @@ below.)
 - **A refiner trusts what it is handed.** A sibling value its own key
   refuses is never passed in: the engine treats it as unanswered
   ([decision](decisions.md#a-refiner-never-sees-an-invalid-sibling)).
-  So a refiner asks whether a licence is there, not whether it is well
+  So a refiner asks whether a license is there, not whether it is well
   formed.
 - **A Regex carries a message.** The pattern cannot be read by the
   person it refuses, so its `message` is what they are told, in the
@@ -229,9 +230,9 @@ A child is usually a structure; it may be a resource with storage of its
 own, as the field's storage is.
 
 - `attach()` is a fixed child. The field attaches its storage.
-- `attachBy()` is a slot: a child that a sibling key chooses. The
-  field's `settings` are chosen by `field_type`, and so are the
-  storage's own `settings`.
+- `attachVariants()` attaches variants: children a sibling key chooses
+  between. The field's `settings` are chosen by `field_type`, and so are
+  the storage's own `settings`.
 - `attachList()` is a collection: a list whose every item is the
   child, its Count the parent's
   ([Resources and structures](resources.md#collections)).
@@ -250,33 +251,33 @@ and the child's access class then decide whether the child is open,
 locked or left out for the account
 ([Resources and structures](resources.md#child-operations)).
 
-A slot is always **open**. The parent never names its children. Each
-child marks itself with `#[Variant]`, naming the parent, the slot and
-the value it is for, so a new field type brings its settings with it
+Variants are always **open**. The parent never names its children.
+Each child marks itself with `#[Variant]`, naming the parent, the key
+and the value it is for, so a new field type brings its settings with it
 and the field resource never changes:
 
 ```php
 #[Resource('field.settings.address', storage: AddressFieldSettingsStorage::class)]
-#[Variant(of: FieldInstanceResource::class, key: 'settings', value: 'address')]
+#[Variant(of: FieldInstanceResource::class, at: 'settings', for: 'address')]
 final class AddressFieldSettingsResource implements ResourceInterface {
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 The deciding key's allowed values become exactly the values the
-variants fill. A slot's values may also come from a description that
-already exists: a service implementing `DerivedVariantsInterface` fills
-a slot for the values no variant class fills.
+variants are for. Variants may also come from a description that
+already exists: a service implementing `DerivedVariantsInterface` adds
+variants for the values no variant class declares.
 `FieldSettingsSchemaVariants` derives a plain `string` or `integer`
 field's settings from `field.field_settings.<field type>`, and
 `FieldStorageSettingsSchemaVariants` its storage settings from
 `field.storage_settings.<field type>`, so a string's `max_length` can be
 set when the field is added. A declared variant always wins.
 
-Underneath, a slot is an `any` placeholder that the framework narrows to
-the chosen child's map once the deciding key has a value: an ordinary
-refinement under the rule that `any` may become anything narrower, not
-a new mechanism.
+Underneath, the key is an `any` placeholder that the framework narrows
+to the chosen variant's map once the deciding key has a value: an
+ordinary refinement under the rule that `any` may become anything
+narrower, not a new mechanism.
 
 **The escape hatch.** A child whose keys cannot be listed at all is
 the one case for a `#[RefinesInput]` method on an `any` key returning
@@ -298,7 +299,7 @@ not which keys there are. It is how much is already known.
   keys that say which thing this is. An identity key is settable until
   the context knows it, and locked from then on. It is on the attribute
   rather than in `defineInputs()` because identity is the address: what
-  a catalogue lists, what a tool or route must supply. A resource with
+  a catalog lists, what a tool or route must supply. A resource with
   no identity keys is a singleton.
 - The ways a resource is asked for are **static methods on the
   class**: `FieldInstanceResource::add()`, `::reuse()`, `::edit()`.
@@ -310,9 +311,9 @@ not which keys there are. It is how much is already known.
   FieldInstanceResource::class)]` on a static method of any class in its
   `src/Alter/` is found the way a hook method is, no interface
   needed, typically building on one of the owner's operations and
-  giving the context starting values with `withStarting()`.
+  giving the context starting values with `withDefaults()`.
 
-That makes operations listable ([the catalogue](catalogue.md)),
+That makes operations listable ([the catalog](catalog.md)),
 addressable (`field.instance:edit`), and generatable: one route or one
 tool per operation, its inputs being the parameters plus the resource's
 open keys.
@@ -369,7 +370,7 @@ is deferred with options sources. Removing is deliberately absent.
 
 An alter says which resource or structure it applies to with
 `#[Alters]` on its class, optionally naming the operations it applies
-in. Static, like the variant and operation attributes, so a catalogue
+in. Static, like the variant and operation attributes, so a catalog
 can say who alters a class without running anything.
 
 ```php
@@ -455,14 +456,14 @@ the answer is about the child's keys: changeable, shown and fixed, or
 not there at all, the way field access treats a field. Its access class
 always answers; the permission of its operation is asked only where the
 build resolved one, since a parent that hands a context whole took
-responsibility for entering it. A slot's variant chosen by a locked
+responsibility for entering it. A variant chosen by a locked
 deciding key may refuse the whole resource through its access class,
 never allow.
 
 ## Outputs
 
 A resource or structure that answers with something implements
-`HasOutputsInterface`: `defineOutputs()` takes the same blueprint as inputs,
+`DefinesOutputsInterface`: `defineOutputs()` takes the same blueprint as inputs,
 so `defineInputs()` reads as "what this asks for" and most classes never
 mention outputs. Outputs are never refined: a refinement narrows what
 may be sent, and nobody sends an output. A resource's output values are
@@ -499,7 +500,7 @@ it.
 ```php
 #[FieldFormatter(id: 'data_surface_demo_string', label: new TranslatableMarkup('Data surface demo formatter'), field_types: ['string'])]
 #[UsesStructure]
-final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements StructureInterface, HasOutputsInterface {
+final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements StructureInterface, DefinesOutputsInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void { /* prefix, casing, variant */ }
 
@@ -516,7 +517,7 @@ final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements
 Such a structure is found through the plugin definitions, not a
 directory. Its id is `<host type>:<plugin id>`
 (`field_formatter:data_surface_demo_string`) unless the class also
-carries `#[Structure]`; the catalogue lists it as used by that same
+carries `#[Structure]`; the catalog lists it as used by that same
 plugin; an alter names it by the plugin class,
 `#[Alters(DataSurfaceDemoFormatter::class)]`. The separate class
 reads better when the structure is large, has children or operations,
@@ -526,7 +527,7 @@ and its settings are only ever its own.
 Either way: no `blockForm()`, `blockValidate()` or `blockSubmit()`. The
 host supplies the context and the storage, since only it holds the
 instance. The attribute is copied into the plugin definition, so tools
-and the catalogue can list such plugins without instantiating any.
+and the catalog can list such plugins without instantiating any.
 Block, formatter, condition, action and field type hosts all read it,
 and `DataSurfacePluginForm` serves any other configurable plugin.
 
@@ -543,7 +544,7 @@ rest of this section is the position it was built to, and what is still
 open. `attachListBy($key, by: 'plugin')` would be a list whose every
 item chooses its own child, the deciding key being *inside* each item
 (visibility conditions, each naming its plugin), children marking
-themselves with `#[Variant]` as for a slot.
+themselves with `#[Variant]` as for `attachVariants()`.
 
 The contract is an ordered list, as typed data lists and field items
 already are: delta is position, reordering is sending the items in
@@ -589,7 +590,7 @@ concept. The naming of sources and resolvers is undecided.
    `FieldInstanceResource::class`, so the address module references the
    field resource's module. That direction is right: it is the
    dependency the address module already has on fields, and a class
-   name is what makes the slot one click away.
+   name is what makes the parent's key one click away.
 3. **Create-only keys that are not identity.** No new verb.
    `withConstraint()` with a one-value `Choice` is a lock in every way
    that matters: the form renders it fixed, the pipeline refuses
@@ -607,7 +608,7 @@ concept. The naming of sources and resolvers is undecided.
 | --- | --- |
 | A class in `src/Resource/` or `src/Structure/` | a static `declareDataSurface()` on the host, or a provider service |
 | `#[RefinesInput('key')]` methods, dependencies in the signature | `refineDataDefinition($name, $definition, $values)` with a `match`, dependencies declared separately |
-| `attach()`, `attachBy()` | `mount()`, `mountVariants()` |
+| `attach()`, `attachVariants()` | `mount()`, `mountVariants()` |
 | `#[Variant]` on the child | a resolver service, or a table the parent holds |
 | `#[Resource(identity:)]` and `#[Operation]` methods | the builder's `lock()`, called by each provider per operation |
 | A class in `src/Alter/` with `#[Alters]` | a build event subscriber holding the full builder |

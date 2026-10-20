@@ -14,7 +14,7 @@ namespace Drupal\data_surface_examples;
  * they answer, and the example 5 page and the README show them as Drush
  * commands. Every call says where the event is, so none depends on what
  * an earlier one wrote, and every capacity is fifty or fewer, which needs
- * no event licence and one steward, the default, so the compliance
+ * no event license and one steward, the default, so the compliance
  * module of example 4 does not change the answers.
  */
 final class ExampleCalls {

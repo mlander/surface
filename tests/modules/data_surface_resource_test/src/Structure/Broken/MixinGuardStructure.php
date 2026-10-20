@@ -22,7 +22,7 @@ final class MixinGuardStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('visibility', 'string', 'Visibility');
-    $inputs->with(OwnershipStructure::class, reads: ['audience' => 'visibility']);
+    $inputs->mixIn(OwnershipStructure::class, reads: ['audience' => 'visibility']);
     $inputs->add('note', 'string', 'Note');
   }
 

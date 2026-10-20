@@ -159,7 +159,7 @@ final class ExamplesController extends ControllerBase {
     $enabled = $this->moduleHandler()->moduleExists(self::COMPLIANCE);
     return [
       'what' => [
-        '#markup' => '<p>' . $this->t('Example 4 has no form of its own. Enable @module and reload example 3: the form gains an event licence and a stewards count, and the title is relabelled. Without a licence the capacity stops at 100; type EV-2048 and it goes back to what the room seats. Change the capacity and the stewards it needs change under their field. Example 3 is not changed.', ['@module' => self::COMPLIANCE]) . '</p>',
+        '#markup' => '<p>' . $this->t('Example 4 has no form of its own. Enable @module and reload example 3: the form gains an event license and a stewards count, and the title is relabelled. Without a license the capacity stops at 100; type EV-2048 and it goes back to what the room seats. Change the capacity and the stewards it needs change under their field. Example 3 is not changed.', ['@module' => self::COMPLIANCE]) . '</p>',
       ],
       'how' => [
         '#theme' => 'item_list',
@@ -239,7 +239,7 @@ final class ExamplesController extends ControllerBase {
       ],
       3 => [
         'title' => $this->t('made of parts'),
-        'sentence' => $this->t('The pricing chooses which ticket structure fills a slot, and a contact structure is always attached; each part is a class of its own.'),
+        'sentence' => $this->t('The pricing chooses between two ticket structures, the variants at one key, and a contact structure is always attached; each part is a class of its own.'),
         'items' => [
           $this->route('data_surface_examples.step3'),
           $this->react('registration.step3'),
@@ -248,7 +248,7 @@ final class ExamplesController extends ControllerBase {
       ],
       4 => [
         'title' => $this->t('others get a say'),
-        'sentence' => $this->t('Another module adds two keys to example 3, rewords a label, caps the capacity at a hundred until an event licence is given, and asks for stewards as the capacity grows, without touching example 3.'),
+        'sentence' => $this->t('Another module adds two keys to example 3, rewords a label, caps the capacity at a hundred until an event license is given, and asks for stewards as the capacity grows, without touching example 3.'),
         'items' => [
           $this->route('data_surface_examples.step4'),
           $this->t('The structure and the alter: @lines lines of code.', ['@lines' => $this->complianceLines()]),

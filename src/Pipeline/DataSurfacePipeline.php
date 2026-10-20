@@ -144,9 +144,9 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *
    * A child's value is accepted by the built child describing it,
    * through this same method, so its locked keys, secrets and defaults
-   * answer for themselves exactly as they would on their own. Slots are
-   * accepted after everything else, because the variant is read from the
-   * accepted value of the deciding key, and so is a child that reads
+   * answer for themselves exactly as they would on their own. Variants
+   * are accepted after everything else, because the variant is read from
+   * the accepted value of the deciding key, and so is a child that reads
    * ports, which read the accepted values of the keys they are wired to;
    * the result keeps declaration order.
    *
@@ -167,7 +167,8 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * @throws \Drupal\data_surface\Pipeline\TypeMismatchException
    *   When the input cannot be held by the definition at all.
    * @throws \Drupal\data_surface\Pipeline\VariantMismatchException
-   *   When a slot's value is shaped for a variant other than the chosen.
+   *   When the value at a key with variants is shaped for a variant
+   *   other than the chosen.
    */
   protected function acceptLevel(DataSurfaceInterface $surface, array $input, array $current, string $prefix): array {
     $definitions = $surface->getDefinitions();
@@ -176,15 +177,15 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       throw new UnknownKeysException(array_map('strval', $unknown), $prefix);
     }
     $values = array_fill_keys($definitions->names(), NULL);
-    $slots = [];
+    $deferred = [];
     foreach ($definitions->entries() as $name => $entry) {
-      if ($entry->slot !== NULL || ($entry->attachment !== NULL && $entry->attachment->reads !== [])) {
-        $slots[] = $entry;
+      if ($entry->variants !== NULL || ($entry->attachment !== NULL && $entry->attachment->reads !== [])) {
+        $deferred[] = $entry;
         continue;
       }
       $values[$name] = $this->acceptKey($surface, $entry, $input, $current, $prefix, $values);
     }
-    foreach ($slots as $entry) {
+    foreach ($deferred as $entry) {
       $values[$entry->name] = $this->acceptKey($surface, $entry, $input, $current, $prefix, $values);
     }
     return $this->withoutWhatDoesNotApply($surface, $values, $input, $current);
@@ -333,8 +334,8 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         continue;
       }
       $below = $input === NULL ? NULL : (is_array($input[$name] ?? NULL) ? $input[$name] : []);
-      $chosen = $entry->slot?->chosen($values[$entry->slot->by] ?? NULL);
-      if ($chosen !== NULL && !$entry->slot->fits($chosen, $current[$name])) {
+      $chosen = $entry->variants?->chosen($values[$entry->variants->by] ?? NULL);
+      if ($chosen !== NULL && !$entry->variants->fits($chosen, $current[$name])) {
         // What it held was another variant's: the chosen one starts here,
         // and is written whole, its defaults included.
         $below = NULL;
@@ -502,8 +503,8 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * @param string $prefix
    *   The dotted path of the key's level.
    * @param array $values
-   *   The values accepted at this level so far, which is where a slot
-   *   reads its deciding key.
+   *   The values accepted at this level so far, which is where a key's
+   *   variants read their deciding key.
    * @param bool $open
    *   TRUE to read the input as though the key were not locked: what a
    *   value sent for a locked key would have been, to tell whether it
@@ -545,13 +546,13 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       // Decision: see docs/decisions.md#a-key-that-does-not-apply.
       $fallback = [];
     }
-    $chosen = $entry->slot?->chosen($values[$entry->slot->by] ?? NULL);
-    if ($chosen !== NULL && !$entry->slot->fits($chosen, $fallback)) {
-      // What the slot held was written for another variant, and the
+    $chosen = $entry->variants?->chosen($values[$entry->variants->by] ?? NULL);
+    if ($chosen !== NULL && !$entry->variants->fits($chosen, $fallback)) {
+      // What the key held was written for another variant, and the
       // deciding key has moved on: it starts again from the chosen
       // variant's defaults rather than carrying keys that mean nothing
       // here.
-      $fallback = $entry->slot->defaultsOf($chosen);
+      $fallback = $entry->variants->defaultsOf($chosen);
     }
     if ($entry->list !== NULL) {
       return $this->acceptCollection($entry, $entry->list, $input, $fallback, $path);
@@ -800,7 +801,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * Accepts a child's value through the built child describing it.
    *
    * @param \Drupal\data_surface\Entry $entry
-   *   The attached or slot key.
+   *   The attached key or key with variants.
    * @param \Drupal\data_surface\DataSurfaceInterface $child
    *   The child answering for it: the attached one, or the chosen
    *   variant.
@@ -811,7 +812,8 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * @param string $path
    *   The dotted path of the key.
    * @param string|null $chosen
-   *   The chosen variant of a slot; NULL for an attached child.
+   *   The chosen variant of the key's variants; NULL for an attached
+   *   child.
    *
    * @return array
    *   The accepted map.
@@ -833,10 +835,10 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     if (!is_array($input)) {
       throw new TypeMismatchException($path, 'map', get_debug_type($input));
     }
-    if ($entry->slot !== NULL && $chosen !== NULL) {
-      $owners = $entry->slot->owners($entry->slot->strangers($chosen, $input), $chosen);
+    if ($entry->variants !== NULL && $chosen !== NULL) {
+      $owners = $entry->variants->owners($entry->variants->strangers($chosen, $input), $chosen);
       if ($owners !== []) {
-        throw new VariantMismatchException($path, $entry->slot->by, $chosen, $owners);
+        throw new VariantMismatchException($path, $entry->variants->by, $chosen, $owners);
       }
     }
     return $this->acceptLevel($child, $input, is_array($fallback) ? $fallback : [], $path);
@@ -940,7 +942,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         $value = is_array($value) ? static::valueWithout($value, $ruled_out) : $value;
       }
       // Decision: see docs/decisions.md#required-inside-a-plain-map.
-      $missing = $entry->attachment === NULL && $entry->slot === NULL
+      $missing = $entry->attachment === NULL && $entry->variants === NULL
         ? $this->missingInMap($definition, is_array($value) ? $value : [])
         : [];
       if (!ValueState::isConfigured($value)) {
@@ -972,14 +974,15 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         $errors = array_merge($errors, $this->validateChild($entry, $child, $value, $current[$name] ?? [], $values));
         continue;
       }
-      if ($entry->slot !== NULL) {
-        // A slot holding a value with no variant to read it by. When the
+      if ($entry->variants !== NULL) {
+        // A key with variants holding a value with no variant to read it
+        // by. When the
         // deciding key holds a value that names none, that key's own
         // Choice says so; when it holds nothing, this does.
-        if (!ValueState::isConfigured($values[$entry->slot->by] ?? NULL)) {
+        if (!ValueState::isConfigured($values[$entry->variants->by] ?? NULL)) {
           $errors[] = new Violation($name, '', $this->t('@label depends on @by, which holds no value.', [
             '@label' => $definition->getLabel() ?? $name,
-            '@by' => $refined->getDefinition($entry->slot->by)?->getLabel() ?? $entry->slot->by,
+            '@by' => $refined->getDefinition($entry->variants->by)?->getLabel() ?? $entry->variants->by,
           ]));
         }
         continue;
@@ -1151,7 +1154,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup[]
    *   "Venue is Riverside Hall", one per watched key, an option by its
    *   label; "Email is set" for a key read for presence alone; "Event
-   *   licence is empty (EV-2048 was refused)" for a refused one.
+   *   license is empty (EV-2048 was refused)" for a refused one.
    */
   protected function conditions(DataSurfaceInterface $refined, array $dependencies, array $values, ?Entry $entry = NULL): array {
     $conditions = [];
@@ -1203,7 +1206,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *   The conditions, at least one.
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup
-   *   "This applies when Room is Main hall and Event licence is empty."
+   *   "This applies when Room is Main hall and Event license is empty."
    */
   protected function appliesWhen(array $conditions): TranslatableMarkup {
     $context = ['context' => self::REFUSAL_CONTEXT];
@@ -1350,8 +1353,8 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     $declared = static::definitionAt($surface, $parents);
     $entry = $refined->getDefinitions()->entry($name);
     $dependencies = $path === '' ? ($entry->dependencies ?? []) : ($entry->paths[$path] ?? $entry->dependencies ?? []);
-    if ($entry?->slot !== NULL) {
-      $dependencies = array_values(array_diff($dependencies, [$entry->slot->by]));
+    if ($entry?->variants !== NULL) {
+      $dependencies = array_values(array_diff($dependencies, [$entry->variants->by]));
     }
     $conditions = $declared === NULL || $declared->isRequired() ? [] : $this->conditions($refined, $dependencies, $values, $entry);
     return $this->requiredWhen($label, $conditions);
@@ -1404,9 +1407,9 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     $parents = $path === '' ? [$name] : [$name, ...explode('.', $path)];
     $entry = $refined->getDefinitions()->entry($name);
     $dependencies = $path === '' ? ($entry->dependencies ?? []) : ($entry->paths[$path] ?? $entry->dependencies ?? []);
-    if ($entry?->slot !== NULL) {
-      // What chooses a slot's variant is not what rules the slot out.
-      $dependencies = array_values(array_diff($dependencies, [$entry->slot->by]));
+    if ($entry?->variants !== NULL) {
+      // What chooses a variant is not what rules the key out.
+      $dependencies = array_values(array_diff($dependencies, [$entry->variants->by]));
     }
     $label = static::definitionAt($surface, $parents)?->getLabel() ?? end($parents);
     $conditions = $this->conditions($refined, $dependencies, $values, $entry);
@@ -1536,7 +1539,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * emitted schemas, and nowhere a refiner could name them.
    *
    * @param \Drupal\data_surface\Entry $entry
-   *   The attached or slot key.
+   *   The attached key or key with variants.
    * @param \Drupal\data_surface\DataSurfaceInterface $child
    *   The child answering for it, as advertised.
    * @param mixed $value
@@ -1544,7 +1547,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * @param mixed $current
    *   What storage holds for the key.
    * @param array $values
-   *   The values of the key's own level, for a slot's deciding key.
+   *   The values of the key's own level, for the variants' deciding key.
    *
    * @return \Drupal\data_surface\Pipeline\Violation[]
    *   The violations, filed under the key.
@@ -1560,13 +1563,13 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       ];
     }
     $errors = [];
-    if ($entry->slot !== NULL) {
-      $chosen = (string) $entry->slot->chosen($values[$entry->slot->by] ?? NULL);
-      $strangers = $entry->slot->strangers($chosen, $value);
-      $owners = $entry->slot->owners($strangers, $chosen);
+    if ($entry->variants !== NULL) {
+      $chosen = (string) $entry->variants->chosen($values[$entry->variants->by] ?? NULL);
+      $strangers = $entry->variants->strangers($chosen, $value);
+      $owners = $entry->variants->owners($strangers, $chosen);
       foreach ($strangers as $stranger) {
         $errors[] = new Violation($name, $stranger, isset($owners[$stranger])
-          ? $this->variantMismatchMessage($name . '.' . $stranger, $entry->slot->by, $chosen, $owners[$stranger])
+          ? $this->variantMismatchMessage($name . '.' . $stranger, $entry->variants->by, $chosen, $owners[$stranger])
           : $this->t('Unknown key @key.', ['@key' => $name . '.' . $stranger]));
       }
       // Judged as the variant would judge it on its own: the keys it
@@ -1758,10 +1761,10 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    */
   public function conformOutput(DataSurfaceInterface $surface, array $output): ViolationSet {
     $definitions = $surface->getOutputDefinitions();
-    // Omitted is the producer's way of saying "this key is not emitted"
+    // NotEmitted is the producer's way of saying "this key is not emitted"
     // from inside an array literal, so it is resolved into absence
     // before anything else looks at the array.
-    $output = Omitted::strip($output);
+    $output = NotEmitted::strip($output);
     $errors = [];
     foreach (array_keys(array_diff_key($output, $definitions->toArray())) as $unknown) {
       $errors[] = new Violation((string) $unknown, '', $this->t('Unknown output key @key.', [
@@ -2305,11 +2308,11 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   }
 
   /**
-   * Turns a slot value shaped for another variant into violations.
+   * Turns a value shaped for a variant nobody chose into violations.
    *
-   * One per misplaced key, each on its own path inside the slot, filed
-   * under the top level key that carries the slot, so a form flags the
-   * slot and a caller reads exactly which keys to move.
+   * One per misplaced key, each on its own path inside the key with
+   * variants, filed under the top level key that carries them, so a form
+   * flags that key and a caller reads exactly which keys to move.
    *
    * @param \Drupal\data_surface\Pipeline\VariantMismatchException $exception
    *   The refusal from accept().

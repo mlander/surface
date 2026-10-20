@@ -14,7 +14,7 @@ use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
-use Drupal\data_surface\Storage\StateStorage;
+use Drupal\data_surface\Pipeline\Storage\StateStorage;
 use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
@@ -177,7 +177,7 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
   /**
    * The storage the payload path writes through.
    *
-   * @return \Drupal\data_surface\Storage\StateStorage
+   * @return \Drupal\data_surface\Pipeline\Storage\StateStorage
    *   The storage.
    */
   protected function storage(): StateStorage {

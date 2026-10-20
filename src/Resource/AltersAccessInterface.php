@@ -15,7 +15,7 @@ use Drupal\Core\Session\AccountInterface;
  * answers of the resource or structure it names, asked after the owner's
  * own (its operation's permission, then its access class), in the frame
  * where that thing is built, wherever it appears: at the top, as a child,
- * as a slot's variant, mixed in, at every entry of keys from the site.
+ * as a variant, mixed in, at every entry of keys from the site.
  *
  * The answers combine as two answers about the same keys always have:
  * the stricter stands (AccessAnswer::andIf()). So an alter may lock or

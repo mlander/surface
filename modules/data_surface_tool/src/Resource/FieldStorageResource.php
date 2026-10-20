@@ -24,11 +24,11 @@ use Drupal\field\FieldStorageConfigInterface;
  * the field's accepted identity when it is committed. Nothing here
  * depends on anything entered, so there is no #[RefinesInput] method.
  *
- * The settings are a slot chosen by the field type, as the field's own
- * settings are: a field type's module marks a storage settings class
- * #[Variant(of: FieldStorageResource::class, key: 'settings')],
- * and every UI field type without one is filled from its config schema,
- * `field.storage_settings.<field type>`.
+ * The settings are variants the field type chooses between, as the
+ * field's own settings are: a field type's module marks a storage
+ * settings class #[Variant(of: FieldStorageResource::class, at: 'settings')],
+ * and every UI field type without one gets a variant derived from its
+ * config schema, `field.storage_settings.<field type>`.
  *
  * @code
  *                     add       edit
@@ -102,7 +102,7 @@ final class FieldStorageResource implements ResourceInterface {
     $inputs->add('translatable', 'boolean', t('Translatable'), default: TRUE);
 
     // Its part.
-    $inputs->attachBy('settings', by: 'field_type')
+    $inputs->attachVariants('settings', by: 'field_type')
       ->setLabel(t('Storage settings'))
       ->setDescription(t('Settings every bundle using this field shares, described by the field type itself.'));
   }

@@ -9,7 +9,7 @@ use Drupal\data_surface\DataSurfaceInterface;
 /**
  * The subschemas one emission writes under `$defs`, as it writes them.
  *
- * One per child: an attached child or a slot's variant, keyed by the
+ * One per child: an attached child or a variant, keyed by the
  * child's id. The same child reached again, at another key, in
  * another frame, or by the instance pass after the declaration pass, is
  * the same def. Two children claiming one id with different declarations

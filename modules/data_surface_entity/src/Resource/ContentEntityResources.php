@@ -42,7 +42,7 @@ use Drupal\data_surface_entity\Storage\ContentEntityStorage;
  *
  * Decision: see docs/decisions.md#derived-definitions-at-discovery.
  */
-#[DerivesResources('entity.content', overrides: FieldItemStructure::class)]
+#[DerivesResources('entity.content', overriddenBy: FieldItemStructure::class)]
 final class ContentEntityResources implements ResourceDeriverInterface {
 
   use StringTranslationTrait;

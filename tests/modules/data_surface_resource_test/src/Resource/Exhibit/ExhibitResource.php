@@ -60,7 +60,7 @@ final class ExhibitResource implements ResourceInterface {
       ]);
     $inputs->add('room', 'string', t('Room'), default: 'east')
       ->addConstraint('LabeledChoice', ['choices' => self::ROOMS]);
-    $inputs->with(ProvenanceStructure::class);
+    $inputs->mixIn(ProvenanceStructure::class);
     $inputs->attach('loan', LoanStructure::class)
       ->setLabel(t('Loan'));
   }

@@ -9,7 +9,7 @@ use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\StructureInterface;
 
 /**
- * An open slot nothing fills: the deciding key can choose nothing.
+ * Variants nothing declares: the deciding key can choose nothing.
  */
 #[Structure('resource_test.broken.attaching')]
 final class AttachingStructure implements StructureInterface {
@@ -19,7 +19,7 @@ final class AttachingStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('type', 'string', 'Type');
-    $inputs->attachBy('settings', by: 'type');
+    $inputs->attachVariants('settings', by: 'type');
   }
 
 }

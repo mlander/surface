@@ -10,7 +10,7 @@
  * resource, called with valid values, then with a capacity above the
  * room's, then as a dry run. Discovery needs a booted kernel with the
  * examples enabled, and the one supported way to boot one is a kernel
- * test, so — exactly like scripts/generate-catalogue.php — this script
+ * test, so — exactly like scripts/generate-catalog.php — this script
  * asks PHPUnit to run ExamplesToolTest, which makes the three calls and
  * asserts their outcomes, with a file to write what they answered to;
  * then prints that file.

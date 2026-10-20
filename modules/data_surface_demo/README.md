@@ -21,12 +21,12 @@ bundle refines against the entity type and the field against both,
 through two `#[RefinesInput]` methods that point at a list with a
 constraint rather than fetch one: core's `EntityBundleExists` for the
 bundle, and this module's `DataSurfaceDemoBundleField`, with its options
-resolver, for the field. Its presentation settings are a slot: a list
+resolver, for the field. Its presentation settings are variants: a list
 and a grid need different things, so each is a structure of its own,
 `ListPresentationStructure` and `GridPresentationStructure`, each marked
 `#[Variant]` for one value of the `presentation` key, which
-chooses the `presentation_settings` slot the block's structure makes with
-`attachBy()`; the form swaps them over AJAX and
+chooses between the variants the block's structure attaches at
+`presentation_settings` with `attachVariants()`; the form swaps them over AJAX and
 the config schema picks the mapping with `[%parent.presentation]`. See
 [docs/resources.md](../../docs/resources.md).
 
@@ -51,15 +51,15 @@ advertised open whatever variant is chosen.
 ### Which spelling, when
 
 The block keeps its structure in `Structure\DemoBlockStructure` because
-the structure is large: six keys, two refiners and a slot whose two
-children are structures of their own. A separate class reads better
+the structure is large: six keys, two refiners and two variants that
+are structures of their own. A separate class reads better
 there: the plugin stays a page of rendering, and the structure is one
 file to open
 for the whole contract.
 The formatter is small, its settings are only ever its own, and every
 key is read a few lines below in `formatValue()`: one file reads better.
 Both are built the same way, discovered the same way, altered the same
-way, and listed in the catalogue the same way; only where the class is
+way, and listed in the catalog the same way; only where the class is
 differs.
 
 ### The standalone form

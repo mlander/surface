@@ -9,6 +9,7 @@ use Drupal\data_surface\Contract\SchemaResolver;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Refinement\DoesNotApply;
 use Drupal\data_surface\Resource\OperationContext;
+use Drupal\data_surface\ResourceBuild\ShapeBlueprint;
 use Drupal\data_surface_resource_test\Resource\Journal\JournalResource;
 use Drupal\data_surface_resource_test\Resource\Journal\LedgerResource;
 use Drupal\data_surface_resource_test\Structure\Broken\MixesMountingStructure;
@@ -193,7 +194,7 @@ class MixinsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests the members are the owner's keys, where with() stands, stored flat.
+   * Tests the members are the owner's keys, where mixIn() stands, stored flat.
    */
   public function testMembersAreTheOwnersKeys(): void {
     $journal = $this->built(JournalResource::class);
@@ -244,7 +245,7 @@ class MixinsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests each mixin the build cannot honour is refused, naming it.
+   * Tests each mixin the build cannot honor is refused, naming it.
    */
   public function testEachRefusal(): void {
     $refusals = [
@@ -553,6 +554,16 @@ class MixinsTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResult()->getMessage());
     $stored = $this->config('data_surface_resource_test.journal');
     $this->assertSame(['bea', 1700000900], [$stored->get('owner'), $stored->get('changed')]);
+  }
+
+  /**
+   * Tests with(), the earlier name, still mixes in, and says it is deprecated.
+   */
+  public function testWithIsTheDeprecatedNameOfMixIn(): void {
+    $this->expectUserDeprecationMessage('BlueprintAdditionsInterface::with() is deprecated in data_surface:1.0.0 and is removed from data_surface:2.0.0. Use ::mixIn() instead. See https://www.drupal.org/project/data_surface');
+    $this->expectException(\LogicException::class);
+    $this->expectExceptionMessage('calls mixIn(). A shape is one value');
+    (new ShapeBlueprint('resource_test.sku', 'Drupal\some_module\Alter\SkuAlter'))->with(EntryStructure::class);
   }
 
 }

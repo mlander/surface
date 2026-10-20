@@ -15,8 +15,8 @@ use Drupal\data_surface_tool\Resource\FieldInstanceResource;
  * The gated test field type's settings: one note, and a gate.
  *
  * Named by SurfaceGatedItem with #[UsesStructure], so the field type host
- * builds it for Field UI, and the variant that fills the field instance
- * resource's settings slot for the field type, so the derived field tools
+ * builds it for Field UI, and the field instance resource's settings
+ * variant for the field type, so the derived field tools
  * build it as a field's settings. No storage: a variant without one is
  * stored by the field, under its settings.
  *
@@ -30,7 +30,7 @@ use Drupal\data_surface_tool\Resource\FieldInstanceResource;
  * skips the variant, and the field type host still builds this structure.
  */
 #[Structure('field.settings.data_surface_gated', access: GatedFieldSettingsAccess::class)]
-#[Variant(of: FieldInstanceResource::class, key: 'settings', value: 'data_surface_gated')]
+#[Variant(of: FieldInstanceResource::class, at: 'settings', for: 'data_surface_gated')]
 final class GatedFieldSettingsStructure implements StructureInterface {
 
   /**

@@ -12,7 +12,7 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
 use Drupal\data_surface\Resource\Attribute\UsesStructure;
-use Drupal\data_surface\Storage\PluginConfigurationStorage;
+use Drupal\data_surface\Pipeline\Storage\PluginConfigurationStorage;
 
 /**
  * A reusable plugin form generated entirely from the plugin's structure.

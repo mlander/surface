@@ -14,7 +14,7 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Refinement\ChoiceSet;
 use Drupal\data_surface\Refinement\Narrowing;
 use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
-use Drupal\data_surface\Storage\SettingsLayoutInterface;
+use Drupal\data_surface\Storage\StorageLayoutInterface;
 
 /**
  * The mutable stage a data surface passes through before it is sealed.
@@ -56,8 +56,8 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
    *
    * Keyed by target, then dependency, mapped to TRUE when a static
    * refiner watches it and FALSE when only a runtime one does so far.
-   * Only addRefinement() writes it; an edge it never saw, a slot's on
-   * its deciding key or one handed to the constructor, is static.
+   * Only addRefinement() writes it; an edge it never saw, the variants'
+   * on their deciding key or one handed to the constructor, is static.
    *
    * @var array<string, array<string, bool>>
    */
@@ -101,7 +101,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * How each provider's mounted settings are written down, by provider.
    *
-   * @var array<string, \Drupal\data_surface\Storage\SettingsLayoutInterface>
+   * @var array<string, \Drupal\data_surface\Storage\StorageLayoutInterface>
    */
   protected array $thirdPartyLayouts = [];
 
@@ -113,11 +113,11 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   protected array $attachments = [];
 
   /**
-   * Slots, keyed by definition key: the deciding key and the variants.
+   * Variants, keyed by definition key: the deciding key and the variants.
    *
    * @var array<string, array{by: string, variants: array<string, \Drupal\data_surface\Attachment>}>
    */
-  protected array $slots = [];
+  protected array $variants = [];
 
   /**
    * Collections, keyed by definition key: the child every item is.
@@ -296,7 +296,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
     }
     // A collection's refiners are the parent's, bound before its child
     // was asked, and go with the key.
-    unset($this->definitions[$name], $this->attachments[$name], $this->slots[$name], $this->lists[$name], $this->refinements[$name], $this->refiners[$name], $this->declaredBy[$name], $this->watchedBy[$name], $this->contributions[$name], $this->lockReasons[$name]);
+    unset($this->definitions[$name], $this->attachments[$name], $this->variants[$name], $this->lists[$name], $this->refinements[$name], $this->refiners[$name], $this->declaredBy[$name], $this->watchedBy[$name], $this->contributions[$name], $this->lockReasons[$name]);
     $this->locked = array_values(array_diff($this->locked, [$name]));
     return $this;
   }
@@ -344,7 +344,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
    */
   public function withdraw(string $name): static {
     $this->assertMutable();
-    if (isset($this->attachments[$name]) || isset($this->slots[$name]) || isset($this->lists[$name])) {
+    if (isset($this->attachments[$name]) || isset($this->variants[$name]) || isset($this->lists[$name])) {
       throw new \LogicException(sprintf('The "%s" key holds a child: omit() leaves a child out.', $name));
     }
     unset($this->definitions[$name], $this->refinements[$name], $this->refiners[$name], $this->declaredBy[$name], $this->watchedBy[$name], $this->contributions[$name], $this->lockReasons[$name]);
@@ -422,7 +422,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * {@inheritdoc}
    */
-  public function setThirdPartyLayout(string $provider, SettingsLayoutInterface $layout): static {
+  public function setThirdPartyLayout(string $provider, StorageLayoutInterface $layout): static {
     $this->assertMutable();
     $this->thirdPartyLayouts[$provider] = $layout;
     return $this;
@@ -464,22 +464,22 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * {@inheritdoc}
    */
-  public function attachBy(string $key, string $by, array $variants): static {
+  public function attachVariants(string $key, string $by, array $variants): static {
     $this->assertMutable();
     $this->assertNotNested($key);
     if ($by === $key) {
-      throw new \InvalidArgumentException(sprintf('The "%s" slot cannot choose its own variant: the deciding key is a sibling.', $key));
+      throw new \InvalidArgumentException(sprintf('The variants at "%s" cannot choose their own variant: the deciding key is a sibling.', $key));
     }
     $deciding = $this->named($by);
     if ($deciding instanceof ListDataDefinitionInterface || $deciding instanceof ComplexDataDefinitionInterface) {
-      throw new \InvalidArgumentException(sprintf('The "%s" slot is chosen by "%s", which is a %s: a deciding key holds one value.', $key, $by, $deciding->getDataType()));
+      throw new \InvalidArgumentException(sprintf('The variants at "%s" are chosen by "%s", which is a %s: a deciding key holds one value.', $key, $by, $deciding->getDataType()));
     }
     $ids = array_map('strval', array_keys($variants));
     $before = DataSurface::deepClone($deciding);
     $set = ChoiceSet::of($deciding);
     if ($set === NULL) {
-      // The complete set of values the slot can be chosen by is part of
-      // what it advertises, so the deciding key says it in its own
+      // The complete set of values the variants can be chosen by is part
+      // of what the key advertises, so the deciding key says it in its own
       // vocabulary.
       $deciding->addConstraint('Choice', ['choices' => $ids]);
     }
@@ -489,7 +489,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
       $unoffered = array_diff($ids, array_map('strval', $set->values));
       if ($unoffered !== []) {
         throw new \LogicException(sprintf(
-          'The "%s" slot has the %s %s, which "%s" does not allow: a variant its deciding key cannot choose would never be reached.',
+          'The variants at "%s" include the %s %s, which "%s" does not allow: a variant its deciding key cannot choose would never be reached.',
           $key,
           implode(', ', $unoffered),
           count($unoffered) === 1 ? 'variant' : 'variants',
@@ -501,9 +501,9 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
         static fn (mixed $value): bool => in_array((string) $value, $ids, TRUE),
       )))->applyTo($deciding);
     }
-    Narrowing::assertNarrows($by, sprintf('the "%s" slot', $key), $before, $deciding);
+    Narrowing::assertNarrows($by, sprintf('the variants at "%s"', $key), $before, $deciding);
     $this->definitions[$key] = $this->shellFor($key);
-    $this->slots[$key] = ['by' => $by, 'variants' => $variants];
+    $this->variants[$key] = ['by' => $by, 'variants' => $variants];
     $this->refinements[$key] = array_values(array_unique(array_merge($this->refinements[$key] ?? [], [$by])));
     foreach ($variants as $variant) {
       $this->cacheability->addCacheableDependency($variant->child);
@@ -731,17 +731,17 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
     foreach ($this->attachments as $key => $attachment) {
       $definitions[$key] = Attachment::mapOf($this->assertShell((string) $key), $attachment->child);
     }
-    $slots = [];
-    foreach ($this->slots as $key => ['by' => $by, 'variants' => $variants]) {
-      $slot = new Slot($by, $this->assertShell((string) $key), $variants);
-      $slots[$key] = $slot;
-      // A locked deciding key has its one value already, so the slot is
+    $sealed = [];
+    foreach ($this->variants as $key => ['by' => $by, 'variants' => $members]) {
+      $variants = new Variants($by, $this->assertShell((string) $key), $members);
+      $sealed[$key] = $variants;
+      // A locked deciding key has its one value already, so the key is
       // that variant from the start: what the data surface advertises is the
       // shape the caller will actually be held to.
       $chosen = in_array($by, $this->locked, TRUE)
-        ? $slot->chosen(DefinitionMetadata::defaultOf($this->named($by)))
+        ? $variants->chosen(DefinitionMetadata::defaultOf($this->named($by)))
         : NULL;
-      $definitions[$key] = $chosen === NULL ? $slot->placeholder() : $slot->definitionFor($chosen);
+      $definitions[$key] = $chosen === NULL ? $variants->placeholder() : $variants->definitionFor($chosen);
     }
     foreach ($this->lists as $key => $list) {
       $definitions[$key] = Collection::listOf($this->assertListShell((string) $key), $list->item->child);
@@ -755,8 +755,8 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
       ConstraintMessages::sources($definition);
     }
     // Locked whole: every key not fixed already holds what is stored. After
-    // the slots, so a slot is chosen by what its deciding key holds, not
-    // preselected by its default.
+    // the variants, so a variant is chosen by what its deciding key holds,
+    // not preselected by its default.
     $locked = $this->locked;
     $held = $this->held;
     if ($this->lockedWhole !== NULL) {
@@ -784,7 +784,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
         refiners: $this->refiners,
         contributions: $this->contributions,
         attachments: $this->attachments,
-        slots: $slots,
+        variants: $sealed,
         staticRefinements: $this->staticRefinements(),
         lists: $this->lists,
         watchedBy: $this->watchedBy,
@@ -949,7 +949,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * Answers whether a definition is a shell a child has yet to fill.
    *
-   * An empty map, for an attached child or a slot; a list whose item is
+   * An empty map, for an attached child or variants; a list whose item is
    * an empty map, for a collection.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $definition
@@ -973,10 +973,10 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
    *   The definition key.
    *
    * @throws \LogicException
-   *   When the key is already attached, a slot or a collection.
+   *   When the key is already attached, has variants or is a collection.
    */
   protected function assertNotNested(string $key): void {
-    if (isset($this->attachments[$key]) || isset($this->slots[$key]) || isset($this->lists[$key])) {
+    if (isset($this->attachments[$key]) || isset($this->variants[$key]) || isset($this->lists[$key])) {
       throw new \LogicException(sprintf('The "%s" key already holds an attached structure: one key holds one child, one set of variants, or one collection.', $key));
     }
   }
@@ -1027,7 +1027,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   protected static function assertNoDefault(string $name, DataDefinitionInterface $definition): void {
     if (DefinitionMetadata::hasDefaultValue($definition)) {
       throw new \InvalidArgumentException(sprintf(
-        'The "%s" output declares a default value. An output carries none: a default is what a value starts from when nobody sent one, and nobody sends an output. An output that is not always emitted is optional and absent, which is what Omitted spells.',
+        'The "%s" output declares a default value. An output carries none: a default is what a value starts from when nobody sent one, and nobody sends an output. An output that is not always emitted is optional and absent, which is what NotEmitted spells.',
         $name,
       ));
     }
@@ -1154,8 +1154,8 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
    * Gets what one key or dotted path is refined against, for the walk.
    *
    * A mounted key is refined on its own, by its dotted path, so the walk
-   * follows each path's own edges: a capacity watching a licence, and a
-   * stewards count beside that licence watching the capacity, is no
+   * follows each path's own edges: a capacity watching a license, and a
+   * stewards count beside that license watching the capacity, is no
    * cycle. A path also moves with anything refining a key it sits in,
    * and a key with whatever refines a path inside it.
    *

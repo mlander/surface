@@ -243,7 +243,7 @@ final class ConfigSchemaPanel {
   /**
    * Says what the resource states about a key as conditionals on its parent.
    *
-   * A slot's variants, one per value of the key that chooses it, and what
+   * Variants, one per value of the key that chooses between them, and what
    * a refiner answers for each value it could be handed, are written on
    * the parent object as `allOf` of `if`/`then`, not on the key. A variant
    * is named by the value that chooses it, the keys it has once its

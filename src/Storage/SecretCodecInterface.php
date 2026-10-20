@@ -31,7 +31,7 @@ namespace Drupal\data_surface\Storage;
  *   needing the key.
  *
  * @see \Drupal\data_surface\Storage\SodiumSecretCodec
- * @see \Drupal\data_surface\Storage\EncryptedSettingsLayout
+ * @see \Drupal\data_surface\Storage\EncryptedStorageLayout
  * @see docs/storage.md
  */
 interface SecretCodecInterface {

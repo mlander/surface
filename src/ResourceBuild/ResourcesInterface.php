@@ -189,7 +189,7 @@ interface ResourcesInterface {
    * permission to check, so the access class is the whole answer, and
    * one with neither answers neutral.
    *
-   * Then the slot variants its identity chose: a slot's variant whose
+   * Then the variants its identity chose: a variant whose
    * deciding key is locked, and whose class names an access class of its
    * own, is asked in the context it is invoked in, and may refuse, since
    * the parent cannot be written without it. A child never allows on its

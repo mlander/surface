@@ -17,7 +17,7 @@ use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Pipeline\ViolationMessage;
 use Drupal\data_surface\Entry;
-use Drupal\data_surface\Slot;
+use Drupal\data_surface\Variants;
 use Drupal\tool\TypedData\InputDefinition;
 use Drupal\tool\TypedData\InputDefinitionInterface;
 use Drupal\tool\TypedData\ListInputDefinition;
@@ -64,12 +64,13 @@ use Drupal\tool\TypedData\OutputDefinitionInterface;
  * definitions the Tool API declares outputs with; outputsFromSurface()
  * says what that direction loses on top of these two.
  *
- * Children convert by what they are. An attached child, and a slot
+ * Children convert by what they are. An attached child, and variants
  * whose deciding key already chose (or is locked), are a map like any
  * other: a nested map input whose properties are the child's keys. A
  * collection is a list input of those maps, its Count the list's
- * constraint. An unresolved slot is the one shape the Tool API cannot
- * say, and fromSlot() says why and what is emitted instead.
+ * constraint. Variants nothing has chosen yet are the one shape the
+ * Tool API cannot say, and fromVariants() says why and what is emitted
+ * instead.
  *
  * One Tool API gap is worth naming here rather than in a method
  * docblock, because it is why a derived tool declares its outputs as
@@ -183,7 +184,7 @@ final class InputDefinitions {
    * Each key it depends on is named by its path in the values map, the
    * name a caller sends it under; a port is named by the key of its
    * container it reads, at the site; a stored value is never named. What
-   * chooses a slot's variant is said by the slot's own description, and a
+   * chooses a variant is said by the variants' own description, and a
    * key that holds a child names nothing its ports read, which the keys
    * inside it name. Inside a collection's item a key names its siblings
    * by their keys in the item.
@@ -244,13 +245,13 @@ final class InputDefinitions {
       foreach ($entry->mounted as $path => $attachment) {
         $children[] = [$attachment, $at . '.' . $path . '.'];
       }
-      foreach ($entry->slot->variants ?? [] as $variant) {
+      foreach ($entry->variants->variants ?? [] as $variant) {
         $children[] = [$variant, $at . '.'];
       }
       // What chooses a variant, and what a child's ports read, are said
-      // elsewhere: by the slot's own description, and by the keys that
+      // elsewhere: by the variants' own description, and by the keys that
       // read them.
-      $read = array_merge($entry->slot === NULL ? [] : [$entry->slot->by], ...array_map(static fn (array $child): array => array_values($child[0]->reads), $children));
+      $read = array_merge($entry->variants === NULL ? [] : [$entry->variants->by], ...array_map(static fn (array $child): array => array_values($child[0]->reads), $children));
       if ($entry->paths !== []) {
         foreach ($entry->paths as $path => $keys) {
           $found[$at . '.' . $path] = array_map($resolve, $keys);
@@ -383,8 +384,8 @@ final class InputDefinitions {
    *   The input definition.
    */
   protected function fromEntry(Entry $entry): InputDefinitionInterface {
-    if ($entry->slot !== NULL && DefinitionMetadata::slotOf($entry->definition) !== NULL) {
-      return $this->fromSlot($entry->slot, $entry->definition);
+    if ($entry->variants !== NULL && DefinitionMetadata::variantsBy($entry->definition) !== NULL) {
+      return $this->fromVariants($entry->variants, $entry->definition);
     }
     $item = $entry->definition instanceof ListDataDefinitionInterface ? $entry->definition->getItemDefinition() : NULL;
     if ($entry->list !== NULL && $item instanceof ComplexDataDefinitionInterface) {
@@ -408,8 +409,8 @@ final class InputDefinitions {
    * Converts a child at a key, or each item of a collection.
    *
    * A map whose properties are the child's own keys, converted the way
-   * the child's own entries say: a slot inside the child is still a
-   * slot, and a collection still a list.
+   * the child's own entries say: variants inside the child are still
+   * variants, and a collection still a list.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $child
    *   The child.
@@ -426,7 +427,7 @@ final class InputDefinitions {
       foreach ($child->getDefinitions()->entries() as $name => $child_entry) {
         $property = $properties[$name] ?? $child_entry->definition;
         $converted = match (TRUE) {
-          $child_entry->slot !== NULL && isset($properties[$name]) && DefinitionMetadata::slotOf($properties[$name]) !== NULL => $this->fromSlot($child_entry->slot, $properties[$name]),
+          $child_entry->variants !== NULL && isset($properties[$name]) && DefinitionMetadata::variantsBy($properties[$name]) !== NULL => $this->fromVariants($child_entry->variants, $properties[$name]),
           $child_entry->list !== NULL => $this->fromEntry($child_entry->withDefinition($property)),
           default => $this->fromDefinition($property),
         };
@@ -449,9 +450,9 @@ final class InputDefinitions {
   }
 
   /**
-   * Converts a slot whose deciding key has chosen nothing.
+   * Converts variants whose deciding key has chosen nothing.
    *
-   * The widest honest schema, and a known Tool API gap. What a slot is
+   * The widest honest schema, and a known Tool API gap. What variants say
    * — "this map is exactly variant A's when the sibling is a, exactly
    * variant B's when it is b" — is a union keyed by a sibling. JSON
    * Schema can say it, but only on the parent: an `if` naming the
@@ -461,32 +462,32 @@ final class InputDefinitions {
    * one data type, constraints and, for a map, its property definitions;
    * MapInputDefinition has no union, no conditional and no `oneOf`, and
    * its normalizer emits one schema per property with no reference to a
-   * sibling. And `oneOf` on the slot's own schema would not do: the
-   * deciding key is not inside the slot's value, so nothing in that
+   * sibling. And `oneOf` on the key's own schema would not do: the
+   * deciding key is not inside the key's value, so nothing in that
    * value could select a branch.
    *
-   * So the slot is advertised as a map holding every key any variant
+   * So the variants are advertised as a map holding every key any variant
    * declares, in variant order, none of them required and none with a
    * default (both depend on the variant), each annotated with the values
    * of the deciding key it belongs to, and the whole table said in the
-   * slot's own description. Nothing is promised that the pipeline does
+   * variants' own description. Nothing is promised that the pipeline does
    * not keep: it refuses a key from another variant by name, and judges
    * the chosen variant's keys by that variant's own rules. A key two
    * variants share is advertised with the first variant's definition.
    *
-   * @param \Drupal\data_surface\Slot $slot
-   *   The slot's variant table.
+   * @param \Drupal\data_surface\Variants $variants
+   *   The variant table.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $placeholder
-   *   The placeholder the slot advertises.
+   *   The variants' placeholder.
    *
    * @return \Drupal\tool\TypedData\MapInputDefinition
    *   The union map.
    */
-  public function fromSlot(Slot $slot, DataDefinitionInterface $placeholder): MapInputDefinition {
+  public function fromVariants(Variants $variants, DataDefinitionInterface $placeholder): MapInputDefinition {
     $owners = [];
     $first = [];
     $table = [];
-    foreach ($slot->variants as $id => $variant) {
+    foreach ($variants->variants as $id => $variant) {
       $keys = [];
       foreach ($variant->child->getDefinitions() as $name => $definition) {
         $owners[$name][] = (string) $id;
@@ -505,7 +506,7 @@ final class InputDefinitions {
       // flags change, so a shallow clone leaves the variant untouched.
       $union = clone $definition;
       $note = $this->t('Only when @by is @values.', [
-        '@by' => $slot->by,
+        '@by' => $variants->by,
         '@values' => implode(', ', $owners[$name]),
       ]);
       if ($union instanceof DataDefinition) {
@@ -516,7 +517,7 @@ final class InputDefinitions {
       $properties[$name] = $this->fromDefinition($union);
     }
     $note = $this->t('Its keys depend on @by. @table.', [
-      '@by' => $slot->by,
+      '@by' => $variants->by,
       '@table' => $table === [] ? $this->t('No variant fills it') : implode('; ', array_map('strval', $table)),
     ]);
     return new MapInputDefinition(
@@ -548,7 +549,7 @@ final class InputDefinitions {
    * - The presence rule. A data surface says an output is absent when
    *   the producer omitted it; JSON Schema says the same thing with
    *   `required`, which is what `required` converts to, so the
-   *   statement survives, but the Omitted sentinel itself does not
+   *   statement survives, but the NotEmitted sentinel itself does not
    *   travel, because it is a PHP marker and not a value.
    * - Who contributed what. A mounted third-party output arrives as an
    *   ordinary property of the third_party_outputs map.
@@ -696,7 +697,7 @@ final class InputDefinitions {
    * start from. A key storage holds nothing for keeps its declared
    * default. A secret keeps none: its stored value is never read back. A
    * child is walked key by key through the data surface that describes the
-   * stored value (a slot's, the variant its stored deciding key chooses,
+   * stored value (for variants, the variant its stored deciding key chooses,
    * and only when the stored value fits it), so a secret inside a child
    * is kept off the schema too, and the map itself carries no default:
    * fromSurface() says why a map's default would act rather than describe.
@@ -723,9 +724,9 @@ final class InputDefinitions {
         continue;
       }
       $child = $entry->childFor($stored);
-      $chosen = $entry->slot?->chosen($stored[$entry->slot->by] ?? NULL);
+      $chosen = $entry->variants?->chosen($stored[$entry->variants->by] ?? NULL);
       if ($child !== NULL && $property instanceof MapInputDefinition && is_array($stored[$name])
-        && ($chosen === NULL || $entry->slot->fits($chosen, $stored[$name]))) {
+        && ($chosen === NULL || $entry->variants->fits($chosen, $stored[$name]))) {
         $this->withStored($property, $child, $stored[$name]);
       }
     }

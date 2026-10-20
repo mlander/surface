@@ -135,8 +135,8 @@ The module uses these twenty-three words in exactly one sense each.
   Declared as a class carrying `#[Resource(id, identity:, storage:,
   access:)]`. A resource with no identity keys is a singleton.
 - **Structure**: a group of keys with no identity or storage of its
-  own, only ever held by something else: attached to a parent, filling a
-  slot as a variant, or configuring a plugin, whose host supplies the
+  own, only ever held by something else: attached to a parent, one of
+  the variants at a key, or configuring a plugin, whose host supplies the
   operation and the storage. Declared as a class carrying
   `#[Structure(id, access:)]`. The six ways one is made of others are
   side by side in [Which way to compose](docs/resources.md#which-way-to-compose).
@@ -161,8 +161,8 @@ The module uses these twenty-three words in exactly one sense each.
   `BlueprintInterface`; an alter gets the add-only
   `BlueprintAdditionsInterface`. Filled once at build, then sealed.
 - **Layout**: how a storage lays accepted values out where that differs
-  from how they are asked for, a `SettingsLayoutInterface`; an alter
-  hands one for its mount with `HasStorageLayoutInterface::storageLayout()`.
+  from how they are asked for, a `StorageLayoutInterface`; an alter
+  hands one for its mount with `AltersStorageLayoutInterface::storageLayout()`.
 - **Definition**: one core `DataDefinitionInterface` describing a single
   value: its type, label, description, constraints, whether it is
   required, and the interim default and example metadata the module
@@ -242,18 +242,16 @@ The module uses these twenty-three words in exactly one sense each.
   or leaving out and never opening. It never removes a key or a value
   from the declaration, never retypes, and attaches a structure only at
   its own mount.
-- **Slot**: an attached structure a sibling key chooses, declared with
-  `attachBy($key, by: $sibling)`. Always open: the parent names no
-  child, and every class marked `#[Variant]` for it fills it for one
-  value, as do derived variants. Until the sibling has a value it is an
-  `any` placeholder, which refinement narrows to the chosen variant's
-  map. (`attach()` is the fixed kind: one child, always there.)
+- **Variants**: a tagged union whose tag is a sibling key, attached with
+  `attachVariants($key, by: $sibling)`; each variant is a structure for
+  one value of that key, `#[Variant(of:, at:, for:)]`
+  ([Variants](docs/resources.md#variants)).
 - **Collection**: a list of child instances at a key, declared with
   `attachList($key, Child::class, min:, max:)`: the list and its Count
   are the parent's, and each item is the child's, refined and validated
   in its own frame ([Collections](docs/resources.md#collections)).
 - **Mixin**: a structure whose members are merged into the owner's own
-  keys, `$inputs->with(Structure::class, reads: [...])`: stored flat,
+  keys, `$inputs->mixIn(Structure::class, reads: [...])`: stored flat,
   refined in the owner's frame, and emitted as `allOf` of its def and the
   owner's properties. Nest for a thing of its own, mix in for shared
   members that are part of this thing ([Mixins](docs/resources.md#mixins)).
@@ -367,11 +365,11 @@ nothing on it is needed to build.
 | Page | What it covers |
 | --- | --- |
 | [Declaring a resource or structure](docs/declaring-a-resource.md) | The class, adopting it on a plugin, defaults, locking, secrets, required. |
-| [Resources and structures](docs/resources.md) | Which way to compose, operations, alters, attached structures and variants, ports, mixins, collections, keys from the site, access, storage, tools, the catalogue. |
+| [Resources and structures](docs/resources.md) | Which way to compose, operations, alters, attached structures and variants, ports, mixins, collections, keys from the site, access, storage, tools, the catalog. |
 | [Refinement](docs/refinement.md) | An alter offering values and a refiner narrowing them, a rule declared as data, a key that does not apply, the narrowing table, cacheability, a worked example, and what it does not reach yet. |
 | [Options and resolvers](docs/options.md) | `LabeledChoice`, the resolver plugin type, the stock resolvers. |
 | [Storage](docs/storage.md) | What storage is, prepare and commit, the seven engine storage classes (a simple config object first), config schema, settings layouts, secrets, the serialization rule. |
-| [Outputs](docs/outputs.md) | Declaring what a host emits, the Omitted sentinel, conformance, its two consumers, an alter's outputs. |
+| [Outputs](docs/outputs.md) | Declaring what a host emits, the NotEmitted sentinel, conformance, its two consumers, an alter's outputs. |
 | [Widgets](docs/widgets.md) | The widget plugin type, and writing one. |
 | [Generated forms](docs/forms.md) | Host families, the merge rule, AJAX, extraction, stale values, the operation form with its panel and cosmetic seam. |
 | [Content entities](docs/entities.md) | A content entity's create and update form as a derived resource, one structure per field, field access as each child's access. |
@@ -395,7 +393,7 @@ nothing on it is needed to build.
 | [The pattern](docs/pattern.md) | What an author writes, where it goes, and why it is shaped that way. |
 | [How it fits](docs/how-it-fits.md) | One build followed from the caller to a sealed data surface. |
 | [Decisions](docs/decisions.md) | The points the pattern left open, and how the module settled them. |
-| [Catalogue](docs/catalogue.md) | Every resource and structure the modules here declare, generated from the static layer. |
+| [Catalog](docs/catalog.md) | Every resource and structure the modules here declare, generated from the static layer. |
 | [Evolving a resource](docs/evolution.md) | Which changes are compatible, the version, stored-value migrations as designed, and the contract diff that holds a module to its baselines. |
 | [Installation](docs/installation.md) | Install, integrations, submodules. |
 
@@ -414,7 +412,7 @@ nothing on it is needed to build.
 | Page | What it covers |
 | --- | --- |
 | [Core gaps](docs/core-gaps.md) | The core proposal: what core lacks, bottom-up in the order it could be added, each step with its issue and what it gives alone. |
-| [Adoption catalogue](docs/adoption.md) | Where core can adopt this, group by group. |
+| [Adoption catalog](docs/adoption.md) | Where core can adopt this, group by group. |
 
 `data_surface.api.php` documents resource and structure classes,
 alters and the two plugin types for the API reference.

@@ -11,10 +11,10 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Resource\Attribute\Alters;
-use Drupal\data_surface\Resource\HasStorageLayoutInterface;
+use Drupal\data_surface\Resource\AltersStorageLayoutInterface;
 use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
 use Drupal\data_surface\Resource\AltersInputsInterface;
-use Drupal\data_surface\Storage\SettingsLayoutInterface;
+use Drupal\data_surface\Storage\StorageLayoutInterface;
 use Drupal\data_surface_demo_extras\NodeTypeReviewSettings;
 use Drupal\data_surface_demo_extras\Plugin\DataSurfaceWidget\CommaSeparatedListWidget;
 use Drupal\data_surface_demo_extras\ReviewDeadlineLayout;
@@ -62,7 +62,7 @@ use Drupal\data_surface_demo_node_type\Resource\NodeTypeResource;
  * @see \Drupal\data_surface_demo_extras\Hook\NodeTypeFormHooks
  */
 #[Alters(NodeTypeResource::class)]
-final class NodeTypeAlter implements AltersInputsInterface, HasStorageLayoutInterface {
+final class NodeTypeAlter implements AltersInputsInterface, AltersStorageLayoutInterface {
 
   use StringTranslationTrait;
 
@@ -121,7 +121,7 @@ final class NodeTypeAlter implements AltersInputsInterface, HasStorageLayoutInte
    * The deadline is stored as seconds, and read back in the largest
    * fixed unit that divides them.
    */
-  public function storageLayout(): SettingsLayoutInterface {
+  public function storageLayout(): StorageLayoutInterface {
     return new ReviewDeadlineLayout();
   }
 

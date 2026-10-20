@@ -15,7 +15,7 @@ use Drupal\data_surface_tool_test\Resource\CabinetResource;
  * A code lock's settings: offered locked unless the account sets codes.
  */
 #[Structure('tool_test.cabinet.code_lock', access: CodeLockAccess::class)]
-#[Variant(of: CabinetResource::class, key: 'lock_settings', value: 'code')]
+#[Variant(of: CabinetResource::class, at: 'lock_settings', for: 'code')]
 final class CodeLockStructure implements StructureInterface {
 
   /**

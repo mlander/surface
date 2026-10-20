@@ -315,8 +315,8 @@ trait DataSurfaceHostTrait {
       // second case the elements have to be the ones the submitted
       // answers ask for: a select offering the stored venue's rooms
       // refuses the new venue's room as a choice it was never offered,
-      // before the data surface is ever asked, and a slot rendered as the
-      // stored variant has no element for the chosen variant's keys to
+      // before the data surface is ever asked, and variants rendered as the
+      // stored variant have no element for the chosen variant's keys to
       // arrive in.
       // Nothing is discarded: the person pressed the button, so every
       // value was said on purpose and is judged rather than dropped.
@@ -353,7 +353,7 @@ trait DataSurfaceHostTrait {
       return array_replace($stored, $input);
     }
     $builder = $this->surfaceFormBuilder();
-    // A key, or a dotted path to one inside an attached child or a slot:
+    // A key, or a dotted path to one inside an attached child or a variant:
     // the child's own refiners orphan the child's own keys.
     $discarded = $builder->discardedRefinementInput($surface, $stored, $input);
     if ($discarded !== []) {
@@ -515,7 +515,7 @@ trait DataSurfaceHostTrait {
    *
    * A refinement trigger is one of the data surface's own elements, and
    * it says how far below the container it sits: one level for a key of
-   * the data surface, two for a key of an attached child or a slot
+   * the data surface, two for a key of an attached child or a
    * variant, which is wired as a dependency of the child's own refiners.
    * Its absolute #parents less that path is the container, wherever the
    * host nested it. A trigger that says nothing is read as a key of the

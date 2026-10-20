@@ -15,7 +15,7 @@ use Drupal\data_surface\Resource\StructureInterface;
 /**
  * A child whose shape cannot be enumerated statically: the escape hatch.
  *
- * No slot and no verb: `detail` is declared `any`, and a #[RefinesInput]
+ * No variants, no verb: `detail` is declared `any`, and a #[RefinesInput]
  * method returns the narrower definition, a map, once `kind` is known,
  * under the one narrowing rule that lets `any` become anything.
  */

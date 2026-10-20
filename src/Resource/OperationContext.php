@@ -40,7 +40,7 @@ final class OperationContext {
    * @param array<string, array<string, array>> $constraints
    *   Narrowing the operation imposes: key => constraint name => options.
    *   Core constraints only; checked narrower like any refinement.
-   * @param array<string, mixed> $starting
+   * @param array<string, mixed> $defaults
    *   Initial values for a creating operation: a clone starts from its
    *   source. Not locks; the caller may change them.
    * @param array<string, \Drupal\data_surface\Resource\OperationContext> $children
@@ -54,7 +54,7 @@ final class OperationContext {
     public readonly bool $creates = FALSE,
     public readonly array $known = [],
     public readonly array $constraints = [],
-    public readonly array $starting = [],
+    public readonly array $defaults = [],
     public readonly array $children = [],
     public readonly array $childOperations = [],
   ) {}
@@ -71,7 +71,7 @@ final class OperationContext {
    *   The new context.
    */
   public function withId(string $id, ?bool $creates = NULL): self {
-    return new self($id, $creates ?? $this->creates, $this->known, $this->constraints, $this->starting, $this->children, $this->childOperations);
+    return new self($id, $creates ?? $this->creates, $this->known, $this->constraints, $this->defaults, $this->children, $this->childOperations);
   }
 
   /**
@@ -84,7 +84,7 @@ final class OperationContext {
    *   The new context.
    */
   public function withKnown(array $known): self {
-    return new self($this->id, $this->creates, $known + $this->known, $this->constraints, $this->starting, $this->children, $this->childOperations);
+    return new self($this->id, $this->creates, $known + $this->known, $this->constraints, $this->defaults, $this->children, $this->childOperations);
   }
 
   /**
@@ -103,20 +103,20 @@ final class OperationContext {
   public function withConstraint(string $key, string $constraint, array $options = []): self {
     $constraints = $this->constraints;
     $constraints[$key][$constraint] = $options;
-    return new self($this->id, $this->creates, $this->known, $constraints, $this->starting, $this->children, $this->childOperations);
+    return new self($this->id, $this->creates, $this->known, $constraints, $this->defaults, $this->children, $this->childOperations);
   }
 
   /**
-   * Returns a copy with more starting values.
+   * Returns a copy with more defaults: the values a new thing starts from.
    *
    * @param array<string, mixed> $values
-   *   Starting values; these win over the ones already given.
+   *   Defaults; these win over the ones already given.
    *
    * @return self
    *   The new context.
    */
-  public function withStarting(array $values): self {
-    return new self($this->id, $this->creates, $this->known, $this->constraints, $values + $this->starting, $this->children, $this->childOperations);
+  public function withDefaults(array $values): self {
+    return new self($this->id, $this->creates, $this->known, $this->constraints, $values + $this->defaults, $this->children, $this->childOperations);
   }
 
   /**
@@ -178,7 +178,7 @@ final class OperationContext {
     else {
       $operations = [$key => ['operation' => (string) $operation, 'known' => $known]] + $operations;
     }
-    return new self($this->id, $this->creates, $this->known, $this->constraints, $this->starting, $children, $operations);
+    return new self($this->id, $this->creates, $this->known, $this->constraints, $this->defaults, $children, $operations);
   }
 
   /**

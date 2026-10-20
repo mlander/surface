@@ -186,7 +186,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
       ? array_intersect_key($body['values'], $served->surface->getDefinitions()->toArray())
       : [];
     $input = $this->servedOperations->keepStale($input, $current, $body['stale'] ?? []);
-    // A key, or a dotted path to one inside an attached child or a slot,
+    // A key, or a dotted path to one inside an attached child or a variant,
     // dropped the way DataSurfaceHostTrait::surfaceFormValues() drops it.
     $discarded = $this->formBuilder->discardedRefinementInput($served->surface, $current, $input);
     // And emitted from the same overlay the form is rebuilt from, settled

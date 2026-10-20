@@ -26,7 +26,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * nested values populate at every depth (the adapter-era MapAdapter
  * discarded them, which read as "the value did not save").
  *
- * A map that declares no properties, such as a slot variant for a choice
+ * A map that declares no properties, such as a variant for a choice
  * with nothing more to say (a daily digest has no send day), holds
  * nothing: it renders as an empty container, with no title around
  * nothing, and answers an empty map.

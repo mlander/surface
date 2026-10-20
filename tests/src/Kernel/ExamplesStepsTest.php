@@ -36,7 +36,7 @@ use Symfony\Component\HttpFoundation\Request;
  *
  * Each step's route is served by the generic operation form, so what is
  * asserted is what a person sees: the form builds from the resource, a
- * refinement narrows what the next key offers, the slot resolves to the
+ * refinement narrows what the next key offers, the variants resolve to the
  * chosen ticket, the contact part validates in its own frame, and the
  * panel says what each key allows as the answers stand.
  */
@@ -231,13 +231,13 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests step 3: the pricing resolves the ticket slot; the contact part.
+   * Tests step 3: the pricing chooses the ticket variant; the contact part.
    */
   public function testStepThreeResolvesTheTicketAndValidatesTheContact(): void {
     $surface = $this->surface(RegistrationStep3Resource::class);
     $entry = $surface->getDefinitions()->entry('ticket');
-    $this->assertSame('pricing', $entry->slot?->by);
-    $this->assertSame(['free', 'paid'], $entry->slot->variantIds());
+    $this->assertSame('pricing', $entry->variants?->by);
+    $this->assertSame(['free', 'paid'], $entry->variants->variantIds());
     $paid = $surface->refine(['pricing' => 'paid'])->getDefinition('ticket');
     $this->assertInstanceOf(ComplexDataDefinitionInterface::class, $paid);
     $this->assertSame(['price', 'currency'], array_keys($paid->getPropertyDefinitions()));
@@ -364,7 +364,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
       'pricing' => ['ticket', 'ticket'],
     ], $narrows);
 
-    // Below them, labelled, what the derived tool can advertise.
+    // Below them, labeled, what the derived tool can advertise.
     $blocks = ['contract', 'full', 'tool'];
     $this->assertSame($blocks, array_values(array_intersect(Element::children($panel), $blocks)));
     $this->assertStringContainsString('What the Tool API can advertise', (string) $panel['tool']['#title']);
@@ -524,7 +524,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
   /**
    * Tests the orphan cascade stops at the keys the venue decides.
    *
-   * Step 3 has a slot and an attached part beside the venue chain. The
+   * Step 3 has variants and an attached part beside the venue chain. The
    * venue moving orphans the room and frees the capacity; the ticket and
    * the contact refine against nothing it moved, so they are neither
    * replaced nor reset.

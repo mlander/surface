@@ -3,7 +3,7 @@ import { holdsValue, holdsIf, inlineSchema, narrow, narrowingStatus, setAt } fro
 import example2 from './fixtures/refine-example2.json';
 import example3 from './fixtures/refine-example3.json';
 import compliance from './fixtures/refine-example3-compliance.json';
-import licence from './fixtures/refine-example3-licence.json';
+import license from './fixtures/refine-example3-license.json';
 import bulletin from './fixtures/refine-bulletin.json';
 import journal from './fixtures/refine-journal.json';
 
@@ -74,12 +74,12 @@ describe('narrowing here agrees with /refine', () => {
     play(example2 as unknown as Recorded, ['local', 'local', 'local', 'local', 'local', 'local', 'local']);
   });
 
-  it('on example 3: the venue, the room and the slot are narrowed here', () => {
+  it('on example 3: the venue, the room and the ticket variants are narrowed here', () => {
     play(example3 as unknown as Recorded, ['local', 'local', 'local', 'local', 'local', 'local', 'local']);
   });
 
-  it('on example 3 with compliance: the slot here, the room and the stewards by the server', () => {
-    // The capacity is stated exactly now, its licence rule declared; the
+  it('on example 3 with compliance: the ticket variants here, the room and the stewards by the server', () => {
+    // The capacity is stated exactly now, its license rule declared; the
     // stewards, inside the mount, follow the capacity, a number, and are
     // dynamic, so a change the capacity depends on is still asked.
     play(compliance as unknown as Recorded, [
@@ -150,15 +150,15 @@ describe('the empty option rule, narrowed here', () => {
 });
 
 describe('a rule declared as data', () => {
-  const recorded = licence as unknown as Recorded;
+  const recorded = license as unknown as Recorded;
   const full = inlineSchema(recorded.schema.schema);
   const rule = (full.allOf ?? []).find((condition) => condition['x-surface']?.declared === true);
 
   it('is stated in the compliance full schema as written, and read by its own `if`', () => {
     expect(full.properties?.capacity['x-surface']).toMatchObject({ enumerated: true, declared: true });
     expect(full.properties?.capacity['x-surface']?.dynamic).toBeUndefined();
-    expect(rule?.then).toEqual({ properties: { capacity: { description: 'Up to 100 without an event licence.', maximum: 100 } } });
-    const at = (value: unknown): Values => ({ third_party_settings: { data_surface_examples_compliance: { licence: value, stewards: 1 } } });
+    expect(rule?.then).toEqual({ properties: { capacity: { description: 'Up to 100 without an event license.', maximum: 100 } } });
+    const at = (value: unknown): Values => ({ third_party_settings: { data_surface_examples_compliance: { license: value, stewards: 1 } } });
     expect(holdsIf(rule?.if, at(null))).toBe(true);
     expect(holdsIf(rule?.if, at(''))).toBe(true);
     expect(holdsIf(rule?.if, at('2048'))).toBe(false);
@@ -166,7 +166,7 @@ describe('a rule declared as data', () => {
   });
 
   it('is narrowed here, keyword for keyword as /refine answers, where nothing dynamic depends on it', () => {
-    // The stewards' rule set aside: what is left of a licence or room
+    // The stewards' rule set aside: what is left of a license or room
     // change is the capacity, its room conditionals and its declared rule.
     const mount = full.properties?.third_party_settings as Schema;
     const stated = { ...full, properties: { ...full.properties, third_party_settings: { ...mount, 'x-surface': { ...mount['x-surface'], dynamic: undefined } } } } as Schema;

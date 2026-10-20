@@ -33,7 +33,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * - the generated element is a password box carrying no value anywhere.
  *
  * @see \Drupal\data_surface_test\Plugin\Field\FieldType\SurfaceSecretItem
- * @see \Drupal\data_surface\Storage\EncryptedSettingsLayout
+ * @see \Drupal\data_surface\Storage\EncryptedStorageLayout
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]

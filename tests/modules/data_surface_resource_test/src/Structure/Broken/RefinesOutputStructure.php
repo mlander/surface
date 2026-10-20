@@ -7,7 +7,7 @@ namespace Drupal\data_surface_resource_test\Structure\Broken;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\data_surface\Resource\Attribute\Structure;
-use Drupal\data_surface\Resource\HasOutputsInterface;
+use Drupal\data_surface\Resource\DefinesOutputsInterface;
 use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\StructureInterface;
 
@@ -15,7 +15,7 @@ use Drupal\data_surface\Resource\StructureInterface;
  * Has a refiner naming an output key.
  */
 #[Structure('resource_test.broken.refines_output')]
-final class RefinesOutputStructure implements StructureInterface, HasOutputsInterface {
+final class RefinesOutputStructure implements StructureInterface, DefinesOutputsInterface {
 
   /**
    * {@inheritdoc}

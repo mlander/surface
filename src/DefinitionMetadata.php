@@ -57,13 +57,13 @@ final class DefinitionMetadata {
   protected const SECRET_KEY = 'secret';
 
   /**
-   * The definition array key marking a slot's placeholder.
+   * The definition array key marking the variants' placeholder.
    *
-   * Holds the sibling key whose value chooses the slot's variant. The
+   * Holds the sibling key whose value chooses the variant. The
    * module's own, like 'secret': core has no union type, and this is the
    * smallest thing a definition can say about being one.
    */
-  protected const SLOT_KEY = 'data_surface_slot';
+  protected const VARIANTS_BY_KEY = 'data_surface_variants_by';
 
   /**
    * The definition array key marking a map that only groups other maps.
@@ -254,7 +254,7 @@ final class DefinitionMetadata {
    *   it, because a form that cannot echo a secret submits an empty box
    *   for an unchanged one (docs/semantics.md says how a caller clears
    *   one on purpose);
-   * - a settings layout decorated with EncryptedSettingsLayout encrypts
+   * - a settings layout decorated with EncryptedStorageLayout encrypts
    *   the value on its way to storage.
    *
    * A secret holds one scalar value. A list or a complex definition is
@@ -320,40 +320,41 @@ final class DefinitionMetadata {
   }
 
   /**
-   * Marks a definition as the placeholder of a slot.
+   * Marks a definition as the placeholder of a key's variants.
    *
-   * A slot is typed `any` until the sibling that chooses it holds a
-   * value, and `any` alone reads as "anything at all". The mark is what
+   * The key is typed `any` until the sibling that chooses its variant
+   * holds a value, and `any` alone reads as "anything at all". The mark is what
    * lets a reader holding only the definition know it means "one of the
    * declared variants, chosen by that key" instead; the variant table is
-   * on the slot's Entry, which is where an emitter reads it.
+   * on the key's Entry, which is where an emitter reads it.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The placeholder.
    * @param string $by
    *   The sibling key whose value chooses the variant.
    *
-   * @see \Drupal\data_surface\Slot
+   * @see \Drupal\data_surface\Variants
    */
-  public static function setSlot(DataDefinitionInterface $definition, string $by): void {
-    static::arrayAccess($definition)->offsetSet(static::SLOT_KEY, $by);
+  public static function setVariantsBy(DataDefinitionInterface $definition, string $by): void {
+    static::arrayAccess($definition)->offsetSet(static::VARIANTS_BY_KEY, $by);
   }
 
   /**
-   * Gets the key that chooses a slot placeholder's variant.
+   * Gets the key that chooses the variant for a variants' placeholder.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition to read.
    *
    * @return string|null
-   *   The deciding key, or NULL when the definition is no unresolved
-   *   slot: a plain key, or a slot that has resolved to its variant.
+   *   The deciding key, or NULL when the definition is no placeholder of
+   *   variants nothing has chosen yet: a plain key, or a key whose
+   *   variant is chosen.
    */
-  public static function slotOf(DataDefinitionInterface $definition): ?string {
-    if (!$definition instanceof \ArrayAccess || !$definition->offsetExists(static::SLOT_KEY)) {
+  public static function variantsBy(DataDefinitionInterface $definition): ?string {
+    if (!$definition instanceof \ArrayAccess || !$definition->offsetExists(static::VARIANTS_BY_KEY)) {
       return NULL;
     }
-    $by = $definition->offsetGet(static::SLOT_KEY);
+    $by = $definition->offsetGet(static::VARIANTS_BY_KEY);
     return is_string($by) ? $by : NULL;
   }
 

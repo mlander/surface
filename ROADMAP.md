@@ -55,7 +55,7 @@ serving, and evolution.
    to it. Form, Drush, config action, agent: one resolution.
 2. **The output surface** — DONE 2026-09-15. Landed as a second
    definitions map on the surface with `refineOutputs()` against input
-   values, the `Omitted` sentinel, strict-typed `conformOutput()`, the
+   values, the `NotEmitted` sentinel, strict-typed `conformOutput()`, the
    formatter split (`formatValue()` with byte-identical rendering), and
    the tool converter. The tool bridge consumer landed as the converter
    plus a recorded limitation: the Tool API has no output-definition
@@ -67,7 +67,7 @@ serving, and evolution.
    descriptions, examples); differs where outputs differ: no defaults,
    no locking, refinement runs against the *input* values (a dry run
    emits a prepared artifact and no committed flag). Includes the
-   **Omitted sentinel** (from JSON resources' MissingValue): a gated or
+   **NotEmitted sentinel** (from JSON resources' MissingValue): a gated or
    irrelevant output field is absent, never NULL, and the presence
    condition is declared data so the emitted schema states it.
    First consumers: the tool bridge (converted to Tool API output
@@ -134,7 +134,7 @@ Prerequisite, third half — DONE 2026-09-15. The attribute is deleted;
 defaults protocol reads the same declaration the instance path builds
 from, with no container and no plugin constructed out of season; the
 awareness service slimmed to interface detection for the future
-catalogue; nine classes converted with semantic parity proven by the
+catalog; nine classes converted with semantic parity proven by the
 suite and the byte-identical comparison document. Original spec: **the
 method becomes the one home; the attribute stops declaring.** The static-harvest claim the attribute was
 built on has shrunk to detection, which the interface already provides,
@@ -155,8 +155,8 @@ which serves the real contract.
 
 4. **Emission as a plugin type.** — DELIVERED 2026-10-08 as the main
    module's emitter, `data_surface.contract_emitter`: JSON Schema
-   2020-12, labeled options as `oneOf` const/title, each slot as `if`/
-   `then` on its deciding sibling, dependency edges and locking under
+   2020-12, labeled options as `oneOf` const/title, variants as `if`/
+   `then` on their deciding sibling, dependency edges and locking under
    `x-surface`, widget hints only when a renderer asks
    (`docs/served-contract.md`). Still open: the constraints it knows
    are a list in the emitter, not yet a plugin type. Original spec:
@@ -187,10 +187,10 @@ which serves the real contract.
    concrete subject answer is the runtime tier the endpoint re-asks.
    Staticness is not a second result type: it is the answer's own
    cacheability, a permissions-context result is the static tier the
-   catalogue may cache per permissions hash, a subject-tagged or
+   catalog may cache per permissions hash, a subject-tagged or
    max-age-zero result is runtime. The node type provider's current
    missing-subject refusal on edit changes to the general answer when
-   this lands. The catalogue enumerates
+   this lands. The catalog enumerates
    coordinates first; the endpoint validates coordinates against the
    declaration before dispatching. The rule underneath, stated once:
    nothing may vary a surface except a declared coordinate or a
@@ -215,10 +215,10 @@ which serves the real contract.
 
    Discoverability, folded into discovery after the human-search
    review: standalone providers get a **service tag** carrying host
-   type and id, and a **catalogue service** unions tagged providers
+   type and id, and a **catalog service** unions tagged providers
    with surface-aware plugin definitions to answer "all surfaces on
    this site" with provider class, operations, and file. The discovery
-   document serves from the catalogue, so standalone providers stop
+   document serves from the catalog, so standalone providers stop
    being invisible to enumeration. On top of it, a **list tool**
    through the bridge (drush is broken on this site) giving a human
    the thirty-second answer: every surface, where it lives, who
@@ -445,7 +445,7 @@ renames sit in A because they are cheapest before new code exists.
   two contradictions (a page saying nothing emits a schema; two
   spellings of the operation label); two bugs: a `{{ max }}` placeholder
   printed literally in a refusal, and core's number element check
-  overriding the rule's own message; and a slot variant with no keys
+  overriding the rule's own message; and a variant with no keys
   must not crash the form (HTTP 500, "No data surface widget serves the
   map data type").
 - **B, what the contract can say:** inapplicable keys (2, done); declarative
@@ -524,7 +524,7 @@ renames sit in A because they are cheapest before new code exists.
    fresh-eyes run: a send day that only applies when the frequency is
    weekly had no good spelling. A refiner now answers
    `DoesNotApply::here()`, declared in its return type, for a key, a
-   mounted key, an attached child's key or a slot's key: the form draws
+   mounted key, an attached child's key or a key with variants: the form draws
    no element, the pipeline reads it as left out and refuses any other
    value sent for it, naming what it depends on, storage keeps what it
    holds, the read tool and the schema for these answers leave it out,
@@ -537,7 +537,7 @@ renames sit in A because they are cheapest before new code exists.
    rule is the one kept.
 3. **Declarative narrowing** (Phase C): DONE 2026-10-18
    (`docs/decisions.md#a-rule-declared-as-data`). An author states a
-   condition instead of coding it, for example "a licence is absent",
+   condition instead of coding it, for example "a license is absent",
    and the emitter writes it as a conditional without executing
    anything. A blueprint's `narrow($key)->when(Condition::...)` takes a
    closed vocabulary of conditions (present, absent, equals, in, the four
@@ -561,7 +561,7 @@ renames sit in A because they are cheapest before new code exists.
    `x-surface.reads` there and `x-surface.ports` on the def; the
    compliance example is the first case, its storage and tools
    unchanged. Left open: a container opting out of the structure's
-   alters; ports on a slot's variant or a collection's item; a
+   alters; ports on a variant or a collection's item; a
    structure at a key inside a mount, a collection under a mount, and a
    mounted structure with children of its own or access other than open.
    As planned: the wall says a child never names a parent's key, and structures
@@ -596,7 +596,7 @@ renames sit in A because they are cheapest before new code exists.
    to the structure (`docs/decisions.md#a-resource-evolves-in-the-open`).
 5. **Mixins: a structure merged flat.** DONE 2026-10-18
    (`docs/decisions.md#a-mixin-is-merged-flat`, `docs/resources.md#mixins`):
-   `$inputs->with(TimestampsStructure::class, reads: [...])` on the
+   `$inputs->mixIn(TimestampsStructure::class, reads: [...])` on the
    owner's blueprint, refused on an alter's; an ordinary `#[Structure]`,
    no marker; stored flat, the owner's config schema listing the members;
    clashes, cycles, a child, a resource, outputs refused at build; emitted
@@ -611,7 +611,7 @@ renames sit in A because they are cheapest before new code exists.
    stricter answer standing; the tool flat, React and `SchemaResolver`
    inline flat. Fixtures: the test module's journal (the ownership with a
    port, the timestamps), its archive, the ledger. Left open: the
-   catalogue listing mixins, an optional port left unwired, a mixed-in
+   catalog listing mixins, an optional port left unwired, a mixed-in
    structure's alter that mounts or a mixin holding a child, opting out
    of a structure's alters. As planned: Today composition only nests
    (attach, with its frame and wall; an alter's mount under its module's
@@ -628,8 +628,8 @@ renames sit in A because they are cheapest before new code exists.
    flags), which is how an entity's base-field traits already compose
    and what the bundle resource will want. With ports, in B.
 6. **Rename the builders to blueprints.** DONE 2026-10-18 (`BlueprintInterface`,
-   `BlueprintAdditionsInterface`, `SettingsLayoutInterface`,
-   `HasStorageLayoutInterface::storageLayout()`). Before named scalar shapes
+   `BlueprintAdditionsInterface`, `StorageLayoutInterface`,
+   `AltersStorageLayoutInterface::storageLayout()`). Before named scalar shapes
    exist, `ShapeInterface` and `ShapeAdditionsInterface`, the builders
    passed to `defineInputs()`, `defineOutputs()` and `alterInputs()`,
    become `BlueprintInterface` and `BlueprintAdditionsInterface` (decided
@@ -642,26 +642,26 @@ renames sit in A because they are cheapest before new code exists.
    says so (layout). Mechanical, with the snapshot.
 7. **Named scalar shapes.** DONE 2026-10-18
    (`docs/decisions.md#a-shape-is-a-named-definition`,
-   `docs/declaring-a-resource.md#named-shapes`): a `#[Shape('event.licence')]`
+   `docs/declaring-a-resource.md#named-shapes`): a `#[Shape('event.license')]`
    class in `src/Shape/` whose static `define()` returns a plain
    `DataDefinition` (a scalar, no default, not required), used as
-   `$inputs->add('licence', Licence::class, t('Event licence'))`; what the
+   `$inputs->add('license', License::class, t('Event license'))`; what the
    key adds is held to the narrowing check against the shape at build; a
    port may read a shape, wired only to a key declared with it; an alter
    of the shape tightens it at every key (`narrow('<id>')` with no
    condition, `describe('<id>')`), and mounting, attaching or offering
    more is refused; both documents write it once as `$defs.<id>`, each
    key `$ref` first with what it adds as sibling keywords, the def
-   allowing null; the compliance licence is the first case, its tool
+   allowing null; the compliance license is the first case, its tool
    definitions unchanged. With it `ShapeMismatchException` became
    `TypeMismatchException`. Left open: a key opting out of a shape's
-   alters, the catalogue listing shapes. As planned: the one Smithy
+   alters, the catalog listing shapes. As planned: the one Smithy
    level the pattern lacks: a named simple shape with its traits, reused
-   anywhere (`string Licence @pattern`). Today a scalar's constraints, message and description are
+   anywhere (`string License @pattern`). Today a scalar's constraints, message and description are
    written inline at each key, and core's answer, a data type plugin, is
-   too heavy for a four-digit string with a label. A `#[Shape('event.licence')]`
+   too heavy for a four-digit string with a label. A `#[Shape('event.license')]`
    class whose static `define()` returns the data definition, used as
-   `$inputs->add('licence', Licence::class)`: the contract emits it once
+   `$inputs->add('license', License::class)`: the contract emits it once
    as a def and references it; an alter can target the shape and so
    tighten every use on the site; a port can declare it as its type;
    and "shape" takes its Smithy place, resources, structures and named
@@ -758,7 +758,7 @@ renames sit in A because they are cheapest before new code exists.
      whole, every element disabled and no Save, `readOnly` at the top
      of both documents, a submit refused by name at every door, the
      read tool answering (`docs/decisions.md#locked-at-the-top`).
-   - A view-only slot variant. DONE: a variant its access locks is
+   - A view-only variant. DONE: a variant its access locks is
      offered, built locked whole, drawn and stated fixed
      (`docs/decisions.md#a-variant-is-open-locked-or-not-offered`).
    - `childrenMayAnswer()` skipping the build. DONE: `access()` builds
@@ -773,17 +773,18 @@ renames sit in A because they are cheapest before new code exists.
    - `attachListBy()`. Not small, a design question, not built. A list
      whose items each choose their variant by a key inside the item is
      expressible today, nested: a collection of a structure that holds
-     the deciding key and an `attachBy()` slot (`{plugin, settings}` per
+     the deciding key and its `attachVariants()` variants (`{plugin, settings}` per
      item), which the engine, the pipeline and both documents recurse
      into. Two things stand between that and `attachListBy()`. The
      design question: whether the variant's keys sit flat beside the
      deciding key in each item (a discriminated union, one `oneOf` per
-     item, a slot with no key of its own, which no door has a spelling
-     for) or nested under a slot key (no new concept, one more level).
-     And the form reads a drawn item back through the child's sealed
-     map, where a slot is its placeholder, so a slot inside an item is
-     not read back on the form (read in `extractCollection()`, not yet
-     pinned by a test); that is the first fix whichever spelling wins.
+     item, variants with no key of their own, which no door has a
+     spelling for) or nested under the variants' key (no new concept, one
+     more level). And the form reads a drawn item back through the
+     child's sealed map, which holds only the variants' placeholder, so
+     variants inside an item are not read back on the form (read in
+     `extractCollection()`, not yet pinned by a test); that is the first
+     fix whichever spelling wins.
    - An item routed to its child's own storage. Not small, a design
      question, not built: an item needs an identity key on the child to
      say which stored thing it is, removing an item from the list then
@@ -838,8 +839,8 @@ renames sit in A because they are cheapest before new code exists.
    fieldset; timestamps and references drawn as such), address as the
    first override (country narrows subdivisions), path alias as the
    first alter with a storage of its own, and a placed block as a
-   config entity resource whose settings are a slot keyed by plugin id
-   with each plugin's structure as a variant.
+   config entity resource whose settings are variants chosen by plugin
+   id, each plugin's structure one of them.
 12. **The core conversation**, bottom-up: the definition-level facts
    first (constraints to JSON Schema keywords, `refined_by` on
    definitions, a setter contract, labels on Choice; drafted), then
@@ -894,7 +895,7 @@ renames sit in A because they are cheapest before new code exists.
       done when one real bundle with a multi-value field, an entity
       reference, an image and a path alias is created and edited through
       the form, the React page, the tool and MCP, with field permissions
-      honoured, and the "today" comparison beside it. Ports, mixins and
+      honored, and the "today" comparison beside it. Ports, mixins and
       collections all have to hold at once there; nothing else exercises
       them together.
     - **The audit stays green.** the matrix tests (`AdvertisedSchemaAcceptanceTest`, `InputCoercionMatrixTest`) pin the
@@ -1023,7 +1024,7 @@ renames sit in A because they are cheapest before new code exists.
       its count, language names vary by the interface language
       (`ToolListingLanguageTest`,
       `docs/decisions.md#a-static-tool-definition-is-no-accounts`). Open:
-      bundle and field labels read from configuration, and the slot
+      bundle and field labels read from configuration, and the
       variant table's joined text, are still the discovering language's.
     - **B10, refusals glued from fragments.** DONE 2026-10-20: the
       constraint's message is kept whole and each sentence a refusal
@@ -1031,11 +1032,11 @@ renames sit in A because they are cheapest before new code exists.
       one per count of conditions, plural by its count
       (`Pipeline\Sentences`,
       `docs/decisions.md#a-refusal-names-what-it-depends-on`).
-    - **B11, the licence refusal names the wrong reason.** DONE
+    - **B11, the license refusal names the wrong reason.** DONE
       2026-10-20: a condition says what the refiners were handed, "Event
-      licence is empty (EV-2048 was refused)"
+      license is empty (EV-2048 was refused)"
       (`DataSurfaceInterface::withheldValues()`,
-      `ExamplesComplianceTest::testTheLicenceRefusalNamesWhatTheRuleWasHanded()`).
+      `ExamplesComplianceTest::testTheLicenseRefusalNamesWhatTheRuleWasHanded()`).
     - **B12, a read then a write changes storage.** DONE 2026-10-20: the
       stored representation is kept where the accepted forms are equal, a
       default storage never held is not written, sent or not, a write that

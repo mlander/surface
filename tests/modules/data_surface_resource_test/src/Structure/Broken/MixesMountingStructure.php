@@ -18,7 +18,7 @@ final class MixesMountingStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->with(MountingMixinStructure::class);
+    $inputs->mixIn(MountingMixinStructure::class);
   }
 
 }

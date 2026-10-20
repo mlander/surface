@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface\ResourceBuild;
 
-use Drupal\data_surface\Resource\HasOutputsInterface;
+use Drupal\data_surface\Resource\DefinesOutputsInterface;
 use Drupal\data_surface\Resource\ResourceCallable;
 
 /**
@@ -68,8 +68,8 @@ final class ResourceDefinition {
    * @param \Drupal\data_surface\ResourceBuild\AlterDefinition[] $alters
    *   Every alter of it, in discovery order.
    * @param array<string, array<string, class-string>> $variants
-   *   Classes marked #[Variant] for a slot here, keyed by slot
-   *   key, then by the deciding value.
+   *   Classes marked #[Variant] for variants here, keyed by the key the
+   *   variants are attached at, then by the deciding value.
    * @param \Drupal\data_surface\Resource\ResourceCallable|null $inputs
    *   For a derived resource, what fills its input blueprint.
    * @param \Drupal\data_surface\Resource\ResourceCallable|null $outputs
@@ -172,11 +172,11 @@ final class ResourceDefinition {
    * Answers whether it declares outputs.
    *
    * @return bool
-   *   TRUE for a class implementing HasOutputsInterface, or a derived
+   *   TRUE for a class implementing DefinesOutputsInterface, or a derived
    *   one whose deriver names an output shape.
    */
   public function hasOutputs(): bool {
-    return $this->class === NULL ? $this->outputs !== NULL : is_subclass_of($this->class, HasOutputsInterface::class);
+    return $this->class === NULL ? $this->outputs !== NULL : is_subclass_of($this->class, DefinesOutputsInterface::class);
   }
 
   /**

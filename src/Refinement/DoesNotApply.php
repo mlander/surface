@@ -38,9 +38,9 @@ use Drupal\data_surface\DataSurfaceInterface;
  *   values leave the key out; the full schema states it as `false` under
  *   the matching conditional and its `required` there, conditionally.
  *
- * A key an alter mounted, an attached child's key and a slot's key may be
- * ruled out the same way; a parent's refiner of a key holding a child may
- * give this answer and no other.
+ * A key an alter mounted, an attached child's key and a key with variants
+ * may be ruled out the same way; a parent's refiner of a key holding a child
+ * may give this answer and no other.
  *
  * Inside the engine the answer becomes a mark on the definition the
  * refiner was handed (marked()), which is what every door reads

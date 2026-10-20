@@ -19,7 +19,7 @@ final class MixinWithChildStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->with(NoticeStructure::class);
+    $inputs->mixIn(NoticeStructure::class);
   }
 
 }

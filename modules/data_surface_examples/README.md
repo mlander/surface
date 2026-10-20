@@ -31,7 +31,7 @@ on the landing page (`/surface-examples/reset`). It puts every config
 object back to the files the module ships in `config/install`, the
 ticket types example 9 reads among them,
 including anything another module stored on them, such as the event
-licence example 4's module adds under example 3, and it opens again
+license example 4's module adds under example 3, and it opens again
 every room example 4 lets a site close and clears example 10's workflow
 state.
 
@@ -317,8 +317,8 @@ answer stays true.
 
 `/surface-examples/3`
 
-Two parts, each a structure of its own. The **ticket** is a *slot*: the
-pricing chooses which structure fills it. Example 3 names neither ticket;
+Two parts, each a structure of its own. The **ticket** has *variants*:
+the pricing chooses which one it is. Example 3 names neither ticket;
 each ticket names example 3, with `#[Variant]`, so a third kind of
 ticket is a new class and example 3 never changes. The **contact** is a
 fixed part, attached with `attach()`: always there, and validated in
@@ -356,7 +356,7 @@ final class RegistrationStep3Resource implements ResourceInterface {
     $inputs->add('pricing', 'string', t('Pricing'), default: 'free')
       ->setRequired(TRUE)
       ->addConstraint('Choice', ['choices' => ['free', 'paid']]);
-    $inputs->attachBy('ticket', by: 'pricing')
+    $inputs->attachVariants('ticket', by: 'pricing')
       ->setLabel(t('Ticket'));
     $inputs->attach('contact', ContactStructure::class)
       ->setLabel(t('Contact'));
@@ -398,7 +398,7 @@ The two tickets:
 
 ```php
 #[Structure('registration.step3.ticket.free')]
-#[Variant(of: RegistrationStep3Resource::class, key: 'ticket', value: 'free')]
+#[Variant(of: RegistrationStep3Resource::class, at: 'ticket', for: 'free')]
 final class FreeTicketStructure implements StructureInterface {
 
   /**
@@ -416,7 +416,7 @@ final class FreeTicketStructure implements StructureInterface {
 
 ```php
 #[Structure('registration.step3.ticket.paid')]
-#[Variant(of: RegistrationStep3Resource::class, key: 'ticket', value: 'paid')]
+#[Variant(of: RegistrationStep3Resource::class, at: 'ticket', for: 'paid')]
 final class PaidTicketStructure implements StructureInterface {
 
   /**
@@ -468,13 +468,13 @@ drush pm:install data_surface_examples_compliance
 ```
 
 then reload example 3. A second module, which example 3 does not know,
-changes it with three classes. One is a shape, what an event licence is
+changes it with three classes. One is a shape, what an event license is
 wherever it is asked for: four digits, explained in words, declared
-once. One is a structure, what compliance asks of any event: a licence
+once. One is a structure, what compliance asks of any event: a license
 of that shape and a number of stewards. The third is an alter of
 example 3, an adapter: it attaches the structure at its own mount, so
 the two keys are stored under the module's own name (at
-`third_party_settings.data_surface_examples_compliance.licence` and
+`third_party_settings.data_surface_examples_compliance.license` and
 `.stewards`, so example 3's storage never has to know them), and it
 rewords the title's label. Its rules and its methods are what you see
 move. A rule is data, a condition and an effect, which the served
@@ -483,14 +483,14 @@ what it watches, so the served contract states its answers ahead of
 time where it can; a method that reads State is a runtime refiner, the
 only kind an instance method may be:
 
-- **The licence lifts a ceiling on example 3's own key.** The alter's
-  rule on `capacity`, `narrow('capacity')->when(Condition::absent('licence'))`,
-  reads the structure's `licence` at the alter's mount. With no licence
+- **The license lifts a ceiling on example 3's own key.** The alter's
+  rule on `capacity`, `narrow('capacity')->when(Condition::absent('license'))`,
+  reads the structure's `license` at the alter's mount. With no license
   it caps the capacity at 100 and says so under the field; with one it
   leaves the capacity alone, so the room's limit, from example 3's own
   method, is what applies. Both narrow the same key, the method first
   and the rule after, and each only narrows: the lower ceiling wins. The
-  full schema states the rule exactly, as an `if` that the licence holds
+  full schema states the rule exactly, as an `if` that the license holds
   nothing.
 - **The stewards follow the capacity.** The structure cannot name
   example 3's capacity, since it is meant for any event: it reads a
@@ -511,23 +511,23 @@ only kind an instance method may be:
 
 No form alter, no hook.
 
-<!-- code: ../data_surface_examples_compliance/src/Shape/Licence.php -->
+<!-- code: ../data_surface_examples_compliance/src/Shape/License.php -->
 
 ```php
-#[Shape('event.licence')]
-final class Licence implements ShapeInterface {
+#[Shape('event.license')]
+final class License implements ShapeInterface {
 
   /**
    * {@inheritdoc}
    */
   public static function define(): DataDefinition {
-    $pattern = ['pattern' => '/^\d{4}$/D', 'message' => t('A licence number is four digits, such as 2048.')];
-    $licence = DataDefinition::create('string')
-      ->setLabel(t('Event licence'))
-      ->setDescription(t('The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.'))
+    $pattern = ['pattern' => '/^\d{4}$/D', 'message' => t('A license number is four digits, such as 2048.')];
+    $license = DataDefinition::create('string')
+      ->setLabel(t('Event license'))
+      ->setDescription(t('The four digits after EV- on the license, such as 2048. Required to host more than 100 people.'))
       ->addConstraint('Regex', $pattern);
-    DefinitionMetadata::setExamples($licence, ['2048']);
-    return $licence;
+    DefinitionMetadata::setExamples($license, ['2048']);
+    return $license;
   }
 
 }
@@ -544,7 +544,7 @@ final class ComplianceStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->reads('capacity', 'integer', required: TRUE);
-    $inputs->add('licence', Licence::class, t('Event licence'));
+    $inputs->add('license', License::class, t('Event license'));
     $inputs->add('stewards', 'integer', t('Stewards'), default: 1)->setRequired(TRUE);
   }
 
@@ -599,14 +599,14 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
     $inputs->attach('third_party_settings.data_surface_examples_compliance', ComplianceStructure::class, reads: ['capacity' => 'capacity']);
     $inputs->describe('title', label: $this->t('Public event title'));
     $inputs->describe('third_party_settings.data_surface_examples_compliance', label: $this->t('Compliance'), after: 'capacity');
-    // Without a licence, no more than a hundred, whatever the room seats.
-    // The licence is the structure's, which this alter reads at its mount.
-    // A licence its own pattern refuses is no licence: a rule never sees
+    // Without a license, no more than a hundred, whatever the room seats.
+    // The license is the structure's, which this alter reads at its mount.
+    // A license its own pattern refuses is no license: a rule never sees
     // an invalid sibling.
     $inputs->narrow('capacity')
-      ->when(Condition::absent('licence'))
+      ->when(Condition::absent('license'))
       ->constrain('Range', ['max' => 100])
-      ->describe($this->t('Up to 100 without an event licence.'));
+      ->because($this->t('Up to 100 without an event license.'));
   }
 
   /**
@@ -643,23 +643,23 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
 
 The two keys sit in one fieldset, titled "Compliance" by the alter,
 which also places it: `after: 'capacity'` draws the fieldset right after
-the capacity its licence lifts, on the form and in React, instead of
+the capacity its license lifts, on the form and in React, instead of
 last. Only where it is drawn moves; the keys are still stored and posted
 at `third_party_settings.data_surface_examples_compliance`, and the Tool
 API and the config schema see nothing new. In the served contract the
 fieldset is the structure's def, `registration.compliance`, referred to
 from the mount, which says which of example 3's keys the port reads
-(`x-surface.reads`); the licence inside it is the shape's def,
-`event.licence`, written once and referred to from the key, which says
+(`x-surface.reads`); the license inside it is the shape's def,
+`event.license`, written once and referred to from the key, which says
 its own title beside the reference. Example 3 ships at Riverside Hall's main hall, which
 seats 400. The capacity stops at 100, and its help text says why: "Up
-to 100 without an event licence." The
-licence asks for the four digits after EV- only. Type `2048` and the
+to 100 without an event license." The
+license asks for the four digits after EV- only. Type `2048` and the
 capacity goes back to the owner's "Up to 400 for the Main hall."; type
-`204` or `EV-2048` and the licence is refused, in the structure's words,
+`204` or `EV-2048` and the license is refused, in the structure's words,
 under the field, and the capacity stops at 100 again: a rule never
-sees a value its own key refuses, so a licence in the wrong format is no
-licence. In a room that seats 100 or fewer the licence changes nothing:
+sees a value its own key refuses, so a license in the wrong format is no
+license. In a room that seats 100 or fewer the license changes nothing:
 the room's own ceiling is the lower one, and the owner's help text
 stands, since a rule says why only where it tightened. The help text says the format before
 anything is typed, and the box shows
@@ -668,7 +668,7 @@ the Regex carries a message, and the panel's "Allows" column says that.
 Under the stewards it says "At least 1 steward for 50 attendees."; set
 the capacity to 150 and it asks for "At least 3 stewards for 150
 attendees." In the panel, the capacity's row now depends on `room` and
-on the licence's path. An alter can add and tighten. It can never take
+on the license's path. An alter can add and tighten. It can never take
 away what the owner declared.
 
 ## Example 5: same contract, no form
@@ -746,9 +746,9 @@ commands run against your site, and the first one writes example 3's
 settings. The calls are written down once, in `ExampleCalls`, and both
 are generated from it. Every call says where the event is, so none
 depends on an earlier one, and every capacity is fifty or fewer, which
-needs no licence and one steward, the default, so example 4's module
+needs no license and one steward, the default, so example 4's module
 does not change the answers. Enable it and send the first call with a
-capacity of 150, which the upper deck seats, and no licence to see it
+capacity of 150, which the upper deck seats, and no license to see it
 refuse.
 
 ### When a call is refused
@@ -765,7 +765,7 @@ stored. With example 4's module enabled, `tool:info` shows, among the
 ```
 
 `tool:info` cuts a long description short; the capacity's reads in full
-"Depends on room, third_party_settings.data_surface_examples_compliance.licence.",
+"Depends on room, third_party_settings.data_surface_examples_compliance.license.",
 and the room's "Depends on venue. Required; a value already stored stands
 when left out."
 
@@ -811,7 +811,7 @@ The landing page then links each example "In React":
 `/surface-react/registration.step3/configure`. Each is the same resource
 as the form beside it, read from `/surface-api/registration.stepN/configure`:
 JSON Schema with the labels as `oneOf` titles, the bounds as `minimum`
-and `maximum`, the ticket slot as a conditional on the pricing, and an
+and `maximum`, the ticket variants as a conditional on the pricing, and an
 `x-surface` note on every key saying what the form knows about it.
 
 Change the venue on example 2: the app posts the answers to `/refine`,
@@ -896,7 +896,7 @@ final class BulletinResource implements ResourceInterface {
     $inputs->narrow('items')
       ->when(Condition::equals('frequency', 'weekly'))
       ->constrain('Range', ['max' => 5])
-      ->describe(t('Up to 5 in a weekly issue.'));
+      ->because(t('Up to 5 in a weekly issue.'));
   }
 
 }
@@ -965,7 +965,7 @@ final class PersonStructure implements StructureInterface {
     $inputs->narrow('email')
       ->when(Condition::equals('listed', TRUE))
       ->require()
-      ->describe(t('Required while this person is listed publicly.'));
+      ->because(t('Required while this person is listed publicly.'));
   }
 
 }
@@ -1020,7 +1020,7 @@ final class ReviewStructure implements StructureInterface {
     $inputs->narrow('reviewed_by')
       ->when(Condition::present('reviewed_on'))
       ->require()
-      ->describe(t('Required once a review date is set.'));
+      ->because(t('Required once a review date is set.'));
   }
 
 }
@@ -1047,7 +1047,7 @@ final class PressResource implements ResourceInterface {
     $inputs->add('public', 'boolean', t('Show on the press page'), default: TRUE);
     $inputs->attach('contact', PersonStructure::class, reads: ['listed' => 'public'])
       ->setLabel(t('Press contact'));
-    $inputs->with(ReviewStructure::class);
+    $inputs->mixIn(ReviewStructure::class);
   }
 
 }
@@ -1625,16 +1625,16 @@ Drush commands are checked against `ExampleCalls`.
 
 | Test | Covers |
 | --- | --- |
-| `Kernel\ExamplesStepsTest` | Examples 1 to 3: each form builds and saves, example 1 as its classic twin does; the venue narrows the room and the room the capacity; the ticket slot resolves by pricing; the contact validates its email; the panel's rows as the answers move; each example's class stays screen sized. |
-| `Kernel\ExamplesComplianceTest` | Example 4: the alter's keys and label; its keys in one fieldset titled "Compliance", drawn between the capacity and the pricing; the capacity capped at a hundred without a licence and the room's limit with one; the licence's pattern; the stewards' minimum following the capacity; what the licence and the capacity replace on the form; a room closed in State left out, said in the room's help, and refused on submit; example 5's calls unchanged. |
-| `Kernel\StaticRefinerEnforcementTest` | Examples 2 and 3, without example 4 and with it: every conditional the served contract enumerates, in the full schema and in the schema for no values and for the defaults, is what refining afresh for its values answers, and example 4's declared licence rule is what refining with the rules alone answers for sampled values. |
+| `Kernel\ExamplesStepsTest` | Examples 1 to 3: each form builds and saves, example 1 as its classic twin does; the venue narrows the room and the room the capacity; the pricing chooses the ticket variant; the contact validates its email; the panel's rows as the answers move; each example's class stays screen sized. |
+| `Kernel\ExamplesComplianceTest` | Example 4: the alter's keys and label; its keys in one fieldset titled "Compliance", drawn between the capacity and the pricing; the capacity capped at a hundred without a license and the room's limit with one; the license's pattern; the stewards' minimum following the capacity; what the license and the capacity replace on the form; a room closed in State left out, said in the room's help, and refused on submit; example 5's calls unchanged. |
+| `Kernel\StaticRefinerEnforcementTest` | Examples 2 and 3, without example 4 and with it: every conditional the served contract enumerates, in the full schema and in the schema for no values and for the defaults, is what refining afresh for its values answers, and example 4's declared license rule is what refining with the rules alone answers for sampled values. |
 | `Kernel\ExamplesToolTest` | Example 5: the three calls and their answers; what the script prints. |
 | `Kernel\ConfigSchemaContractTest` | What config schema can say: the plain mapping of examples 1 and 3, whole, with no list, no bound, nothing required and no keys for the ticket, the same whatever is stored or mounted; core's answer, a comment and no property; a constraint a schema does declare is said; the JSON this page quotes. |
 | `Kernel\ExamplesTodayPanelTest` | The second panel under examples 1 to 3: its two documents and its table, row by row; its rows read from the resource's full schema, so the pricing, the venue and what is stored leave every row and both documents as they were; example 4's keys on the resource's side only; the classic twin's page. |
 | `Unit\ExamplesReadmeTest` | This page against the files it quotes, and its Drush commands. |
 | `Functional\ExamplesRoutesTest` | Every route answers an administrator and refuses anonymous; the landing page; both panels under example 3, and a save through it; the classic twin's page with its two documents, and a save through it. |
 | `FunctionalJavascript\ExamplesAjaxRefreshTest` | In a browser: example 2's venue replaces the room and the capacity and leaves the venue the same node, the orphaned room on its empty option with the stale marker and the capacity with no upper bound; a room then narrows the capacity and loses `- Select -`. Example 3's paid pricing swaps the note for a price and a currency, and leaves the second panel's table and its two documents as they were. |
-| `FunctionalJavascript\ExamplesComplianceRefreshTest` | Example 4, in a browser: one fieldset titled "Compliance", the ceiling of 100 lifted to the main hall's 400 by `2048`, and the stewards at 1 for 50 and 3 for 150; a malformed licence on blur is said once, under the licence, with `aria-invalid` and nothing at the top, and caps the capacity at a hundred; corrected, the error goes and the room's limit comes back. A refused capacity left by a click on text keeps no focus, and left by Tab lands on the Compliance fieldset after it. The fieldset is drawn below the capacity and above the pricing, and stays there when `2048` and Tab lift the capacity, which, with the stewards, is all that is replaced. With the East room closed in State, choosing Riverside Hall offers the main hall alone and says why. |
+| `FunctionalJavascript\ExamplesComplianceRefreshTest` | Example 4, in a browser: one fieldset titled "Compliance", the ceiling of 100 lifted to the main hall's 400 by `2048`, and the stewards at 1 for 50 and 3 for 150; a malformed license on blur is said once, under the license, with `aria-invalid` and nothing at the top, and caps the capacity at a hundred; corrected, the error goes and the room's limit comes back. A refused capacity left by a click on text keeps no focus, and left by Tab lands on the Compliance fieldset after it. The fieldset is drawn below the capacity and above the pricing, and stays there when `2048` and Tab lift the capacity, which, with the stewards, is all that is replaced. With the East room closed in State, choosing Riverside Hall offers the main hall alone and says why. |
 | `Functional\ServedContractEndpointsTest` | In React: the landing page's links, and example 2's contract, refine and validate over HTTP. |
 | `Functional\ServedSubmitEndpointTest` | In React: example 2 saved over HTTP, refused, and refused after someone else saved. |
 | `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files, and opens every room example 4 closed. |

@@ -11,7 +11,7 @@ namespace Drupal\data_surface\Resource;
  * Outputs are never refined, because a refinement narrows what may be
  * sent and nobody sends an output; a #[RefinesInput] naming an output key is
  * refused at seal. An output whose keys depend on an input value is a
- * variant: attachBy() on that input key, exactly as for an input slot.
+ * variant: attachVariants() on that input key, exactly as for input variants.
  *
  * Inputs and outputs are separate namespaces; a key may appear in both
  * with different meanings.
@@ -20,7 +20,7 @@ namespace Drupal\data_surface\Resource;
  * ignores: a default is what a value starts from when nobody sent one,
  * and nobody sends an output.
  */
-interface HasOutputsInterface {
+interface DefinesOutputsInterface {
 
   /**
    * Outputs. What the resource or structure answers with.

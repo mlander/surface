@@ -164,7 +164,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
     <header>
       <p class="eyebrow">Data Surface</p>
       <h1>One resource, every door</h1>
-      <p class="about">This models the event registration example that ships in the <a href="https://github.com/mlander/data_surface/tree/main/modules/data_surface_examples" target="_blank" rel="noopener"><code>data_surface_examples</code></a> module: the settings for one event, with a venue, a room, a capacity, a ticket and a contact. Compliance is a second example module that adds a licence and stewards. It is a drawing of that example, not a live copy of it.</p>
+      <p class="about">This models the event registration example that ships in the <a href="https://github.com/mlander/data_surface/tree/main/modules/data_surface_examples" target="_blank" rel="noopener"><code>data_surface_examples</code></a> module: the settings for one event, with a venue, a room, a capacity, a ticket and a contact. Compliance is a second example module that adds a license and stewards. It is a drawing of that example, not a live copy of it.</p>
     </header>
 
     <nav class="tabs" aria-label="Layers of the model" id="tabs">
@@ -192,7 +192,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
       <p>Each is real work, and neither reads the other. Another module alters the form. The tool never hears about it, so a call with 150 is saved although the form would refuse it. To close the gap the module has to write its rule a second time.</p>
       <p>A headless admin has nothing to draw from. The form's rules are PHP callbacks, and the tool's inputs carry no dependencies between keys.</p>
       <pre class="code" data-code="today"></pre>
-      <p class="muted">Change the licence below. Only the form's doors light up.</p>
+      <p class="muted">Change the license below. Only the form's doors light up.</p>
     </section>
 
     <section class="chapter" id="ch-compare" hidden>
@@ -223,7 +223,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
     <section class="chapter" id="ch-parts" hidden>
       <h2>Structures</h2>
       <p>A resource can attach a structure at one of its keys. The child keeps its own keys, refinement and validation, and the parent cannot reach into it. That is what makes Contact reusable anywhere.</p>
-      <p>A slot is a key whose child another key's value chooses. Pricing decides whether the free ticket or the paid ticket fills it.</p>
+      <p>Variants are the structures a key can hold when another key's value chooses between them. Pricing decides whether the ticket is the free ticket or the paid ticket.</p>
       <pre class="code" data-code="parts"></pre>
     </section>
 
@@ -237,13 +237,13 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
     <section class="chapter" id="ch-alter" hidden>
       <h2>Others get a say</h2>
       <p>Another module can add keys to a resource it does not own, stored under its own name. It can tighten the owner's keys and say where its fieldset is drawn.</p>
-      <p>Here Compliance adds a licence and stewards. Without a licence it holds capacity at 100. The owner's class is not touched.</p>
+      <p>Here Compliance adds a license and stewards. Without a license it holds capacity at 100. The owner's class is not touched.</p>
       <pre class="code" data-code="alter"></pre>
     </section>
 
     <section class="chapter" id="ch-contract" hidden>
       <h2>The contract</h2>
-      <p>Ask the resource with the values so far and it answers with its schema as it stands: JSON Schema, with labelled choices as <code>oneOf</code> and slots as <code>if</code> / <code>then</code>.</p>
+      <p>Ask the resource with the values so far and it answers with its schema as it stands: JSON Schema, with labeled choices as <code>oneOf</code> and variants as <code>if</code> / <code>then</code>.</p>
       <p>Nothing in it depends on who is asking.</p>
       <pre class="code" data-code="contract"></pre>
     </section>
@@ -270,10 +270,10 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
           <button id="pricing-paid" data-set="pricing" data-val="paid" aria-pressed="false">Paid</button>
         </div>
       </div>
-      <div class="try-row"><span>licence</span>
-        <div class="seg" role="group" aria-label="Event licence">
-          <button id="licence-none" data-set="licence" data-val="" aria-pressed="true">None</button>
-          <button id="licence-2048" data-set="licence" data-val="2048" aria-pressed="false">2048</button>
+      <div class="try-row"><span>license</span>
+        <div class="seg" role="group" aria-label="Event license">
+          <button id="license-none" data-set="license" data-val="" aria-pressed="true">None</button>
+          <button id="license-2048" data-set="license" data-val="2048" aria-pressed="false">2048</button>
         </div>
       </div>
       <pre class="code" id="readout" aria-live="polite"></pre>
@@ -341,11 +341,11 @@ final class RegistrationStep3Resource implements ResourceInterface {
     parts: `$inputs->attach('contact', ContactStructure::class)
   ->setLabel(t('Contact'));
 
-$inputs->attachBy('ticket', by: 'pricing')
+$inputs->attachVariants('ticket', by: 'pricing')
   ->setLabel(t('Ticket'));
 
 #[Structure('registration.step3.ticket.paid')]
-#[Variant(of: RegistrationStep3Resource::class, key: 'ticket', value: 'paid')]
+#[Variant(of: RegistrationStep3Resource::class, at: 'ticket', for: 'paid')]
 final class PaidTicketStructure implements StructureInterface {
   // price, currency
 }`,
@@ -362,7 +362,7 @@ public static function roomInVenue(
 final class RegistrationComplianceAlter implements AltersInputsInterface {
 
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->add('licence', 'string', $this->t('Event licence'));
+    $inputs->add('license', 'string', $this->t('Event license'));
     $inputs->add('stewards', 'integer', $this->t('Stewards'), default: 1);
     $inputs->describe(
       'third_party_settings.data_surface_examples_compliance',
@@ -370,7 +370,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
       after: 'capacity',
     );
     $inputs->narrow('capacity')
-      ->when(Condition::absent('licence'))
+      ->when(Condition::absent('license'))
       ->constrain('Range', ['max' => 100]);
   }
 
@@ -381,7 +381,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
       "type": ["integer", "null"],
       "minimum": 1, "maximum": 100,
       "x-surface": { "refined": true,
-        "dependsOn": ["room", "third_party_settings...licence"] }
+        "dependsOn": ["room", "third_party_settings...license"] }
     }
   },
   "allOf": [{
@@ -409,7 +409,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
       body: 'A formatter, a block or any plugin with settings names a structure, or is one. Its configuration form is drawn from it.',
       sample: "#[UsesStructure]\nfinal class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements StructureInterface {\n  public static function defineInputs(BlueprintInterface $inputs): void {}\n}" },
     { id: 'headless', name: 'Headless', tier: 2, ang: 119, via: 'schema', shipped: true,
-      body: 'A React app that knows nothing about this resource draws it from the schema: selects from oneOf, slots from if / then, order and grouping from the x-surface hints.',
+      body: 'A React app that knows nothing about this resource draws it from the schema: selects from oneOf, variants from if / then, order and grouping from the x-surface hints.',
       sample: "/surface-react/registration.step3/configure" },
     { id: 'drush', name: 'Drush', tier: 2, ang: 90, via: 'tool', shipped: true,
       body: 'The command line describes the tool and calls it. A refused value comes back with the message a person would see on the form.',
@@ -419,7 +419,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
       sample: "tools/list  ->  data_surface:registration.step3:configure\n                inputSchema: the contract" },
     { id: 'agents', name: 'AI agents', tier: 2, ang: 50, via: 'tool', shipped: false,
       body: 'An agent given the tool reads what it takes before calling it. When a value is refused, the reason comes back in words, so the agent can correct itself.',
-      sample: "// agent sends capacity 150, no licence\n// The values were refused:\n// capacity: This value should be between 1 and 100." },
+      sample: "// agent sends capacity 150, no license\n// The values were refused:\n// capacity: This value should be between 1 and 100." },
     { id: 'eca', name: 'ECA', tier: 2, ang: 37, via: 'tool', shipped: false,
       body: 'An action that runs the tool is configured from the same definitions. A model cannot save what the form would refuse.',
       sample: "event  ->  condition  ->  run tool\n                          data_surface:registration.step3:configure" },
@@ -448,7 +448,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
   var FROM_SLUG = {};
   Object.keys(SLUG).forEach(function (k) { FROM_SLUG[SLUG[k] || 'whole-picture'] = k; FROM_SLUG[k] = k; });
 
-  var state = { pricing: 'free', licence: '' };
+  var state = { pricing: 'free', license: '' };
   var chapter = 'all';
   var selected = null;
   var gl = null; // filled in when WebGL is available
@@ -533,8 +533,8 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
   }
 
   function readout() {
-    var max = state.licence ? 400 : 100;
-    var why = state.licence ? 'the Main hall seats 400' : 'no licence, so Compliance stops it at 100';
+    var max = state.license ? 400 : 100;
+    var why = state.license ? 'the Main hall seats 400' : 'no license, so Compliance stops it at 100';
     var ticket = state.pricing === 'paid'
       ? '{ "required": ["price", "currency"] }'
       : '{ "properties": { "note": {} } }';
@@ -715,14 +715,14 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
   var gPaid = part('PaidTicketStructure', PARK.x, PARK.y, PARK.z, 2.6, ['price', 'currency'], 'part');
   gPaid.userData.fade = gPaid.userData.fadeGoal = 0.4;
   var gContact = part('ContactStructure', 2.6, DOCK, 1.3, 2.9, ['email', 'phone'], 'part');
-  label('ticket: a slot', scene, -0.9, TOP + 0.05, 2.35, ['parts'], 'major', { c: 'part' });
+  label('ticket: variants', scene, -0.9, TOP + 0.05, 2.35, ['parts'], 'major', { c: 'part' });
   label('contact: a structure', scene, 2.6, TOP + 0.05, 2.35, ['parts'], 'major', { c: 'part' });
 
   /* another module's alter, mounted beside capacity */
   var ALT = 2.8;
   var gAlter = new T.Group(); gAlter.position.set(2.6, ALT, -1.05); scene.add(gAlter);
   var aPlate = box(2.9, 0.2, 1.7, 'alter', ['alter']); gAlter.add(aPlate); edges(aPlate, ['alter']);
-  tile(gAlter, 'licence', -0.65, 0, 0.1, 'alterTile', ['alter'], 1.12);
+  tile(gAlter, 'license', -0.65, 0, 0.1, 'alterTile', ['alter'], 1.12);
   tile(gAlter, 'stewards', 0.65, 0, 0.1, 'alterTile', ['alter'], 1.12);
   label('Compliance: another module', gAlter, 0, 1.05, 0, ['alter'], 'major', { c: 'alter' });
   var aPins = [];
@@ -896,7 +896,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
   label('#ajax and #states callbacks', scene, XF - 1.7, KT + 1.0, -1.4, TD, 'note');
   var fAlter = new T.Group(); fAlter.position.set(XF + 1.6, ALT, 0.9); scene.add(fAlter);
   var fPlate = box(2.9, 0.2, 1.7, 'alter', TD); fAlter.add(fPlate); edges(fPlate, TD);
-  tile(fAlter, 'licence', -0.65, 0, 0.1, 'alterTile', TD, 1.12);
+  tile(fAlter, 'license', -0.65, 0, 0.1, 'alterTile', TD, 1.12);
   tile(fAlter, 'stewards', 0.65, 0, 0.1, 'alterTile', TD, 1.12);
   label('hook_form_alter(): another module', fAlter, 0, 1.05, 0, TD, 'major', { c: 'alter' });
   var fPins = [];
@@ -911,7 +911,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
   oldStack(XT, { name: 'A tool plugin: the inputs again', mid: 'constraints, written again', midAt: 2.4, save: 'execute()', saveAt: 3.8, saveZ: 0.4, nameAt: 3.3, nameZ: -1.8,
     contract: "Contract 2: the tool's inputs" });
   ghostAlter(XT + 1.6, ALT, 0.9, 'the form alter never arrives');
-  gauge(XT, 0, TD, 2.0, 'old', 'max 1000: no room, no licence', 'note');
+  gauge(XT, 0, TD, 2.0, 'old', 'max 1000: no room, no license', 'note');
 
   buildDoor('t-form', 'Form API', v(XF, 0, -7), v(XF, 0, 0), 1, TD, { fixed: true });
   buildDoor('t-settings', 'Settings pages', v(XF - 3.2, 0, -11.4), v(XF, 0, 0), 2, TD, { fixed: true });
@@ -1090,8 +1090,8 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
     var paid = s.pricing === 'paid';
     gPaid.userData.goal = paid ? DOCKED : PARK; gFree.userData.goal = paid ? PARK : DOCKED;
     gPaid.userData.fadeGoal = paid ? 1 : 0.4; gFree.userData.fadeGoal = paid ? 0.4 : 1;
-    setGauge(gCap, s.licence ? 1.75 : 0.45, s.licence ? 'owner' : 'alter', s.licence ? 'max 400: the room' : 'max 100: no licence');
-    setGauge(gForm, s.licence ? 1.75 : 0.45, s.licence ? 'old' : 'alter', s.licence ? 'max 400: the form' : 'max 100: the form alter');
+    setGauge(gCap, s.license ? 1.75 : 0.45, s.license ? 'owner' : 'alter', s.license ? 'max 400: the room' : 'max 100: no license');
+    setGauge(gForm, s.license ? 1.75 : 0.45, s.license ? 'old' : 'alter', s.license ? 'max 400: the form' : 'max 100: the form alter');
     if (announce) { rippleAt = clock; }
     if (reduce) {
       gPaid.position.copy(gPaid.userData.goal); gFree.position.copy(gFree.userData.goal);

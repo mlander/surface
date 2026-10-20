@@ -34,14 +34,15 @@ use Drupal\data_surface\Entry;
  * names storage of its own is routed to an adapter like this one, for
  * the child's data surface and in the child's context, so it loads its
  * own slice and commits it after its parent; a child without it is left
- * in the parent's values and stored by the parent under its key. A
- * slot routes by the variant its deciding key chooses, read from the
- * values themselves, which is why the routing lives here and not in a
+ * in the parent's values and stored by the parent under its key. A key
+ * with variants routes by the variant its deciding key chooses, read from
+ * the values themselves, which is why the routing lives here and not in a
  * CompositeStorage: a composite hands each child only the keys it claims,
- * and a slot's child needs its sibling to know which variant it is.
+ * and a key with variants needs its sibling to know which variant it
+ * holds.
  *
  * A storage layout an alter hands the build for the keys it mounts
- * (HasStorageLayoutInterface) is applied here, to that module's namespace
+ * (AltersStorageLayoutInterface) is applied here, to that module's namespace
  * under `third_party_settings` and nothing else: fromStorage() on what
  * the storage loads, toStorage() in prepare. So the storage reads and
  * writes a contributor's settings in the layout they are stored in, and
@@ -331,17 +332,17 @@ final class StorageAdapter implements CreatingStorageInterface {
    * @param \Drupal\data_surface\Entry $entry
    *   The child's key.
    * @param array $values
-   *   The values of its level, where a slot's deciding key is read.
+   *   The values of its level, where the variants' deciding key is read.
    *
    * @return string|null
-   *   ATTACHED for an attached child, the variant id for a slot, or NULL
-   *   when the slot is unresolved.
+   *   ATTACHED for an attached child, the variant id for a key with
+   *   variants, or NULL when nothing has chosen one yet.
    */
   protected function routeOf(Entry $entry, array $values): ?string {
     if ($entry->attachment !== NULL) {
       return self::ATTACHED;
     }
-    return $entry->slot?->chosen($values[$entry->slot->by] ?? NULL);
+    return $entry->variants?->chosen($values[$entry->variants->by] ?? NULL);
   }
 
   /**
@@ -356,7 +357,7 @@ final class StorageAdapter implements CreatingStorageInterface {
    *   The child.
    */
   protected static function childOf(Entry $entry, string $id): DataSurfaceInterface {
-    return $entry->attachment !== NULL ? $entry->attachment->child : $entry->slot->variant($id)->child;
+    return $entry->attachment !== NULL ? $entry->attachment->child : $entry->variants->variant($id)->child;
   }
 
   /**

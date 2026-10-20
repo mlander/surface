@@ -17,17 +17,17 @@ use Drupal\Core\TypedData\MapDataDefinition;
 interface BlueprintInterface extends BlueprintAdditionsInterface {
 
   /**
-   * A slot: a child structure one sibling INPUT key chooses.
+   * Variants: the child structures one sibling INPUT key chooses between.
    *
    * The parent never names the children. Every structure carrying
-   * #[Variant] for this class and key fills the slot, one per
+   * #[Variant] for this class and key is one of the variants, one per
    * value of $by, and $by's allowed values become exactly those: a Choice
    * over the variants' values, narrower than any list it already
    * declares, which must allow every one of them. Until $by holds a value
-   * the slot is an `any` stub that lists every variant; once it does, the
+   * the key is an `any` stub that lists every variant; once it does, the
    * stub narrows to exactly that variant's map, which is an ordinary
    * refinement under the rule that `any` may become anything narrower. A
-   * sibling the context locks resolves the slot from the start.
+   * sibling the context locks chooses the variant from the start.
    *
    * A child that cannot be enumerated statically is the one case for a
    * #[RefinesInput] method on an `any` key returning the narrower
@@ -46,7 +46,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *   When the key is already declared, or for outputs, which do not
    *   attach yet.
    */
-  public function attachBy(string $key, string $by): MapDataDefinition;
+  public function attachVariants(string $key, string $by): MapDataDefinition;
 
   /**
    * A map with one value per thing the site has: keys from the site.

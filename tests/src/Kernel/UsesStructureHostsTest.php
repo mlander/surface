@@ -10,7 +10,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Form\DataSurfacePluginForm;
 use Drupal\data_surface\Refinement\ChoiceSet;
 use Drupal\data_surface\Resource\Attribute\UsesStructure;
-use Drupal\data_surface\Storage\PluginConfigurationStorage;
+use Drupal\data_surface\Pipeline\Storage\PluginConfigurationStorage;
 use Drupal\data_surface_address\Resource\AddressFieldSettingsResource;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface_demo\Plugin\Field\FieldFormatter\DataSurfaceDemoFormatter;

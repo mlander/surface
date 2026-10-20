@@ -24,7 +24,7 @@ use Symfony\Component\Validator\Constraint;
  *
  * The field's selection handler is asked, for the account asking: core's
  * autocomplete and select widgets ask it the same way. Up to the served
- * contract's enumeration cap the targets are the key's options, labelled;
+ * contract's enumeration cap the targets are the key's options, labeled;
  * past it this resolver does not apply, so the key takes any id and the
  * constraint's validator decides, which the contract says is checked on
  * the server.

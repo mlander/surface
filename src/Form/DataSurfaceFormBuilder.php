@@ -243,29 +243,29 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         );
         continue;
       }
-      $slot = $definitions->entry($name)?->slot;
+      $variants = $definitions->entry($name)?->variants;
       $locked = $definitions->isLocked($name);
       $reason = $definitions->entry($name)?->lockedBecause;
-      if ($slot !== NULL && DefinitionMetadata::slotOf($definition) !== NULL) {
+      if ($variants !== NULL && DefinitionMetadata::variantsBy($definition) !== NULL) {
         // The values said nothing about the deciding key, so its own
-        // default is what the person sees chosen, and the slot is that
+        // default is what the person sees chosen, and the key is that
         // variant's.
-        $chosen = $slot->chosen($values[$slot->by] ?? $surface->getDefault($slot->by));
+        $chosen = $variants->chosen($values[$variants->by] ?? $surface->getDefault($variants->by));
         if ($chosen === NULL) {
-          // A slot whose deciding key chose nothing has no shape to
+          // Variants whose deciding key chose nothing have no shape to
           // render. Offering nothing is honest: a key with no element
-          // has said nothing, so what it holds is kept, and the slot
+          // has said nothing, so what it holds is kept, and the variant
           // appears the moment its deciding key is answered, through the
           // rebuild the deciding key is wired to. Nothing but its
           // wrapper is rendered, so that rebuild has a place to put it.
           $container[$name] = ['#markup' => '', self::PLACEHOLDER_KEY => TRUE];
           continue;
         }
-        $child = $slot->variant($chosen)->child;
+        $child = $variants->variant($chosen)->child;
         $held = $values[$name] ?? NULL;
-        $definition = $slot->definitionFor($chosen, $child->refine(array_replace(
+        $definition = $variants->definitionFor($chosen, $child->refine(array_replace(
           $child->getDefaultValues(),
-          $slot->fits($chosen, $held) ? $held : [],
+          $variants->fits($chosen, $held) ? $held : [],
         )));
       }
       $value = match (TRUE) {
@@ -284,20 +284,20 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         $definitions->isLocked($name) && !$definitions->isHeld($name) && !$definitions->entry($name)?->isNested() => $surface->getDefault($name),
         default => $shown[$name] ?? $surface->getDefault($name),
       };
-      if ($slot !== NULL) {
+      if ($variants !== NULL) {
         // Rendered for the variant now chosen, from that variant's
         // defaults when what is held was written for another one.
-        $chosen = (string) $slot->chosen($values[$slot->by] ?? $surface->getDefault($slot->by));
-        $value = $slot->fits($chosen, $value) ? $value : $slot->defaultsOf($chosen);
+        $chosen = (string) $variants->chosen($values[$variants->by] ?? $surface->getDefault($variants->by));
+        $value = $variants->fits($chosen, $value) ? $value : $variants->defaultsOf($chosen);
         // A variant its access locked is offered, and drawn fixed.
         // Decision: see
         // docs/decisions.md#a-variant-is-open-locked-or-not-offered.
-        $variant = $chosen !== '' ? $slot->variant($chosen)->child->lockedWhole() : NULL;
+        $variant = $chosen !== '' ? $variants->variant($chosen)->child->lockedWhole() : NULL;
         $locked = $locked || $variant !== NULL;
         $reason ??= $variant;
       }
       $element = $this->widgetManager->getWidgetFor($definition)->buildElement($definition, $value);
-      $inside = $slot === NULL ? $definitions->entry($name)?->attachment?->child : NULL;
+      $inside = $variants === NULL ? $definitions->entry($name)?->attachment?->child : NULL;
       if ($inside !== NULL && !$locked) {
         $element = static::lockedInside($element, $inside);
       }
@@ -698,7 +698,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         continue;
       }
       $held = $stored[$name] ?? NULL;
-      if ($entry->slot !== NULL && !$entry->slot->fits((string) $entry->slot->chosen($values[$entry->slot->by] ?? NULL), $held)) {
+      if ($entry->variants !== NULL && !$entry->variants->fits((string) $entry->variants->chosen($values[$entry->variants->by] ?? NULL), $held)) {
         // What is stored was written for another variant, and says
         // nothing about this one.
         $held = NULL;
@@ -743,7 +743,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    */
   protected function settleFrame(DataSurfaceInterface $surface, array $stored, array $input): array {
     // One mounted key at a time: a moved capacity drops the stewards
-    // count it narrows, and not the licence beside it.
+    // count it narrows, and not the license beside it.
     $refinements = $surface->getDefinitions()->refinementPaths();
     if ($refinements === []) {
       return [[], []];
@@ -873,7 +873,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       return FALSE;
     }
     $definition = static::definitionAt($refined, $name);
-    if ($definition === NULL || $definition instanceof ListDataDefinitionInterface || $refined->getDefinitions()->entry($name)?->slot !== NULL) {
+    if ($definition === NULL || $definition instanceof ListDataDefinitionInterface || $refined->getDefinitions()->entry($name)?->variants !== NULL) {
       return FALSE;
     }
     $set = $this->options->resolve($definition);
@@ -947,14 +947,14 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         return FALSE;
       }
     }
-    $slot = $refined->getDefinitions()->entry($name)?->slot;
-    if ($slot !== NULL) {
-      // A slot's input stands while it is shaped for the variant now
-      // chosen. Input left by another variant answered a question that
-      // is no longer on the form, so it goes, and the rebuilt slot
-      // starts from the chosen variant's own values.
-      $chosen = $slot->chosen($values[$slot->by] ?? NULL);
-      return $chosen === NULL || $slot->fits($chosen, $value);
+    $variants = $refined->getDefinitions()->entry($name)?->variants;
+    if ($variants !== NULL) {
+      // The input at a key with variants stands while it is shaped for
+      // the variant now chosen. Input left by another variant answered a
+      // question that is no longer on the form, so it goes, and the
+      // rebuilt key starts from the chosen variant's own values.
+      $chosen = $variants->chosen($values[$variants->by] ?? NULL);
+      return $chosen === NULL || $variants->fits($chosen, $value);
     }
     // An empty answer has nothing to fall out of: it is the person
     // having said "nothing" under a parent that has not moved, and a
@@ -1666,10 +1666,10 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     $container = static::findSurfaceContainer($container);
     $raw = [];
     $definitions = $surface->getDefinitions();
-    $slots = [];
+    $variantKeys = [];
     foreach ($definitions->entries() as $name => $entry) {
-      if ($entry->slot !== NULL) {
-        $slots[] = $name;
+      if ($entry->variants !== NULL) {
+        $variantKeys[] = $name;
         continue;
       }
       if ($entry->list !== NULL) {
@@ -1678,14 +1678,14 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       }
       $raw += $this->extractKey((string) $name, $entry->definition, $container, $form_state);
     }
-    if ($slots !== []) {
-      // A slot's element is the chosen variant's, so it is read through
+    if ($variantKeys !== []) {
+      // A key's element is the chosen variant's, so it is read through
       // that variant's shape, chosen by what the deciding key holds in
       // this same submission.
-      $resolved = $definitions->withSlotsResolved($raw + $current + $surface->getDefaultValues());
-      foreach ($slots as $name) {
+      $resolved = $definitions->withVariantsResolved($raw + $current + $surface->getDefaultValues());
+      foreach ($variantKeys as $name) {
         $definition = $resolved->get((string) $name);
-        if ($definition !== NULL && DefinitionMetadata::slotOf($definition) === NULL) {
+        if ($definition !== NULL && DefinitionMetadata::variantsBy($definition) === NULL) {
           $raw += $this->extractKey((string) $name, $definition, $container, $form_state);
         }
       }
@@ -1784,7 +1784,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    */
   protected function extractKey(string $name, ?DataDefinitionInterface $definition, array $container, FormStateInterface $form_state): array {
     if ($definition === NULL || !isset($container[$name]) || !is_array($container[$name]) || !empty($container[$name][self::PLACEHOLDER_KEY])) {
-      // A placeholder is a wrapper and nothing else (a slot nothing
+      // A placeholder is a wrapper and nothing else (variants nothing
       // chose, a key that does not apply): no element was offered, so the
       // key has said nothing.
       return [];
@@ -2175,8 +2175,8 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    * else.
    *
    * @param array $element
-   *   The container, or the element an attached child or a slot variant
-   *   is rendered as.
+   *   The container, or the element an attached child or a variant is
+   *   rendered as.
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The data surface or built child the element renders.
    * @param array $values
@@ -2207,8 +2207,8 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       }
       $at = [...$path, $name];
       if (isset($refinements[$name])) {
-        // A target — a slot is one too, of its deciding key — has a
-        // wrapper of its own, which is what the rebuild replaces.
+        // A target (a key with variants is one too, of its deciding key)
+        // has a wrapper of its own, which is what the rebuild replaces.
         $element[$name][self::REFRESH_KEY] = implode('.', $at);
       }
       if ($entry->list !== NULL) {
@@ -2236,12 +2236,12 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       }
       $child = $entry->attachment?->child;
       $held = $values[$name] ?? NULL;
-      if ($entry->slot !== NULL) {
-        // The variant the slot was rendered as, from what it was rendered
+      if ($entry->variants !== NULL) {
+        // The variant the key was rendered as, from what it was rendered
         // with: its own defaults when what is held was another's.
-        $chosen = $entry->slot->chosen($values[$entry->slot->by] ?? $surface->getDefault($entry->slot->by));
-        $child = $chosen === NULL ? NULL : $entry->slot->variant($chosen)->child;
-        $held = $chosen !== NULL && $entry->slot->fits($chosen, $held) ? $held : NULL;
+        $chosen = $entry->variants->chosen($values[$entry->variants->by] ?? $surface->getDefault($entry->variants->by));
+        $child = $chosen === NULL ? NULL : $entry->variants->variant($chosen)->child;
+        $held = $chosen !== NULL && $entry->variants->fits($chosen, $held) ? $held : NULL;
       }
       if ($child !== NULL) {
         $element[$name] = $this->wireRefinement(
@@ -2376,7 +2376,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         $element[$name] = static::describeLocked($element[$name], $entry->lockedBecause);
         continue;
       }
-      if ($entry->attachment !== NULL && $entry->slot === NULL) {
+      if ($entry->attachment !== NULL && $entry->variants === NULL) {
         $element[$name] = static::lockedInside($element[$name], $entry->attachment->child);
       }
     }

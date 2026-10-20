@@ -30,6 +30,8 @@ use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
  */
 final class ShapeBlueprint implements BlueprintAdditionsInterface {
 
+  use DeprecatedWithTrait;
+
   /**
    * The rules declared, in order.
    *
@@ -71,7 +73,7 @@ final class ShapeBlueprint implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    */
-  public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): static {
+  public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): DataDefinitionInterface {
     throw $this->refused(sprintf('addDefinition("%s")', $key));
   }
 
@@ -92,8 +94,8 @@ final class ShapeBlueprint implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    */
-  public function with(string $structure, array $reads = []): static {
-    throw $this->refused('with()');
+  public function mixIn(string $structure, array $reads = []): static {
+    throw $this->refused('mixIn()');
   }
 
   /**

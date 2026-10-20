@@ -17,9 +17,9 @@ use Drupal\data_surface\Contract\PatternTranslation;
  *
  * @code
  * $inputs->narrow('capacity')
- *   ->when(Condition::absent('licence'))
+ *   ->when(Condition::absent('license'))
  *   ->constrain('Range', ['max' => 100])
- *   ->describe(t('Up to 100 without an event licence.'));
+ *   ->because(t('Up to 100 without an event license.'));
  * @endcode
  *
  * A declared rule is a refiner, static by construction: it is bound in
@@ -211,8 +211,8 @@ final class Rule {
    *
    * @return $this
    */
-  public function describe(string|\Stringable $description): static {
-    $this->assertApplies('describe');
+  public function because(string|\Stringable $description): static {
+    $this->assertApplies('because');
     $this->description = $description;
     return $this;
   }

@@ -49,7 +49,7 @@ named by `#[Resource(access:)]` or `#[Structure(access:)]`, which may
 hold services and asks the thing itself. A context whose id names no
 declared operation (a plugin host's `configure`) has no permission to
 check, so the access class is the whole answer, and a class with neither
-answers neutral. A slot's variant chosen by a locked deciding key whose
+answers neutral. A variant chosen by a locked deciding key whose
 class names an access class of its own is asked too, and may refuse; a
 child never allows on its parent's behalf. Every other child's access
 shaped its keys when it was built. A plugin host asks through its own
@@ -242,7 +242,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 The output half of `validate()`, and the only stage that runs after the
 host has done its work rather than before. It holds what was emitted to
 the data surface's [output definitions](outputs.md), which are never
-refined: it strips the `Omitted` sentinel, refuses keys no output declares, and checks what is
+refined: it strips the `NotEmitted` sentinel, refuses keys no output declares, and checks what is
 left against each definition's type and constraints, answering with the
 same `ViolationSet` everything else answers with.
 
@@ -373,7 +373,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 What any door may hand a caller of a set of values, the read tool's
 projection (`Pipeline\Outbound::project()`): no key the build left out
 for the caller, at any depth; no secret, at any depth, under every
-variant of a slot that keeps it secret and inside each item of a list;
+variant that keeps it secret and inside each item of a list;
 no key that does not apply to the values; a locked key as stored. The
 read tool answers what storage loads through it, the write tool answers
 its accepted `values` through it, dry run or written, and React's
@@ -440,7 +440,7 @@ are in [Value semantics](semantics.md#violation-messages-are-objects).
 | --- | --- | --- |
 | `UnknownKeysException` | `accept()` | The input carries a key no definition declares, at any depth. |
 | `TypeMismatchException` | `accept()` | The input carries a value of a type its definition cannot hold, such as a string where a map was advertised. Names the dotted path and what was expected. |
-| `VariantMismatchException` | `accept()` | A slot's value carries keys the chosen variant does not declare and another variant does. Names the slot, the deciding key and the misplaced keys. |
+| `VariantMismatchException` | `accept()` | The value at a key with variants carries keys the chosen variant does not declare and another variant does. Names that key, the deciding key and the misplaced keys. |
 | `StorageViolationsException` | `prepare()` | What the storage writes to refuses the values; a config schema, usually. |
 
 `UnknownKeysException` and `StorageViolationsException` render their

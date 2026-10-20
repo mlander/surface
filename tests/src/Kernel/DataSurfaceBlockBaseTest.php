@@ -229,7 +229,7 @@ class DataSurfaceBlockBaseTest extends DataSurfaceKernelTestBase {
    * Tests that the plugin is listed by its structure without booting it.
    *
    * #[UsesStructure] is copied into the plugin definition, which is
-   * cached, so a catalogue lists the configurable plugins on a site
+   * cached, so a catalog lists the configurable plugins on a site
    * without booting one. What each structure holds is the built structure's
    * answer, which costs an instance and is asserted everywhere else in
    * this class.

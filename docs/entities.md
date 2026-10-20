@@ -66,8 +66,8 @@ names it as the field.
 | `boolean` | `value` | `boolean` |
 | `integer` | `value` | `integer`, with the field's `min` and `max` |
 | `decimal`, `float` | `value` | `float`, with `min` and `max` |
-| `list_string`, `list_integer` | `value` | `string`, `integer`, a labelled choice of the allowed values |
-| `list_float` | `value` | `string`, a labelled choice of the allowed values as written |
+| `list_string`, `list_integer` | `value` | `string`, `integer`, a labeled choice of the allowed values |
+| `list_float` | `value` | `string`, a labeled choice of the allowed values as written |
 | `datetime` | `value` | `string` in the storage form: `YYYY-MM-DD` for a date, `YYYY-MM-DDTHH:MM:SS` in UTC for a date and time, held to it by a `Regex` |
 | `timestamp`, `created`, `changed` | `value` | `integer`, seconds since the epoch |
 | `link` | `uri`, `title` | `uri`, `string`; no `title` when the field switches titles off |
@@ -106,7 +106,7 @@ and access stay derived. Its keys are the item's property names, which
 is how the storage writes them.
 
 Discovery finds these classes for the deriver: `#[DerivesResources(base:
-'field.item', overrides: FieldItemStructure::class)]` names the attribute,
+'field.item', overriddenBy: FieldItemStructure::class)]` names the attribute,
 and the registry hands the deriver every class in an enabled module's
 `src/Resource` or `src/Structure` carrying it. The test module's
 `TelephoneItemStructure` is the one written so far
@@ -317,7 +317,7 @@ done about it.
     as core's form drops it. A hidden required field could therefore be
     saved empty through the resource exactly as through core's form.
 18. **A field is a fieldset.** Every field is a child, so a one-value
-    field is a fieldset with one element, both labelled with the field's
+    field is a fieldset with one element, both labeled with the field's
     label. The form's cosmetic layer could flatten it; nothing does yet.
 19. **Base fields compose by trait, and the derivation lists them one by
     one.** An owner, a changed time and a published flag come from

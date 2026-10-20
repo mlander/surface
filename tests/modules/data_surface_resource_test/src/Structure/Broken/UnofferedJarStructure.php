@@ -10,10 +10,10 @@ use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\StructureInterface;
 
 /**
- * Fills UnofferedVariantStructure's slot for `jar`.
+ * The variant of UnofferedVariantStructure's settings for `jar`.
  */
 #[Structure('resource_test.broken.unoffered_variant.jar')]
-#[Variant(of: UnofferedVariantStructure::class, key: 'settings', value: 'jar')]
+#[Variant(of: UnofferedVariantStructure::class, at: 'settings', for: 'jar')]
 final class UnofferedJarStructure implements StructureInterface {
 
   /**

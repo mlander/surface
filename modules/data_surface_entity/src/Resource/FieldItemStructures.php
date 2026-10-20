@@ -40,7 +40,7 @@ use Drupal\data_surface_entity\Structure\Attribute\FieldItemStructure;
  *
  * @see \Drupal\data_surface_entity\Resource\ContentEntityResources
  */
-#[DerivesResources('field.item', overrides: FieldItemStructure::class)]
+#[DerivesResources('field.item', overriddenBy: FieldItemStructure::class)]
 final class FieldItemStructures implements ResourceDeriverInterface {
 
   use StringTranslationTrait;

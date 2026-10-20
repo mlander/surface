@@ -317,7 +317,7 @@ keys:
 
 ```php
 $inputs->narrow('capacity')
-  ->when(Condition::absent('licence'))
+  ->when(Condition::absent('license'))
   ->constrain('Range', ['max' => 100]);
 ```
 

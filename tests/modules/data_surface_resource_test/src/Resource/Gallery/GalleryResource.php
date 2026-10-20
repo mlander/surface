@@ -21,7 +21,7 @@ use Drupal\data_surface_resource_test\Structure\Gallery\WallStructure;
  * Nothing here names an access class but the wall's: every other answer
  * comes from an alter in src/Alter, of the gallery itself (when it is
  * curated), of the plaque it mixes in, of the wall it attaches twice, of
- * the oil finish one of its slot's variants is, and of the room at every
+ * the oil finish one of its variants is, and of the room at every
  * entry of its keys from the site. Each alter is asked after the owner's
  * own answer, the stricter standing.
  *
@@ -52,7 +52,7 @@ final class GalleryResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('name', 'string', t('Name'))
       ->setRequired(TRUE);
-    $inputs->with(PlaqueStructure::class);
+    $inputs->mixIn(PlaqueStructure::class);
     $inputs->attach('north', WallStructure::class)
       ->setLabel(t('North wall'));
     $inputs->attach('south', WallStructure::class)
@@ -60,7 +60,7 @@ final class GalleryResource implements ResourceInterface {
     $inputs->add('medium', 'string', t('Medium'), default: 'oil')
       ->setRequired(TRUE)
       ->addConstraint('Choice', ['choices' => ['oil', 'print']]);
-    $inputs->attachBy('finish', by: 'medium')
+    $inputs->attachVariants('finish', by: 'medium')
       ->setLabel(t('Finish'));
     $inputs->attachEach('rooms', RoomStructure::class, from: GalleryRooms::class)
       ->setLabel(t('Rooms'));

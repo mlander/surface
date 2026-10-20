@@ -25,7 +25,7 @@ Everything else under `x-surface` is the data surface's own reading of
 a key and is always there.
 
 It is this module's own emitter, not the Tool API's: the Tool API's
-context definitions have no place for labelled values, a conditional on
+context definitions have no place for labeled values, a conditional on
 a sibling, or anything the form knows about a key, so the tool bridge's
 JSON Schema cannot say them. This one can.
 
@@ -47,11 +47,11 @@ JSON Schema cannot say them. This one can.
   enabled: the whole document, widget hints included. The full schema is
   `GET /surface-api/{resource}/{operation}/schema` beside it.
 - **Not `drush tool:info`.** That prints the Tool API's rendering of the
-  derived tool, which cannot say keys a sibling chooses: a slot is
+  derived tool, which cannot say keys a sibling chooses: variants are
   flattened to one map, the variant the stored values choose, or every
   variant's keys with none required before anything chooses
   ([resources](resources.md), "Emission"). The `allOf` of `if`/`then`
-  below is only in this contract, for a slot and for
+  below is only in this contract, for variants and for
   [an enumerated key](#exact-where-it-can-be) alike: a Tool API context
   definition has no conditional, so the tool's schema stays as loose as
   the unrefined data surface.
@@ -88,7 +88,8 @@ The emitter writes two documents from one data surface, by one code path.
   ([decision](decisions.md#access-is-static-or-runtime-read-from-its-cacheability)).
   Its `x-surface` carries only what holds for
   any values (`version`, `locked`, `access`, `dependsOn`, `enumerated`, `declared`, `dynamic`, `runtime`,
-  a slot's `by` and `variants`, `group`, `after`, `patternMessage`,
+  the `by` and `variants` of a key with variants, `group`, `after`,
+  `patternMessage`,
   `checkedOnServer`); there is no `refined`, `stale`, `emptyOption` or
   `chosen`, and no `values` or `stale` beside the schema. A child's
   frame is described from nothing, not from the child's defaults. Only
@@ -243,11 +244,11 @@ version of its stored values the resource or structure describes
 top frame says under `x-surface` (`doesNotApply`, `ports`). A document
 asked for in no operation has no `operation`, and starts with `version`.
 
-Each frame (the top level, an attached part, a slot's variant) is an
+Each frame (the top level, an attached part, a variant) is an
 object with `properties` in declaration order, `required`, and
 `additionalProperties: false` (`unevaluatedProperties: false`, for a
 frame that [mixes structures in](#a-mixed-in-structure-is-composed)); an
-attached part and a slot's variant are each written once, as a def
+attached part and a variant are each written once, as a def
 under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 
 | The declaration says | The schema says |
@@ -266,7 +267,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | any list of allowed values | `oneOf: [{const, title, description?}]`, read from the options service, so the labels travel; never `enum`. An optional key that may be cleared adds an untitled `{const: null}` (not one its storage always holds), and so does a list of no values, which a required key's type then refuses too: nothing is allowed. |
 | a map | a nested object |
 | an attached part | a reference to its def under `$defs`, beside its label ([reusable subschemas](#reusable-subschemas)) |
-| a structure mixed in, `with()` | a reference to its def in the frame's `allOf`, beside the frame's own `properties` (each member in its place: `true`, what differs, or `false`), the frame closed with `unevaluatedProperties: false` ([below](#a-mixed-in-structure-is-composed)) |
+| a structure mixed in, `mixIn()` | a reference to its def in the frame's `allOf`, beside the frame's own `properties` (each member in its place: `true`, what differs, or `false`), the frame closed with `unevaluatedProperties: false` ([below](#a-mixed-in-structure-is-composed)) |
 | a list | `type: array`, `items`, never null: an empty item is dropped before anything reads the list ([decision](decisions.md#an-item-is-never-null)) |
 | a collection | `type: array`, `items` a reference to the child's def, narrowed by composition only where every item differs from it (a key the child's operation locked, a locked list), `minItems` and `maxItems` from its Count as the parent's refiners left it, and `x-surface.list: true` ([below](#collections)) |
 | a locked key | `readOnly: true` and `const` of the value the operation knows |
@@ -280,16 +281,16 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 
 | Keyword | Holds |
 | --- | --- |
-| `widget` | Only when the caller asks for widget hints (`data_surface_react` does). The Form API-equivalent hint, the stock widget's choice ([the widget mapping](#the-widget-mapping)): `select`, `radios`, `checkboxes`, `checkbox`, `number`, `text`, `textarea`, `email`, `time`, `fieldset`, `slot`, `list` (a list of free values, and a collection); `null` when no widget would claim the key. |
+| `widget` | Only when the caller asks for widget hints (`data_surface_react` does). The Form API-equivalent hint, the stock widget's choice ([the widget mapping](#the-widget-mapping)): `select`, `radios`, `checkboxes`, `checkbox`, `number`, `text`, `textarea`, `email`, `time`, `fieldset`, `slot` (the wire's word for variants), `list` (a list of free values, and a collection); `null` when no widget would claim the key. |
 | `locked` | Identity the operation knows, or a key of a child or a variant whose access answered locked: shown, never changed. At the top, beside `readOnly: true`, when the resource's own access locked it whole: every key is `readOnly`, a submit is refused, and a renderer offers none ([decision](decisions.md#locked-at-the-top)). |
-| `access` | Only `"runtime"`, and only in [the full schema](#two-documents): an access answer that waits for the subject (it read a stored value, State, the `user` context) was set aside for this account, so the key is as the account's static answers leave it and may be locked or left out once the subject is known. The answer may be the owner's access class's or an alter's, each read by itself, so a key the account's static answers lock is `readOnly` and marked too. On every key of the document when the answer set aside is the resource's own at the top, which may lock it whole. A client keeps what the schema for these answers says for it rather than narrowing it from the full schema. On a slot: a variant offered may be withheld. |
+| `access` | Only `"runtime"`, and only in [the full schema](#two-documents): an access answer that waits for the subject (it read a stored value, State, the `user` context) was set aside for this account, so the key is as the account's static answers leave it and may be locked or left out once the subject is known. The answer may be the owner's access class's or an alter's, each read by itself, so a key the account's static answers lock is `readOnly` and marked too. On every key of the document when the answer set aside is the resource's own at the top, which may lock it whole. A client keeps what the schema for these answers says for it rather than narrowing it from the full schema. On a key with variants: a variant offered may be withheld. |
 | `dependsOn` | The sibling keys this key's refiners watch, in its own frame; a key an alter mounted, which only that alter may watch, by its dotted path in that frame (`third_party_settings.<module>.<key>`); a port the frame reads, by the port's name. A client refines when one of them changes. |
 | `refined` | Whether the key is narrowed right now, compared with what the resource or structure advertises in this operation. |
 | `stale` | The stored value is no longer offered; the key is shown on its empty option, standing for it. |
 | `emptyOption` | On a single select or radios: `{show, label}`, by [the empty option rule](decisions.md#the-empty-option-rule): always for a select that may be cleared (`- None -`), for one that holds a value (required, or [always held by its storage](decisions.md#a-key-its-storage-always-holds)) only while no valid choice is selected (`- Select -`). On radios: `show` is whether a `- None -` radio is drawn, only where the key may be cleared; one that holds a value shows nothing checked while no valid choice is. |
 | `multiple` | With the widget hints, on a list of allowed values drawn as a select: a multiple select. A list drawn as checkboxes says `checkboxes` and no `multiple`. |
-| `by`, `variants`, `chosen` | On a slot: the deciding key, the values that choose a variant, and the one chosen now. |
-| `variant` | On a slot's conditional, beside the reference to the variant's def: which value it is for. |
+| `by`, `variants`, `chosen` | On a key with variants: the deciding key, the values that choose a variant, and the one chosen now. |
+| `variant` | On a variant's conditional, beside the reference to the variant's def: which value it is for. |
 | `group` | Only when `true`, on `third_party_settings`: the object only groups one object per contributing module, each that module's fieldset, so it has no `title` or `description` and a renderer draws nothing around them, as the form does. |
 | `after` | On a module's object inside a `group`, when its alter placed it (`describe(..., after:)`): draw this fieldset after the named property of the object that contains its group. Only where it is drawn: its properties stay in the group, where its values are sent, and the schema's order and nesting do not move. |
 | `checkedOnServer` | Constraints no keyword states. |
@@ -318,11 +319,11 @@ code path they share (`ContractEmitter::define()` and `reference()`):
 A [shape](#a-shape-is-one-def) is a def too, one per shape, which each
 key declared with it refers to.
 
-1. **One def per child.** Every attached child and every slot's
+1. **One def per child.** Every attached child and every
    variant is written once, under the root's `$defs`, keyed by the id on
    its class's `#[Structure]` or `#[Resource]` (`registration.contact`).
    A child with no class, a [derived variant](resources.md#derived-variants), is keyed
-   `<parent id>.<slot key>.<value>` (`field.storage.settings.string`), an
+   `<parent id>.<key>.<value>` (`field.storage.settings.string`), an
    attached one `<parent id>.<key>`. The same class at two keys, or in
    two frames, is one def. A def may refer to other defs (a child inside
    a variant). Two children claiming one id with declarations that are
@@ -337,8 +338,8 @@ key declared with it refers to.
    `additionalProperties: false`; its own conditionals under its
    `allOf` (what its refiners answer for each value they could be
    handed); and its own `x-surface` facts (a `dependsOn` inside the
-   child, `enumerated`, `dynamic`, `group`, `after`, a slot's `by` and
-   `variants`, the `ports` it reads). An alter of the child applies in the def, since alters
+   child, `enumerated`, `dynamic`, `group`, `after`, the `by` and
+   `variants` of a key with variants, the `ports` it reads). An alter of the child applies in the def, since alters
    apply by class. No label: that is the parent's to give. Each document
    writes its own defs, the schema for these answers with its
    `refined`, `stale` and `emptyOption` as they read for no values, the
@@ -347,7 +348,7 @@ key declared with it refers to.
    property is `{"$ref": "#/$defs/<id>", ...}` with what is particular
    to that use beside it: the title and description the parent gives the
    key, and the `x-surface` the parent reads for it (`locked`,
-   `dependsOn` as the parent sees it, `refined`, `variant` on a slot's
+   `dependsOn` as the parent sees it, `refined`, `variant` on a variant's
    conditional, the widget hint, and `reads`, which of the parent's keys
    each port reads, with whatever depends on one stated on the parent's
    `allOf`: [a port is stated at its site](#a-port-is-stated-at-its-site)). JSON Schema 2020-12 applies keywords
@@ -363,10 +364,10 @@ key declared with it refers to.
    narrows, so a validator applying the def and the narrowing accepts
    exactly what the child at that site accepts; `ServedContractTest`
    holds the two readings to the same verdicts.
-5. **A slot's conditionals refer to the variants' defs.** Each `then`
-   names the slot with a reference to its variant's def, beside the
-   slot's label and `x-surface.variant`; the slot's own property keeps
-   what it said before (`by`, `variants`, `chosen`).
+5. **Each variant's conditional refers to the variant's def.** Each
+   `then` names the variants' key with a reference to its variant's def,
+   beside the key's label and `x-surface.variant`; the key's own property
+   keeps what it said before (`by`, `variants`, `chosen`).
 
 Only local references, `#/$defs/<id>`, are written: the def's key is a
 JSON Pointer segment (`~` and `/` escaped) inside the URI fragment. A
@@ -467,16 +468,16 @@ A list locked by its access is `readOnly`, and its items narrow the def
 by composition, every key inside them `readOnly` and none holding a
 `const`: each item holds its own value, which is in `values`.
 
-### A slot is a conditional
+### Variants are conditionals
 
-A slot's own property fixes no keys. Each variant is a `then` on the
+The property at the variants' key fixes no keys. Each variant is a `then` on the
 parent, under an `if` naming the deciding key's value as a `const`, so a
 validator applies exactly the chosen variant's rules and a renderer reads
 the variant the current value selects. The `then` refers to the variant's
-def ([above](#reusable-subschemas)), beside the slot's label. There is no
+def ([above](#reusable-subschemas)), beside the key's label. There is no
 OpenAPI `discriminator` beside it: OpenAPI's names a property inside the
-object whose alternatives it picks, and a slot's deciding key is a
-sibling of it ([decision](decisions.md#no-openapi-discriminator-on-a-slot)). Example
+object whose alternatives it picks, and the variants' deciding key is a
+sibling of it ([decision](decisions.md#no-openapi-discriminator-for-variants)). Example
 3's ticket, abbreviated, as `/surface-api` serves it (with the widget
 hints):
 
@@ -654,24 +655,24 @@ differently from the def, and its whole `x-surface`. Example 4's
 compliance structure, in its def:
 
 ```json
-"licence": {
-  "$ref": "#/$defs/event.licence",
-  "title": "Event licence",
+"license": {
+  "$ref": "#/$defs/event.license",
+  "title": "Event license",
   "x-surface": {"widget": "text", "locked": false, "dependsOn": [],
-                "patternMessage": "A licence number is four digits, such as 2048."}
+                "patternMessage": "A license number is four digits, such as 2048."}
 }
 ```
 
 and the shape beside it under `$defs`:
 
 ```json
-"event.licence": {
-  "title": "Event licence",
-  "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
+"event.license": {
+  "title": "Event license",
+  "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
   "type": ["string", "null"],
   "pattern": "^\\d{4}$",
   "examples": ["2048"],
-  "x-surface": {"patternMessage": "A licence number is four digits, such as 2048."}
+  "x-surface": {"patternMessage": "A license number is four digits, such as 2048."}
 }
 ```
 
@@ -701,7 +702,7 @@ watched keys offer a short list of values. So where a key's static
 refiners have nothing to refine against yet (a sibling they watch holds
 nothing), the emitter runs them ahead of time for every value they could be
 handed and writes each answer as a conditional on the parent, beside
-the slots': an `if` naming each watched sibling's value as a `const`,
+the variants': an `if` naming each watched sibling's value as a `const`,
 and a `then` saying what the key's schema says differently from the
 unrefined one. The property carries `x-surface.enumerated: true`. A
 generic JSON Schema validator then refuses what the server refuses, with
@@ -747,8 +748,8 @@ no `/refine` round trip.
   out, as its return type says, is in no `required`: nothing states
   where it applies.
 - **Inside a child too.** Each frame is described the same way, so
-  a slot's variant enumerates its own keys inside the variant's schema,
-  under the slot's conditional. A child's frame starts from the
+  a variant enumerates its own keys inside the variant's schema,
+  under its conditional. A child's frame starts from the
   child's defaults, as refinement does, so a child key watching a
   sibling with a default is shown refined against that default, not
   enumerated.
@@ -768,7 +769,7 @@ capacity (per room, 6); the demo block's `bundle` (per entity type) and
 `field` (per entity type and bundle); the demo formatter's `variant`
 (per casing); the demo extras' `limit` (per presentation; only the grid
 writes one). Declared: example 4's capacity, whose ceiling without a
-licence is a rule declared as data, stated as written beside its six
+license is a rule declared as data, stated as written beside its six
 conditionals per room. Dynamic: example 4's stewards, in the compliance
 structure at the mount, which read the capacity through a port, a
 number. Runtime: example 4's room, which its alter narrows
@@ -850,7 +851,7 @@ the hint's words: `radios`, `checkboxes`, `select`, `time`.
 | a map with properties, an attached part | `details` | `fieldset` | `FieldsetField` |
 | `third_party_settings`, which only groups each module's map | `container`, no title | `fieldset`, `group: true` | `FieldsetField`, as a plain `div` |
 | a module's map its alter placed | its `details`, drawn after the named key | `fieldset`, `after: "<key>"` | `FieldsetField`, drawn after that sibling of the group |
-| a slot | the chosen variant's `details`; nothing while unresolved | `slot` | `SlotField` |
+| a key with variants | the chosen variant's `details`; nothing while none is chosen | `slot` | `VariantsField` |
 | `string` with the `multiline` setting | `textarea`, no maxlength, no placeholder | `textarea` | `TextareaField` |
 | `email` | `email` | `email` | `TextField` (type email) |
 | `string` asking for a time, `setSetting('widget', 'time')` | a time input (`date`, type `time`), the Regex still the rule | `time` | `TextField` (type time) |
@@ -1098,7 +1099,7 @@ itself. The rule, as `data_surface_react` applies it:
   with the `then` of every conditional on its frame whose `if` the values
   meet once every key it watches holds a value, and with its
   conditionals, held to what those keys still offer, while one holds
-  nothing. A slot is its chosen variant's def; a part is its def,
+  nothing. A key with variants is its chosen variant's def; a part is its def,
   described for its values.
 - **Drop what does not apply.** A conditional whose `if` the values meet
   and whose `then` says `false` for a key leaves the key out of the form,
@@ -1126,11 +1127,11 @@ itself. The rule, as `data_surface_react` applies it:
 
 Example 2 narrows every change itself. Example 3 does too; with example
 4's module on, a change of the venue asks (the room is `runtime`, for
-the closed rooms), and so does the licence and the room: the capacity is
-stated exactly, its licence rule declared, but the stewards that follow
+the closed rooms), and so does the license and the room: the capacity is
+stated exactly, its license rule declared, but the stewards that follow
 it, through the compliance structure's port, are `dynamic`, reading a
 number. The pricing is still narrowed
-here: the ticket is a slot, stated whole.
+here: the ticket's variants are stated whole.
 
 ## What a write needs
 

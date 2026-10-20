@@ -58,7 +58,7 @@ entity.
 
 A *structure* is a group of keys, and nothing more: no identity and
 no storage of its own. It is only ever held by something else. It is
-attached to a parent, or fills a slot as a variant, or is the
+attached to a parent, or is one of the variants at a key, or is the
 configuration of a plugin, whose host supplies the operation and the
 storage. A block's settings, a field type's settings and a contact's
 details are structures.
@@ -98,19 +98,20 @@ it](https://www.drupal.org/project/drupal/issues/3622144).
 | Concept | What it is | In the code |
 | --- | --- | --- |
 | **Resource class** | A thing with identity and storage, in one class: its identity keys, storage and access class on the attribute, its keys in static `defineInputs()` (and `defineOutputs()`), one static `#[RefinesInput]` method per rule that reads another key, and its operations. It may live in a config object, a config entity, State, a plugin's settings or a content entity; only its storage knows which. Never instantiated: no constructor, no service. A resource with no identity keys, such as a settings object, is a singleton resource. | `#[Resource(id, identity:, storage:, access:)]` on a class implementing `Resource\ResourceInterface`, in `src/Resource/` or `src/Structure/` |
-| **Structure class** | A group of keys with no identity or storage, held by something else: a parent, a slot, or a plugin's host. Static `defineInputs()` and refiners, as a resource's; it may still declare operations for its container to choose between. | `#[Structure(id, access:)]` on a class implementing `Resource\StructureInterface`, in either directory; or a plugin that is its own structure, `#[UsesStructure]` with no argument |
+| **Structure class** | A group of keys with no identity or storage, held by something else: a parent (attached, or as a variant), or a plugin's host. Static `defineInputs()` and refiners, as a resource's; it may still declare operations for its container to choose between. | `#[Structure(id, access:)]` on a class implementing `Resource\StructureInterface`, in either directory; or a plugin that is its own structure, `#[UsesStructure]` with no argument |
 | **Data surface** | What the build step seals from a resource or structure and a context: an immutable group of data definitions, the map of which key depends on which, and the refiners that narrow them. What the pipeline, the form, the widgets and the emitter read. | `DataSurfaceInterface`, built by `ResourceBuild\ResourcesInterface` (`data_surface.resources`) |
 | **Definition map** | Everything a data surface advertises, as one ordered, validated collection: one entry per key, in declaration order. | `DefinitionMap` of `Entry` |
 | **Definition** | One core `DataDefinitionInterface`: type, label, description, constraints, required, plus the interim default and example metadata. | core, plus `DefinitionMetadata` |
 | **Refinement** | A narrower definition for one key, given the values of the siblings it watches. Checked narrower on every run. | rules declared with `narrow('key')`, `#[RefinesInput('key')]` methods |
 | **Operation** | One way a resource is asked for (add, edit, reuse), returning a context that says what is already known. The context's id is the operation's. Routes and tools are generated from them. | `#[Operation]` static methods, `Resource\OperationContext` |
 | **Alter** | Another module's class that adds keys to a resource or structure, rewords a label, offers more values on a fixed list, and narrows with its own refinements. Never removes. | `#[Alters]` on a class in `src/Alter/` |
-| **Attached structure** | A child at a key, its own class with its own keys: `attach()` for a fixed child, `attachBy()` for a slot a sibling key chooses. A child may be a resource with storage of its own (a field's storage). | `Resource\BlueprintInterface`, `Attachment`, `Slot` |
+| **Attached structure** | A child at a key, its own class with its own keys: `attach()` for a fixed child, `attachVariants()` for variants a sibling key chooses between. A child may be a resource with storage of its own (a field's storage). | `Resource\BlueprintInterface`, `Attachment`, `Variants` |
 | **Collection** | A list of child instances at a key, `attachList()`: the list and its Count the parent's, each item the child's. | `Resource\BlueprintInterface`, `Collection` |
-| **Variant** | A child that fills a slot for one value of its deciding key. | `#[Variant(of:, key:, value:)]` |
+| **Variants** | A tagged union whose tag is a sibling key: structures attached at one key, of which the sibling's value (the deciding key) chooses one. Always open: the parent names no variant, and any module may declare one. Until the deciding key holds a value, the key is an `any` placeholder; once it does, the key is the chosen variant's map. | `attachVariants($key, by: $sibling)`, `Variants` |
+| **Variant** | One structure among the variants at a key, for one value of its deciding key. | `#[Variant(of:, at:, for:)]` |
 | **Derived variants** | Variants for the values no variant class fills, read from a description that already exists, such as a field type's config schema. | `ResourceBuild\DerivedVariantsInterface`, tagged `data_surface.derived_variants` |
 | **Derived resource** | A resource or structure whose keys are the site's, made at discovery by a deriver from facts a class cannot know: a resource per content entity bundle, a structure per field. It has no class; it is `<base>:<derivative>`. | `#[DerivesResources]` on a `Resource\ResourceDeriverInterface` in `src/Resource/`, returning `Resource\DerivedResource`; [Content entities](entities.md) |
-| **Output definitions** | The other half of the contract: what a host's execution emits, in the same vocabulary and the same collection type as the inputs, with an absent-rather-than-NULL rule. Never refined. | `defineOutputs()`, `DataSurfaceInterface::getOutputDefinitions()`, `Pipeline\Omitted` |
+| **Output definitions** | The other half of the contract: what a host's execution emits, in the same vocabulary and the same collection type as the inputs, with an absent-rather-than-NULL rule. Never refined. | `defineOutputs()`, `DataSurfaceInterface::getOutputDefinitions()`, `Pipeline\NotEmitted` |
 | **Pipeline** | Access, accept, validate, prepare, commit: the one road from raw input to storage. | `Pipeline\DataSurfacePipelineInterface` |
 | **Storage** | Where a resource's accepted values are written (a config object, a config entity, State, a plugin's settings, a content entity), and the translation between the resource's layout and storage's own. The one part of a resource that knows where it lives. | `#[Resource(storage:)]` naming a `Resource\ResourceStorageInterface` in `src/Storage/`; `Pipeline\DataSurfaceStorageInterface` |
 | **Access class** | What may refuse once the operation's permission allows: the part of access that depends on the thing itself. At a child, whether its keys are open, locked or omitted. | `access:` on `#[Resource]` or `#[Structure]`, naming a `Resource\OperationAccessInterface` in `src/Access/` |
@@ -118,7 +119,7 @@ it](https://www.drupal.org/project/drupal/issues/3622144).
 | **Operation form** | The generic form that serves a resource in one of its operations from a route, with no form class of its own. | `Form\DataSurfaceOperationForm`, `Form\DataSurfaceFormCosmeticsInterface` |
 | **Widget** | Maps one definition to a form element and back. A plugin type. | `Widget\DataSurfaceWidgetInterface`, `Plugin/DataSurfaceWidget/*` |
 | **Options resolver** | Reads one validation constraint as the list of values it allows, with labels and cacheability. A plugin type. | `Options\DataSurfaceOptionsResolverInterface`, `Plugin/DataSurfaceOptionsResolver/*` |
-| **Catalogue** | Every discovered resource and structure, with its kind, read from the static layer without building anything. | `data_surface.resource_catalogue`, [catalogue.md](catalogue.md) |
+| **Catalog** | Every discovered resource and structure, with its kind, read from the static layer without building anything. | `data_surface.resource_catalog`, [catalog.md](catalog.md) |
 
 Read the architecture as three layers that never reach into each other.
 A data surface is pure data: it holds definitions and refiners, reaches
@@ -179,11 +180,11 @@ The pages fall in the same groups as the README's documentation table.
 - **The engine and the record**: [The pattern](pattern.md), [How it
   fits](how-it-fits.md), [Decisions](decisions.md) (the reasons behind
   each rule, for a reader who wants the why; nothing on it is needed to
-  build), the [Catalogue](catalogue.md), [Evolving a
+  build), the [Catalog](catalog.md), [Evolving a
   resource](evolution.md) and [Installation](installation.md).
 - **Evidence**: the logs and the audit [below](#evidence).
 - **The proposal**: [Core gaps](core-gaps.md), then the [Adoption
-  catalogue](adoption.md).
+  catalog](adoption.md).
 
 The module ships no resources of its own on a production site. It
 provides the model, the pipeline, the two plugin types and the host

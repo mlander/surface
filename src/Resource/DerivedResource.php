@@ -52,7 +52,7 @@ final class DerivedResource {
    *   What it covers and what it leaves out.
    * @param array<string, string|\Stringable> $notes
    *   What the derivation could not carry, by the key or field it is
-   *   about, for the catalogue and for whoever lists it.
+   *   about, for the catalog and for whoever lists it.
    * @param string[] $cacheTags
    *   The tags of the facts it was derived from.
    */

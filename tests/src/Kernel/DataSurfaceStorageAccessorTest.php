@@ -6,8 +6,8 @@ namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\data_surface\Form\FieldSurfaceProviderInterface;
-use Drupal\data_surface\Storage\FieldSettingsStorage;
-use Drupal\data_surface\Storage\PluginConfigurationStorage;
+use Drupal\data_surface\Pipeline\Storage\FieldSettingsStorage;
+use Drupal\data_surface\Pipeline\Storage\PluginConfigurationStorage;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use PHPUnit\Framework\Attributes\Group;

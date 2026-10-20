@@ -12,14 +12,14 @@ use Drupal\data_surface\Resource\StructureInterface;
 /**
  * What the demo block needs to know when it renders a list.
  *
- * One of the two variants of the block's presentation slot, filling it
- * for `list` with #[Variant]; the grid is the other. Nothing here
+ * One of the two variants of the block's presentation settings, the one
+ * for `list`, declared with #[Variant]; the grid is the other. Nothing here
  * depends on anything, and nothing here can see the block's own keys.
  *
  * @see \Drupal\data_surface_demo\Structure\DemoBlockStructure
  */
 #[Structure('block.data_surface_demo.presentation.list')]
-#[Variant(of: DemoBlockStructure::class, key: 'presentation_settings', value: 'list')]
+#[Variant(of: DemoBlockStructure::class, at: 'presentation_settings', for: 'list')]
 final class ListPresentationStructure implements StructureInterface {
 
   /**

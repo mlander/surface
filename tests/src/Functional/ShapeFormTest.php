@@ -11,8 +11,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 /**
  * Tests a key declared with a shape on the form: refused in its words.
  *
- * The compliance licence is a shape now, so example 3's form refuses a
- * malformed licence under the field in the shape's own message; the
+ * The compliance license is a shape now, so example 3's form refuses a
+ * malformed license under the field in the shape's own message; the
  * depot uses one shape at two keys, refused in the same words at each
  * and in each key's own words for what it narrows.
  *
@@ -60,23 +60,23 @@ class ShapeFormTest extends BrowserTestBase {
   }
 
   /**
-   * Tests the licence's pattern, and the depot's two keys, refuse as said.
+   * Tests the license's pattern, and the depot's two keys, refuse as said.
    */
   public function testShapedKeysRefuseInTheShapesWords(): void {
     $assert = $this->assertSession();
-    $licence = 'surface[third_party_settings][data_surface_examples_compliance][licence]';
+    $license = 'surface[third_party_settings][data_surface_examples_compliance][license]';
     $this->drupalGet('surface-examples/3');
     $assert->statusCodeEquals(200);
-    $assert->fieldExists($licence);
+    $assert->fieldExists($license);
     $before = $this->stored('data_surface_examples.registration_step3');
-    $this->submitForm([$licence => 'EV-2048'], 'Save');
-    $assert->elementExists('css', 'input[name="' . $licence . '"][aria-invalid="true"]');
-    $assert->pageTextContains('A licence number is four digits, such as 2048.');
+    $this->submitForm([$license => 'EV-2048'], 'Save');
+    $assert->elementExists('css', 'input[name="' . $license . '"][aria-invalid="true"]');
+    $assert->pageTextContains('A license number is four digits, such as 2048.');
     $assert->pageTextNotContains('The changes have been saved.');
     $this->assertSame($before, $this->stored('data_surface_examples.registration_step3'));
-    $this->submitForm([$licence => '2048'], 'Save');
+    $this->submitForm([$license => '2048'], 'Save');
     $assert->pageTextContains('The changes have been saved.');
-    $this->assertSame('2048', $this->stored('data_surface_examples.registration_step3')['third_party_settings']['data_surface_examples_compliance']['licence']);
+    $this->assertSame('2048', $this->stored('data_surface_examples.registration_step3')['third_party_settings']['data_surface_examples_compliance']['license']);
 
     $this->drupalGet('surface-test/depot');
     $assert->statusCodeEquals(200);

@@ -1,7 +1,7 @@
 import type { Schema } from '../contract';
-import { defName, inlineSchema, isPart, resolveSchema, resolveSlot, watchedPaths } from '../contract';
+import { defName, inlineSchema, isPart, resolveSchema, resolveVariants, watchedPaths } from '../contract';
 import example3 from './fixtures/example3.json';
-import licence from './fixtures/refine-example3-licence.json';
+import license from './fixtures/refine-example3-license.json';
 
 // The resolver, over schemas shaped as the emitter writes them: each
 // child a def under `$defs`, each site a reference beside its own
@@ -127,19 +127,19 @@ describe('example 3 as the emitter serves it', () => {
       'registration.step3.ticket.paid',
       'registration.contact',
       'registration.compliance',
-      'event.licence',
+      'event.license',
     ]);
     expect(schema.properties?.contact.$ref).toBe('#/$defs/registration.contact');
     expect(schema.properties?.contact).not.toHaveProperty('properties');
   });
 
-  it('reads inline as one schema: the contact\'s keys and each ticket\'s through the slot', () => {
+  it('reads inline as one schema: the contact\'s keys and each ticket\'s through the variants', () => {
     const inline = inlineSchema(schema);
     expect(Object.keys(inline.properties?.contact.properties ?? {})).toEqual(['email', 'phone']);
     expect(inline.properties?.contact.title).toBe('Contact');
     expect(inline.properties?.contact.required).toEqual(['email']);
-    expect(Object.keys(resolveSlot(inline, 'ticket', { pricing: 'free' })?.properties ?? {})).toEqual(['note']);
-    const paid = resolveSlot(inline, 'ticket', { pricing: 'paid' });
+    expect(Object.keys(resolveVariants(inline, 'ticket', { pricing: 'free' })?.properties ?? {})).toEqual(['note']);
+    const paid = resolveVariants(inline, 'ticket', { pricing: 'paid' });
     expect(paid?.title).toBe('Ticket');
     expect(paid?.['x-surface']?.variant).toBe('paid');
     expect(paid?.required).toEqual(['price', 'currency']);
@@ -232,15 +232,15 @@ describe('a key declared with a shape', () => {
     expect(isPart(inline.properties!.tag)).toBe(true);
   });
 
-  it('reads the compliance licence the server refers to its def, in both documents', () => {
-    const recorded = licence as unknown as { schema: { schema: Schema }; contract: { schema: Schema } };
+  it('reads the compliance license the server refers to its def, in both documents', () => {
+    const recorded = license as unknown as { schema: { schema: Schema }; contract: { schema: Schema } };
     for (const document of [recorded.schema.schema, recorded.contract.schema]) {
-      expect(document.$defs?.['event.licence']).toMatchObject({ type: ['string', 'null'], pattern: '^\\d{4}$', examples: ['2048'] });
+      expect(document.$defs?.['event.license']).toMatchObject({ type: ['string', 'null'], pattern: '^\\d{4}$', examples: ['2048'] });
       const mount = inlineSchema(document).properties?.third_party_settings.properties?.data_surface_examples_compliance as Schema;
       expect(isPart(mount)).toBe(true);
-      expect(isPart(mount.properties!.licence)).toBe(false);
-      expect(mount.properties?.licence).toMatchObject({ title: 'Event licence', type: ['string', 'null'], pattern: '^\\d{4}$' });
-      expect(mount.properties?.licence['x-surface']).toMatchObject({ widget: 'text', patternMessage: 'A licence number is four digits, such as 2048.' });
+      expect(isPart(mount.properties!.license)).toBe(false);
+      expect(mount.properties?.license).toMatchObject({ title: 'Event license', type: ['string', 'null'], pattern: '^\\d{4}$' });
+      expect(mount.properties?.license['x-surface']).toMatchObject({ widget: 'text', patternMessage: 'A license number is four digits, such as 2048.' });
     }
   });
 });

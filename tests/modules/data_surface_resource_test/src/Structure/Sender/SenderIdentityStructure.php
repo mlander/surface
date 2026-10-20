@@ -32,7 +32,7 @@ final class SenderIdentityStructure implements StructureInterface {
     $inputs->narrow('name')
       ->when(Condition::present('email'))
       ->require()
-      ->describe(t('Required once an email is given.'));
+      ->because(t('Required once an email is given.'));
     $inputs->narrow('signature')
       ->when(Condition::absent('email'))
       ->doesNotApply();

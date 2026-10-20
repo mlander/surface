@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_demo_extras;
 
-use Drupal\data_surface\Storage\SettingsLayoutInterface;
+use Drupal\data_surface\Storage\StorageLayoutInterface;
 
 /**
  * Writes the review deadline down as seconds, and reads it back.
@@ -27,7 +27,7 @@ use Drupal\data_surface\Storage\SettingsLayoutInterface;
  * not whole hours, which neither this resource nor the form alter writes,
  * reads back as no amount.
  */
-final class ReviewDeadlineLayout implements SettingsLayoutInterface {
+final class ReviewDeadlineLayout implements StorageLayoutInterface {
 
   /**
    * {@inheritdoc}

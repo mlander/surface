@@ -408,7 +408,7 @@ final class OperationInputs {
   /**
    * Answers whether an operation changes a thing that exists.
    *
-   * The same reading the catalogue's reads() makes for an operation that
+   * The same reading the catalog's reads() makes for an operation that
    * can be asked on its own: one that needs nothing, by its context not
    * creating; one that needs a subject, by its parameters naming one
    * thing whole.
@@ -742,7 +742,7 @@ final class OperationInputs {
       );
     }
     $key = $neutral?->getDefinitions()->entry($parameter->name);
-    if ($key !== NULL && $key->attachment === NULL && $key->slot === NULL && $key->list === NULL) {
+    if ($key !== NULL && $key->attachment === NULL && $key->variants === NULL && $key->list === NULL) {
       $input = $this->inputDefinitions->fromDefinition($key->definition);
       $input->setRequired(!$parameter->optional);
       return $input;

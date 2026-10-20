@@ -10,7 +10,7 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\Plugin\Validation\Constraint\LabeledChoiceConstraint;
-use Drupal\data_surface\Storage\SettingsLayoutInterface;
+use Drupal\data_surface\Storage\StorageLayoutInterface;
 use Drupal\data_surface_test\CasingVariantRefiner;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
@@ -117,11 +117,11 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
   /**
    * Builds a storage layout that translates nothing.
    *
-   * @return \Drupal\data_surface\Storage\SettingsLayoutInterface
+   * @return \Drupal\data_surface\Storage\StorageLayoutInterface
    *   The layout.
    */
-  protected function layout(): SettingsLayoutInterface {
-    return new class() implements SettingsLayoutInterface {
+  protected function layout(): StorageLayoutInterface {
+    return new class() implements StorageLayoutInterface {
 
       /**
        * {@inheritdoc}

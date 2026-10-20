@@ -18,9 +18,10 @@ use Drupal\data_surface_resource_test\Storage\PantryStorage;
  * - shelf: attached by class, no storage, a refiner in its own frame and
  *   an alter of its own; stored by the pantry under its key.
  * - label: attached by class, with storage of its own.
- * - kind_settings: an open slot chosen by kind, filled by JarStructure
+ * - kind_settings: variants chosen by kind, declared by JarStructure
  *   (no storage) and TinResource (storage of its own). The kind declares
- *   a sack as well, which no variant fills, so the slot narrows it away.
+ *   a sack as well, which no variant is for, so the variants narrow it
+ *   away.
  */
 #[Resource('resource_test.pantry', identity: ['pantry'], storage: PantryStorage::class)]
 final class PantryResource implements ResourceInterface {
@@ -50,7 +51,7 @@ final class PantryResource implements ResourceInterface {
       ->addConstraint('Choice', ['choices' => ['jar', 'tin', 'sack']]);
     $inputs->attach('shelf', ShelfStructure::class);
     $inputs->attach('label', LabelResource::class);
-    $inputs->attachBy('kind_settings', by: 'kind')
+    $inputs->attachVariants('kind_settings', by: 'kind')
       ->setLabel('Kind settings')
       ->setDescription('What the kind of container needs.');
   }

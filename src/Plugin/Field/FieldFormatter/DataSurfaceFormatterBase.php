@@ -9,7 +9,7 @@ use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FormatterBase;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Form\DataSurfaceFormatterTrait;
-use Drupal\data_surface\Pipeline\Omitted;
+use Drupal\data_surface\Pipeline\NotEmitted;
 
 /**
  * Base class for field formatters whose settings come from a structure.
@@ -85,7 +85,7 @@ abstract class DataSurfaceFormatterBase extends FormatterBase {
    * anything that wants the data without the presentation.
    *
    * A key the formatter has nothing to say about on this item is
-   * **absent**, and Pipeline\Omitted is how to say that from inside the
+   * **absent**, and Pipeline\NotEmitted is how to say that from inside the
    * array literal. NULL is not absence: it is a value, and it has to
    * satisfy the output definition like any other.
    *
@@ -100,7 +100,7 @@ abstract class DataSurfaceFormatterBase extends FormatterBase {
    * @return array
    *   The emitted values, keyed by output key.
    *
-   * @see \Drupal\data_surface\Pipeline\Omitted
+   * @see \Drupal\data_surface\Pipeline\NotEmitted
    */
   public function formatValue(FieldItemInterface $item, array $settings): array {
     $property = $item::mainPropertyName();
@@ -127,7 +127,7 @@ abstract class DataSurfaceFormatterBase extends FormatterBase {
     $elements = [];
     $settings = $this->getSettings();
     foreach ($items as $delta => $item) {
-      $data = Omitted::strip($this->formatValue($item, $settings));
+      $data = NotEmitted::strip($this->formatValue($item, $settings));
       $classes = $data['classes'] ?? [];
       $elements[$delta] = [
         '#type' => 'html_tag',

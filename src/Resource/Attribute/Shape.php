@@ -9,7 +9,7 @@ namespace Drupal\data_surface\Resource\Attribute;
  *
  * A shape is one value with its type, its label, its description, its
  * constraints and its examples, declared once and named, so a key says
- * `$inputs->add('licence', Licence::class, t('Event licence'))` instead
+ * `$inputs->add('license', License::class, t('Event license'))` instead
  * of repeating them. The served contract writes it once, as a def under
  * this id, and refers to it from every key that uses it; an alter naming
  * the class tightens it at every one of those keys. Any class in a
@@ -26,7 +26,7 @@ final class Shape {
    * Constructs a Shape attribute.
    *
    * @param string $id
-   *   Machine name, dotted as a resource's is: `event.licence`.
+   *   Machine name, dotted as a resource's is: `event.license`.
    */
   public function __construct(
     public readonly string $id,

@@ -56,7 +56,7 @@ final class BulletinResource implements ResourceInterface {
     $inputs->narrow('items')
       ->when(Condition::equals('frequency', 'weekly'))
       ->constrain('Range', ['max' => 5])
-      ->describe(t('Up to 5 in a weekly issue.'));
+      ->because(t('Up to 5 in a weekly issue.'));
   }
 
 }

@@ -279,7 +279,7 @@ final class AccessAnswer implements RefinableCacheableDependencyInterface {
    * @return string
    *   The name.
    */
-  public function answer(): string {
+  public function getAnswer(): string {
     return $this->answer;
   }
 

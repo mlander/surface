@@ -14,7 +14,7 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DataSurfaceHostTrait;
 use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
 use Drupal\data_surface\Pipeline\StorageViolationsException;
-use Drupal\data_surface\Storage\FieldSettingsStorage;
+use Drupal\data_surface\Pipeline\Storage\FieldSettingsStorage;
 
 /**
  * Implements the field settings protocol of a field type from a structure.
@@ -103,7 +103,7 @@ trait DataSurfaceFieldTypeTrait {
    *
    * The default is the plain settings storage: the input layout is the
    * storage layout. A field type whose storage layout differs overrides
-   * this and hands the storage a SettingsLayoutInterface, which is where
+   * this and hands the storage a StorageLayoutInterface, which is where
    * the transform becomes visible.
    *
    * @return \Drupal\data_surface\Pipeline\DataSurfaceStorageInterface

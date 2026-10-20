@@ -96,7 +96,7 @@ export interface Choice {
 
 export interface Conditional {
   /**
-   * An enumerated conditional's and a slot's: a `const` per key it names.
+   * An enumerated conditional's and a variant's: a `const` per key it names.
    * A declared rule's is any `if` of its vocabulary (holdsIf()).
    */
   if: { properties: Record<string, { const: unknown }>; required?: string[] };
@@ -440,7 +440,7 @@ export function isPart(schema: Schema): boolean {
  * A schema with every reference resolved, at every depth.
  *
  * What the app draws from: run once per contract, on load and on each
- * refine, so a property, a slot's conditional and a fieldset's keys are
+ * refine, so a property, a variant's conditional and a fieldset's keys are
  * each read inline. At the root, `$defs` is dropped. PHP's twin is
  * `Drupal\data_surface\Contract\SchemaResolver::inline()`.
  */
@@ -451,7 +451,7 @@ export function inlineSchema(schema: Schema, root?: Schema, ancestors: string[] 
     delete resolved.$defs;
   }
   if (followed.length > ancestors.length && isObject(resolved.properties)) {
-    // A child's frame: an attached part, a slot's variant, a collection's
+    // A child's frame: an attached part, a variant, a collection's
     // item. A key that refers to a shape's def is a value, never a frame.
     parts.add(resolved);
   }
@@ -480,12 +480,12 @@ export function inlineSchema(schema: Schema, root?: Schema, ancestors: string[] 
 }
 
 /**
- * The shape a slot has for the values of the object it sits in.
+ * The variant chosen by the values of the object the variants sit in.
  *
  * Read from the parent's `allOf`: the `then` whose `if` names the value
  * the deciding key holds. Null when the deciding key chose nothing.
  */
-export function resolveSlot(parent: Schema, name: string, parentValues: Values): Schema | null {
+export function resolveVariants(parent: Schema, name: string, parentValues: Values): Schema | null {
   const by = parent.properties?.[name]?.['x-surface']?.by;
   if (by === undefined) {
     return null;
@@ -501,12 +501,12 @@ export function resolveSlot(parent: Schema, name: string, parentValues: Values):
   return null;
 }
 
-/** Whether a conditional's word on a slot is one of its variants, not that it does not apply. */
+/** Whether a conditional's word on a key with variants is one of them, not that it does not apply. */
 function isVariant(branch: Schema | false | undefined): branch is Schema {
   return isObject(branch);
 }
 
-/** A slot's conditionals that each name a variant. */
+/** The conditionals that each name a variant at a key. */
 function variantsIn(conditions: Conditional[], name: string): Conditional[] {
   return conditions.filter((condition) => !isRule(condition) && isVariant(condition.then?.properties?.[name]));
 }
@@ -739,7 +739,7 @@ function rulesOut(condition: Conditional, name: string): boolean {
  * Every dotted path something refines against, as the values stand.
  *
  * `dependsOn` names siblings, so each is resolved against the path of
- * the object it sits in; fieldsets and resolved slots are walked.
+ * the object it sits in; fieldsets and chosen variants are walked.
  */
 export function watchedPaths(schema: Schema, values: Values, prefix = ''): Set<string> {
   const watched = new Set<string>();
@@ -765,7 +765,7 @@ export function watchedPaths(schema: Schema, values: Values, prefix = ''): Set<s
     }
     const nestedValues = isObject(nested) ? nested : {};
     const widget = property['x-surface']?.widget;
-    const inner = widget === 'slot' ? resolveSlot(schema, name, values) : widget === 'fieldset' ? property : null;
+    const inner = widget === 'slot' ? resolveVariants(schema, name, values) : widget === 'fieldset' ? property : null;
     if (inner !== null) {
       watchedPaths(inner, nestedValues, `${prefix}${name}.`).forEach((path) => watched.add(path));
     }
@@ -955,7 +955,7 @@ export function dependents(full: Schema, values: Values, path: string): { frame:
       break;
     }
     if (property['x-surface']?.widget === 'slot') {
-      frame = resolveSlot(frame, name, held);
+      frame = resolveVariants(frame, name, held);
       held = asValues(held[name]);
       prefix += `${name}.`;
       i += 1;
@@ -1088,7 +1088,7 @@ function conditionalKey(condition: Conditional): string | undefined {
   return Object.keys(condition.then?.properties ?? {})[0] ?? condition.then?.required?.[0];
 }
 
-function isSlot(schema: Schema): boolean {
+function isVariants(schema: Schema): boolean {
   return schema['x-surface']?.widget === 'slot';
 }
 
@@ -1298,8 +1298,8 @@ function settle(full: Schema, previous: Schema | null, input: Values, stored: Va
         return false;
       }
     }
-    if (isSlot(declared)) {
-      const variant = resolveSlot(full, name, values);
+    if (isVariants(declared)) {
+      const variant = resolveVariants(full, name, values);
       return variant === null || fits(variant, input[name]);
     }
     if (declared.properties !== undefined && !isPart(declared)) {
@@ -1321,7 +1321,7 @@ function settle(full: Schema, previous: Schema | null, input: Values, stored: Va
       return false;
     }
     const moved = (declared['x-surface']?.dependsOn ?? []).some((dep) => !sameAnswer(getAt(values, dep), getAt(stored, dep)));
-    if (!moved || isSlot(declared)) {
+    if (!moved || isVariants(declared)) {
       return false;
     }
     const list = listAt(name, values);
@@ -1339,7 +1339,7 @@ function settle(full: Schema, previous: Schema | null, input: Values, stored: Va
     for (const name of targets) {
       if (!discarded.includes(name) && !stillStands(name, values)) {
         const declared = properties[name];
-        if (declared.properties !== undefined && !isPart(declared) && !isSlot(declared)) {
+        if (declared.properties !== undefined && !isPart(declared) && !isVariants(declared)) {
           throw new Unsettled(path + name, declared['x-surface']?.dynamic ? 'dynamic' : 'unsettled');
         }
         discarded.push(name);
@@ -1389,17 +1389,17 @@ function settle(full: Schema, previous: Schema | null, input: Values, stored: Va
         : item);
       continue;
     }
-    if (!isObject(held) || (!isPart(declared) && !isSlot(declared))) {
+    if (!isObject(held) || (!isPart(declared) && !isVariants(declared))) {
       continue;
     }
-    const child = isSlot(declared) ? resolveSlot(full, name, values) : declared;
+    const child = isVariants(declared) ? resolveVariants(full, name, values) : declared;
     if (child === null) {
       continue;
     }
-    const was = isSlot(declared) ? (previous === null ? null : resolveSlot(previous, name, before ?? {})) : previous?.properties?.[name] ?? null;
-    const sameVariant = !isSlot(declared) || (before !== null && sameValue(getAt(values, declared['x-surface']?.by ?? ''), getAt(before, declared['x-surface']?.by ?? '')));
+    const was = isVariants(declared) ? (previous === null ? null : resolveVariants(previous, name, before ?? {})) : previous?.properties?.[name] ?? null;
+    const sameVariant = !isVariants(declared) || (before !== null && sameValue(getAt(values, declared['x-surface']?.by ?? ''), getAt(before, declared['x-surface']?.by ?? '')));
     let kept: unknown = stored[name];
-    if (isSlot(declared) && !fits(child, kept)) {
+    if (isVariants(declared) && !fits(child, kept)) {
       kept = null;
     }
     values[name] = settle(child, sameVariant ? was : null, held, { ...frameDefaults(child), ...asValues(kept) }, sameVariant && before !== null ? asValues(before[name]) : null, `${path}${name}.`, false, context);
@@ -1466,7 +1466,7 @@ function core(full: Schema, previous: Schema | null, values: Values, before: Val
       if (isPart(declared) && !isCollection(declared)) {
         properties[name] = core(declared, was, { ...frameDefaults(declared), ...asValues(held) }, asValues(before[name]), `${at}.`, context);
       }
-      else if (isSlot(declared)) {
+      else if (isVariants(declared)) {
         const by = extension?.by ?? '';
         conditions[name] = variantsIn(previousConditions, name).map((condition) => {
           if (!sameValue(condition.if.properties[by]?.const, values[by])) {
@@ -1508,8 +1508,8 @@ function core(full: Schema, previous: Schema | null, values: Values, before: Val
           required.add(name);
         }
       }
-      else if (isSlot(declared) || isPart(declared) || rules.length > 0) {
-        // Whether a part or a slot applies is stated only for every key
+      else if (isVariants(declared) || isPart(declared) || rules.length > 0) {
+        // Whether a part or a variant applies is stated only for every key
         // it watches, and a rule is laid over what those answer; the rest
         // is the server's to answer.
         throw new Unsettled(at, 'unsettled');
@@ -1526,7 +1526,7 @@ function core(full: Schema, previous: Schema | null, values: Values, before: Val
         required.add(name);
       }
     }
-    if (isSlot(declared)) {
+    if (isVariants(declared)) {
       properties[name] = extension?.enumerated || extension?.declared ? { ...declared, 'x-surface': withoutEnumerated(extension) } : declared;
       const by = extension?.by ?? '';
       conditions[name] = variantsIn(fullConditions, name).map((condition) => {
@@ -1642,7 +1642,7 @@ function withoutEnumerated(extension: Extension | undefined): Extension | undefi
  *
  * ContractEmitter::frame() and property(): a select's empty option by the
  * empty option rule, a stored value no longer offered shown as nothing
- * and listed stale, an orphan stale whatever its widget, a slot's chosen
+ * and listed stale, an orphan stale whatever its widget, the chosen
  * variant, a part narrowed when a key inside it is. A key holding nothing
  * shows its default, except inside a plain map.
  */
@@ -1655,7 +1655,7 @@ function present(schema: Schema, full: Schema, values: Values, path: string, map
     const at = path + name;
     const extension = (property['x-surface'] ?? {}) as Extension;
     const held = values[name];
-    if (isSlot(declared)) {
+    if (isVariants(declared)) {
       const by = extension.by ?? '';
       const branches = variantsIn(schema.allOf ?? [], name);
       const chosen = branches.find((condition) => sameValue(condition.if.properties[by]?.const, values[by])) ?? null;

@@ -17,7 +17,7 @@ use Drupal\data_surface_tool_test\Storage\CabinetStorage;
  *
  * CabinetAccess answers open for a keeper, locked for an auditor and
  * omitted for anyone else, so asked on its own the cabinet is shown and
- * fixed to an auditor. Its lock settings are a slot chosen by the lock:
+ * fixed to an auditor. Its lock settings are variants the lock chooses:
  * a key lock is open, a code lock is offered locked unless the account
  * may set codes (CodeLockAccess). Counting the drawers is an operation
  * that changes nothing.
@@ -50,7 +50,7 @@ final class CabinetResource implements ResourceInterface {
       ->addConstraint('Range', ['min' => 1, 'max' => 12]);
     $inputs->add('lock', 'string', t('Lock'), default: 'key')
       ->addConstraint('Choice', ['choices' => ['key', 'code']]);
-    $inputs->attachBy('lock_settings', by: 'lock')
+    $inputs->attachVariants('lock_settings', by: 'lock')
       ->setLabel(t('Lock settings'));
   }
 

@@ -29,10 +29,10 @@ use Drupal\field\FieldStorageConfigInterface;
  * @endcode
  *
  * The storage is a fixed child with storage of its own. The settings
- * are a slot chosen by the field type: the field resource names no
- * children, and each field type's module marks its own settings class
+ * are variants the field type chooses between: the field resource names
+ * no children, and each field type's module marks its own settings class
  * (a resource or a structure) with #[Variant]. A field type offered in
- * the UI with no settings class still fills the slot, with a variant
+ * the UI with no settings class still has a variant, the one
  * FieldSettingsSchemaVariants derives from its config schema.
  *
  * Add, reuse and edit are not three resources. They are how much is already
@@ -148,7 +148,7 @@ final class FieldInstanceResource implements ResourceInterface {
     $inputs->attach('storage', FieldStorageResource::class)
       ->setLabel(t('Field storage'))
       ->setDescription(t('What every bundle using this field shares.'));
-    $inputs->attachBy('settings', by: 'field_type')
+    $inputs->attachVariants('settings', by: 'field_type')
       ->setLabel(t('Field settings'))
       ->setDescription(t('Settings for this field on this bundle, described by the field type itself.'));
   }

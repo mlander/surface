@@ -21,12 +21,12 @@ use Drupal\data_surface_examples_compliance\Structure\ComplianceStructure;
  * Example 4: others get a say.
  *
  * Another module's class, naming example 3's resource: an adapter. It
- * attaches the compliance structure at its own mount, so the licence and
+ * attaches the compliance structure at its own mount, so the license and
  * the stewards are stored under this module's name, and wires the
  * structure's capacity port to example 3's capacity. The rest is glue for
  * this one owner: it titles the fieldset and draws it right after the
- * capacity its licence lifts, rewords one of the owner's labels, stops the
- * owner's capacity at a hundred without a licence, a rule declared as
+ * capacity its license lifts, rewords one of the owner's labels, stops the
+ * owner's capacity at a hundred without a license, a rule declared as
  * data, and leaves out a room the site has closed, which only the site
  * knows when it is asked. Example 3 is not changed and does not know this
  * module exists.
@@ -61,14 +61,14 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
     $inputs->attach('third_party_settings.data_surface_examples_compliance', ComplianceStructure::class, reads: ['capacity' => 'capacity']);
     $inputs->describe('title', label: $this->t('Public event title'));
     $inputs->describe('third_party_settings.data_surface_examples_compliance', label: $this->t('Compliance'), after: 'capacity');
-    // Without a licence, no more than a hundred, whatever the room seats.
-    // The licence is the structure's, which this alter reads at its mount.
-    // A licence its own pattern refuses is no licence: a rule never sees
+    // Without a license, no more than a hundred, whatever the room seats.
+    // The license is the structure's, which this alter reads at its mount.
+    // A license its own pattern refuses is no license: a rule never sees
     // an invalid sibling.
     $inputs->narrow('capacity')
-      ->when(Condition::absent('licence'))
+      ->when(Condition::absent('license'))
       ->constrain('Range', ['max' => 100])
-      ->describe($this->t('Up to 100 without an event licence.'));
+      ->because($this->t('Up to 100 without an event license.'));
   }
 
   /**

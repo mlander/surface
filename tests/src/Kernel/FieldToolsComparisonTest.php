@@ -20,7 +20,7 @@ use PHPUnit\Framework\Attributes\Group;
  * Belt's field_add derives its answer from the field type's config
  * schema; data_surface:field.instance:reuse, the tool derived from the
  * field instance resource's reuse operation, from the field type's
- * settings resource, which fills the field instance's settings slot. The
+ * settings resource, the field instance's settings variant for it. The
  * two answers are put side by side in the data_surface_tool module's
  * COMPARISON.md.
  * That file is written by scripts/generate-comparison.php; the last test

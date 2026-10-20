@@ -52,8 +52,8 @@ final class JournalResource implements ResourceInterface {
           'staff' => t('Staff'),
         ],
       ]);
-    $inputs->with(OwnershipStructure::class, reads: ['audience' => 'visibility']);
-    $inputs->with(TimestampsStructure::class);
+    $inputs->mixIn(OwnershipStructure::class, reads: ['audience' => 'visibility']);
+    $inputs->mixIn(TimestampsStructure::class);
     $inputs->add('revision', 'integer', t('Revision'), default: 1)
       ->addConstraint('Range', ['min' => 1]);
     $inputs->add('published', 'boolean', t('Published'), default: FALSE);
@@ -64,11 +64,11 @@ final class JournalResource implements ResourceInterface {
     $inputs->narrow('revision')
       ->when(Condition::absent('created'))
       ->constrain('Range', ['max' => 1])
-      ->describe(t('A journal never created is on its first revision.'));
+      ->because(t('A journal never created is on its first revision.'));
     $inputs->narrow('created')
       ->when(Condition::equals('published', TRUE))
       ->require()
-      ->describe(t('A published journal says when it was created.'));
+      ->because(t('A published journal says when it was created.'));
   }
 
 }

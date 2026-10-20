@@ -171,7 +171,7 @@ callback's walk to each dependent. What is kept:
   (`surface[third_party_settings][<module>][<key>]`), so they post, and
   save, where they always did.
 - **Dependents-only refresh.** Each key inside it keeps its refresh
-  wrapper and id. Changing the licence replaces the capacity and the
+  wrapper and id. Changing the license replaces the capacity and the
   stewards it moves, by their wrappers; changing the capacity replaces
   the stewards. The fieldset itself is never replaced, so it stays
   where it was drawn. An element the callback replaces is rendered
@@ -192,7 +192,7 @@ discarded, including in the `#ajax` already attached to the children.
 
 Every key another key refines against gets an `#ajax` with
 `refreshSurface()` as the callback, at any depth: an attached child's or
-a chosen slot variant's own dependency is wired too, as a trigger of the
+a chosen variant's own dependency is wired too, as a trigger of the
 child's own refiners. One exception, on purpose: an element whose
 `#type` is a grouping type (`details`, `fieldset`, `container`, which
 is what the map widget renders) is left unwired. A `details` is not an
@@ -225,7 +225,7 @@ that refine against those, until nothing new is reached: the same
 closure the [discard cascade](#the-in-form-half-discarding-orphaned-input)
 walks. In the registration example, the venue replaces the room and the
 capacity; the room replaces the capacity; the pricing replaces the
-ticket slot. In the demo block, the entity type replaces the bundle and
+ticket variants. In the demo block, the entity type replaces the bundle and
 the field, and the bundle replaces the field. Replacing the whole
 container, as the form once did, redrew the select the person had just
 changed and left the real change (a maximum moving on another field)
@@ -235,25 +235,26 @@ The callback answers with an `AjaxResponse`:
 
 | Command | For |
 | --- | --- |
-| `ReplaceCommand` | Each dependent, by its own wrapper. A slot whose deciding key moved is replaced whole, by the slot's wrapper. |
+| `ReplaceCommand` | Each dependent, by its own wrapper. Variants whose deciding key moved are replaced whole, by the wrapper of the key they sit at. |
 | `ReplaceCommand` | Each element placed with `placeRefreshed()` (the operation form's panel), on every rebuild. |
 | `RemoveCommand`, then `AppendCommand` | The [stale marker](#stale-values-on-a-form): removed, and appended to the container again when the rebuild left one. It names stale selects across the whole container and may appear or disappear with the rebuild, so it is never replaced in place. |
 | `ReplaceCommand` | The trigger itself, by its own wrapper, in three cases only: its own value was refused (the error is printed under it), its previous request printed an error under it (so a fixed error goes away), or the rebuild changed the options it offers (a required select loses `- Select -` once something is chosen). |
 | `RemoveCommand`, then `PrependCommand` | Whatever else the request put in the messenger, a stale value kept, printed inside the container where the render-array path printed it, after the previous request's are taken away. An error on the trigger is never among them: it is printed under the trigger. |
-| `AnnounceCommand` | At most one, polite: what the rebuild changed, in whole sentences, for whoever cannot see it. The trigger's refusal comes first, named for its field, then each dependent the change moved, compared with what the page showed: "Send day no longer applies." or "Send day now applies.", "Items per issue now allows 1 to 20.", "<Label> is now required.", "The choices for Room have changed.", and, for a group whose fields changed (a slot's variant), "Ticket was updated." Nothing is announced when nothing moved. |
+| `AnnounceCommand` | At most one, polite: what the rebuild changed, in whole sentences, for whoever cannot see it. The trigger's refusal comes first, named for its field, then each dependent the change moved, compared with what the page showed: "Send day no longer applies." or "Send day now applies.", "Items per issue now allows 1 to 20.", "<Label> is now required.", "The choices for Room have changed.", and, for a group whose fields changed (a variant), "Ticket was updated." Nothing is announced when nothing moved. |
 
 **Coming from `#states`.** A dependent moves on a round trip to the
 server, a text trigger's on blur, and one taken out and brought back is
 drawn afresh from what is stored, not from what was typed in it before.
 
-Each refinement target, each trigger, each slot and each placed
-element gets a wrapper of its own, a `div` in its `#prefix` and `#suffix`, with its id
-on the element under `REFRESH_ID_KEY`. The ids are derived from the
+Each refinement target, each trigger, each key with variants and each
+placed element gets a wrapper of its own, a `div` in its `#prefix` and
+`#suffix`, with its id on the element under `REFRESH_ID_KEY`. The ids
+are derived from the
 container's id and the element's path below it
 (`<container>--shelf--height`), so they are unique wherever the
 container's is. They are placed by the container's `#process`, since
-the container's id is only final once a host has merged it. A slot whose
-deciding key chose nothing renders as its wrapper and nothing else, so
+the container's id is only final once a host has merged it. Variants
+nothing has chosen yet render as their wrapper and nothing else, so
 the rebuild that chooses a variant has a place to put it; extraction
 reads nothing from it. A key that does not apply to the values the form
 is drawn for is the same: no element, not disabled and not hidden, only
@@ -292,9 +293,9 @@ element template's own error slot, with `aria-invalid` and the `error`
 class. The error carries an id, the input's own followed by `--error`,
 which the input's `aria-describedby` names after its description, so
 the error is read with the field; and the rebuild's announcement says
-it, named for the field. Type `EV-2048` as example 3's licence: the licence is redrawn
-with "A licence number is four digits, such as 2048." under
-it, and the capacity with the no-licence ceiling of 100. The message is
+it, named for the field. Type `EV-2048` as example 3's license: the license is redrawn
+with "A license number is four digits, such as 2048." under
+it, and the capacity with the no-license ceiling of 100. The message is
 said there and nowhere else: not at the top of the container, and not
 held over to the next page. An error Form API's own element validation
 sets on the trigger, a maximum length, still stops the rebuild, and is
@@ -475,8 +476,9 @@ nothing discarded**: every value was sent on purpose and is judged. That
 is what makes the elements the ones the answers ask for. Without it a
 select offers the stored venue's rooms and Form API refuses the new
 venue's room as a choice it was never offered before the data surface
-is asked, and a slot flipped in the same request is rendered as the stored
-variant, with no element for the chosen variant's keys to arrive in. A
+is asked, and variants whose deciding key flipped in the same request
+are rendered as the stored variant, with no element for the chosen
+variant's keys to arrive in. A
 select left on the empty option it was given in place of a stored value
 (named in the hidden input the container posts) is read as that
 stored value, here and on an AJAX rebuild alike, so it is rebuilt
@@ -575,7 +577,7 @@ to judge and nothing to report.
 Three rules keep it honest:
 
 - **Only input is ever dropped.** `discardedRefinementInput()` names
-  keys (and, inside an attached child or a chosen slot variant, the
+  keys (and, inside an attached child or a chosen variant, the
   dotted paths of the child's own keys its own refiners orphaned, asked
   of the child in its own frame); a stored value is never touched by it. A rule that could reach
   storage would be the stale model with the safety taken off.

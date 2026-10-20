@@ -22,8 +22,8 @@ use Drupal\data_surface_tool\Resource\FieldInstanceResource;
 /**
  * A field type's settings, read from its config schema, as a variant.
  *
- * Fills FieldInstanceResource's settings slot for every field type a site
- * offers in its UI that no #[Variant] fills, so a plain `string`
+ * Derives FieldInstanceResource's settings variant for every field type a
+ * site offers in its UI that no #[Variant] covers, so a plain `string`
  * or `integer` field can be added and edited through the derived field
  * tools as an address field can. What a caller gets is what the schema
  * says: the keys of `field.field_settings.<field type>`, their types and
@@ -39,13 +39,13 @@ use Drupal\data_surface_tool\Resource\FieldInstanceResource;
  *
  * The field's storage has settings of its own, chosen by the same field
  * type and described the same way: FieldStorageSettingsSchemaVariants
- * is this class pointed at the storage's slot, its schema and its
- * defaults.
+ * is this class pointed at the storage's settings variants, its schema
+ * and its defaults.
  */
 class FieldSettingsSchemaVariants implements DerivedVariantsInterface {
 
   /**
-   * The resource whose slot this fills.
+   * The resource whose settings variants this derives.
    */
   protected const RESOURCE = FieldInstanceResource::class;
 
@@ -79,7 +79,7 @@ class FieldSettingsSchemaVariants implements DerivedVariantsInterface {
   /**
    * {@inheritdoc}
    */
-  public function slot(): array {
+  public function variantsAt(): array {
     return [static::RESOURCE, 'settings'];
   }
 

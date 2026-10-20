@@ -19,7 +19,7 @@ final class MixinResourceStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->with(LedgerResource::class);
+    $inputs->mixIn(LedgerResource::class);
   }
 
 }

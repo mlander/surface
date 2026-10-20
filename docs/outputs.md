@@ -24,11 +24,11 @@ way.
 
 ## Declaring outputs
 
-Beside the inputs, in the same class, on `HasOutputsInterface`:
+Beside the inputs, in the same class, on `DefinesOutputsInterface`:
 
 ```php
 #[UsesStructure]
-final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements StructureInterface, HasOutputsInterface {
+final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements StructureInterface, DefinesOutputsInterface {
 
   public static function defineOutputs(BlueprintInterface $outputs): void {
     $outputs->add('text', 'string', t('Text'))
@@ -61,30 +61,30 @@ documented:
 | **Refinement** | `#[RefinesInput]` methods narrow it against its siblings. | Refused: a `#[RefinesInput]` naming an output key is refused when the resource or structure is built. A refinement narrows what may be sent, and nobody sends an output. |
 
 An output whose shape depends on an input value would be a variant,
-declared with `attachBy()` on that input key, exactly as for an input
-slot. Outputs hold no attached structure yet: `attach()` and
-`attachBy()` on an output are refused by name, so until they can, an
+declared with `attachVariants()` on that input key, exactly as for an
+input's variants. Outputs hold no attached structure yet: `attach()` and
+`attachVariants()` on an output are refused by name, so until they can, an
 output that would vary is advertised at its widest: the demo formatter's
 `classes` is an open list of class names, whatever variant is chosen.
 
-## Absent, NULL, and the Omitted sentinel
+## Absent, NULL, and the NotEmitted sentinel
 
 Three states, and the middle one is the one worth being careful about.
 
 | The emitted array | Means | Legal when |
 | --- | --- | --- |
 | The key is missing | The producer has nothing to say about it on this run. | The output is not required. |
-| The key holds `Omitted::value()` | The same thing, said from inside an array literal. Conformance strips it before anything else looks. | The output is not required. |
+| The key holds `NotEmitted::value()` | The same thing, said from inside an array literal. Conformance strips it before anything else looks. | The output is not required. |
 | The key holds `NULL` | `NULL` **is** the value. It is emitted, and it is checked against the definition like `0` or the empty string. | The definition accepts it, so never for a required output. |
 
-`Pipeline\Omitted` exists because PHP has no way to leave a key out of
+`Pipeline\NotEmitted` exists because PHP has no way to leave a key out of
 an array expression, and the readable shape of a producer is one
 literal:
 
 ```php
 return [
   'text' => $text,
-  'classes' => $variant === NULL ? Omitted::value() : ['v-' . $variant],
+  'classes' => $variant === NULL ? NotEmitted::value() : ['v-' . $variant],
 ];
 ```
 
@@ -110,7 +110,7 @@ $violations = $pipeline->conformOutput($surface, $emitted);
 
 What it does, in order:
 
-1. Strips every `Omitted` key, at every depth.
+1. Strips every `NotEmitted` key, at every depth.
 2. Refuses keys no output definition declares, at any depth, in the same
    spirit `accept()` refuses unknown input keys.
 3. Checks every present value against its definition's type and
@@ -167,7 +167,7 @@ separately checkable against the contract.
 The demo formatter is the worked example: it is its own structure, and
 declares two outputs in its static `defineOutputs()`; it implements
 `formatValue()`, writes no render array, and emits
-`Omitted::value()` for its classes when no variant is chosen. Its
+`NotEmitted::value()` for its classes when no variant is chosen. Its
 `classes` output is advertised open whatever variant is chosen, because
 outputs are never refined.
 
@@ -185,7 +185,7 @@ flag, the constraints, and the enum, through the same treatment the
 inputs get. What is lost, on top of the two the inputs already lose
 (example values and type settings, both Tool API gaps):
 
-- **The `Omitted` marker itself**, which is a PHP marker and not a
+- **The `NotEmitted` marker itself**, which is a PHP marker and not a
   value. The statement it makes survives as `required`.
 - **Who contributed what.** A mounted third-party output arrives as an
   ordinary property of the `third_party_outputs` map.

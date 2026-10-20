@@ -113,8 +113,8 @@ final class ResourceCollectorPass implements CompilerPassInterface {
     // A deriver's overrides may live in a module scanned after its own.
     foreach (array_keys($found['derivers']) as $deriver) {
       $attribute = (new \ReflectionClass($deriver))->getAttributes(DerivesResources::class)[0]->newInstance();
-      foreach ($attribute->overrides === NULL ? [] : $scanned as $class => [$module, $reflection]) {
-        if ($reflection->getAttributes($attribute->overrides) !== []) {
+      foreach ($attribute->overriddenBy === NULL ? [] : $scanned as $class => [$module, $reflection]) {
+        if ($reflection->getAttributes($attribute->overriddenBy) !== []) {
           $found['overrides'][$deriver][$class] = $module;
         }
       }

@@ -19,7 +19,7 @@ final class MixinWiresMemberStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->with(OwnershipStructure::class, reads: ['audience' => 'owner']);
+    $inputs->mixIn(OwnershipStructure::class, reads: ['audience' => 'owner']);
   }
 
 }

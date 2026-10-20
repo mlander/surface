@@ -10,8 +10,8 @@ use Drupal\Core\TypedData\MapDataDefinition;
 /**
  * A sealed child at one key of its parent: an attached structure.
  *
- * What attach() leaves on the entry it declares, and what each variant of
- * a slot is. The child is a whole data surface, not a copy of its
+ * What attach() leaves on the entry it declares, and what each variant
+ * is. The child is a whole data surface, not a copy of its
  * definitions: its own refiners, locked keys, secrets and defaults travel
  * with it, so the pipeline and the form hand the value at the key to the
  * child and let it answer for itself, and its refiners run in the
@@ -35,7 +35,7 @@ use Drupal\Core\TypedData\MapDataDefinition;
  * container names nothing inside it.
  *
  * @see \Drupal\data_surface\DataSurfaceBuilderInterface::attach()
- * @see \Drupal\data_surface\Slot
+ * @see \Drupal\data_surface\Variants
  */
 final class Attachment {
 

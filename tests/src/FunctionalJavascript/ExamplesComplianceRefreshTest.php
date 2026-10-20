@@ -12,8 +12,8 @@ use WebDriver\Key;
 /**
  * Tests example 3 with the compliance alter, in a browser.
  *
- * A licence the alter's pattern refuses is said under the licence, once,
- * as it is typed, and is no licence to the capacity: the refusal is the
+ * A license the alter's pattern refuses is said under the license, once,
+ * as it is typed, and is no license to the capacity: the refusal is the
  * trigger's own, held for the request while the rebuild goes ahead. A
  * room the site closed is left out by the alter's runtime refiner.
  *
@@ -33,14 +33,14 @@ class ExamplesComplianceRefreshTest extends ExamplesWebDriverTestBase {
   ];
 
   /**
-   * The licence element's name.
+   * The license element's name.
    */
-  protected const LICENCE = 'surface[third_party_settings][data_surface_examples_compliance][licence]';
+  protected const LICENSE = 'surface[third_party_settings][data_surface_examples_compliance][license]';
 
   /**
-   * The constraint message a malformed licence earns.
+   * The constraint message a malformed license earns.
    */
-  protected const MESSAGE = 'A licence number is four digits, such as 2048.';
+  protected const MESSAGE = 'A license number is four digits, such as 2048.';
 
   /**
    * The Compliance fieldset's data-drupal-selector.
@@ -56,24 +56,24 @@ class ExamplesComplianceRefreshTest extends ExamplesWebDriverTestBase {
    * Tests the alter's keys sit in one fieldset, and the stewards follow.
    *
    * The shipped room, Riverside Hall's main hall, seats more than the
-   * hundred allowed without a licence, so the ceiling shows at once.
+   * hundred allowed without a license, so the ceiling shows at once.
    */
   public function testOneFieldsetTitledComplianceAndTheStewardsFollow(): void {
     $assert = $this->assertSession();
     $page = $this->getSession()->getPage();
     $this->drupalGet('surface-examples/3');
-    // One details around the licence and the stewards, titled by the
+    // One details around the license and the stewards, titled by the
     // alter, and nothing drawn around it.
-    $around = $page->findAll('xpath', sprintf('//details[.//input[@name="%s"]]', self::LICENCE));
+    $around = $page->findAll('xpath', sprintf('//details[.//input[@name="%s"]]', self::LICENSE));
     $this->assertCount(1, $around);
     $this->assertSame('Compliance', trim($around[0]->find('css', 'summary')->getText()));
     $this->assertNotNull($around[0]->find('xpath', sprintf('.//input[@name="%s"]', self::STEWARDS)));
     $assert->pageTextNotContains('Third party settings');
     $assert->pageTextNotContains('Settings added by other modules.');
 
-    $this->assertStringContainsString('Up to 100 without an event licence.', $this->formItemText('surface[capacity]'));
+    $this->assertStringContainsString('Up to 100 without an event license.', $this->formItemText('surface[capacity]'));
     $this->assertStringContainsString('At least 1 steward for 50 attendees.', $this->formItemText(self::STEWARDS));
-    $this->enterLicence('2048');
+    $this->enterLicense('2048');
     $this->assertStringContainsString('Up to 400 for the Main hall.', $this->formItemText('surface[capacity]'));
     $capacity = $assert->fieldExists('surface[capacity]');
     $capacity->setValue('150');
@@ -109,32 +109,32 @@ class ExamplesComplianceRefreshTest extends ExamplesWebDriverTestBase {
   }
 
   /**
-   * Tests a malformed licence on blur, then corrected.
+   * Tests a malformed license on blur, then corrected.
    */
-  public function testMalformedLicenceIsSaidInlineAndLiftsNothing(): void {
+  public function testMalformedLicenseIsSaidInlineAndLiftsNothing(): void {
     $assert = $this->assertSession();
     $this->drupalGet('surface-examples/3');
 
-    $this->enterLicence('EV-2048');
-    $licence = $assert->fieldExists(self::LICENCE);
-    $this->assertSame('EV-2048', $licence->getValue());
-    $this->assertSame('true', $licence->getAttribute('aria-invalid'));
-    $this->assertSame(1, substr_count($this->formItemText(self::LICENCE), self::MESSAGE));
+    $this->enterLicense('EV-2048');
+    $license = $assert->fieldExists(self::LICENSE);
+    $this->assertSame('EV-2048', $license->getValue());
+    $this->assertSame('true', $license->getAttribute('aria-invalid'));
+    $this->assertSame(1, substr_count($this->formItemText(self::LICENSE), self::MESSAGE));
     $assert->elementsCount('css', '.form-item--error-message', 1);
     // Said there and nowhere else: no messages at the top.
     $assert->elementNotExists('css', '[data-drupal-messages] .messages');
     $assert->elementNotExists('css', '.messages');
-    // And no licence to the capacity.
+    // And no license to the capacity.
     $capacity = $assert->fieldExists('surface[capacity]');
     $this->assertSame('100', $capacity->getAttribute('max'));
-    $this->assertStringContainsString('Up to 100 without an event licence.', $this->formItemText('surface[capacity]'));
+    $this->assertStringContainsString('Up to 100 without an event license.', $this->formItemText('surface[capacity]'));
 
     // Corrected, the error goes with the next refresh and the room's own
     // limit comes back.
-    $this->enterLicence('2048');
-    $licence = $assert->fieldExists(self::LICENCE);
-    $this->assertNull($licence->getAttribute('aria-invalid'));
-    $this->assertStringNotContainsString(self::MESSAGE, $this->formItemText(self::LICENCE));
+    $this->enterLicense('2048');
+    $license = $assert->fieldExists(self::LICENSE);
+    $this->assertNull($license->getAttribute('aria-invalid'));
+    $this->assertStringNotContainsString(self::MESSAGE, $this->formItemText(self::LICENSE));
     $assert->elementNotExists('css', '.form-item--error-message');
     $assert->elementNotExists('css', '.messages');
     $this->assertSame('400', $assert->fieldExists('surface[capacity]')->getAttribute('max'));
@@ -192,9 +192,9 @@ class ExamplesComplianceRefreshTest extends ExamplesWebDriverTestBase {
   /**
    * Tests the Compliance fieldset is drawn after the capacity, and stays.
    *
-   * The alter places its fieldset after the capacity its licence lifts:
+   * The alter places its fieldset after the capacity its license lifts:
    * below the capacity and above the pricing, the next key the owner
-   * declared. A licence typed there still lifts the capacity, and the
+   * declared. A license typed there still lifts the capacity, and the
    * refresh replaces the capacity and the stewards it moves, never the
    * fieldset, which is where it was afterwards.
    */
@@ -213,7 +213,7 @@ class ExamplesComplianceRefreshTest extends ExamplesWebDriverTestBase {
 
     $this->probeAll();
     $this->getSession()->executeScript(sprintf('document.querySelector(%s).dataset.dataSurfaceProbe = "kept";', json_encode(sprintf('details[data-drupal-selector="%s"]', self::COMPLIANCE))));
-    $this->typeInto(self::LICENCE, '2048' . Key::TAB);
+    $this->typeInto(self::LICENSE, '2048' . Key::TAB);
     $this->assertSession()->assertWaitOnAjaxRequest();
     $this->assertStringContainsString('Up to 400 for the Main hall.', $this->formItemText('surface[capacity]'));
     $this->assertSame(['surface[capacity]', self::STEWARDS], $this->replacedSinceProbe());
@@ -239,7 +239,7 @@ class ExamplesComplianceRefreshTest extends ExamplesWebDriverTestBase {
       })(document.querySelector(%s));',
       json_encode('[name="surface[capacity]"]'),
       json_encode('[name="surface[pricing]"]'),
-      json_encode(sprintf('[name="%s"], [name="%s"]', self::LICENCE, self::STEWARDS)),
+      json_encode(sprintf('[name="%s"], [name="%s"]', self::LICENSE, self::STEWARDS)),
       json_encode(sprintf('details[data-drupal-selector="%s"]', self::COMPLIANCE)),
     )));
   }
@@ -266,18 +266,18 @@ class ExamplesComplianceRefreshTest extends ExamplesWebDriverTestBase {
   }
 
   /**
-   * Types a licence and leaves the field, which is what asks.
+   * Types a license and leaves the field, which is what asks.
    *
    * The driver's own blur after typing does not reach the field here, so
    * it is left explicitly.
    *
    * @param string $value
-   *   The licence.
+   *   The license.
    */
-  protected function enterLicence(string $value): void {
-    $licence = $this->assertSession()->fieldExists(self::LICENCE);
-    $licence->setValue($value);
-    $licence->blur();
+  protected function enterLicense(string $value): void {
+    $license = $this->assertSession()->fieldExists(self::LICENSE);
+    $license->setValue($value);
+    $license->blur();
     $this->assertSession()->assertWaitOnAjaxRequest();
   }
 

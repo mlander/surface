@@ -20,10 +20,11 @@ use Drupal\data_surface_examples\Venues;
 /**
  * Example 3: made of parts.
  *
- * Example 2, plus two parts that are structures of their own. The ticket is a
- * slot the pricing chooses: FreeTicketStructure or PaidTicketStructure fills
- * it, each naming this class with #[Variant], and this class names
- * neither. The contact is a fixed part, ContactStructure, always there.
+ * Example 2, plus two parts that are structures of their own. The ticket
+ * has variants the pricing chooses between: FreeTicketStructure and
+ * PaidTicketStructure, each naming this class with #[Variant], and this
+ * class names neither. The contact is a fixed part, ContactStructure,
+ * always there.
  */
 #[Resource('registration.step3', storage: RegistrationStep3Storage::class)]
 final class RegistrationStep3Resource implements ResourceInterface {
@@ -54,7 +55,7 @@ final class RegistrationStep3Resource implements ResourceInterface {
     $inputs->add('pricing', 'string', t('Pricing'), default: 'free')
       ->setRequired(TRUE)
       ->addConstraint('Choice', ['choices' => ['free', 'paid']]);
-    $inputs->attachBy('ticket', by: 'pricing')
+    $inputs->attachVariants('ticket', by: 'pricing')
       ->setLabel(t('Ticket'));
     $inputs->attach('contact', ContactStructure::class)
       ->setLabel(t('Contact'));

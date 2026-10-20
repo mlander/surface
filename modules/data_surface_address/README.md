@@ -17,9 +17,9 @@ Four pieces:
   list and the language list are not in it: the items carry the address
   module's `Country` constraint and the `LanguageExists` constraint, and
   `CountryOptions` and `LanguageExistsOptions` resolve them live. It is
-  also the variant that fills the field instance resource's open
-  `settings` slot for the address field type, by
-  `#[Variant(of: FieldInstanceResource::class, key: 'settings', value: 'address')]`,
+  also the field instance resource's `settings` variant for the address
+  field type, by
+  `#[Variant(of: FieldInstanceResource::class, at: 'settings', for: 'address')]`,
   so the tool bridge's field resource never names it.
 - `SurfaceAddressItem`: the Field UI host. It names that resource with
   `#[UsesStructure]`, which the field type trait reads from the field
@@ -32,7 +32,7 @@ Four pieces:
   field itself is stored. Its prepare holds the settings, in the layout
   the field stores, to the address field type's settings schema, so a
   dry run previews them.
-- `AddressSettingsLayout::toStorage()` / `fromStorage()`: the layout transform between the input
+- `AddressStorageLayout::toStorage()` / `fromStorage()`: the layout transform between the input
   layout and the stored layout. It is not new logic: it is the settings
   form's validate handler (strip the rows with an empty override) plus
   the item class's accessors (unwrap each override, drop the falsy

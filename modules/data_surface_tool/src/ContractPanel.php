@@ -39,7 +39,7 @@ use Drupal\tool\Tool\ToolManager;
  *
  * Below the table, collapsed, are three JSON Schema documents. First the
  * contract itself, from the main module's emitter for the operation and
- * the values as they stand: a slot as an `if`/`then` per variant keyed
+ * the values as they stand: variants as an `if`/`then` per variant keyed
  * on its deciding sibling, each part defined once under `$defs` and
  * referred to where it is used, allowed values as titled `oneOf`, and
  * what each key depends on and whether it is locked under `x-surface`.
@@ -52,7 +52,7 @@ use Drupal\tool\Tool\ToolManager;
  * when one changes. Then
  * what the derived tool for the same operation advertises, normalized by
  * the Tool API's own serializer: the rendering `tool:info` prints, which
- * cannot say a shape keyed by a sibling and so shows a slot as one map,
+ * cannot say a shape keyed by a sibling and so shows variants as one map,
  * the variant chosen when the tool was derived or every variant's keys
  * before anything chooses. The panel needs the Tool API for that second
  * block, which is why it lives in this submodule.
@@ -145,7 +145,7 @@ final class ContractPanel implements DataSurfaceFormPanelInterface {
       '#open' => FALSE,
       '#title' => $this->t('The schema for these answers'),
       'note' => [
-        '#markup' => '<p>' . $this->t('What the resource states for the answers as they stand, as JSON Schema: each part a shape of its own defined once under <code>$defs</code> and referred to where it is used, each slot as one conditional per variant on the key that chooses it, allowed values with their labels, and under <code>x-surface</code> what each key depends on and whether it is locked. A key another answer narrows is shown as narrowed, so this describes these answers and no others. It is the document data_surface_react serves at <code>/surface-api</code>, less the widget hints that renderer asks for.') . '</p>',
+        '#markup' => '<p>' . $this->t('What the resource states for the answers as they stand, as JSON Schema: each part a shape of its own defined once under <code>$defs</code> and referred to where it is used, each set of variants as one conditional per variant on the key that chooses between them, allowed values with their labels, and under <code>x-surface</code> what each key depends on and whether it is locked. A key another answer narrows is shown as narrowed, so this describes these answers and no others. It is the document data_surface_react serves at <code>/surface-api</code>, less the widget hints that renderer asks for.') . '</p>',
       ],
       'json' => $this->json($contract->document['schema']),
     ];
@@ -170,7 +170,7 @@ final class ContractPanel implements DataSurfaceFormPanelInterface {
         '#open' => FALSE,
         '#title' => $this->t('What the Tool API can advertise: @tool', ['@tool' => $tool_id]),
         'note' => [
-          '#markup' => '<p>' . $this->t("The input schema of the tool for the same operation, as <code>tool:info</code> prints it. The Tool API cannot say a shape chosen by a sibling key, so a slot appears as one map, not as a conditional on the key that chooses it: the variant the stored values choose, or, before anything chooses, every variant's keys with none required.") . '</p>',
+          '#markup' => '<p>' . $this->t("The input schema of the tool for the same operation, as <code>tool:info</code> prints it. The Tool API cannot say a shape chosen by a sibling key, so variants appear as one map, not as a conditional on the key that chooses between them: the variant the stored values choose, or, before anything chooses, every variant's keys with none required.") . '</p>',
         ],
         'json' => $this->json($this->definitionSerializer->normalizeInputSchema($tool)),
       ];
@@ -214,22 +214,22 @@ final class ContractPanel implements DataSurfaceFormPanelInterface {
   protected function entryRows(array &$rows, string $path, Entry $entry, ?DataDefinitionInterface $declared, DataSurfaceInterface $refined, array $values): void {
     $definition = $entry->definition;
     $depends = $refined->getDefinitions()->dependencies($entry->name);
-    if ($entry->slot !== NULL) {
-      $chosen = $entry->slot->chosen($values[$entry->slot->by] ?? $refined->getDefault($entry->slot->by));
+    if ($entry->variants !== NULL) {
+      $chosen = $entry->variants->chosen($values[$entry->variants->by] ?? $refined->getDefault($entry->variants->by));
       $variants = [];
-      foreach ($entry->slot->variants as $value => $variant) {
+      foreach ($entry->variants->variants as $value => $variant) {
         $variants[] = $value . ' → ' . ($variant->source === NULL ? $this->t('derived') : $this->registry->getDefinition($variant->source)->id);
       }
-      $rows[] = $this->row($path, $this->t('slot'), $definition, $refined->getDefault($entry->name), $this->t('A part chosen by @by: @variants', [
-        '@by' => $entry->slot->by,
+      $rows[] = $this->row($path, $this->t('variants'), $definition, $refined->getDefault($entry->name), $this->t('A part chosen by @by: @variants', [
+        '@by' => $entry->variants->by,
         '@variants' => implode(', ', $variants),
-      ]), [$entry->slot->by], $chosen === NULL
+      ]), [$entry->variants->by], $chosen === NULL
         ? $this->t('not chosen yet')
         : $this->t('the @value variant', ['@value' => $chosen]));
       if ($chosen !== NULL) {
-        $child = $entry->slot->variant($chosen)->child;
+        $child = $entry->variants->variant($chosen)->child;
         $held = is_array($values[$entry->name] ?? NULL) ? $values[$entry->name] : [];
-        $this->propertyRows($rows, $path, $entry->slot->definitionFor($chosen, $child->refine($held)), $child->getDefinitions()->toArray(), []);
+        $this->propertyRows($rows, $path, $entry->variants->definitionFor($chosen, $child->refine($held)), $child->getDefinitions()->toArray(), []);
       }
       return;
     }

@@ -19,13 +19,13 @@
                 },
                 "type": "object",
                 "properties": {
-                    "licence": {
-                        "$ref": "#/$defs/event.licence",
-                        "title": "Event licence",
+                    "license": {
+                        "$ref": "#/$defs/event.license",
+                        "title": "Event license",
                         "x-surface": {
                             "locked": false,
                             "dependsOn": [],
-                            "patternMessage": "A licence number is four digits, such as 2048."
+                            "patternMessage": "A license number is four digits, such as 2048."
                         }
                     },
                     "stewards": {
@@ -45,9 +45,9 @@
                     "stewards"
                 ],
                 "$defs": {
-                    "event.licence": {
-                        "title": "Event licence",
-                        "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
+                    "event.license": {
+                        "title": "Event license",
+                        "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
                         "type": [
                             "string",
                             "null"
@@ -57,11 +57,18 @@
                             "2048"
                         ],
                         "x-surface": {
-                            "patternMessage": "A licence number is four digits, such as 2048."
+                            "patternMessage": "A license number is four digits, such as 2048."
                         }
                     }
                 }
             }
+        }
+    ],
+    "allowed": [
+        {
+            "path": "#/properties/licence",
+            "change": "key removed",
+            "reason": "A rename to US spelling (2026-10-20): the examples' own key and its def are spelled license now, a compatible rename for them; no stored value held the old key, and only the examples read it."
         }
     ]
 }

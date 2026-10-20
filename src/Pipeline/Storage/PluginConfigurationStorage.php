@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Storage;
+namespace Drupal\data_surface\Pipeline\Storage;
 
 use Drupal\Component\Plugin\ConfigurableInterface;
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;

@@ -42,7 +42,7 @@ use Drupal\data_surface\DefinitionMetadata;
  *
  * The key list is given at construction rather than read from a data
  * surface at call time, because a layout has no data surface:
- * `SettingsLayoutInterface` is pure layout, constructed once and reused
+ * `StorageLayoutInterface` is pure layout, constructed once and reused
  * for every instance of a field type, and the two methods take values
  * and settings rather than a data surface on purpose. A variant of the
  * interface that took the data surface was the alternative and was not
@@ -73,10 +73,10 @@ use Drupal\data_surface\DefinitionMetadata;
  * @see \Drupal\data_surface\DefinitionMetadata::setSecret()
  * @see docs/storage.md
  */
-final class EncryptedSettingsLayout implements SettingsLayoutInterface {
+final class EncryptedStorageLayout implements StorageLayoutInterface {
 
   /**
-   * Constructs an EncryptedSettingsLayout.
+   * Constructs an EncryptedStorageLayout.
    *
    * @param \Drupal\data_surface\Storage\SecretCodecInterface $codec
    *   The codec that enciphers and deciphers one value.
@@ -85,14 +85,14 @@ final class EncryptedSettingsLayout implements SettingsLayoutInterface {
    *   list is carried through untouched, which is what keeps this
    *   decorator invisible to every data surface that declares no secret
    *   at all.
-   * @param \Drupal\data_surface\Storage\SettingsLayoutInterface|null $inner
+   * @param \Drupal\data_surface\Storage\StorageLayoutInterface|null $inner
    *   The layout this one decorates, or NULL when the input layout is
    *   the storage layout and encryption is the only translation.
    */
   public function __construct(
     private readonly SecretCodecInterface $codec,
     private readonly array $secretKeys,
-    private readonly ?SettingsLayoutInterface $inner = NULL,
+    private readonly ?StorageLayoutInterface $inner = NULL,
   ) {
   }
 
@@ -108,14 +108,14 @@ final class EncryptedSettingsLayout implements SettingsLayoutInterface {
    *   The data surface whose definitions carry the secret flags.
    * @param \Drupal\data_surface\Storage\SecretCodecInterface $codec
    *   The codec to encrypt with.
-   * @param \Drupal\data_surface\Storage\SettingsLayoutInterface|null $inner
+   * @param \Drupal\data_surface\Storage\StorageLayoutInterface|null $inner
    *   The layout to decorate, or NULL when there is none.
    *
-   * @return \Drupal\data_surface\Storage\SettingsLayoutInterface|null
+   * @return \Drupal\data_surface\Storage\StorageLayoutInterface|null
    *   The decorator, or the inner layout unchanged (NULL included) when
    *   the data surface declares no secret key.
    */
-  public static function forSurface(DataSurfaceInterface $surface, SecretCodecInterface $codec, ?SettingsLayoutInterface $inner = NULL): ?SettingsLayoutInterface {
+  public static function forSurface(DataSurfaceInterface $surface, SecretCodecInterface $codec, ?StorageLayoutInterface $inner = NULL): ?StorageLayoutInterface {
     $keys = static::secretKeys($surface);
     return $keys === [] ? $inner : new static($codec, $keys, $inner);
   }

@@ -32,8 +32,8 @@ use Symfony\Component\HttpFoundation\Request;
  *
  * The bulletin's send day applies only to a weekly bulletin, and is
  * required when it does: the newcomer's case from the first fresh-eyes
- * run, which had no spelling. The notice rules out an attached child, a
- * slot and a key an alter mounted the same way.
+ * run, which had no spelling. The notice rules out an attached child,
+ * variants and a key an alter mounted the same way.
  *
  * @see docs/decisions.md#a-key-that-does-not-apply
  */
@@ -145,7 +145,7 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
     $this->assertFalse(DoesNotApply::marks($email->getDefinition('schedule')));
     $post = $notice->refine(['channel' => 'post', 'cadence' => 'weekly']);
     $this->assertFalse(DoesNotApply::marks($post->getDefinition('address')));
-    $this->assertTrue(DoesNotApply::marks($post->getDefinition('schedule')), 'A slot is ruled out like any key.');
+    $this->assertTrue(DoesNotApply::marks($post->getDefinition('schedule')), 'Variants are ruled out like any key.');
     $this->assertSame(['data_surface_resource_test.signature'], $notice->getDefinitions()->entry('third_party_settings')->mayNotApply(), 'A mounted key, by its path inside the mount.');
     $this->assertSame(['data_surface_resource_test.signature'], DoesNotApply::inside($post->getDefinition('third_party_settings')));
     $this->assertSame([], DoesNotApply::inside($email->getDefinition('third_party_settings')));
@@ -192,7 +192,7 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests the pipeline rules out a child, a slot and a mounted key.
+   * Tests the pipeline rules out a child, variants and a mounted key.
    */
   public function testThePipelineRulesOutNestedKeys(): void {
     $notice = $this->built(NoticeStructure::class);
@@ -300,7 +300,7 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['channel', 'cadence', 'address', 'third_party_settings'], array_keys($post['schema']['properties']));
     $this->assertSame(['footer'], array_keys($post['schema']['properties']['third_party_settings']['properties']['data_surface_resource_test']['properties']), 'The signature is no property of its mount.');
     $this->assertArrayNotHasKey('schedule', $post['values']);
-    $this->assertSame([], array_filter($post['schema']['allOf'] ?? [], static fn (array $condition): bool => isset($condition['then']['properties']['schedule'])), 'No variant of a slot that does not apply.');
+    $this->assertSame([], array_filter($post['schema']['allOf'] ?? [], static fn (array $condition): bool => isset($condition['then']['properties']['schedule'])), 'No variant of a key that does not apply.');
   }
 
   /**

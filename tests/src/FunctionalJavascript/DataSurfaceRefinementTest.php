@@ -163,7 +163,7 @@ class DataSurfaceRefinementTest extends WebDriverTestBase {
    *
    * Every named element on the placement form is marked first, the
    * block's own and the structure's: the headline, the limit, the
-   * presentation and its slot, the region, the machine name. Afterwards
+   * presentation and its variants, the region, the machine name. Afterwards
    * the two the entity type moves are new nodes and every other one is
    * the node it was.
    */

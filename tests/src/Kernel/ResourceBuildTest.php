@@ -139,7 +139,7 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
   /**
    * Tests that the block host builds the structure #[UsesStructure] names.
    *
-   * Once, through the build step; the presentation slot's children are
+   * Once, through the build step; the presentation's variants are
    * built inside that one build, each in its own frame.
    */
   public function testBlockHostBuildsTheUsedStructure(): void {
@@ -155,10 +155,10 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
       array_keys($this->demoStructure()->getDefinitions()->toArray()),
       array_keys($block->getDataSurface()->getDefinitions()->toArray()),
     );
-    $slot = $block->getDataSurface()->getDefinitions()->entry('presentation_settings')?->slot;
-    $this->assertNotNull($slot);
-    $this->assertSame(ListPresentationStructure::class, $slot->variant('list')->source);
-    $this->assertSame(GridPresentationStructure::class, $slot->variant('grid')->source);
+    $variants = $block->getDataSurface()->getDefinitions()->entry('presentation_settings')?->variants;
+    $this->assertNotNull($variants);
+    $this->assertSame(ListPresentationStructure::class, $variants->variant('list')->source);
+    $this->assertSame(GridPresentationStructure::class, $variants->variant('grid')->source);
   }
 
   /**
@@ -215,7 +215,7 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
 
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('The "edit" context carries starting values for course but does not create.');
-    $this->resources()->build(RecipeResource::class, RecipeResource::edit('main', 'stew')->withStarting(['course' => 'starter']));
+    $this->resources()->build(RecipeResource::class, RecipeResource::edit('main', 'stew')->withDefaults(['course' => 'starter']));
   }
 
   /**
@@ -321,7 +321,7 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
       ],
       'a variant its deciding key cannot choose' => [
         UnofferedVariantStructure::class,
-        'The "settings" slot has the tin variant, which "kind" does not allow',
+        'The variants at "settings" include the tin variant, which "kind" does not allow',
       ],
       'an owner refiner that is an instance method' => [
         InstanceRefinerStructure::class,
@@ -367,17 +367,17 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests an open slot nothing fills.
+   * Tests variants nothing declares.
    *
    * It is a placeholder for good, and its deciding key can be answered
    * with nothing at all, rather than the structure being refused on a site
    * where no module brings a variant.
    */
-  public function testAnOpenSlotNothingFillsChoosesNothing(): void {
+  public function testVariantsNothingDeclaresChooseNothing(): void {
     $surface = $this->resources()->build(AttachingStructure::class, new OperationContext('configure'));
-    $this->assertNull(DefinitionMetadata::slotOf($surface->getDefinition('type')));
-    $this->assertSame('type', DefinitionMetadata::slotOf($surface->getDefinition('settings')));
-    $this->assertSame([], $surface->getDefinitions()->entry('settings')->slot->variantIds());
+    $this->assertNull(DefinitionMetadata::variantsBy($surface->getDefinition('type')));
+    $this->assertSame('type', DefinitionMetadata::variantsBy($surface->getDefinition('settings')));
+    $this->assertSame([], $surface->getDefinitions()->entry('settings')->variants->variantIds());
     $this->assertSame(['choices' => []], $surface->getDefinition('type')->getConstraints()['Choice']);
     $this->assertContains('type', $this->pipeline()->validate($surface, ['type' => 'anything'])->keys());
   }

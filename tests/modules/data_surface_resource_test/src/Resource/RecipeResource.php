@@ -8,7 +8,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
-use Drupal\data_surface\Resource\HasOutputsInterface;
+use Drupal\data_surface\Resource\DefinesOutputsInterface;
 use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
@@ -27,7 +27,7 @@ use Drupal\data_surface_resource_test\Storage\RecipeStorage;
   storage: RecipeStorage::class,
   access: RecipeAccess::class,
 )]
-final class RecipeResource implements ResourceInterface, HasOutputsInterface {
+final class RecipeResource implements ResourceInterface, DefinesOutputsInterface {
 
   /**
    * The dishes each course offers.

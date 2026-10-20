@@ -22,7 +22,7 @@ final class MixinRulesOutStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('kind', 'string', 'Kind')
       ->addConstraint('Choice', ['choices' => ['draft', 'final']]);
-    $inputs->with(TimestampsStructure::class);
+    $inputs->mixIn(TimestampsStructure::class);
     $inputs->narrow('changed')
       ->when(Condition::equals('kind', 'draft'))
       ->doesNotApply();

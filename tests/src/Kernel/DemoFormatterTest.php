@@ -9,7 +9,7 @@ use Drupal\Core\Form\FormState;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\Omitted;
+use Drupal\data_surface\Pipeline\NotEmitted;
 use Drupal\data_surface\Resource\Attribute\UsesStructure;
 use Drupal\data_surface_demo\Plugin\Field\FieldFormatter\DataSurfaceDemoFormatter;
 use Drupal\entity_test\Entity\EntityTest;
@@ -440,7 +440,7 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
     $this->assertSame([
       ['text' => '>> ONE', 'classes' => ['data-surface-variant-bold']],
       ['text' => '>> TWO', 'classes' => ['data-surface-variant-bold']],
-    ], array_map(Omitted::strip(...), $emitted));
+    ], array_map(NotEmitted::strip(...), $emitted));
   }
 
   /**
@@ -458,8 +458,8 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
 
     $data = $formatter->formatValue($entity->get('field_demo')->first(), $formatter->getSettings());
 
-    $this->assertTrue(Omitted::is($data['classes']));
-    $this->assertSame(['text' => 'plain'], Omitted::strip($data));
+    $this->assertTrue(NotEmitted::is($data['classes']));
+    $this->assertSame(['text' => 'plain'], NotEmitted::strip($data));
     $this->assertCount(0, $this->pipeline()->conformOutput($formatter->getDataSurface(), $data));
   }
 

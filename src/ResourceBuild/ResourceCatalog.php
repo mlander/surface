@@ -12,7 +12,7 @@ namespace Drupal\data_surface\ResourceBuild;
  * configuration it is, its operations with what each needs, whether it
  * creates, the permission it asks for, whether it can be asked on its
  * own and whether what it changes can be read on its own, the alters
- * that apply to it, and the variants that fill its slots.
+ * that apply to it, and the variants at its keys.
  * Nothing here builds anything; everything is read from what discovery
  * found, which is the point of the attributes being static.
  *
@@ -22,10 +22,10 @@ namespace Drupal\data_surface\ResourceBuild;
  *
  * @see \Drupal\data_surface\ResourceBuild\ResourceRegistry
  */
-final class ResourceCatalogue {
+final class ResourceCatalog {
 
   /**
-   * Constructs a ResourceCatalogue.
+   * Constructs a ResourceCatalog.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry $registry
    *   What discovery found.
@@ -34,7 +34,7 @@ final class ResourceCatalogue {
    * @param \Drupal\data_surface\ResourceBuild\ResourcePlugins $plugins
    *   Which plugins name which structure with #[UsesStructure].
    * @param \Drupal\data_surface\ResourceBuild\DerivedVariants $derivedVariants
-   *   What fills an open slot for the values no declared variant fills.
+   *   What derives variants for the values no declared variant covers.
    */
   public function __construct(
     protected readonly ResourceRegistry $registry,
@@ -59,18 +59,18 @@ final class ResourceCatalogue {
    *   own, as a read tool. Operations are a list in discovery order, so two
    *   providers of one id are both listed, as they are both refused when
    *   it is built. `variants` are the declared ones, each
-   *   value's #[Variant] class keyed by slot; `derived` says, per
-   *   slot, where the variants of every other value come from. An
+   *   value's #[Variant] class keyed by the variants' key; `derived` says,
+   *   per key, where the variants of every other value come from. An
    *   alter's `refines` lists its #[RefinesInput] methods by the key each
    *   refines and the keys it watches, named as the alter names them: a
    *   key it mounted itself by that key's own name; its `access` says
    *   whether it answers access too (AltersAccessInterface).
    */
   public function describe(): array {
-    $catalogue = [];
+    $catalog = [];
     foreach ($this->registry->getDefinitions() as $definition) {
       $plugins = $definition->isDerived() ? [] : $this->plugins->usedBy((string) $definition->class);
-      $catalogue[$definition->id] = [
+      $catalog[$definition->id] = [
         'id' => $definition->id,
         'class' => $definition->class,
         'deriver' => $definition->base,
@@ -107,18 +107,18 @@ final class ResourceCatalogue {
         'derived' => $this->derivedVariants->sources($definition->name()),
       ];
     }
-    ksort($catalogue);
-    return $catalogue;
+    ksort($catalog);
+    return $catalog;
   }
 
   /**
    * Describes every discovered deriver, without asking it anything.
    *
-   * What the catalogue can say about derived resources whatever site it
+   * What the catalog can say about derived resources whatever site it
    * is generated on: the derivatives themselves are the site's (one per
    * bundle, say), and describe() lists those this site has.
    *
-   * @return array<string, array{base: string, class: class-string, module: string, overrides: class-string|null, overridden: array<class-string, string>}>
+   * @return array<string, array{base: string, class: class-string, module: string, overriddenBy: class-string|null, overridden: array<class-string, string>}>
    *   The derivers, keyed and sorted by base id: the class, its module,
    *   the attribute an override of its derivation carries and the
    *   classes that carry it.

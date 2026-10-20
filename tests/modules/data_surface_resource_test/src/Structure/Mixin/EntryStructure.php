@@ -19,7 +19,7 @@ final class EntryStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('line', 'string', t('Line'));
-    $inputs->with(RecordStructure::class);
+    $inputs->mixIn(RecordStructure::class);
   }
 
 }

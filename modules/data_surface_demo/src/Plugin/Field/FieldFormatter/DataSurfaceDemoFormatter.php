@@ -10,12 +10,12 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
-use Drupal\data_surface\Pipeline\Omitted;
+use Drupal\data_surface\Pipeline\NotEmitted;
 use Drupal\data_surface\Plugin\Field\FieldFormatter\DataSurfaceFormatterBase;
 use Drupal\data_surface\Refinement\ChoiceSet;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\data_surface\Resource\Attribute\UsesStructure;
-use Drupal\data_surface\Resource\HasOutputsInterface;
+use Drupal\data_surface\Resource\DefinesOutputsInterface;
 use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\StructureInterface;
 use Drupal\data_surface_demo\DemoVariant;
@@ -49,7 +49,7 @@ use Drupal\data_surface_demo\DemoVariant;
   field_types: ['string'],
 )]
 #[UsesStructure]
-final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements StructureInterface, HasOutputsInterface {
+final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements StructureInterface, DefinesOutputsInterface {
 
   /**
    * The prefix every variant class carries.
@@ -141,7 +141,7 @@ final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements
       // has nothing to say about classes on this item.
       'classes' => is_string($variant) && $variant !== ''
         ? [self::VARIANT_CLASS_PREFIX . $variant]
-        : Omitted::value(),
+        : NotEmitted::value(),
     ];
   }
 

@@ -203,7 +203,7 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
     $this->actAs('keep cabinet');
     $built = $this->resources()->buildOperation(CabinetResource::class, 'edit');
     // Offered: both values can be chosen.
-    $offered = $built->getDefinitions()->entry('lock_settings')?->slot?->variantIds() ?? [];
+    $offered = $built->getDefinitions()->entry('lock_settings')?->variants?->variantIds() ?? [];
     sort($offered);
     $this->assertSame(['code', 'key'], $offered);
     $code = static::variant($built, 'code');
@@ -294,7 +294,7 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
   /**
    * Tests access builds a resource only when a variant could refuse it.
    *
-   * Only a slot's variant chosen by a locked deciding key may refuse its
+   * Only a variant chosen by a locked deciding key may refuse its
    * parent, so a site where no variant names an access class answers
    * access with no build.
    */
@@ -333,7 +333,7 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Gets a built resource's chosen variant at a slot, for a value.
+   * Gets a built resource's chosen variant at a key, for a value.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $built
    *   The built resource.
@@ -344,9 +344,9 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
    *   The variant.
    */
   protected static function variant(DataSurfaceInterface $built, string $value): DataSurfaceInterface {
-    $slot = $built->getDefinitions()->entry('lock_settings')?->slot;
-    assert($slot !== NULL);
-    return $slot->variant($value)->child;
+    $variants = $built->getDefinitions()->entry('lock_settings')?->variants;
+    assert($variants !== NULL);
+    return $variants->variant($value)->child;
   }
 
 }

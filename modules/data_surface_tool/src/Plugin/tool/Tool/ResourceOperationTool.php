@@ -115,12 +115,12 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
    * {@inheritdoc}
    *
    * The values input, once the parameters are known: the resource built
-   * in the operation's real context, so a settings slot the subject's
-   * type chooses is that variant, and exactly the identity keys the
-   * operation knows are left out, and, for an operation that changes a
-   * thing that exists, each property defaults to what is stored for it
-   * now. Parameters that name nothing leave the declared definition
-   * standing; executing refuses them.
+   * in the operation's real context, so where the subject's type chooses
+   * the settings variant, the settings are that variant, and exactly the
+   * identity keys the operation knows are left out, and, for an operation
+   * that changes a thing that exists, each property defaults to what is
+   * stored for it now. Parameters that name nothing leave the declared
+   * definition standing; executing refuses them.
    */
   public function refineInputDefinition(string $name, InputDefinitionInterface $definition, array $values): InputDefinitionInterface {
     if ($name !== OperationInputs::VALUES) {

@@ -19,8 +19,8 @@ final class TwoMixinsClashStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->with(TimestampsStructure::class);
-    $inputs->with(CreatedOnlyStructure::class);
+    $inputs->mixIn(TimestampsStructure::class);
+    $inputs->mixIn(CreatedOnlyStructure::class);
   }
 
 }

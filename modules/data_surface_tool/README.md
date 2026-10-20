@@ -15,7 +15,7 @@ instead of a config schema.
 The hand-written `data_surface:field_add` and `data_surface:field_update`
 are gone, replaced by the tools derived from the field instance
 resource's operations. Nothing about the settings changed: the same
-variant fills the same slot, and the comparison below is the same
+variant sits at the same key, and the comparison below is the same
 document. What a caller sends moved:
 
 | Was | Is | Inputs |
@@ -39,7 +39,7 @@ among them, is described by its config schema,
 `field.field_settings.<field type>`, through `FieldSettingsSchemaVariants`
 (below): its keys, their types and labels, and the field type's own
 default settings where their type fits, and nothing more. The storage
-settings are the same kind of slot on the storage, described by
+settings are the same kind of variants on the storage, described by
 `field.storage_settings.<field type>` through
 `FieldStorageSettingsSchemaVariants`. The tools place a new field on the
 bundle's default form and view displays, as the old add tool did.
@@ -68,11 +68,10 @@ Five pieces:
   and an access class. It attaches `Resource\FieldStorageResource` at
   `storage` (its field type, cardinality, translatability and storage
   settings, with storage of its own, committed before the field), and its
-  `settings` are an open slot chosen by
-  `field_type`, filled by whichever settings class a field type's
-  module marks with `#[Variant]` (the address module's, and the
-  test module's gated one), and for every other field type by
-  `FieldSettingsSchemaVariants`. `reuse($storage, $bundle)` is an add for the
+  `settings` are variants chosen by `field_type`: the settings class a
+  field type's module marks with `#[Variant]` (the address module's, and
+  the test module's gated one), and for every other field type the one
+  `FieldSettingsSchemaVariants` derives. `reuse($storage, $bundle)` is an add for the
   field and an edit for its storage; the storage's edit operation knows
   the field type, which locks its settings to that type's, and refuses
   shrinking its cardinality once the field has data. Adding a field
@@ -105,17 +104,17 @@ Five pieces:
   edit tools is a read tool, `Plugin\tool\Tool\ResourceOperationReadTool`
   (below).
 - `FieldSettingsSchemaVariants`: a service tagged
-  `data_surface.derived_variants` that fills the field instance
-  resource's `settings` slot for every field type offered in the UI that
-  no `#[Variant]` fills, reading `field.field_settings.<field
+  `data_surface.derived_variants` that adds the field instance
+  resource's `settings` variants for every field type offered in the UI
+  that no `#[Variant]` declares, reading `field.field_settings.<field
   type>` through typed config: a mapping becomes a map, a sequence a
   list, a primitive its typed data type, and what the schema cannot
   resolve without a value `any`. `FieldStorageSettingsSchemaVariants`
-  is the same class pointed at the storage resource's `settings` slot,
+  is the same class pointed at the storage resource's `settings`,
   `field.storage_settings.<field type>` and the field type's default
   storage settings. A derived variant has no storage of its own, so the
-  field, or the storage, stores it. The catalogue says, per slot, where
-  derived variants come from.
+  field, or the storage, stores it. The catalog says, per key with
+  variants, where derived variants come from.
 - `InputDefinitions`: converts core data definitions into the
   Tool API's input definitions: type, label, description, required,
   default value and constraints, with maps and lists becoming the Tool
@@ -194,11 +193,11 @@ settings once `storage` names an address storage. Compare with
 
 `tool:info` shows the Tool API's rendering of an operation, not the
 resource's whole contract. The Tool API cannot say a structure chosen by a
-sibling key, so a slot is flattened to one map: the variant the stored
+sibling key, so variants are flattened to one map: the variant the stored
 values choose (example 3's ticket, as the free ticket while `pricing`
 is `free`), or every variant's keys with none required before anything
-chooses. The full contract, each slot an `if`/`then` per variant on the
-key that chooses it, is the main module's `data_surface.contract_emitter`:
+chooses. The full contract, with an `if`/`then` per variant on the key
+that chooses it, is the main module's `data_surface.contract_emitter`:
 see it in the contract panel below, or, with `data_surface_react`
 enabled, at `/surface-api/{resource}/{operation}`
 ([`docs/served-contract.md`](../../docs/served-contract.md)).
@@ -224,15 +223,15 @@ base plugin id:
   not create, and one that needs a subject and whose parameters name one
   thing whole: a single entity, or a scalar for every identity key.
   `node.type:add`, `field.instance:add` and `field.instance:reuse`
-  create, and have none. `ResourceCatalogue::reads()` decides, and the
-  catalogue lists it ("Read on its own"); a context that turns out to
+  create, and have none. `ResourceCatalog::reads()` decides, and the
+  catalog lists it ("Read on its own"); a context that turns out to
   create is refused when the read runs.
 - **Inputs.** The operation's parameters, exactly as the write tool
   declares them, and nothing else: no `values`, no `dry_run`.
 - **Output.** `values`: what the resource's composed storage loads, in
   the shape the write tool's `values` input takes (the resource's keys
   less the identity keys the operation knows, keys other modules mount
-  under `third_party_settings` included, attached structures and slots
+  under `third_party_settings` included, attached structures and variants
   as nested maps). Its definition is the write tool's `values` map said as an
   output, `InputDefinitions::outputFromInput()`: the same data
   types, labels, descriptions and nesting, so `tools/list` over MCP shows
@@ -244,8 +243,8 @@ base plugin id:
 - **Secrets.** A key the resource marks secret is never returned, at any
   depth, and is not in the output definition: left out, as the write
   tool's defaults leave it out, not sent as a placeholder.
-  `Pipeline\Outbound::secrets()` finds every one, under a slot in
-  any of its variants, and cuts both the definition and the values.
+  `Pipeline\Outbound::secrets()` finds every one, under a key with
+  variants in any of them, and cuts both the definition and the values.
 - **Every door answers the same.** What the read answers is the one
   projection of stored values (`Pipeline\Outbound::project()`): no key
   the build left out for the account, at any depth, no secret, no key
@@ -278,7 +277,7 @@ requiredness, default, what it allows in words, what it depends on, and
 whether it is narrowed right now. Below the table, collapsed, are three
 JSON Schema documents: "The schema for these answers", which
 `data_surface.contract_emitter` emits for the operation and the form's
-values as they stand (slots as `allOf` of `if`/`then`, titled `oneOf`,
+values as they stand (variants as `allOf` of `if`/`then`, titled `oneOf`,
 `x-surface` with dependsOn and locked, no widget hints); "The full
 schema, for any answers", the same emitter's `emitFull()`, which reads
 no value and so does not change with the form (every key as declared,
@@ -295,10 +294,10 @@ The routes of `data_surface_examples` name it.
 | `Kernel\FieldToolsTest` | The three field tools end to end: add, reuse, edit, dry run, the schema refusing at prepare, a `string` field added and edited through settings derived from its schema, its storage's `max_length` set on add and changed by `data_surface:field.storage:edit`, a storage type other than the field's refused, cardinality and columns kept once the field has data, access. |
 | `Kernel\FieldToolsAccessTest` | The field type's own access class refusing both the tools and its Field UI host. |
 | `Kernel\FieldToolsComparisonTest` | The two JSON Schema documents in `COMPARISON.md`, against what the code emits, and parity with the retired tools. |
-| `Kernel\FieldInstanceResourceTest` | The three operations, the storage child (its keys, its locked type) and its has-data constraint, the settings slot, starting values. |
+| `Kernel\FieldInstanceResourceTest` | The three operations, the storage child (its keys, its locked type) and its has-data constraint, the settings variants, starting values. |
 | `Kernel\OperationToolsTest` | The generated tools: which exist, the two derivation rules, what they advertise, refinement to the thing a parameter names, execution, dry run, access, the storage tool's has-data constraint. |
-| `Kernel\ResourceCatalogueTest` | The catalogue read from the static layer, and `docs/catalogue.md` against it, where each derived slot is listed. |
-| `Kernel\ExamplesStepsTest` | The contract panel: its rows as the answers narrow them, the contract's slot conditionals, and the tool's schema below them. |
+| `Kernel\ResourceCatalogTest` | The catalog read from the static layer, and `docs/catalog.md` against it, where each key with derived variants is listed. |
+| `Kernel\ExamplesStepsTest` | The contract panel: its rows as the answers narrow them, the contract's variant conditionals, and the tool's schema below them. |
 | `Kernel\ExamplesToolTest` | `data_surface:registration.step3:configure`: the example calls, its definition (no key required and each the resource requires saying so, no default at any depth, the read tool named in its description, and the same after a write), and a partial update that leaves a required key out, kept where it is stored and refused by the pipeline where it is not. |
 | `Kernel\OperationKindsTest` | Every shipped operation's kind, on the examples, the first module and the tool test modules: a create lists the resource's required keys, an update lists none and says why, a read only operation lists none, and a read tool takes only the parameters. |
 | `Kernel\ReadToolTest` | The read tools: one per operation that changes a thing that exists and none for one that creates, a read operation taking exactly the parameters, an output map of the write tool's keys, step 3's stored values with the compliance module's mounted keys before and after a write, the content type read by its type, an unknown parameter failing as for the write tool, access as the write tool's, and a secret never returned. |
@@ -340,7 +339,7 @@ Tool API checks it before reading any input, when it is one permission
 as written: `data_surface:node.type:add` declares the node type demo's
 permission. A permission with a `%key` placeholder, as the field tools'
 `administer %entity_type_id fields`, names a different permission for
-each call, and the Tool API has no slot for one that depends on the
+each call, and the Tool API has no place for one that depends on the
 input: such a tool declares none, `tool:info` prints "Permission:
 None", and the tool's own access, which fills the placeholder from the
 parameters, is the only check
@@ -421,12 +420,12 @@ changing the Tool API.
   key converts to a locked property definition, but only top level inputs
   are filtered by it, and the map normalizer walks every property. The
   statement is carried anyway.
-- **A required map property's default is not honoured.** A resource's
+- **A required map property's default is not honored.** A resource's
   required key must hold a value, which a default or a stored value
   can supply. `TypedInputsTrait::validateInputValue()` refuses a
   required property the payload leaves out ("This property is
   required.") whatever its default, and the `!isset($default_value) &&
-  isRequired()` check that does honour a default covers top level
+  isRequired()` check that does honor a default covers top level
   inputs only (issue 5 of the Tool API gaps raised upstream). So a tool
   for an operation that changes what exists requires no key at all, in
   its listing and at its door, and says on each key the resource

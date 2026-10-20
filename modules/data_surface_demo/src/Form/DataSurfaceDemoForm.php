@@ -11,7 +11,7 @@ use Drupal\Core\State\StateInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DataSurfaceHostTrait;
 use Drupal\data_surface\Plugin\Block\DataSurfaceBlockBase;
-use Drupal\data_surface\Storage\StateStorage;
+use Drupal\data_surface\Pipeline\Storage\StateStorage;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -159,7 +159,7 @@ final class DataSurfaceDemoForm extends FormBase {
   /**
    * Builds the storage this form's values are read from and written to.
    *
-   * @return \Drupal\data_surface\Storage\StateStorage
+   * @return \Drupal\data_surface\Pipeline\Storage\StateStorage
    *   The State storage.
    */
   protected function demoStorage(): StateStorage {

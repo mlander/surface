@@ -38,7 +38,7 @@ final class TimestampsStructure implements StructureInterface {
     $inputs->narrow('changed')
       ->when(Condition::present('created'))
       ->require()
-      ->describe(t('Required once the created time is set.'));
+      ->because(t('Required once the created time is set.'));
   }
 
   /**

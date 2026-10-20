@@ -249,12 +249,12 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
     $this->assertArrayHasKey('decimal', $this->registry()->getDefinition('field.item:node.kitchen.field_decimal')->notes);
     $this->assertStringContainsString('LinkType', (string) $this->registry()->getDefinition('field.item:node.kitchen.field_link')->notes['constraints']);
 
-    // The catalogue lists them as derived, by base, and lists the derivers.
-    $catalogue = $this->container->get('data_surface.resource_catalogue');
-    $entry = $catalogue->describe()['entity.content:node.page'];
+    // The catalog lists them as derived, by base, and lists the derivers.
+    $catalog = $this->container->get('data_surface.resource_catalog');
+    $entry = $catalog->describe()['entity.content:node.page'];
     $this->assertNull($entry['class']);
     $this->assertSame('entity.content', $entry['deriver']);
-    $this->assertSame(['entity.content', 'field.item'], array_keys($catalogue->derivers()));
+    $this->assertSame(['entity.content', 'field.item'], array_keys($catalog->derivers()));
   }
 
   /**
@@ -309,7 +309,7 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
   /**
    * Tests that a context that knows nothing builds the whole resource.
    *
-   * What a tool's static definition and the catalogue build in: the edit
+   * What a tool's static definition and the catalog build in: the edit
    * operation's children need an id, so they inherit.
    */
   public function testBareContextBuilds(): void {

@@ -226,7 +226,7 @@ Verdicts on values:
 
 | Pattern, value | Pipeline | opis (full and these) |
 | --- | --- | --- |
-| The shipped licence `/^\d{4}$/`, `"2048\n"` (capacity 150, 3 stewards) | accepted, stored `"2048\n"` | refused |
+| The shipped license `/^\d{4}$/`, `"2048\n"` (capacity 150, 3 stewards) | accepted, stored `"2048\n"` | refused |
 | `/^\S+$/`, `"a\u{00A0}b"` | accepted (bytes) | refused (a no-break space is white space with Unicode properties; ECMA agrees) |
 | `/^\W+$/`, `"é"` | accepted | refused (opis's Unicode reading only; ECMA agrees with PHP) |
 | `/^\d{4}\Z/`, `"2048"` | accepted | the schema does not compile |
@@ -235,14 +235,14 @@ Verdicts on values:
 
 **Verdict: broken.** Without `D`, PCRE's `$` also matches before a final
 newline; ECMA's (and opis's) does not. Every shipped pattern ends in `$`
-without `D`: the licence, the content type's machine name, the field
+without `D`: the license, the content type's machine name, the field
 instance's `field_name`, the audience tag and the derived date patterns
 (and, among the test fixtures, the telephone). A string with a trailing newline is accepted by the
 pipeline and refused by the schema. Separately, the body is never read,
 so a PCRE-only construct reaches the schema as written.
 
 **Recommendation.** **Tighten** the shipped patterns with `D` (or `\z`),
-since a licence or a machine name ending in a newline is surely not
+since a license or a machine name ending in a newline is surely not
 meant, and teach the translation that `D` is ECMA's `$` and carry it.
 For a pattern without `D`, **widen**: rewrite each `$` outside a class to
 `\n?$`, or omit the pattern. And **widen** for the body: carry it only
@@ -278,7 +278,7 @@ stored:
 | a select | refused (`oneOf`) | accepted | accepted |
 | a map | refused (`type`) | accepted | accepted |
 
-The shipped licence cleared in the React page's text input (which posts
+The shipped license cleared in the React page's text input (which posts
 `''` for an emptied text field, `null` for an emptied number or select):
 accepted, stored `NULL`; the full schema refuses `''`.
 

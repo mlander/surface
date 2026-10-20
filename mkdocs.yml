@@ -33,7 +33,7 @@ nav:
   - The pattern: pattern.md
   - How it fits: how-it-fits.md
   - Resources and structures: resources.md
-  - Catalogue: catalogue.md
+  - Catalog: catalog.md
   - Content entities: entities.md
   - Declaring a resource: declaring-a-resource.md
   - Decisions: decisions.md
@@ -52,7 +52,7 @@ nav:
   - Extending a resource or structure:
       - Refinement and contributions: refinement.md
   - For core:
-      - Adoption catalogue: adoption.md
+      - Adoption catalog: adoption.md
       - Core gaps: core-gaps.md
   - Evidence:
       - 'Fresh eyes, 2026-10-18': fresh-eyes-2026-10-18.md

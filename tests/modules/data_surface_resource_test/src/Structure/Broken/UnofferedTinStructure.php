@@ -10,10 +10,10 @@ use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\StructureInterface;
 
 /**
- * Fills UnofferedVariantStructure's slot for `tin`.
+ * The variant of UnofferedVariantStructure's settings for `tin`.
  */
 #[Structure('resource_test.broken.unoffered_variant.tin')]
-#[Variant(of: UnofferedVariantStructure::class, key: 'settings', value: 'tin')]
+#[Variant(of: UnofferedVariantStructure::class, at: 'settings', for: 'tin')]
 final class UnofferedTinStructure implements StructureInterface {
 
   /**

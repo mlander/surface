@@ -28,7 +28,7 @@ settings object, is a singleton resource. A content type is a config
 entity whose identity is its machine name, and a basic page,
 `entity.content:node.page`, is the same shape applied to content. A
 **structure** is a group of keys with no identity or storage of its
-own: it is attached to a parent, fills a slot as a variant, or is the
+own: it is attached to a parent, is a variant at a key, or is the
 configuration of the plugin that names it (`#[Structure(id, access:)]`,
 `StructureInterface`). Both extend `DefinesInputsInterface`, whose static
 `defineInputs()` is all they share by contract, and one
@@ -120,7 +120,7 @@ unchanged:
   `{resource}` and `{operation}`, with the controllers' arguments, the
   access check's raw parameters and the examples' links;
 - a variable holding a `ResourceDefinition` is `$resource`, not
-  `$surface` (the tool bridge, the catalogue and its script), as is the
+  `$surface` (the tool bridge, the catalog and its script), as is the
   tool base's `$resourceRegistry`, and a translatable placeholder
   `@surface` is `@resource` (or `@child` for a collection's item);
 - `BlueprintAdapterBase::reserveSubsurface()` is `reserveChild()`, and
@@ -144,6 +144,50 @@ unchanged:
   What it refuses is a value of a type its definition cannot hold (a
   list where a string was wanted), which its own message already said;
   the semantics page's section is "Type mismatches".
+
+<!-- cspell:disable -->
+Renamed 2026-10-20, each concept name to its word and to US spelling,
+no wire format changed but the examples' own `license`; old → new, to
+grep:
+
+- `attachBy()` → `attachVariants()`, the blueprint's and the engine builder's;
+- `#[Variant(of:, key:, value:)]` → `#[Variant(of:, at:, for:)]`;
+- `Slot` → `Variants`, `Entry::$slot` → `Entry::$variants`;
+- `ContractEmitter::slot()` → `ContractEmitter::variants()`;
+- `DerivedVariantsInterface::slot()` → `DerivedVariantsInterface::variantsAt()`;
+- `DefinitionMetadata::setSlot()`, `slotOf()` → `setVariantsBy()`, `variantsBy()`;
+- `DefinitionMap::withSlotsResolved()` → `withVariantsResolved()`;
+- `InputDefinitions::fromSlot()` → `InputDefinitions::fromVariants()`;
+- the glossary's Slot → Variants ([Variants, not slots](#variants-not-slots));
+- the decisions "A slot nothing fills" and "No OpenAPI discriminator on a slot" → [Variants nothing declares](#variants-nothing-declares) and [No OpenAPI discriminator for variants](#no-openapi-discriminator-for-variants), and the served contract's "A slot is a conditional" → [Variants are conditionals](served-contract.md#variants-are-conditionals);
+- `BlueprintAdditionsInterface::with()` → `mixIn()`, `with()` deprecated;
+- `addDefinition()` returning the blueprint → returning the definition;
+- `HasOutputsInterface` → `DefinesOutputsInterface`;
+- `HasStorageLayoutInterface` → `AltersStorageLayoutInterface`;
+- `SettingsLayoutInterface` → `StorageLayoutInterface`;
+- `EncryptedSettingsLayout` → `EncryptedStorageLayout`;
+- `AddressSettingsLayout` → `AddressStorageLayout`;
+- `OperationContext::withStarting()`, `$starting` → `withDefaults()`, `$defaults`;
+- `Rule::describe()` → `Rule::because()`;
+- `#[Alters(resource:)]` → `#[Alters(of:)]`;
+- `#[DerivesResources(overrides:)]` → `#[DerivesResources(overriddenBy:)]`;
+- `KeyedList::add($id, ...)` → `KeyedList::add($key, ...)`;
+- `Pipeline\Omitted` → `Pipeline\NotEmitted`;
+- `AccessAnswer::answer()` → `AccessAnswer::getAnswer()`;
+- `Storage\StateStorage` → `Pipeline\Storage\StateStorage`;
+- `Storage\ConfigEntityStorage` → `Pipeline\Storage\ConfigEntityStorage`;
+- `Storage\FieldSettingsStorage` → `Pipeline\Storage\FieldSettingsStorage`;
+- `Storage\BaseFieldOverrideStorage` → `Pipeline\Storage\BaseFieldOverrideStorage`;
+- `Storage\PluginConfigurationStorage` → `Pipeline\Storage\PluginConfigurationStorage`;
+- `Storage\CompositeStorage` → `Pipeline\Storage\CompositeStorage`;
+- `Licence` → `License`, "Event licence" → "Event license";
+- `event.licence` → `event.license`, the examples' def id;
+- `licence` → `license`, the examples' stored key;
+- `ResourceCatalogue` → `ResourceCatalog`;
+- `data_surface.resource_catalogue` → `data_surface.resource_catalog`;
+- `docs/catalogue.md` → `docs/catalog.md`, `scripts/generate-catalogue.php` → `scripts/generate-catalog.php`;
+- "labelled", "honour", "colour", "behaviour" → "labeled", "honor", "color", "behavior".
+<!-- cspell:enable -->
 
 Deferred:
 
@@ -183,22 +227,22 @@ its members are declared into is not one; a named scalar shape, a
 ([A shape is a named definition](#a-shape-is-a-named-definition)), and
 the two never share a name. How accepted values are laid out in storage, where that
 differs from how they are asked for, is a **layout**:
-`SettingsLayoutInterface`, and `HasStorageLayoutInterface::storageLayout()`
+`StorageLayoutInterface`, and `AltersStorageLayoutInterface::storageLayout()`
 for an alter's mount. "Shape" is the named type, of three kinds, and in
 code names the third, `#[Shape]`. (`ResourceBlueprint`,
 `ResourceBlueprintAdditions`, `BlueprintAdapterBase`)
 
 ### A shape is a named definition
 
-A scalar asked for at many keys (a licence, a stock code) was written
+A scalar asked for at many keys (a license, a stock code) was written
 inline at each: its type, its pattern and the words that explain it,
 its description, its examples. A **shape** names it once: a class in
-`src/Shape/` carrying `#[Shape('event.licence')]` and implementing
+`src/Shape/` carrying `#[Shape('event.license')]` and implementing
 `ShapeInterface`, whose static `define()` returns a plain core
 `DataDefinition`, used in the type position of `add()`:
-`$inputs->add('licence', Licence::class, t('Event licence'))`. Resources,
+`$inputs->add('license', License::class, t('Event license'))`. Resources,
 structures and these named scalars are the three kinds of shape, in
-Smithy's sense of a named type. The compliance licence is the first
+Smithy's sense of a named type. The compliance license is the first
 case, the test module's stock code the fixture. Each choice, and why:
 
 - **A named definition, not a data type plugin.** Core's answer to a
@@ -264,18 +308,51 @@ case, the test module's stock code the fixture. Each choice, and why:
   is refused at discovery.
 
 Open: a key, or a container, opting out of a shape's alters, as a
-container cannot yet opt out of a structure's; the catalogue listing
+container cannot yet opt out of a structure's; the catalog listing
 shapes and who uses them. (`Resource\Attribute\Shape`,
 `ShapeInterface`, `ResourceBuild\Shapes`, `ShapeBlueprint`,
 `Resources::assertShapesNarrowed()`, `Resources::unshaped()`,
 `DefinitionMetadata::shapeOf()`, `ContractEmitter::named()`, `isPart()`
 in `app/src/contract.ts`)
 
+### Variants, not slots
+
+A key whose structure a sibling key chooses was a **slot**, named for
+the hole. It is **variants** now, named for what fills it: structures a
+sibling key chooses between, attached at one key with
+`attachVariants($key, by: $sibling)`, each the variant for one value of
+that key, `#[Variant(of:, at:, for:)]`. In one line, a tagged union
+whose tag is a sibling key.
+
+- **The members are what an author writes.** A variant is a class with
+  keys of its own; the key the variants sit at is one line in the
+  parent. The verb and the attribute now say the word the glossary
+  says, where `attachBy()` said neither and `key: 'ticket', value:
+  'free'` read as "the ticket is free" when it is the pricing that is.
+- **The hole needs no name.** It is a key like any other, and "the
+  variants at `ticket`" says all that "the `ticket` slot" said.
+- **"Union" is kept** for an untagged data definition core may gain, a
+  value of one of several types with nothing beside it to say which.
+  These are tagged, and the tag is a sibling, so the two are named
+  apart.
+- **The overlap with single-directory components goes** as a side
+  effect: a slot there is markup a theme fills, and a Drupal reader
+  met the word with that meaning first.
+
+The wire keeps the old word: the widget hint `x-surface.widget: "slot"`
+(and any other `slot` a client reads) stays until the contract's
+version, as its `surface` and `situation` keys do
+([The product keeps its name](#the-product-keeps-its-name)). In code,
+the engine's `Slot` is `Variants`, `ContractEmitter::slot()` is
+`variants()` and `DerivedVariantsInterface::slot()` is `variantsAt()`;
+`DerivedVariants` already fit. (`BlueprintInterface::attachVariants()`,
+`Resource\Attribute\Variant`, `Variants`, `DerivedVariantsInterface`)
+
 ## Authoring
 
 ### A resource or structure is static
 
-`DefinesInputsInterface::defineInputs()` and `HasOutputsInterface::defineOutputs()`
+`DefinesInputsInterface::defineInputs()` and `DefinesOutputsInterface::defineOutputs()`
 are `public static`, and the build step calls them on the class, never
 on an instance; a resource's or structure's `#[RefinesInput]` methods
 are static too, and one that is not is refused when it is built. What it declares is a
@@ -388,7 +465,7 @@ nothing and stays open.
 An operation whose context carries an id other than its own is
 refused when the operation is asked. The pattern says the context's id
 *is* the operation id; enforcing it is what lets alters (`operations:`),
-permissions and catalogues trust it. An operation built on another calls
+permissions and catalogs trust it. An operation built on another calls
 `withId()`. (`Resources::operation()`)
 
 ### Constraints and starting values for an attached key
@@ -421,7 +498,7 @@ field name this way, which `FieldStorageStorage` loads by, while
 `field_type`, its one
 identity key, is locked. (Before storage settings existed, the field
 type was known the same way; it became identity when it started
-choosing the settings slot.)
+choosing between the settings variants.)
 
 ### An entity parameter given as an id
 
@@ -466,8 +543,8 @@ definition refuses is passed as if the key held nothing: a whole key is
 then unanswered, so [the gate](#gating-per-key) withholds every refiner
 watching it and the target stays as advertised, and a key an alter
 mounted, which never holds a target back, is handed as `NULL`. So an
-event licence typed as `EV-2048` gives example 3's capacity the
-no-licence ceiling of 100, exactly as no licence does, and a capacity
+event license typed as `EV-2048` gives example 3's capacity the
+no-license ceiling of 100, exactly as no license does, and a capacity
 of 250 under that ceiling moves no steward minimum. A refusal upstream
 is settled before anything downstream is judged: withholding a venue
 widens the room, and the room is judged again against that. The values
@@ -484,10 +561,10 @@ service id; a data surface sealed without one, which only the engine's
 tests build,
 hands every configured value over. A refiner may therefore assume what
 it is handed satisfies its sibling's constraints, and
-`RegistrationComplianceAlter` tests only that a licence is there. The
+`RegistrationComplianceAlter` tests only that a license is there. The
 refined data surface says which values it withheld
 (`withheldValues()`), so a refusal that names what a key depends on
-says the licence is empty and that "EV-2048" was refused, which is what
+says the license is empty and that "EV-2048" was refused, which is what
 the rule was handed, and not the value sent (decided 2026-10-20, B11;
 [A refusal names what it depends on](#a-refusal-names-what-it-depends-on)).
 (`DataSurface::refine()`, `DataSurface::refusedWatchedValues()`,
@@ -640,9 +717,9 @@ narrower, and a key ruled out may not be made to apply again), and
 static or runtime by the same declaration and the same three layers of
 enforcement. The engine marks the definition it was handed and calls
 nothing after it. A key, a key an alter mounted (inside its mount), an
-attached child's key and a slot's key are ruled out the same way; a
-parent's refiner of a key holding a child may give this answer and no
-other, since what the child holds is the child's to narrow.
+attached child's key and a key with variants are ruled out the same
+way; a parent's refiner of a key holding a child may give this answer
+and no other, since what the child holds is the child's to narrow.
 
 Three spellings were weighed. A marker set on the definition the refiner
 returns is what the engine does inside, but as the author's spelling it
@@ -719,13 +796,13 @@ options resolver may find nothing on a site (no bundles yet), so a
 refusal would break a page for site state. The text field it fell
 through to before showed what was stored as something to edit, on a
 field that could accept nothing. An empty `Choice` is now such a list
-too, which is what a slot nothing fills gives its deciding key.
+too, which is what variants nothing declares give their deciding key.
 
-A slot that does not apply is drawn as nothing, as one whose deciding
-key chose nothing is; its variants' conditionals are not written in the
-schema for these answers, and the full schema states it `false` beside
-them. An empty variant is a different answer: the slot applies and has
-nothing to say, its value an empty map.
+A key with variants that does not apply is drawn as nothing, as one
+whose deciding key chose nothing is; its variants' conditionals are not
+written in the schema for these answers, and the full schema states it
+`false` beside them. An empty variant is a different answer: the key
+applies and has nothing to say, its value an empty map.
 
 Inside a collection's item a key that does not apply is not put back
 from storage, by design (decided 2026-10-19): a list is sent whole and
@@ -760,9 +837,9 @@ a `Refinement\Condition`, and its effects.
 
 ```php
 $inputs->narrow('capacity')
-  ->when(Condition::absent('licence'))
+  ->when(Condition::absent('license'))
   ->constrain('Range', ['max' => 100])
-  ->describe($this->t('Up to 100 without an event licence.'));
+  ->because($this->t('Up to 100 without an event license.'));
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
@@ -786,7 +863,7 @@ condition is runtime. Each choice, and why:
   handed them as they stand, because `absent` is about a key holding
   nothing, and because the `if` a schema states is read on any document.
   A key only a rule reads gates nothing, so a rule on the capacity that
-  reads the licence never holds the room's ceiling back
+  reads the license never holds the room's ceiling back
   (`Entry::gate()`, `Entry::declaredDependencies()`).
 - **A closed condition vocabulary, each word one exact `if`.** `present`,
   `absent`, `equals`, `in`, `atLeast`, `atMost`, `above`, `below`,
@@ -878,7 +955,7 @@ which is an effect computed, so it stayed with the code it left. In a
 room seating fewer than a hundred the room's ceiling is the lower one,
 and its own sentence stands: the rule tightened nothing. Its stewards stay
 coded and `dynamic` (they watch a number), so the React page still asks
-on a licence change: the stewards depend on the capacity. Phase C item 9
+on a license change: the stewards depend on the capacity. Phase C item 9
 of the roadmap (dependent effects as data) is this, but `locked`.
 (`Refinement\Condition`, `Refinement\Rule`, `Refinement\DeclaredRefiner`,
 `Resources::bindRules()`, `DataSurface::refinedEntry()`,
@@ -950,10 +1027,10 @@ handed as it stands, NULL while unanswered, and the parameter receiving
 it has to accept NULL (refused at build otherwise). Gating is per key,
 so an unanswered optional key of the alter's would otherwise suspend
 the owner's own refiners of the same key, and the alter would have
-widened what the owner narrowed: the compliance alter's licence, empty,
+widened what the owner narrowed: the compliance alter's license, empty,
 would have lifted the room's limit along with its own hundred. The
 cycle check follows each path's own edges, so a capacity watching the
-licence while the stewards beside it watch the capacity is no cycle.
+license while the stewards beside it watch the capacity is no cycle.
 *Changed for example 4 of the examples; until then watching any mounted
 key was refused, pending dotted refinement paths, `ROADMAP.md` item 16,
 of which this is the one case the third-party mount needs.*
@@ -963,7 +1040,7 @@ of which this is the one case the third-party mount needs.*
 ### A storage layout for a mount
 
 An alter whose keys are asked for in one layout and stored in another
-implements `HasStorageLayoutInterface`; its layout applies to its own
+implements `AltersStorageLayoutInterface`; its layout applies to its own
 module's mount and nothing else. The alter does not own the storage, so
 it hands the translation to the data surface, and the composed storage
 applies it. (`Resources::buildResource()`, `StorageAdapter`)
@@ -971,7 +1048,7 @@ applies it. (`Resources::buildResource()`, `StorageAdapter`)
 ### Required inside a plain map
 
 A required property inside a plain map (a key that is neither an
-attached structure nor a slot, such as the mount alters' keys live in)
+attached structure nor variants, such as the mount alters' keys live in)
 that holds no value is refused with the pipeline's own "is required"
 
 message, filed at its path, whether or not the map itself holds
@@ -1012,19 +1089,19 @@ an alter changing the owner's key. (`BlueprintAdapterBase::add()`)
 
 ## Attached structures
 
-### A slot nothing fills
+### Variants nothing declares
 
-A slot with no variant stays a placeholder and its deciding key gains
-an empty `Choice`, so nothing can be chosen. Refusing the whole parent
-would break it on every site without a variant module.
-(`Resources::slotsOf()`)
+A key with no variant declared stays a placeholder and its deciding
+key gains an empty `Choice`, so nothing can be chosen. Refusing the
+whole parent would break it on every site without a variant module.
+(`Resources::variantKeysOf()`)
 
 ### Derived variants
 
 A value no `#[Variant]` class fills may get a variant derived
 from a description that already exists, through a
 `DerivedVariantsInterface` service: a field type's config schema fills
-the field's settings slot and the storage's. A derived
+the field's settings variants and the storage's. A derived
 variant is a child with no class, so no alter, refiner, storage or access
 class of its own, and a declared variant always wins.
 (`Resources::buildResource()`)
@@ -1070,7 +1147,7 @@ first case. Each choice, and why:
   container does not declare, to a key of another type, to a key inside
   the child itself, a port the child does not read, and a cycle through
   the wiring, naming it. An optional port left unwired holds nothing. A
-  slot's variant and a collection's item are wired by nothing yet, so
+  variant and a collection's item are wired by nothing yet, so
   neither may require a port.
 - **What depends on a port is stated at the site.** The def is the
   structure as declared, for no values, reused at every site with one
@@ -1096,7 +1173,7 @@ first case. Each choice, and why:
   a coded refiner on an owner's key, `extendChoices()`. The glue may read
   the structure's keys at its mount, because a relation between an
   owner's key and the structure's answer (the compliance capacity
-  without a licence) is the one thing neither side can say alone, and
+  without a license) is the one thing neither side can say alone, and
   reading changes nothing the def says. A resource's own refiners still
   do not read an attached child's keys: the wall is unchanged, and what
   an alter reads is its own mount, as it always could.
@@ -1110,7 +1187,7 @@ first case. Each choice, and why:
   operation.
 
 Open: a container opting out of the alters of a structure it attaches,
-which apply wherever it is used; ports on a slot's variant or a
+which apply wherever it is used; ports on a variant or a
 collection's item, which nothing wires yet. (`Port`, `BlueprintInterface::reads()`,
 `Attachment::bound()`, `Resources::assertWiring()`, `Resources::wirePorts()`,
 `DataSurface::refine()`, `ContractEmitter::site()`, `ContractEmitter::mounts()`)
@@ -1119,8 +1196,8 @@ collection's item, which nothing wires yet. (`Port`, `BlueprintInterface::reads(
 
 Composition nested only (attach, behind the wall; an alter's mount under
 its module's name) until a structure could be mixed in: its members
-merged into the owner's own keys, `$inputs->with(TimestampsStructure::class)`,
-or with its ports wired, `$inputs->with(OwnershipStructure::class, reads:
+merged into the owner's own keys, `$inputs->mixIn(TimestampsStructure::class)`,
+or with its ports wired, `$inputs->mixIn(OwnershipStructure::class, reads:
 ['audience' => 'visibility'])`. Nest for a thing of its own inside this
 one (a contact, a ticket); mix in for shared members that are part of
 this thing (timestamps, ownership, publishing flags). The test module's
@@ -1132,7 +1209,7 @@ journal is the first case. Each choice, and why:
   wiring reads exactly as `attach(..., reads:)` does; and a derived
   resource, which has no attribute, can call it from its inputs
   callable. The attribute would have been visible at discovery, so the
-  catalogue could list it without filling a blueprint; it does not list
+  catalog could list it without filling a blueprint; it does not list
   mixins yet (open), and the contract names each one, as a reference.
 - **An ordinary `#[Structure]`, no marker.** The same class is mixed in
   by one owner and attached by another (the journal mixes the
@@ -1143,7 +1220,7 @@ journal is the first case. Each choice, and why:
 - **Declared by the owner only.** An alter's keys live under its own
   module's name, so a structure an alter mixed in would put its members
   at the owner's level, which is what the mount exists to prevent; an
-  alter's `with()` is refused, naming the mount to attach at instead.
+  alter's `mixIn()` is refused, naming the mount to attach at instead.
 - **Stored flat, described by the owner's config schema.** The members
   are the owner's keys, so storage holds them beside the owner's own
   and the owner's config schema lists them. A mapping of the members
@@ -1222,7 +1299,7 @@ journal is the first case. Each choice, and why:
   keys, so `values` is flat; the Tool API's normalizer writes from typed
   definitions and has no `allOf` to carry.
 
-Open: listing mixins in the catalogue; an optional port a mixin's owner
+Open: listing mixins in the catalog; an optional port a mixin's owner
 leaves unwired; a mixed-in structure's alter that mounts; a mixed-in
 structure holding a child; a container opting out of a structure's
 alters. Found on the way and left: the React page narrows an attached
@@ -1230,14 +1307,14 @@ child whose def states conditionals of its own to the instance (its
 answered conditionals dropped), where `/refine` inlined carries the
 def's too, the same constraints written twice; the Vitest chain for the
 journal leaves the child's step out for it.
-(`BlueprintAdditionsInterface::with()`, `ResourceBlueprint::with()`,
+(`BlueprintAdditionsInterface::mixIn()`, `ResourceBlueprint::mixIn()`,
 `Resources::mixIn()`, `Resources::bindMixin()`,
 `Resources::assertMixinsUnnamed()`, `Mixin`, `ContractEmitter::composed()`,
 `SchemaResolver::mixIn()`, `mixIn()` in `app/src/contract.ts`)
 
 ### An empty variant is an empty map
 
-A slot variant may declare no keys, the spelling of "this choice has
+A variant may declare no keys, the spelling of "this choice has
 nothing more to say". It renders as nothing (an empty container on the
 form, nothing on the React page), its value is an empty map, and both
 contracts and the tool state an object with no properties; a value left
@@ -1251,7 +1328,7 @@ apply at all, rather than applying with nothing to say, is
 
 ### Outputs hold no children
 
-`attach()` and `attachBy()` on outputs are refused. The pattern lets an
+`attach()` and `attachVariants()` on outputs are refused. The pattern lets an
 output vary by an input that way, but the engine's output map has no
 children yet. (`BlueprintAdapterBase`)
 
@@ -1349,7 +1426,7 @@ storage loads by identity. (`StorageAdapter`)
 
 ### Write order
 
-An attached child is committed before its parent, a slot's variant
+An attached child is committed before its parent, a variant
 after. An attached child is a part the parent is built on (a field's
 storage); a variant lives on what the parent writes (a field's
 settings). (`StorageAdapter::commit()`)
@@ -1535,9 +1612,9 @@ is known. Decided 2026-10-18, point by point.
   structure's access answers for its members in the owner's frame, the
   stricter of the owner's and its own standing ([A mixin is merged
   flat](#a-mixin-is-merged-flat)); set aside, each member is marked, and
-  a mark from a structure it mixes in itself is carried through. A slot
+  a mark from a structure it mixes in itself is carried through. A
   variant whose answer is runtime is offered in the build for the
-  account alone and the slot marked, since it may be withheld once the
+  account alone and the key it sits at marked, since it may be withheld once the
   subject is known; a variant chosen by a locked deciding key still
   refuses the whole parent at the top, asked with the subject ([A chosen
   variant may refuse](#a-chosen-variant-may-refuse)). A port carries no
@@ -1601,7 +1678,7 @@ closing that gap (found 2026-10-19), point by point.
 - **Where it is asked.** For the resource or structure the alter names,
   in the frame where that thing is built, wherever it appears: at the
   top, where locked builds it locked whole and omitted refuses the
-  caller; as an attached child; as a slot's variant, offered, offered
+  caller; as an attached child; as a variant, offered, offered
   read only or not offered, and refusing its parent as a chosen variant
   may ([A chosen variant may refuse](#a-chosen-variant-may-refuse)); a
   mixed-in structure's members, held in the owner's frame; a
@@ -1664,7 +1741,7 @@ closing that gap (found 2026-10-19), point by point.
 The fixture is the test module's gallery, which names no access class
 but its wall's: alters answer for the gallery (in its curating
 operation), the plaque it mixes in, the wall it attaches twice and the
-annex once, the oil finish one of its slot's variants is, and the room
+annex once, the oil finish one of its variants is, and the room
 at every entry of its keys from the site; one more alter tries to open
 the wall (`AlterAccessTest`, `AlterAccessFormTest`). The first case on
 a site is example 10's workflow module, `data_surface_examples_workflow`.
@@ -1728,7 +1805,7 @@ function of the built data surface (`Pipeline\Outbound::project()`,
 `DataSurfacePipelineInterface::outbound()`): a key the build left out
 for the caller is not there, at any depth (a child the parent stores
 whole included, which only the read's top level left out before); a
-secret is not there, at any depth, under every variant of a slot that
+secret is not there, at any depth, under every variant that
 keeps it secret and inside each item of a list; a key that does not
 apply to the values is not there; a locked key is there as stored,
 which the accepted values hold for it. It applies to the read tool's
@@ -1839,8 +1916,8 @@ reading under which a locked answer at the top was a refusal.
   page let the caller in, as for a locked child.
 - **The build.** The build asks the access class itself, at the top, and
   a locked answer locks the resource whole (`lockWhole()`): every key is
-  held to what is stored, as `hold()` holds one, after the slots, so a
-  slot is chosen by what its deciding key holds and not preselected by
+  held to what is stored, as `hold()` holds one, after the variants, so
+  a variant is chosen by what its deciding key holds and not preselected by
   its default; the sealed data surface says why
   (`DataSurfaceInterface::lockedWhole()`). A class whose `access()` is
   declared to return core's answer alone cannot answer locked, so it is
@@ -1906,14 +1983,14 @@ noted. (`DataSurfacePipeline::acceptKey()`, `DataSurfacePipeline::takes()`,
 
 ### A variant is open, locked or not offered
 
-A slot's variant invoked through an operation whose access omits it is
-dropped from the slot, so its deciding value can no longer be chosen,
+A variant invoked through an operation whose access omits it is
+dropped from the variants, so its deciding value can no longer be chosen,
 and no derived variant is put in its place. A variant its access locks
 is offered read only (decided 2026-10-19, replacing "not offered"): it
 is built locked whole, every key held to what is stored, so it can be
 chosen and is drawn fixed. Chosen anew, it starts from its own
 defaults, as any variant chosen anew does, and holds them. Its keys are
-`readOnly` and `x-surface.locked` where the slot states it, the form
+`readOnly` and `x-surface.locked` where the variants are stated, the form
 draws its fieldset disabled, and a value posted for it is kept as
 stored. A locked variant chosen by a locked deciding key no longer
 refuses its parent ([A chosen variant may
@@ -1923,15 +2000,15 @@ variant's keys kept. (`Resources::buildResource()`,
 
 ### A chosen variant may refuse
 
-A slot whose deciding key is locked has its variant chosen by what the
+When the deciding key is locked, the variant is chosen by what the
 parent is, as a field's settings are chosen by its type, and the parent
 cannot be written without that variant. Its access class, asked in the
 context it is invoked in however it was invoked, may refuse the whole
 parent, never allow; a locked answer is no refusal, since the variant is
 then built locked and kept. The build leaves an omitted variant out of
-the slot ([A variant is open, locked or not
+the variants ([A variant is open, locked or not
 offered](#a-variant-is-open-locked-or-not-offered)), so it is looked up
-among the slot's declared variants. A field type's settings refuse the field
+among the declared variants. A field type's settings refuse the field
 they belong to this way, and nothing below a parent can open what its
 own access closed. Every other child's access decided its own keys when
 it was built ([One invocation model for both
@@ -1989,14 +2066,14 @@ that key's value, so it says what the key says.
 
 A class any plugin names with `#[UsesStructure]` gets no tool,
 whatever it declares. Only the plugin's host holds the instance it
-configures. (`ResourceOperationToolDeriver`, `ResourceCatalogue::standalone()`)
+configures. (`ResourceOperationToolDeriver`, `ResourceCatalog::standalone()`)
 
 ### A permission nothing can name is no tool
 
 An operation whose permission has a `%key` none of its parameters can
 supply is no tool: it could never be allowed. `field.storage`'s `add`
 is only ever a field's child. (`ResourceOperationToolDeriver`,
-`ResourceCatalogue::standalone()`)
+`ResourceCatalog::standalone()`)
 
 ### A Symfony placeholder is filled in when shown
 
@@ -2060,17 +2137,17 @@ value not on its list unexplained.
   handed, not the values sent: a watched value its own key refused was
   handed as nothing ([A refiner never sees an invalid
   sibling](#a-refiner-never-sees-an-invalid-sibling)), so it is said as
-  empty, with what was refused. With an event licence of "EV-2048" and a
+  empty, with what was refused. With an event license of "EV-2048" and a
   capacity of 150, the capacity's refusal reads "This value should be
   between 1 and 100. This applies when Room is Main hall and Event
-  licence is empty (EV-2048 was refused)."; it read "... is set", the
-  opposite of the reason, and an agent cleared the licence
+  license is empty (EV-2048 was refused)."; it read "... is set", the
+  opposite of the reason, and an agent cleared the license
   (`DataSurfaceInterface::withheldValues()`).
 - **Why each part.** The caller who sent stewards and no capacity learns
   which sibling to change, which the key's own message cannot say, and
   what it holds, so a caller that sent nothing for it sees that. Every
   watched key is named, held or not, because a refiner that watches a
-  nullable value (the licence) narrows when it holds nothing. The list
+  nullable value (the license) narrows when it holds nothing. The list
   is the one that applies, not the listing's wider one, so the next try
   is accepted; the value beside each label is what a caller sends, which
   a label alone does not say. A refusal by a rule the key declared
@@ -2118,7 +2195,7 @@ value not on its list unexplained.
   another narrows says so in its own description, once: "Depends on
   venue." Each key by its path in `values`, what a caller sends it
   under; a port by the container's key it reads, at the site; never a
-  stored value. A slot's deciding key is said by the slot's own
+  stored value. The deciding key of variants is said by their key's own
   description, and a key that holds a child names nothing its ports
   read, which the keys inside it name. Inside a collection's item a key
   names its siblings by their keys in the item, the frame a caller sends
@@ -2200,7 +2277,7 @@ operation (`DerivedOperation`).
   operation.
 - **No read tool beside a read only operation.** It changes nothing, so
   there is nothing to read before changing it
-  (`ResourceCatalogue::reads()`).
+  (`ResourceCatalog::reads()`).
 
 A read only operation writes nothing at any door (decided 2026-10-19,
 closing the point this entry left open): the build marks the data
@@ -2306,7 +2383,7 @@ read, as identity is. A context that turns out to create is refused when
 the read runs. *Open:* whether `#[Operation]` should say `creates`
 itself, checked against the context the way its id is, which would
 replace the reading. (`OperationDefinition::namesOneThing()`,
-`ResourceCatalogue::reads()`)
+`ResourceCatalog::reads()`)
 
 ### A read promises shape, not membership
 
@@ -2323,7 +2400,7 @@ absent. The vocabulary is on the write tool's input.
 A secret is never returned by a read, and is not in its output
 definition either: left out, as the write tool's defaults leave it out,
 rather than sent as an empty placeholder a caller could mistake for the
-value. Under a slot, a key any variant keeps secret is left out
+value. Among variants, a key any variant keeps secret is left out
 whichever variant holds. Inside a list of maps, a collection's items
 among them, only the secret is left out of each item, and the list and
 the rest of every item are read (decided 2026-10-19; until then a secret
@@ -2378,8 +2455,8 @@ not yet lazy: a label read from configuration, which config translation
 overrides when it is loaded (a content type's, a field's), is a string
 in the language that loaded it, so a content entity resource's tools
 name the bundle and the field in the language that discovered them; and
-a slot's description lists each variant's keys joined into one string,
-whose word for a variant with none ("nothing") is rendered then.
+a key with variants describes each variant's keys joined into one
+string, whose word for a variant with none ("nothing") is rendered then.
 
 *Open, outside this module:* the MCP bridge's config deriver
 (`mcp_server_tool_bridge`'s `McpToolConfigDeriver`) normalizes a tool
@@ -2415,7 +2492,7 @@ inside the form's `surface` container, and the AJAX rebuild replaces it
 along with the dependents of whatever changed, because a panel
 describing the resource as it stands has to follow every change; it is
 handed the values the elements are built with, not a refined data
-surface, so it can tell which variant a slot shows. The
+surface, so it can tell which variant is shown. The
 contract panel lives in `data_surface_tool`, since half of it is the
 derived tool's JSON Schema. Its "Right now" column, and the React
 page's, says "narrowed, and checked at runtime" for a key that is
@@ -2656,10 +2733,10 @@ only when asked for. (`DataSurfaceWidgetManager::asked()`,
 
 ### Whether an operation creates
 
-The catalogue says whether an operation creates only for one that needs
+The catalog says whether an operation creates only for one that needs
 nothing; one that needs a subject is listed as not knowing. `creates`
 is on the context an operation returns, not on `#[Operation]`, and the
-catalogue builds nothing. (`ResourceCatalogue::creates()`)
+catalog builds nothing. (`ResourceCatalog::creates()`)
 
 ### A class that is not there
 
@@ -2675,7 +2752,7 @@ site, and a typo must not pass silently. (`ResourceRegistry`)
 Core's discovery reads only a plugin type's own attribute, so one
 definition alter per plugin host copies `#[UsesStructure]` into the
 definition under `UsesStructure::DEFINITION_KEY`, run last so a swapped
-class is the one read. That is what lets a catalogue list the plugins
+class is the one read. That is what lets a catalog list the plugins
 that use a structure without instantiating any. (`ResourcePluginHooks`)
 
 ### `#[UsesStructure]` is inherited
@@ -2697,10 +2774,10 @@ so every host builds it exactly as it builds a named structure. Such a
 structure is found through the plugin definitions
 (`ResourcePlugins::ownStructures()`), not a directory: a plugin lives
 where its plugin type says. Its id is `<host type>:<plugin id>`, the
-catalogue's name for the plugin, unless the class also carries
+catalog's name for the plugin, unless the class also carries
 `#[Structure]`, whose id and access then apply; a class
 several plugins share (a deriver's derivatives) is one structure, named
-after the first of them in sorted order. The catalogue lists it as used
+after the first of them in sorted order. The catalog lists it as used
 by that same plugin, and an alter names it by the plugin class. The
 registry's cache id hashes the plugin-own list beside the compiler
 pass's, so a plugin more or less is a different entry. The compiler
@@ -2721,7 +2798,7 @@ implementing `ResourceDeriverInterface`, and cached with the rest of
 discovery under the cache tags of what it was read from. Not a context
 handed to `defineInputs()`: it takes nothing but the blueprint, so
 that what it declares is the same wherever it is asked for and a static tool
-definition, a catalogue and the full schema can describe it before
+definition, a catalog and the full schema can describe it before
 anyone calls; a `defineInputs()` that read a bundle from its context would
 declare different keys in every context, with one id. And not one class per
 bundle: a bundle is site configuration, made and deleted in the UI, and
@@ -2916,7 +2993,7 @@ why:
   provider). The structure at the entries is built once for the map, so
   its access answers once, as a collection's item's does; it may name no
   storage or identity, its owner storing it, and require no port, since
-  nothing wires an entry yet, as nothing wires a slot's variant or a
+  nothing wires an entry yet, as nothing wires a variant or a
   collection's item. Neither verb is offered to an alter, or inside a
   structure mixed in, which holds no children.
 - **The cost.** Ported again, pathauto's punctuation is a shape (20 code
@@ -2997,7 +3074,7 @@ keys rather than extending its class, so each example reads alone on
 screen. The machine names keep the word step (`registration_step2`,
 `RegistrationStep2Resource`, the `data_surface_examples.step2` route):
 they were never shown to anybody, and renaming them would churn the
-catalogue and every test for no reader's benefit. A
+catalog and every test for no reader's benefit. A
 ticket price is a `float` with a `Range` minimum of 0.01: core's typed
 data has no decimal type and no `Positive` constraint plugin. The event
 title is stored as a `string`, not a translatable `label`, because a
@@ -3025,31 +3102,32 @@ canonical contract the operation form's contract panel shows and
 contract, so `x-surface.widget`, the Form API mapping said for a
 renderer, and `multiple`, its qualifier, are written only when a caller
 passes `widgets: TRUE`; `data_surface_react` does, for its app. The rest
-of `x-surface` (locked, dependsOn, refined, stale, emptyOption, a slot's
-by, variants and chosen, a variant's id, checkedOnServer, enumerated,
+of `x-surface` (locked, dependsOn, refined, stale, emptyOption, by,
+variants and chosen, a variant's id, checkedOnServer, enumerated,
 dynamic, runtime) is the
 data surface's own reading of a key, not a widget, and is always written.
 The hints are stripped after the schema is built rather than threaded
 through it, so the widget a key gets is still read in the same pass as
 its shape. (`Contract\ContractEmitter::emit()`)
 
-### No OpenAPI discriminator on a slot
+### No OpenAPI discriminator for variants
 
-A slot is an `allOf` of `if`/`then` on its parent, and carries no
-OpenAPI `discriminator` beside it, because there is no place where
+Variants are an `allOf` of `if`/`then` on their parent, and carry no
+OpenAPI `discriminator` beside them, because there is no place where
 OpenAPI's meaning would be true. A discriminator sits on a schema whose
 `oneOf`/`anyOf` (or `allOf` inheritance) lists whole alternatives of
 that same object, and names a property inside it, mapped by its string
-value to a named or referenced schema. A slot's deciding key is a
-sibling: on the slot (`ticket`) the property does not exist, and on the
-parent the alternatives are not whole objects but conditionals that
-each constrain only the slot, so a reader would resolve `free` and
-`paid` as component schema names, which they are not. A parent with two
-slots keyed by two siblings would need two discriminators on one
-object. Restating the parent as a `oneOf` of whole objects would make it
-legal and multiply the parent per variant, per slot. The `if`/`then` is
+value to a named or referenced schema. The variants' deciding key is a
+sibling: at the variants' key (`ticket`) the property does not exist,
+and on the parent the alternatives are not whole objects but
+conditionals that each constrain only that key, so a reader would
+resolve `free` and `paid` as component schema names, which they are
+not. A parent with variants at two keys, chosen by two siblings, would
+need two discriminators on one object. Restating the parent as a
+`oneOf` of whole objects would make it legal and multiply the parent
+per variant, per key with variants. The `if`/`then` is
 the JSON Schema statement, and `x-surface.by` names the key for a
-reader that wants it. (`ContractEmitter::slot()`)
+reader that wants it. (`ContractEmitter::variants()`)
 
 ### Two documents, never stricter than the runtime
 
@@ -3160,7 +3238,7 @@ country-sized list (some 250) is refused outright rather than written.
 Above it the key is `dynamic`. A key watching free text, a number, a
 boolean or a key an alter mounted stays `dynamic` whatever the count:
 its domain is not a list, so there is nothing to enumerate, and
-inventing one (sampling numbers, guessing at a licence) would state a
+inventing one (sampling numbers, guessing at a license) would state a
 rule the refiners never made. Such a key keeps `dependsOn`, and a client
 asks `/refine` when a watched key changes, as before.
 (`ContractEmitter::enumerate()`)
@@ -3239,7 +3317,7 @@ Tool API itself keeps an absent key and a null apart where the
 difference is a fact, for outputs (`omit_when_null`). Decided
 2026-10-18, after a first reading that collapsed null into "keep" was
 tried and reverted. A child sent `null` (an attached structure, or a
-slot's chosen variant) is each of its keys sent `null`: its optional
+chosen variant) is each of its keys sent `null`: its optional
 keys clear and a required one is refused in its own words, so the
 accepted document is a map its def describes; until 2026-10-18 the
 pipeline took `contact: null` whole, which the schema refused.
@@ -3275,14 +3353,14 @@ make it one:
   exists, a key storage holds nothing for reads as its declared default,
   which the run validates against; left out, or sent as that default (a
   form posts every element it drew, the compliance module's empty
-  licence and one steward among them), it is what it was, and nothing is
+  license and one steward among them), it is what it was, and nothing is
   written for it, a property the default leaves out read as `null`. The
   compliance module's keys, enabled after step 3 was saved, stay
   unstored until a caller sends another value. A thing being created,
   which storage holds nothing of, is written whole, its defaults
   included: storage says whether the operation creates
-  (`Pipeline\CreatingStorageInterface`), and a slot whose chosen variant
-  is not the one stored starts that variant whole. A plugin reads its
+  (`Pipeline\CreatingStorageInterface`), and a chosen variant that
+  is not the one stored starts whole. A plugin reads its
   configuration array whole, so `PluginConfigurationStorage` fills a
   declared default back into what it hands the plugin.
 - **A write that changes nothing is not made.** `DataSurfaceResult`
@@ -3403,10 +3481,10 @@ the `x` `s` `m` modifiers, a `$` without `D`, an escaped delimiter that
 is no ECMA syntax character) leaves `pattern` out, which is wider, and
 names `Regex` under `checkedOnServer`; `x-surface.patternMessage` still
 carries the explanation. Never approximated. Every shipped pattern ends
-in `$`, so each gained `D`: a licence or a machine name with a trailing
+in `$`, so each gained `D`: a license or a machine name with a trailing
 newline was never meant. One consequence outside this module: the Tool
 API's own schema leaves a pattern with a modifier out, so the derived
-tools no longer advertise the licence's. (`Contract\PatternTranslation`)
+tools no longer advertise the license's. (`Contract\PatternTranslation`)
 
 Decided 2026-10-20, from the JSON Schema tooling review (B20): the
 subset carried `\d` `\w` `\s` `\b` under `u` and negated classes, and
@@ -3651,7 +3729,7 @@ resource](evolution.md#compatible-and-breaking). Each choice, and why:
   a restore. A stored version above the declared one is refused at load.
   A layout change that leaves the accepted document alone is the
   storage's own, read both and write the new one, as
-  `EncryptedSettingsLayout` reads plaintext. A content entity's storage
+  `EncryptedStorageLayout` reads plaintext. A content entity's storage
   will answer the same two questions, where its ledger lives and how it
   stamps, with no change to the steps or the runner. Designed, not
   built: ROADMAP.md, Phase D item 13.

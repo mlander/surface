@@ -6,7 +6,7 @@ namespace Drupal\data_surface;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\Storage\SettingsLayoutInterface;
+use Drupal\data_surface\Storage\StorageLayoutInterface;
 
 /**
  * A runtime description of the values something accepts.
@@ -130,10 +130,10 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
    * - No locking. Locking narrows what a caller may send.
    * - No refinement. A refinement narrows what may be sent, and nobody
    *   sends an output; an output whose shape depends on an input value
-   *   is a variant, declared with attachBy() on that input.
+   *   is a variant, declared with attachVariants() on that input.
    *
    * An output key the producer has nothing to say about is **absent**
-   * from the emitted array, never NULL; Pipeline\Omitted is how a
+   * from the emitted array, never NULL; Pipeline\NotEmitted is how a
    * producer says so from inside an array literal, and
    * DataSurfacePipelineInterface::conformOutput() is what checks an
    * emitted array against this map.
@@ -141,7 +141,7 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
    * @return \Drupal\data_surface\DefinitionMap
    *   The output definitions; empty when the data surface declares none.
    *
-   * @see \Drupal\data_surface\Pipeline\Omitted
+   * @see \Drupal\data_surface\Pipeline\NotEmitted
    * @see docs/outputs.md
    */
   public function getOutputDefinitions(): DefinitionMap;
@@ -183,7 +183,7 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
    *
    * Set when an access answer locked the whole: a resource's own, asked on
    * its own (every key shown and fixed, and a submit refused before
-   * anything is written), or a slot variant's (offered and shown, fixed).
+   * anything is written), or a variant's (offered and shown, fixed).
    *
    * Decision: see docs/decisions.md#locked-at-the-top.
    *
@@ -239,13 +239,13 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
    * @param string $provider
    *   The module that mounted the settings.
    *
-   * @return \Drupal\data_surface\Storage\SettingsLayoutInterface|null
+   * @return \Drupal\data_surface\Storage\StorageLayoutInterface|null
    *   The layout the provider declared at build time, or NULL when its
    *   settings are stored exactly as the data surface describes them.
    *
    * @see \Drupal\data_surface\DataSurfaceBuilderInterface::setThirdPartyLayout()
    */
-  public function getThirdPartyLayout(string $provider): ?SettingsLayoutInterface;
+  public function getThirdPartyLayout(string $provider): ?StorageLayoutInterface;
 
   /**
    * Gets the default value for one key.

@@ -13,7 +13,7 @@ use Drupal\data_surface\Resource\StructureInterface;
  * A weekly notice's schedule: the day it goes out.
  */
 #[Structure('resource_test.notice.weekly')]
-#[Variant(of: NoticeStructure::class, key: 'schedule', value: 'weekly')]
+#[Variant(of: NoticeStructure::class, at: 'schedule', for: 'weekly')]
 final class NoticeWeeklyStructure implements StructureInterface {
 
   /**

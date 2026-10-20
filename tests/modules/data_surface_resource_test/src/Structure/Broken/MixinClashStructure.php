@@ -20,7 +20,7 @@ final class MixinClashStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('created', 'string', 'Created');
-    $inputs->with(TimestampsStructure::class);
+    $inputs->mixIn(TimestampsStructure::class);
   }
 
 }

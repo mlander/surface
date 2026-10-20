@@ -14,12 +14,12 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Tests what a tool is handed for a resource with attached structures.
  *
  * Every schema is produced the way an invoker produces it, by the Tool
- * API's own definition serializer. An attached child, and a slot that
- * has resolved, are nested objects; an unresolved slot is the widest
- * honest object, because the Tool API has no way to say a union keyed
- * by a sibling.
+ * API's own definition serializer. An attached child, and a chosen
+ * variant, are nested objects; variants nothing has chosen yet are the
+ * widest honest object, because the Tool API has no way to say a union
+ * keyed by a sibling.
  *
- * @see \Drupal\data_surface_tool\InputDefinitions::fromSlot()
+ * @see \Drupal\data_surface_tool\InputDefinitions::fromVariants()
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -70,37 +70,37 @@ class AttachedStructureEmissionTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests an unresolved slot: every variant's keys, none required.
+   * Tests unresolved variants: every variant's keys, none required.
    */
-  public function testUnresolvedSlotIsTheWidestHonestObject(): void {
+  public function testUnresolvedVariantsAreTheWidestHonestObject(): void {
     $schema = $this->schema($this->container->get('data_surface.resources')->build(PantryResource::class, PantryResource::add()));
-    $slot = $schema['properties']['kind_settings'];
-    $this->assertSame(['object', 'null'], $slot['type']);
-    $this->assertEqualsCanonicalizing(['lid', 'volume', 'opener'], array_keys($slot['properties']));
-    $this->assertArrayNotHasKey('required', $slot);
+    $variants = $schema['properties']['kind_settings'];
+    $this->assertSame(['object', 'null'], $variants['type']);
+    $this->assertEqualsCanonicalizing(['lid', 'volume', 'opener'], array_keys($variants['properties']));
+    $this->assertArrayNotHasKey('required', $variants);
     // Each key says which values of the deciding key it belongs to.
-    $this->assertSame('Lid: How the jar closes. Only when kind is jar.', $slot['properties']['lid']['description']);
-    $this->assertSame('Needs an opener: Only when kind is tin.', $slot['properties']['opener']['description']);
-    $this->assertMatchesRegularExpression('/^Volume: Only when kind is (jar, tin|tin, jar)\.$/', $slot['properties']['volume']['description']);
+    $this->assertSame('Lid: How the jar closes. Only when kind is jar.', $variants['properties']['lid']['description']);
+    $this->assertSame('Needs an opener: Only when kind is tin.', $variants['properties']['opener']['description']);
+    $this->assertMatchesRegularExpression('/^Volume: Only when kind is (jar, tin|tin, jar)\.$/', $variants['properties']['volume']['description']);
     // A default would be one variant's, so none is advertised.
-    $this->assertArrayNotHasKey('default', $slot['properties']['volume']);
-    // And the slot's own description carries the whole table.
-    $this->assertStringStartsWith('Kind settings: What the kind of container needs. Its keys depend on kind.', $slot['description']);
-    $this->assertStringContainsString('jar: lid, volume', $slot['description']);
-    $this->assertStringContainsString('tin: opener, volume', $slot['description']);
+    $this->assertArrayNotHasKey('default', $variants['properties']['volume']);
+    // And the key's own description carries the whole table.
+    $this->assertStringStartsWith('Kind settings: What the kind of container needs. Its keys depend on kind.', $variants['description']);
+    $this->assertStringContainsString('jar: lid, volume', $variants['description']);
+    $this->assertStringContainsString('tin: opener, volume', $variants['description']);
     // The deciding key lists exactly the values a variant answers for.
     $this->assertEqualsCanonicalizing(['jar', 'tin', NULL], $schema['properties']['kind']['enum']);
   }
 
   /**
-   * Tests a resolved slot: exactly the chosen variant's object.
+   * Tests resolved variants: exactly the chosen variant's object.
    */
-  public function testResolvedSlotIsTheVariant(): void {
+  public function testResolvedVariantsAreTheChosenVariant(): void {
     $surface = $this->container->get('data_surface.resources')->build(PantryResource::class, PantryResource::add());
-    $slot = $this->schema($surface->refine(['kind' => 'tin']))['properties']['kind_settings'];
-    $this->assertSame(['object', 'null'], $slot['type']);
-    $this->assertSame(['opener', 'volume'], array_keys($slot['properties']));
-    $this->assertSame('Kind settings: What the kind of container needs.', $slot['description']);
+    $variants = $this->schema($surface->refine(['kind' => 'tin']))['properties']['kind_settings'];
+    $this->assertSame(['object', 'null'], $variants['type']);
+    $this->assertSame(['opener', 'volume'], array_keys($variants['properties']));
+    $this->assertSame('Kind settings: What the kind of container needs.', $variants['description']);
   }
 
 }

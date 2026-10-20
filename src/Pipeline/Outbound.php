@@ -21,7 +21,7 @@ use Drupal\data_surface\Refinement\DoesNotApply;
  * document. A key the build left out for the caller (an omitted child,
  * at any depth) is not there, since what is not in the built data
  * surface is nothing the caller may see; a secret is not there, at any
- * depth, under every variant of a slot that keeps it secret and inside
+ * depth, under every variant that keeps it secret and inside
  * each item of a list; a key that does not apply to the values is not
  * there. A locked key is there as stored, which is what the accepted
  * values already hold for it. Nothing storage-shaped crosses: storage's
@@ -65,7 +65,7 @@ final class Outbound {
    * left out for this account inside a child its parent stores whole, a
    * key an alter no longer mounts. Only what the build declares is the
    * caller's to see. A child is read in its own frame: an attached one,
-   * the variant the values choose for a slot, each item of a collection.
+   * the variant the values choose at a key, each item of a collection.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The data surface.
@@ -101,10 +101,10 @@ final class Outbound {
    * A secret is a scalar key of its own (DefinitionMetadata::setSecret()
    * refuses anything else), but it can sit anywhere: on the data surface,
    * in a plain map such as a module's mounted settings, in an attached
-   * child, or in any variant of a slot. A slot's secrets are every
-   * variant's, whichever variant the values choose, so a key one variant
-   * keeps secret is never returned under that slot, even when another
-   * variant names a plain key the same. Inside a list of maps, a
+   * child, or in any variant. The secrets at a key with variants are
+   * every variant's, whichever variant the values choose, so a key one
+   * variant keeps secret is never returned under that key, even when
+   * another variant names a plain key the same. Inside a list of maps, a
    * collection's or a plain list's, the secrets of each item are under
    * EACH, so only they are left out of every item and the list stays.
    *
@@ -138,7 +138,7 @@ final class Outbound {
    */
   public static function secretsAt(Entry $entry): true|array {
     $found = static::secretsOf($entry->definition);
-    $children = $entry->slot === NULL ? [] : array_map(static fn ($variant): DataSurfaceInterface => $variant->child, $entry->slot->variants);
+    $children = $entry->variants === NULL ? [] : array_map(static fn ($variant): DataSurfaceInterface => $variant->child, $entry->variants->variants);
     if ($entry->attachment !== NULL) {
       $children[] = $entry->attachment->child;
     }

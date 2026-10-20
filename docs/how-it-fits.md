@@ -26,7 +26,7 @@ reads their attributes into the discovery cache: each resource's or
 structure's id and access class (and a resource's identity and storage)
 and its `#[RefinesInput]` methods; each operation with its parameters;
 each alter with the operations it applies in; each variant with the
-slot and value it fills. Plugin definitions get `#[UsesStructure]`
+key and value it is for. Plugin definitions get `#[UsesStructure]`
 copied in by `ResourcePluginHooks`, and that is where the registry
 finds the other kind of structure: a plugin that is its own structure,
 `#[UsesStructure]` with no argument, whose definition records its own
@@ -63,7 +63,7 @@ build(FieldInstanceResource::class, $context):
      whose operations leave this context's id out:
        $alter->alterInputs(new ResourceBlueprintAdditions($builder, $module))
        $alter->alterOutputs(...)                    <- if it has outputs
-       $alter->storageLayout()                       <- if HasStorageLayoutInterface
+       $alter->storageLayout()                       <- if AltersStorageLayoutInterface
      ResourceBlueprintAdditions mounts what it adds at
      third_party_settings.<module>; a structure an alter attached there
      is built now, in its own frame, its keys the mount's and its ports
@@ -71,7 +71,7 @@ build(FieldInstanceResource::class, $context):
 
   3. the checks on the blueprint: every identity key is a declared input,
      no operation id is provided twice, no class is attached inside
-     itself, every slot is chosen by a plain input
+     itself, the variants at every key are chosen by a plain input
 
   4. the context (applyContext):
        starting values become the keys' defaults, if it creates
@@ -107,13 +107,13 @@ build(FieldInstanceResource::class, $context):
          -> its ports checked against the parent's keys (assertWiring)
          -> what reads a port recorded at its path, on the parent's key
             (wirePorts); the child refines with the key's value, live
-       attachBy('settings', by: 'field_type')
+       attachVariants('settings', by: 'field_type')
          -> one child per #[Variant] for (FieldInstanceResource, settings)
          -> one derived child per value a DerivedVariantsInterface service
             fills and no variant class does
 
   7. seal: a DataSurfaceInterface, its children sealed into the parent's
-     entries as Attachment / Slot
+     entries as Attachment / Variants
 ```
 
 Nothing is cached across builds: a build describes live site state,
@@ -125,7 +125,7 @@ The rest of the framework, beside the build:
 access($resource, $context, $account)          Resources::access()
   the operation's permission, %keys filled from the known identity,
   then the resource's access class if it has one,
-  then each slot variant a locked deciding key chose, through its own
+  then each variant a locked deciding key chose, through its own
   access class, which may refuse and never allow (every child's access
   was answered at build, however it was invoked)
 
@@ -178,19 +178,19 @@ ResourceOperationTool
 
 Step 1   FieldInstanceResource::defineInputs(), static
            entity_type_id, bundle, field_type, field_name, label, ...
-           attach storage; attachBy settings on field_type
+           attach storage; attachVariants settings on field_type
 Step 2   no alter in this repository names the field resource
 Step 4   all four identity keys are known -> locked
            (on the add tool only two are known -> two stay open)
 Step 5   bundleOfEntityType() watches entity_type_id -> an edge
 Step 6   storage built with ITS context: field_type locked to address,
            cardinality narrowed right there if the field has data; its
-           settings slot resolved to the variant derived from
+           settings variants resolved to the one derived from
            field.storage_settings.address
-         settings slot: field_type is locked to address, so the child
+         settings variants: field_type is locked to address, so the child
            is AddressFieldSettingsResource, built in the settings context;
            every other field type's settings, derived from
-           field.field_settings.<type>, sit in the slot's table too
+           field.field_settings.<type>, sit in the variants' table too
 
   $storage = $resources->storage(FieldInstanceResource::class, $context, $built);
       FieldInstanceStorage, routing storage to FieldStorageStorage and the
@@ -213,9 +213,9 @@ $built = $resources->build(FieldInstanceResource::class, $context);
 ```
 
 Step 4 locks the entity type and the bundle; the field type and the
-machine name stay open, and the caller supplies them. The settings slot
-stays an `any` placeholder until `field_type` has a value, then resolves
-to that type's variant. The storage child sees the field's context id,
+machine name stay open, and the caller supplies them. The settings
+variants stay an `any` placeholder until `field_type` has a value, then
+resolve to that type's variant. The storage child sees the field's context id,
 `creates` and known identity, so its own `field_type` is open too: a
 caller describing the storage's settings names the type there, and
 `FieldStorageStorage` refuses one that differs from the field's. When the
@@ -238,7 +238,7 @@ blueprint alone, with no alter and no context.
 ## Tools, derived
 
 `data_surface_tool` derives one tool per operation that can be asked
-on its own (`ResourceCatalogue::standalone()`: the resource names
+on its own (`ResourceCatalog::standalone()`: the resource names
 storage, no plugin uses it, and every `%key` in its permission can be
 supplied by a parameter). `ResourceOperationToolDeriver` writes each
 definition from the static layer: `OperationInputs` turns the
@@ -247,7 +247,7 @@ read off the signature for `values`; `ResourceOperationTool` refines
 `values` to the real context once the parameters arrive, asks
 `Resources::access()` decisively, and submits through the pipeline to
 the composed storage, stopping after prepare for a dry run. Beside each
-that changes a thing that exists (`ResourceCatalogue::reads()`) the same
+that changes a thing that exists (`ResourceCatalog::reads()`) the same
 deriver writes a read tool, `ResourceOperationReadTool`, which takes the
 parameters, asks the same access, and answers with what its storage
 loads, less every secret. Nothing in any of these classes names a

@@ -13,7 +13,7 @@ use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Pipeline\TypeMismatchException;
 use Drupal\data_surface\Pipeline\UnknownKeysException;
 use Drupal\data_surface\Pipeline\VariantMismatchException;
-use Drupal\data_surface\Storage\StateStorage;
+use Drupal\data_surface\Pipeline\Storage\StateStorage;
 use Drupal\data_surface_examples_compliance\Alter\RegistrationComplianceAlter;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface_resource_test\Access\ExhibitAccess;
@@ -36,7 +36,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * Modelled on the Tool API's AdvertisedSchemaAcceptanceTest: for each
  * example resource and the test fixtures (every scalar type, a list and a
- * map on the specimen, a slot and an attached part on example 3, a
+ * map on the specimen, variants and an attached part on example 3, a
  * runtime refiner, a declared rule and a mounted key on example 4,
  * collections on the cellar, keys that do not apply on the bulletin and
  * the notice, every declared rule's condition and effect on the parcel,
@@ -258,18 +258,18 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
   /**
    * Example 3's values with example 4's mount answered.
    *
-   * @param string|null $licence
-   *   The licence.
+   * @param string|null $license
+   *   The license.
    * @param int $stewards
    *   The stewards.
    *
    * @return array
    *   The values.
    */
-  protected static function mounted(?string $licence, int $stewards): array {
+  protected static function mounted(?string $license, int $stewards): array {
     return [
       'third_party_settings' => [
-        'data_surface_examples_compliance' => ['licence' => $licence, 'stewards' => $stewards],
+        'data_surface_examples_compliance' => ['license' => $license, 'stewards' => $stewards],
       ],
     ];
   }
@@ -371,7 +371,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Example 3: a slot and an attached part.
+   * Example 3: variants and an attached part.
    */
   public function testExampleThree(): void {
     $this->assertTable('registration.step3', $this->build('registration.step3'), $this->stored('registration.step3'), [
@@ -397,8 +397,8 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
   /**
    * Example 4: a mounted key, a declared rule, a dynamic key, a runtime one.
    *
-   * The capacity's ceiling without a licence is a declared rule, which
-   * the full schema states exactly, so it refuses a crowd with no licence
+   * The capacity's ceiling without a license is a declared rule, which
+   * the full schema states exactly, so it refuses a crowd with no license
    * as the pipeline does. The stewards watch the capacity, a number, so
    * the full schema cannot state their minimum (`dynamic`) and is wider;
    * the schema for these answers is refined for them and is exact. The
@@ -411,11 +411,11 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $this->assertTable('registration.step3', $this->build('registration.step3'), $this->stored('registration.step3'), [
       'as stored' => [[], TRUE],
       'licensed for 150 with three stewards' => [['capacity' => 150] + self::mounted('2048', 3), TRUE],
-      'the licence cleared' => [self::mounted('', 1), TRUE],
-      'a licence with a trailing newline' => [['capacity' => 150] + self::mounted("2048\n", 3), FALSE],
-      'over 100 with no licence' => [['capacity' => 150] + self::mounted(NULL, 3), FALSE],
-      'over 100 with the licence cleared' => [['capacity' => 150] + self::mounted('', 3), FALSE],
-      'a hundred with no licence' => [['capacity' => 100] + self::mounted(NULL, 2), TRUE],
+      'the license cleared' => [self::mounted('', 1), TRUE],
+      'a license with a trailing newline' => [['capacity' => 150] + self::mounted("2048\n", 3), FALSE],
+      'over 100 with no license' => [['capacity' => 150] + self::mounted(NULL, 3), FALSE],
+      'over 100 with the license cleared' => [['capacity' => 150] + self::mounted('', 3), FALSE],
+      'a hundred with no license' => [['capacity' => 100] + self::mounted(NULL, 2), TRUE],
       'too few stewards for 150' => [['capacity' => 150] + self::mounted('2048', 1), FALSE, TRUE, FALSE],
       'a room the site closed' => [['room' => 'riverside_east'], FALSE, TRUE, FALSE],
     ]);
@@ -808,7 +808,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * The notice: an attached child, a slot and a mounted key, ruled out.
+   * The notice: an attached child, variants and a mounted key, ruled out.
    */
   public function testNotice(): void {
     $notice = $this->container->get('data_surface.resources')->build(NoticeStructure::class, new OperationContext('configure'));
@@ -986,7 +986,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       }
     }
 
-    // Every shipped pattern ends in `$` and carries D: the licence, with
+    // Every shipped pattern ends in `$` and carries D: the license, with
     // example 4 on, through the pipeline and both documents.
     $this->enableModules(['data_surface_examples_compliance']);
     $step3 = $this->build('registration.step3');
@@ -994,10 +994,10 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $accepted = $this->pipeline()->accept($step3, $licensed, $this->stored('registration.step3'));
     $this->assertTrue($this->pipeline()->validate($step3, $accepted)->has('third_party_settings'));
     $full = $this->decoded($this->container->get('data_surface.contract_emitter')->emitFull($step3, 'registration.step3')->document['schema']);
-    // The licence is a shape, defined once, which the compliance
+    // The license is a shape, defined once, which the compliance
     // structure's key refers to.
-    $this->assertSame('#/$defs/event.licence', $full['$defs']['registration.compliance']['properties']['licence']['$ref']);
-    $this->assertSame('^\d{4}$', $full['$defs']['event.licence']['pattern']);
+    $this->assertSame('#/$defs/event.license', $full['$defs']['registration.compliance']['properties']['license']['$ref']);
+    $this->assertSame('^\d{4}$', $full['$defs']['event.license']['pattern']);
     $this->assertFalse($this->validates($full, $accepted));
   }
 
@@ -1380,7 +1380,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
   /**
    * Case 2: an unknown key is refused in every position.
    *
-   * Beside the tables' rows: inside a slot's variant and under
+   * Beside the tables' rows: inside a variant and under
    * third_party_settings, mounted or not; and a map that declares no
    * properties, which says nothing about its keys, in both.
    */
@@ -1388,7 +1388,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $step3 = $this->build('registration.step3');
     $stored = $this->stored('registration.step3');
     foreach ([
-      'inside a slot\'s variant' => [['ticket' => ['note' => '', 'fax' => '1']] + self::EVENT, 'ticket'],
+      'inside a variant' => [['ticket' => ['note' => '', 'fax' => '1']] + self::EVENT, 'ticket'],
       'third_party_settings, no module mounting' => [
         self::EVENT + ['third_party_settings' => ['other' => ['a' => 1]]],
         '',

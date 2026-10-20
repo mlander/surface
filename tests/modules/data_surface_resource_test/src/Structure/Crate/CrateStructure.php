@@ -9,7 +9,7 @@ use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\StructureInterface;
 
 /**
- * A crate: a slot whose variant refines one of its keys by another.
+ * A crate: variants, one of which refines one of its keys by another.
  *
  * For the served contract, which enumerates a variant's refined keys
  * inside the variant's own conditional.
@@ -24,7 +24,7 @@ final class CrateStructure implements StructureInterface {
     $inputs->add('contents', 'string', 'Contents', default: 'fruit')
       ->setRequired(TRUE)
       ->addConstraint('Choice', ['choices' => ['fruit']]);
-    $inputs->attachBy('contents_settings', by: 'contents')
+    $inputs->attachVariants('contents_settings', by: 'contents')
       ->setLabel('Contents settings');
   }
 

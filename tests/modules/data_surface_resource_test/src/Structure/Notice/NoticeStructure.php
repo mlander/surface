@@ -15,7 +15,7 @@ use Drupal\data_surface\Resource\StructureInterface;
  * A notice sent by post or by email: its keys hold children, ruled out.
  *
  * The address is an attached child, and applies only to a notice sent by
- * post; the schedule is a slot its cadence chooses, and applies only to
+ * post; the schedule has variants its cadence chooses, and applies only to
  * one sent by email. NoticeAlter mounts a signature that applies only to
  * email too.
  */
@@ -34,7 +34,7 @@ final class NoticeStructure implements StructureInterface {
       ->addConstraint('Choice', ['choices' => ['daily', 'weekly']]);
     $inputs->attach('address', NoticeAddressStructure::class)
       ->setLabel('Address');
-    $inputs->attachBy('schedule', by: 'cadence')
+    $inputs->attachVariants('schedule', by: 'cadence')
       ->setLabel('Schedule');
   }
 

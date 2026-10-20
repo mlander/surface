@@ -44,7 +44,7 @@ use Opis\JsonSchema\CompliantValidator;
  * (ContractEmitter::describeKey()), so what is compared is what a
  * conditional says against what refinement says, not two describers.
  * Every part is held to it as well, as a document of its own for
- * any values: an attached child, each variant a slot offers, and a
+ * any values: an attached child, each variant at a key, and a
  * collection's item.
  *
  * @see docs/decisions.md#static-by-default-runtime-by-declaration
@@ -117,7 +117,7 @@ trait StaticRefinerAgreementTrait {
         $compared++;
       }
       foreach ($condition['then']['properties'] ?? [] as $key => $narrowed) {
-        // A slot's conditional names its variant; only an enumerated
+        // The variants' conditional names the variant; only an enumerated
         // key's is a refiner's answer written down.
         if (($schema['properties'][$key]['x-surface']['enumerated'] ?? FALSE) !== TRUE || isset($narrowed['x-surface']['variant'])) {
           continue;
@@ -157,7 +157,7 @@ trait StaticRefinerAgreementTrait {
       if ($entry->attachment !== NULL) {
         $children[] = $entry->attachment->child;
       }
-      foreach ($entry->slot->variants ?? [] as $variant) {
+      foreach ($entry->variants->variants ?? [] as $variant) {
         $children[] = $variant->child;
       }
       if ($entry->list !== NULL) {

@@ -218,7 +218,7 @@ class StaticRefinerEnforcementTest extends DataSurfaceKernelTestBase {
    *
    * The demo block (bundles per entity type, fields per bundle), the
    * stockroom (a static and a runtime refiner on one key) and the crate
-   * (a key enumerated inside a slot's variant).
+   * (a key enumerated inside a variant).
    */
   public function testTheFixturesAgree(): void {
     NodeType::create(['type' => 'article', 'name' => 'Article'])->save();

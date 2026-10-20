@@ -12,7 +12,7 @@ use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Pipeline\StorageViolationsException;
 use Drupal\data_surface\Pipeline\ViolationSet;
 use Drupal\data_surface\Resource\ResourceStorageInterface;
-use Drupal\data_surface\Storage\BaseFieldOverrideStorage;
+use Drupal\data_surface\Pipeline\Storage\BaseFieldOverrideStorage;
 use Drupal\data_surface\Storage\SchemaViolations;
 use Drupal\node\Entity\NodeType;
 use Drupal\node\NodePreviewMode;
@@ -257,7 +257,7 @@ final class NodeTypeStorage implements ResourceStorageInterface {
    * @param string $bundle
    *   The content type, which need not exist yet.
    *
-   * @return \Drupal\data_surface\Storage\BaseFieldOverrideStorage
+   * @return \Drupal\data_surface\Pipeline\Storage\BaseFieldOverrideStorage
    *   The storage, for the title label and the workflow defaults.
    */
   protected function overrides(string $bundle): BaseFieldOverrideStorage {

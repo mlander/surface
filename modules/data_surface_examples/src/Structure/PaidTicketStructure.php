@@ -13,11 +13,11 @@ use Drupal\data_surface\Resource\StructureInterface;
 /**
  * The ticket, when registration is paid: a price, and its currency.
  *
- * Fills example 3's ticket slot for `paid`. No storage: example 3 stores it
+ * Example 3's ticket variant for `paid`. No storage: example 3 stores it
  * under its ticket key.
  */
 #[Structure('registration.step3.ticket.paid')]
-#[Variant(of: RegistrationStep3Resource::class, key: 'ticket', value: 'paid')]
+#[Variant(of: RegistrationStep3Resource::class, at: 'ticket', for: 'paid')]
 final class PaidTicketStructure implements StructureInterface {
 
   /**

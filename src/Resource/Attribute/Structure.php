@@ -8,7 +8,7 @@ namespace Drupal\data_surface\Resource\Attribute;
  * Names a structure: a group of keys held by something else.
  *
  * A structure has no identity and no storage of its own. It is attached
- * to a parent, fills a slot as a variant, or is the configuration of the
+ * to a parent, is a variant at a parent's key, or is the configuration of the
  * plugin that names it; its container or its host supplies the operation
  * and the storage. It may declare operations of its own, for a container
  * to choose between, and refiners, outputs and an access class. Any

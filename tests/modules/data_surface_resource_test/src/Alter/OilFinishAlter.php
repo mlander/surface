@@ -13,7 +13,7 @@ use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface_resource_test\Structure\Gallery\OilFinishStructure;
 
 /**
- * An answer for one slot variant, the oil finish, and no other.
+ * An answer for one variant, the oil finish, and no other.
  *
  * Static: an account that may freeze walls finds the oil finish locked,
  * offered read only. Runtime: once oil is banned, a State flag, it is not

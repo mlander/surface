@@ -19,13 +19,13 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests the field instance resource, its storage child and settings slot.
+ * Tests the field instance resource, its storage child and settings.
  *
  * The field resource lists no children: the address module's settings
- * resource fills the slot for the address field type, by
- * #[Variant]. Editing knows the field type, so the slot is the
- * address settings from the start; adding without it leaves the slot to
- * whichever type arrives. The field's own values are stored by its
+ * resource is the settings variant for the address field type, by
+ * #[Variant]. Editing knows the field type, so the settings are the
+ * address settings from the start; adding without it leaves the settings
+ * to whichever type arrives. The field's own values are stored by its
  * storage class, and the address settings, which name a storage class of
  * their own, by theirs, after the field, in a context that knows which
  * field.
@@ -120,40 +120,40 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that editing resolves the slot by the locked field type.
+   * Tests that editing chooses the variant by the locked field type.
    */
-  public function testEditResolvesTheSlotFromTheFieldType(): void {
+  public function testEditResolvesTheVariantFromTheFieldType(): void {
     $field = $this->createField();
     $surface = $this->resources()->build(FieldInstanceResource::class, FieldInstanceResource::edit($field));
 
     foreach (['entity_type_id', 'bundle', 'field_name', 'field_type'] as $key) {
       $this->assertTrue($surface->isLocked($key), $key);
     }
-    // The field type offers exactly the types the slot's variants fill:
+    // The field type offers exactly the types the variants are for:
     // the declared ones first, then every UI field type derived from its
     // config schema.
     $choices = $surface->getDefinition('field_type')->getConstraints()['Choice']['choices'];
     $this->assertSame('address', $choices[0]);
     $this->assertContains('string', $choices);
-    $this->assertSame($surface->getDefinitions()->entry('settings')?->slot?->variantIds(), $choices);
+    $this->assertSame($surface->getDefinitions()->entry('settings')?->variants?->variantIds(), $choices);
     $entry = $surface->getDefinitions()->entry('settings');
-    $this->assertSame(AddressFieldSettingsResource::class, $entry->slot->variant('address')->source);
+    $this->assertSame(AddressFieldSettingsResource::class, $entry->variants->variant('address')->source);
     // Advertised as the address settings, not as a placeholder: the one
     // value the field type can hold has already chosen.
     $settings = $surface->getDefinition('settings');
     $this->assertInstanceOf(MapDataDefinition::class, $settings);
-    $this->assertNull(DefinitionMetadata::slotOf($settings));
+    $this->assertNull(DefinitionMetadata::variantsBy($settings));
     $this->assertSame(['available_countries', 'langcode_override', 'field_overrides'], array_keys($settings->getPropertyDefinitions()));
     $this->assertSame('Field settings', (string) $settings->getLabel());
   }
 
   /**
-   * Tests that adding leaves the slot open until a field type arrives.
+   * Tests that adding leaves the variant open until a field type arrives.
    */
-  public function testAddLeavesTheSlotToTheFieldType(): void {
+  public function testAddLeavesTheVariantToTheFieldType(): void {
     $surface = $this->resources()->buildOperation(FieldInstanceResource::class, 'add', ['entity_test', 'entity_test']);
     $this->assertFalse($surface->isLocked('field_type'));
-    $this->assertSame('field_type', DefinitionMetadata::slotOf($surface->getDefinition('settings')));
+    $this->assertSame('field_type', DefinitionMetadata::variantsBy($surface->getDefinition('settings')));
     $resolved = $surface->refine(['field_type' => 'address'])->getDefinition('settings');
     $this->assertInstanceOf(MapDataDefinition::class, $resolved);
     $this->assertArrayHasKey('field_overrides', $resolved->getPropertyDefinitions());
@@ -362,7 +362,7 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
    * may change, and only where the context creates.
    */
   public function testStartingValuesAreTheNewFieldsDefaults(): void {
-    $context = $this->addContext()->withStarting(['label' => 'Postal address', 'required' => TRUE]);
+    $context = $this->addContext()->withDefaults(['label' => 'Postal address', 'required' => TRUE]);
     $surface = $this->resources()->build(FieldInstanceResource::class, $context);
     $this->assertSame('Postal address', $surface->getDefault('label'));
     $this->assertTrue($surface->getDefault('required'));
@@ -375,7 +375,7 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
 
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('does not create');
-    $this->resources()->build(FieldInstanceResource::class, FieldInstanceResource::edit($field)->withStarting(['label' => 'Nope']));
+    $this->resources()->build(FieldInstanceResource::class, FieldInstanceResource::edit($field)->withDefaults(['label' => 'Nope']));
   }
 
 }

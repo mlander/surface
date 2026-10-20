@@ -33,10 +33,10 @@ namespace Drupal\data_surface\Storage;
  * cannot (a storage layout that loses a distinction the data surface
  * makes), the implementation says so in its own documentation.
  *
- * @see \Drupal\data_surface\Storage\FieldSettingsStorage
+ * @see \Drupal\data_surface\Pipeline\Storage\FieldSettingsStorage
  * @see docs/storage.md
  */
-interface SettingsLayoutInterface {
+interface StorageLayoutInterface {
 
   /**
    * Turns accepted values into the settings storage holds.

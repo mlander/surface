@@ -34,8 +34,8 @@ data_surface_resource_test.cellar.edit:
   requirements:
     _data_surface_operation_access: 'TRUE'
 
-# The digest's one operation, served by the generic form: a slot two of
-# whose variants declare no keys.
+# The digest's one operation, served by the generic form: variants, two
+# of which declare no keys.
 data_surface_resource_test.digest:
   path: '/surface-test/digest'
   defaults:

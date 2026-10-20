@@ -26,16 +26,16 @@ the record of the rework that brought the module to the pattern.
   with no identity keys, such as a settings object, is a singleton
   resource. `#[Resource(id, identity:, storage:, access:)]`.
 - **Structure**: a group of keys with no identity or storage of its
-  own, held by a parent, a slot or a plugin's host.
+  own, held by a parent (attached or as a variant) or a plugin's host.
   `#[Structure(id, access:)]`.
 - **Shape**: a named type (Smithy's word), of three kinds: resources,
   structures, and named scalar shapes. The third is `#[Shape(id)]` on a
   class in `src/Shape/` whose static `define()` returns one scalar
   `DataDefinition` (no default, not required), used as
-  `$inputs->add('licence', Licence::class, t('Event licence'))`: the key
+  `$inputs->add('license', License::class, t('Event license'))`: the key
   may only narrow it (checked at build), a port may read it
   (`reads('code', Sku::class)`, wired only to a key of that shape), an
-  `#[Alters(Licence::class)]` tightens it at every key with
+  `#[Alters(License::class)]` tightens it at every key with
   `narrow('<id>')` and `describe('<id>')`, and both documents write it
   once as `$defs.<id>`, each key `$ref` first with what it adds beside
   (`docs/declaring-a-resource.md#named-shapes`).
@@ -57,8 +57,8 @@ the record of the rework that brought the module to the pattern.
 - **Storage**: where a resource's values live: `load()`, `prepare()`,
   `commit()` on a `ResourceStorageInterface`.
 - **Layout**: how a storage lays accepted values out where that differs
-  from how they are asked for, `SettingsLayoutInterface`; an alter hands
-  one for its mount with `HasStorageLayoutInterface::storageLayout()`.
+  from how they are asked for, `StorageLayoutInterface`; an alter hands
+  one for its mount with `AltersStorageLayoutInterface::storageLayout()`.
 - **Alter**: another module's class that adds keys to a resource or
   structure and narrows it, `#[Alters]` in `src/Alter/`; one that
   implements `AltersAccessInterface` answers access for it too, after
@@ -71,14 +71,17 @@ the record of the rework that brought the module to the pattern.
   wired by the container with `attach(..., reads: ['capacity' =>
   'seats'])`; a live sibling value, never stored by the structure.
 - **Mixin**: a structure whose members are merged into the owner's own
-  keys, `$inputs->with(TimestampsStructure::class, reads: [...])`:
+  keys, `$inputs->mixIn(TimestampsStructure::class, reads: [...])`:
   stored flat, refined in the owner's frame, emitted as `allOf` of its
   def and the owner's properties; the owner's only, never an alter's.
   Nest for a thing of its own, mix in for shared members that are part
   of this thing (`docs/resources.md#mixins`).
-- **Slot**: a child a sibling key chooses, `attachBy()`.
-- **Variant**: a structure or resource that fills a slot for one value,
-  `#[Variant(of:, key:, value:)]`.
+- **Variants**: a tagged union whose tag is a sibling key: structures
+  that key chooses between, attached at one key,
+  `attachVariants($key, by: $sibling)`. Always open: the parent names
+  none, any module may declare one.
+- **Variant**: one structure (or resource) among the variants, for one
+  value of the deciding key, `#[Variant(of:, at:, for:)]`.
 - **Collection**: a list of child instances at a key, `attachList()`.
 - **Keys from the site**: one key per thing the site has, in a map at a
   key, `addEach('forms', 'boolean', from: Provider::class)` (a value of
@@ -136,7 +139,7 @@ engine, tool ids); every concept name uses the new word
 A resource is a class in a module's `src/Resource/` carrying
 `#[Resource]`, a structure one in `src/Structure/` carrying
 `#[Structure]`; the attribute decides the kind, and either directory
-works. Each has a static `defineInputs()` (and, on `HasOutputsInterface`,
+works. Each has a static `defineInputs()` (and, on `DefinesOutputsInterface`,
 a static `defineOutputs()`), static `#[RefinesInput]` methods and
 `#[Operation]` static methods; it is never instantiated. Another module
 changes either with an alter in `src/Alter/` carrying `#[Alters]`. A
@@ -180,34 +183,34 @@ parameters onto the operation's by name (`OperationRoute`), gated by
 `data_surface_tool` derives one tool per operation that can be asked
 on its own, `data_surface:<id>:<operation>`: its resource names storage,
 no plugin uses it, and every `%key` in its permission can be supplied by
-a parameter (`ResourceCatalogue::standalone()`). Beside each such
+a parameter (`ResourceCatalog::standalone()`). Beside each such
 operation that changes a thing that exists it derives a read tool,
 `data_surface:<id>:<operation>:read`, taking the parameters and
 answering with the stored values less secrets
-(`ResourceCatalogue::reads()`, `ResourceOperationReadTool`). Both declare
+(`ResourceCatalog::reads()`, `ResourceOperationReadTool`). Both declare
 the operation's permission to the Tool API, unless it has a `%key`
 (`ResourceOperationToolDeriver::declaredPermission()`). The field
 tools are `data_surface:field.instance:add` / `:reuse` / `:edit`; the
 hand-written `field_add` / `field_update` are gone.
-`data_surface.resource_catalogue` lists the static layer; `docs/catalogue.md`
-is generated from it by `scripts/generate-catalogue.php`.
+`data_surface.resource_catalog` lists the static layer; `docs/catalog.md`
+is generated from it by `scripts/generate-catalog.php`.
 
 Attached structures are `attach()` (a fixed child, by class) and
-`attachBy()` (a slot a sibling chooses, always open: every `#[Variant]`
-for it fills it, and the parent names none). Both return the map at the
-key, which the owner labels with the core setters; `describe()` is for
-an alter rewording a key it does not own. A child may be a resource with
-storage of its own, an attached resource (the field's storage,
-`FieldStorageResource`). A service implementing
-`ResourceBuild\DerivedVariantsInterface` fills a slot for the values no
-variant class fills (`data_surface_tool` derives a field type's
+`attachVariants()` (variants a sibling key chooses between, always
+open: every `#[Variant]` at the key is one, and the parent names none).
+Both return the map at the key, which the owner labels with the core
+setters; `describe()` is for an alter rewording a key it does not own.
+A child may be a resource with storage of its own, an attached resource
+(the field's storage, `FieldStorageResource`). A service implementing
+`ResourceBuild\DerivedVariantsInterface` adds variants for the values no
+variant class declares (`data_surface_tool` derives a field type's
 settings, and its storage settings, from its config schema). A child
 whose keys cannot be listed at all is a `#[RefinesInput]` method on an
 `any` key returning a map. A structure reads a value of its container
 through a port it declares, `reads()`, which `attach(..., reads:)` wires
 to a key of the container's; what depends on a port is stated at the
 site, on the container's `allOf`, never in the structure's def
-(`docs/resources.md#ports`). `with()` mixes a structure in: its
+(`docs/resources.md#ports`). `mixIn()` mixes a structure in: its
 members are the owner's own keys, its refiners and rules bound in the
 owner's frame on its members and its ports, its access locking or
 omitting its members (`docs/resources.md#mixins`). `attachList()` is a collection: a list of
@@ -233,7 +236,7 @@ storage or identity keys is a resource, any other a structure.
 (`entity.content:*`) and a structure per field (`field.item:*`), with
 field access as each field child's access (`docs/entities.md`). A
 child is built by the same build step in its own frame and sealed into
-the parent's entry as an `Attachment`, or a `Slot` of them; the
+the parent's entry as an `Attachment`, or among its `Variants`; the
 pipeline, refinement, the form and the tool bridge recurse through those
 entries, and nothing in a parent can name a key inside its child (an
 alter's glue reads the structure at its own mount, never narrowing it). `docs/resources.md` has the rules.
@@ -317,16 +320,16 @@ npx --yes cspell@8 --config /tmp/merged.json --no-progress --no-summary "**"
 The served contract's emitter is the main module's:
 `Contract\ContractEmitter` (`data_surface.contract_emitter`) turns a
 sealed data surface and its values into JSON Schema 2020-12 with an
-`x-surface` keyword per property, each slot an `allOf` of `if`/`then`
-on its deciding sibling. That is the schema as it stands, for one set
+`x-surface` keyword per property, variants as an `allOf` of `if`/`then`
+on their deciding sibling. That is the schema as it stands, for one set
 of values; `emitFull()` is the second document, the full schema, which
 reads no value: every key as declared, every listable dependency as
 conditionals, the rest `dynamic`, and never stricter than the pipeline
 (`docs/decisions.md#two-documents-never-stricter-than-the-runtime`).
 It names no widget unless asked
 (`emit(..., widgets: TRUE)`); `data_surface_tool`'s contract panel shows
-it without, beside what the Tool API can advertise (which flattens a
-slot, and is what `tool:info` prints). `modules/data_surface_react`
+it without, beside what the Tool API can advertise (which flattens
+variants, and is what `tool:info` prints). `modules/data_surface_react`
 serves it with the widget hints, through the main module's service:
 `/surface-api/{resource}/{operation}` serves it, `/refine` re-narrows it
 (the AJAX rebuild's equivalent, emitted from the form builder's `refinementOverlay()`, so an orphan is
@@ -339,7 +342,7 @@ contract carries a `fingerprint` of the stored values; a submit that
 sends it back is refused when storage changed since, and one that sends
 none is not checked (opt-in; the app sends it).
 `/surface-react/{resource}/{operation}` renders it with a React app.
-`docs/served-contract.md` has the format, with children and slot variants
+`docs/served-contract.md` has the format, with children and variants
 as `$defs` that the properties reference; `docs/decisions.md` (Served
 contract) has the points it settled.
 
@@ -420,8 +423,8 @@ so the rule is this sentence. `npm test` is not part of
   order, and `FieldToolsComparisonTest`'s drift assertion is the tripwire.
 - `modules/data_surface_tool/COMPARISON.md` and
   `modules/data_surface_demo_node_type_tool/COMPARISON.md` are generated
-  by `scripts/generate-comparison.php`, `docs/catalogue.md` by
-  `scripts/generate-catalogue.php`, and the contract baselines under
+  by `scripts/generate-comparison.php`, `docs/catalog.md` by
+  `scripts/generate-catalog.php`, and the contract baselines under
   `tests/fixtures/contracts/` by `drush data_surface:contract-diff
   --write`. Never edit any of them by hand.
 - Commit messages are one line.
@@ -431,7 +434,7 @@ so the rule is this sentence. `npm test` is not part of
 - A resource class ends in `Resource`, a structure class in
   `Structure`, and the id on either attribute is dotted (`node.type`,
   `field.instance`); a shape class is named for the value with no
-  suffix (`Licence`, `event.licence`); an alter ends in `Alter`, a storage class in
+  suffix (`License`, `event.license`); an alter ends in `Alter`, a storage class in
   `Storage`, an access class in `Access`. A deriver is named in the
   plural for what it derives (`ContentEntityResources`,
   `FieldItemStructures`).
@@ -439,7 +442,7 @@ so the rule is this sentence. `npm test` is not part of
   (`AddressItem` → `SurfaceAddressItem`), and the hook implementation's
   docblock **must name the replacement class**, so grepping the original
   lands on the line that replaces it.
-- The catalogue lists a plugin as `<host type>:<plugin id>` —
+- The catalog lists a plugin as `<host type>:<plugin id>` —
   `block:my_teaser`, `field_type:address`.
 - A context's id is an operation id (`add`, `edit`, `reuse`) or a
   host's own verb (`configure`, `field_settings`) and never carries
@@ -454,7 +457,7 @@ See `docs/declaring-a-resource.md` for all four in full.
 src/                     Data surface, builder (internal), definition map, host trait.
 src/Resource/            The authoring API and attributes (Attribute/).
 src/ResourceBuild/       Discovery pass, registry, build step, adapters,
-                         derived variants, catalogue, operation routes.
+                         derived variants, catalog, operation routes.
 src/Access/              The operation route's access check.
 src/Hook/                #[UsesStructure] into plugin definitions.
 src/Pipeline/            Access, accept, validate, prepare, commit; results.

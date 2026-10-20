@@ -43,7 +43,7 @@ use Drupal\Core\Site\Settings;
  * module's.
  *
  * @see \Drupal\data_surface\Storage\SecretCodecInterface
- * @see \Drupal\data_surface\Storage\EncryptedSettingsLayout
+ * @see \Drupal\data_surface\Storage\EncryptedStorageLayout
  */
 final class SodiumSecretCodec implements SecretCodecInterface {
 

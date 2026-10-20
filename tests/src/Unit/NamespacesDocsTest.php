@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Unit;
 
+use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -75,6 +76,25 @@ class NamespacesDocsTest extends UnitTestCase {
       }
     }
     return $classes;
+  }
+
+  /**
+   * Tests the namespace says which storage a class is, as the table does.
+   *
+   * A class in Storage\ is one an author names on #[Resource(storage:)]
+   * or extends, or one such a class works with; the storages the
+   * pipeline writes through are in Pipeline\Storage\, beside the
+   * interface they implement.
+   */
+  public function testStorageHoldsWhatAnAuthorNames(): void {
+    foreach (['Storage' => FALSE, 'Pipeline/Storage' => TRUE] as $directory => $pipeline) {
+      $files = glob(self::ROOT . '/src/' . $directory . '/*.php');
+      $this->assertNotEmpty($files, $directory);
+      foreach ($files as $file) {
+        $class = 'Drupal\\data_surface\\' . str_replace('/', '\\', $directory) . '\\' . basename($file, '.php');
+        $this->assertSame($pipeline, is_subclass_of($class, DataSurfaceStorageInterface::class), sprintf('%s %s the pipeline\'s storage interface.', $class, $pipeline ? 'implements' : 'does not implement'));
+      }
+    }
   }
 
   /**

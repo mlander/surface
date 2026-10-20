@@ -45,7 +45,7 @@ services:
   data_surface.watched_value_check:
     class: Drupal\data_surface\Refinement\WatchedValueCheck
     arguments: ['@typed_data_manager']
-  # What fills an open slot for the values no #[Variant] fills:
+  # What adds variants for the values no #[Variant] declares:
   # every service tagged data_surface.derived_variants.
   data_surface.derived_variants:
     class: Drupal\data_surface\ResourceBuild\DerivedVariants
@@ -74,9 +74,9 @@ services:
     class: Drupal\data_surface\Contract\ContractBaselines
     arguments: ['@data_surface.resource_registry', '@data_surface.resources', '@data_surface.contract_emitter', '@extension.list.module']
   # Every discovered resource and structure, its operations, alters and
-  # variants, as one array: what docs/catalogue.md is generated from.
-  data_surface.resource_catalogue:
-    class: Drupal\data_surface\ResourceBuild\ResourceCatalogue
+  # variants, as one array: what docs/catalog.md is generated from.
+  data_surface.resource_catalog:
+    class: Drupal\data_surface\ResourceBuild\ResourceCatalog
     arguments: ['@data_surface.resource_registry', '@data_surface.resources', '@data_surface.resource_plugins', '@data_surface.derived_variants']
   # Which plugins name which structure with #[UsesStructure], read from the
   # definitions of every host that reads the attribute (the keys of

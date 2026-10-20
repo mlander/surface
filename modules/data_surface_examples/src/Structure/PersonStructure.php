@@ -34,7 +34,7 @@ final class PersonStructure implements StructureInterface {
     $inputs->narrow('email')
       ->when(Condition::equals('listed', TRUE))
       ->require()
-      ->describe(t('Required while this person is listed publicly.'));
+      ->because(t('Required while this person is listed publicly.'));
   }
 
 }

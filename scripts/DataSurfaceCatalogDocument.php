@@ -2,24 +2,24 @@
 
 /**
  * @file
- * The renderer behind docs/catalogue.md.
+ * The renderer behind docs/catalog.md.
  *
  * Not autoloadable, like the comparison renderers beside it: it belongs
  * to the generator script, not to the module's runtime. Both
- * scripts/generate-catalogue.php and ResourceCatalogueTest include it, so
+ * scripts/generate-catalog.php and ResourceCatalogTest include it, so
  * the document the script writes and the document the test asserts come
  * from one piece of code.
  *
- * @see scripts/generate-catalogue.php
- * @see \Drupal\Tests\data_surface\Kernel\ResourceCatalogueTest
+ * @see scripts/generate-catalog.php
+ * @see \Drupal\Tests\data_surface\Kernel\ResourceCatalogTest
  */
 
 declare(strict_types=1);
 
 /**
- * Renders the catalogue of resources and structures as markdown.
+ * Renders the catalog of resources and structures as markdown.
  */
-final class DataSurfaceCatalogueDocument {
+final class DataSurfaceCatalogDocument {
 
   /**
    * The environment variable that turns writing on.
@@ -29,23 +29,23 @@ final class DataSurfaceCatalogueDocument {
   /**
    * Where the document lives, relative to the module root.
    */
-  public const PATH = 'docs/catalogue.md';
+  public const PATH = 'docs/catalog.md';
 
   /**
-   * Renders the catalogue.
+   * Renders the catalog.
    *
-   * @param array $catalogue
-   *   What ResourceCatalogue::describe() returns.
+   * @param array $catalog
+   *   What ResourceCatalog::describe() returns.
    * @param array $derivers
-   *   What ResourceCatalogue::derivers() returns.
+   *   What ResourceCatalog::derivers() returns.
    *
    * @return string
    *   The markdown.
    */
-  public static function render(array $catalogue, array $derivers = []): string {
+  public static function render(array $catalog, array $derivers = []): string {
     $document = self::intro();
     $document .= "| Resource or structure | Class | Identity | Operations |\n| --- | --- | --- | --- |\n";
-    foreach ($catalogue as $resource) {
+    foreach ($catalog as $resource) {
       $document .= sprintf(
         "| [`%s`](#%s) | `%s` | %s | %s |\n",
         $resource['id'],
@@ -55,7 +55,7 @@ final class DataSurfaceCatalogueDocument {
         self::codes(array_column($resource['operations'], 'id')),
       );
     }
-    foreach ($catalogue as $resource) {
+    foreach ($catalog as $resource) {
       $document .= "\n## " . $resource['id'] . "\n\n";
       $document .= $resource['class'] === NULL
         ? 'Derived under `' . $resource['deriver'] . '`, in `' . $resource['module'] . "`.\n\n"
@@ -95,7 +95,7 @@ final class DataSurfaceCatalogueDocument {
           . (($alter['access'] ?? FALSE) ? '; it answers access' : '') . ".\n";
       }
       foreach ($resource['variants'] as $key => $variants) {
-        $document .= "\n- Slot `" . $key . '` is filled by: ';
+        $document .= "\n- Variants at `" . $key . '`: ';
         $filled = [];
         foreach ($variants as $value => $class) {
           $filled[] = '`' . $value . '` → `' . $class . '`';
@@ -103,7 +103,7 @@ final class DataSurfaceCatalogueDocument {
         $document .= implode(', ', $filled) . ".\n";
       }
       foreach ($resource['derived'] as $key => $source) {
-        $document .= "\n- Slot `" . $key . '` is filled, for every other value, by variants derived from ' . $source . ".\n";
+        $document .= "\n- Variants at `" . $key . '`, for every other value: derived from ' . $source . ".\n";
       }
     }
     if ($derivers !== []) {
@@ -115,7 +115,7 @@ final class DataSurfaceCatalogueDocument {
           $deriver['base'],
           $deriver['class'],
           $deriver['module'],
-          $deriver['overrides'] === NULL ? 'nothing' : 'classes carrying `' . self::short($deriver['overrides']) . '`' . ($deriver['overridden'] === [] ? ', none here' : ': ' . self::codes(array_map(self::short(...), array_keys($deriver['overridden'])))),
+          $deriver['overriddenBy'] === NULL ? 'nothing' : 'classes carrying `' . self::short($deriver['overriddenBy']) . '`' . ($deriver['overridden'] === [] ? ', none here' : ': ' . self::codes(array_map(self::short(...), array_keys($deriver['overridden'])))),
         );
       }
     }
@@ -134,7 +134,7 @@ A deriver makes resources or structures from site state at discovery,
 one per bundle or per field, under the id `<base>:<derivative>`. Which
 derivatives exist depends on the site (its bundles, their form displays
 and fields), so this file, generated on a test site with none, lists
-the derivers and not what they derive; the catalogue service lists
+the derivers and not what they derive; the catalog service lists
 every derivative a site has, with `class` empty and `deriver` naming
 the base.
 
@@ -142,17 +142,17 @@ MARKDOWN;
   }
 
   /**
-   * The prose above the catalogue.
+   * The prose above the catalog.
    *
    * @return string
    *   The introduction.
    */
   private static function intro(): string {
     return <<<'MARKDOWN'
-# Catalogue
+# Catalog
 
-Generated by `scripts/generate-catalogue.php`; do not edit by hand.
-`ResourceCatalogueTest` asserts on every run that this file still
+Generated by `scripts/generate-catalog.php`; do not edit by hand.
+`ResourceCatalogTest` asserts on every run that this file still
 matches what that script produces.
 
 Every resource and structure the modules in this repository declare,
@@ -187,9 +187,9 @@ MARKDOWN;
    * Says whether an operation can be asked on its own, and why not.
    *
    * @param array $resource
-   *   The resource or structure, as the catalogue describes it.
+   *   The resource or structure, as the catalog describes it.
    * @param array $operation
-   *   The operation, as the catalogue describes it.
+   *   The operation, as the catalog describes it.
    *
    * @return string
    *   "yes", or "no" and the first reason.
@@ -207,7 +207,7 @@ MARKDOWN;
    * Says whether what an operation changes can be read on its own, and why not.
    *
    * @param array $operation
-   *   The operation, as the catalogue describes it.
+   *   The operation, as the catalog describes it.
    *
    * @return string
    *   "yes", or "no" and the first reason.

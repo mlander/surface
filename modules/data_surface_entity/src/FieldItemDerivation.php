@@ -29,7 +29,7 @@ use Drupal\data_surface\Contract\ContractEmitter;
  *
  * A field item's structure is derived from the item's property definitions:
  * one key per property the field type stores and a caller sets, typed as
- * the casting table can carry it (docs/semantics.md), labelled from the
+ * the casting table can carry it (docs/semantics.md), labeled from the
  * field (one property) or the property (several), required on the main
  * property when the field is, defaulting to the field's literal default.
  * What narrows is carried where a definition has the same word for it:

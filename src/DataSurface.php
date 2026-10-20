@@ -18,7 +18,7 @@ use Drupal\data_surface\Refinement\DoesNotApply;
 use Drupal\data_surface\Refinement\Narrowing;
 use Drupal\data_surface\Refinement\RuntimeRefiner;
 use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
-use Drupal\data_surface\Storage\SettingsLayoutInterface;
+use Drupal\data_surface\Storage\StorageLayoutInterface;
 
 /**
  * The immutable data surface a builder seals.
@@ -69,7 +69,7 @@ final class DataSurface implements DataSurfaceInterface {
    *   What the host's execution emits: one entry per output key, in
    *   declaration order, carrying the definition and the contributor.
    *   Empty for a data surface that declares no outputs.
-   * @param array<string, \Drupal\data_surface\Storage\SettingsLayoutInterface> $thirdPartyLayouts
+   * @param array<string, \Drupal\data_surface\Storage\StorageLayoutInterface> $thirdPartyLayouts
    *   How each provider's mounted third-party settings are stored, by
    *   provider; a provider not listed stores them as described.
    * @param \Drupal\data_surface\Refinement\WatchedValueCheckInterface|null $watchedValueCheck
@@ -171,7 +171,7 @@ final class DataSurface implements DataSurfaceInterface {
   /**
    * {@inheritdoc}
    */
-  public function getThirdPartyLayout(string $provider): ?SettingsLayoutInterface {
+  public function getThirdPartyLayout(string $provider): ?StorageLayoutInterface {
     return $this->thirdPartyLayouts[$provider] ?? NULL;
   }
 
@@ -226,11 +226,11 @@ final class DataSurface implements DataSurfaceInterface {
    * Reads what one key starts from.
    *
    * An attached child starts from its own defaults, read from the child
-   * so its own attached structures answer for themselves. A slot starts
-   * from the defaults of the variant its deciding key's default chooses,
-   * and from nothing when that chooses none. A collection starts from
-   * what its list declares, which is no items unless the owner said
-   * otherwise.
+   * so its own attached structures answer for themselves. A key with
+   * variants starts from the defaults of the variant its deciding key's
+   * default chooses, and from nothing when that chooses none. A collection
+   * starts from what its list declares, which is no items unless the owner
+   * said otherwise.
    *
    * @param \Drupal\data_surface\Entry $entry
    *   The key.
@@ -242,9 +242,9 @@ final class DataSurface implements DataSurfaceInterface {
     if ($entry->attachment !== NULL) {
       return $entry->attachment->child->getDefaultValues();
     }
-    if ($entry->slot !== NULL) {
-      $chosen = $entry->slot->chosen($this->getDefault($entry->slot->by));
-      return $chosen === NULL ? NULL : $entry->slot->defaultsOf($chosen);
+    if ($entry->variants !== NULL) {
+      $chosen = $entry->variants->chosen($this->getDefault($entry->variants->by));
+      return $chosen === NULL ? NULL : $entry->variants->defaultsOf($chosen);
     }
     return DefinitionMetadata::defaultOf($entry->definition);
   }
@@ -375,7 +375,7 @@ final class DataSurface implements DataSurfaceInterface {
    *
    * @param array $values
    *   The values as they stand, which an attached structure is refined
-   *   against in its own frame, and which choose a slot's variant.
+   *   against in its own frame, and which choose a variant.
    * @param array $admitted
    *   The same values with every refused watched value withheld, which
    *   are what a refiner is handed.
@@ -579,7 +579,7 @@ final class DataSurface implements DataSurfaceInterface {
    * what the child holds is the child's to narrow.
    *
    * @param \Drupal\data_surface\Entry $entry
-   *   The attached key or slot, as advertised.
+   *   The attached key or key with variants, as advertised.
    * @param array $admitted
    *   The values a refiner may be handed.
    * @param int $runtime
@@ -717,12 +717,12 @@ final class DataSurface implements DataSurfaceInterface {
    * child's own defaults, under the child's own key names: no parent
    * refiner reaches into it and its refiners never see a parent value.
    * What comes back is the key's definition for these values: the
-   * child's refined map for an attached child, and for a slot the chosen
-   * variant's refined map, or nothing while no variant is chosen.
+   * child's refined map for an attached child, and for variants the
+   * chosen variant's refined map, or nothing while no variant is chosen.
    *
    * The result is held to the same narrowing check as any refiner link,
    * against what the key advertises. For an attached child that is the
-   * map rule: the same properties, each no wider. For a slot it is the
+   * map rule: the same properties, each no wider. For variants it is the
    * one resolution refinement allows from a placeholder: `any`, to the
    * map of a variant declared before anything was chosen.
    *
@@ -748,8 +748,8 @@ final class DataSurface implements DataSurfaceInterface {
       return NULL;
     }
     $value = $values[$entry->name] ?? NULL;
-    $chosen = $entry->slot?->chosen($values[$entry->slot->by] ?? NULL);
-    if ($chosen !== NULL && !$entry->slot->fits($chosen, $value)) {
+    $chosen = $entry->variants?->chosen($values[$entry->variants->by] ?? NULL);
+    if ($chosen !== NULL && !$entry->variants->fits($chosen, $value)) {
       // A value left behind by another variant says nothing about this
       // one, so the variant is refined from its own defaults.
       $value = [];
@@ -757,7 +757,7 @@ final class DataSurface implements DataSurfaceInterface {
     $refined = $child->refine(array_replace($child->getDefaultValues(), is_array($value) ? $value : []), $runtime);
     $cacheability->addCacheableDependency($refined);
     if ($chosen !== NULL) {
-      $definition = $entry->slot->definitionFor($chosen, $refined);
+      $definition = $entry->variants->definitionFor($chosen, $refined);
     }
     elseif ($refined === $child) {
       return NULL;

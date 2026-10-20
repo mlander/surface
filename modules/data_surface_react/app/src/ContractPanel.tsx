@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { FullSchema } from './api';
 import type { Contract, Schema, Values } from './contract';
-import { choices, inlineSchema, isObject, jsonType, resolveSlot } from './contract';
+import { choices, inlineSchema, isObject, jsonType, resolveVariants } from './contract';
 
 interface Row {
   path: string;
@@ -90,7 +90,7 @@ function rows(schema: Schema, values: Values, prefix = ''): Row[] {
     const widget = extension?.widget;
     found.push({
       path,
-      type: widget === 'slot' ? 'slot' : widget === 'fieldset' ? 'part' : extension?.list ? 'collection' : (jsonType(property) ?? 'any'),
+      type: widget === 'slot' ? 'variants' : widget === 'fieldset' ? 'part' : extension?.list ? 'collection' : (jsonType(property) ?? 'any'),
       label: property.title ?? name,
       required: (schema.required ?? []).includes(name),
       allows: widget === 'slot'
@@ -112,7 +112,7 @@ function rows(schema: Schema, values: Values, prefix = ''): Row[] {
       found.push(...rows(property.items, {}, `${path}.*.`));
       continue;
     }
-    const inner = widget === 'slot' ? resolveSlot(schema, name, values) : widget === 'fieldset' ? property : null;
+    const inner = widget === 'slot' ? resolveVariants(schema, name, values) : widget === 'fieldset' ? property : null;
     if (inner !== null) {
       found.push(...rows(inner, nested, `${path}.`));
     }

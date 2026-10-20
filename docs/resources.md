@@ -25,15 +25,15 @@ page of its own.
 | The question you are asking | What it gives | The example that shows it | On this page |
 | --- | --- | --- | --- |
 | Is this group of keys a thing of its own? | `attach($key, Child::class)`: a fixed child, its keys stored as a map under the key, behind the wall; the schema refers to the child's def at the key. | The contact, `/surface-examples/3`; the press contact, `/surface-examples/8` | [Children](#children) |
-| Are these keys shared members that are part of this thing? | `with(Structure::class)`: a mixin, its members the owner's own keys, stored flat beside them; the schema is `allOf` of the structure's def and the owner's properties. | The review, `/surface-examples/8` | [Mixins](#mixins) |
+| Are these keys shared members that are part of this thing? | `mixIn(Structure::class)`: a mixin, its members the owner's own keys, stored flat beside them; the schema is `allOf` of the structure's def and the owner's properties. | The review, `/surface-examples/8` | [Mixins](#mixins) |
 | Does a structure need a value its container holds? | `reads($port, $type)` in the structure, wired by `attach(..., reads: [$port => $key])`: a port, the value kept at the container's key and stored by nothing in the structure; the def lists its ports, and what depends on one is stated on the container's `allOf`. | The person's `listed`, `/surface-examples/8` and `/surface-examples/8/desk` | [Ports](#ports) |
-| Does one key's value choose which further keys apply? | `attachBy($key, by: $sibling)` and a `#[Variant]` per value: a slot, the chosen variant's keys stored under the key; the schema is an `if`/`then` on the sibling for each variant. | The ticket, `/surface-examples/3` | [Children](#children) |
+| Does one key's value choose which further keys apply? | `attachVariants($key, by: $sibling)` and a `#[Variant]` per value: variants, the chosen variant's keys stored under the key; the schema is an `if`/`then` on the sibling for each variant. | The ticket, `/surface-examples/3` | [Variants](#variants) |
 | Does a group of keys repeat? | `attachList($key, Child::class, min:, max:)`: a collection, a list under the key whose every item is the child's keys; the schema is an array whose `items` refer to the child's def, its Count as `minItems` and `maxItems`. | The volunteers, `/surface-examples/8/desk` | [Collections](#collections) |
 | Is there one key per thing the site has? | `addEach()` or `attachEach()` with a provider: keys from the site, a map under the key with one entry per thing the provider lists at every build; the schema states every entry, the map a def of the owner's. | The ticket types, `/surface-examples/9` | [Keys that come from the site](#keys-that-come-from-the-site) |
 
 The rule of thumb: nest for a thing of its own, mix in for shared
 members that are part of this thing, and read a port for a value the
-container holds. Use a slot when a key chooses the keys, and a
+container holds. Use variants when a key chooses the keys, and a
 collection when groups repeat. Use keys from the site when the site,
 not the code, decides how many there are.
 
@@ -192,13 +192,13 @@ already known, and that is a **context**, an `OperationContext`:
   each with its value. A singleton's one operation returns
   `new OperationContext('configure')`; the id is the operation's own
   and has nothing to do with the plugin hosts' `configure` verb, which
-  no operation declares. `withConstraint()`, `withStarting()` and
+  no operation declares. `withConstraint()`, `withDefaults()` and
   `withChild()` return a copy that says more.
 - Another module adds an operation with
   `#[Operation('clone', of: SomeResource::class)]` on a static method in
   its `src/Alter/`. Two declarations of one id are refused, naming both.
 - A context may also narrow a key (`withConstraint()`, checked narrower)
-  and, when it creates, give starting values (`withStarting()`), which
+  and, when it creates, give starting values (`withDefaults()`), which
   become the key's defaults: values the caller sees first and may
   change. It may hand a child a context of its own, or name the child's
   own operation to invoke (`withChild()`, see [Child
@@ -357,7 +357,7 @@ surface, both contracts and the form.
 Access composes: the parent's operation access gates the whole data
 surface as above, and each child's access then decides that child's
 keys ([Child operations](#child-operations)). One child may refuse the
-whole parent, never allow: a slot's variant chosen by a locked deciding
+whole parent, never allow: a variant chosen by a locked deciding
 key, which the parent cannot be written without ([A chosen variant may
 refuse](decisions.md#a-chosen-variant-may-refuse)).
 
@@ -426,8 +426,8 @@ full schema's marks to the build for sampled accounts
 
 Composition follows the frames: a child's access answers in its own
 frame, a mixed-in structure's for its members in the owner's (the
-stricter standing), a slot variant answered at runtime is offered and
-the slot marked, and a port carries no access. A static lock on a
+stricter standing), a variant answered at runtime is offered and the
+variants' key marked, and a port carries no access. A static lock on a
 parent over a runtime answer in its child leaves the child's key locked
 with the parent and marked. At the top, a runtime answer set aside
 marks every key, since the whole may be found locked. The exhibit in
@@ -471,12 +471,12 @@ it along the tree:
   committed to it, in the context its parent hands it, plus the
   identity the parent accepted that it did not already know. An
   attached child (a field's storage) is committed **before** its parent,
-  which is built on it; a slot's variant (a field's settings) **after**,
+  which is built on it; a variant (a field's settings) **after**,
   since it lives on what the parent writes.
 - A child without storage, every structure among them, is stored by its
   parent under its key.
 - An alter whose keys are asked for in one layout and stored in another
-  implements `HasStorageLayoutInterface`. Its layout is applied to that
+  implements `AltersStorageLayoutInterface`. Its layout is applied to that
   module's mount, `third_party_settings.<module>`, and nothing else:
   `toStorage()` before the storage class prepares, `fromStorage()` after
   it reads. `NodeTypeAlter` in the extras module asks for a review
@@ -576,8 +576,8 @@ own is a tool, `data_surface:<resource id>:<operation id>`, derived by
 - **Behavior** is the operation's: the `Read` kind for a read only
   operation, the `Write` kind for every other, and destructive when it
   says so.
-- **Access** is the operation's, decisively, then a slot variant its
-  locked deciding key chose may refuse through its own access class.
+- **Access** is the operation's, decisively, then a variant its locked
+  deciding key chose may refuse through its own access class.
 - **Execution** is the operation, the build, and one pipeline submit to
   the composed storage; a dry run stops after prepare.
 - **Outputs** are the accepted `values`, as the read tool would answer
@@ -585,8 +585,8 @@ own is a tool, `data_surface:<resource id>:<operation id>`, derived by
   resource's own outputs, as its storage reads them back after the
   write; a dry run answers the same `values` and no outputs.
 
-Two rules say what is not a tool, and the catalogue applies the same
-two (`ResourceCatalogue::standalone()`):
+Two rules say what is not a tool, and the catalog applies the same
+two (`ResourceCatalog::standalone()`):
 
 1. **A permission nothing can name.** An operation whose permission has
    a `%key` placeholder that none of its parameters can supply (one
@@ -610,7 +610,7 @@ exactly as the write tool declares them, and whose one output, `values`,
 is what the composed storage loads, in the shape the write tool's
 `values` takes, less the identity keys the operation knows and less
 every secret, at any depth. Its access is the write tool's. Which
-operations those are is `ResourceCatalogue::reads()`: one that needs
+operations those are is `ResourceCatalog::reads()`: one that needs
 nothing and whose context does not create, or one that needs a subject
 and whose parameters name one thing whole, a single entity or every
 identity key, since its context cannot be asked before a caller names
@@ -619,9 +619,9 @@ the subject; never one that is read only, which changes nothing. So `node.type:e
 `field.instance:reuse` do not; a context that turns out to create is
 refused when the read runs.
 
-## Catalogue
+## Catalog
 
-`data_surface.resource_catalogue` (`ResourceCatalogue::describe()`) lists
+`data_surface.resource_catalog` (`ResourceCatalog::describe()`) lists
 every discovered resource and structure with its id, kind, class (none
 for a derived one, whose `deriver` names the base), identity, storage,
 access class, the plugins whose configuration it is
@@ -629,15 +629,15 @@ access class, the plugins whose configuration it is
 `data_surface.resource_plugins`), operations (id, label, parameters,
 whether it creates, permission, the placeholders nothing supplies,
 whether it can be asked on its own, and whether what it changes can be
-read on its own), alters, declared variants and, per slot, where derived
-variants come from, without building anything. Whether an operation
+read on its own), alters, declared variants and, per key with variants, where
+derived variants come from, without building anything. Whether an operation
 creates is on the context it returns, so it is known only for an
-operation that needs nothing. `ResourceCatalogue::derivers()` lists the
+operation that needs nothing. `ResourceCatalog::derivers()` lists the
 derivers, whose derivatives are the site's own.
-[`catalogue.md`](catalogue.md) is both for this repository's modules,
-generated by `scripts/generate-catalogue.php` on a test site with no
+[`catalog.md`](catalog.md) is both for this repository's modules,
+generated by `scripts/generate-catalog.php` on a test site with no
 bundles, so it lists the derivers and no derivative, and held to it by
-`ResourceCatalogueTest`.
+`ResourceCatalogTest`.
 
 ## Plugins
 
@@ -664,7 +664,7 @@ or, with no argument, the plugin class itself, which implements
 ```php
 #[FieldFormatter(id: 'data_surface_demo_string', label: new TranslatableMarkup('Data surface demo formatter'), field_types: ['string'])]
 #[UsesStructure]
-final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements StructureInterface, HasOutputsInterface {
+final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements StructureInterface, DefinesOutputsInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void { /* ... */ }
 
@@ -686,7 +686,7 @@ discovery holds it to the same rules: it implements
 `StructureInterface`, its declaration and refiners are static. Its id is
 `<host type>:<plugin id>`, `field_formatter:data_surface_demo_string`,
 unless the class also carries `#[Structure]`, whose id and access class
-then apply. The catalogue lists it as used by that same plugin, and an
+then apply. The catalog lists it as used by that same plugin, and an
 alter names it by the plugin class. An access class it names is not
 registered by the compiler pass, which never sees it; the class resolver
 builds one, so it is constructor-free or implements
@@ -724,7 +724,7 @@ by.
   last so a class another module swapped in (`SurfaceAddressItem` for
   `AddressItem`) is the one read. A field item reaches it as its typed
   data definition, which core derives from the field type's. So the
-  catalogue lists which plugins use a structure without instantiating
+  catalog lists which plugins use a structure without instantiating
   one.
 - **The build.** `DataSurfaceHostTrait::hostedStructure()` builds the
   structure the definition names, in `new OperationContext($operation)`:
@@ -776,9 +776,9 @@ adapter: it wires the structure's [ports](#ports) to the owner's keys,
 and keeps the glue for this one owner. The examples' compliance alter
 attaches the compliance structure, whose stewards follow a `capacity`
 port, and wires the port to example 3's capacity; its own rule reads
-the structure's `licence` at its mount and caps the owner's capacity at
+the structure's `license` at its mount and caps the owner's capacity at
 a hundred while it is empty, so the capacity's dependencies, its AJAX
-trigger and its `dependsOn` name the licence by its path. The glue may
+trigger and its `dependsOn` name the license by its path. The glue may
 read the structure's keys and never narrows them
 ([Decisions](decisions.md#an-alter-attaches-at-its-own-mount)).
 
@@ -841,7 +841,7 @@ examples' compliance alter ends with
 $inputs->describe('third_party_settings.data_surface_examples_compliance', label: $this->t('Compliance'), after: 'capacity');
 ```
 
-so the licence sits right under the capacity it lifts. Placement is
+so the license sits right under the capacity it lifts. Placement is
 where the fieldset is drawn and nothing else: its values are still
 stored, posted, validated and advertised at
 `third_party_settings.<module>.<key>`, the config schema and the Tool
@@ -876,7 +876,7 @@ omitted for an account without it, with the `user.permissions` context.
 
 It answers wherever the thing appears, in the frame it is built in: at
 the top (locked builds it locked whole, omitted refuses the caller), as
-a child, at each site of a structure attached twice, as one slot
+a child, at each site of a structure attached twice, as one
 variant, for a mixed-in structure's members in the owner's frame, for a
 collection's item and at every entry of keys from the site; only in the
 operations its `#[Alters]` names. Each answer's kind is its own,
@@ -947,12 +947,12 @@ use Drupal\data_surface_examples_compliance\Structure\ComplianceStructure;
  * Example 4: others get a say.
  *
  * Another module's class, naming example 3's resource: an adapter. It
- * attaches the compliance structure at its own mount, so the licence and
+ * attaches the compliance structure at its own mount, so the license and
  * the stewards are stored under this module's name, and wires the
  * structure's capacity port to example 3's capacity. The rest is glue for
  * this one owner: it titles the fieldset and draws it right after the
- * capacity its licence lifts, rewords one of the owner's labels, stops the
- * owner's capacity at a hundred without a licence, a rule declared as
+ * capacity its license lifts, rewords one of the owner's labels, stops the
+ * owner's capacity at a hundred without a license, a rule declared as
  * data, and leaves out a room the site has closed, which only the site
  * knows when it is asked. Example 3 is not changed and does not know this
  * module exists.
@@ -987,14 +987,14 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
     $inputs->attach('third_party_settings.data_surface_examples_compliance', ComplianceStructure::class, reads: ['capacity' => 'capacity']);
     $inputs->describe('title', label: $this->t('Public event title'));
     $inputs->describe('third_party_settings.data_surface_examples_compliance', label: $this->t('Compliance'), after: 'capacity');
-    // Without a licence, no more than a hundred, whatever the room seats.
-    // The licence is the structure's, which this alter reads at its mount.
-    // A licence its own pattern refuses is no licence: a rule never sees
+    // Without a license, no more than a hundred, whatever the room seats.
+    // The license is the structure's, which this alter reads at its mount.
+    // A license its own pattern refuses is no license: a rule never sees
     // an invalid sibling.
     $inputs->narrow('capacity')
-      ->when(Condition::absent('licence'))
+      ->when(Condition::absent('license'))
       ->constrain('Range', ['max' => 100])
-      ->describe($this->t('Up to 100 without an event licence.'));
+      ->because($this->t('Up to 100 without an event license.'));
   }
 
   /**
@@ -1059,9 +1059,9 @@ data_surface_examples.registration.third_party.data_surface_examples_compliance:
   type: mapping
   label: 'Compliance settings'
   mapping:
-    licence:
+    license:
       type: string
-      label: 'Event licence'
+      label: 'Event license'
       nullable: true
     stewards:
       type: integer
@@ -1091,7 +1091,7 @@ Each refusal names the class and method at fault:
   collection, or a child's refiner that watches a key only its parent
   declares (a refiner of a collection that narrows inside its items is
   refused when the data surface is refined);
-- a slot chosen by a key that is not a plain input, or a variant its
+- variants chosen by a key that is not a plain input, or a variant its
   deciding key does not allow;
 - a context constraint or starting value for a child's key, and a
   starting value for a collection;
@@ -1102,7 +1102,7 @@ Each refusal names the class and method at fault:
 - a port read under the name of a key, a refiner or rule narrowing a
   port, a required port left unwired, a wiring to a key the container
   does not declare, of another type or inside the child, a wiring of a
-  port the child does not read, a cycle through a wiring, and a slot's
+  port the child does not read, a cycle through a wiring, and a
   variant or a collection's item that requires a port
   ([Ports](#ports));
 - an alter attaching anywhere but its own mount, beside keys of its own
@@ -1122,66 +1122,18 @@ own, as a field's storage is.
 A value asked for at several keys is no child: a child is a group of
 keys behind the wall, and one value with its type, pattern and words is
 a shape, declared once in `src/Shape/` and used in the type position of
-`add()`, `$inputs->add('licence', Licence::class, t('Event licence'))`,
+`add()`, `$inputs->add('license', License::class, t('Event license'))`,
 each key narrowing it as it needs and an alter of the shape tightening
 it at all of them ([Named shapes](declaring-a-resource.md#named-shapes)).
-The compliance structure's licence is one; a shape handed to `attach()`
+The compliance structure's license is one; a shape handed to `attach()`
 is refused.
 
 - `attach('key', Child::class)` is a fixed child.
-- `attachBy('key', by: 'sibling')` is a child the sibling's value
-  chooses: a **slot**. A slot is always open. The parent never names
-  its children: every class marked
-  `#[Variant(of: Parent::class, key: 'key', value: '...')]` fills
-  it, and the sibling's allowed values become exactly the values the
-  variants fill. A new variant brings itself and the parent never
-  changes.
-- A variant may declare no keys: a choice with nothing more to say (a
-  daily digest has no send day, a weekly one does). It renders as
-  nothing on the form and the React page, its value is an empty map, and
-  both contracts and the tool state it as an object with no properties.
-  `DigestResource` in the resource test module is the fixture; one class
-  per value, since `#[Variant]` names one value.
+- `attachVariants('key', by: 'sibling')` attaches **variants**: children
+  the sibling's value chooses between, one per value
+  ([Variants](#variants)).
 
-The demo block's presentation is a slot its two presentation structures
-fill; the field instance resource attaches its storage, a resource of
-its own, and its settings are a slot each field type's module fills, as
-are the storage's own settings:
-
-```php
-// DemoBlockStructure
-$inputs->add('presentation', 'string', t('Presentation'), default: 'list')
-  ->setRequired(TRUE)
-  ->addConstraint('Choice', ['choices' => ['list', 'grid']]);
-$inputs->attachBy('presentation_settings', by: 'presentation')
-  ->setLabel(t('Presentation settings'))
-  ->setDescription(t('What the chosen presentation needs.'));
-
-// ListPresentationStructure and GridPresentationStructure, beside it
-#[Structure('block.data_surface_demo.presentation.list')]
-#[Variant(of: DemoBlockStructure::class, key: 'presentation_settings', value: 'list')]
-
-#[Structure('block.data_surface_demo.presentation.grid')]
-#[Variant(of: DemoBlockStructure::class, key: 'presentation_settings', value: 'grid')]
-
-// FieldInstanceResource, in data_surface_tool
-$inputs->attach('storage', FieldStorageResource::class)
-  ->setLabel(t('Field storage'));
-$inputs->attachBy('settings', by: 'field_type')
-  ->setLabel(t('Field settings'));
-
-// FieldStorageResource, in data_surface_tool
-$inputs->attachBy('settings', by: 'field_type')
-  ->setLabel(t('Storage settings'));
-
-// AddressFieldSettingsResource, in data_surface_address
-#[Resource('field.settings.address', storage: AddressFieldSettingsStorage::class)]
-#[Variant(of: FieldInstanceResource::class, key: 'settings', value: 'address')]
-```
-
-Each class's `use` line: [Namespaces](concepts.md#namespaces).
-
-`attach()` and `attachBy()` return the map definition at the key, a
+`attach()` and `attachVariants()` return the map definition at the key, a
 core `MapDataDefinition`, the way `add()` returns its definition, so
 the owner labels and describes its own child's key with the core
 setters. `describe()` is for an alter rewording a key it does not own;
@@ -1212,35 +1164,21 @@ What that means, end to end:
   The key a child sits at is the parent's own, so a parent's refiner
   may say it [does not apply](refinement.md#when-a-key-does-not-apply),
   and nothing else about it.
-- **A slot** is advertised as an `any` placeholder marked as a slot
-  (`DefinitionMetadata::slotOf()`) while its deciding key holds
-  nothing, and as exactly the chosen variant's map once it does, or
-  from the start, when the context locks the deciding key. That is an
-  ordinary refinement under the rule that `any` may become anything
-  narrower, not a mechanism of its own. The deciding
-  key gains a Choice over the variants' values, checked narrower than
-  any list it already had, and becomes a refinement dependency of the
-  slot, so the form rebuilds on it over AJAX and the discard cascade
-  drops input left by another variant. A payload carrying another
-  variant's keys is refused by name
-  (`presentation_settings.show_summary belongs to the list variant, but
-  presentation chose grid.`); a stored value that does not fit a newly
-  chosen variant falls back to that variant's defaults.
 - **Narrowing reads inside maps.** A refined map holds exactly the
   properties it was handed, each held to the same table, list items
-  too; the one shape refinement may introduce is a slot's placeholder
-  resolving to its variant.
+  too; the one shape refinement may introduce is the variants'
+  placeholder resolving to the chosen variant.
 - **Storage composes along the tree.** A child whose
   `#[Resource(storage:)]` names a storage class is loaded from and
-  committed to it (an attached child before its parent, a slot's variant
+  committed to it (an attached child before its parent, a variant
   after) in its own context plus whatever identity the parent accepted
   that it did not already know; a child without one is stored by its
   parent under its key. `ResourcesInterface::storage()` builds the
   composed storage (see Storage, above).
 - **Emission.** The tool bridge converts an attached child to a nested
-  map input, and an unresolved slot to the widest honest map: every
-  variant's keys, none required and none with a default, each
-  annotated with the values it belongs to, the table in the
+  map input, and variants nothing has chosen yet to the widest honest
+  map: every variant's keys, none required and none with a default,
+  each annotated with the values it belongs to, the table in the
   description. The Tool API cannot say a union keyed by a sibling. The
   served contract can, and writes each child once, as a def under
   `$defs` that every place it is used refers to: the wall is where a
@@ -1248,6 +1186,76 @@ What that means, end to end:
 
 An alter attaches only at its own mount ([Alters](#alters)), and an
 output attaches nothing; both are refused by name otherwise.
+
+### Variants
+
+Variants are a tagged union whose tag is a sibling key.
+`attachVariants('key', by: 'sibling')` attaches them at the key, and the
+sibling, the deciding key, chooses one. They are always open. The parent
+never names them: every class marked
+`#[Variant(of: Parent::class, at: 'key', for: '...')]` is the variant
+for that value, and the sibling's allowed values become exactly the
+values the variants are for. A new variant brings itself and the parent
+never changes.
+
+A variant may declare no keys: a choice with nothing more to say (a
+daily digest has no send day, a weekly one does). It renders as
+nothing on the form and the React page, its value is an empty map, and
+both contracts and the tool state it as an object with no properties.
+`DigestResource` in the resource test module is the fixture; one class
+per value, since `#[Variant]` names one value.
+
+The demo block's presentation has two variants, its two presentation
+structures; the field instance resource attaches its storage, a
+resource of its own, and its settings are variants each field type's
+module adds, as are the storage's own settings:
+
+```php
+// DemoBlockStructure
+$inputs->add('presentation', 'string', t('Presentation'), default: 'list')
+  ->setRequired(TRUE)
+  ->addConstraint('Choice', ['choices' => ['list', 'grid']]);
+$inputs->attachVariants('presentation_settings', by: 'presentation')
+  ->setLabel(t('Presentation settings'))
+  ->setDescription(t('What the chosen presentation needs.'));
+
+// ListPresentationStructure and GridPresentationStructure, beside it
+#[Structure('block.data_surface_demo.presentation.list')]
+#[Variant(of: DemoBlockStructure::class, at: 'presentation_settings', for: 'list')]
+
+#[Structure('block.data_surface_demo.presentation.grid')]
+#[Variant(of: DemoBlockStructure::class, at: 'presentation_settings', for: 'grid')]
+
+// FieldInstanceResource, in data_surface_tool
+$inputs->attach('storage', FieldStorageResource::class)
+  ->setLabel(t('Field storage'));
+$inputs->attachVariants('settings', by: 'field_type')
+  ->setLabel(t('Field settings'));
+
+// FieldStorageResource, in data_surface_tool
+$inputs->attachVariants('settings', by: 'field_type')
+  ->setLabel(t('Storage settings'));
+
+// AddressFieldSettingsResource, in data_surface_address
+#[Resource('field.settings.address', storage: AddressFieldSettingsStorage::class)]
+#[Variant(of: FieldInstanceResource::class, at: 'settings', for: 'address')]
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+Until the deciding key holds a value, the key is advertised as an `any`
+placeholder marked as variants (`DefinitionMetadata::variantsBy()`); once
+it does, or from the start when the context locks the deciding key, it is
+exactly the chosen variant's map. That is an ordinary refinement under
+the rule that `any` may become anything narrower, not a mechanism of its
+own. The deciding key gains a Choice over the variants' values, checked
+narrower than any list it already had, and becomes a refinement
+dependency of the key the variants sit at, so the form rebuilds on it
+over AJAX and the discard cascade drops input left by another variant. A
+payload carrying another variant's keys is refused by name
+(`presentation_settings.show_summary belongs to the list variant, but
+presentation chose grid.`); a stored value that does not fit a newly
+chosen variant falls back to that variant's defaults.
 
 ### Ports
 
@@ -1263,7 +1271,7 @@ final class ComplianceStructure implements StructureInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->reads('capacity', 'integer', required: TRUE);
-    $inputs->add('licence', Licence::class, t('Event licence'));
+    $inputs->add('license', License::class, t('Event license'));
     $inputs->add('stewards', 'integer', t('Stewards'), default: 1)->setRequired(TRUE);
   }
 
@@ -1308,7 +1316,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   required port left unwired, a key the container does not declare, a
   key of another type, a key inside the child itself, a port the child
   does not read, and a wiring that would make a cycle in the refinement
-  map, naming it. A slot's variant and a collection's item are wired by
+  map, naming it. A variant and a collection's item are wired by
   nothing yet, so neither may require a port.
 - **Identity is a port of a fixed kind.** What a parent hands a child
   through `withChild(known:)` is read from the container too, but
@@ -1346,8 +1354,8 @@ final class JournalResource implements ResourceInterface {
     $inputs->add('visibility', 'string', t('Visibility'), default: 'staff')
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', ['choices' => ['public' => t('Public'), 'staff' => t('Staff')]]);
-    $inputs->with(OwnershipStructure::class, reads: ['audience' => 'visibility']);
-    $inputs->with(TimestampsStructure::class);
+    $inputs->mixIn(OwnershipStructure::class, reads: ['audience' => 'visibility']);
+    $inputs->mixIn(TimestampsStructure::class);
     $inputs->add('revision', 'integer', t('Revision'), default: 1);
     // ...
     $inputs->narrow('revision')
@@ -1382,7 +1390,7 @@ timestamps' two are the journal's own.
   own, and narrow only its own members, watching or reading only those
   and its ports. A port is declared as for a structure attached
   (`reads()`) and wired by the owner in the same spelling,
-  `with(..., reads: ['audience' => 'visibility'])`, to one of the
+  `mixIn(..., reads: ['audience' => 'visibility'])`, to one of the
   owner's keys, of the port's type, that the structure did not bring;
   every port is wired, required or not, since the structure's refiners
   read it as that key.
@@ -1409,8 +1417,8 @@ timestamps' two are the journal's own.
 - **Refused at build**, naming the class or the method: a member the
   owner, or another structure mixed in, declares too; a structure mixed
   into itself, directly or through another; a structure that attaches a
-  child, declares a slot or a collection; a resource; one with outputs;
-  a `with()` from an alter; an unwired port, one wired to a key the
+  child, attaches variants or a collection; a resource; one with outputs;
+  a `mixIn()` from an alter; an unwired port, one wired to a key the
   owner does not declare, to one of the structure's own members, or of
   another type; an owner's refiner or rule ruling a member out, or
   naming a member of a structure with an access class; a structure's
@@ -1427,7 +1435,7 @@ its own module attaches it. The recipe:
    `attach('compliance', ComplianceStructure::class, reads: ['capacity' =>
    'seats'])`, or, from an alter, at the alter's own mount. Every
    required port must be wired, to a key of the container of the port's
-   type. Or mix it in, `with(ComplianceStructure::class, reads: [...])`,
+   type. Or mix it in, `mixIn(ComplianceStructure::class, reads: [...])`,
    when its keys are part of the resource rather than a thing of their
    own ([Mixins](#mixins)).
 3. **Describe its keys in config schema**, since the container's
@@ -1484,7 +1492,7 @@ parent named that needs an argument nothing supplies is refused at
 build, with the `withChild()` call that would hand it; one found by the
 parent's operation id or as the default is passed over for the next
 step, since a context that knows nothing yet (what a tool's static
-definition and the catalogue build in) cannot invoke a child operation
+definition and the catalog build in) cannot invoke a child operation
 that needs identity.
 
 The child's access then decides its keys for the current account
@@ -1510,8 +1518,8 @@ Permission is about entering an operation; access is about what may be
 done with what is there, and only access composes down the tree. Where
 both are asked, the narrower answer stands. An alter naming an
 operation of the child, `#[Alters(Child::class, operations: ['enter'])]`,
-applies only where that operation is invoked. A slot's variant is
-resolved the same way, one variant at a time; a variant whose access
+applies only where that operation is invoked. A variant is resolved
+the same way, one variant at a time; a variant whose access
 omits it is not offered, so its deciding value can no longer be chosen,
 and nothing is derived in its place; one whose access locks it is
 offered read only, built locked whole: it can be chosen, and is drawn
@@ -1528,16 +1536,16 @@ racks a context whole, where the access class answers the same and
 
 ### Derived variants
 
-A slot's deciding values may come from somewhere no class answers for.
-Most field types declare no settings class, and yet each one's settings
-are described already, by its config schema. A service tagged
-`data_surface.derived_variants` implementing
-`ResourceBuild\DerivedVariantsInterface` fills one open slot for the
-values no `#[Variant]` fills:
+The deciding values of variants may come from somewhere no class
+answers for. Most field types declare no settings class, and yet each
+one's settings are described already, by its config schema. A service
+tagged `data_surface.derived_variants` implementing
+`ResourceBuild\DerivedVariantsInterface` adds variants at one key for
+the values no `#[Variant]` declares:
 
-- `slot()` names the parent class and the slot's key;
+- `variantsAt()` names the parent class and the variants' key;
 - `source()` says, in one phrase, where the variants come from, for the
-  catalogue;
+  catalog;
 - `variants(array $declared)` returns fresh core definitions keyed by
   key, keyed by deciding value, leaving out the values a declared
   variant already fills.
@@ -1546,26 +1554,26 @@ The build step seals each value's definitions into a child beside the
 declared ones, and from there it is advertised, refined, accepted and
 emitted the same way. A derived variant is its definitions and nothing else: no
 class, no alters, no refiners, no storage and no access class, so it is
-stored by its parent under the slot's key. A declared variant always
+stored by its parent under the variants' key. A declared variant always
 wins over a derived one for the same value.
 
-`data_surface_tool` ships two. `FieldSettingsSchemaVariants` fills
-`FieldInstanceResource`'s `settings` slot from
+`data_surface_tool` ships two. `FieldSettingsSchemaVariants` adds
+`FieldInstanceResource`'s `settings` variants from
 `field.field_settings.<field type>` for every field type offered in the
 UI, and `FieldStorageSettingsSchemaVariants`, the same class pointed at
-another slot, fills `FieldStorageResource`'s from
+another key, adds `FieldStorageResource`'s from
 `field.storage_settings.<field type>`. So the field tools offer a plain
 `string` or `integer` field as they offer an address field, with what
 the schema says and nothing more: its keys, their types and labels, and
 the field type's own default settings where their type fits. A string's
 `max_length` is `storage.settings.max_length` when the field is added,
 and `settings.max_length` on `data_surface:field.storage:edit`. The
-catalogue lists the declared variants per slot, and says where the
+catalog lists the declared variants per key, and says where the
 derived ones come from.
 
 ### A child that cannot be listed
 
-A slot covers a child chosen from a set of values someone can name. A
+Variants cover a child chosen from a set of values someone can name. A
 child whose keys cannot be enumerated at all is the one case for a
 `#[RefinesInput]` method on an `any` key that returns the narrower
 definition itself, a map included. No verb is needed for it: `any` may
@@ -1727,7 +1735,7 @@ that change while the code does not. A deriver makes those, the way a
 plugin deriver makes plugin derivatives.
 
 ```php
-#[DerivesResources('entity.content', overrides: FieldItemStructure::class)]
+#[DerivesResources('entity.content', overriddenBy: FieldItemStructure::class)]
 final class ContentEntityResources implements ResourceDeriverInterface {
 
   public function derivatives(array $overrides): array {
@@ -1784,7 +1792,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 - **It has no class.** `ResourceDefinition::$class` is NULL, and every
   caller asks for it by `name()`, its id (a class-based one's name is
   its class). The build step, the alters, the routes
-  (`_data_surface_resource: 'entity.content:node.page'`), the catalogue,
+  (`_data_surface_resource: 'entity.content:node.page'`), the catalog,
   the derived tools and read tools, the React app and its API treat it
   as they treat a class ([decision](decisions.md#a-derived-resource-has-no-class)).
 - **Cacheability.** A derived resource names the cache tags of what it
@@ -1795,7 +1803,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 - **Alters.** `#[Alters]` names a derived resource or structure by its
   id, or every one a deriver makes by the base id:
   `#[Alters('entity.content')]`.
-- **Overrides.** `#[DerivesResources(overrides:)]` names an attribute;
+- **Overrides.** `#[DerivesResources(overriddenBy:)]` names an attribute;
   the registry hands the deriver every class in an enabled module's
   `src/Resource` or `src/Structure` carrying it, as what replaces its
   derivation where someone wrote one by hand. `data_surface_entity`'s

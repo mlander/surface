@@ -551,7 +551,7 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
     $this->assertStringContainsString('value="title"', $this->ajaxMarkup($response, $this->wrapperSelector($container['field'])));
     $this->assertNotContains('#' . $container['#attributes']['id'], $replaced);
 
-    // The presentation decides a slot: the slot's own wrapper goes, whole.
+    // The presentation decides variants: their own wrapper goes, whole.
     $state = $this->postDemo(['entity_type' => 'node', 'bundle' => 'article', 'field' => '', 'presentation' => 'grid'], 'presentation', $state->getCompleteForm()['#build_id']);
     $container = $state->getCompleteForm()['surface'];
     $response = $this->ajaxResponse($state);
@@ -668,8 +668,8 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
     $this->assertNotContains($this->wrapperSelector($container['shelf']['unit']), $this->ajaxSelectors($response, 'replaceWith'));
     $this->assertStringContainsString('max="80"', $this->ajaxMarkup($response, $this->wrapperSelector($container['shelf']['height'])));
 
-    // The kind decides a slot of the parent's: the slot goes whole, as
-    // the variant the new kind chose, and the shelf does not move.
+    // The kind decides the parent's variants: the key goes whole, as the
+    // variant the new kind chose, and the shelf does not move.
     $state = $this->postPantry(['kind' => 'tin', 'kind_settings' => ['lid' => 'screw']], 'surface[kind]');
     $container = $state->getCompleteForm()['surface'];
     $response = $this->ajaxResponse($state);
@@ -678,16 +678,16 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests a slot whose deciding key chose nothing still has a wrapper.
+   * Tests variants whose deciding key chose nothing still have a wrapper.
    *
    * Nothing is rendered for it but the wrapper, so the rebuild that
    * chooses a variant has a place on the page to put it, and the empty
    * wrapper says nothing on extraction.
    */
-  public function testAnUnchosenSlotKeepsItsWrapper(): void {
+  public function testUnchosenVariantsKeepTheirWrapper(): void {
     $state = $this->postPantry(['kind' => ''], 'surface[kind]');
     $container = $state->getCompleteForm()['surface'];
-    // No kind, no variant: the slot is its wrapper and nothing else.
+    // No kind, no variant: the key is its wrapper and nothing else.
     $this->assertArrayHasKey(DataSurfaceFormBuilderInterface::REFRESH_ID_KEY, $container['kind_settings']);
     $this->assertSame([], array_values(array_filter(array_keys($container['kind_settings']), static fn ($key): bool => !str_starts_with((string) $key, '#'))));
     $response = $this->ajaxResponse($state);

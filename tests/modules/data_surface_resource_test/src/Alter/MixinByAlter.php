@@ -20,7 +20,7 @@ final class MixinByAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->with(TimestampsStructure::class);
+    $inputs->mixIn(TimestampsStructure::class);
   }
 
 }

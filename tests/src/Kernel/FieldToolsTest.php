@@ -482,9 +482,9 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
   /**
    * Tests that a field type with no declared settings is derived from schema.
    *
-   * The field instance resource's settings slot is filled by every field
+   * The field instance resource's settings variants are every field
    * type's declared settings, and, for every field type offered in the UI
-   * that has none, by a variant derived from its config schema,
+   * that has none, a variant derived from its config schema,
    * `field.field_settings.<field type>`. The declared variant wins where
    * there is one: the address field type's settings are still its own
    * resource.
@@ -499,12 +499,12 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
     $this->assertContains('integer', $choices);
 
     $surface = $this->container->get('data_surface.resources')->build(FieldInstanceResource::class, new OperationContext('configure'));
-    $slot = $surface->getDefinitions()->entry('settings')?->slot;
-    $this->assertNotNull($slot);
-    $this->assertSame(AddressFieldSettingsResource::class, $slot->variant('address')->source);
-    $this->assertNull($slot->variant('string')->source);
-    $this->assertSame([], $slot->variant('string')->child->getDefinitions()->names());
-    $this->assertSame(['min', 'max', 'prefix', 'suffix'], $slot->variant('integer')->child->getDefinitions()->names());
+    $variants = $surface->getDefinitions()->entry('settings')?->variants;
+    $this->assertNotNull($variants);
+    $this->assertSame(AddressFieldSettingsResource::class, $variants->variant('address')->source);
+    $this->assertNull($variants->variant('string')->source);
+    $this->assertSame([], $variants->variant('string')->child->getDefinitions()->names());
+    $this->assertSame(['min', 'max', 'prefix', 'suffix'], $variants->variant('integer')->child->getDefinitions()->names());
   }
 
   /**
@@ -609,8 +609,8 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
   /**
    * Tests that a storage setting is set when a field is added.
    *
-   * The storage's settings are a slot its field type chooses, filled for
-   * `string` from `field.storage_settings.string`. Adding a field leaves
+   * The storage's settings are variants its field type chooses, the one
+   * for `string` from `field.storage_settings.string`. Adding a field leaves
    * the type open on both levels, so a caller describing the storage's
    * settings names it on the storage too; a type other than the field's
    * is refused when the storage is prepared, and nothing is written.

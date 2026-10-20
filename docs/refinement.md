@@ -84,7 +84,7 @@ array, so the mounted key has to appear in that array too. See
 
 ### Declaring a rule
 
-Most rules between keys are a condition and an effect: without a licence
+Most rules between keys are a condition and an effect: without a license
 the capacity stops at a hundred; an insured parcel is signed for; a note
 is for freight alone. Such a rule is declared, in the blueprint, beside
 the keys it is about:
@@ -93,13 +93,13 @@ the keys it is about:
 use Drupal\data_surface\Refinement\Condition;
 
 $inputs->narrow('capacity')
-  ->when(Condition::absent('licence'))
+  ->when(Condition::absent('license'))
   ->constrain('Range', ['max' => 100])
-  ->describe($this->t('Up to 100 without an event licence.'));
+  ->because($this->t('Up to 100 without an event license.'));
 ```
 
 That is example 4's alter (`RegistrationComplianceAlter`), on example
-3's capacity, reading the licence it mounted itself. Declare the rule
+3's capacity, reading the license it mounted itself. Declare the rule
 when its condition and effect fit the vocabulary below; write a refiner
 when the effect must be computed (the stewards for a capacity,
 `ceil($capacity / 50)`, stays coded) or the condition is runtime.
@@ -123,7 +123,7 @@ when the effect must be computed (the stewards for a capacity,
 | `->constrain('Regex', ['pattern' => ..., 'message' => ...])` | a pattern, where the key has none | `pattern` |
 | `->require()` | the key must hold a value | `required`, and its type without `null` |
 | `->doesNotApply()` | the key [does not apply](#when-a-key-does-not-apply) | the key `false` |
-| `->describe($text)` | says why, under the field, where the rule's other effects tightened the key for these values (always for `require()`, or for a description alone) | `description`, kept in the `then` whatever the values |
+| `->because($text)` | says why, under the field, where the rule's other effects tightened the key for these values (always for `require()`, or for a description alone) | `description`, kept in the `then` whatever the values |
 
 A condition names keys of the frame the narrowed key sits in, by their
 names: the owner's keys, and an alter's own mounted keys by the names it
@@ -198,8 +198,8 @@ refines: `DemoBlockStructure::bundleOfEntityType()` and
 takes the key's definition first and one parameter per sibling it
 watches, and runs once every watched sibling has a value. A watched
 value its own key's refined definition refuses counts as no value: a
-refiner never sees an invalid sibling, so a licence in the wrong format
-is no licence ([decision](decisions.md#a-refiner-never-sees-an-invalid-sibling)).
+refiner never sees an invalid sibling, so a license in the wrong format
+is no license ([decision](decisions.md#a-refiner-never-sees-an-invalid-sibling)).
 
 A refiner is handed a deep clone, so it may mutate what it is given and
 hand it back, or answer with a fresh definition. A fresh definition does
@@ -376,8 +376,8 @@ required choice of three days, and the refiner says where it applies.
   where they cannot say where it applies. A method that answers it
   without declaring it is refused.
 - **Any key**: a key of the class's own, a key an alter mounted (the
-  alter's refiner on its own key), and the key an attached child or a
-  slot sits at. A parent's refiner of a key holding a child may only
+  alter's refiner on its own key), and the key an attached child or
+  variants are attached at. A parent's refiner of a key holding a child may only
   answer that it does not apply; anything else it hands back must be
   what it was handed.
 
@@ -454,8 +454,8 @@ naming the key ([Collections](resources.md#collections)).
 
 Inside a map the table recurses, which is what holds an attached
 structure to it: the child narrows its own keys, and the map its parent
-advertises narrows with them. Refining `any` to a map is how a slot's
-placeholder resolves to the variant its deciding key chose (see
+advertises narrows with them. Refining `any` to a map is how the
+variants' placeholder resolves to the variant its deciding key chose (see
 [Attached structures](resources.md#children)), and how a
 `#[RefinesInput]` method on an `any` key describes a child that cannot
 be listed statically.
@@ -609,7 +609,7 @@ contract all see the same five values, narrowed the same way.
   their own names, beside the owner's
   ([Decisions](decisions.md#an-alter-watches-its-own-mounted-key));
   the compliance alter of the examples caps the capacity at a hundred
-  until the licence is given, by a declared rule reading the licence of
+  until the license is given, by a declared rule reading the license of
   the compliance structure it attached at its mount, whose own refiner
   raises the stewards count with the capacity it reads through a
   [port](resources.md#ports). A watched mounted key is never waited for: it is handed as

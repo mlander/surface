@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface\Resource;
 
 /**
- * An alter that adds outputs. Optional, as HasOutputsInterface is.
+ * An alter that adds outputs. Optional, as DefinesOutputsInterface is.
  */
 interface AltersOutputsInterface {
 

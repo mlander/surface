@@ -1,8 +1,8 @@
-# Adoption catalogue
+# Adoption catalog
 
 Drupal core is full of places with the same shape: collect values from a
 form, validate them somewhere, store them somewhere else, and describe
-them nowhere. This page catalogues those places, grouped by how much
+them nowhere. This page catalogs those places, grouped by how much
 adapter work each family needs, and says which of them this module has
 already built.
 
@@ -139,13 +139,14 @@ than the form".
 covers instance settings, and `data_surface_address` is the worked
 example: the address field type's settings declared as a resource,
 `AddressFieldSettingsResource`, which the swapped item class builds for
-Field UI and which fills the field instance resource's settings slot for
-the tool bridge, with the address module unmodified.
+Field UI and which is the address variant of the field instance
+resource's settings for the tool bridge, with the address module
+unmodified.
 
 Storage settings are described but have no Field UI host.
-`FieldStorageResource` in `data_surface_tool` fills its `settings` slot by
-field type, from a `#[Variant]` or, for every other field type
-the UI offers, from `field.storage_settings.<type>` through
+`FieldStorageResource` in `data_surface_tool` attaches variants at
+`settings` by field type, from a `#[Variant]` or, for every other
+field type the UI offers, from `field.storage_settings.<type>` through
 `FieldStorageSettingsSchemaVariants`, so the field tools set and edit
 them: a string's `max_length` is `storage.settings.max_length` on
 `data_surface:field.instance:add`. `$has_data` is read where it bites:

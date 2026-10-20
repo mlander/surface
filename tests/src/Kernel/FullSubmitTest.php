@@ -32,7 +32,7 @@ use Symfony\Component\HttpFoundation\Request;
  * derived tool. The other half is the valid submission that moves both:
  * the form's elements have to be the ones the submitted answers ask for,
  * or Form API refuses the new venue's room as a choice it was never
- * offered, and a slot flipped to another variant has nowhere for its
+ * offered, and a key flipped to another variant has nowhere for its
  * keys to arrive.
  */
 #[Group('data_surface')]
@@ -452,13 +452,13 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests a slot flipped in the same submission is built as the new one.
+   * Tests a variant flipped in the same submission is built as the new one.
    *
    * Step 3 stores the free ticket. Moving pricing to paid and sending
    * the paid ticket's keys is valid and written; sending the free
    * ticket's keys under paid is refused, on every door.
    */
-  public function testTheSlotFlippedInTheSameSubmission(): void {
+  public function testTheVariantFlippedInTheSameSubmission(): void {
     $base = [
       'title' => 'Gala',
       'capacity' => '20',
@@ -615,12 +615,12 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests a changed pricing replaces the ticket slot and the panel.
+   * Tests a changed pricing replaces the ticket variant and the panel.
    *
-   * The slot is replaced by its own wrapper, whole: the variant's keys
+   * The key is replaced by its own wrapper, whole: the variant's keys
    * are a different set, so there is nothing inside the old one to keep.
    */
-  public function testChangingThePricingReplacesTheTicketSlot(): void {
+  public function testChangingThePricingReplacesTheTicketVariant(): void {
     $this->actAsAnonymousAdministrator();
     $state = $this->postStep(3, [
       'title' => 'Spring meetup',
