@@ -262,7 +262,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
 
     // The same through the pipeline alone, and in weeks.
     $resources = $this->container->get('data_surface.resources');
-    $add = NodeTypeResource::add();
+    $add = $resources->operation(NodeTypeResource::class, 'add');
     $surface = $resources->build(NodeTypeResource::class, $add);
     $pipeline_result = $this->pipeline()->submit(
       $surface,

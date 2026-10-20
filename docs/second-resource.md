@@ -89,7 +89,6 @@ use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
-use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_first\Storage\StoreStorage;
 
@@ -97,15 +96,12 @@ use Drupal\data_surface_first\Storage\StoreStorage;
  * The store location: a region is one of the chosen country's.
  */
 #[Resource('first.store', storage: StoreStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure the store location'),
+  description: new TranslatableMarkup('Sets the store location: its country, and a region of that country.'),
+  permission: 'administer data_surface_first',
+)]
 final class StoreResource implements ResourceInterface {
-
-  /**
-   * Configures the store location, which always exists.
-   */
-  #[Operation('configure', label: new TranslatableMarkup('Configure the store location'), permission: 'administer data_surface_first')]
-  public static function configure(): OperationContext {
-    return new OperationContext('configure');
-  }
 
   /**
    * {@inheritdoc}

@@ -305,7 +305,7 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
     [$success, $message] = $this->call(ExampleCalls::TOOL, ['capacity' => 'many'] + $event);
     $this->assertFalse($success);
     $this->assertStringStartsWith("Invalid input:\nvalues", $message);
-    $dry_run = 'Dry run of Configure registration: the values were accepted and prepared, and nothing was written.';
+    $dry_run = 'Dry run of Configure registration (step 3): the values were accepted and prepared, and nothing was written.';
     $this->assertSame([TRUE, $dry_run], $this->call(ExampleCalls::TOOL, ['capacity' => 40]), 'The required keys left out keep what is stored.');
     [$success, $message] = $this->call(ExampleCalls::TOOL, ['venue' => 'riverside_hall'] + $event);
     $this->assertFalse($success);

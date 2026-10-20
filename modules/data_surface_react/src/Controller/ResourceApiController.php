@@ -151,7 +151,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
     // account's static access answers and by nothing a runtime one read.
     // Decision: see
     // docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
-    $full = $this->emitter->emitFull($this->servedOperations->declared($served), $served->definition->id, $served->operation->id, $served->operation->label, widgets: TRUE, operation: $served->operation->facts($served->context));
+    $full = $this->emitter->emitFull($this->servedOperations->declared($served), $served->definition->id, $served->operation->id, $served->operation->label, widgets: TRUE, operation: $served->operation->facts());
     $response = new CacheableJsonResponse($full->document);
     $response->setEncodingOptions(JsonResponse::DEFAULT_ENCODING_OPTIONS | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     $response->addCacheableDependency($full);
@@ -415,7 +415,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   The contract.
    */
   protected function emit(ServedOperation $served, array $values): ServedContract {
-    return $this->emitter->emit($served->surface, $values, $served->definition->id, $served->operation->id, $served->operation->label, widgets: TRUE, operation: $served->operation->facts($served->context));
+    return $this->emitter->emit($served->surface, $values, $served->definition->id, $served->operation->id, $served->operation->label, widgets: TRUE, operation: $served->operation->facts());
   }
 
   /**

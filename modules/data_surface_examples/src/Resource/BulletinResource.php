@@ -9,7 +9,6 @@ use Drupal\data_surface\Refinement\Condition;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
-use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_examples\Storage\BulletinStorage;
 
@@ -23,15 +22,12 @@ use Drupal\data_surface_examples\Storage\BulletinStorage;
  * day. The send day is required wherever it applies.
  */
 #[Resource('event.bulletin', storage: BulletinStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure the bulletin'),
+  description: new TranslatableMarkup('Sets how often the event bulletin goes out, the day it is sent and how many items an issue holds.'),
+  permission: 'administer site configuration',
+)]
 final class BulletinResource implements ResourceInterface {
-
-  /**
-   * Configures the bulletin, whose settings always exist.
-   */
-  #[Operation('configure', label: new TranslatableMarkup('Configure the bulletin'), permission: 'administer site configuration')]
-  public static function configure(): OperationContext {
-    return new OperationContext('configure');
-  }
 
   /**
    * {@inheritdoc}

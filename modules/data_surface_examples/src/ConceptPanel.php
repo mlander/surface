@@ -336,7 +336,7 @@ final class ConceptPanel {
     $rows = [];
     $resource = $this->registry->getDefinition($served->resource);
     foreach ($this->registry->getOperations($served->resource) as $operation) {
-      $facts = $operation->facts($this->resources->operation($served->resource, $operation->id));
+      $facts = $operation->facts();
       $tool_id = 'data_surface:' . $resource->id . ':' . $operation->id;
       $tool = $this->toolManager->hasDefinition($tool_id) ? $this->toolManager->getDefinition($tool_id) : NULL;
       $tool_kind = '—';
@@ -527,7 +527,7 @@ final class ConceptPanel {
     $operation = $served->operation ?? $this->registry->getOperation($resource, 'configure');
     $context = $served->context ?? $this->resources->operation($resource, 'configure');
     $definition = $this->registry->getDefinition($resource);
-    return $this->emitter->emitFull($this->resources->buildStatic($resource, $context), $definition->id, $operation->id, $operation->label, operation: $operation->facts($context))->document['schema'];
+    return $this->emitter->emitFull($this->resources->buildStatic($resource, $context), $definition->id, $operation->id, $operation->label, operation: $operation->facts())->document['schema'];
   }
 
   /**

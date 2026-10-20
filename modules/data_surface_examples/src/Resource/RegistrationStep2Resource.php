@@ -11,7 +11,6 @@ use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
-use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_examples\Storage\RegistrationStep2Storage;
 use Drupal\data_surface_examples\Venues;
@@ -26,15 +25,12 @@ use Drupal\data_surface_examples\Venues;
  * that decides it, and its description names that room's limit.
  */
 #[Resource('registration.step2', storage: RegistrationStep2Storage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure registration (step 2)'),
+  description: new TranslatableMarkup('Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.'),
+  permission: 'administer site configuration',
+)]
 final class RegistrationStep2Resource implements ResourceInterface {
-
-  /**
-   * Configures the registration settings, which always exist.
-   */
-  #[Operation('configure', label: new TranslatableMarkup('Configure registration'), permission: 'administer site configuration')]
-  public static function configure(): OperationContext {
-    return new OperationContext('configure');
-  }
 
   /**
    * {@inheritdoc}

@@ -28,14 +28,14 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
  *
  * What it keeps is deliberately small: which classes carry #[Resource]
  * or #[Structure], which carry #[Shape], which carry #[Alters], which
- * carry #[DerivesResources], and which have an #[Operation] method, each
- * with the module it came from; and, for each deriver whose attribute
- * names an override attribute, the classes in any src/Resource or
- * src/Structure carrying that attribute. The reading of every attribute
- * on those classes (labels, kind, identity, refiners, watched keys) is
- * the registry's, at run time, and cached the way plugin definitions
- * are, because an operation's label is translatable markup and a
- * container parameter holds scalars only.
+ * carry #[DerivesResources], and which carry #[Operation] on the class
+ * or on a method, each with the module it came from; and, for each
+ * deriver whose attribute names an override attribute, the classes in
+ * any src/Resource or src/Structure carrying that attribute. The reading
+ * of every attribute on those classes (labels, kind, identity, refiners,
+ * watched keys) is the registry's, at run time, and cached the way
+ * plugin definitions are, because an operation's label is translatable
+ * markup and a container parameter holds scalars only.
  *
  * Classes that must be built with services are registered as autowired
  * services here, keyed by class name, the way a hook class is: every
@@ -158,6 +158,9 @@ final class ResourceCollectorPass implements CompilerPassInterface {
     if ($class->getAttributes(DerivesResources::class) !== []) {
       $found['derivers'][$name] = $module;
       self::registerAutowired($container, $name);
+    }
+    if ($class->getAttributes(Operation::class) !== []) {
+      $found['operations'][$name] = $module;
     }
     foreach ($class->getMethods() as $method) {
       if ($method->getAttributes(Operation::class) !== []) {

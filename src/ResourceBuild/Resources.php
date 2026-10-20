@@ -232,6 +232,12 @@ final class Resources implements ResourcesInterface {
    *   The sealed data surface.
    */
   protected function buildAs(string $resource, OperationContext $context, bool $alone, bool $declaring): DataSurfaceInterface {
+    if ($context->id === '') {
+      throw new \LogicException(sprintf(
+        'A context with no id was handed to build %s. An #[Operation] method may leave its id out for the attribute\'s to be stamped on it, so ask for the operation through operation() rather than calling its method.',
+        $resource,
+      ));
+    }
     [$was_alone, $was_declaring] = [$this->accountAlone, $this->declaring];
     [$this->accountAlone, $this->declaring] = [$alone, $declaring];
     try {
@@ -2005,6 +2011,11 @@ final class Resources implements ResourcesInterface {
   public function operation(string $resource, string $operation, array $arguments = []): OperationContext {
     $found = $this->registry->getOperation($resource, $operation);
     $resolved = $this->operationArguments->resolve($found, $arguments);
+    // One on the class is its attribute's facts and nothing else.
+    // Decision: see docs/decisions.md#an-operation-on-the-class.
+    if ($found->isBare()) {
+      return (new OperationContext())->stamped($found->id, $found->creates);
+    }
     // A derived operation is a method its deriver named, handed the
     // arguments by name; an #[Operation] method takes them as its own.
     $context = $found->context !== NULL
@@ -2019,16 +2030,8 @@ final class Resources implements ResourcesInterface {
         OperationContext::class,
       ));
     }
-    if ($context->id !== $found->id) {
-      throw new \LogicException(sprintf(
-        'The "%s" operation, %s, returned a context whose id is "%s". An operation\'s context carries the operation\'s id as its own: call withId(\'%s\') on a context built from another operation.',
-        $found->id,
-        $found->describe(),
-        $context->id,
-        $found->id,
-      ));
-    }
-    return $context;
+    // Decision: see docs/decisions.md#a-contexts-id-is-the-operation-id.
+    return $found->stamp($context);
   }
 
   /**

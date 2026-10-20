@@ -69,6 +69,13 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * of, so it is declared nowhere and the tool's own access, which fills
  * the placeholder from the parameters, is the only check.
  *
+ * A tool's title is its operation's label, and its description the
+ * operation's description followed by one line of call rules for its
+ * kind (OperationInputs::description()). No two tools share a title:
+ * where operations of several resources share a label, each tool adds
+ * its resource (title()); the read tool's is "Current values:" and the
+ * write tool's.
+ *
  * Each write tool says how its operation behaves (behaves()): the Read
  * kind for a read only operation, the Write kind for every other, and
  * whether it may destroy what is there.
@@ -173,6 +180,7 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
     foreach ($this->registry->getDefinitions() as $resource) {
       $tags = Cache::mergeTags($tags, $resource->cacheTags);
     }
+    $shared = $this->sharedLabels();
     foreach ($this->registry->getDefinitions() as $resource) {
       // A resource or structure with no storage of its own is stored by
       // its parent or by its host; one a plugin names with
@@ -196,9 +204,10 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
         }
         $id = $resource->id . ':' . $operation->id;
         try {
+          $title = $this->title($resource, $operation, $shared);
           $definition = $this->definition(
             $base_plugin_definition,
-            $this->label($operation),
+            $title,
             $this->operationInputs->description($resource, $operation),
             $this->operationInputs->inputs($resource, $operation),
             $this->operationInputs->outputs($resource, $operation),
@@ -216,7 +225,7 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
         }
         $this->derivatives[$id] = $definition;
         if ($this->catalog->reads($resource, $operation, $plugins)) {
-          $this->read($base_plugin_definition, $resource, $operation);
+          $this->read($base_plugin_definition, $resource, $operation, $title);
         }
       }
     }
@@ -233,13 +242,15 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
    *   The resource.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
    *   An operation that changes a thing that exists.
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup $title
+   *   The write tool's title, which the read tool's names.
    */
-  protected function read(ToolDefinition $base_plugin_definition, ResourceDefinition $resource, OperationDefinition $operation): void {
+  protected function read(ToolDefinition $base_plugin_definition, ResourceDefinition $resource, OperationDefinition $operation, TranslatableMarkup $title): void {
     $id = $resource->id . ':' . $operation->id . ResourceOperationReadTool::SUFFIX;
     try {
       $definition = $this->definition(
         $base_plugin_definition,
-        $this->t('@label, read only', ['@label' => OperationInputs::operationLabel($operation)]),
+        $this->t('Current values: @label', ['@label' => $title]),
         $this->operationInputs->readDescription($resource, $operation),
         $this->operationInputs->parameters($resource, $operation),
         $this->operationInputs->readOutputs($resource, $operation),
@@ -258,22 +269,66 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
   }
 
   /**
-   * Gets the tool's label: the operation's, translated when it is read.
+   * Lists the operation labels more than one tool would carry.
+   *
+   * A client lists tools by title, and an agent or a picker choosing
+   * between them reads the title first, so two tools never share one:
+   * the examples' three registration steps are each "Configure
+   * registration" in their own module's words, and as tools each says
+   * which resource it configures.
+   *
+   * @return array<string, true>
+   *   The labels, as rendered, that two or more tools would carry.
+   */
+  protected function sharedLabels(): array {
+    $seen = [];
+    foreach ($this->registry->getDefinitions() as $resource) {
+      $plugins = $this->plugins->usedBy($resource->name());
+      if ($resource->storage === NULL || $plugins !== []) {
+        continue;
+      }
+      try {
+        $operations = $this->registry->getOperations($resource->name());
+      }
+      catch (\LogicException) {
+        continue;
+      }
+      foreach ($operations as $operation) {
+        if (ResourceCatalog::standalone($resource, $operation, $plugins)) {
+          $label = (string) $operation->label;
+          $seen[$label] = isset($seen[$label]);
+        }
+      }
+    }
+    return array_filter($seen);
+  }
+
+  /**
+   * Gets the tool's title: the operation's label, translated when read.
    *
    * The definition is cached for every language, so a translatable label
    * is handed over as itself, never rendered in the language that
-   * discovered the tool.
+   * discovered the tool. Where several tools would carry one label, each
+   * adds the resource it is an operation of: its label, or its id for a
+   * class, which has none.
    *
    * Decision: see docs/decisions.md#a-static-tool-definition-is-no-accounts.
    *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
+   *   The resource.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
+   * @param array<string, true> $shared
+   *   The labels several tools would carry (sharedLabels()).
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup
-   *   The label.
+   *   The title.
    */
-  protected function label(OperationDefinition $operation): TranslatableMarkup {
+  protected function title(ResourceDefinition $resource, OperationDefinition $operation, array $shared): TranslatableMarkup {
     $label = OperationInputs::operationLabel($operation);
+    if (isset($shared[(string) $operation->label])) {
+      return $this->t('@label (@resource)', ['@label' => $label, '@resource' => $resource->label ?? $resource->id]);
+    }
     return $label instanceof TranslatableMarkup ? $label : $this->t('@label', ['@label' => $label]);
   }
 

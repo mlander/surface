@@ -223,13 +223,18 @@ class FirstResourceDocsTest extends UnitTestCase {
    * Tests the first page stays inside its budget.
    *
    * A resource, an operation, a storage and add(): the page that shows a
-   * newcomer a working settings page names nothing else. A feature that
+   * newcomer a working settings page names nothing else, and its
+   * operation is the attribute alone, with no method. A feature that
    * cannot stay off it has to justify itself (ROADMAP item 13).
    */
   public function testTheFirstPageStaysInsideItsBudget(): void {
     $first = self::page('docs/first-resource.md');
     $this->assertSame([], array_unique(preg_match_all('/\b(refiners?|RefinesInput|alters?|Alters|structures?|attach\w*|slots?|variants?|collections?|secrets?)\b/i', $first, $found) ? $found[0] : []));
     $this->assertSame(1, substr_count((string) preg_replace('/\s+/', ' ', $first), 'the form, the tool and the schema came for free'), 'One sentence says what was derived.');
+    // Its one operation needs nothing, so it is the attribute on the
+    // class: the page writes no method and builds no context.
+    $this->assertStringNotContainsString('OperationContext', $first, 'An operation that needs nothing has no method to build a context in.');
+    $this->assertStringNotContainsString('public static function configure', $first);
   }
 
 }

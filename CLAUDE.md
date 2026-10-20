@@ -39,11 +39,18 @@ the record of the rework that brought the module to the pattern.
   `narrow('<id>')` and `describe('<id>')`, and both documents write it
   once as `$defs.<id>`, each key `$ref` first with what it adds beside
   (`docs/declaring-a-resource.md#named-shapes`).
-- **Operation**: a way a resource is asked for, a static `#[Operation]`
-  method returning an `OperationContext` whose `id` is the operation's.
-  It states how a call behaves, `readOnly:` and `destructive:`, and
-  idempotence, derived from whether it creates unless declared, and its
-  kind, `create`, `update` or `read`, always derived: a create's tool
+- **Operation**: a way a resource is asked for, `#[Operation]`, its
+  static facts on the attribute: id, label, `description:` (the tool's
+  first sentence and both documents' top `description`), permission and
+  `creates:`. On the class, repeatable, when the context needs nothing
+  more (the default; no method); on a static method returning an
+  `OperationContext` when it needs more, the attribute's id and
+  `creates` stamped on it and a context saying otherwise refused
+  (`docs/decisions.md#an-operation-on-the-class`). It states how a call
+  behaves, `readOnly:` and `destructive:`, and idempotence, derived
+  from whether it creates unless declared (a create whose caller names
+  the thing declares it), and its kind, `create`, `update` or `read`,
+  always derived from the attribute: a create's tool
   requires what the resource requires, an update's requires nothing at
   its door
   (`docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door`); a tool
@@ -141,7 +148,8 @@ A resource is a class in a module's `src/Resource/` carrying
 `#[Structure]`; the attribute decides the kind, and either directory
 works. Each has a static `defineInputs()` (and, on `DefinesOutputsInterface`,
 a static `defineOutputs()`), static `#[RefinesInput]` methods and
-`#[Operation]` static methods; it is never instantiated. Another module
+`#[Operation]` on the class or on static methods; it is never
+instantiated. Another module
 changes either with an alter in `src/Alter/` carrying `#[Alters]`. A
 plugin names the resource or structure it holds with `#[UsesStructure]`,
 or, with no argument, is its own structure: the plugin class implements
@@ -189,7 +197,11 @@ operation that changes a thing that exists it derives a read tool,
 answering with the stored values less secrets
 (`ResourceCatalog::reads()`, `ResourceOperationReadTool`). Both declare
 the operation's permission to the Tool API, unless it has a `%key`
-(`ResourceOperationToolDeriver::declaredPermission()`). The field
+(`ResourceOperationToolDeriver::declaredPermission()`). A tool's title
+is the operation's label (with its resource added where labels are
+shared; the read tool's is "Current values:" and that), and its
+description the operation's description and one line of call rules
+for its kind (`OperationInputs::description()`). The field
 tools are `data_surface:field.instance:add` / `:reuse` / `:edit`; the
 hand-written `field_add` / `field_update` are gone.
 `data_surface.resource_catalog` lists the static layer; `docs/catalog.md`

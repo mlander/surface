@@ -7,7 +7,6 @@ namespace Drupal\data_surface_tool_test\Resource;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
-use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_tool_test\Access\CabinetAccess;
 use Drupal\data_surface_tool_test\Storage\CabinetStorage;
@@ -23,23 +22,16 @@ use Drupal\data_surface_tool_test\Storage\CabinetStorage;
  * that changes nothing.
  */
 #[Resource('tool_test.cabinet', storage: CabinetStorage::class, access: CabinetAccess::class)]
+#[Operation('edit',
+  label: 'Edit the cabinet',
+  description: 'Edits the cabinet, which always exists.',
+)]
+#[Operation('count',
+  label: 'Count the drawers',
+  description: 'Counts the drawers, and changes nothing.',
+  readOnly: TRUE,
+)]
 final class CabinetResource implements ResourceInterface {
-
-  /**
-   * Edits the cabinet, which always exists.
-   */
-  #[Operation('edit', label: 'Edit the cabinet')]
-  public static function edit(): OperationContext {
-    return new OperationContext('edit');
-  }
-
-  /**
-   * Counts the drawers: changes nothing.
-   */
-  #[Operation('count', label: 'Count the drawers', readOnly: TRUE)]
-  public static function count(): OperationContext {
-    return new OperationContext('count');
-  }
 
   /**
    * {@inheritdoc}

@@ -135,7 +135,7 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
         'provider' => NodeTypeResource::class . '::edit()',
         'module' => 'data_surface_demo_node_type',
         'parameters' => ['NodeTypeInterface $type'],
-        'creates' => NULL,
+        'creates' => FALSE,
         'permission' => NodeTypeResource::PERMISSION,
         'unresolvable' => [],
         'standalone' => TRUE,
@@ -203,12 +203,10 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
   /**
    * Tests which operations change a thing that exists, and so read.
    *
-   * An operation that needs nothing says so by its context; one that
-   * needs a subject by its signature: a single entity is the thing, every
-   * identity key named is the thing, and an entity beside an identity key
-   * (the field's reuse) or an identity key left out (the field's add) is
-   * room for a new one. An operation that cannot be asked on its own has
-   * no read either.
+   * Read off the attribute, for one that needs a subject as for one that
+   * needs nothing: an update reads, and a create (the field's add and
+   * reuse) or a read only operation does not. An operation that cannot be
+   * asked on its own has no read either.
    */
   public function testTheCatalogueSaysWhatCanBeRead(): void {
     $catalog = $this->catalog();

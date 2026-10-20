@@ -59,20 +59,31 @@ final class NodeTypeResource implements ResourceInterface {
    *
    * A machine name that is already a content type is refused, on add
    * only: that is where you are, not what was entered, so the operation
-   * narrows the key rather than a refiner.
+   * narrows the key rather than a refiner. The caller names the type, so
+   * the same call twice leaves what the first left, the second refused
+   * for the name the first took: idempotent, though it creates.
    */
-  #[Operation('add', label: new TranslatableMarkup('Add a content type'), permission: self::PERMISSION)]
+  #[Operation('add',
+    label: new TranslatableMarkup('Add a content type'),
+    description: new TranslatableMarkup('Creates a content type under a machine name the caller chooses; a machine name already in use is refused.'),
+    permission: self::PERMISSION,
+    creates: TRUE,
+    idempotent: TRUE,
+  )]
   public static function add(): OperationContext {
-    return (new OperationContext('add', creates: TRUE))
-      ->withConstraint('type', 'DataSurfaceUniqueNodeType');
+    return (new OperationContext())->withConstraint('type', 'DataSurfaceUniqueNodeType');
   }
 
   /**
    * Edits a content type. Its machine name is known, so it is locked.
    */
-  #[Operation('edit', label: new TranslatableMarkup('Edit a content type'), permission: self::PERMISSION)]
+  #[Operation('edit',
+    label: new TranslatableMarkup('Edit a content type'),
+    description: new TranslatableMarkup('Changes a content type, named by its machine name, which stays as it is.'),
+    permission: self::PERMISSION,
+  )]
   public static function edit(NodeTypeInterface $type): OperationContext {
-    return new OperationContext('edit', known: ['type' => $type->id()]);
+    return new OperationContext(known: ['type' => $type->id()]);
   }
 
   /**

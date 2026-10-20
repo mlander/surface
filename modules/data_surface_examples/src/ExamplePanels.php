@@ -90,7 +90,7 @@ final class ExamplePanels implements DataSurfaceFormPanelInterface {
     if (is_a($storage, ConfigObjectStorage::class, TRUE)) {
       // The full schema the contract panel shows, asked for again rather
       // than read back out of its render array: static against static.
-      $full = $this->emitter->emitFull($this->resources->buildStatic($served->resource, $served->context), $definition->id, $served->operation->id, $served->operation->label, operation: $served->operation->facts($served->context));
+      $full = $this->emitter->emitFull($this->resources->buildStatic($served->resource, $served->context), $definition->id, $served->operation->id, $served->operation->label, operation: $served->operation->facts());
       $panels[self::TODAY] = ['#weight' => 1] + $this->configSchemaPanel->build($storage::CONFIG, $full->document['schema']);
     }
     return $panels;

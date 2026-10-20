@@ -29,7 +29,7 @@ final class PantryResource implements ResourceInterface {
   /**
    * A new pantry.
    */
-  #[Operation('add', label: 'Add a pantry')]
+  #[Operation('add', label: 'Add a pantry', creates: TRUE)]
   public static function add(): OperationContext {
     return new OperationContext('add', creates: TRUE);
   }

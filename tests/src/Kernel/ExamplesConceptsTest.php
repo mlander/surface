@@ -130,7 +130,7 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $context = $resources->operation($class, $operation);
     $definition = $registry->getOperation($class, $operation);
     return $this->container->get('data_surface.contract_emitter')
-      ->emitFull($resources->buildStatic($class, $context), $registry->getDefinition($class)->id, $operation, $definition->label, operation: $definition->facts($context))
+      ->emitFull($resources->buildStatic($class, $context), $registry->getDefinition($class)->id, $operation, $definition->label, operation: $definition->facts())
       ->document['schema'];
   }
 
@@ -350,8 +350,18 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $configure = $this->full(ProgramResource::class)[ContractEmitter::EXTENSION]['operation'];
     $check = $this->full(ProgramResource::class, 'check')[ContractEmitter::EXTENSION]['operation'];
     $facts = ['creates' => FALSE, 'readOnly' => FALSE, 'destructive' => FALSE, 'idempotent' => TRUE];
-    $this->assertSame(['id' => 'configure', 'label' => 'Configure the program', 'kind' => 'update'] + $facts, $configure);
-    $this->assertSame(array_replace(['id' => 'check', 'label' => 'Check a program', 'kind' => 'read'] + $facts, ['readOnly' => TRUE]), $check);
+    $this->assertSame([
+      'id' => 'configure',
+      'label' => 'Configure the program',
+      'description' => 'Sets the program: its headline, how many sessions it has, whether it is published, and its fees.',
+      'kind' => 'update',
+    ] + $facts, $configure);
+    $this->assertSame(array_replace([
+      'id' => 'check',
+      'label' => 'Check a program',
+      'description' => 'Checks a program against every rule the program configuration applies, and saves nothing.',
+      'kind' => 'read',
+    ] + $facts, ['readOnly' => TRUE]), $check);
     $tools = $this->container->get('plugin.manager.tool');
     $this->assertSame(ToolOperation::Write, $tools->getDefinition('data_surface:event.program:configure')->getOperation());
     $this->assertSame(ToolOperation::Read, $tools->getDefinition('data_surface:event.program:check')->getOperation());

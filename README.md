@@ -204,10 +204,12 @@ The module uses these twenty-three words in exactly one sense each.
   holds with `#[UsesStructure]`, or is the structure itself when the
   attribute names none, and supplies the context and the storage,
   because only it holds the instance.
-- **Operation**: one way a resource is asked for: add, edit, reuse. A
-  static method on the class carrying `#[Operation]`, returning a
-  context that says which identity keys are already known (and locked),
-  and carrying the permission that gates it. A structure may declare
+- **Operation**: one way a resource is asked for: add, edit, reuse.
+  `#[Operation]` states its id, label, description, the permission that
+  gates it and whether it creates. On the class when asking needs
+  nothing more (a settings object's `configure`); on a static method
+  returning a context when the context says more, such as which
+  identity keys are already known (and locked). A structure may declare
   operations too, for what holds it to choose between. Operations are
   what routes and tools are generated from: a route naming a resource
   class and an operation is a working form with no form class behind it,

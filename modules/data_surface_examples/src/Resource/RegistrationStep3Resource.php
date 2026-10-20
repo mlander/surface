@@ -12,7 +12,6 @@ use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
-use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_examples\Storage\RegistrationStep3Storage;
 use Drupal\data_surface_examples\Venues;
@@ -27,15 +26,12 @@ use Drupal\data_surface_examples\Venues;
  * always there.
  */
 #[Resource('registration.step3', storage: RegistrationStep3Storage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure registration (step 3)'),
+  description: new TranslatableMarkup('Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.'),
+  permission: 'administer site configuration',
+)]
 final class RegistrationStep3Resource implements ResourceInterface {
-
-  /**
-   * Configures the registration settings, which always exist.
-   */
-  #[Operation('configure', label: new TranslatableMarkup('Configure registration'), permission: 'administer site configuration')]
-  public static function configure(): OperationContext {
-    return new OperationContext('configure');
-  }
 
   /**
    * {@inheritdoc}

@@ -9,10 +9,12 @@
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "title": "Configure the bulletin",
+                "description": "Sets how often the event bulletin goes out, the day it is sent and how many items an issue holds.",
                 "x-surface": {
                     "operation": {
                         "id": "configure",
                         "label": "Configure the bulletin",
+                        "description": "Sets how often the event bulletin goes out, the day it is sent and how many items an issue holds.",
                         "kind": "update",
                         "creates": false,
                         "readOnly": false,

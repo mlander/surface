@@ -99,14 +99,14 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
     $config = fn (): array => $this->config('data_surface_examples.registration_step3')->get();
 
     $this->assertTrue($results['valid']['success'], $results['valid']['message']);
-    $this->assertSame('Configure registration: the values were accepted and written.', $results['valid']['message']);
+    $this->assertSame('Configure registration (step 3): the values were accepted and written.', $results['valid']['message']);
     $this->assertTrue($results['valid']['outputs'][OperationInputs::COMMITTED]);
 
     $this->assertFalse($results['over_capacity']['success']);
     $this->assertSame("The values were refused:\n" . 'capacity: This value should be between 1 and 30. This applies when Room is Garden room.', $results['over_capacity']['message']);
 
     $this->assertTrue($results['dry_run']['success'], $results['dry_run']['message']);
-    $this->assertSame('Dry run of Configure registration: the values were accepted and prepared, and nothing was written.', $results['dry_run']['message']);
+    $this->assertSame('Dry run of Configure registration (step 3): the values were accepted and prepared, and nothing was written.', $results['dry_run']['message']);
     $this->assertFalse($results['dry_run']['outputs'][OperationInputs::COMMITTED]);
     $this->assertSame('Winter social', $results['dry_run']['outputs'][OperationInputs::VALUES]['title']);
     $this->assertArrayNotHasKey('prepared', $results['dry_run']['outputs']);
@@ -159,8 +159,8 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
     // capacity of 50 is no more what a key left out becomes than the
     // installed title is.
     $this->assertSame([], $this->defaults($values));
-    $this->assertStringContainsString('(kind: update)', (string) $definition->getDescription());
-    $this->assertStringContainsString('A key left out keeps its current value; ' . ExampleCalls::READ_TOOL . ' returns the current values.', (string) $definition->getDescription());
+    // The operation's own description, then the update's call rules.
+    $this->assertSame('Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact. Update: send only the keys to change; a key left out keeps its value, null clears it. The read tool returns the current values.', (string) $definition->getDescription());
     $contact = $properties['contact'];
     $this->assertInstanceOf(MapInputDefinition::class, $contact);
     $this->assertFalse($contact->isRequired());

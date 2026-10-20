@@ -12,13 +12,10 @@ namespace Drupal\data_surface\ResourceBuild;
  * configuration it is, its operations with what each needs, whether it
  * creates, the permission it asks for, whether it can be asked on its
  * own and whether what it changes can be read on its own, the alters
- * that apply to it, and the variants at its keys.
- * Nothing here builds anything; everything is read from what discovery
- * found, which is the point of the attributes being static.
- *
- * One thing on an operation is not static: whether it creates is on the
- * context it returns. An operation that needs nothing is asked; one that
- * needs a subject is not, and says so.
+ * that apply to it, and the variants at its keys. Nothing here builds
+ * or asks anything; everything is read from what discovery found, which
+ * is the point of the attributes being static, whether an operation
+ * creates among it.
  *
  * @see \Drupal\data_surface\ResourceBuild\ResourceRegistry
  */
@@ -29,8 +26,6 @@ final class ResourceCatalog {
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry $registry
    *   What discovery found.
-   * @param \Drupal\data_surface\ResourceBuild\ResourcesInterface $resources
-   *   The build step, which invokes an operation that needs nothing.
    * @param \Drupal\data_surface\ResourceBuild\ResourcePlugins $plugins
    *   Which plugins name which structure with #[UsesStructure].
    * @param \Drupal\data_surface\ResourceBuild\DerivedVariants $derivedVariants
@@ -38,7 +33,6 @@ final class ResourceCatalog {
    */
   public function __construct(
     protected readonly ResourceRegistry $registry,
-    protected readonly ResourcesInterface $resources,
     protected readonly ResourcePlugins $plugins,
     protected readonly DerivedVariants $derivedVariants,
   ) {}
@@ -46,21 +40,22 @@ final class ResourceCatalog {
   /**
    * Describes every discovered resource and structure.
    *
-   * @return array<string, array{id: string, class: class-string|null, deriver: string|null, module: string, kind: string, identity: string[], storage: class-string|null, access: class-string|null, plugins: list<string>, operations: list<array{id: string, label: string, provider: string, module: string, parameters: string[], creates: bool|null, permission: string|null, unresolvable: string[], standalone: bool, reads: bool}>, alters: list<array{class: class-string, module: string, operations: string[], refines: list<array{key: string, watches: string[]}>}>, variants: array<string, array<string, class-string>>, derived: array<string, string>}>
+   * @return array<string, array{id: string, class: class-string|null, deriver: string|null, module: string, kind: string, identity: string[], storage: class-string|null, access: class-string|null, plugins: list<string>, operations: list<array{id: string, label: string, provider: string, module: string, parameters: string[], creates: bool, permission: string|null, unresolvable: string[], standalone: bool, reads: bool}>, alters: list<array{class: class-string, module: string, operations: string[], refines: list<array{key: string, watches: string[]}>}>, variants: array<string, array<string, class-string>>, derived: array<string, string>}>
    *   The entries, keyed and sorted by id. `kind` is resource or
    *   structure. `class` is NULL for a derived one, whose `deriver` is
    *   the base id it was derived under (NULL for every other). `plugins`
    *   lists the plugins whose configuration it is, as
    *   `<host type>:<plugin id>`.
-   *   An operation's `creates` is NULL when it needs a subject to say;
-   *   `unresolvable` lists its permission's placeholders no parameter can
-   *   supply; `standalone` says whether it can be asked on its own, as a
-   *   route or a tool; `reads` whether what it changes can be read on its
-   *   own, as a read tool. Operations are a list in discovery order, so two
-   *   providers of one id are both listed, as they are both refused when
-   *   it is built. `variants` are the declared ones, each
-   *   value's #[Variant] class keyed by the variants' key; `derived` says,
-   *   per key, where the variants of every other value come from. An
+   *   An operation's `creates` is its attribute's, read without building
+   *   anything; `unresolvable` lists its permission's placeholders no
+   *   parameter can supply; `standalone` says whether it can be asked on
+   *   its own, as a route or a tool; `reads` whether what it changes can
+   *   be read on its own, as a read tool. Operations are a list in
+   *   discovery order, so two providers of one id are both listed, as
+   *   they are both refused when it is built. `variants` are the declared
+   *   ones, each value's #[Variant] class keyed by the variants' key;
+   *   `derived` says, per key, where the variants of every other value
+   *   come from. An
    *   alter's `refines` lists its #[RefinesInput] methods by the key each
    *   refines and the keys it watches, named as the alter names them: a
    *   key it mounted itself by that key's own name; its `access` says
@@ -83,10 +78,10 @@ final class ResourceCatalog {
         'operations' => array_map(fn (OperationDefinition $operation): array => [
           'id' => $operation->id,
           'label' => (string) $operation->label,
-          'provider' => $operation->class . '::' . $operation->method . '()',
+          'provider' => $operation->provider(),
           'module' => $operation->module,
           'parameters' => array_map(static fn (OperationParameter $parameter): string => $parameter->describe(), $operation->parameters),
-          'creates' => $this->creates($definition, $operation),
+          'creates' => $operation->creates,
           'permission' => $operation->permission,
           'unresolvable' => $operation->unresolvablePlaceholders(),
           'standalone' => static::standalone($definition, $operation, $plugins),
@@ -160,12 +155,11 @@ final class ResourceCatalog {
    * Answers whether what an operation changes can be read on its own.
    *
    * The rule a generated read tool follows: the operation can be asked
-   * on its own, and it changes a thing that exists. A read only operation
-   * changes nothing, so nothing beside it is read. For an operation that
-   * needs nothing that is its context, which does not create; for one
-   * that needs a subject it is its signature, which names one thing
-   * whole (OperationDefinition::namesOneThing()), because the context is
-   * not there to ask until a caller names the subject.
+   * on its own, and it changes a thing that exists, which is to say it
+   * neither creates nor is read only, both read off its attribute. A read
+   * only operation changes nothing, so nothing beside it is read.
+   *
+   * Decision: see docs/decisions.md#which-operations-read.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource or structure.
@@ -178,38 +172,7 @@ final class ResourceCatalog {
    *   TRUE when what it changes can be read on its own.
    */
   public function reads(ResourceDefinition $resource, OperationDefinition $operation, array $plugins): bool {
-    if (!static::standalone($resource, $operation, $plugins) || $operation->readOnly) {
-      return FALSE;
-    }
-    if (!$operation->needsNothing()) {
-      return $operation->namesOneThing($resource->identity);
-    }
-    return $this->creates($resource, $operation) === FALSE;
-  }
-
-  /**
-   * Answers whether an operation creates, when it can be asked unaided.
-   *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
-   *   The resource or structure.
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
-   *   The operation.
-   *
-   * @return bool|null
-   *   Whether its context creates, or NULL when it needs a subject first,
-   *   or cannot be asked (a clash, a context for another operation),
-   *   which building it reports.
-   */
-  protected function creates(ResourceDefinition $resource, OperationDefinition $operation): ?bool {
-    if (!$operation->needsNothing()) {
-      return NULL;
-    }
-    try {
-      return $this->resources->operation($resource->name(), $operation->id)->creates;
-    }
-    catch (\LogicException | \InvalidArgumentException) {
-      return NULL;
-    }
+    return static::standalone($resource, $operation, $plugins) && $operation->kind() === OperationDefinition::UPDATE;
   }
 
 }

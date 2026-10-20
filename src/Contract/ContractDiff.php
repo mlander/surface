@@ -412,8 +412,10 @@ final class ContractDiff {
             $add($at . '/' . $fact, sprintf('the operation\'s %s changed', $fact), self::BREAKS);
           }
         }
-        if (($a['label'] ?? NULL) !== ($b['label'] ?? NULL)) {
-          $add($at . '/label', 'the operation\'s label changed', self::NOTE);
+        foreach (['label', 'description'] as $words) {
+          if (($a[$words] ?? NULL) !== ($b[$words] ?? NULL)) {
+            $add($at . '/' . $words, sprintf('the operation\'s %s changed', $words), self::NOTE);
+          }
         }
       }
       else {

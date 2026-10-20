@@ -24,7 +24,7 @@ final class PinnedNoteResource implements ResourceInterface {
   /**
    * Pins a note.
    */
-  #[Operation('pin', label: 'Pin a note', permission: 'access content')]
+  #[Operation('pin', label: 'Pin a note', permission: 'access content', creates: TRUE)]
   public static function pin(): OperationContext {
     return new OperationContext('pin', creates: TRUE);
   }

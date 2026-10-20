@@ -9,6 +9,8 @@ use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Form\DataSurfaceOperationForm;
+use Drupal\data_surface_first\Resource\NewsletterResource;
+use Drupal\data_surface_first\Resource\StoreResource;
 use Drupal\data_surface_tool\OperationInputs;
 use Drupal\Tests\data_surface\Unit\FirstResourceDocsTest;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -21,9 +23,10 @@ use Symfony\Component\HttpFoundation\Request;
  *
  * FirstResourceDocsTest holds the pages' code to data_surface_first; this
  * holds what they say happens to what does: both forms render with the
- * elements the pages describe, the permission gates them, and every
- * `drush tool:run` line they quote answers as quoted, in order, on one
- * fresh site.
+ * elements the pages describe, the permission gates them, the operation
+ * on the class is the tool's title and description and the schema's,
+ * with no method behind it, and every `drush tool:run` line they quote
+ * answers as quoted, in order, on one fresh site.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -102,6 +105,35 @@ class FirstResourceTest extends DataSurfaceKernelTestBase {
     $this->setUpCurrentUser();
     $this->assertFalse($access->checkNamedRoute('data_surface_first.newsletter'), 'Without the permission.');
     $this->assertFalse($access->checkNamedRoute('data_surface_first.store'));
+  }
+
+  /**
+   * Tests the operation is the attribute on the class, and nothing more.
+   *
+   * The first page writes no method: its one operation needs nothing, so
+   * `#[Operation]` beside `#[Resource]` is all of it. Its label is the
+   * tool's title and the schema's, and its description the first sentence
+   * of the tool's description and the schema's own.
+   */
+  public function testTheOperationIsTheAttribute(): void {
+    $this->setUpCurrentUser(admin: TRUE);
+    $registry = $this->container->get('data_surface.resource_registry');
+    $resources = $this->container->get('data_surface.resources');
+    $manager = $this->container->get('plugin.manager.tool');
+    foreach ([NewsletterResource::class => 'first.newsletter', StoreResource::class => 'first.store'] as $class => $id) {
+      $this->assertFalse(method_exists($class, 'configure'), $id . ': no method.');
+      $operation = $registry->getOperation($class, 'configure');
+      $this->assertTrue($operation->isBare(), $id);
+      $tool = $manager->getDefinition(OperationInputs::TOOL . ':' . $id . ':configure');
+      $this->assertSame((string) $operation->label, (string) $tool->getLabel(), $id);
+      $this->assertStringStartsWith((string) $operation->description . ' ', (string) $tool->getDescription(), $id);
+      $context = $resources->operation($class, 'configure');
+      $full = $this->container->get('data_surface.contract_emitter')
+        ->emitFull($resources->buildStatic($class, $context), $id, 'configure', $operation->label, operation: $operation->facts())
+        ->document['schema'];
+      $this->assertSame((string) $operation->label, $full['title'], $id);
+      $this->assertSame((string) $operation->description, $full['description'], $id);
+    }
   }
 
   /**

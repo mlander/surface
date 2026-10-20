@@ -89,10 +89,13 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  *   It takes the key's definition first and one parameter per sibling it
  *   watches, and returns the definition narrowed. The framework checks it
  *   narrowed.
- * - How much is already known, in static methods carrying
- *   \Drupal\data_surface\Resource\Attribute\Operation, each returning a
- *   \Drupal\data_surface\Resource\OperationContext. An identity key the
- *   context knows is locked; one it does not know stays open.
+ * - How it is asked for, with
+ *   \Drupal\data_surface\Resource\Attribute\Operation: its id, label,
+ *   description, permission and whether it creates. On the class for an
+ *   operation that needs nothing more; on a static method returning a
+ *   \Drupal\data_surface\Resource\OperationContext for one that knows
+ *   more, the id and creates stamped from the attribute. An identity key
+ *   the context knows is locked; one it does not know stays open.
  * - Where the values are stored and what may refuse, on the attribute:
  *   storage names a \Drupal\data_surface\Resource\ResourceStorageInterface
  *   and access a \Drupal\data_surface\Resource\OperationAccessInterface,
@@ -107,18 +110,23 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  *   storage: ExampleStorage::class,
  *   access: ExampleAccess::class,
  * )]
+ * #[Operation('add',
+ *   label: new TranslatableMarkup('Add a thing'),
+ *   description: new TranslatableMarkup('Creates a thing.'),
+ *   permission: ExampleResource::PERMISSION,
+ *   creates: TRUE,
+ * )]
  * final class ExampleResource implements ResourceInterface {
  *
  *   public const PERMISSION = 'administer things';
  *
- *   #[Operation('add', label: new TranslatableMarkup('Add a thing'), permission: self::PERMISSION)]
- *   public static function add(): OperationContext {
- *     return new OperationContext('add', creates: TRUE);
- *   }
- *
- *   #[Operation('edit', label: new TranslatableMarkup('Edit a thing'), permission: self::PERMISSION)]
+ *   #[Operation('edit',
+ *     label: new TranslatableMarkup('Edit a thing'),
+ *     description: new TranslatableMarkup('Changes a thing, named by its id.'),
+ *     permission: self::PERMISSION,
+ *   )]
  *   public static function edit(ExampleInterface $thing): OperationContext {
- *     return new OperationContext('edit', known: ['id' => $thing->id()]);
+ *     return new OperationContext(known: ['id' => $thing->id()]);
  *   }
  *
  *   public static function defineInputs(BlueprintInterface $inputs): void {
@@ -276,8 +284,8 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  * adds lands at third_party_outputs.<module>.<key>. An alter whose keys
  * are asked for in one layout and stored in another implements
  * \Drupal\data_surface\Resource\AltersStorageLayoutInterface. Another module's
- * operation for a resource is a static method carrying #[Operation] with
- * of: naming the resource, in that module's src/Alter/.
+ * operation for a resource is #[Operation] with of: naming the resource,
+ * on a class in that module's src/Alter/ or on a static method there.
  *
  * @see \Drupal\data_surface\Resource\AltersInputsInterface
  * @see \Drupal\data_surface\Resource\BlueprintAdditionsInterface

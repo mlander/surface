@@ -9,10 +9,12 @@
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "title": "Configure the doors",
+                "description": "Sets when the doors open, the badges checked at the door and the notes for the door team.",
                 "x-surface": {
                     "operation": {
                         "id": "configure",
                         "label": "Configure the doors",
+                        "description": "Sets when the doors open, the badges checked at the door and the notes for the door team.",
                         "kind": "update",
                         "creates": false,
                         "readOnly": false,

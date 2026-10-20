@@ -9,10 +9,12 @@
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "title": "Configure the program",
+                "description": "Sets the program: its headline, how many sessions it has, whether it is published, and its fees.",
                 "x-surface": {
                     "operation": {
                         "id": "configure",
                         "label": "Configure the program",
+                        "description": "Sets the program: its headline, how many sessions it has, whether it is published, and its fees.",
                         "kind": "update",
                         "creates": false,
                         "readOnly": false,
@@ -117,10 +119,12 @@
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "title": "Check a program",
+                "description": "Checks a program against every rule the program configuration applies, and saves nothing.",
                 "x-surface": {
                     "operation": {
                         "id": "check",
                         "label": "Check a program",
+                        "description": "Checks a program against every rule the program configuration applies, and saves nothing.",
                         "kind": "read",
                         "creates": false,
                         "readOnly": true,

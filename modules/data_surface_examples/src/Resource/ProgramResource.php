@@ -8,7 +8,6 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
-use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_examples\Storage\ProgramStorage;
 use Drupal\data_surface_examples\Structure\FeesStructure;
@@ -22,23 +21,18 @@ use Drupal\data_surface_examples\Structure\FeesStructure;
  * program changes nothing, and says so: readOnly.
  */
 #[Resource('event.program', storage: ProgramStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure the program'),
+  description: new TranslatableMarkup('Sets the program: its headline, how many sessions it has, whether it is published, and its fees.'),
+  permission: 'administer site configuration',
+)]
+#[Operation('check',
+  label: new TranslatableMarkup('Check a program'),
+  description: new TranslatableMarkup('Checks a program against every rule the program configuration applies, and saves nothing.'),
+  permission: 'administer site configuration',
+  readOnly: TRUE,
+)]
 final class ProgramResource implements ResourceInterface {
-
-  /**
-   * Configures the program, which always exists.
-   */
-  #[Operation('configure', label: new TranslatableMarkup('Configure the program'), permission: 'administer site configuration')]
-  public static function configure(): OperationContext {
-    return new OperationContext('configure');
-  }
-
-  /**
-   * Checks a program against every rule, and writes nothing.
-   */
-  #[Operation('check', label: new TranslatableMarkup('Check a program'), permission: 'administer site configuration', readOnly: TRUE)]
-  public static function check(): OperationContext {
-    return new OperationContext('check');
-  }
 
   /**
    * {@inheritdoc}

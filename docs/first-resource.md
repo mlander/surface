@@ -10,7 +10,7 @@ This page uses four things and nothing else:
 | You write | It says |
 | --- | --- |
 | `#[Resource]` | what the thing is called and where it is stored |
-| `#[Operation]` | how it is asked for, and the permission that gates it |
+| `#[Operation]` | how it is asked for, what that does, and the permission that gates it |
 | a storage | the config object it lives in |
 | `defineInputs()` with `add()` | its keys: name, type, label, what each allows |
 
@@ -130,7 +130,6 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
-use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_first\Storage\NewsletterStorage;
 
@@ -138,15 +137,12 @@ use Drupal\data_surface_first\Storage\NewsletterStorage;
  * The newsletter settings: a form, a tool and a schema, from this class.
  */
 #[Resource('first.newsletter', storage: NewsletterStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure the newsletter'),
+  description: new TranslatableMarkup('Sets who the newsletter is sent from, how often it goes out and how many recipients one send reaches.'),
+  permission: 'administer data_surface_first',
+)]
 final class NewsletterResource implements ResourceInterface {
-
-  /**
-   * Configures the newsletter, whose settings always exist.
-   */
-  #[Operation('configure', label: new TranslatableMarkup('Configure the newsletter'), permission: 'administer data_surface_first')]
-  public static function configure(): OperationContext {
-    return new OperationContext('configure');
-  }
 
   /**
    * {@inheritdoc}
@@ -178,11 +174,13 @@ Read it top to bottom:
 - **`#[Resource('first.newsletter', storage: ...)]`** names the resource
   and its storage. The class goes in `src/Resource/`, where it is found;
   nothing is registered by hand.
-- **`#[Operation('configure', ...)]`** is the one way it is asked for.
-  The method returns an `OperationContext` whose id is the operation's;
-  there is only one newsletter, so the context knows nothing more. The
-  label is the tool's label and the schema's title, and the permission
-  is the one the route and the tool both check (step 5).
+- **`#[Operation('configure', ...)]`** is the one way it is asked for,
+  on the class beside `#[Resource]`. There is only one newsletter, so
+  asking for it needs nothing more than the attribute says, and there is
+  no method to write. The label is the tool's title and the schema's
+  title, the description is the first thing an agent reads about the
+  tool and the schema's description, and the permission is the one the
+  route and the tool both check (step 5).
 - **`defineInputs()`** declares the keys. `add()` takes the key, its type
   (core's typed data types: `string`, `email`, `integer`, `boolean`,
   ...), its label and, optionally, a `default:`, and returns core's own
@@ -200,7 +198,8 @@ Read it top to bottom:
 - **Everything is static.** The class is never instantiated, so there is
   nothing to inject a translation service into: labels call the global
   `t()` with a literal string. An attribute argument cannot call a
-  function, so the operation's label is `new TranslatableMarkup()`.
+  function, so the operation's label and description are
+  `new TranslatableMarkup()`.
 
 ## 5. The permission
 

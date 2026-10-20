@@ -18,6 +18,7 @@ use Drupal\data_surface\Resource\Attribute\Shape;
 use Drupal\data_surface\Resource\Attribute\Structure;
 use Drupal\data_surface\Resource\Attribute\Variant;
 use Drupal\data_surface\Resource\DerivedOperation;
+use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\DefinesOutputsInterface;
 use Drupal\data_surface\Resource\AltersAccessInterface;
 use Drupal\data_surface\Resource\AltersInputsInterface;
@@ -561,7 +562,23 @@ final class ResourceRegistry {
       $operation_classes[$class] ??= $module;
     }
     foreach ($operation_classes as $class => $module) {
-      foreach ((new \ReflectionClass($class))->getMethods() as $method) {
+      $reflection = new \ReflectionClass($class);
+      // On the class: an operation whose context is the bare one, the
+      // attribute's id and answer and nothing else, so it has no method.
+      // Decision: see docs/decisions.md#an-operation-on-the-class.
+      foreach ($reflection->getAttributes(Operation::class) as $attribute) {
+        $operation = $attribute->newInstance();
+        $where = sprintf('#[Operation(\'%s\')] on %s', $operation->id, $class);
+        $of = $operation->of ?? (isset($resources[$class]) ? $class : throw new \LogicException(sprintf(
+          '%s names no resource or structure: `of` may be left out only on the class carrying #[Resource] or #[Structure] itself.',
+          $where,
+        )));
+        if (self::isUndiscovered($of, $resources, $where)) {
+          continue;
+        }
+        $operations[$of][] = self::operationDefinition($operation, $of, $class, '', $module, [], $operation->description);
+      }
+      foreach ($reflection->getMethods() as $method) {
         foreach ($method->getAttributes(Operation::class) as $attribute) {
           $operation = $attribute->newInstance();
           $of = $operation->of ?? (isset($resources[$class]) ? $class : throw new \LogicException(sprintf(
@@ -581,20 +598,17 @@ final class ResourceRegistry {
           if (self::isUndiscovered($of, $resources, sprintf('#[Operation(\'%s\')] on %s::%s()', $operation->id, $class, $method->getName()))) {
             continue;
           }
-          $operations[$of][] = new OperationDefinition(
-            id: $operation->id,
-            label: $operation->label,
-            resource: $of,
-            class: $class,
-            method: $method->getName(),
-            permission: $operation->permission,
-            module: $module,
-            parameters: array_map(OperationParameter::fromReflection(...), $method->getParameters()),
-            default: $operation->default,
-            destructive: $operation->destructive,
-            readOnly: $operation->readOnly,
-            idempotent: $operation->idempotent,
+          $definition = self::operationDefinition(
+            $operation,
+            $of,
+            $class,
+            $method->getName(),
+            $module,
+            array_map(OperationParameter::fromReflection(...), $method->getParameters()),
+            $operation->description ?? self::summary($method),
           );
+          $this->assertStamps($definition);
+          $operations[$of][] = $definition;
         }
       }
     }
@@ -793,29 +807,144 @@ final class ResourceRegistry {
             cacheTags: array_values($declared->cacheTags),
             kind: $declared->kind(),
           ),
-          array_map(static fn (DerivedOperation $operation): OperationDefinition => new OperationDefinition(
-            id: $operation->id,
-            label: $operation->label,
-            resource: $id,
-            class: $operation->context->class,
-            method: $operation->context->method,
-            permission: $operation->permission,
-            module: $module,
-            parameters: array_map(
-              OperationParameter::fromDeclaration(...),
-              array_keys($operation->parameters),
-              array_values($operation->parameters),
-            ),
-            default: $operation->default,
-            context: $operation->context,
-            destructive: $operation->destructive,
-            readOnly: $operation->readOnly,
-            idempotent: $operation->idempotent,
-          ), array_values($declared->operations)),
+          array_map(function (DerivedOperation $operation) use ($id, $module): OperationDefinition {
+            $definition = new OperationDefinition(
+              id: $operation->id,
+              label: $operation->label,
+              resource: $id,
+              class: $operation->context->class,
+              method: $operation->context->method,
+              permission: $operation->permission,
+              module: $module,
+              parameters: array_map(
+                OperationParameter::fromDeclaration(...),
+                array_keys($operation->parameters),
+                array_values($operation->parameters),
+              ),
+              default: $operation->default,
+              context: $operation->context,
+              destructive: $operation->destructive,
+              readOnly: $operation->readOnly,
+              idempotent: $operation->idempotent,
+              creates: $operation->creates,
+              description: $operation->description,
+            );
+            $this->assertStamps($definition);
+            return $definition;
+          }, array_values($declared->operations)),
         ];
       }
     }
     return $derived;
+  }
+
+  /**
+   * Reads one #[Operation] into its definition.
+   *
+   * @param \Drupal\data_surface\Resource\Attribute\Operation $operation
+   *   The attribute.
+   * @param string $of
+   *   The resource or structure it is an operation of.
+   * @param class-string $class
+   *   The class the attribute is on, or whose method carries it.
+   * @param string $method
+   *   The method, or empty for an operation on the class.
+   * @param string $module
+   *   The module it is in.
+   * @param \Drupal\data_surface\ResourceBuild\OperationParameter[] $parameters
+   *   The method's parameters.
+   * @param string|\Stringable|null $description
+   *   The description: the attribute's, else the method's docblock
+   *   summary.
+   *
+   * @return \Drupal\data_surface\ResourceBuild\OperationDefinition
+   *   The definition.
+   */
+  protected static function operationDefinition(Operation $operation, string $of, string $class, string $method, string $module, array $parameters, string|\Stringable|null $description): OperationDefinition {
+    return new OperationDefinition(
+      id: $operation->id,
+      label: $operation->label,
+      resource: $of,
+      class: $class,
+      method: $method,
+      permission: $operation->permission,
+      module: $module,
+      parameters: $parameters,
+      default: $operation->default,
+      destructive: $operation->destructive,
+      readOnly: $operation->readOnly,
+      idempotent: $operation->idempotent,
+      creates: $operation->creates,
+      description: $description,
+    );
+  }
+
+  /**
+   * Reads a method's docblock summary: its first paragraph, as one line.
+   *
+   * What an #[Operation] method that says no description is described
+   * by. Not translatable, being a comment; an operation that will be
+   * read in another language says `description:` on its attribute.
+   *
+   * @param \ReflectionMethod $method
+   *   The method.
+   *
+   * @return string|null
+   *   The summary, or NULL when there is no docblock or it only inherits.
+   */
+  protected static function summary(\ReflectionMethod $method): ?string {
+    $comment = $method->getDocComment();
+    if ($comment === FALSE) {
+      return NULL;
+    }
+    $lines = [];
+    foreach (preg_split('/\R/', $comment) ?: [] as $line) {
+      $line = trim((string) preg_replace('#^\s*(/\*\*|\*/|\*)#', '', $line));
+      if ($line === '' && $lines !== []) {
+        break;
+      }
+      if ($line !== '') {
+        $lines[] = $line;
+      }
+    }
+    $summary = implode(' ', $lines);
+    return $summary === '' || str_starts_with($summary, '{@inheritdoc}') || str_starts_with($summary, '@') ? NULL : $summary;
+  }
+
+  /**
+   * Refuses, at discovery, a context that says otherwise than its operation.
+   *
+   * An operation that needs nothing is built here, as it would be when
+   * asked, and its context stamped (OperationDefinition::stamp()), so a
+   * context under another id, or one that says otherwise about creating,
+   * is refused before anything asks for it. One that needs a subject
+   * cannot be built before a caller names it, and is checked when asked.
+   * A method that cannot run here, for whatever reason, is left to be
+   * reported when it is asked.
+   *
+   * Decision: see docs/decisions.md#a-contexts-id-is-the-operation-id.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   *
+   * @throws \LogicException
+   *   When its context names another id, or says otherwise about creating.
+   */
+  protected function assertStamps(OperationDefinition $operation): void {
+    if ($operation->isBare() || !$operation->needsNothing()) {
+      return;
+    }
+    try {
+      $context = $operation->context !== NULL
+        ? ($this->classResolver === NULL ? NULL : $operation->context->call($this->classResolver, []))
+        : (new \ReflectionMethod($operation->class, $operation->method))->invoke(NULL);
+    }
+    catch (\Throwable) {
+      return;
+    }
+    if ($context instanceof OperationContext) {
+      $operation->stamp($context);
+    }
   }
 
   /**

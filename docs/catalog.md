@@ -6,15 +6,14 @@ matches what that script produces.
 
 Every resource and structure the modules in this repository declare,
 read from the static layer alone: the `#[Resource]` and `#[Structure]`
-attributes, the `#[Operation]` methods and what each needs, the
-`#[Alters]` classes and the `#[Variant]` ones. Each entry says its kind;
-a resource also names its storage, while a structure has none of its
-own. A plugin that is its own structure, `#[UsesStructure]` with no
-argument, is listed by its plugin class, under an id from its plugin
-unless it carries `#[Structure]`, and is used by itself. Nothing here
-builds anything. An operation's "Creates" is the one fact that is not
-static (it is on the context the operation returns), so it is known
-only for an operation that needs nothing to start from.
+attributes, the `#[Operation]` ones, on a class or on a method and what
+it needs, the `#[Alters]` classes and the `#[Variant]` ones. Each entry
+says its kind; a resource also names its storage, while a structure has
+none of its own. A plugin that is its own structure, `#[UsesStructure]`
+with no argument, is listed by its plugin class, under an id from its
+plugin unless it carries `#[Structure]`, and is used by itself. Nothing
+here builds anything: whether an operation creates is on its attribute
+too.
 
 An operation that can be asked "on its own" is also a tool,
 `data_surface:<id>:<operation>`, when `data_surface_tool` is enabled:
@@ -22,10 +21,8 @@ it belongs to a resource that names storage and is no plugin's
 configuration, and every `%key` placeholder in its permission can be
 supplied by one of its parameters. A structure a plugin uses is
 configured through the plugin's host. One that can be asked on its own
-and changes a thing that exists is "read on its own" too, a read tool,
-`data_surface:<id>:<operation>:read`: an operation that needs
-nothing says so by not creating, and one that needs a subject by naming
-one thing whole, with a single entity or with every identity key.
+and changes a thing that exists, neither creating nor read only, is
+"read on its own" too, a read tool, `data_surface:<id>:<operation>:read`.
 `docs/resources.md` says how each part works.
 
 | Resource or structure | Class | Identity | Operations |
@@ -101,7 +98,7 @@ one thing whole, with a single entity or with every identity key.
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the bulletin | nothing | no | `administer site configuration` | yes | yes | `BulletinResource::configure()` (`data_surface_examples`) |
+| `configure` | Configure the bulletin | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on BulletinResource` (`data_surface_examples`) |
 
 ## event.desk
 
@@ -114,7 +111,7 @@ one thing whole, with a single entity or with every identity key.
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the information desk | nothing | no | `administer site configuration` | yes | yes | `InfoDeskResource::configure()` (`data_surface_examples`) |
+| `configure` | Configure the information desk | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on InfoDeskResource` (`data_surface_examples`) |
 
 ## event.doors
 
@@ -127,7 +124,7 @@ one thing whole, with a single entity or with every identity key.
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the doors | nothing | no | `administer site configuration` | yes | yes | `DoorsResource::configure()` (`data_surface_examples`) |
+| `configure` | Configure the doors | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on DoorsResource` (`data_surface_examples`) |
 
 ## event.fees
 
@@ -160,7 +157,7 @@ one thing whole, with a single entity or with every identity key.
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the press page | nothing | no | `administer site configuration` | yes | yes | `PressResource::configure()` (`data_surface_examples`) |
+| `configure` | Configure the press page | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on PressResource` (`data_surface_examples`) |
 
 ## event.program
 
@@ -173,8 +170,8 @@ one thing whole, with a single entity or with every identity key.
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the program | nothing | no | `administer site configuration` | yes | yes | `ProgramResource::configure()` (`data_surface_examples`) |
-| `check` | Check a program | nothing | no | `administer site configuration` | yes | no: what it needs leaves room for a new one | `ProgramResource::check()` (`data_surface_examples`) |
+| `configure` | Configure the program | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on ProgramResource` (`data_surface_examples`) |
+| `check` | Check a program | nothing | no | `administer site configuration` | yes | no: it changes nothing | `#[Operation] on ProgramResource` (`data_surface_examples`) |
 
 - Altered by `Drupal\data_surface_examples_workflow\Alter\ProgramWorkflowAlter` (`data_surface_examples_workflow`), in `configure`; it answers access.
 
@@ -198,7 +195,7 @@ one thing whole, with a single entity or with every identity key.
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure ticket sales | nothing | no | `administer site configuration` | yes | yes | `TicketSalesResource::configure()` (`data_surface_examples`) |
+| `configure` | Configure ticket sales | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on TicketSalesResource` (`data_surface_examples`) |
 
 ## event.ticket_limit
 
@@ -220,9 +217,9 @@ one thing whole, with a single entity or with every identity key.
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `add` | Add a field to a bundle | `string $entity_type_id`, `string $bundle` | once given what it needs | `administer %entity_type_id fields` | yes | no: what it needs leaves room for a new one | `FieldInstanceResource::add()` (`data_surface_tool`) |
-| `reuse` | Add an existing field to another bundle | `FieldStorageConfigInterface $storage`, `string $bundle` | once given what it needs | `administer %entity_type_id fields` | yes | no: what it needs leaves room for a new one | `FieldInstanceResource::reuse()` (`data_surface_tool`) |
-| `edit` | Edit a field | `FieldConfigInterface $field` | once given what it needs | `administer %entity_type_id fields` | yes | yes | `FieldInstanceResource::edit()` (`data_surface_tool`) |
+| `add` | Add a field to a bundle | `string $entity_type_id`, `string $bundle` | yes | `administer %entity_type_id fields` | yes | no: it creates | `FieldInstanceResource::add()` (`data_surface_tool`) |
+| `reuse` | Add an existing field to another bundle | `FieldStorageConfigInterface $storage`, `string $bundle` | yes | `administer %entity_type_id fields` | yes | no: it creates | `FieldInstanceResource::reuse()` (`data_surface_tool`) |
+| `edit` | Edit a field | `FieldConfigInterface $field` | no | `administer %entity_type_id fields` | yes | yes | `FieldInstanceResource::edit()` (`data_surface_tool`) |
 
 - Variants at `settings`: `address` → `Drupal\data_surface_address\Resource\AddressFieldSettingsResource`.
 
@@ -250,7 +247,7 @@ one thing whole, with a single entity or with every identity key.
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `add` | New field storage | nothing | yes | `administer %entity_type_id fields` | no: nothing supplies `%entity_type_id` | no: not on its own | `FieldStorageResource::add()` (`data_surface_tool`) |
-| `edit` | Edit a field storage | `FieldStorageConfigInterface $storage` | once given what it needs | `administer %entity_type_id fields` | yes | yes | `FieldStorageResource::edit()` (`data_surface_tool`) |
+| `edit` | Edit a field storage | `FieldStorageConfigInterface $storage` | no | `administer %entity_type_id fields` | yes | yes | `FieldStorageResource::edit()` (`data_surface_tool`) |
 
 - Variants at `settings`, for every other value: derived from the config schema `field.storage_settings.<field type>`, for every field type offered in the UI.
 
@@ -277,7 +274,7 @@ one thing whole, with a single entity or with every identity key.
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the newsletter | nothing | no | `administer data_surface_first` | yes | yes | `NewsletterResource::configure()` (`data_surface_first`) |
+| `configure` | Configure the newsletter | nothing | no | `administer data_surface_first` | yes | yes | `#[Operation] on NewsletterResource` (`data_surface_first`) |
 
 ## first.store
 
@@ -290,7 +287,7 @@ one thing whole, with a single entity or with every identity key.
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the store location | nothing | no | `administer data_surface_first` | yes | yes | `StoreResource::configure()` (`data_surface_first`) |
+| `configure` | Configure the store location | nothing | no | `administer data_surface_first` | yes | yes | `#[Operation] on StoreResource` (`data_surface_first`) |
 
 ## node.type
 
@@ -304,7 +301,7 @@ one thing whole, with a single entity or with every identity key.
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `add` | Add a content type | nothing | yes | `administer data surface node type demo` | yes | no: it creates | `NodeTypeResource::add()` (`data_surface_demo_node_type`) |
-| `edit` | Edit a content type | `NodeTypeInterface $type` | once given what it needs | `administer data surface node type demo` | yes | yes | `NodeTypeResource::edit()` (`data_surface_demo_node_type`) |
+| `edit` | Edit a content type | `NodeTypeInterface $type` | no | `administer data surface node type demo` | yes | yes | `NodeTypeResource::edit()` (`data_surface_demo_node_type`) |
 
 - Altered by `Drupal\data_surface_demo_extras\Alter\NodeTypeAlter` (`data_surface_demo_extras`), in every operation.
 
@@ -337,7 +334,7 @@ one thing whole, with a single entity or with every identity key.
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure registration | nothing | no | `administer site configuration` | yes | yes | `RegistrationStep1Resource::configure()` (`data_surface_examples`) |
+| `configure` | Configure registration (step 1) | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on RegistrationStep1Resource` (`data_surface_examples`) |
 
 ## registration.step2
 
@@ -350,7 +347,7 @@ one thing whole, with a single entity or with every identity key.
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure registration | nothing | no | `administer site configuration` | yes | yes | `RegistrationStep2Resource::configure()` (`data_surface_examples`) |
+| `configure` | Configure registration (step 2) | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on RegistrationStep2Resource` (`data_surface_examples`) |
 
 ## registration.step3
 
@@ -363,7 +360,7 @@ one thing whole, with a single entity or with every identity key.
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure registration | nothing | no | `administer site configuration` | yes | yes | `RegistrationStep3Resource::configure()` (`data_surface_examples`) |
+| `configure` | Configure registration (step 3) | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on RegistrationStep3Resource` (`data_surface_examples`) |
 
 - Altered by `Drupal\data_surface_examples_compliance\Alter\RegistrationComplianceAlter` (`data_surface_examples_compliance`), in every operation; it refines `room` (watching `venue`) at runtime.
 

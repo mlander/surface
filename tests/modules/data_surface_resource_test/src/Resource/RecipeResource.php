@@ -41,7 +41,7 @@ final class RecipeResource implements ResourceInterface, DefinesOutputsInterface
   /**
    * A new recipe in a kitchen.
    */
-  #[Operation('add', label: 'Add a recipe', permission: 'cook in %kitchen')]
+  #[Operation('add', label: 'Add a recipe', permission: 'cook in %kitchen', creates: TRUE)]
   public static function add(string $kitchen): OperationContext {
     return new OperationContext('add', creates: TRUE, known: ['kitchen' => $kitchen]);
   }

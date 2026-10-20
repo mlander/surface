@@ -75,11 +75,11 @@ final class DataSurfaceCatalogDocument {
             $operation['id'],
             $operation['label'],
             $operation['parameters'] === [] ? 'nothing' : self::codes($operation['parameters']),
-            $operation['creates'] === NULL ? 'once given what it needs' : ($operation['creates'] ? 'yes' : 'no'),
+            $operation['creates'] ? 'yes' : 'no',
             $operation['permission'] === NULL ? 'none' : '`' . $operation['permission'] . '`',
             self::standalone($resource, $operation),
             self::reads($operation),
-            self::short($operation['provider']),
+            str_starts_with($operation['provider'], '#[Operation] on ') ? '#[Operation] on ' . self::short($operation['provider']) : self::short($operation['provider']),
             $operation['module'],
           );
         }
@@ -157,15 +157,14 @@ matches what that script produces.
 
 Every resource and structure the modules in this repository declare,
 read from the static layer alone: the `#[Resource]` and `#[Structure]`
-attributes, the `#[Operation]` methods and what each needs, the
-`#[Alters]` classes and the `#[Variant]` ones. Each entry says its kind;
-a resource also names its storage, while a structure has none of its
-own. A plugin that is its own structure, `#[UsesStructure]` with no
-argument, is listed by its plugin class, under an id from its plugin
-unless it carries `#[Structure]`, and is used by itself. Nothing here
-builds anything. An operation's "Creates" is the one fact that is not
-static (it is on the context the operation returns), so it is known
-only for an operation that needs nothing to start from.
+attributes, the `#[Operation]` ones, on a class or on a method and what
+it needs, the `#[Alters]` classes and the `#[Variant]` ones. Each entry
+says its kind; a resource also names its storage, while a structure has
+none of its own. A plugin that is its own structure, `#[UsesStructure]`
+with no argument, is listed by its plugin class, under an id from its
+plugin unless it carries `#[Structure]`, and is used by itself. Nothing
+here builds anything: whether an operation creates is on its attribute
+too.
 
 An operation that can be asked "on its own" is also a tool,
 `data_surface:<id>:<operation>`, when `data_surface_tool` is enabled:
@@ -173,10 +172,8 @@ it belongs to a resource that names storage and is no plugin's
 configuration, and every `%key` placeholder in its permission can be
 supplied by one of its parameters. A structure a plugin uses is
 configured through the plugin's host. One that can be asked on its own
-and changes a thing that exists is "read on its own" too, a read tool,
-`data_surface:<id>:<operation>:read`: an operation that needs
-nothing says so by not creating, and one that needs a subject by naming
-one thing whole, with a single entity or with every identity key.
+and changes a thing that exists, neither creating nor read only, is
+"read on its own" too, a read tool, `data_surface:<id>:<operation>:read`.
 `docs/resources.md` says how each part works.
 
 
@@ -216,8 +213,8 @@ MARKDOWN;
     return match (TRUE) {
       $operation['reads'] => 'yes',
       !$operation['standalone'] => 'no: not on its own',
-      $operation['creates'] === TRUE => 'no: it creates',
-      default => 'no: what it needs leaves room for a new one',
+      $operation['creates'] => 'no: it creates',
+      default => 'no: it changes nothing',
     };
   }
 

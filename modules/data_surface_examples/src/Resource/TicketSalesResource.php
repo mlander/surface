@@ -8,7 +8,6 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
-use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_examples\Keys\TicketTypes;
 use Drupal\data_surface_examples\Storage\TicketSalesStorage;
@@ -22,15 +21,12 @@ use Drupal\data_surface_examples\Structure\TicketLimitStructure;
  * sit in, a checkbox per type and a structure per type.
  */
 #[Resource('event.sales', storage: TicketSalesStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure ticket sales'),
+  description: new TranslatableMarkup('Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.'),
+  permission: 'administer site configuration',
+)]
 final class TicketSalesResource implements ResourceInterface {
-
-  /**
-   * Configures ticket sales, which always exist.
-   */
-  #[Operation('configure', label: new TranslatableMarkup('Configure ticket sales'), permission: 'administer site configuration')]
-  public static function configure(): OperationContext {
-    return new OperationContext('configure');
-  }
 
   /**
    * {@inheritdoc}

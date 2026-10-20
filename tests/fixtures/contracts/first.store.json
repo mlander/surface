@@ -9,10 +9,12 @@
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "title": "Configure the store location",
+                "description": "Sets the store location: its country, and a region of that country.",
                 "x-surface": {
                     "operation": {
                         "id": "configure",
                         "label": "Configure the store location",
+                        "description": "Sets the store location: its country, and a region of that country.",
                         "kind": "update",
                         "creates": false,
                         "readOnly": false,

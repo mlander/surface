@@ -36,7 +36,7 @@ final class LarderResource implements ResourceInterface {
   /**
    * A new larder.
    */
-  #[Operation('add', label: 'Add a larder', permission: 'keep a larder')]
+  #[Operation('add', label: 'Add a larder', permission: 'keep a larder', creates: TRUE)]
   public static function add(): OperationContext {
     return new OperationContext('add', creates: TRUE);
   }

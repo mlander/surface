@@ -7,10 +7,11 @@ namespace Drupal\data_surface\Resource;
 /**
  * One operation of a derived resource, declared by its deriver.
  *
- * What #[Operation] says on a static method of a resource class, said as
- * a value, because a derived resource has no class to put the attribute
- * on: an id, a label, the static part of access, whether it is the
- * default a parent invokes, and the parameters a route or a tool
+ * What #[Operation] says on a resource class or its static method, said
+ * as a value, because a derived resource has no class to put the
+ * attribute on: an id, a label, a description, the static part of
+ * access, whether it creates, whether it is the default a parent
+ * invokes, how a call behaves, and the parameters a route or a tool
  * supplies. A class-based operation reads its parameters off its
  * signature; a derived one names them, since one method serves every
  * derivative and a parameter may be named after the derivative (a node
@@ -51,6 +52,11 @@ final class DerivedOperation {
    * @param bool|null $idempotent
    *   Whether the same call twice leaves what the first left, or NULL to
    *   have it derived, as on #[Operation].
+   * @param bool $creates
+   *   Whether submitting makes a new thing, as on #[Operation]: stamped
+   *   on the context, which must agree.
+   * @param string|\Stringable|null $description
+   *   What a call does to what, as on #[Operation]; NULL for none.
    */
   public function __construct(
     public readonly string $id,
@@ -62,6 +68,8 @@ final class DerivedOperation {
     public readonly bool $destructive = FALSE,
     public readonly bool $readOnly = FALSE,
     public readonly ?bool $idempotent = NULL,
+    public readonly bool $creates = FALSE,
+    public readonly string|\Stringable|null $description = NULL,
   ) {}
 
 }

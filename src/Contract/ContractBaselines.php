@@ -90,7 +90,7 @@ final class ContractBaselines {
           continue;
         }
         $context = $this->resources->operation($name, $operation->id);
-        $documents[] = $this->emitter->emitFull($this->resources->buildStatic($name, $context), $definition->id, $operation->id, $operation->label, operation: $operation->facts($context))->document;
+        $documents[] = $this->emitter->emitFull($this->resources->buildStatic($name, $context), $definition->id, $operation->id, $operation->label, operation: $operation->facts())->document;
       }
       if ($documents !== []) {
         $baselines[$definition->id] = [

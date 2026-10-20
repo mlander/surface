@@ -392,6 +392,54 @@ attribute arguments (`#[Operation(label:)]`, plugin attributes), where
 a function call is not allowed; a class the container builds keeps
 injecting `string_translation` and calling `$this->t()`.
 
+### An operation on the class
+
+`#[Operation]` may stand on the resource's or structure's class,
+repeatable, and is then the whole operation: its context is the bare
+one, `new OperationContext()` with the attribute's id and `creates`
+stamped on it, and there is no method. Decided 2026-10-20. **The class
+form is the default and the method the exception**: a method only when
+the context needs more than the attribute says, parameters, identity it
+knows, a constraint, defaults or a child. Every shipped singleton is
+written on the class (the examples, the first module's two resources),
+and the content type, the field and the field storage keep methods
+because their contexts know or narrow something.
+
+- **Why.** Thirty-eight operations in the module, twelve of them in
+  shipped modules and every one of the examples' and the first module's,
+  had a method whose whole body was the context, `return new
+  OperationContext('configure');`, restating the attribute's id in a
+  second place that had to agree with it. The method form exists so that what an operation needs is its own
+  signature, and a bare operation has no signature; the first page a
+  newcomer copies carried the five lines for nothing.
+- **Against the earlier refusal of a second spelling.** [A rule
+  declared as data](#a-rule-declared-as-data) rejected an attribute
+  for rules partly because two spellings of one rule would be
+  documented twice. That reason does not carry over: the class form
+  carries no code at all, so there is nothing to keep in step with a
+  method, and the method form is needed exactly when there is something
+  to write in it. It is one attribute in two places, not two
+  vocabularies; the docs teach the class form first and say "a method
+  only when the context needs more".
+- **What stays on the attribute.** Everything static about an
+  operation, wherever it stands: id, label, `description`, permission,
+  `creates`, `readOnly`, `destructive`, `idempotent`, `default`, `of`.
+  The catalog, the tool listing and the kind read them without running
+  anything ([Whether an operation creates](#whether-an-operation-creates)).
+- **A description.** `description:` says what a call does to what, for
+  whoever chooses between operations, an agent first among them: it is
+  the first sentence of the tool's description and the top
+  `description` of both documents. With none, a method's docblock
+  summary stands in (a comment, so not translatable; an operation read
+  in another language says it on the attribute), and an operation on
+  the class has none, its tool described by its label.
+
+The sandbox modules and the test fixtures that keep the method form
+work unchanged: a method that names the attribute's id is the same
+operation. (`Operation`, `ResourceRegistry::discover()`,
+`OperationDefinition::isBare()`, `Resources::operation()`,
+`OperationFactsTest`)
+
 ## Context
 
 ### A build is not cached
@@ -462,11 +510,20 @@ nothing and stays open.
 
 ### A context's id is the operation id
 
-An operation whose context carries an id other than its own is
-refused when the operation is asked. The pattern says the context's id
-*is* the operation id; enforcing it is what lets alters (`operations:`),
-permissions and catalogs trust it. An operation built on another calls
-`withId()`. (`Resources::operation()`)
+The context's id *is* the operation id, and is stamped from the
+attribute: an `#[Operation]` method may leave the id out of the context
+it returns, and `creates` too, and the engine stamps the attribute's on
+it (decided 2026-10-20). One that names another id, or says otherwise
+about creating, is refused, at discovery for an operation that needs
+nothing (discovery builds it, as it would be built when asked), and
+when it is first asked for one that needs a subject, which cannot be
+built before a caller names it. Enforcing it is what lets alters
+(`operations:`), permissions and catalogs trust it. An operation built
+on another calls `withId()`. A context that was never stamped, an
+operation's method called directly and handed to `build()`, is refused
+there: ask for the operation through `operation()`.
+(`OperationDefinition::stamp()`, `ResourceRegistry::assertStamps()`,
+`Resources::operation()`)
 
 ### Constraints and starting values for an attached key
 
@@ -917,7 +974,11 @@ condition is runtime. Each choice, and why:
   it needs a method to sit on and a rule has no code; attribute
   arguments take no static call, so conditions would be nested `new`s
   of public constructors and descriptions `new TranslatableMarkup`; and
-  two spellings of one rule would be documented twice.
+  two spellings of one rule would be documented twice. (Operations
+  weighed the same worry and decided the other way, 2026-10-20: an
+  operation on the class carries no code to keep in step, so the class
+  form is the default and the method the exception, [An operation on
+  the class](#an-operation-on-the-class).)
 - **Stated as written.** The full schema and every def state each rule
   as one conditional, its `then` read the way an enumerated one is (only
   what changed, `false` where it does not apply, `required` where only
@@ -2213,27 +2274,43 @@ value not on its list unexplained.
 
 ### An operation states how it behaves
 
-`#[Operation]` says whether a call changes nothing (`readOnly`) and
-whether it may destroy what is there (`destructive`), both `FALSE`
-unless said, and whether the same call twice leaves what the first left
-(`idempotent`), derived unless said: an operation that does not create
-is idempotent, the same document twice writing the same state; one that
-creates is not, the second call finding what the first made; a read only
-one is. Decided 2026-10-19. A read only operation that destroys, or
-that is not idempotent, is refused at discovery. `OperationDefinition`
-carries the three (`idempotent()`, `facts()`), and so does a derived
-operation (`DerivedOperation`).
+`#[Operation]` says whether a call creates (`creates`), whether it
+changes nothing (`readOnly`) and whether it may destroy what is there
+(`destructive`), all `FALSE` unless said, and whether the same call
+twice leaves what the first left (`idempotent`), derived unless said:
+an operation that does not create is idempotent, the same document
+twice writing the same state; one that creates is not, the second call
+finding what the first made; a read only one is. Decided 2026-10-19;
+`creates` moved onto the attribute 2026-10-20. A read only operation
+that destroys, or that is not idempotent, is refused at discovery.
+`OperationDefinition` carries the facts (`kind()`, `idempotent()`,
+`facts()`), and so does a derived operation (`DerivedOperation`).
 
 - **Why on the operation.** A client asks before it calls a tool that
   destroys and retries one that is idempotent, and MCP reads both as a
   tool's annotations. Only the author knows whether a call destroys; a
   module that writes cannot read it off a storage class. Whether an
-  operation creates is the context's ([Whether an operation
-  creates](#whether-an-operation-creates)), so idempotence is derived
-  from it and declared only where the author knows better, such as an
-  operation that appends. None of the module's own operations destroys:
-  an edit changes the keys it is sent, and a key left out keeps its
-  value.
+  operation creates is on the attribute too, stamped on its context
+  ([Whether an operation creates](#whether-an-operation-creates)), so
+  idempotence is derived from it and declared only where the author
+  knows better: an operation that appends is not idempotent, and a
+  create whose caller names the thing is. None of the module's own
+  operations destroys: an edit changes the keys it is sent, and a key
+  left out keeps its value.
+- **A create the caller names is idempotent** (decided 2026-10-20).
+  `node.type:add`, `field.instance:add` and `field.instance:reuse`
+  create a thing whose identity the caller sends, a machine name or a
+  field name on a bundle: the second identical call finds that name
+  taken and leaves what the first left (the content type's is refused
+  for the name, the field's writes the same field again), which is
+  Smithy's put. They declare `idempotent: TRUE`, and their `kind`
+  stays `create`: whether a tool requires the resource's keys at its
+  door follows from creating, not from idempotence, and no `put` kind
+  was added. A create whose storage gives the id (a content entity's
+  add) stays derived, not idempotent. Derivation was weighed (a
+  creating context that leaves an identity key for the caller) and not
+  taken: it reads the context, which waits for the parameters, and the
+  attribute already says it in one word.
 - **The Tool API.** The tool deriver makes a read only operation the
   `Read` kind and every other the `Write` kind, and passes `destructive`
   to `setDestructive()`; a read tool is `Read` by what it is
@@ -2257,14 +2334,19 @@ operation (`DerivedOperation`).
 - **Both documents.** The schema for these answers and the full schema
   state the facts at the top, first under the top's `x-surface`, beside
   the title that is the operation's label:
-  `x-surface.operation: {id, label, kind, creates, readOnly,
-  destructive, idempotent}`, so a client reading the contract directly
-  has the operation's own answer, idempotence included. A document
+  `x-surface.operation: {id, label, description, kind, creates,
+  readOnly, destructive, idempotent}`, `description` only when the
+  operation says one, so a client reading the contract directly has the
+  operation's own answer, idempotence included. As the label is the
+  document's `title`, the description is its top `description`
+  (decided 2026-10-20), and a change to either is a note to the
+  contract diff. A document
   asked for in no operation states none.
 - **A kind, derived.** `kind` names the call in one word, `create`,
   `update` or `read` (decided 2026-10-19): a read only operation is a
-  read, one whose context creates is a create, and every other an
-  update (`OperationDefinition::kind()`). It is never declared, so it
+  read, one that creates is a create, and every other an update
+  (`OperationDefinition::kind()`), read off the attribute, so known
+  before anything is built. It is never declared, so it
   cannot disagree with `readOnly` and `creates`, and the contract diff
   does not compare it on its own: a change to it is a change to one of
   those two, which it does compare. It is the fact a client needs first,
@@ -2272,9 +2354,27 @@ operation (`DerivedOperation`).
   requires the keys the resource requires, an update none ([Required is
   the resource's, and an update tool requires nothing at its
   door](#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
-  A tool says it in its description, "(kind: update)", beside the Tool
-  API's own `Read` or `Write`, which `tool:info` prints as its
+  A tool says it in its description's line of call rules, which starts
+  with the kind ("Update: send only the keys to change; ..."), beside
+  the Tool API's own `Read` or `Write`, which `tool:info` prints as its
   operation.
+- **A description, and a title of its own** (decided 2026-10-20). A
+  tool's description is the operation's `description`, or its label
+  where it says none, then one line of call rules for its kind, with no
+  literal quotes, which the MCP bridge escapes into entities: "Create: a
+  key left out takes its default, and every key marked required must be
+  sent.", "Update: send only the keys to change; a key left out keeps
+  its value, null clears it. The read tool returns the current
+  values.", "Read only: nothing is written; a key left out is checked at
+  its current value." It replaced a template that gave 38 of 65 tools
+  one 32-word sentence. The read tool is named by what it does, not by
+  its Tool API id, which an MCP client renames. No two tools share a
+  title: the examples' three registration steps say which step they
+  are, and where operations of several resources still share a label,
+  each tool adds its resource's label, or its id for a class, which has
+  none; the read tool is titled "Current values:" and the write tool's
+  title (`ResourceOperationToolDeriver::title()`,
+  `OperationInputs::description()`).
 - **No read tool beside a read only operation.** It changes nothing, so
   there is nothing to read before changing it
   (`ResourceCatalog::reads()`).
@@ -2334,8 +2434,9 @@ What a property defaults to in the tool's static definition, its
 listing, depends on whether the operation creates. One that creates
 lists the declared defaults, which are what a key left out becomes. One
 that changes a thing that exists lists none, at any depth, and its
-description says "A key left out keeps its current value; <read tool>
-returns the current values."
+description's call rules say "Update: send only the keys to change; a
+key left out keeps its value, null clears it. The read tool returns the
+current values."
 
 Why no required key on an update (decided 2026-10-19, replacing "a
 required key cannot be left out"): the Tool API refuses a required input
@@ -2371,19 +2472,16 @@ listing changed. (`OperationInputs::declaredValues()`,
 ### Which operations read
 
 An operation that can be asked on its own has a read tool when it changes
-a thing that exists: one that needs nothing, by its context not
-creating; one that needs a subject, by its parameters naming one thing
-whole, a single entity with no scalar identity key beside it, or a
-scalar for every identity key. A read only operation has none: it
-changes nothing ([An operation states how it
-behaves](#an-operation-states-how-it-behaves)). The context is the truth and cannot be
-asked before the subject is named, and `creates` is not on
-`#[Operation]` ([Whether an operation creates](#whether-an-operation-creates)), so the signature is
-read, as identity is. A context that turns out to create is refused when
-the read runs. *Open:* whether `#[Operation]` should say `creates`
-itself, checked against the context the way its id is, which would
-replace the reading. (`OperationDefinition::namesOneThing()`,
-`ResourceCatalog::reads()`)
+a thing that exists: when its kind is `update`, neither creating nor
+read only, both read off its attribute. A read only operation has none:
+it changes nothing ([An operation states how it
+behaves](#an-operation-states-how-it-behaves)). Until 2026-10-20 the
+signature was read for an operation that needs a subject (one entity,
+or a scalar for every identity key, named one thing whole), because
+whether it creates was on its context, which cannot be built before the
+subject is named; `creates` on `#[Operation]`, checked against the
+context the way its id is, replaced the reading, closing the point this
+entry left open. (`ResourceCatalog::reads()`)
 
 ### A read promises shape, not membership
 
@@ -2733,10 +2831,17 @@ only when asked for. (`DataSurfaceWidgetManager::asked()`,
 
 ### Whether an operation creates
 
-The catalog says whether an operation creates only for one that needs
-nothing; one that needs a subject is listed as not knowing. `creates`
-is on the context an operation returns, not on `#[Operation]`, and the
-catalog builds nothing. (`ResourceCatalog::creates()`)
+Whether an operation creates is on `#[Operation(creates:)]`, read at
+discovery, and stamped on the context its method returns, which may say
+it too and must then agree (decided 2026-10-20, reversing "on the
+context, not on `#[Operation]`"). The catalog, the tool listing and the
+kind read it without building or asking anything, so the catalog knows
+it for every operation, one that needs a subject included, where it
+used to say "once given what it needs", and the tool bridge no longer
+reads the signature to guess it. A context that says otherwise is
+refused, at discovery when the operation needs nothing, as [a context
+under another id](#a-contexts-id-is-the-operation-id) is.
+(`OperationDefinition::stamp()`, `ResourceCatalog::describe()`)
 
 ### A class that is not there
 

@@ -9,7 +9,6 @@ use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
-use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_tool_test\Storage\VaultStorage;
 
@@ -21,15 +20,11 @@ use Drupal\data_surface_tool_test\Storage\VaultStorage;
  * of a collection, which the read tool never returns.
  */
 #[Resource('tool_test.vault', storage: VaultStorage::class)]
+#[Operation('configure',
+  label: 'Configure the vault',
+  permission: 'administer site configuration',
+)]
 final class VaultResource implements ResourceInterface {
-
-  /**
-   * Configures the vault, which always exists.
-   */
-  #[Operation('configure', label: 'Configure the vault', permission: 'administer site configuration')]
-  public static function configure(): OperationContext {
-    return new OperationContext('configure');
-  }
 
   /**
    * {@inheritdoc}

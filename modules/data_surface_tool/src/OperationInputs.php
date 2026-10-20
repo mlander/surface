@@ -17,7 +17,6 @@ use Drupal\data_surface\ResourceBuild\OperationDefinition;
 use Drupal\data_surface\ResourceBuild\OperationParameter;
 use Drupal\data_surface\ResourceBuild\ResourceDefinition;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
-use Drupal\data_surface_tool\Plugin\tool\Tool\ResourceOperationReadTool;
 use Drupal\tool\TypedData\InputDefinition;
 use Drupal\tool\TypedData\InputDefinitionInterface;
 use Drupal\tool\TypedData\ListOutputDefinition;
@@ -65,8 +64,8 @@ use Drupal\tool\TypedData\OutputDefinition;
  * requires none and lists no default in its static definition, which
  * clients cache as a discovery channel: a key left out keeps its current
  * value, each key the resource requires says so in its description, the
- * tool's description names the read tool that returns the current
- * values, and the pipeline refuses the merged document when a required
+ * tool's description says the read tool returns the current values, and
+ * the pipeline refuses the merged document when a required
  * key has nothing stored. Once its parameters arrive, the refined
  * `values` (values()) defaults each property to what the storage loads
  * now, for that one request, and requires nothing either, so a client
@@ -408,10 +407,8 @@ final class OperationInputs {
   /**
    * Answers whether an operation changes a thing that exists.
    *
-   * The same reading the catalog's reads() makes for an operation that
-   * can be asked on its own: one that needs nothing, by its context not
-   * creating; one that needs a subject, by its parameters naming one
-   * thing whole.
+   * Whether it does not create, as its attribute says, the same reading
+   * the catalog's reads() makes, so nothing is built to learn it.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
@@ -422,18 +419,14 @@ final class OperationInputs {
    *   TRUE when a key left out keeps what is stored.
    */
   public function changesWhatExists(ResourceDefinition $resource, OperationDefinition $operation): bool {
-    if (!$operation->needsNothing()) {
-      return $operation->namesOneThing($resource->identity);
-    }
-    return !$this->resources->operation($resource->name(), $operation->id)->creates;
+    return !$operation->creates;
   }
 
   /**
    * Names the kind of call a tool for an operation is.
    *
-   * The operation's kind (OperationDefinition::kind()), with whether it
-   * creates read as changesWhatExists() reads it, since an operation that
-   * needs a subject cannot build its context before the subject is named.
+   * The operation's kind (OperationDefinition::kind()), read off its
+   * attribute.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
@@ -444,7 +437,7 @@ final class OperationInputs {
    *   OperationDefinition::CREATE, ::UPDATE or ::READ.
    */
   public function kind(ResourceDefinition $resource, OperationDefinition $operation): string {
-    return $operation->kind(!$this->changesWhatExists($resource, $operation));
+    return $operation->kind();
   }
 
   /**
@@ -619,10 +612,13 @@ final class OperationInputs {
   /**
    * Describes the tool for one operation.
    *
-   * Its kind first, then what it needs and what its values are. An update
-   * says what a key left out does and names the read tool; a read only
-   * operation that changes nothing says a key left out is checked as it
-   * is stored.
+   * The operation's own description first, what a call does to what, or
+   * its label where it says none; then one line of call rules for its
+   * kind: what a key left out does, and for an update that the read tool
+   * returns what is there. No literal quotes, which a bridge that escapes
+   * the text would turn into entities.
+   *
+   * Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
@@ -633,23 +629,34 @@ final class OperationInputs {
    *   The description.
    */
   public function description(ResourceDefinition $resource, OperationDefinition $operation): TranslatableMarkup {
-    $changes = $this->changesWhatExists($resource, $operation);
-    $arguments = [
-      '@label' => self::operationLabel($operation),
-      '@operation' => $operation->id,
-      '@resource' => $resource->id,
-      '@kind' => $this->kind($resource, $operation),
-      '@needs' => $this->needs($operation),
-    ];
-    if ($changes && $operation->readOnly) {
-      return $this->t('@label: the "@operation" operation of the @resource resource (kind: @kind). @needs The values input is the resource itself, less what the operation already knows: every setting it takes, including those other modules add, with its label, its meaning and the values it allows. A key left out is checked at its current value, and nothing is written.', $arguments);
+    $arguments = ['@description' => $this->operationDescription($operation)];
+    return match ($operation->kind()) {
+      OperationDefinition::READ => $this->t('@description Read only: nothing is written; a key left out is checked at its current value.', $arguments),
+      OperationDefinition::CREATE => $this->t('@description Create: a key left out takes its default, and every key marked required must be sent.', $arguments),
+      default => $this->t('@description Update: send only the keys to change; a key left out keeps its value, null clears it. The read tool returns the current values.', $arguments),
+    };
+  }
+
+  /**
+   * Gets an operation's description as a placeholder value, still lazy.
+   *
+   * Its own, or, where it says none, its label as a sentence.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup|string
+   *   The description: the object, for a translatable one.
+   */
+  protected function operationDescription(OperationDefinition $operation): TranslatableMarkup|string {
+    if ($operation->description instanceof TranslatableMarkup) {
+      return $operation->description;
     }
-    if ($changes) {
-      return $this->t('@label: the "@operation" operation of the @resource resource (kind: @kind). @needs The values input is the resource itself, less what the operation already knows: every setting it takes, including those other modules add, with its label, its meaning and the values it allows. A key left out keeps its current value; @read returns the current values.', $arguments + [
-        '@read' => self::TOOL . ':' . $resource->id . ':' . $operation->id . ResourceOperationReadTool::SUFFIX,
-      ]);
+    if ($operation->description !== NULL && (string) $operation->description !== '') {
+      return (string) $operation->description;
     }
-    return $this->t('@label: the "@operation" operation of the @resource resource (kind: @kind). @needs The values input is the resource itself, less what the operation already knows: every setting it takes, including those other modules add, with its label, its meaning and the values it allows.', $arguments);
+    $label = self::operationLabel($operation);
+    return $label instanceof TranslatableMarkup ? $this->t('@label.', ['@label' => $label]) : $label . '.';
   }
 
   /**
@@ -664,10 +671,8 @@ final class OperationInputs {
    *   The description.
    */
   public function readDescription(ResourceDefinition $resource, OperationDefinition $operation): TranslatableMarkup {
-    return $this->t('Reads what is stored for @label: the "@operation" operation of the @resource resource, and writes nothing. @needs The values output is the resource itself, less what the operation already knows, in the shape the write tool takes, so a caller can read what is there before changing it. A secret is never returned.', [
+    return $this->t('Reads what is stored for @label, and writes nothing. @needs The values output is the resource itself, less what the operation already knows, in the shape the write tool takes, so a caller can read what is there before changing it. A secret is never returned.', [
       '@label' => self::operationLabel($operation),
-      '@operation' => $operation->id,
-      '@resource' => $resource->id,
       '@needs' => $this->needs($operation),
     ]);
   }

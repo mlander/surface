@@ -208,17 +208,21 @@ same two keys.
 
 ### The schema
 
-At the top, after `$schema` and the `title` that is the operation's
-label, the top's `x-surface` says first how the operation behaves, as
-`#[Operation]` states it
+At the top, after `$schema`, the `title` that is the operation's label
+and the `description` that is its description (what a call does to
+what, when the operation says one), the top's `x-surface` says first
+how the operation behaves, as `#[Operation]` states it
 ([decision](decisions.md#an-operation-states-how-it-behaves)), in both
 documents alike:
 
 ```json
+"title": "Configure registration (step 3)",
+"description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
 "x-surface": {
   "operation": {
     "id": "configure",
-    "label": "Configure registration",
+    "label": "Configure registration (step 3)",
+    "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
     "kind": "update",
     "creates": false,
     "readOnly": false,
@@ -230,13 +234,16 @@ documents alike:
 ```
 
 `kind` names the call, derived and never declared: `read` for a read
-only operation, `create` for one whose context creates, and `update` for
-every other, which changes what exists. A generated tool asks for what
-its kind says at its door: a create requires the keys the resource
-requires, and an update requires none, since a key left out keeps what
-is stored ([decision](decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
-`creates` is the context's answer; `idempotent` is the operation's own,
-derived from `creates` unless declared, which a tool listing cannot
+only operation, `create` for one that creates (`#[Operation(creates:
+TRUE)]`), and `update` for every other, which changes what exists. A
+generated tool asks for what its kind says at its door: a create
+requires the keys the resource requires, and an update requires none,
+since a key left out keeps what is stored
+([decision](decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
+`creates` is the attribute's, stamped on the context; `description` is
+there only when the operation says one; `idempotent` is the operation's
+own, derived from `creates` unless declared (a create whose caller names
+the thing, such as `node.type:add`, declares it), which a tool listing cannot
 always say (the Tool API reads idempotence off the operation kind, and
 every kind that writes is not idempotent). Then `version`, which
 version of its stored values the resource or structure describes
@@ -805,10 +812,11 @@ Riverside Hall and its main hall, as `/surface-api` serves it:
 {
   "surface": "registration.step2",
   "situation": "configure",
-  "label": "Configure registration",
+  "label": "Configure registration (step 2)",
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "title": "Configure registration",
+    "title": "Configure registration (step 2)",
+    "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
     "type": "object",
     "properties": {
       "title": {"title": "Event title", "type": "string", "x-surface": {"widget": "text", ...}},
@@ -1006,7 +1014,7 @@ The harbour's deck, written:
   "committed": true, "valid": true, "violations": [], "stale": [], "notes": [],
   "changes": ["title", "venue", "room", "capacity"], "outputs": {},
   "contract": {
-    "surface": "registration.step2", "situation": "configure", "label": "Configure registration",
+    "surface": "registration.step2", "situation": "configure", "label": "Configure registration (step 2)",
     "schema": {...},
     "values": {"title": "Autumn meetup", "open": true, "venue": "harbour", "room": "harbour_deck", "capacity": 90},
     "stale": [],

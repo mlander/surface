@@ -301,12 +301,15 @@ not which keys there are. It is how much is already known.
   rather than in `defineInputs()` because identity is the address: what
   a catalog lists, what a tool or route must supply. A resource with
   no identity keys is a singleton.
-- The ways a resource is asked for are **static methods on the
-  class**: `FieldInstanceResource::add()`, `::reuse()`, `::edit()`.
-  Each returns an `OperationContext` and knows more than the last.
-- Each carries `#[Operation]`: an id, a label, and the static part of
-  its access. What it needs is its own signature. Whether it creates is
-  on the context it returns, where the storage reads it.
+- The ways a resource is asked for are **`#[Operation]` attributes**:
+  an id, a label, a description, the static part of its access, and
+  whether it creates. One that needs nothing more stands on the class
+  and has no method (a settings object's `configure`); one whose
+  context needs more is a **static method on the class**:
+  `FieldInstanceResource::add()`, `::reuse()`, `::edit()`. Each returns
+  an `OperationContext` and knows more than the last; what it needs is
+  its own signature. Whether it creates is on the attribute, stamped on
+  the context, where the storage reads it.
 - **Another module can add one.** `#[Operation('clone', of:
   FieldInstanceResource::class)]` on a static method of any class in its
   `src/Alter/` is found the way a hook method is, no interface

@@ -8,7 +8,9 @@ use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\ResourceBuild\OperationDefinition;
 use Drupal\data_surface_tool\OperationInputs;
+use Drupal\data_surface_tool\Plugin\Derivative\ResourceOperationToolDeriver;
 use Drupal\data_surface_tool\Plugin\tool\Tool\ResourceOperationReadTool;
+use Drupal\data_surface_tool_test\Resource\VaultResource;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\TypedData\MapInputDefinition;
 use PHPUnit\Framework\Attributes\Group;
@@ -17,15 +19,17 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 /**
  * Tests every shipped operation's tool asks for what its kind says.
  *
- * The kind is derived, `create`, `update` or `read`, and stated in both
- * documents and in the tool's description. A create's tool requires the
- * keys the resource requires; an update's requires none, at any depth,
- * says on each key the resource requires that a value already stored
- * stands, and names its read tool; a read only operation's requires none
- * either, since a key left out is checked at its current value, and has
- * no read tool beside it; a read tool takes only the operation's
- * parameters. Over the examples, the first module, the field tools and
- * the tool test module.
+ * The kind is derived from the attribute, `create`, `update` or `read`,
+ * and stated in both documents and in the tool's description, whose
+ * first sentence is the operation's own description and whose one line
+ * of call rules is its kind's. A create's tool requires the keys the
+ * resource requires; an update's requires none, at any depth, says on
+ * each key the resource requires that a value already stored stands, and
+ * has a read tool; a read only operation's requires none either, since a
+ * key left out is checked at its current value, and has no read tool
+ * beside it; a read tool takes only the operation's parameters. No two
+ * tools share a title. Over the examples, the first module, the field
+ * tools and the tool test module.
  *
  * @see docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door
  * @see docs/decisions.md#an-operation-states-how-it-behaves
@@ -40,6 +44,15 @@ class OperationKindsTest extends DataSurfaceKernelTestBase {
    * What an update tool says on each key the resource requires.
    */
   protected const NOTE = 'Required; a value already stored stands when left out.';
+
+  /**
+   * The line of call rules each kind's tool description ends with.
+   */
+  protected const RULES = [
+    'create' => 'Create: a key left out takes its default, and every key marked required must be sent.',
+    'update' => 'Update: send only the keys to change; a key left out keeps its value, null clears it. The read tool returns the current values.',
+    'read' => 'Read only: nothing is written; a key left out is checked at its current value.',
+  ];
 
   /**
    * {@inheritdoc}
@@ -88,12 +101,16 @@ class OperationKindsTest extends DataSurfaceKernelTestBase {
       $operation = $registry->getOperation($resource->name(), substr($derivative, $separator + 1));
       $kind = $operation_inputs->kind($resource, $operation);
       $kinds[$id] = $kind;
+      $this->assertSame($kind, $operation->facts()['kind'], $id . ': the tool and the documents name one kind.');
       $description = (string) $definition->getDescription();
-      $this->assertStringContainsString('(kind: ' . $kind . ')', $description, $id);
+      // The vault says none, and is described by its label.
+      $this->assertSame($operation->description === NULL, $id === 'data_surface:tool_test.vault:configure', $id . ': every shipped operation says what it does.');
+      $this->assertSame((string) ($operation->description ?? $operation->label . '.') . ' ' . self::RULES[$kind], $description, $id . ': its own description, then its kind\'s call rules.');
+      $this->assertStringNotContainsString('"', $description, $id . ': no literal quotes, which a bridge escapes.');
 
       $context = $operation->needsNothing() ? $resources->operation($resource->name(), $operation->id) : new OperationContext($operation->id);
       if ($operation->needsNothing()) {
-        $this->assertSame($kind, $operation->facts($context)['kind'], $id . ': the tool and the documents name one kind.');
+        $this->assertSame($operation->creates, $context->creates, $id . ': the context says what the attribute says.');
       }
       $values = $definition->getInputDefinition(OperationInputs::VALUES);
       $this->assertInstanceOf(MapInputDefinition::class, $values, $id);
@@ -109,7 +126,6 @@ class OperationKindsTest extends DataSurfaceKernelTestBase {
       if ($kind === OperationDefinition::CREATE) {
         $this->assertSame($requires, $this->required($values, FALSE), $id . ': a create lists the keys the resource requires.');
         $this->assertStringNotContainsString(self::NOTE, $this->descriptions($values), $id);
-        $this->assertStringNotContainsString('left out', $description, $id);
         $this->assertFalse($read, $id . ': nothing exists to read before a create.');
         continue;
       }
@@ -119,8 +135,8 @@ class OperationKindsTest extends DataSurfaceKernelTestBase {
         $this->assertStringEndsWith(self::NOTE, (string) $values->getPropertyDefinition($name)?->getDescription(), $id . ': ' . $name);
       }
       if ($kind === OperationDefinition::UPDATE) {
-        $this->assertStringContainsString('A key left out keeps its current value; ' . $id . ResourceOperationReadTool::SUFFIX . ' returns the current values.', $description, $id);
         $this->assertTrue($read, $id . ': an update has a read tool beside it.');
+        $this->assertSame('Current values: ' . $definition->getLabel(), (string) $manager->getDefinition($id . ResourceOperationReadTool::SUFFIX)->getLabel(), $id);
         $this->assertSame(
           array_map(static fn ($parameter): string => $parameter->name, $operation->parameters),
           array_keys($manager->getDefinition($id . ResourceOperationReadTool::SUFFIX)->getInputDefinitions()),
@@ -129,7 +145,6 @@ class OperationKindsTest extends DataSurfaceKernelTestBase {
         continue;
       }
       $this->assertSame(OperationDefinition::READ, $kind);
-      $this->assertStringContainsString('A key left out is checked at its current value, and nothing is written.', $description, $id);
       $this->assertFalse($read, $id . ': a read only operation has no read tool beside it.');
     }
 
@@ -161,6 +176,36 @@ class OperationKindsTest extends DataSurfaceKernelTestBase {
       'data_surface:tool_test.specimen:configure' => 'update',
       'data_surface:tool_test.vault:configure' => 'update',
     ], $kinds);
+  }
+
+  /**
+   * Tests no two tools share a title, and what one shared would read.
+   *
+   * A client lists tools by title. The examples' three registration steps
+   * say which step they are; where operations of several resources still
+   * share a label, each tool adds its resource, and the read tool is
+   * "Current values:" and the write tool's title.
+   */
+  public function testNoTwoToolsShareTitles(): void {
+    $titles = [];
+    foreach ($this->container->get('plugin.manager.tool')->getDefinitions() as $id => $definition) {
+      if (str_starts_with($id, OperationInputs::TOOL . ':')) {
+        $titles[$id] = (string) $definition->getLabel();
+      }
+    }
+    $this->assertSame(array_unique($titles), $titles);
+    $this->assertSame('Configure registration (step 3)', $titles['data_surface:registration.step3:configure']);
+    $this->assertSame('Current values: Configure registration (step 3)', $titles['data_surface:registration.step3:configure:read']);
+
+    $deriver = ResourceOperationToolDeriver::create($this->container, OperationInputs::TOOL);
+    $shared = new \ReflectionMethod($deriver, 'sharedLabels');
+    $this->assertSame([], $shared->invoke($deriver), 'No shipped label is shared.');
+    $title = new \ReflectionMethod($deriver, 'title');
+    $registry = $this->container->get('data_surface.resource_registry');
+    $vault = $registry->getDefinition(VaultResource::class);
+    $configure = $registry->getOperation(VaultResource::class, 'configure');
+    $this->assertSame('Configure the vault', (string) $title->invoke($deriver, $vault, $configure, []));
+    $this->assertSame('Configure the vault (tool_test.vault)', (string) $title->invoke($deriver, $vault, $configure, ['Configure the vault' => TRUE]), 'A class has no label, so its id.');
   }
 
   /**

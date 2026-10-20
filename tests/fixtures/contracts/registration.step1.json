@@ -5,14 +5,16 @@
         {
             "surface": "registration.step1",
             "situation": "configure",
-            "label": "Configure registration",
+            "label": "Configure registration (step 1)",
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
-                "title": "Configure registration",
+                "title": "Configure registration (step 1)",
+                "description": "Sets the event title, its capacity and whether registration is open.",
                 "x-surface": {
                     "operation": {
                         "id": "configure",
-                        "label": "Configure registration",
+                        "label": "Configure registration (step 1)",
+                        "description": "Sets the event title, its capacity and whether registration is open.",
                         "kind": "update",
                         "creates": false,
                         "readOnly": false,

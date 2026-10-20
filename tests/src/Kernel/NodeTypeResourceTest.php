@@ -251,7 +251,7 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
    * Tests the storage creating a content type, then updating it.
    */
   public function testStorageCreatesThenUpdates(): void {
-    [$surface, $storage] = $this->served(NodeTypeResource::add());
+    [$surface, $storage] = $this->served($this->resources()->operation(NodeTypeResource::class, 'add'));
     $this->assertSame([], $storage->load($surface));
     $result = $this->submit($surface, $storage, [
       'name' => 'Recipe',
@@ -280,7 +280,7 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
 
     // Edited through the edit operation: a partial payload changes what
     // it names, the rest is loaded, and the machine name cannot move.
-    [$surface, $storage] = $this->served(NodeTypeResource::edit($type));
+    [$surface, $storage] = $this->served($this->resources()->operation(NodeTypeResource::class, 'edit', ['type' => $type]));
     $this->assertSame('Recipe name', $storage->load($surface)['title_label']);
     $edit = $this->submit($surface, $storage, [
       'name' => 'Recipes',
@@ -310,7 +310,7 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
    * status, whose default did not move.
    */
   public function testDryRunReturnsThePreparedStorageLayoutAndWritesNothing(): void {
-    [$surface, $storage] = $this->served(NodeTypeResource::add());
+    [$surface, $storage] = $this->served($this->resources()->operation(NodeTypeResource::class, 'add'));
     $result = $this->submit($surface, $storage, [
       'name' => 'Dry run',
       'type' => 'dry_run',
@@ -367,7 +367,7 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
    * written.
    */
   public function testSchemaRefusesAnInvalidNodeTypeAtPrepare(): void {
-    [$surface, $storage] = $this->served(NodeTypeResource::add());
+    [$surface, $storage] = $this->served($this->resources()->operation(NodeTypeResource::class, 'add'));
     $values = ['name' => "Two\nlines", 'type' => 'two_lines'];
     // The built resource itself has nothing against it.
     $this->assertTrue($this->pipeline()->validate($surface, $this->pipeline()->accept($surface, $values, []))->isEmpty());
@@ -386,7 +386,10 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
     $this->expectException(StorageViolationsException::class);
     $this->expectExceptionMessage('Labels are not allowed to span multiple lines or contain control characters.');
     $this->container->get('class_resolver')->getInstanceFromDefinition(NodeTypeStorage::class)
-      ->prepare(NodeTypeResource::add(), ['name' => "Two\nlines", 'type' => 'two_lines']);
+      ->prepare($this->resources()->operation(NodeTypeResource::class, 'add'), [
+        'name' => "Two\nlines",
+        'type' => 'two_lines',
+      ]);
   }
 
   /**
@@ -400,7 +403,7 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
    */
   public function testAlterStoresTheReviewSettingsInTheirOwnLayout(): void {
     $extras = 'data_surface_demo_extras';
-    [$surface, $storage] = $this->served(NodeTypeResource::add());
+    [$surface, $storage] = $this->served($this->resources()->operation(NodeTypeResource::class, 'add'));
     $mount = $surface->getDefinition('third_party_settings');
     $this->assertInstanceOf(ComplexDataDefinitionInterface::class, $mount);
     $module = $mount->getPropertyDefinition($extras);
@@ -425,7 +428,7 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['news'], $type->getThirdPartySetting($extras, NodeTypeReviewSettings::TAGS));
     $this->assertContains($extras, $type->getDependencies()['module'] ?? []);
 
-    [$surface, $storage] = $this->served(NodeTypeResource::edit($type));
+    [$surface, $storage] = $this->served($this->resources()->operation(NodeTypeResource::class, 'edit', ['type' => $type]));
     $this->assertSame($week, $storage->load($surface)['third_party_settings'][$extras][NodeTypeReviewSettings::DEADLINE]);
 
     // Past thirty days is refused on the amount, in the caller's units.
@@ -457,8 +460,8 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
       'demo permission only' => [[NodeTypeResourceHooks::PERMISSION], FALSE],
       'both' => [['administer content types', NodeTypeResourceHooks::PERMISSION], TRUE],
     ];
-    $add = NodeTypeResource::add();
-    $edit = NodeTypeResource::edit(NodeType::load('article'));
+    $add = $this->resources()->operation(NodeTypeResource::class, 'add');
+    $edit = $this->resources()->operation(NodeTypeResource::class, 'edit', ['type' => 'article']);
     foreach ($matrix as $who => [$permissions, $allowed]) {
       $account = $this->createUser($permissions);
       $add_access = $this->resources()->access(NodeTypeResource::class, $add, $account);

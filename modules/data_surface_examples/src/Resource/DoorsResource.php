@@ -10,7 +10,6 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
-use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_examples\Storage\DoorsStorage;
 
@@ -23,15 +22,12 @@ use Drupal\data_surface_examples\Storage\DoorsStorage;
  * not be cleared, and may clear the notes, which say `nullable: true`.
  */
 #[Resource('event.doors', storage: DoorsStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure the doors'),
+  description: new TranslatableMarkup('Sets when the doors open, the badges checked at the door and the notes for the door team.'),
+  permission: 'administer site configuration',
+)]
 final class DoorsResource implements ResourceInterface {
-
-  /**
-   * Configures the doors, which always exist.
-   */
-  #[Operation('configure', label: new TranslatableMarkup('Configure the doors'), permission: 'administer site configuration')]
-  public static function configure(): OperationContext {
-    return new OperationContext('configure');
-  }
 
   /**
    * {@inheritdoc}

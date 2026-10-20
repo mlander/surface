@@ -5,14 +5,16 @@
         {
             "surface": "registration.step3",
             "situation": "configure",
-            "label": "Configure registration",
+            "label": "Configure registration (step 3)",
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
-                "title": "Configure registration",
+                "title": "Configure registration (step 3)",
+                "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
                 "x-surface": {
                     "operation": {
                         "id": "configure",
-                        "label": "Configure registration",
+                        "label": "Configure registration (step 3)",
+                        "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
                         "kind": "update",
                         "creates": false,
                         "readOnly": false,

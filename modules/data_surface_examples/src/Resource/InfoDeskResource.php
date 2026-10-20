@@ -8,7 +8,6 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
-use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_examples\Shape\PhoneNumber;
 use Drupal\data_surface_examples\Storage\InfoDeskStorage;
@@ -23,15 +22,12 @@ use Drupal\data_surface_examples\Structure\PersonStructure;
  * person's.
  */
 #[Resource('event.desk', storage: InfoDeskStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure the information desk'),
+  description: new TranslatableMarkup('Sets the information desk: its phone, whether it is listed in the printed program, its lead and up to four volunteers.'),
+  permission: 'administer site configuration',
+)]
 final class InfoDeskResource implements ResourceInterface {
-
-  /**
-   * Configures the information desk, which always exists.
-   */
-  #[Operation('configure', label: new TranslatableMarkup('Configure the information desk'), permission: 'administer site configuration')]
-  public static function configure(): OperationContext {
-    return new OperationContext('configure');
-  }
 
   /**
    * {@inheritdoc}

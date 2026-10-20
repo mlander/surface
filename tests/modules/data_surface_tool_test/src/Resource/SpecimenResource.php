@@ -10,7 +10,6 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
-use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_tool_test\Storage\SpecimenStorage;
 
@@ -22,15 +21,12 @@ use Drupal\data_surface_tool_test\Storage\SpecimenStorage;
  * schema documents describe it.
  */
 #[Resource('tool_test.specimen', storage: SpecimenStorage::class)]
+#[Operation('configure',
+  label: 'Configure the specimen',
+  description: 'Configures the specimen, which always exists.',
+  permission: 'administer site configuration',
+)]
 final class SpecimenResource implements ResourceInterface {
-
-  /**
-   * Configures the specimen, which always exists.
-   */
-  #[Operation('configure', label: 'Configure the specimen', permission: 'administer site configuration')]
-  public static function configure(): OperationContext {
-    return new OperationContext('configure');
-  }
 
   /**
    * {@inheritdoc}

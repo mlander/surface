@@ -82,8 +82,26 @@ final class FieldItemStructures implements ResourceDeriverInterface {
           $derivatives[$entity_type_id . '.' . $bundle . '.' . $name] = new DerivedResource(
             inputs: new ResourceCallable(self::class, 'defineInputs', [...$bound, $override]),
             operations: [
-              new DerivedOperation('add', $this->t('Enter @field on a new item', ['@field' => $field->getLabel()]), new ResourceCallable(self::class, 'add', $bound)),
-              new DerivedOperation('edit', $this->t('Change @field', ['@field' => $field->getLabel()]), new ResourceCallable(self::class, 'edit', $bound), ['id' => 'string']),
+              new DerivedOperation(
+                'add',
+                $this->t('Enter @field on a new item', ['@field' => $field->getLabel()]),
+                new ResourceCallable(self::class, 'add', $bound),
+                creates: TRUE,
+                description: $this->t('Enters the @field field of a new @bundle item.', [
+                  '@field' => $field->getLabel(),
+                  '@bundle' => $bundle,
+                ]),
+              ),
+              new DerivedOperation(
+                'edit',
+                $this->t('Change @field', ['@field' => $field->getLabel()]),
+                new ResourceCallable(self::class, 'edit', $bound),
+                ['id' => 'string'],
+                description: $this->t('Changes the @field field of a @bundle item, named by its id.', [
+                  '@field' => $field->getLabel(),
+                  '@bundle' => $bundle,
+                ]),
+              ),
             ],
             refiners: $refiners,
             access: FieldItemAccess::class,

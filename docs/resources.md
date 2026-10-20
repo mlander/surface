@@ -61,8 +61,9 @@ module the way core scans `src/Hook`:
   shapes](declaring-a-resource.md#named-shapes)).
 - A class in `src/Alter/` carrying `#[Alters]` is an alter. It is
   registered as an autowired service, so it may hold services.
-- A static method carrying `#[Operation]` in any of the three is an
-  operation.
+- `#[Operation]` on a resource's or structure's class, or on a static
+  method of it, is an operation; on a class in `src/Alter/`, or a static
+  method there, with `of:`, another module's operation of it.
 - A class carrying `#[DerivesResources]`, by convention in
   `src/Resource/`, is a deriver: it makes resources and structures from
   site state at discovery, one per bundle or per field, each with no
@@ -183,20 +184,37 @@ already known, and that is a **context**, an `OperationContext`:
   key the context knows is locked to that value; one it does not know
   stays open. That is the whole difference between add and edit. A
   resource with no identity keys is a singleton.
-- The ways a resource is asked for are static methods carrying
-  `#[Operation]`, each returning a context whose id is the operation's
-  id. What an operation needs is its own signature: a route or a tool
-  supplies its parameters by name.
-- The context is `new OperationContext($id, creates: FALSE, known: [])`:
-  its id, whether it creates the thing, and the identity keys it knows,
-  each with its value. A singleton's one operation returns
-  `new OperationContext('configure')`; the id is the operation's own
-  and has nothing to do with the plugin hosts' `configure` verb, which
-  no operation declares. `withConstraint()`, `withDefaults()` and
-  `withChild()` return a copy that says more.
+- The ways a resource is asked for are `#[Operation]` attributes. Each
+  states the operation's static facts, read at discovery without
+  running anything: its id, its `label`, a `description` of what a call
+  does to what (the tool's first sentence and both documents' top
+  `description`), its `permission`, whether it `creates`, and how a
+  call behaves (below).
+- **On the class**, the default: an operation that needs nothing more
+  than those facts has no method. `#[Operation('configure', label: ...,
+  permission: ...)]` beside `#[Resource]`, repeatable, means the context
+  `new OperationContext()` with the attribute's id and `creates`
+  stamped on it. Every shipped singleton is written this way
+  ([decision](decisions.md#an-operation-on-the-class)).
+- **On a static method**, the exception: a method only when the context
+  needs more, parameters (what the operation needs is its own
+  signature: a route or a tool supplies them by name), identity it
+  knows, a constraint, defaults or a child. The method returns an
+  `OperationContext` and may leave the id and `creates` out; the
+  attribute's are stamped on it, and a context that names another id,
+  or says otherwise about creating, is refused: at discovery when the
+  method needs nothing, else when it is first asked
+  ([decision](decisions.md#a-contexts-id-is-the-operation-id)). With no
+  `description:`, the method's docblock summary is its description.
+- The context is `new OperationContext(known: [])`: the identity keys
+  it knows, each with its value. The plugin hosts build their own,
+  `new OperationContext('configure')`, under a verb that no operation
+  declares. `withConstraint()`, `withDefaults()` and `withChild()`
+  return a copy that says more.
 - Another module adds an operation with
-  `#[Operation('clone', of: SomeResource::class)]` on a static method in
-  its `src/Alter/`. Two declarations of one id are refused, naming both.
+  `#[Operation('clone', of: SomeResource::class)]` on a class or a static
+  method in its `src/Alter/`. Two declarations of one id are refused,
+  naming both.
 - A context may also narrow a key (`withConstraint()`, checked narrower)
   and, when it creates, give starting values (`withDefaults()`), which
   become the key's defaults: values the caller sees first and may
@@ -211,16 +229,18 @@ already known, and that is a **context**, an `OperationContext`:
   it, or overwrite it beyond what was sent), both `FALSE` unless said.
   Whether the same call twice leaves what the first left is derived: an
   operation that does not create is idempotent, one that creates is not,
-  a read only one is; say `idempotent:` only where you know better, as
-  for an operation that appends. A tool carries them to the Tool API,
+  a read only one is; say `idempotent:` only where you know better: an
+  operation that appends is not, and a create whose caller names the
+  thing (`node.type:add`, `field.instance:add`) is, a second identical
+  call finding the name taken. A tool carries them to the Tool API,
   which MCP reads as a tool's annotations, and both schema documents
   state them at the top, under `x-surface.operation`
   ([decision](decisions.md#an-operation-states-how-it-behaves)). A read
   only operation writes nothing at any door: its pipeline accepts,
   validates and prepares, stops where a dry run does, and refuses to
-  commit what it prepared. The
-  content type's and the field's operations say nothing: an edit changes
-  the keys it is sent, and a key left out keeps its value.
+  commit what it prepared. No
+  shipped operation is destructive: an edit changes the keys it is sent,
+  and a key left out keeps its value.
 
 The content type resource is the worked example:
 
@@ -232,21 +252,45 @@ The content type resource is the worked example:
 )]
 final class NodeTypeResource implements ResourceInterface {
 
-  #[Operation('add', label: new TranslatableMarkup('Add a content type'), permission: self::PERMISSION)]
+  #[Operation('add',
+    label: new TranslatableMarkup('Add a content type'),
+    description: new TranslatableMarkup('Creates a content type under a machine name the caller chooses; a machine name already in use is refused.'),
+    permission: self::PERMISSION,
+    creates: TRUE,
+    idempotent: TRUE,
+  )]
   public static function add(): OperationContext {
     // Unique on add only: that is where you are, not what was entered.
-    return (new OperationContext('add', creates: TRUE))
-      ->withConstraint('type', 'DataSurfaceUniqueNodeType');
+    return (new OperationContext())->withConstraint('type', 'DataSurfaceUniqueNodeType');
   }
 
-  #[Operation('edit', label: new TranslatableMarkup('Edit a content type'), permission: self::PERMISSION)]
+  #[Operation('edit',
+    label: new TranslatableMarkup('Edit a content type'),
+    description: new TranslatableMarkup('Changes a content type, named by its machine name, which stays as it is.'),
+    permission: self::PERMISSION,
+  )]
   public static function edit(NodeTypeInterface $type): OperationContext {
-    return new OperationContext('edit', known: ['type' => $type->id()]);
+    return new OperationContext(known: ['type' => $type->id()]);
   }
 
   // defineInputs(): name, type, description, title_label, ...
 
 }
+```
+
+Both are methods because their contexts need more: add narrows the
+machine name, edit knows it. A settings object's one `configure` needs
+nothing, so it is the attribute alone, as on [the first
+resource](first-resource.md):
+
+```php
+#[Resource('first.newsletter', storage: NewsletterStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure the newsletter'),
+  description: new TranslatableMarkup('Sets who the newsletter is sent from, how often it goes out and how many recipients one send reaches.'),
+  permission: 'administer data_surface_first',
+)]
+final class NewsletterResource implements ResourceInterface {
 ```
 
 and the field instance resource has three, each knowing more than the
@@ -545,15 +589,14 @@ own is a tool, `data_surface:<resource id>:<operation id>`, derived by
   with its label, meaning and allowed values), then `values`, the
   resource's keys less the identity keys the operation knows, then
   `dry_run`. What `values` requires follows the operation's kind
-  (`create`, `update` or `read`, stated in the tool's description and
-  in both documents). An operation that creates requires what the
+  (`create`, `update` or `read`, read off its attribute and stated in
+  both documents). An operation that creates requires what the
   resource requires and lists the declared defaults. One that changes a
   thing that exists requires nothing, at any depth, and lists no
   default: each key the resource requires says "Required; a value
-  already stored stands when left out.", and the description says "A
-  key left out keeps its current value;" and names the read tool, since
-  a listing is cached by its clients and the Tool API refuses a required
-  key left out before the tool runs. The pipeline still refuses an edit
+  already stored stands when left out.", since a listing is cached by
+  its clients and the Tool API refuses a required key left out before
+  the tool runs. The pipeline still refuses an edit
   of a thing that holds no value for a required key, in the key's own
   words
   ([decision](decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
@@ -573,6 +616,19 @@ own is a tool, `data_surface:<resource id>:<operation id>`, derived by
   The value you selected is not a valid choice. This applies when Venue
   is Riverside Hall. Choose Main hall (riverside_main) or East room
   (riverside_east)."
+- **Title and description** are the operation's. The title is its
+  label; where operations of several resources share one, each tool
+  adds its resource, and the read tool's is "Current values:" and the
+  write tool's. The description is the operation's description, or its
+  label where it says none, then one line of call rules for its kind,
+  with no literal quotes, which an MCP bridge would escape:
+  - create: "Create: a key left out takes its default, and every key
+    marked required must be sent."
+  - update: "Update: send only the keys to change; a key left out keeps
+    its value, null clears it. The read tool returns the current
+    values."
+  - read: "Read only: nothing is written; a key left out is checked at
+    its current value."
 - **Behavior** is the operation's: the `Read` kind for a read only
   operation, the `Write` kind for every other, and destructive when it
   says so.
@@ -610,14 +666,11 @@ exactly as the write tool declares them, and whose one output, `values`,
 is what the composed storage loads, in the shape the write tool's
 `values` takes, less the identity keys the operation knows and less
 every secret, at any depth. Its access is the write tool's. Which
-operations those are is `ResourceCatalog::reads()`: one that needs
-nothing and whose context does not create, or one that needs a subject
-and whose parameters name one thing whole, a single entity or every
-identity key, since its context cannot be asked before a caller names
-the subject; never one that is read only, which changes nothing. So `node.type:edit`, `field.instance:edit` and
-`field.storage:edit` read, and `node.type:add`, `field.instance:add` and
-`field.instance:reuse` do not; a context that turns out to create is
-refused when the read runs.
+operations those are is `ResourceCatalog::reads()`: the updates, read
+off the attribute, an operation that neither creates nor is read only.
+So `node.type:edit`, `field.instance:edit` and `field.storage:edit`
+read, and `node.type:add`, `field.instance:add` and
+`field.instance:reuse` do not.
 
 ## Catalog
 
@@ -630,9 +683,9 @@ access class, the plugins whose configuration it is
 whether it creates, permission, the placeholders nothing supplies,
 whether it can be asked on its own, and whether what it changes can be
 read on its own), alters, declared variants and, per key with variants, where
-derived variants come from, without building anything. Whether an operation
-creates is on the context it returns, so it is known only for an
-operation that needs nothing. `ResourceCatalog::derivers()` lists the
+derived variants come from, without building anything, whether an
+operation creates included, since it is on the attribute.
+`ResourceCatalog::derivers()` lists the
 derivers, whose derivatives are the site's own.
 [`catalog.md`](catalog.md) is both for this repository's modules,
 generated by `scripts/generate-catalog.php` on a test site with no

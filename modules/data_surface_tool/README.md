@@ -166,8 +166,9 @@ drush tool:list
 ```
 
 `drush tool:info data_surface:field.instance:reuse` prints the input
-definitions, and the description names the operation's kind (`create`,
-`update` or `read`). A tool for an operation that creates requires each
+definitions. The title is the operation's label, and the description is
+the operation's own description followed by one line of call rules
+that names its kind (`Create:`, `Update:` or `Read only:`). A tool for an operation that creates requires each
 key in `values` exactly when the resource requires it, and lists the
 declared defaults. One for an operation that changes what exists, such
 as `data_surface:registration.step3:configure` or
@@ -175,8 +176,9 @@ as `data_surface:registration.step3:configure` or
 default at all, because a listing is cached by its clients and a key
 left out keeps its current value: each key the resource requires says
 "Required; a value already stored stands when left out.", and the
-description says "A key left out keeps its current value;" and names
-the read tool, which returns the current values. An edit of a thing
+description says "Update: send only the keys to change; a key left out
+keeps its value, null clears it. The read tool returns the current
+values." An edit of a thing
 that holds no value for a required key is refused by the pipeline, in
 the key's own words. A key another narrows says so in its description,
 by the path a caller sends it under ("Depends on venue."), and a
@@ -298,10 +300,10 @@ The routes of `data_surface_examples` name it.
 | `Kernel\OperationToolsTest` | The generated tools: which exist, the two derivation rules, what they advertise, refinement to the thing a parameter names, execution, dry run, access, the storage tool's has-data constraint. |
 | `Kernel\ResourceCatalogTest` | The catalog read from the static layer, and `docs/catalog.md` against it, where each key with derived variants is listed. |
 | `Kernel\ExamplesStepsTest` | The contract panel: its rows as the answers narrow them, the contract's variant conditionals, and the tool's schema below them. |
-| `Kernel\ExamplesToolTest` | `data_surface:registration.step3:configure`: the example calls, its definition (no key required and each the resource requires saying so, no default at any depth, the read tool named in its description, and the same after a write), and a partial update that leaves a required key out, kept where it is stored and refused by the pipeline where it is not. |
-| `Kernel\OperationKindsTest` | Every shipped operation's kind, on the examples, the first module and the tool test modules: a create lists the resource's required keys, an update lists none and says why, a read only operation lists none, and a read tool takes only the parameters. |
+| `Kernel\ExamplesToolTest` | `data_surface:registration.step3:configure`: the example calls, its definition (no key required and each the resource requires saying so, no default at any depth, the operation's description and the update's call rules as its description, and the same after a write), and a partial update that leaves a required key out, kept where it is stored and refused by the pipeline where it is not. |
+| `Kernel\OperationKindsTest` | Every shipped operation's kind, on the examples, the first module and the tool test modules: each tool's description is the operation's description and its kind's call rules, with no literal quotes; a create lists the resource's required keys, an update lists none and says why, a read only operation lists none, and a read tool takes only the parameters and is titled "Current values:" and the write tool's title; no two tools share a title, and where labels are shared each adds its resource. |
 | `Kernel\ReadToolTest` | The read tools: one per operation that changes a thing that exists and none for one that creates, a read operation taking exactly the parameters, an output map of the write tool's keys, step 3's stored values with the compliance module's mounted keys before and after a write, the content type read by its type, an unknown parameter failing as for the write tool, access as the write tool's, and a secret never returned. |
-| `Kernel\OperationFactsTest` | How an operation behaves: the attribute's defaults, idempotence derived from whether it creates, contradicting facts refused, the Tool API's kind and destructive flag as the MCP bridge reads them, no read tool beside a read only operation, and `x-surface.operation` at the top of both documents. |
+| `Kernel\OperationFactsTest` | How an operation behaves: the attribute's defaults, `creates` read off the attribute and stamped on the context, idempotence derived from it, an operation on the class with no method, a method's context taking the attribute's id and `creates` and its docblock summary as its description, a context naming another id or creating against its attribute refused at discovery, contradicting facts refused, the Tool API's kind and destructive flag as the MCP bridge reads them, no read tool beside a read only operation, and `x-surface.operation` and the description at the top of both documents. |
 | `Kernel\ToolFeedbackTest` | What the listing and a refusal say: each key another narrows naming what it depends on, once, through a port at its site; every refusal form (a list, a list another key narrows, a long list capped, a bound, a pattern, a key that does not apply); `values` held to its shape before the tool runs; and an agent's retry loop on example 3 fixing each key from its refusal in one try, through the runner MCP and ECA call. |
 | `Kernel\SecurityProjectionTest` | Every door projecting what the read projects: a dry run and React `/validate` answering no key access left out and no `prepared`, no door echoing a secret, a collection item keeping its position's secret or refused when positions moved, a note saying nothing of a secret, the React and tool doors asking the permission first and naming no id, a child permission nothing can name refused, and the cached definitions no account's. |
 | `Kernel\DerivedToolDefinitionsTest` | Tool Explorer showing every derived tool, read tools included, installing a module deriving its tools, and each tool declaring its operation's permission unless it has a placeholder. |

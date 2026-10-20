@@ -130,22 +130,21 @@ the config schema, so neither is in either document.
 
 Three settings, each on one line: its name, its type, its label, and
 what it allows. The operation at the top, `configure`, is how the
-resource is asked for: it needs nothing, and only an account that may
-administer site configuration may ask.
+resource is asked for: it needs nothing, only an account that may
+administer site configuration may ask, and its description is what a
+tool's caller reads first. It needs no method: an operation is a method
+only when its context needs more.
 
 <!-- code: src/Resource/RegistrationStep1Resource.php -->
 
 ```php
 #[Resource('registration.step1', storage: RegistrationStep1Storage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure registration (step 1)'),
+  description: new TranslatableMarkup('Sets the event title, its capacity and whether registration is open.'),
+  permission: 'administer site configuration',
+)]
 final class RegistrationStep1Resource implements ResourceInterface {
-
-  /**
-   * Configures the registration settings, which always exist.
-   */
-  #[Operation('configure', label: new TranslatableMarkup('Configure registration'), permission: 'administer site configuration')]
-  public static function configure(): OperationContext {
-    return new OperationContext('configure');
-  }
 
   /**
    * {@inheritdoc}
@@ -238,15 +237,12 @@ declared after the room it depends on.
 
 ```php
 #[Resource('registration.step2', storage: RegistrationStep2Storage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure registration (step 2)'),
+  description: new TranslatableMarkup('Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.'),
+  permission: 'administer site configuration',
+)]
 final class RegistrationStep2Resource implements ResourceInterface {
-
-  /**
-   * Configures the registration settings, which always exist.
-   */
-  #[Operation('configure', label: new TranslatableMarkup('Configure registration'), permission: 'administer site configuration')]
-  public static function configure(): OperationContext {
-    return new OperationContext('configure');
-  }
 
   /**
    * {@inheritdoc}
@@ -328,15 +324,12 @@ its own frame, so its email is checked by its own rules.
 
 ```php
 #[Resource('registration.step3', storage: RegistrationStep3Storage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure registration (step 3)'),
+  description: new TranslatableMarkup('Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.'),
+  permission: 'administer site configuration',
+)]
 final class RegistrationStep3Resource implements ResourceInterface {
-
-  /**
-   * Configures the registration settings, which always exist.
-   */
-  #[Operation('configure', label: new TranslatableMarkup('Configure registration'), permission: 'administer site configuration')]
-  public static function configure(): OperationContext {
-    return new OperationContext('configure');
-  }
 
   /**
    * {@inheritdoc}
@@ -692,7 +685,7 @@ ddev exec php web/modules/custom/data_surface/scripts/examples-dry-run.php
 
 ```
 1. Valid values
-Success: Configure registration: the values were accepted and written.
+Success: Configure registration (step 3): the values were accepted and written.
   values: {"title":"Autumn meetup","open":true,"venue":"harbour","room":"harbour_deck","capacity":50,"pricing":"paid","ticket":{"price":12.5,"currency":"EUR"},"contact":{"email":"events@example.com","phone":""}}
   committed: true
   changes: ["title","venue","room","pricing","ticket.price","ticket.currency","ticket.note"]
@@ -702,7 +695,7 @@ Failed: The values were refused:
 capacity: This value should be between 1 and 30. This applies when Room is Garden room.
 
 3. A dry run
-Success: Dry run of Configure registration: the values were accepted and prepared, and nothing was written.
+Success: Dry run of Configure registration (step 3): the values were accepted and prepared, and nothing was written.
   values: {"title":"Winter social","open":true,"venue":"riverside","room":"riverside_east","capacity":40,"pricing":"free","ticket":{"note":"Donations welcome"},"contact":{"email":"events@example.com","phone":""}}
   committed: false
   changes: ["title","venue","room","capacity","pricing","ticket.note","ticket.price","ticket.currency"]
@@ -732,8 +725,9 @@ and the operation asks for "administer site configuration", for a read
 as for a write. `tool:info` lists no defaults and requires no key:
 configuring changes what exists, a key left out keeps its current value
 (each key the resource requires says "Required; a value already stored
-stands when left out."), and the description names the read tool, the
-second command, for what that value is. The dry run
+stands when left out."), and the description, after saying what the
+operation sets, says the read tool, the second command, returns what
+that value is. The dry run
 is a second input, which `tool:run` reads as `name=value` and decodes as
 JSON, so `true` is a boolean.
 
@@ -863,15 +857,12 @@ required, as it is wherever it applies; the rule says where it does not
 
 ```php
 #[Resource('event.bulletin', storage: BulletinStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure the bulletin'),
+  description: new TranslatableMarkup('Sets how often the event bulletin goes out, the day it is sent and how many items an issue holds.'),
+  permission: 'administer site configuration',
+)]
 final class BulletinResource implements ResourceInterface {
-
-  /**
-   * Configures the bulletin, whose settings always exist.
-   */
-  #[Operation('configure', label: new TranslatableMarkup('Configure the bulletin'), permission: 'administer site configuration')]
-  public static function configure(): OperationContext {
-    return new OperationContext('configure');
-  }
 
   /**
    * {@inheritdoc}
@@ -1030,15 +1021,12 @@ final class ReviewStructure implements StructureInterface {
 
 ```php
 #[Resource('event.press', storage: PressStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure the press page'),
+  description: new TranslatableMarkup('Sets the press page: whether it is shown, the press contact, and who last reviewed it and when.'),
+  permission: 'administer site configuration',
+)]
 final class PressResource implements ResourceInterface {
-
-  /**
-   * Configures the press page, which always exists.
-   */
-  #[Operation('configure', label: new TranslatableMarkup('Configure the press page'), permission: 'administer site configuration')]
-  public static function configure(): OperationContext {
-    return new OperationContext('configure');
-  }
 
   /**
    * {@inheritdoc}
@@ -1063,15 +1051,12 @@ volunteer is never asked for an email
 
 ```php
 #[Resource('event.desk', storage: InfoDeskStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure the information desk'),
+  description: new TranslatableMarkup('Sets the information desk: its phone, whether it is listed in the printed program, its lead and up to four volunteers.'),
+  permission: 'administer site configuration',
+)]
 final class InfoDeskResource implements ResourceInterface {
-
-  /**
-   * Configures the information desk, which always exists.
-   */
-  #[Operation('configure', label: new TranslatableMarkup('Configure the information desk'), permission: 'administer site configuration')]
-  public static function configure(): OperationContext {
-    return new OperationContext('configure');
-  }
 
   /**
    * {@inheritdoc}
@@ -1142,15 +1127,12 @@ class cannot list the ticket types: the site's configuration does, in
 
 ```php
 #[Resource('event.sales', storage: TicketSalesStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure ticket sales'),
+  description: new TranslatableMarkup('Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.'),
+  permission: 'administer site configuration',
+)]
 final class TicketSalesResource implements ResourceInterface {
-
-  /**
-   * Configures ticket sales, which always exist.
-   */
-  #[Operation('configure', label: new TranslatableMarkup('Configure ticket sales'), permission: 'administer site configuration')]
-  public static function configure(): OperationContext {
-    return new OperationContext('configure');
-  }
 
   /**
    * {@inheritdoc}
@@ -1318,23 +1300,18 @@ final class FeesStructure implements StructureInterface {
 
 ```php
 #[Resource('event.program', storage: ProgramStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure the program'),
+  description: new TranslatableMarkup('Sets the program: its headline, how many sessions it has, whether it is published, and its fees.'),
+  permission: 'administer site configuration',
+)]
+#[Operation('check',
+  label: new TranslatableMarkup('Check a program'),
+  description: new TranslatableMarkup('Checks a program against every rule the program configuration applies, and saves nothing.'),
+  permission: 'administer site configuration',
+  readOnly: TRUE,
+)]
 final class ProgramResource implements ResourceInterface {
-
-  /**
-   * Configures the program, which always exists.
-   */
-  #[Operation('configure', label: new TranslatableMarkup('Configure the program'), permission: 'administer site configuration')]
-  public static function configure(): OperationContext {
-    return new OperationContext('configure');
-  }
-
-  /**
-   * Checks a program against every rule, and writes nothing.
-   */
-  #[Operation('check', label: new TranslatableMarkup('Check a program'), permission: 'administer site configuration', readOnly: TRUE)]
-  public static function check(): OperationContext {
-    return new OperationContext('check');
-  }
 
   /**
    * {@inheritdoc}
@@ -1522,15 +1499,12 @@ string; and rows with "Add another" for a list of free values
 
 ```php
 #[Resource('event.doors', storage: DoorsStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure the doors'),
+  description: new TranslatableMarkup('Sets when the doors open, the badges checked at the door and the notes for the door team.'),
+  permission: 'administer site configuration',
+)]
 final class DoorsResource implements ResourceInterface {
-
-  /**
-   * Configures the doors, which always exist.
-   */
-  #[Operation('configure', label: new TranslatableMarkup('Configure the doors'), permission: 'administer site configuration')]
-  public static function configure(): OperationContext {
-    return new OperationContext('configure');
-  }
 
   /**
    * {@inheritdoc}

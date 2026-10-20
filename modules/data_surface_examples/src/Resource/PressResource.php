@@ -8,7 +8,6 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
-use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_examples\Storage\PressStorage;
 use Drupal\data_surface_examples\Structure\PersonStructure;
@@ -21,15 +20,12 @@ use Drupal\data_surface_examples\Structure\ReviewStructure;
  * page's `public`; the review is mixed in, so its keys are this page's.
  */
 #[Resource('event.press', storage: PressStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure the press page'),
+  description: new TranslatableMarkup('Sets the press page: whether it is shown, the press contact, and who last reviewed it and when.'),
+  permission: 'administer site configuration',
+)]
 final class PressResource implements ResourceInterface {
-
-  /**
-   * Configures the press page, which always exists.
-   */
-  #[Operation('configure', label: new TranslatableMarkup('Configure the press page'), permission: 'administer site configuration')]
-  public static function configure(): OperationContext {
-    return new OperationContext('configure');
-  }
 
   /**
    * {@inheritdoc}

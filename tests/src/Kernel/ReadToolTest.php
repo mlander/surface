@@ -278,7 +278,7 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
   public function testReadsWhatIsStoredAndWhatWasWritten(): void {
     $read = $this->runTool(ExampleCalls::READ_TOOL);
     $this->assertTrue($read['success'], $read['message']);
-    $this->assertSame('Configure registration: the stored values were read, and nothing was written.', $read['message']);
+    $this->assertSame('Configure registration (step 3): the stored values were read, and nothing was written.', $read['message']);
     $this->assertSame([
       'title' => 'Spring meetup',
       'capacity' => 50,

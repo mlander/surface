@@ -183,15 +183,15 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($values->isRequired());
     // Adding one creates, so what the resource requires is required.
     $this->assertTrue($add->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['name']->isRequired());
-    $this->assertStringContainsString('(kind: create)', (string) $add->getDescription());
-    $this->assertStringContainsString('(kind: update)', (string) $edit->getDescription());
+    $this->assertStringEndsWith(' Create: a key left out takes its default, and every key marked required must be sent.', (string) $add->getDescription());
+    $this->assertStringEndsWith(' Update: send only the keys to change; a key left out keeps its value, null clears it. The read tool returns the current values.', (string) $edit->getDescription());
     // Editing changes what exists, so the listing carries no default,
     // declared or stored: a key left out keeps its current value.
     $this->assertNull($values->getPropertyDefinitions()['title_label']->getDefaultValue());
-    $this->assertStringContainsString('A key left out keeps its current value; data_surface:node.type:edit:read returns the current values.', (string) $edit->getDescription());
+    $this->assertStringStartsWith('Changes a content type, named by its machine name, which stays as it is.', (string) $edit->getDescription());
     // Adding one creates, so it lists the declared defaults.
     $this->assertSame('Title', $add->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['title_label']->getDefaultValue());
-    $this->assertStringNotContainsString('keeps its current value', (string) $add->getDescription());
+    $this->assertStringNotContainsString('keeps its value', (string) $add->getDescription());
     $this->assertSame([OperationInputs::VALUES => ['type']], $edit->getInputDefinitionRefiners());
 
     // A field: add takes the entity type and bundle, reuse a storage and

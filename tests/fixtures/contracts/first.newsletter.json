@@ -9,10 +9,12 @@
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "title": "Configure the newsletter",
+                "description": "Sets who the newsletter is sent from, how often it goes out and how many recipients one send reaches.",
                 "x-surface": {
                     "operation": {
                         "id": "configure",
                         "label": "Configure the newsletter",
+                        "description": "Sets who the newsletter is sent from, how often it goes out and how many recipients one send reaches.",
                         "kind": "update",
                         "creates": false,
                         "readOnly": false,

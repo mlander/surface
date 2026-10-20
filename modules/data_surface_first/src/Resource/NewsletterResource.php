@@ -8,7 +8,6 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
-use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_first\Storage\NewsletterStorage;
 
@@ -16,15 +15,12 @@ use Drupal\data_surface_first\Storage\NewsletterStorage;
  * The newsletter settings: a form, a tool and a schema, from this class.
  */
 #[Resource('first.newsletter', storage: NewsletterStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure the newsletter'),
+  description: new TranslatableMarkup('Sets who the newsletter is sent from, how often it goes out and how many recipients one send reaches.'),
+  permission: 'administer data_surface_first',
+)]
 final class NewsletterResource implements ResourceInterface {
-
-  /**
-   * Configures the newsletter, whose settings always exist.
-   */
-  #[Operation('configure', label: new TranslatableMarkup('Configure the newsletter'), permission: 'administer data_surface_first')]
-  public static function configure(): OperationContext {
-    return new OperationContext('configure');
-  }
 
   /**
    * {@inheritdoc}

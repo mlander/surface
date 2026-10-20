@@ -80,12 +80,25 @@ final class ContentEntityResources implements ResourceDeriverInterface {
           inputs: new ResourceCallable(self::class, 'defineInputs', [...$bound, $by_type]),
           identity: ['entity_type', 'bundle', 'id'],
           operations: [
-            new DerivedOperation('add', $this->t('Add @bundle', ['@bundle' => $bundle_label]), new ResourceCallable(self::class, 'add', $bound)),
+            new DerivedOperation(
+              'add',
+              $this->t('Add @bundle', ['@bundle' => $bundle_label]),
+              new ResourceCallable(self::class, 'add', $bound),
+              creates: TRUE,
+              description: $this->t('Creates a new @bundle item (@entity_type); the site gives it its id.', [
+                '@bundle' => $bundle_label,
+                '@entity_type' => $entity_type->getLabel(),
+              ]),
+            ),
             new DerivedOperation(
               'edit',
               $this->t('Edit @bundle', ['@bundle' => $bundle_label]),
               new ResourceCallable(self::class, 'edit', [...$bound, $this->derivation->idType($entity_type_id)]),
               ['id' => 'entity:' . $entity_type_id],
+              description: $this->t('Changes an existing @bundle item (@entity_type), named by its id.', [
+                '@bundle' => $bundle_label,
+                '@entity_type' => $entity_type->getLabel(),
+              ]),
             ),
           ],
           storage: ContentEntityStorage::class,

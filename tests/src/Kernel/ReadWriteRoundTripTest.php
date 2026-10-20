@@ -130,7 +130,7 @@ class ReadWriteRoundTripTest extends DataSurfaceKernelTestBase {
     [$message, $outputs] = $this->write($read);
     $this->assertTrue($outputs[OperationInputs::COMMITTED]);
     $this->assertSame([], $outputs[OperationInputs::CHANGES]);
-    $this->assertSame('Configure registration: the values were accepted, and they are what is stored, so nothing was written.', $message);
+    $this->assertSame('Configure registration (step 3): the values were accepted, and they are what is stored, so nothing was written.', $message);
     $this->assertSame(0, $saved, 'Nothing was saved.');
     $this->assertSame($before, $this->exported());
     $this->assertSame($read, $this->read());

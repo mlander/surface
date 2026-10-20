@@ -7,11 +7,15 @@ namespace Drupal\data_surface\Resource;
 /**
  * Which operation is being asked, and what it knows. Never the values.
  *
- * Built by an #[Operation] method, so the ways a resource is asked for
- * sit beside its identity keys; a host builds one for its own verb
- * (`configure`), which is no declared operation. Its id is the
- * operation's id. Neither defineInputs() nor defineOutputs() receives
- * it. The framework applies it, once, when the resource or structure is
+ * Built for an #[Operation]: by the engine, from the attribute, for one
+ * on the class; by its method, for one that needs more, so the ways a
+ * resource is asked for sit beside its identity keys. A host builds one
+ * for its own verb (`configure`), which is no declared operation. Its id
+ * is the operation's id, and whether it creates is the operation's: an
+ * #[Operation] method may leave both out, and the engine stamps the
+ * attribute's on what it returns (stamped()), refusing one that says
+ * otherwise. Neither defineInputs() nor defineOutputs() receives it.
+ * The framework applies it, once, when the resource or structure is
  * built:
  *   - each identity key it knows is locked to that value;
  *   - each constraint it carries narrows that key;
@@ -29,12 +33,35 @@ namespace Drupal\data_surface\Resource;
 final class OperationContext {
 
   /**
+   * The operation id, or a host's own verb; empty until it is stamped.
+   */
+  public readonly string $id;
+
+  /**
+   * Whether submitting makes a new thing or changes one that exists.
+   */
+  public readonly bool $creates;
+
+  /**
+   * The id as given, NULL when it is left to be stamped.
+   */
+  private readonly ?string $saidId;
+
+  /**
+   * Whether it creates, as given, NULL when it is left to be stamped.
+   */
+  private readonly ?bool $saidCreates;
+
+  /**
    * Constructs an OperationContext.
    *
-   * @param string $id
-   *   The operation id, or a host's own verb.
-   * @param bool $creates
+   * @param string|null $id
+   *   The operation id, or a host's own verb. NULL in an #[Operation]
+   *   method: the attribute's is stamped on it.
+   * @param bool|null $creates
    *   Whether submitting makes a new thing or changes one that exists.
+   *   NULL in an #[Operation] method: the attribute's is stamped on it;
+   *   FALSE anywhere else.
    * @param array<string, mixed> $known
    *   Identity the caller already has. Each becomes a lock.
    * @param array<string, array<string, array>> $constraints
@@ -50,14 +77,54 @@ final class OperationContext {
    *   the identity handed to it.
    */
   public function __construct(
-    public readonly string $id,
-    public readonly bool $creates = FALSE,
+    ?string $id = NULL,
+    ?bool $creates = NULL,
     public readonly array $known = [],
     public readonly array $constraints = [],
     public readonly array $defaults = [],
     public readonly array $children = [],
     public readonly array $childOperations = [],
-  ) {}
+  ) {
+    $this->saidId = $id;
+    $this->saidCreates = $creates;
+    $this->id = $id ?? '';
+    $this->creates = $creates ?? FALSE;
+  }
+
+  /**
+   * Returns this context with an operation's id and answer stamped on it.
+   *
+   * What the engine does with the context an #[Operation] method returns:
+   * the id and `creates` it left out are the attribute's. One it said is
+   * kept, for the caller to compare with the attribute's
+   * (OperationDefinition::stamp() refuses a disagreement).
+   *
+   * @param string $id
+   *   The operation id, from the attribute.
+   * @param bool $creates
+   *   Whether the operation creates, from the attribute.
+   *
+   * @return self
+   *   The context, its id and `creates` said.
+   */
+  public function stamped(string $id, bool $creates): self {
+    if ($this->saidId !== NULL && ($this->saidCreates !== NULL || !$creates)) {
+      return $this;
+    }
+    // Not creating is what a context says by saying nothing, so it stays
+    // unsaid: the copy is the context a host would have built.
+    return new self($this->saidId ?? $id, $this->saidCreates ?? ($creates ?: NULL), $this->known, $this->constraints, $this->defaults, $this->children, $this->childOperations);
+  }
+
+  /**
+   * Answers what the context said itself, before any stamp.
+   *
+   * @return array{id: string|null, creates: bool|null}
+   *   The id and whether it creates, each NULL when it was left out.
+   */
+  public function said(): array {
+    return ['id' => $this->saidId, 'creates' => $this->saidCreates];
+  }
 
   /**
    * Returns a copy under another operation id.
@@ -65,13 +132,14 @@ final class OperationContext {
    * @param string $id
    *   The operation id.
    * @param bool|null $creates
-   *   Whether submitting creates; NULL keeps this context's answer.
+   *   Whether submitting creates; NULL keeps this context's answer, or
+   *   leaves it to be stamped when it gave none.
    *
    * @return self
    *   The new context.
    */
   public function withId(string $id, ?bool $creates = NULL): self {
-    return new self($id, $creates ?? $this->creates, $this->known, $this->constraints, $this->defaults, $this->children, $this->childOperations);
+    return new self($id, $creates ?? $this->saidCreates, $this->known, $this->constraints, $this->defaults, $this->children, $this->childOperations);
   }
 
   /**
@@ -84,7 +152,7 @@ final class OperationContext {
    *   The new context.
    */
   public function withKnown(array $known): self {
-    return new self($this->id, $this->creates, $known + $this->known, $this->constraints, $this->defaults, $this->children, $this->childOperations);
+    return new self($this->saidId, $this->saidCreates, $known + $this->known, $this->constraints, $this->defaults, $this->children, $this->childOperations);
   }
 
   /**
@@ -103,7 +171,7 @@ final class OperationContext {
   public function withConstraint(string $key, string $constraint, array $options = []): self {
     $constraints = $this->constraints;
     $constraints[$key][$constraint] = $options;
-    return new self($this->id, $this->creates, $this->known, $constraints, $this->defaults, $this->children, $this->childOperations);
+    return new self($this->saidId, $this->saidCreates, $this->known, $constraints, $this->defaults, $this->children, $this->childOperations);
   }
 
   /**
@@ -116,7 +184,7 @@ final class OperationContext {
    *   The new context.
    */
   public function withDefaults(array $values): self {
-    return new self($this->id, $this->creates, $this->known, $this->constraints, $values + $this->defaults, $this->children, $this->childOperations);
+    return new self($this->saidId, $this->saidCreates, $this->known, $this->constraints, $values + $this->defaults, $this->children, $this->childOperations);
   }
 
   /**
@@ -178,7 +246,7 @@ final class OperationContext {
     else {
       $operations = [$key => ['operation' => (string) $operation, 'known' => $known]] + $operations;
     }
-    return new self($this->id, $this->creates, $this->known, $this->constraints, $this->defaults, $children, $operations);
+    return new self($this->saidId, $this->saidCreates, $this->known, $this->constraints, $this->defaults, $children, $operations);
   }
 
   /**

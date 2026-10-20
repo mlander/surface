@@ -239,7 +239,8 @@ final class ContractEmitter {
    * @param array $operation
    *   How the operation behaves (OperationDefinition::facts()), stated at
    *   the top of the schema as `x-surface.operation`; empty for a data
-   *   surface asked for in no operation, which states none.
+   *   surface asked for in no operation, which states none. Its
+   *   description, when it has one, is also the top's `description`.
    *
    * @return \Drupal\data_surface\Contract\ServedContract
    *   The contract, and what it depends on.
@@ -256,7 +257,7 @@ final class ContractEmitter {
     if (!$widgets) {
       $schema = $this->withoutWidgets($schema);
     }
-    $title = $label === NULL ? [] : ['title' => PlainText::of($label)];
+    $title = $this->heading($label, $operation);
     $document = [
       'surface' => $resource_id,
       'situation' => $operation_id,
@@ -344,7 +345,7 @@ final class ContractEmitter {
     if (!$widgets) {
       $schema = $this->withoutWidgets($schema);
     }
-    $title = $label === NULL ? [] : ['title' => PlainText::of($label)];
+    $title = $this->heading($label, $operation);
     $document = [
       'surface' => $resource_id,
       'situation' => $operation_id,
@@ -356,6 +357,30 @@ final class ContractEmitter {
       $document['outputs'] = $outputs;
     }
     return new ServedContract($document, $cacheability);
+  }
+
+  /**
+   * Heads a document: its title, and its description when there is one.
+   *
+   * The title is the operation's label. The description is the
+   * operation's, what a call does to what, which a client choosing
+   * between operations reads first; a document asked for in no operation,
+   * or for one that says none, has none.
+   *
+   * @param string|\Stringable|null $label
+   *   The operation's label.
+   * @param array $operation
+   *   How the operation behaves (OperationDefinition::facts()), or empty.
+   *
+   * @return array<string, string>
+   *   `title` and `description`, each only when there is one.
+   */
+  protected function heading(string|\Stringable|null $label, array $operation): array {
+    $heading = $label === NULL ? [] : ['title' => PlainText::of($label)];
+    if (isset($operation['description']) && (string) $operation['description'] !== '') {
+      $heading['description'] = PlainText::of($operation['description']);
+    }
+    return $heading;
   }
 
   /**

@@ -8,7 +8,10 @@ use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceCallable;
 
 /**
- * One #[Operation] method, as discovery read it.
+ * One operation, as discovery read it.
+ *
+ * An #[Operation] on a class or on a method, or a derived resource's
+ * DerivedOperation.
  *
  * @internal
  */
@@ -35,14 +38,16 @@ final class OperationDefinition {
    * @param string $id
    *   The operation id, which is the id of the context it builds.
    * @param string|\Stringable $label
-   *   For people and for tool descriptions.
+   *   For people: the form's and the schemas' title, and the tool's.
    * @param string $resource
    *   The resource or structure it is an operation of: its class, or a
    *   derived resource's id.
    * @param class-string $class
-   *   The class the method is on.
+   *   The class the attribute or the method is on.
    * @param string $method
-   *   The method that builds the context: static, for an #[Operation].
+   *   The method that builds the context: static, for an #[Operation];
+   *   empty for one on the class, whose context is the bare one
+   *   (isBare()).
    * @param string|null $permission
    *   The static part of access, `%key` placeholders unresolved.
    * @param string $module
@@ -65,6 +70,12 @@ final class OperationDefinition {
    * @param bool|null $idempotent
    *   Whether the same call twice leaves what the first left, as
    *   declared; NULL when it is derived (idempotent()).
+   * @param bool $creates
+   *   Whether submitting makes a new thing, as declared: the context it
+   *   builds is stamped with it and must agree (stamp()).
+   * @param string|\Stringable|null $description
+   *   What a call does to what, for whoever chooses between operations;
+   *   NULL for none.
    *
    * @throws \LogicException
    *   When the facts contradict each other: a read only operation that
@@ -84,6 +95,8 @@ final class OperationDefinition {
     public readonly bool $destructive = FALSE,
     public readonly bool $readOnly = FALSE,
     public readonly ?bool $idempotent = NULL,
+    public readonly bool $creates = FALSE,
+    public readonly string|\Stringable|null $description = NULL,
   ) {
     if ($readOnly && ($destructive || $idempotent === FALSE)) {
       throw new \LogicException(sprintf(
@@ -105,66 +118,117 @@ final class OperationDefinition {
    *
    * Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
    *
-   * @param bool $creates
-   *   Whether its context creates: the context's own answer, or, where
-   *   the context cannot be asked yet, what the signature says.
-   *
    * @return bool
    *   TRUE when a retry is safe.
    */
-  public function idempotent(bool $creates): bool {
-    return $this->idempotent ?? ($this->readOnly || !$creates);
+  public function idempotent(): bool {
+    return $this->idempotent ?? ($this->readOnly || !$this->creates);
   }
 
   /**
    * Names what kind of call the operation is: a create, an update or a read.
    *
-   * Derived, never declared: a read only operation is a read, one whose
-   * context creates is a create, and every other changes what exists, an
-   * update. What a generated tool asks for at its door follows from it: a
-   * create requires the keys the resource requires, and an update requires
+   * Derived, never declared: a read only operation is a read, one that
+   * creates is a create, and every other changes what exists, an update.
+   * Read off the attribute, so it is known before anything is built.
+   * What a generated tool asks for at its door follows from it: a create
+   * requires the keys the resource requires, and an update requires
    * none, a key left out keeping what is stored.
    *
    * Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
    *
-   * @param bool $creates
-   *   Whether its context creates: the context's own answer, or, where
-   *   the context cannot be asked yet, what the signature says.
-   *
    * @return string
    *   self::CREATE, self::UPDATE or self::READ.
    */
-  public function kind(bool $creates): string {
+  public function kind(): string {
     return match (TRUE) {
       $this->readOnly => self::READ,
-      $creates => self::CREATE,
+      $this->creates => self::CREATE,
       default => self::UPDATE,
     };
   }
 
   /**
-   * States how the operation behaves, in the context it was asked in.
+   * States how the operation behaves.
    *
    * What both schema documents carry at the top, under
    * `x-surface.operation`, so a client reading the contract directly
-   * knows what a tool listing says with its annotations.
+   * knows what a tool listing says with its annotations. Every fact is
+   * the attribute's, so none waits for a context; the label also titles
+   * the documents, and the description, when there is one, is also their
+   * top `description`.
    *
-   * @param \Drupal\data_surface\Resource\OperationContext $context
-   *   The context the operation built.
-   *
-   * @return array{id: string, label: string, kind: string, creates: bool, readOnly: bool, destructive: bool, idempotent: bool}
+   * @return array{id: string, label: string, description?: string, kind: string, creates: bool, readOnly: bool, destructive: bool, idempotent: bool}
    *   The facts.
    */
-  public function facts(OperationContext $context): array {
+  public function facts(): array {
+    $description = $this->description === NULL || (string) $this->description === '' ? [] : ['description' => (string) $this->description];
     return [
       'id' => $this->id,
       'label' => (string) $this->label,
-      'kind' => $this->kind($context->creates),
-      'creates' => $context->creates,
+    ] + $description + [
+      'kind' => $this->kind(),
+      'creates' => $this->creates,
       'readOnly' => $this->readOnly,
       'destructive' => $this->destructive,
-      'idempotent' => $this->idempotent($context->creates),
+      'idempotent' => $this->idempotent(),
     ];
+  }
+
+  /**
+   * Answers whether the operation is declared on the class, with no method.
+   *
+   * @return bool
+   *   TRUE for `#[Operation]` on the class: its context is the bare one,
+   *   the id and `creates` and nothing else.
+   */
+  public function isBare(): bool {
+    return $this->method === '' && $this->context === NULL;
+  }
+
+  /**
+   * Stamps the operation's id and answer on the context it built.
+   *
+   * An #[Operation] method may leave both out of the context it returns;
+   * they are the attribute's. One it said must be the attribute's too: a
+   * context under another id would be addressed as another operation, and
+   * one that says otherwise about creating would be asked for one kind
+   * and run as another.
+   *
+   * Decision: see docs/decisions.md#a-contexts-id-is-the-operation-id.
+   *
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   What the operation's method returned.
+   *
+   * @return \Drupal\data_surface\Resource\OperationContext
+   *   The context, its id and `creates` the operation's.
+   *
+   * @throws \LogicException
+   *   When the context names another id, or says otherwise about
+   *   creating.
+   */
+  public function stamp(OperationContext $context): OperationContext {
+    ['id' => $id, 'creates' => $creates] = $context->said();
+    if ($id !== NULL && $id !== $this->id) {
+      throw new \LogicException(sprintf(
+        'The "%s" operation, %s, returned a context whose id is "%s". An operation\'s context carries the operation\'s id as its own: leave the id out, and the attribute\'s is stamped on it, or call withId(\'%s\') on a context built from another operation.',
+        $this->id,
+        $this->describe(),
+        $id,
+        $this->id,
+      ));
+    }
+    if ($creates !== NULL && $creates !== $this->creates) {
+      throw new \LogicException(sprintf(
+        'The "%s" operation, %s, returned a context that %s, and its #[Operation] %s. Whether an operation creates is the attribute\'s, read before anything is built, and stamped on its context: say it once, %s, and leave it out of the context.',
+        $this->id,
+        $this->describe(),
+        $creates ? 'creates' : 'does not create',
+        $this->creates ? 'says creates: TRUE' : 'does not say creates: TRUE',
+        $creates ? 'creates: TRUE on #[Operation]' : 'on #[Operation]',
+      ));
+    }
+    return $context->stamped($this->id, $this->creates);
   }
 
   /**
@@ -182,43 +246,6 @@ final class OperationDefinition {
       }
     }
     return TRUE;
-  }
-
-  /**
-   * Answers whether its parameters name one whole thing, read off them.
-   *
-   * Whether an operation creates is on the context it returns, which an
-   * operation that needs a subject cannot return before it is given one,
-   * so this reads the signature instead, the way a tool's static
-   * definition reads the identity an operation knows: one entity
-   * parameter, with no scalar beside it named for an identity key, is the
-   * thing itself, loaded; scalar parameters named for every identity key
-   * name it whole. An entity beside a scalar identity key is what a new
-   * thing is made from (a storage reused on another bundle), and
-   * parameters that leave an identity key unnamed leave room for the
-   * thing to be new.
-   *
-   * @param string[] $identity
-   *   The resource's identity keys.
-   *
-   * @return bool
-   *   TRUE when the parameters name one thing whole.
-   */
-  public function namesOneThing(array $identity): bool {
-    $entities = 0;
-    $named = [];
-    foreach ($this->parameters as $parameter) {
-      if ($parameter->takesObject()) {
-        $entities++;
-      }
-      elseif (in_array($parameter->name, $identity, TRUE)) {
-        $named[] = $parameter->name;
-      }
-    }
-    if ($entities > 0) {
-      return $entities === 1 && $named === [];
-    }
-    return $identity !== [] && array_diff($identity, $named) === [];
   }
 
   /**
@@ -279,7 +306,19 @@ final class OperationDefinition {
    *   Class::method() and the module.
    */
   public function describe(): string {
-    return sprintf('%s::%s() in %s', $this->class, $this->method, $this->module);
+    return $this->isBare()
+      ? sprintf('#[Operation] on %s in %s', $this->class, $this->module)
+      : sprintf('%s::%s() in %s', $this->class, $this->method, $this->module);
+  }
+
+  /**
+   * Names what provides the operation, for a catalog.
+   *
+   * @return string
+   *   `Class::method()`, or `#[Operation] on Class` for one on the class.
+   */
+  public function provider(): string {
+    return $this->isBare() ? '#[Operation] on ' . $this->class : $this->class . '::' . $this->method . '()';
   }
 
 }

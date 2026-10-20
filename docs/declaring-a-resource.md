@@ -62,7 +62,7 @@ part of a resource or structure has one home:
 | Its keys: type, label, default, constraints | `static defineInputs(BlueprintInterface $inputs)` |
 | What it emits | `static defineOutputs()`, on `DefinesOutputsInterface`; see [Outputs](outputs.md) |
 | A key whose allowed values depend on another key's value | a rule, `$inputs->narrow('key')->when(Condition::...)`, in `defineInputs()`; a static `#[RefinesInput('key')]` method where the effect must be computed ([Declaring a rule](refinement.md#declaring-a-rule)) |
-| How much is already known: add, edit, reuse | `#[Operation]` static methods returning an `OperationContext` |
+| How much is already known: add, edit, reuse | `#[Operation]` on the class, or on a static method returning an `OperationContext` when the context needs more |
 | Where its values are stored | `#[Resource(storage:)]`, a `ResourceStorageInterface` in `src/Storage/`; a structure is stored by what holds it |
 | What may refuse once the operation's permission allows | `access:` on either attribute, an `OperationAccessInterface` in `src/Access/` |
 | Its parts | `attach()` and `attachVariants()` in `defineInputs()`, and `#[Variant]` on each variant |
@@ -379,9 +379,9 @@ and is what string extraction looks for. The string is a literal, which
 `Drupal.Semantics.FunctionT` holds it to; values go in placeholders.
 
 **Attribute arguments construct `new TranslatableMarkup`.** A function
-call is not allowed in an attribute argument, so `#[Operation(label:)]`
-and a plugin attribute's label are the one place the constructor
-stays.
+call is not allowed in an attribute argument, so `#[Operation(label:,
+description:)]` and a plugin attribute's label are the one place the
+constructor stays.
 
 **Everything the container builds calls `$this->t()`.** An alter, a
 storage class, an access class, a widget, a cosmetic layer, a deriver: a class

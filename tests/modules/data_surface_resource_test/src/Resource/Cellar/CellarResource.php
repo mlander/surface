@@ -35,7 +35,7 @@ final class CellarResource implements ResourceInterface {
   /**
    * A new cellar.
    */
-  #[Operation('add', label: 'Add a cellar', permission: 'keep a larder')]
+  #[Operation('add', label: 'Add a cellar', permission: 'keep a larder', creates: TRUE)]
   public static function add(): OperationContext {
     return new OperationContext('add', creates: TRUE);
   }

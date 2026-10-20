@@ -16,7 +16,7 @@ final class RecipeOperations {
   /**
    * A new recipe that starts from another one's values.
    */
-  #[Operation('clone', label: 'Clone a recipe', of: RecipeResource::class, permission: 'cook in %kitchen')]
+  #[Operation('clone', label: 'Clone a recipe', of: RecipeResource::class, permission: 'cook in %kitchen', creates: TRUE)]
   public static function clone(string $kitchen, string $course, string $dish): OperationContext {
     return RecipeResource::add($kitchen)
       ->withId('clone')

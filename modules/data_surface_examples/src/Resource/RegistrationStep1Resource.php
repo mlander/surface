@@ -8,7 +8,6 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
-use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_examples\Storage\RegistrationStep1Storage;
 
@@ -20,15 +19,12 @@ use Drupal\data_surface_examples\Storage\RegistrationStep1Storage;
  * data_surface:registration.step1:configure are all read from here.
  */
 #[Resource('registration.step1', storage: RegistrationStep1Storage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure registration (step 1)'),
+  description: new TranslatableMarkup('Sets the event title, its capacity and whether registration is open.'),
+  permission: 'administer site configuration',
+)]
 final class RegistrationStep1Resource implements ResourceInterface {
-
-  /**
-   * Configures the registration settings, which always exist.
-   */
-  #[Operation('configure', label: new TranslatableMarkup('Configure registration'), permission: 'administer site configuration')]
-  public static function configure(): OperationContext {
-    return new OperationContext('configure');
-  }
 
   /**
    * {@inheritdoc}

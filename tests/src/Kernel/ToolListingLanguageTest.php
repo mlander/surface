@@ -61,7 +61,8 @@ class ToolListingLanguageTest extends DataSurfaceKernelTestBase {
     $this->installEntitySchema('user');
     $this->installConfig(['data_surface_examples']);
     $this->container->get('string_translation')->addTranslator(new FakeLanguageTranslator(self::LANGCODE, [
-      'Configure registration' => 'XX Configure registration',
+      'Configure registration (step 3)' => 'XX Configure registration (step 3)',
+      'Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.' => 'XX Sets the event registration.',
       'Event title' => 'XX Event title',
       'Depends on @keys.' => 'XX Depends on @keys.',
       'Required; a value already stored stands when left out.' => 'XX Required.',
@@ -92,8 +93,8 @@ class ToolListingLanguageTest extends DataSurfaceKernelTestBase {
     $definition = unserialize($cached);
     $this->assertInstanceOf(ToolDefinition::class, $definition);
 
-    $this->assertSame('XX Configure registration', (string) $definition->getLabel());
-    $this->assertStringStartsWith('XX Configure registration: the "configure" operation', (string) $definition->getDescription());
+    $this->assertSame('XX Configure registration (step 3)', (string) $definition->getLabel());
+    $this->assertStringStartsWith('XX Sets the event registration. Update:', (string) $definition->getDescription(), 'The description, as the language that reads it says it.');
     $values = $definition->getInputDefinition(OperationInputs::VALUES);
     $this->assertInstanceOf(MapInputDefinition::class, $values);
     $properties = $values->getPropertyDefinitions();

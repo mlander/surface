@@ -9,10 +9,12 @@
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "title": "Configure the press page",
+                "description": "Sets the press page: whether it is shown, the press contact, and who last reviewed it and when.",
                 "x-surface": {
                     "operation": {
                         "id": "configure",
                         "label": "Configure the press page",
+                        "description": "Sets the press page: whether it is shown, the press contact, and who last reviewed it and when.",
                         "kind": "update",
                         "creates": false,
                         "readOnly": false,

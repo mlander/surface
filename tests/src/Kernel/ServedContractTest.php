@@ -114,7 +114,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
       $operation->operation->id,
       $operation->operation->label,
       $widgets,
-      $operation->operation->facts($operation->context),
+      $operation->operation->facts(),
     );
     return json_decode((string) json_encode($contract->document), TRUE);
   }
@@ -207,7 +207,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $contract = $this->contract('registration.step1', 'configure');
     $this->assertSame('registration.step1', $contract['surface']);
     $this->assertSame('configure', $contract['situation']);
-    $this->assertSame('Configure registration', $contract['label']);
+    $this->assertSame('Configure registration (step 1)', $contract['label']);
     $schema = $contract['schema'];
     $this->assertSame('https://json-schema.org/draft/2020-12/schema', $schema['$schema']);
     $this->assertSame('object', $schema['type']);
