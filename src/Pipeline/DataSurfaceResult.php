@@ -42,6 +42,11 @@ final class DataSurfaceResult {
    *   sent for a locked key that the key did not take, since it keeps
    *   what it holds ("Lock is locked and kept as stored; the value sent
    *   was not taken."). Never a refusal, so isValid() does not read it.
+   * @param string[]|null $changes
+   *   The dotted paths the write changes (or, on a dry run, would change)
+   *   against what storage held, a list whole; empty when it changes
+   *   nothing, so a committed run with none wrote nothing; NULL when the
+   *   run did not reach prepare.
    */
   public function __construct(
     public readonly array $values,
@@ -50,7 +55,21 @@ final class DataSurfaceResult {
     public readonly bool $committed = FALSE,
     public readonly ?AccessResultInterface $access = NULL,
     public readonly array $notes = [],
+    public readonly ?array $changes = NULL,
   ) {
+  }
+
+  /**
+   * Returns whether the write changed what storage holds.
+   *
+   * Decision: see docs/decisions.md#absent-keeps-null-clears.
+   *
+   * @return bool
+   *   TRUE when a committed run moved a value; FALSE when it was not
+   *   committed or changed nothing.
+   */
+  public function changed(): bool {
+    return $this->committed && $this->changes !== [];
   }
 
   /**

@@ -26,7 +26,7 @@ trait ResultReportingTrait {
    *   The violations, exactly as the pipeline reports them.
    *
    * @return string
-   *   The violations as one line, each prefixed by its full path. This
+   *   The violations, one per line, each prefixed by its full path. This
    *   is the boundary a message object stops being one: a tool result
    *   carries a single string, so the objects are rendered here and
    *   nowhere earlier. Rendered as plain text, because the line is
@@ -39,7 +39,7 @@ trait ResultReportingTrait {
     foreach ($violations as $violation) {
       $lines[] = $violation->fullPath() . ': ' . PlainTextOutput::renderFromHtml((string) $violation->message);
     }
-    return implode(' ', $lines);
+    return implode("\n", $lines);
   }
 
   /**

@@ -491,7 +491,10 @@ final class ConceptPanel {
     try {
       $tool = $this->toolManager->createInstance($tool_id);
       $tool->setInputValue(OperationInputs::VALUES, ConceptCalls::CALLS[$resource][$name]['values']);
-      $tool->setInputValue(OperationInputs::DRY_RUN, ConceptCalls::CALLS[$resource][$name]['dry_run'] ?? TRUE);
+      // A read only operation's tool takes no dry run: it writes nothing.
+      if (isset($tool->getInputDefinitions()[OperationInputs::DRY_RUN])) {
+        $tool->setInputValue(OperationInputs::DRY_RUN, ConceptCalls::CALLS[$resource][$name]['dry_run'] ?? TRUE);
+      }
       $tool->execute();
       $result = $tool->getResult();
     }
@@ -501,7 +504,7 @@ final class ConceptPanel {
     }
     $lines = [($result->isSuccess() ? 'Success: ' : 'Failed: ') . PlainTextOutput::renderFromHtml((string) $result->getMessage())];
     foreach ($result->getContextValues() as $output => $value) {
-      if ($output === OperationInputs::VALUES && is_array($value) && !$result->getContextValues()[OperationInputs::COMMITTED]) {
+      if ($output === OperationInputs::VALUES && is_array($value) && !($result->getContextValues()[OperationInputs::COMMITTED] ?? FALSE)) {
         $lines[] = '  values: ' . json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
       }
     }

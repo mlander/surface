@@ -375,13 +375,35 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
       iterator_to_array($violations),
     );
     $this->assertSame(
-      ['This value should be 3 or more when Capacity is 150.'],
+      ['This value should be 3 or more. This applies when Capacity is 150.'],
       $messages($this->pipeline()->validate($this->surface(), ['capacity' => 150] + self::compliance('2048', 2) + self::EVENT)),
     );
     $this->assertSame(
-      ['This value should be between 1 and 100 when Room is Main hall and Event licence is empty.'],
+      ['This value should be between 1 and 100. This applies when Room is Main hall and Event licence is empty.'],
       $messages($this->pipeline()->validate($this->surface(), ['capacity' => 150] + self::compliance(NULL, 3) + self::EVENT)),
     );
+  }
+
+  /**
+   * Tests the ceiling's refusal names the licence the rule was handed.
+   *
+   * B11 of the 2026-10-20 reviews: a licence its own pattern refuses is
+   * handed to the capacity's rule as no licence, so the ceiling is the
+   * no-licence one, and the refusal said "Event licence is set", the
+   * value sent, which reads as the opposite of the reason: a caller
+   * would clear the licence. It says what the rule was handed, and what
+   * was refused.
+   */
+  public function testTheLicenceRefusalNamesWhatTheRuleWasHanded(): void {
+    $violations = [];
+    foreach ($this->pipeline()->validate($this->surface(), ['capacity' => 150] + self::compliance('EV-2048', 3) + self::EVENT) as $violation) {
+      $violations[$violation->fullPath()] = strip_tags((string) $violation->message);
+    }
+    $this->assertSame(
+      'This value should be between 1 and 100. This applies when Room is Main hall and Event licence is empty (EV-2048 was refused).',
+      $violations['capacity'],
+    );
+    $this->assertSame('A licence number is four digits, such as 2048.', $violations[self::LICENCE]);
   }
 
   /**
@@ -646,7 +668,7 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
     ];
     $state = $this->postStep(3, $surface, ['op' => 'Save']);
     $errors = array_map('strval', $state->getErrors());
-    $this->assertSame('A licence number is four digits, such as 2048.', $errors['surface][third_party_settings][' . self::MODULE . '][licence'] ?? NULL);
+    $this->assertSame('Event licence: A licence number is four digits, such as 2048.', $errors['surface][third_party_settings][' . self::MODULE . '][licence'] ?? NULL);
     $this->assertArrayHasKey('surface][capacity', $errors);
     $this->assertStringContainsString('100', $errors['surface][capacity']);
     foreach ($errors as $error) {

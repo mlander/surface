@@ -181,10 +181,12 @@ once. Labels come from the first set, and the cacheability of both is
 merged, since an answer is only reusable for as long as its
 shorter-lived half.
 
-Answers are memoized per request, keyed by the definition object. There
-is no invalidation because there is nothing to invalidate: the memo dies
-with the request, and a refined definition is a different object, so
-narrowing can never be served a stale list.
+Answers are memoized weakly, keyed by the definition object: an answer
+lives as long as its definition, so a worker that outlives a request (an
+MCP stdio server, a queue, a Drush batch) keeps none it no longer uses.
+There is no invalidation because there is nothing to invalidate: a
+refined definition is a different object, so narrowing can never be
+served a stale list.
 
 A constraint plugin that is not registered is logged as a warning rather
 than thrown: the definition renders as free input and the constraint

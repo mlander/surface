@@ -138,7 +138,9 @@ interface DataSurfaceFormBuilderInterface {
    * Core prints an element's errors in the messages at the top of the
    * page, unless Inline Form Errors is on; an error on a refinement
    * trigger is printed where it was made instead, by the module's form
-   * element preprocess, whichever of the two is the case.
+   * element preprocess, whichever of the two is the case. Its value is
+   * the id the printed error carries, which the element's
+   * aria-describedby names, or TRUE for an element with no id.
    */
   public const INLINE_ERROR_KEY = '#data_surface_inline_error';
 

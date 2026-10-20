@@ -93,7 +93,7 @@ final class NodeTypeResource implements ResourceInterface {
       ->addConstraint('Length', ['max' => EntityTypeInterface::BUNDLE_MAX_LENGTH])
       ->addConstraint('Regex', [
         'pattern' => '/^[a-z0-9_]+$/D',
-        'message' => 'The machine name must contain only lowercase letters, numbers, and underscores.',
+        'message' => t('The machine name must contain only lowercase letters, numbers, and underscores.'),
       ]);
 
     // The content type itself. Core has no multiline string type, so the

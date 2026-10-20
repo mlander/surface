@@ -6,6 +6,7 @@ namespace Drupal\data_surface_tool\Plugin\tool\Tool;
 
 use Drupal\data_surface_tool\OperationInputs;
 use Drupal\tool\ExecutableResult;
+use Drupal\tool\FailureCategory;
 
 /**
  * Reads what one operation of one resource would change; writes nothing.
@@ -44,11 +45,16 @@ final class ResourceOperationReadTool extends ResourceOperationToolBase {
    * {@inheritdoc}
    */
   protected function doExecute(array $values): ExecutableResult {
-    [$resource, $operation, $context] = $this->operation($values);
+    try {
+      [$resource, $operation, $context] = $this->operation($values);
+    }
+    catch (\InvalidArgumentException $e) {
+      return $this->notFound($e);
+    }
     // Asked again here, as the write tool does: execute() is callable from
     // PHP without an access check.
     if (!$this->operationAccess($resource, $context, $this->currentUser)->isAllowed()) {
-      return ExecutableResult::failure($this->t('You do not have permission to do this.'));
+      return ExecutableResult::failure($this->t('You do not have permission to do this.'), [], FailureCategory::Access);
     }
     if ($context->creates) {
       return ExecutableResult::failure($this->t('@label creates what it is about, so nothing is stored to read.', ['@label' => (string) $operation->label]));

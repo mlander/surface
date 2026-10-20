@@ -28,7 +28,7 @@ final class PhoneNumber implements ShapeInterface {
       ->setDescription(t('Digits, with spaces if you like, and a leading + for a country code.'))
       ->addConstraint('Regex', [
         'pattern' => '/^\+?[0-9 ]{7,20}$/D',
-        'message' => 'Write the number in digits, such as +1 555 0100.',
+        'message' => t('Write the number in digits, such as +1 555 0100.'),
       ]);
     DefinitionMetadata::setExamples($phone, ['+1 555 0100']);
     return $phone;

@@ -1068,7 +1068,13 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
         $by_message[trim($text)][] = '`' . implode('.', $segments[1]) . '`';
       }
     }
-    elseif (preg_match_all('/(\S+): (.*?\.)(?= \S+: |$)/', preg_replace('/^The values were refused: /', '', $message) ?? '', $matches, PREG_SET_ORDER)) {
+    elseif (str_starts_with($message, 'The values were refused:') && preg_match_all('/^(\S+): (.*\.)$/m', $message, $matches, PREG_SET_ORDER)) {
+      // One violation per line.
+      foreach ($matches as [, $path, $text]) {
+        $by_message[trim($text)][] = '`' . $path . '`';
+      }
+    }
+    elseif (preg_match_all('/(\S+): (.*?\.)(?= \S+: |$)/', $message, $matches, PREG_SET_ORDER)) {
       foreach ($matches as [, $path, $text]) {
         $by_message[trim($text)][] = '`' . $path . '`';
       }

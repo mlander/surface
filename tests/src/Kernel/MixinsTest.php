@@ -298,12 +298,12 @@ class MixinsTest extends DataSurfaceKernelTestBase {
 
     $this->assertSame([], $this->refusals($journal, []));
     $this->assertSame(
-      ['changed' => 'This value should be 1700000000 or more when Created is 1700000000.'],
+      ['changed' => 'This value should be 1700000000 or more. This applies when Created is 1700000000.'],
       $this->refusals($journal, ['changed' => 1600000000]),
       'Changed before created, refused in the owner\'s frame, naming the member it depends on.',
     );
     $this->assertSame(
-      ['owner' => 'This value is too long. It should have 32 characters or less when Visibility is Staff.'],
+      ['owner' => 'This value is too long. It should have 32 characters or less. This applies when Visibility is Staff.'],
       $this->refusals($journal, ['owner' => str_repeat('a', 40)]),
       'A refusal the port caused names the owner\'s key it reads.',
     );
@@ -318,14 +318,14 @@ class MixinsTest extends DataSurfaceKernelTestBase {
       'Once the created time is set, the changed time is required.',
     );
     $this->assertSame(
-      ['revision' => 'This value should be between 1 and 1 when Created is empty.'],
+      ['revision' => 'This value should be between 1 and 1. This applies when Created is empty.'],
       $this->refusals($journal, ['published' => FALSE, 'created' => NULL, 'changed' => NULL]),
       'The owner\'s rule on a member: never created, the first revision.',
     );
     $this->assertSame(
       [
         'created' => 'Created is required when Published is on.',
-        'revision' => 'This value should be between 1 and 1 when Created is empty.',
+        'revision' => 'This value should be between 1 and 1. This applies when Created is empty.',
       ],
       $this->refusals($journal, ['created' => NULL, 'changed' => NULL]),
       'The owner\'s rules on a member: a published journal says when it was created, and one never created is on its first revision.',
@@ -546,7 +546,7 @@ class MixinsTest extends DataSurfaceKernelTestBase {
     $tool->setInputValue(OperationInputs::VALUES, ['changed' => 1600000000] + self::JOURNAL);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
-    $this->assertSame('The values were refused: changed: This value should be 1700000000 or more when Created is 1700000000.', strip_tags((string) $tool->getResult()->getMessage()));
+    $this->assertSame("The values were refused:\n" . 'changed: This value should be 1700000000 or more. This applies when Created is 1700000000.', strip_tags((string) $tool->getResult()->getMessage()));
     $tool = $manager->createInstance('data_surface:resource_test.journal:configure');
     $tool->setInputValue(OperationInputs::VALUES, ['owner' => 'bea', 'changed' => 1700000900] + self::JOURNAL);
     $tool->execute();

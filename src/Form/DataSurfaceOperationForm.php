@@ -201,7 +201,8 @@ class DataSurfaceOperationForm extends FormBase {
       );
     }
     // Locked whole: every element is drawn disabled by its key's lock,
-    // and with nothing to save there is no Save.
+    // and with nothing to save there is no Save. An operation that
+    // changes nothing saves nothing either: its button says what it does.
     // Decision: see docs/decisions.md#locked-at-the-top.
     $locked = $surface->lockedWhole();
     $form[$locked === NULL ? 'actions' : 'locked'] = $locked === NULL ? [
@@ -209,7 +210,7 @@ class DataSurfaceOperationForm extends FormBase {
       '#weight' => 100,
       'submit' => [
         '#type' => 'submit',
-        '#value' => $this->t('Save'),
+        '#value' => $served->operation->readOnly ? $served->operation->label : $this->t('Save'),
       ],
     ] : [
       '#type' => 'item',

@@ -287,12 +287,12 @@ class PortsTest extends DataSurfaceKernelTestBase {
     };
     $this->assertSame([], $refusals(self::venue('theatre', 80, ['rows' => 8, 'aisle' => 'side'])));
     $this->assertSame(
-      ['seating.aisle' => 'The value you selected is not a valid choice when Layout is Theatre; choose Centre (centre) or Side (side).'],
+      ['seating.aisle' => 'The value you selected is not a valid choice. This applies when Layout is Theatre. Choose Centre (centre) or Side (side).'],
       $refusals(self::venue('theatre', 80, ['rows' => 8, 'aisle' => 'none'])),
       'A refusal a port caused names the container\'s key it reads.',
     );
     $this->assertSame(
-      ['seating.rows' => 'This value should be between 1 and 10 when Capacity is 60.'],
+      ['seating.rows' => 'This value should be between 1 and 10. This applies when Capacity is 60.'],
       $refusals(self::venue('banquet', 60, ['rows' => 20, 'aisle' => 'none'])),
     );
     $this->assertSame(

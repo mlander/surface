@@ -7,11 +7,13 @@ namespace Drupal\data_surface\Form;
 use Drupal\Component\Utility\Html;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Ajax\AnnounceCommand;
 use Drupal\Core\Ajax\AppendCommand;
 use Drupal\Core\Ajax\PrependCommand;
 use Drupal\Core\Ajax\RemoveCommand;
 use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\Core\Cache\CacheableMetadata;
+use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\OptGroup;
 use Drupal\Core\Form\SubformStateInterface;
@@ -88,6 +90,16 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
   protected const RENDERED_OPTIONS = 'data_surface_rendered_options';
 
   /**
+   * Where a request keeps what each element it may replace was drawn as.
+   *
+   * Temporary form state, read off the form the request arrived with as
+   * RENDERED_OPTIONS is, so the AJAX callback can say what the rebuild
+   * changed: keyed by the container's place in the form, then by each
+   * replaceable element's dotted path, each as drawing() reads it.
+   */
+  protected const DRAWN_AS = 'data_surface_drawn_as';
+
+  /**
    * Render key marking a collection's element: its dotted path.
    */
   protected const LIST_KEY = '#data_surface_list';
@@ -156,6 +168,9 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    *   The options service, which answers the one question the discard
    *   rule turns on: whether the refined definition still offers the
    *   value an in-progress edit left behind.
+   * @param \Drupal\Core\Extension\ModuleHandlerInterface $moduleHandler
+   *   The module handler, which says whether Inline Form Errors prints
+   *   an error beside its element, so the message need not name it.
    */
   public function __construct(
     protected readonly DataSurfaceWidgetManager $widgetManager,
@@ -163,6 +178,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     protected readonly ElementInfoManagerInterface $elementInfo,
     protected readonly MessengerInterface $messenger,
     protected readonly DataSurfaceOptions $options,
+    protected readonly ModuleHandlerInterface $moduleHandler,
   ) {
   }
 
@@ -198,6 +214,10 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     // Drawn after the type's own, which an explicit list replaces.
     $container['#pre_render'] = $this->surfacePreRender('container');
     $definitions = $surface->getDefinitions();
+    // Locked whole, the reason is said once, above the form: no element
+    // repeats it, and none is marked required, since nothing is asked.
+    // Decision: see docs/decisions.md#locked-at-the-top.
+    $whole = $surface->lockedWhole() !== NULL;
     foreach ($definitions as $name => $definition) {
       if (DoesNotApply::marks($definition)) {
         // Not rendered at all, not disabled and not hidden: the key does
@@ -218,11 +238,14 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
           $definitions->isLocked($name),
           [(string) $name],
           $wrapper_id,
+          $definitions->entry($name)->lockedBecause,
+          $whole,
         );
         continue;
       }
       $slot = $definitions->entry($name)?->slot;
       $locked = $definitions->isLocked($name);
+      $reason = $definitions->entry($name)?->lockedBecause;
       if ($slot !== NULL && DefinitionMetadata::slotOf($definition) !== NULL) {
         // The values said nothing about the deciding key, so its own
         // default is what the person sees chosen, and the slot is that
@@ -269,7 +292,9 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         // A variant its access locked is offered, and drawn fixed.
         // Decision: see
         // docs/decisions.md#a-variant-is-open-locked-or-not-offered.
-        $locked = $locked || ($chosen !== '' && $slot->variant($chosen)->child->lockedWhole() !== NULL);
+        $variant = $chosen !== '' ? $slot->variant($chosen)->child->lockedWhole() : NULL;
+        $locked = $locked || $variant !== NULL;
+        $reason ??= $variant;
       }
       $element = $this->widgetManager->getWidgetFor($definition)->buildElement($definition, $value);
       $inside = $slot === NULL ? $definitions->entry($name)?->attachment?->child : NULL;
@@ -282,7 +307,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         // A locked child's fieldset passes #disabled on to every element
         // inside it, as the form API does for any parent.
         $element['#disabled'] = TRUE;
-        $element = static::describeLocked($element);
+        $element = $whole ? static::withoutRequired($element) : static::describeLocked($element, $reason);
       }
       $container[$name] = $element;
     }
@@ -337,11 +362,16 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    *   The list's path below the container.
    * @param string $wrapper_id
    *   The container's id.
+   * @param string|\Stringable|null $reason
+   *   Why the list is locked, when an access answer said why.
+   * @param bool $whole
+   *   Whether the data surface is locked whole, its reason said above the
+   *   form: the list then carries no note and no required marker.
    *
    * @return array
    *   The list's element.
    */
-  protected function buildCollection(Collection $list, ListDataDefinitionInterface $definition, mixed $values, mixed $shown, bool $locked, array $path, string $wrapper_id): array {
+  protected function buildCollection(Collection $list, ListDataDefinitionInterface $definition, mixed $values, mixed $shown, bool $locked, array $path, string $wrapper_id, string|\Stringable|null $reason = NULL, bool $whole = FALSE): array {
     $child = $list->child();
     $items = Collection::items($values);
     $showing = Collection::items($shown);
@@ -404,6 +434,8 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
             $locked || $refined->isLocked((string) $name),
             [...$path, (string) $delta, (string) $name],
             $wrapper_id,
+            $locked ? $reason : $refined->getDefinitions()->entry((string) $name)->lockedBecause,
+            $whole,
           );
           continue;
         }
@@ -422,12 +454,14 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         $element[$delta] = $drawn + $ordered;
       }
       $element[$delta][self::REMOVE_KEY] = $control(self::REMOVE_KEY, [(string) $delta, self::REMOVE_KEY], count($items) <= $min);
+      // Every item's button says "Remove"; its accessible name says which.
+      $element[$delta][self::REMOVE_KEY]['#attributes']['aria-label'] = static::removeLabel(static::itemLabel($label, $delta));
       $element[$delta][self::REMOVE_KEY]['#weight'] = 1000;
     }
     $element[self::ADD_KEY] = $control(self::ADD_KEY, [self::ADD_KEY], $max !== NULL && count($items) >= $max);
     if ($locked) {
       $element['#disabled'] = TRUE;
-      $element = static::describeLocked($element);
+      $element = $whole ? static::withoutRequired($element) : static::describeLocked($element, $reason);
     }
     return $element;
   }
@@ -458,6 +492,23 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    */
   protected static function controlLabel(string $control): string {
     return (string) ($control === self::ADD_KEY ? t('Add another') : t('Remove'));
+  }
+
+  /**
+   * Names a "Remove" button for the item it takes out.
+   *
+   * The button shows "Remove", the word it is pressed by, and every item
+   * has one, so its accessible name adds the item's title, as core's
+   * media library names each of its "Remove" buttons.
+   *
+   * @param string|\Stringable $item
+   *   The item's title, "Volunteers 2".
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   The accessible name, "Remove Volunteers 2".
+   */
+  protected static function removeLabel(string|\Stringable $item): TranslatableMarkup {
+    return t('Remove @item', ['@item' => $item]);
   }
 
   /**
@@ -998,17 +1049,18 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     $own_parents = explode('.', $own);
     $touched = NestedArray::getValue($container, $own_parents);
     $replace_own = FALSE;
+    $state = $form_state instanceof SubformStateInterface ? $form_state->getCompleteFormState() : $form_state;
     if (is_array($touched)) {
       $touched = static::withTriggerErrors($touched, $form_state, static::containerKey($container), $own);
       NestedArray::setValue($container, $own_parents, $touched);
       // Decision: see docs/decisions.md#an-error-on-the-trigger-renders-inline.
-      $state = $form_state instanceof SubformStateInterface ? $form_state->getCompleteFormState() : $form_state;
       $rendered = $state->getTemporaryValue([self::RENDERED_OPTIONS, static::containerKey($container), $own]);
       $replace_own = !empty($touched[self::INLINE_ERROR_KEY])
         || ($state->getUserInput()[self::INVALID_INPUT] ?? NULL) === '1'
         || ($rendered !== NULL && $rendered !== static::optionsSignature($touched));
     }
     $elements = [];
+    $drawn = [];
     foreach ([...$replaces, ...($container[self::REFRESHED_KEY] ?? []), ...($replace_own ? [$own] : [])] as $dotted) {
       if ($dotted === $own && !$replace_own) {
         // Not the element that was touched, unless its own value was
@@ -1029,6 +1081,10 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       // element is rendered on its own; core's own AJAX response builder
       // does the same to the element a callback returns.
       unset($element['#group']);
+      if ($dotted !== $own && in_array($dotted, $replaces, TRUE)) {
+        // What the change moved; a panel every rebuild redraws is not.
+        $drawn[(string) $dotted] = $element;
+      }
       // Rendered without the container, so a fieldset placed inside it
       // is placed here, as the container's pre-render would have.
       $elements[$element[self::REFRESH_ID_KEY]] = static::placeMounts($element);
@@ -1036,6 +1092,16 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     $response = new AjaxResponse();
     foreach ($elements as $id => $element) {
       $response->addCommand(new ReplaceCommand('#' . $id, $element));
+    }
+    // Said once, politely, for whoever cannot see what moved: the error on
+    // the trigger, then what the rebuild changed.
+    $said = static::changesSaid(
+      $state->getTemporaryValue([self::DRAWN_AS, static::containerKey($container)]) ?? [],
+      $drawn,
+      is_array($touched) && !empty($touched[self::INLINE_ERROR_KEY]) ? $touched : NULL,
+    );
+    if ($said !== '') {
+      $response->addCommand(new AnnounceCommand($said));
     }
     // The stale marker names stale selects across the whole container,
     // and whether it exists at all depends on the rebuild, so it is not
@@ -1063,6 +1129,133 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       ]));
     }
     return $response;
+  }
+
+  /**
+   * Says what a rebuild changed, in whole sentences, for an announcement.
+   *
+   * A sighted person sees a field come or go and a limit move; nobody
+   * else is told. Each replaced element is compared with what it was
+   * drawn as on the page the request came from: whether it applies,
+   * whether it is required, the range it allows, the choices it offers,
+   * and, for a group, the fields it holds. The trigger's own refusal,
+   * named for it, comes first.
+   *
+   * Decision: see docs/decisions.md#an-element-hints-and-the-rule-speaks.
+   *
+   * @param array<string, array> $before
+   *   What each replaceable element was drawn as, by dotted path, from
+   *   drawnAs().
+   * @param array<string, array> $after
+   *   The replaced elements as rebuilt, by dotted path, the trigger left
+   *   out.
+   * @param array|null $refused
+   *   The trigger, when it carries an error printed under it.
+   *
+   * @return string
+   *   The sentences, or an empty string when nothing is said.
+   */
+  protected static function changesSaid(array $before, array $after, ?array $refused): string {
+    $sentences = [];
+    $errors = $refused['#errors'] ?? NULL;
+    foreach (is_array($errors) ? ($errors['#items'] ?? []) : [$errors] as $message) {
+      if ($refused !== NULL && (is_string($message) || $message instanceof \Stringable) && (string) $message !== '') {
+        $sentences[] = static::named($refused, $message);
+      }
+    }
+    foreach ($after as $dotted => $element) {
+      $was = $before[$dotted] ?? NULL;
+      if ($was === NULL) {
+        continue;
+      }
+      $now = static::drawing($element);
+      $label = $now['label'] ?? $was['label'];
+      if ($label === NULL || trim(strip_tags((string) $label)) === '') {
+        continue;
+      }
+      if ($was['applies'] !== $now['applies']) {
+        $sentences[] = $now['applies']
+          ? t('@label now applies.', ['@label' => $label])
+          : t('@label no longer applies.', ['@label' => $label]);
+        continue;
+      }
+      if (!$now['applies']) {
+        continue;
+      }
+      $said = count($sentences);
+      if ($was['required'] !== $now['required']) {
+        $sentences[] = $now['required']
+          ? t('@label is now required.', ['@label' => $label])
+          : t('@label is no longer required.', ['@label' => $label]);
+      }
+      if ([$was['min'], $was['max']] !== [$now['min'], $now['max']]) {
+        // Only the bounds there are: a placeholder is never handed NULL.
+        $range = array_filter(['@label' => $label, '@min' => $now['min'], '@max' => $now['max']], static fn ($bound): bool => $bound !== NULL);
+        $sentences[] = match (TRUE) {
+          isset($range['@min'], $range['@max']) => t('@label now allows @min to @max.', $range),
+          isset($range['@min']) => t('@label now allows @min or more.', $range),
+          isset($range['@max']) => t('@label now allows up to @max.', $range),
+          default => t('@label now allows any number.', $range),
+        };
+      }
+      if ($was['options'] !== $now['options']) {
+        $sentences[] = t('The choices for @label have changed.', ['@label' => $label]);
+      }
+      if (count($sentences) === $said && $was['children'] !== $now['children']) {
+        $sentences[] = t('@label was updated.', ['@label' => $label]);
+      }
+    }
+    return implode(' ', array_map('strval', $sentences));
+  }
+
+  /**
+   * Reads what every element a rebuild may replace is drawn as.
+   *
+   * @param array $element
+   *   The container, or an element inside it.
+   *
+   * @return array<string, array>
+   *   Each replaceable element as drawing() reads it, by dotted path.
+   */
+  protected static function drawnAs(array $element): array {
+    $found = [];
+    foreach (static::elementChildren($element) as $key) {
+      $child = $element[$key];
+      if (isset($child[self::REFRESH_KEY])) {
+        $found[(string) $child[self::REFRESH_KEY]] = static::drawing($child);
+      }
+      $found += static::drawnAs($child);
+    }
+    return $found;
+  }
+
+  /**
+   * Reads what an element says to a person, as far as a rebuild moves it.
+   *
+   * The same before Form API processes the element and after, so the
+   * form the page was drawn from and the rebuilt one compare: a group's
+   * fields are its own children, which processing adds none to, while a
+   * select's or a radios' options are compared by optionsSignature().
+   *
+   * @param array $element
+   *   The element.
+   *
+   * @return array{label: mixed, applies: bool, required: bool, min: mixed, max: mixed, options: string|null, children: array|null}
+   *   What it says.
+   */
+  protected static function drawing(array $element): array {
+    // The marker a person is shown: a select keeping a stale value is not
+    // checked as required, and keeps the marker on its label.
+    $marked = in_array('form-required', (array) ($element['#label_attributes']['class'] ?? []), TRUE);
+    return [
+      'label' => $element['#title'] ?? NULL,
+      'applies' => empty($element[self::PLACEHOLDER_KEY]),
+      'required' => !empty($element['#required']) || !empty($element[self::REQUIRED_KEY]) || $marked,
+      'min' => isset($element['#min']) ? (string) $element['#min'] : NULL,
+      'max' => isset($element['#max']) ? (string) $element['#max'] : NULL,
+      'options' => static::optionsSignature($element),
+      'children' => in_array($element['#type'] ?? NULL, self::GROUPING_TYPES, TRUE) ? static::elementChildren($element) : NULL,
+    ];
   }
 
   /**
@@ -1148,6 +1341,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         // The first build of a request is the form the page was rendered
         // from; a rebuild later in the same request is not.
         $state->setTemporaryValue([self::RENDERED_OPTIONS, static::containerKey($element)], static::triggerOptions($element));
+        $state->setTemporaryValue([self::DRAWN_AS, static::containerKey($element)], static::drawnAs($element));
       }
       static::wrapRefreshed($element, $wrapper_id);
       if (isset($element[self::STALE_MARKER_KEY]) && !isset($element[self::STALE_MARKER_KEY][self::REFRESH_ID_KEY])) {
@@ -1620,6 +1814,12 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     $container = static::findSurfaceContainer($container);
     $trigger = static::triggerPath($container, $form_state);
     $state = $form_state instanceof SubformStateInterface ? $form_state->getCompleteFormState() : $form_state;
+    // Printed at the top of the page, a message is named for its element;
+    // Inline Form Errors prints it beside the element, and links it from
+    // its own summary by the element's title.
+    // Decision: see docs/decisions.md#an-element-hints-and-the-rule-speaks.
+    $beside = $this->moduleHandler->moduleExists('inline_form_errors')
+      && empty($state->getCompleteForm()['#disable_inline_form_errors']);
     foreach ($errors as $violation) {
       $segments = $violation->path === '' ? [] : explode('.', $violation->path);
       $dotted = implode('.', [$violation->key, ...$segments]);
@@ -1652,7 +1852,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         $element = $element[$segment];
       }
       if (is_array($element) && isset($element['#parents'])) {
-        $form_state->setError($element, $violation->message);
+        $form_state->setError($element, $beside ? $violation->message : static::named($element, $violation->message));
       }
       else {
         $form_state->setErrorByName(implode('][', array_merge([$violation->key], $segments)), $violation->message);
@@ -1666,6 +1866,41 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       // working again on its own.
       $this->messenger->addWarning($reference->message);
     }
+  }
+
+  /**
+   * Names the element a message is about, unless the message does.
+   *
+   * A constraint's own words name no field ("This value should be between
+   * 1 and 1000."), which is enough beside the element and nowhere else:
+   * printed at the top of the page, or announced, the message is put
+   * after the element's title. One that already begins with the title,
+   * as a required key's does, and an element with no title are left as
+   * they are. The message stays the object it was, a placeholder of the
+   * sentence that names it.
+   *
+   * Decision: see docs/decisions.md#an-element-hints-and-the-rule-speaks.
+   *
+   * @param array $element
+   *   The element the message is about.
+   * @param string|\Stringable $message
+   *   The message.
+   *
+   * @return string|\Stringable
+   *   The message, named.
+   */
+  protected static function named(array $element, string|\Stringable $message): string|\Stringable {
+    $title = $element['#title'] ?? NULL;
+    if (!is_string($title) && !$title instanceof \Stringable) {
+      return $message;
+    }
+    $plain = trim(strip_tags((string) $title));
+    if ($plain === '' || str_starts_with((string) $message, $plain)) {
+      return $message;
+    }
+    return t('@field: @message', ['@field' => $title, '@message' => $message], [
+      'context' => 'A form error, after the label of the field it is about',
+    ]);
   }
 
   /**
@@ -1805,7 +2040,17 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       '#theme' => 'item_list',
       '#items' => $messages,
     ];
-    $element[self::INLINE_ERROR_KEY] = TRUE;
+    // Printed with an id the input names after its description, so the
+    // error is read out with the field; the module's preprocess prints
+    // it, and Inline Form Errors, which would print it without one, is
+    // told the element's message is printed elsewhere.
+    $error_id = isset($element['#id']) && is_string($element['#id']) ? $element['#id'] . '--error' : NULL;
+    $element[self::INLINE_ERROR_KEY] = $error_id ?? TRUE;
+    if ($error_id !== NULL) {
+      $element['#error_no_message'] = TRUE;
+      $described = trim(($element['#attributes']['aria-describedby'] ?? '') . ' ' . $error_id);
+      $element['#attributes']['aria-describedby'] = $described;
+    }
     // What core sets on an element that failed validation, said here for
     // a trigger that was rebuilt rather than failed: the request held its
     // error back so the rebuild could go ahead.
@@ -2128,7 +2373,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       }
       if ($definitions->isLocked($name)) {
         $element[$name]['#disabled'] = TRUE;
-        $element[$name] = static::describeLocked($element[$name]);
+        $element[$name] = static::describeLocked($element[$name], $entry->lockedBecause);
         continue;
       }
       if ($entry->attachment !== NULL && $entry->slot === NULL) {
@@ -2143,22 +2388,48 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    *
    * A disabled input tells a sighted user it is fixed and tells a screen
    * reader nothing about why, so the reason goes in the description
-   * where every user reaches it.
+   * where every user reaches it: the access answer's own, when the
+   * answer that locked the key said why, and otherwise a sentence that
+   * says only that it is fixed.
+   *
+   * Decision: see docs/decisions.md#locked-at-the-top.
    *
    * @param array $element
    *   The locked element.
+   * @param string|\Stringable|null $reason
+   *   Why the access answer locked it, or NULL when none said.
    *
    * @return array
    *   The element, with the reason appended to its description.
    */
-  protected static function describeLocked(array $element): array {
-    $note = t('Fixed for this operation.');
+  protected static function describeLocked(array $element, string|\Stringable|null $reason = NULL): array {
+    $note = $reason !== NULL && (string) $reason !== '' ? $reason : t('Fixed for this operation.');
     $element['#description'] = isset($element['#description'])
       ? t('@description @note', [
         '@description' => $element['#description'],
         '@note' => $note,
       ])
       : $note;
+    return $element;
+  }
+
+  /**
+   * Takes the required marker off an element and everything inside it.
+   *
+   * For a data surface locked whole: nothing on the form can be sent, so
+   * nothing is asked for, and a marker would say otherwise.
+   *
+   * @param array $element
+   *   The element.
+   *
+   * @return array
+   *   The element, nothing in it required.
+   */
+  protected static function withoutRequired(array $element): array {
+    unset($element['#required']);
+    foreach (static::elementChildren($element) as $key) {
+      $element[$key] = static::withoutRequired($element[$key]);
+    }
     return $element;
   }
 

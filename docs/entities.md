@@ -215,8 +215,8 @@ would, a field whose view access is denied left out
   and its keys are built, refined, validated and offered, but a content
   entity has nowhere to keep `third_party_settings`, so its storage does
   not keep them.
-- Translations. The resource edits the entity in the language it loads
-  in; `langcode` is left out.
+- Translations. The resource edits the entity's default translation,
+  whatever the language of the request; `langcode` is left out.
 - A form's extras: Scheduler's, path aliases, menu settings, the
   moderation state, the vertical tabs.
 

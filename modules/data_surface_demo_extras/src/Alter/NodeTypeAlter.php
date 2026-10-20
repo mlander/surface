@@ -105,7 +105,7 @@ final class NodeTypeAlter implements AltersInputsInterface, HasStorageLayoutInte
       ->setLabel($this->t('Audience tag'))
       ->addConstraint('Regex', [
         'pattern' => NodeTypeReviewSettings::TAG_PATTERN,
-        'message' => 'An audience tag is lower case letters and digits, words joined by one space or one hyphen, with nothing around it.',
+        'message' => $this->t('An audience tag is lower case letters and digits, words joined by one space or one hyphen, with nothing around it.'),
       ]);
     $inputs->addDefinition(NodeTypeReviewSettings::TAGS, (new ListDataDefinition([], $tag))
       ->setLabel($this->t('Audience tags'))

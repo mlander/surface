@@ -70,6 +70,13 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   public const CHOICES_SHOWN = 10;
 
   /**
+   * The context of a refusal's own sentences, for a translator.
+   *
+   * Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
+   */
+  public const REFUSAL_CONTEXT = 'data_surface refusal';
+
+  /**
    * The locked keys the last accept() was sent a value it did not take.
    *
    * Collected while accepting, one per key by its full path, so a caller
@@ -289,8 +296,13 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   /**
    * {@inheritdoc}
    */
-  public function kept(DataSurfaceInterface $surface, array $values, array $current): array {
+  public function kept(DataSurfaceInterface $surface, array $values, array $current, ?array $input = NULL): array {
+    // A thing storage holds nothing of is being created, and is written
+    // whole, its defaults included.
+    $exists = $input !== NULL && $current !== [];
+    $defaults = NULL;
     $kept = [];
+    $unwritten = [];
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
       $name = (string) $name;
       if (!array_key_exists($name, $values)) {
@@ -299,16 +311,39 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         }
         continue;
       }
+      $sent = $input !== NULL && array_key_exists($name, $input);
+      if ($exists && !array_key_exists($name, $current)) {
+        $defaults ??= $surface->getDefaultValues();
+        if (static::isDefault($values[$name], $defaults[$name] ?? NULL)) {
+          // A key storage never held reads as its default. Left out, or
+          // sent as that default (a form posts every element it drew),
+          // it is what it was: nothing to write.
+          // Decision: see docs/decisions.md#absent-keeps-null-clears.
+          $unwritten[$name] = TRUE;
+          continue;
+        }
+      }
       $kept[$name] = $values[$name];
+      $child = $entry->list === NULL ? $entry->childFor($values) : NULL;
+      if ($sent && $child === NULL && $entry->list === NULL && !is_array($values[$name]) && array_key_exists($name, $current) && $this->heldAlike($entry->definition, $values[$name], $current[$name])) {
+        $kept[$name] = $current[$name];
+        continue;
+      }
       if (!is_array($values[$name]) || !is_array($current[$name] ?? NULL) || $entry->list !== NULL) {
         continue;
       }
-      $child = $entry->childFor($values);
+      $below = $input === NULL ? NULL : (is_array($input[$name] ?? NULL) ? $input[$name] : []);
+      $chosen = $entry->slot?->chosen($values[$entry->slot->by] ?? NULL);
+      if ($chosen !== NULL && !$entry->slot->fits($chosen, $current[$name])) {
+        // What it held was another variant's: the chosen one starts here,
+        // and is written whole, its defaults included.
+        $below = NULL;
+      }
       $kept[$name] = $child !== NULL
-        ? $this->kept($child, $values[$name], $current[$name])
-        : static::keptInMap($entry->definition, $values[$name], $current[$name]);
+        ? $this->kept($child, $values[$name], $current[$name], $below)
+        : $this->keptInMap($entry->definition, $values[$name], $current[$name], $below);
     }
-    return $kept + $values;
+    return array_diff_key($kept + $values, $unwritten);
   }
 
   /**
@@ -320,15 +355,18 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *   The accepted map.
    * @param array $stored
    *   What storage holds for it.
+   * @param array|null $input
+   *   What was sent for it, or NULL when that is not known.
    *
    * @return array
    *   The map to write.
    */
-  protected static function keptInMap(DataDefinitionInterface $definition, array $value, array $stored): array {
+  protected function keptInMap(DataDefinitionInterface $definition, array $value, array $stored, ?array $input = NULL): array {
     if (!$definition instanceof ComplexDataDefinitionInterface || $definition instanceof ListDataDefinitionInterface) {
       return $value;
     }
     $kept = [];
+    $unwritten = [];
     foreach ($definition->getPropertyDefinitions() as $property => $property_definition) {
       if (!array_key_exists($property, $value)) {
         if (array_key_exists($property, $stored)) {
@@ -336,11 +374,118 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         }
         continue;
       }
+      $sent = $input !== NULL && array_key_exists($property, $input);
+      if ($input !== NULL && !array_key_exists($property, $stored) && static::isDefault($value[$property], DefinitionMetadata::defaultOf($property_definition))) {
+        $unwritten[$property] = TRUE;
+        continue;
+      }
+      if ($sent && !is_array($value[$property]) && array_key_exists($property, $stored) && $this->heldAlike($property_definition, $value[$property], $stored[$property])) {
+        $kept[$property] = $stored[$property];
+        continue;
+      }
       $kept[$property] = is_array($value[$property]) && is_array($stored[$property] ?? NULL)
-        ? static::keptInMap($property_definition, $value[$property], $stored[$property])
+        ? $this->keptInMap($property_definition, $value[$property], $stored[$property], $input === NULL ? NULL : (is_array($input[$property] ?? NULL) ? $input[$property] : []))
         : $value[$property];
     }
-    return $kept + $value;
+    return array_diff_key($kept + $value, $unwritten);
+  }
+
+  /**
+   * Answers whether an accepted value is a key's default, read alike.
+   *
+   * A property a default leaves out holds nothing, so it is NULL in the
+   * accepted value: the two are one value.
+   *
+   * @param mixed $value
+   *   The accepted value.
+   * @param mixed $default
+   *   The declared default.
+   *
+   * @return bool
+   *   TRUE when the value is the default.
+   */
+  protected static function isDefault(mixed $value, mixed $default): bool {
+    if (!is_array($value) || !is_array($default) || array_is_list($value) || array_is_list($default)) {
+      return static::sameValue($value, $default);
+    }
+    foreach (array_keys($value + $default) as $key) {
+      if (!static::isDefault($value[$key] ?? NULL, $default[$key] ?? NULL)) {
+        return FALSE;
+      }
+    }
+    return TRUE;
+  }
+
+  /**
+   * Answers whether an accepted value is what storage holds, read alike.
+   *
+   * What storage holds is accepted as though it were sent, so the empty
+   * string a read returned and the NULL the empty string sent is accepted
+   * as are one value, as are a stored "5" and an integer 5: the stored
+   * representation is then the one written back.
+   *
+   * Decision: see docs/decisions.md#absent-keeps-null-clears.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key or the property.
+   * @param mixed $accepted
+   *   The accepted value, not an array.
+   * @param mixed $stored
+   *   What storage holds for it.
+   *
+   * @return bool
+   *   TRUE when the two are one value.
+   */
+  protected function heldAlike(DataDefinitionInterface $definition, mixed $accepted, mixed $stored): bool {
+    if (DefinitionMetadata::isSecret($definition) || $definition instanceof ListDataDefinitionInterface || is_array($stored)) {
+      return FALSE;
+    }
+    try {
+      return static::sameValue($accepted, $this->acceptValue($definition, $stored, $stored, ''));
+    }
+    catch (\InvalidArgumentException) {
+      return FALSE;
+    }
+  }
+
+  /**
+   * Lists the paths a write changes, against what storage holds.
+   *
+   * @param array $write
+   *   What would be written, as kept() puts it.
+   * @param array $current
+   *   What storage holds.
+   * @param string $prefix
+   *   The dotted path of this level; '' at the top.
+   *
+   * @return string[]
+   *   The dotted paths whose value would change, a map's by its own keys,
+   *   a list whole; empty when the write changes nothing.
+   */
+  protected static function changes(array $write, array $current, string $prefix = ''): array {
+    $changes = [];
+    foreach ($write as $key => $value) {
+      $path = static::joinPath($prefix, (string) $key);
+      if (!array_key_exists($key, $current)) {
+        $changes[] = $path;
+        continue;
+      }
+      $held = $current[$key];
+      if (is_array($value) && is_array($held) && $value !== [] && $held !== [] && !array_is_list($value) && !array_is_list($held)) {
+        array_push($changes, ...static::changes($value, $held, $path));
+        // Below the top a map is written whole, so what it held and the
+        // write leaves out is gone. At the top, what no key describes is
+        // storage's own, and stays.
+        foreach (array_keys(array_diff_key($held, $value)) as $gone) {
+          $changes[] = static::joinPath($path, (string) $gone);
+        }
+        continue;
+      }
+      if (!static::sameValue($value, $held)) {
+        $changes[] = $path;
+      }
+    }
+    return $changes;
   }
 
   /**
@@ -898,16 +1043,17 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *   capacity given, is about a value the caller may not have touched:
    *   the key it names is the one to fix, but the reason is a sibling.
    *   When the refiners changed the refused key's constraints for these
-   *   values, the refusal goes on to name each key they watch and what it
+   *   values, a second sentence names each key they watch and what it
    *   holds, as a key that does not apply is said ("This value should be
-   *   3 or more when Capacity is 120."). A refusal by a rule the key
-   *   declared itself says no condition. A key an alter mounted is
+   *   3 or more. This applies when Capacity is 120."). A refusal by a
+   *   rule the key declared itself says no condition. A key an alter mounted is
    *   refined one property at a time, so its refusals are matched to the
    *   property each is about.
-   * - A value not on its key's list goes on to list what may be chosen,
-   *   as refined for these values, each label with its value, so the
-   *   sentence says what to send ("...; choose Main hall (riverside_main)
-   *   or East room (riverside_east)."), capped at CHOICES_SHOWN.
+   * - A value not on its key's list is followed by a sentence listing
+   *   what may be chosen, as refined for these values, each label with
+   *   its value, so it says what to send ("... Choose Main hall
+   *   (riverside_main) or East room (riverside_east)."), capped at
+   *   CHOICES_SHOWN.
    *
    * Decision: see
    * docs/decisions.md#a-refusal-names-what-it-depends-on.
@@ -954,17 +1100,23 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       if ($conditions === [] && $allowed === NULL) {
         continue;
       }
-      $arguments = [
-        '@message' => new Clause($refusal->message),
-        '@conditions' => implode(' ' . $this->t('and') . ' ', array_map('strval', $conditions)),
-        '@choices' => (string) $allowed,
-      ];
-      $message = match (TRUE) {
-        $allowed === NULL => $this->t('@message when @conditions.', $arguments),
-        $conditions === [] => $this->t('@message; @choices.', $arguments),
-        default => $this->t('@message when @conditions; @choices.', $arguments),
-      };
-      $refusals[$index] = new Violation($refusal->key, $refusal->path, $message);
+      // A required property a rule made required says so in the one
+      // sentence a required key does.
+      $message = $refusal->message;
+      if ($allowed === NULL && $message instanceof TranslatableMarkup && $message->getUntranslatedString() === '@label is required.') {
+        $refusals[$index] = new Violation($refusal->key, $refusal->path, $this->requiredWhen($message->getArguments()['@label'], $conditions));
+        continue;
+      }
+      // The constraint's message is kept whole, and what this adds is said
+      // in whole sentences of its own beside it.
+      $sentences = [$refusal->message];
+      if ($conditions !== []) {
+        $sentences[] = $this->appliesWhen($conditions);
+      }
+      if ($allowed !== NULL) {
+        $sentences[] = $allowed;
+      }
+      $refusals[$index] = new Violation($refusal->key, $refusal->path, new Sentences(...$sentences));
     }
     return $refusals;
   }
@@ -972,10 +1124,15 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   /**
    * Says what each watched key holds, as the condition of a refusal.
    *
-   * A key only a declared rule reads, and only by whether it holds a
-   * value (`present()`, `absent()`), is said as set or empty, never by
-   * what it holds: the rule asked nothing else, and "when Email is
-   * digest@example.com" reads as though only that address counted.
+   * Each condition is one whole clause a translator sees entire, its
+   * kind in the source ("@key is empty", "@key is on"), never a key and
+   * a bare word joined. It describes what the refiners were handed: a
+   * watched value its own key refused was handed as nothing, so it is
+   * said as empty, with the value that was refused. A key only a declared
+   * rule reads, and only by whether it holds a value (`present()`,
+   * `absent()`), is said as set or empty, never by what it holds: the
+   * rule asked nothing else, and "when Email is digest@example.com" reads
+   * as though only that address counted.
    *
    * Decision: see
    * docs/decisions.md#a-refusal-names-what-it-depends-on.
@@ -993,27 +1150,90 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup[]
    *   "Venue is Riverside Hall", one per watched key, an option by its
-   *   label; "Email is set" for a key read for presence alone.
+   *   label; "Email is set" for a key read for presence alone; "Event
+   *   licence is empty (EV-2048 was refused)" for a refused one.
    */
   protected function conditions(DataSurfaceInterface $refined, array $dependencies, array $values, ?Entry $entry = NULL): array {
     $conditions = [];
     $presence = $entry?->presenceDependencies() ?? [];
+    $withheld = $refined->withheldValues();
+    $context = ['context' => self::REFUSAL_CONTEXT];
     foreach ($dependencies as $dependency) {
       $at = explode('.', $dependency);
       $watched = static::definitionAt($refined, $at);
+      $key = $watched?->getLabel() ?? $dependency;
+      $arguments = ['@key' => $key];
+      if (array_key_exists($dependency, $withheld)) {
+        // What the rule was handed: nothing, since its own key refused it.
+        // Decision: see
+        // docs/decisions.md#a-refiner-never-sees-an-invalid-sibling.
+        $refused = $withheld[$dependency];
+        $arguments['@value'] = is_bool($refused) ? (int) $refused : $refused;
+        $conditions[] = is_scalar($refused)
+          ? $this->t('@key is empty (@value was refused)', $arguments, $context)
+          : $this->t('@key is empty (what was sent was refused)', $arguments, $context);
+        continue;
+      }
       $held = NestedArray::getValue($values, $at) ?? $refined->getPortValues()[$dependency] ?? NULL;
       $set = $watched === NULL || !is_scalar($held) ? NULL : $this->options->resolve($watched);
-      $shown = match (TRUE) {
-        !ValueState::isConfigured($held) => $this->t('empty'),
-        in_array($dependency, $presence, TRUE) => $this->t('set'),
-        $set !== NULL && isset($set->options[$held]) => $set->options[$held],
-        is_bool($held) => $held ? $this->t('on') : $this->t('off'),
-        is_scalar($held) => (string) $held,
-        default => $this->t('what it holds'),
+      $labeled = $set !== NULL && isset($set->options[$held]);
+      if ($labeled || (is_scalar($held) && !is_bool($held))) {
+        $arguments['@value'] = $labeled ? $set->options[$held] : (string) $held;
+      }
+      $conditions[] = match (TRUE) {
+        !ValueState::isConfigured($held) => $this->t('@key is empty', $arguments, $context),
+        in_array($dependency, $presence, TRUE) => $this->t('@key is set', $arguments, $context),
+        isset($arguments['@value']) => $this->t('@key is @value', $arguments, $context),
+        $held === TRUE => $this->t('@key is on', $arguments, $context),
+        $held === FALSE => $this->t('@key is off', $arguments, $context),
+        default => $this->t('@key holds its current value', $arguments, $context),
       };
-      $conditions[] = $this->t('@key is @value', ['@key' => $watched?->getLabel() ?? $dependency, '@value' => $shown]);
     }
     return $conditions;
+  }
+
+  /**
+   * Says when a refusal applies, in one sentence.
+   *
+   * One source per count of conditions, so no condition is ever joined
+   * to another by a translated word: one, two, and more, which is plural
+   * by its count.
+   *
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup[] $conditions
+   *   The conditions, at least one.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   "This applies when Room is Main hall and Event licence is empty."
+   */
+  protected function appliesWhen(array $conditions): TranslatableMarkup {
+    $context = ['context' => self::REFUSAL_CONTEXT];
+    $arguments = static::conditionArguments($conditions);
+    return match (count($conditions)) {
+      1 => $this->t('This applies when @condition.', $arguments, $context),
+      2 => $this->t('This applies when @first and @second.', $arguments, $context),
+      default => $this->formatPlural(count($conditions), 'This applies when this holds: @conditions.', 'This applies when all @count of these hold: @conditions.', $arguments, $context),
+    };
+  }
+
+  /**
+   * Hands conditions to the sentence for their count.
+   *
+   * One is `@condition`, two are `@first` and `@second`, and three or
+   * more are `@conditions`, whole clauses set in a row with semicolons
+   * outside translation.
+   *
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup[] $conditions
+   *   The conditions, at least one.
+   *
+   * @return array<string, \Drupal\Core\StringTranslation\TranslatableMarkup|string>
+   *   The placeholders.
+   */
+  protected static function conditionArguments(array $conditions): array {
+    return match (count($conditions)) {
+      1 => ['@condition' => $conditions[0]],
+      2 => ['@first' => $conditions[0], '@second' => $conditions[1]],
+      default => ['@conditions' => implode('; ', array_map('strval', $conditions))],
+    };
   }
 
   /**
@@ -1027,9 +1247,9 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *   The refused property below it, or ''.
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup|null
-   *   "choose Main hall (riverside_main) or East room (riverside_east)",
-   *   at most CHOICES_SHOWN of them and how many more; "nothing may be
-   *   chosen" for an empty list; NULL when the key offers no list.
+   *   "Choose Main hall (riverside_main) or East room (riverside_east).",
+   *   at most CHOICES_SHOWN of them and how many more; "Nothing may be
+   *   chosen." for an empty list; NULL when the key offers no list.
    */
   protected function choices(DataSurfaceInterface $refined, string $name, string $path): ?TranslatableMarkup {
     $definition = $path === '' ? NULL : static::definitionAt($refined, [$name, ...explode('.', $path)]);
@@ -1038,24 +1258,25 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     if ($set === NULL) {
       return NULL;
     }
+    $context = ['context' => self::REFUSAL_CONTEXT];
     if ($set->options === []) {
-      return $this->t('nothing may be chosen');
+      return $this->t('Nothing may be chosen.', [], $context);
     }
     $choices = [];
     foreach ($set->options as $value => $label) {
       $choices[] = (string) $label === (string) $value
         ? (string) $value
-        : (string) $this->t('@label (@value)', ['@label' => $label, '@value' => $value]);
+        : (string) $this->t('@label (@value)', ['@label' => $label, '@value' => $value], $context);
     }
     $shown = array_slice($choices, 0, self::CHOICES_SHOWN);
     $more = count($choices) - count($shown);
     if ($more > 0) {
-      return $this->t('choose @choices and @count more', ['@choices' => implode(', ', $shown), '@count' => $more]);
+      return $this->formatPlural($more, 'Choose @choices or 1 more.', 'Choose @choices or one of @count more.', ['@choices' => implode(', ', $shown)], $context);
     }
     $last = array_pop($shown);
     return $shown === []
-      ? $this->t('choose @choice', ['@choice' => $last])
-      : $this->t('choose @choices or @last', ['@choices' => implode(', ', $shown), '@last' => $last]);
+      ? $this->t('Choose @choice.', ['@choice' => $last], $context)
+      : $this->t('Choose @choices or @last.', ['@choices' => implode(', ', $shown), '@last' => $last], $context);
   }
 
   /**
@@ -1080,14 +1301,15 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     }
     $set = $this->options->resolve($definition);
     $value = is_bool($default) ? (int) $default : $default;
-    $shown = match (TRUE) {
-      $set !== NULL && isset($set->options[$value]) => $this->t('@label (@value)', [
-        '@label' => $set->options[$value],
-        '@value' => $value,
-      ]),
-      is_bool($default) => $default ? $this->t('on') : $this->t('off'),
-      default => (string) $default,
-    };
+    $context = ['context' => self::REFUSAL_CONTEXT];
+    if (is_bool($default) && !($set !== NULL && isset($set->options[$value]))) {
+      return $default
+        ? $this->t('@label cannot be cleared: it always holds a value, on by default. Leave it out to keep what it holds.', ['@label' => $label], $context)
+        : $this->t('@label cannot be cleared: it always holds a value, off by default. Leave it out to keep what it holds.', ['@label' => $label], $context);
+    }
+    $shown = $set !== NULL && isset($set->options[$value])
+      ? $this->t('@label (@value)', ['@label' => $set->options[$value], '@value' => $value], $context)
+      : (string) $default;
     return $this->t('@label cannot be cleared: it always holds a value, @default by default. Leave it out to keep what it holds.', [
       '@label' => $label,
       '@default' => $shown,
@@ -1132,13 +1354,32 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       $dependencies = array_values(array_diff($dependencies, [$entry->slot->by]));
     }
     $conditions = $declared === NULL || $declared->isRequired() ? [] : $this->conditions($refined, $dependencies, $values, $entry);
+    return $this->requiredWhen($label, $conditions);
+  }
+
+  /**
+   * Says that a key is required, under the conditions that made it so.
+   *
+   * @param string|\Stringable $label
+   *   The label of what is required.
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup[] $conditions
+   *   The conditions; none for a key required by its own declaration.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   "Phone is required when Maximum visitors is 80.", one source per
+   *   count of conditions.
+   */
+  protected function requiredWhen(string|\Stringable $label, array $conditions): TranslatableMarkup {
     if ($conditions === []) {
       return $this->t('@label is required.', ['@label' => $label]);
     }
-    return $this->t('@label is required when @conditions.', [
-      '@label' => $label,
-      '@conditions' => implode(' ' . $this->t('and') . ' ', array_map('strval', $conditions)),
-    ]);
+    $context = ['context' => self::REFUSAL_CONTEXT];
+    $arguments = ['@label' => $label] + static::conditionArguments($conditions);
+    return match (count($conditions)) {
+      1 => $this->t('@label is required when @condition.', $arguments, $context),
+      2 => $this->t('@label is required when @first and @second.', $arguments, $context),
+      default => $this->formatPlural(count($conditions), '@label is required when this holds: @conditions.', '@label is required when all @count of these hold: @conditions.', $arguments, $context),
+    };
   }
 
   /**
@@ -1172,10 +1413,13 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     if ($conditions === []) {
       return $this->t('@label does not apply.', ['@label' => $label]);
     }
-    return $this->t('@label does not apply when @conditions.', [
-      '@label' => $label,
-      '@conditions' => implode(' ' . $this->t('and') . ' ', array_map('strval', $conditions)),
-    ]);
+    $context = ['context' => self::REFUSAL_CONTEXT];
+    $arguments = ['@label' => $label] + static::conditionArguments($conditions);
+    return match (count($conditions)) {
+      1 => $this->t('@label does not apply when @condition.', $arguments, $context),
+      2 => $this->t('@label does not apply when @first and @second.', $arguments, $context),
+      default => $this->formatPlural(count($conditions), '@label does not apply when this holds: @conditions.', '@label does not apply when all @count of these hold: @conditions.', $arguments, $context),
+    };
   }
 
   /**
@@ -1794,8 +2038,15 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     if (!$violations->isEmpty()) {
       return new DataSurfaceResult($values, $violations, access: $access, notes: $notes);
     }
+    // What is written: what was accepted, with what storage holds put
+    // back where nothing was said or what was said is what it holds. A
+    // thing being created is written whole.
+    // Decision: see docs/decisions.md#absent-keeps-null-clears.
+    $creates = $storage instanceof CreatingStorageInterface && $storage->creates();
+    $write = $this->kept($surface, $values, $current, $creates ? NULL : $input);
+    $changes = $surface->changesNothing() ? [] : static::changes($write, $current);
     try {
-      $prepared = $this->prepare($surface, $this->kept($surface, $values, $current), $storage);
+      $prepared = $this->prepare($surface, $write, $storage);
     }
     catch (StorageViolationsException $e) {
       return new DataSurfaceResult($values, $e->getViolations(), access: $access, notes: $notes);
@@ -1807,10 +2058,15 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     // An operation that changes nothing stops where a dry run does.
     // Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
     if ($dry_run || $surface->changesNothing()) {
-      return new DataSurfaceResult($values, $violations, $prepared, access: $access, notes: $notes);
+      return new DataSurfaceResult($values, $violations, $prepared, access: $access, notes: $notes, changes: $changes);
     }
-    $this->commit($prepared, $storage);
-    return new DataSurfaceResult($values, $violations, $prepared, TRUE, $access, $notes);
+    // A write that changes nothing on a thing that exists is not made:
+    // it is committed, and nothing moved. One being created is written
+    // whatever it holds.
+    if ($changes !== [] || $current === [] || $creates) {
+      $this->commit($prepared, $storage);
+    }
+    return new DataSurfaceResult($values, $violations, $prepared, TRUE, $access, $notes, $changes);
   }
 
   /**

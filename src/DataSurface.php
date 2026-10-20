@@ -87,6 +87,9 @@ final class DataSurface implements DataSurfaceInterface {
    *   Whether it was built for an operation that changes nothing.
    * @param int $version
    *   Which version of its stored values it describes.
+   * @param array<string, mixed> $withheld
+   *   The watched values its refiners were handed as nothing because
+   *   their own keys refused them, by dotted path, each as it was given.
    *
    * @internal
    *   A data surface is built by the build step, which seals a
@@ -106,7 +109,15 @@ final class DataSurface implements DataSurfaceInterface {
     protected readonly string|\Stringable|null $lockedWhole = NULL,
     protected readonly bool $changesNothing = FALSE,
     protected readonly int $version = 1,
+    protected readonly array $withheld = [],
   ) {
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function withheldValues(): array {
+    return $this->withheld;
   }
 
   /**
@@ -284,6 +295,9 @@ final class DataSurface implements DataSurfaceInterface {
     // Decision: see docs/decisions.md#a-refiner-never-sees-an-invalid-sibling.
     $admitted = $values;
     $graph = $this->definitions->refinementPaths();
+    // What was handed as nothing because its own key refused it, which a
+    // refusal names as such.
+    $refusals = [];
     do {
       $refined = $this->refineAgainst($values, $admitted, $runtime);
       $refused = $this->watchedValueCheck === NULL ? [] : $this->refusedWatchedValues($refined, $admitted);
@@ -294,6 +308,9 @@ final class DataSurface implements DataSurfaceInterface {
         $refused,
         static fn (string $path): bool => array_intersect(static::upstreamOf($path, $graph), $refused) === [],
       );
+      foreach ($withheld as $path) {
+        $refusals[$path] = NestedArray::getValue($values, explode('.', $path));
+      }
       if ($withheld === []) {
         // Once every refusal is settled: a key that does not apply holds
         // nothing a refiner may see, whatever is stored under it.
@@ -304,7 +321,20 @@ final class DataSurface implements DataSurfaceInterface {
         NestedArray::setValue($admitted, explode('.', $path), NULL, TRUE);
       }
     } while ($withheld !== []);
-    return $refined;
+    return $refusals === [] ? $refined : $refined->withWithheld($refusals);
+  }
+
+  /**
+   * Returns the same data surface, saying which values were withheld.
+   *
+   * @param array<string, mixed> $withheld
+   *   The refused watched values, by dotted path, as given.
+   *
+   * @return static
+   *   A copy that answers withheldValues() with them.
+   */
+  protected function withWithheld(array $withheld): static {
+    return new self($this->definitions, $this->cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $this->ports, $this->portDefinitions, $this->lockedWhole, $this->changesNothing, $this->version, $withheld);
   }
 
   /**

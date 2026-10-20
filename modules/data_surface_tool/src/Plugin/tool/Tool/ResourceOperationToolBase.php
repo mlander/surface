@@ -14,6 +14,8 @@ use Drupal\data_surface\ResourceBuild\ResourceDefinition;
 use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface_tool\OperationInputs;
+use Drupal\tool\ExecutableResult;
+use Drupal\tool\FailureCategory;
 use Drupal\tool\Tool\ToolBase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -80,6 +82,13 @@ abstract class ResourceOperationToolBase extends ToolBase {
    * the operation's permission for the context the parameters name (one
    * with a `%key` filled in) hears the access class's reason.
    *
+   * An account the operation's own permission lets in, read off the
+   * tool's id with no `%key`, may hear that a parameter names nothing: it
+   * is let through, and the call answers "Not found" as input to correct
+   * (notFound()), since a wrong id is fixable and "access denied" reads
+   * as final. Any other account learns nothing of what the parameters
+   * name.
+   *
    * Decision: see
    * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
    */
@@ -87,12 +96,17 @@ abstract class ResourceOperationToolBase extends ToolBase {
     $result = $this->permissionAccess($account);
     if ($result === NULL || $result->isAllowed()) {
       $held = FALSE;
+      $permitted = $result;
       try {
         [$resource, $operation, $context] = $this->operation($values);
         $result = $this->operationAccess($resource, $context, $account);
         $held = $this->resources->permissionAccess($resource->name(), $operation->id, $account, $context)?->isAllowed() ?? FALSE;
       }
       catch (\InvalidArgumentException $e) {
+        if ($permitted !== NULL && $permitted->isAllowed()) {
+          $result = AccessResult::allowed()->addCacheableDependency($permitted)->setCacheMaxAge(0);
+          return $return_as_object ? $result : TRUE;
+        }
         $result = AccessResult::forbidden($e->getMessage())->setCacheMaxAge(0);
       }
       // An account that holds the operation's permission for what the
@@ -107,6 +121,26 @@ abstract class ResourceOperationToolBase extends ToolBase {
       $result = DataSurfaceAccess::decisive($result, $result instanceof AccessResultReasonInterface ? $result->getReason() : NULL);
     }
     return $return_as_object ? $result : $result->isAllowed();
+  }
+
+  /**
+   * Answers a call whose parameters name nothing.
+   *
+   * Reached only by an account the operation's own permission lets in
+   * (checkAccess()), which may hear it: the id is the caller's to
+   * correct, so it is input, not access.
+   *
+   * Decision: see
+   * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
+   *
+   * @param \InvalidArgumentException $e
+   *   Why the parameters built no context.
+   *
+   * @return \Drupal\tool\ExecutableResult
+   *   The failure, in the input category.
+   */
+  protected function notFound(\InvalidArgumentException $e): ExecutableResult {
+    return ExecutableResult::failure($this->t('Not found: @reason', ['@reason' => $e->getMessage()]), [], FailureCategory::Input);
   }
 
   /**

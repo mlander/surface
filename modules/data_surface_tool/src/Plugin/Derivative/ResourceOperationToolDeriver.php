@@ -198,7 +198,7 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
         try {
           $definition = $this->definition(
             $base_plugin_definition,
-            $this->t('@label', ['@label' => (string) $operation->label]),
+            $this->label($operation),
             $this->operationInputs->description($resource, $operation),
             $this->operationInputs->inputs($resource, $operation),
             $this->operationInputs->outputs($resource, $operation),
@@ -239,7 +239,7 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
     try {
       $definition = $this->definition(
         $base_plugin_definition,
-        $this->t('@label, read only', ['@label' => (string) $operation->label]),
+        $this->t('@label, read only', ['@label' => OperationInputs::operationLabel($operation)]),
         $this->operationInputs->readDescription($resource, $operation),
         $this->operationInputs->parameters($resource, $operation),
         $this->operationInputs->readOutputs($resource, $operation),
@@ -255,6 +255,26 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
       return;
     }
     $this->derivatives[$id] = $definition;
+  }
+
+  /**
+   * Gets the tool's label: the operation's, translated when it is read.
+   *
+   * The definition is cached for every language, so a translatable label
+   * is handed over as itself, never rendered in the language that
+   * discovered the tool.
+   *
+   * Decision: see docs/decisions.md#a-static-tool-definition-is-no-accounts.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   The label.
+   */
+  protected function label(OperationDefinition $operation): TranslatableMarkup {
+    $label = OperationInputs::operationLabel($operation);
+    return $label instanceof TranslatableMarkup ? $label : $this->t('@label', ['@label' => $label]);
   }
 
   /**

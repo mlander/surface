@@ -140,7 +140,9 @@ class LockedAccessFormTest extends BrowserTestBase {
     $assert = $this->assertSession();
     $this->drupalLogin($this->drupalCreateUser(['keep cabinet']));
     $this->drupalGet('surface-test/cabinet/count');
-    $this->submitForm(['surface[drawers]' => '9'], 'Save');
+    // Nothing is saved, so the button says what the operation does.
+    $assert->buttonNotExists('Save');
+    $this->submitForm(['surface[drawers]' => '9'], 'Count the drawers');
     $assert->pageTextContains('The values were accepted. Count the drawers changes nothing, so nothing was written.');
     $this->assertSame(self::STORED, $this->stored());
     $answer = $this->post('surface-api/tool_test.cabinet/count/submit', ['values' => ['drawers' => 9]]);

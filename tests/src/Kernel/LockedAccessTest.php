@@ -226,7 +226,7 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
     $this->assertSame([], $this->submit(['lock_settings' => ['digits' => 5]])->notes, 'What it holds, sent back, was taken.');
     $write = $this->runTool('data_surface:tool_test.cabinet:edit', [OperationInputs::VALUES => ['lock_settings' => ['digits' => 7]]]);
     $this->assertTrue($write['success'], $write['message']);
-    $this->assertSame('Edit the cabinet: the values were accepted and written. lock_settings.digits: Digits is locked and kept as stored; the value sent was not taken.', $write['message']);
+    $this->assertSame('Edit the cabinet: the values were accepted, and they are what is stored, so nothing was written. lock_settings.digits: Digits is locked and kept as stored; the value sent was not taken.', $write['message']);
 
     // Chosen anew from the key lock, it starts from its defaults, fixed.
     $this->container->get('state')->set(CabinetStorage::KEY, ['lock' => 'key', 'lock_settings' => ['keys' => 3]] + self::STORED);

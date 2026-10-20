@@ -164,7 +164,17 @@ final class Resources implements ResourcesInterface {
   protected bool $declaring = FALSE;
 
   /**
-   * The static access answers asked so far, by class, context and account kind.
+   * How many static access answers are kept, the least recently asked let go.
+   */
+  protected const STATIC_ANSWERS_KEPT = 256;
+
+  /**
+   * The static access answers asked lately, by class, context and account kind.
+   *
+   * Keyed by what the context knows, since an answer may read its
+   * identity, and so bounded: an edit context per entity would otherwise
+   * add one entry per entity for the life of a worker. The most recently
+   * asked last.
    *
    * @var array<string, \Drupal\data_surface\Resource\AccessAnswer>
    */
@@ -438,7 +448,7 @@ final class Resources implements ResourcesInterface {
       $builder->attach($key, $attachment);
       $this->wirePorts($builder, $key . '.', $attachment, FALSE, $definition->id);
       if ($access !== NULL && $access->isLocked()) {
-        $builder->lock($key);
+        $builder->lock($key, $access->getReason());
       }
       if ($runtime) {
         $builder->markRuntimeAccess($key);
@@ -504,7 +514,7 @@ final class Resources implements ResourcesInterface {
       }
       $builder->attachList($key, new Collection($attachment, $child_context));
       if ($access !== NULL && $access->isLocked()) {
-        $builder->lock($key);
+        $builder->lock($key, $access->getReason());
       }
       if ($runtime) {
         $builder->markRuntimeAccess($key);
@@ -800,7 +810,7 @@ final class Resources implements ResourcesInterface {
     }
     $builder->attach($key, new Attachment($map->seal()));
     if ($access !== NULL && $access->isLocked()) {
-      $builder->lock($key);
+      $builder->lock($key, $access->getReason());
     }
     if ($runtime) {
       $builder->markRuntimeAccess($key);
@@ -1836,7 +1846,9 @@ final class Resources implements ResourcesInterface {
   protected function ask(string $class, string $interface, OperationContext $context, AccountInterface $account): AccessAnswer {
     $kept = $this->keptAs($class, $context, $account);
     if ($kept !== NULL && isset($this->staticAnswers[$kept])) {
-      return $this->staticAnswers[$kept];
+      $answer = $this->staticAnswers[$kept];
+      unset($this->staticAnswers[$kept]);
+      return $this->staticAnswers[$kept] = $answer;
     }
     $instance = $this->instance($class, $interface);
     assert($instance instanceof OperationAccessInterface || $instance instanceof AltersAccessInterface);
@@ -1847,6 +1859,9 @@ final class Resources implements ResourcesInterface {
     assert($this->answersAgain($class, $instance, $context, $account, $answer));
     if ($kept !== NULL) {
       $this->staticAnswers[$kept] = $answer;
+      if (count($this->staticAnswers) > self::STATIC_ANSWERS_KEPT) {
+        unset($this->staticAnswers[array_key_first($this->staticAnswers)]);
+      }
     }
     return $answer;
   }

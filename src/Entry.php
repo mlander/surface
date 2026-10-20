@@ -99,6 +99,10 @@ final class Entry {
    *   known: in a data surface built for the account alone
    *   (ResourcesInterface::buildStatic()), such an answer was asked and
    *   left out, the key kept open, and the full schema marks it.
+   * @param string|\Stringable|null $lockedBecause
+   *   Why the key is locked, when an access answer locked it and said
+   *   why: what a form prints beside the fixed element. NULL for a key
+   *   locked by what an operation knows, or by no answer with a reason.
    */
   public function __construct(
     public readonly string $name,
@@ -117,6 +121,7 @@ final class Entry {
     public readonly array $mounted = [],
     public readonly bool $held = FALSE,
     public readonly bool $runtimeAccess = FALSE,
+    public readonly string|\Stringable|null $lockedBecause = NULL,
   ) {
   }
 
@@ -152,6 +157,7 @@ final class Entry {
       $this->mounted,
       $this->held,
       $this->runtimeAccess,
+      $this->lockedBecause,
     );
   }
 
@@ -426,6 +432,7 @@ final class Entry {
       $mounted + $this->mounted,
       $this->held,
       $this->runtimeAccess,
+      $this->lockedBecause,
     );
   }
 

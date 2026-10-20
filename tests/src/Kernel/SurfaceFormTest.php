@@ -17,7 +17,7 @@ use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Form\DataSurfaceFormBuilder;
-use Drupal\data_surface\Pipeline\Clause;
+use Drupal\data_surface\Pipeline\Sentences;
 use Drupal\data_surface_test\CacheableCasingRefiner;
 use Drupal\data_surface_test\CasingVariantRefiner;
 use Drupal\data_surface_test\ModeSubsetRefiner;
@@ -297,16 +297,15 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
     // too. The refused value rides along as a raw argument rather than
     // being substituted and escaped into the text, which is what makes
     // it safe for whatever prints the error to escape the message once.
-    // It is the first clause of the refusal, which goes on to list what
-    // may be chosen, and reaches the form as an object all the same.
+    // It is the refusal's first sentence, kept whole beside the one that
+    // lists what may be chosen, and reaches the form as an object all the
+    // same.
     $badge = $flagged['extras][badge'];
-    $this->assertInstanceOf(TranslatableMarkup::class, $badge);
-    $this->assertSame('@message; @choices.', $badge->getUntranslatedString());
-    $own = $badge->getArguments()['@message'];
-    $this->assertInstanceOf(Clause::class, $own);
-    $this->assertInstanceOf(TranslatableMarkup::class, $own->message());
-    $this->assertSame('The value you selected is not a valid choice.', $own->message()->getUntranslatedString());
-    $this->assertSame('"<em>bogus</em>"', $own->message()->getArguments()['%value']);
+    $this->assertInstanceOf(Sentences::class, $badge);
+    $own = $badge->sentences()[0];
+    $this->assertInstanceOf(TranslatableMarkup::class, $own);
+    $this->assertSame('The value you selected is not a valid choice.', $own->getUntranslatedString());
+    $this->assertSame('"<em>bogus</em>"', $own->getArguments()['%value']);
     $this->assertStringNotContainsString('<em>bogus', (string) $badge, 'Escaped once, where it is rendered.');
   }
 
@@ -426,7 +425,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
     $refused = $this->pipeline()->validate($surface, ['scope' => 'basic', 'mode' => 2])->byKey('mode');
     $this->assertSame('', $refused[0]->path);
     $this->assertSame(
-      'The value you selected is not a valid choice when Scope is basic; choose Disabled (0) or Optional (1).',
+      'The value you selected is not a valid choice. This applies when Scope is basic. Choose Disabled (0) or Optional (1).',
       (string) $refused[0]->message,
     );
   }

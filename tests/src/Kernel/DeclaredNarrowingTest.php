@@ -301,14 +301,14 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
     $freight = ['service' => 'freight', 'weight' => 40, 'handling' => 'cold'];
     $this->assertSame([], $refusals([]));
     $this->assertSame([
-      'declared_value' => 'This value should be between 0 and 500 when Weight in kilograms is 1 and Reference is empty and Insured is off and Customs code is empty.',
+      'declared_value' => 'This value should be between 0 and 500. This applies when all 4 of these hold: Weight in kilograms is 1; Reference is empty; Insured is off; Customs code is empty.',
     ], $refusals(['declared_value' => 501]));
     // A declared rule's require() names what it read, as a refused
     // constraint does; a key declared required names nothing.
     $this->assertSame(['signature' => 'Signed for by is required when Insured is on and Declared value is 100.'], $refusals(['insured' => TRUE]));
     $this->assertSame([], $refusals(['insured' => TRUE, 'signature' => 'Ann']));
     $this->assertSame([
-      'handling' => 'The value you selected is not a valid choice when Service is Standard; choose Fragile (fragile) or This way up (upright).',
+      'handling' => 'The value you selected is not a valid choice. This applies when Service is Standard. Choose Fragile (fragile) or This way up (upright).',
     ], $refusals(['handling' => 'cold']));
     $this->assertSame([
       'note' => 'Note for the driver does not apply when Service is Standard.',
@@ -341,13 +341,13 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
       return $messages;
     };
     $this->assertSame([
-      'declared_value' => 'This value should be between 0 and 500 when Weight in kilograms is 1 and Reference is set and Insured is off and Customs code is empty.',
+      'declared_value' => 'This value should be between 0 and 500. This applies when all 4 of these hold: Weight in kilograms is 1; Reference is set; Insured is off; Customs code is empty.',
     ], $refusals(['declared_value' => 501, 'reference' => 'R1']));
     $this->assertSame([
-      'declared_value' => 'This value should be between 1 and 100000 when Weight in kilograms is 2 and Reference is set and Insured is off and Customs code is set.',
+      'declared_value' => 'This value should be between 1 and 100000. This applies when all 4 of these hold: Weight in kilograms is 2; Reference is set; Insured is off; Customs code is set.',
     ], $refusals(['weight' => 2, 'declared_value' => 0, 'reference' => 'R1'] + self::customs('C1')), 'A key an alter mounted, the same.');
     $this->assertSame([
-      'tracking' => 'A tracking code is two capitals and six digits, such as AB123456 when Reference is set and Service is Express and Insured is off.',
+      'tracking' => 'A tracking code is two capitals and six digits, such as AB123456. This applies when all 3 of these hold: Reference is set; Service is Express; Insured is off.',
     ], $refusals(['reference' => 'R1', 'service' => 'express', 'tracking' => 'nope']));
 
     // The third fresh-eyes run's sender: a name once an email is given.

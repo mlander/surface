@@ -22,7 +22,7 @@ final class Licence implements ShapeInterface {
    * {@inheritdoc}
    */
   public static function define(): DataDefinition {
-    $pattern = ['pattern' => '/^\d{4}$/D', 'message' => 'A licence number is four digits, such as 2048.'];
+    $pattern = ['pattern' => '/^\d{4}$/D', 'message' => t('A licence number is four digits, such as 2048.')];
     $licence = DataDefinition::create('string')
       ->setLabel(t('Event licence'))
       ->setDescription(t('The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.'))

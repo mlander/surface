@@ -12,11 +12,30 @@ use Drupal\data_surface\Contract\PlainText;
  *
  * A label or a description is written for the form, which renders it as
  * markup; a tool listing carries its plain text (PlainText), still
- * translated when it is read.
+ * translated when it is read. It decorates the markup it was handed: when
+ * read, it renders that markup in the language that reads it, and reduces
+ * the result to plain text. So a plural picks one form and fills in its
+ * count, as it does on the form. It stays a TranslatableMarkup, which the
+ * Tool API's definitions take, and serializes the markup it holds, since
+ * a tool definition is cached.
  *
  * Decision: see docs/decisions.md#a-machine-document-carries-plain-text.
  */
 final class PlainTextMarkup extends TranslatableMarkup {
+
+  /**
+   * Constructs a PlainTextMarkup.
+   *
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup $markup
+   *   The label or the description, as the form renders it.
+   */
+  public function __construct(
+    protected TranslatableMarkup $markup,
+  ) {
+    // The source, arguments and options are the original's, so a caller
+    // that reads them reads what it would have from the original.
+    parent::__construct($markup->getUntranslatedString(), $markup->getArguments(), $markup->getOptions());
+  }
 
   /**
    * Reads a label or a description as plain text.
@@ -44,14 +63,31 @@ final class PlainTextMarkup extends TranslatableMarkup {
    *   The same, translated when it is read, as plain text.
    */
   public static function translatable(TranslatableMarkup $text): self {
-    return $text instanceof self ? $text : new self($text->getUntranslatedString(), $text->getArguments(), $text->getOptions());
+    return $text instanceof self ? $text : new self($text);
+  }
+
+  /**
+   * Gets the markup this reads as plain text.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   The label or the description, as the form renders it.
+   */
+  public function markup(): TranslatableMarkup {
+    return $this->markup;
   }
 
   /**
    * {@inheritdoc}
    */
   public function render() {
-    return PlainText::of(parent::render());
+    return PlainText::of($this->markup->render());
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function __sleep(): array {
+    return array_merge(parent::__sleep(), ['markup']);
   }
 
 }

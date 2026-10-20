@@ -13,6 +13,7 @@ use Drupal\data_surface_tool\OperationInputs;
 use Drupal\data_surface_tool\ResultReportingTrait;
 use Drupal\tool\Attribute\Tool;
 use Drupal\tool\ExecutableResult;
+use Drupal\tool\FailureCategory;
 use Drupal\tool\Tool\ToolOperation;
 use Drupal\tool\TypedData\InputDefinitionInterface;
 use Drupal\tool\TypedData\InputDefinitionRefinerInterface;
@@ -189,14 +190,19 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
    * {@inheritdoc}
    */
   protected function doExecute(array $values): ExecutableResult {
-    [$resource, $operation, $context] = $this->operation($values);
+    try {
+      [$resource, $operation, $context] = $this->operation($values);
+    }
+    catch (\InvalidArgumentException $e) {
+      return $this->notFound($e);
+    }
     // Asked again here, not only in checkAccess(): execute() is callable
     // from PHP without an access check, and this is the method that
     // writes. The same answer travels into the pipeline, which stops
     // before reading storage when it is a refusal.
     $access = $this->operationAccess($resource, $context, $this->currentUser);
     if (!$access->isAllowed()) {
-      return ExecutableResult::failure($this->t('You do not have permission to do this.'));
+      return ExecutableResult::failure($this->t('You do not have permission to do this.'), [], FailureCategory::Access);
     }
     $built = $this->resources->build($resource->name(), $context);
     $storage = $this->resources->storage($resource->name(), $context, $built);
@@ -211,29 +217,46 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     // Decision: see docs/decisions.md#locked-at-the-top.
     $notes = $this->notesSaid($result->notes);
     if (!$result->isValid()) {
-      return ExecutableResult::failure($this->withNotes($this->t('The values were refused: @violations', [
+      // Refused by access, or by a resource locked whole, which no other
+      // values would change: no retry with corrected input can help.
+      // Decision: see docs/decisions.md#locked-at-the-top.
+      $category = $result->isAccessRefused() || $built->lockedWhole() !== NULL ? FailureCategory::Access : FailureCategory::Input;
+      return ExecutableResult::failure($this->withNotes($this->t("The values were refused:\n@violations", [
         '@violations' => $this->violationSummary($result->violations),
-      ]), $notes));
+      ]), $notes), [], $category);
     }
     $outputs = $result->committed && $storage instanceof StorageAdapter
       ? $storage->outputs($built, $result->values)
       : [];
     $stale = $this->staleReferences($result->violations);
+    // What the read tool would answer of them, never more: a dry run's
+    // caller is answered the document it would write, as it may see it.
+    // Decision: see
+    // docs/decisions.md#every-door-projects-what-the-read-tool-projects.
+    $answer = [OperationInputs::VALUES => $this->pipeline->outbound($built, $result->values)];
+    // A read only operation says nothing about a write.
+    // Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
+    if (!$built->changesNothing()) {
+      $answer[OperationInputs::COMMITTED] = $result->committed;
+      // Decision: see docs/decisions.md#absent-keeps-null-clears.
+      $answer[OperationInputs::CHANGES] = $result->changes ?? [];
+    }
+    $answer += $outputs;
+    if ($stale !== []) {
+      $answer[OperationInputs::STALE] = $stale;
+    }
+    if ($notes !== []) {
+      $answer[OperationInputs::NOTES] = $notes;
+    }
     return ExecutableResult::success(
       $this->withNotes(match (TRUE) {
+        $result->committed && !$result->changed() => $this->t('@label: the values were accepted, and they are what is stored, so nothing was written.', ['@label' => (string) $operation->label]),
         $result->committed => $this->t('@label: the values were accepted and written.', ['@label' => (string) $operation->label]),
         // Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
         $built->changesNothing() => $this->t('@label changes nothing: the values were accepted and prepared, and nothing was written.', ['@label' => (string) $operation->label]),
         default => $this->t('Dry run of @label: the values were accepted and prepared, and nothing was written.', ['@label' => (string) $operation->label]),
       }, $notes),
-      [
-        // What the read tool would answer of them, never more: a dry run's
-        // caller is answered the document it would write, as it may see it.
-        // Decision: see
-        // docs/decisions.md#every-door-projects-what-the-read-tool-projects.
-        OperationInputs::VALUES => $this->pipeline->outbound($built, $result->values),
-        OperationInputs::COMMITTED => $result->committed,
-      ] + $outputs + ($stale === [] ? [] : ['stale' => $stale]) + ($notes === [] ? [] : ['notes' => $notes]),
+      $answer,
     );
   }
 

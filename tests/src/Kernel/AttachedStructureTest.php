@@ -489,11 +489,10 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
     $this->assertSame('tin', $pantry['values']['kind']);
     $this->assertArrayNotHasKey('label', $pantry['values']);
     $this->assertArrayNotHasKey('kind_settings', $pantry['values']);
-    $this->assertSame([
-      'unit' => 'in',
-      'height' => 20,
-      'third_party_settings' => ['data_surface_resource_test' => ['sturdy' => TRUE]],
-    ], $pantry['values']['shelf']);
+    // The shelf was not sent: it keeps what it holds, and the alter's
+    // default it never held is not written.
+    // Decision: see docs/decisions.md#absent-keeps-null-clears.
+    $this->assertSame(['unit' => 'in', 'height' => 20], $pantry['values']['shelf']);
     $label = $state->get(PantryStorage::key('larder', PantryLabelStorage::PART));
     $this->assertSame(['text' => 'Big larder'], $label['values']);
     $this->assertSame('larder', $label['known']['pantry']);

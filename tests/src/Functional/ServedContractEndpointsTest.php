@@ -356,7 +356,7 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $this->assertTrue($valid['valid']);
     $this->assertSame([], $valid['violations']);
     $this->assertSame('harbour_deck', $valid['values']['room']);
-    $this->assertSame(['valid', 'violations', 'stale', 'notes', 'values'], array_keys($valid));
+    $this->assertSame(['valid', 'violations', 'stale', 'notes', 'changes', 'values'], array_keys($valid));
 
     // Nothing was written by any of them.
     $this->container->get('config.factory')->reset();

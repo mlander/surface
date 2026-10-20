@@ -220,17 +220,30 @@ interface DataSurfacePipelineInterface {
    *
    * Decision: see docs/decisions.md#a-key-that-does-not-apply.
    *
+   * Given what was sent, it also writes back what storage holds as it
+   * holds it: a key sent a value whose accepted form is what storage
+   * holds keeps the stored representation (the empty string a read
+   * returned, sent back, stays the empty string), and a key storage never
+   * held, on a thing that exists, reads as its declared default and is
+   * not written while it holds that default, sent or not. So writing back
+   * what a read returned, or what a form drew, leaves storage as it was.
+   *
+   * Decision: see docs/decisions.md#absent-keeps-null-clears.
+   *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The data surface describing the values.
    * @param array $values
    *   The accepted values.
    * @param array $current
    *   What storage holds.
+   * @param array|null $input
+   *   What was sent for this level, or NULL when it is not known (a
+   *   host's own configuration), which writes every accepted value.
    *
    * @return array
    *   The values, each key left out put back from what storage holds.
    */
-  public function kept(DataSurfaceInterface $surface, array $values, array $current): array;
+  public function kept(DataSurfaceInterface $surface, array $values, array $current, ?array $input = NULL): array;
 
   /**
    * Writes a prepared artifact through its storage.

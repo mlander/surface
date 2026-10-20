@@ -19,18 +19,29 @@ namespace Drupal\data_surface\Contract;
  *
  * The subset: literal characters (any character outside ASCII only with
  * the `u` modifier), an escaped syntax character, `\n` `\r` `\t` `\f`;
- * character classes, negated or not, with ranges; the class escapes `\d`
- * `\w` `\s`, inside a class or out; the quantifiers `*` `+` `?` and
- * `{n}` `{n,}` `{n,m}`, lazy or not; alternation; capturing, named and
- * non-capturing groups; the anchors `^`, and `$` with the `D` modifier;
- * `\b`. The modifiers `u` and `D` are carried (an ECMA `$` is already the
- * very end, which is what `D` says); any other modifier, a bracket
- * delimiter, a `$` without `D` (PCRE's matches before a final newline
- * too), `.` (the two engines end a line differently), and everything
- * else (`\A` `\z` `\Z` `\h` `\R` `\x{…}` `\p{…}` `\Q…\E`, the negated
- * class escapes, back-references, inline flags, look-around, atomic
- * groups, possessive quantifiers, `(?P<`, POSIX classes, an escaped
- * delimiter that is no ECMA syntax character) leave it out.
+ * character classes with ranges, never negated; the class escapes `\d`
+ * `\w` `\s`, inside a class or out, and `\b`, only without `u`; the
+ * quantifiers `*` `+` `?` and `{n}` `{n,}` `{n,m}`, lazy or not;
+ * alternation; capturing, named and non-capturing groups; the anchors
+ * `^`, and `$` with the `D` modifier. The modifiers `u` and `D` are
+ * carried (an ECMA `$` is already the very end, which is what `D` says);
+ * any other modifier, a bracket delimiter, a `$` without `D` (PCRE's
+ * matches before a final newline too), `.` (the two engines end a line
+ * differently), and everything else (`\A` `\z` `\Z` `\h` `\R` `\x{…}`
+ * `\p{…}` `\Q…\E`, the negated class escapes, back-references, inline
+ * flags, look-around, atomic groups, possessive quantifiers, `(?P<`,
+ * POSIX classes, an escaped delimiter that is no ECMA syntax character)
+ * leave it out.
+ *
+ * Without `u`, PCRE reads `\d` `\w` `\b` by ASCII, exactly as ECMA does,
+ * so they are carried as written; its `\s` is the six ASCII white space
+ * characters, which ECMA's wider `\s` contains. With `u`, PHP also reads
+ * by Unicode properties: `\d` and `\w` (so `\b`) take in letters and
+ * digits ECMA never does, and `\s` takes in U+0085 and U+180E, which
+ * ECMA's lacks, so none of the four is carried. A negated class is never
+ * carried: without `u`, PCRE's matches one byte of a character outside
+ * ASCII where ECMA's matches the whole character, and ECMA's `[^\s]`
+ * leaves out more than PCRE's.
  *
  * Decision: see docs/decisions.md#a-pattern-both-engines-read-alike.
  */
@@ -95,7 +106,7 @@ final class PatternTranslation {
       $char = $body[$i];
       if ($char === '\\') {
         $next = $body[$i + 1] ?? '';
-        if (!self::escape($next, FALSE)) {
+        if (!self::escape($next, FALSE, $unicode)) {
           return FALSE;
         }
         // \b is an assertion and takes no quantifier.
@@ -104,7 +115,7 @@ final class PatternTranslation {
         continue;
       }
       if ($char === '[') {
-        $close = self::classEnd($body, $i);
+        $close = self::classEnd($body, $i, $unicode);
         if ($close === NULL) {
           return FALSE;
         }
@@ -156,16 +167,22 @@ final class PatternTranslation {
    *   The character after the backslash.
    * @param bool $in_class
    *   Whether the escape is inside a character class.
+   * @param bool $unicode
+   *   Whether the expression carries `u`.
    *
    * @return bool
    *   TRUE when both engines read it alike.
    */
-  private static function escape(string $next, bool $in_class): bool {
+  private static function escape(string $next, bool $in_class, bool $unicode): bool {
     if ($next === '') {
       return FALSE;
     }
-    if (in_array($next, ['d', 'w', 's', 'b', 'n', 'r', 't', 'f'], TRUE)) {
+    if (in_array($next, ['n', 'r', 't', 'f'], TRUE)) {
       return TRUE;
+    }
+    // With u, PCRE reads these by Unicode properties and ECMA does not.
+    if (in_array($next, ['d', 'w', 's', 'b'], TRUE)) {
+      return !$unicode;
     }
     return str_contains(self::SYNTAX, $next) || ($in_class && $next === '-');
   }
@@ -177,14 +194,18 @@ final class PatternTranslation {
    *   The pattern body.
    * @param int $start
    *   The offset of its `[`.
+   * @param bool $unicode
+   *   Whether the expression carries `u`.
    *
    * @return int|null
    *   The offset of its `]`, or NULL when it is not in the subset.
    */
-  private static function classEnd(string $body, int $start): ?int {
+  private static function classEnd(string $body, int $start, bool $unicode): ?int {
     $i = $start + 1;
+    // A negated class: without u PCRE's matches a byte of a character, and
+    // ECMA's [^\s] leaves out more than PCRE's.
     if (($body[$i] ?? '') === '^') {
-      $i++;
+      return NULL;
     }
     // A `]` first is a literal to PCRE and closes an empty class to ECMA.
     if (($body[$i] ?? '') === ']') {
@@ -197,7 +218,7 @@ final class PatternTranslation {
         return $i;
       }
       if ($char === '\\') {
-        if (!self::escape($body[$i + 1] ?? '', TRUE)) {
+        if (!self::escape($body[$i + 1] ?? '', TRUE, $unicode)) {
           return NULL;
         }
         $i += 2;

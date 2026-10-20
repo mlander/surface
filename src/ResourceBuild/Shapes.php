@@ -8,6 +8,7 @@ use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\data_surface\ConstraintMessages;
 use Drupal\data_surface\DataSurface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Resource\AltersInputsInterface;
@@ -163,6 +164,9 @@ final class Shapes {
    *   The key's definition.
    */
   protected static function marked(string $id, DataDefinition $shape): DataDefinition {
+    // Both copies carry a message written with t() as its source, the
+    // string core's validator translates.
+    ConstraintMessages::sources($shape);
     $key = DataSurface::deepClone($shape);
     assert($key instanceof DataDefinition);
     DefinitionMetadata::setShape($key, $id, DataSurface::deepClone($shape));

@@ -484,9 +484,14 @@ service id; a data surface sealed without one, which only the engine's
 tests build,
 hands every configured value over. A refiner may therefore assume what
 it is handed satisfies its sibling's constraints, and
-`RegistrationComplianceAlter` tests only that a licence is there.
+`RegistrationComplianceAlter` tests only that a licence is there. The
+refined data surface says which values it withheld
+(`withheldValues()`), so a refusal that names what a key depends on
+says the licence is empty and that "EV-2048" was refused, which is what
+the rule was handed, and not the value sent (decided 2026-10-20, B11;
+[A refusal names what it depends on](#a-refusal-names-what-it-depends-on)).
 (`DataSurface::refine()`, `DataSurface::refusedWatchedValues()`,
-`Resources::buildResource()`)
+`DataSurface::withheldValues()`, `Resources::buildResource()`)
 
 ### Alters' refiners in the owner's chain
 
@@ -1458,7 +1463,9 @@ is known. Decided 2026-10-18, point by point.
   (`DefinitionMap::isRuntimeAccess()`); `build()` applies both. A static
   answer is asked once per context and account kind (the account's roles
   and its permissions hash) and kept, so a class that lied is wrong
-  visibly rather than now and then (`Resources::ask()`). Under
+  visibly rather than now and then (`Resources::ask()`); the latest 256
+  are kept, since a context knows its identity and a worker asking for
+  one entity after another would otherwise keep one per entity. Under
   `assert()`: the first asking of a static answer is repeated with the
   global container guarded and must answer the same, static, having
   asked for no service that reads site state beside the account
@@ -1781,7 +1788,21 @@ leaves a secret out" are promises about every door, or about none.
   the real one goes to the log. Only an account holding the operation's
   permission for the context the parameters name hears the access
   class's reason. Before, the reason was the exception text, an
-  anonymous existence oracle for entity ids.
+  anonymous existence oracle for entity ids. At the tool door, an
+  account the operation's own permission lets in, read off the tool's id
+  with no `%key`, already tells an id that names something from one that
+  does not by the reasons it hears, so it is told plainly: the call is
+  let through and answers "Not found: ..." as input to correct, not
+  "access denied", which an agent reads as final (decided 2026-10-20,
+  B13; `ResourceOperationToolBase::notFound()`). Every other account
+  still hears the one fixed reason.
+- **A refusal no input can change is access.** The write tool answers a
+  permission refusal, an access refusal inside the pipeline and a
+  resource locked whole in the Tool API's `Access` failure category,
+  which no client reads as correctable, so it is not handed the input
+  schema and invited to retry; a value refused stays `Input`, one
+  violation per line ("path: sentence") after "The values were
+  refused:" (decided 2026-10-20, B13).
 - **What an option list read, it says.** A reference's options are the
   selection handler's referenceable entities, which core's handlers
   narrow by the account's permissions and, for a node (and a comment,
@@ -1833,7 +1854,9 @@ reading under which a locked answer at the top was a refusal.
   them and offers no Save. The pipeline refuses a submit before storage
   is loaded, by name ("This may be seen and not changed, so nothing was
   written: ..."), under `@access`, so the form, the write tool and the
-  React `/submit` and `/validate` refuse alike; the read tool answers.
+  React `/submit` and `/validate` refuse alike, the write tool in the
+  Tool API's `Access` category, since no other values would be taken
+  (2026-10-20, B13); the read tool answers.
   Both documents say `readOnly: true` and `x-surface.locked: true` at
   the top, beside every key `readOnly`, and the React page offers no
   Submit for such a document.
@@ -1844,6 +1867,21 @@ submit written back unchanged would report a write that did nothing.
 (`Resources::lockedAtTheTop()`, `Resources::atTheTop()`,
 `DataSurfacePipeline::submit()`, `ContractEmitter::lockedWhole()`,
 `LockedAccessTest`, `LockedAccessFormTest`)
+
+**A lock says its own reason, once** (decided 2026-10-20, from the Form
+API review, B16 of the reviews' synthesis). A key an access answer
+locked carries the answer's reason, recorded with the lock
+(`DataSurfaceBuilderInterface::lock()`, `Entry::$lockedBecause`), and
+the form prints that reason beside the fixed element, as it prints a
+locked variant's; "Fixed for this operation." is left for a lock with
+no reason, an operation's (an identity key) or an answer that gave
+none. A form locked whole says its reason once, above the elements, and
+no element repeats it or carries a required marker: nothing can be
+sent, so nothing is asked for. An operation that changes nothing has
+nothing to save either, so its form's button is the operation's label
+("Check a program"), not "Save". (`DataSurfaceFormBuilder::describeLocked()`,
+`DataSurfaceFormBuilder::withoutRequired()`,
+`DataSurfaceOperationForm::buildForm()`, `LockReasonFormTest`)
 
 **A locked key inside an open write is said, not refused** (decided
 2026-10-19, from the third fresh-eyes log, entry 22). A key locked one
@@ -1980,23 +2018,54 @@ amending the second sentence this entry first settled ("This depends on
 Capacity."), which named the keys and not what they hold, and left a
 value not on its list unexplained.
 
-- **The form.** The constraint's own message is the first clause, still
-  the object it built, its full stop left off (`Pipeline\Clause`). When
-  the refiners changed the refused key's constraints for these values,
-  it goes on "when" and each watched key with what it holds, by label,
-  an option by its label, nothing as "empty", joined by "and", the
-  phrase a key that does not apply already used: "This value should be
-  3 or more when Capacity is 150." When a list of allowed values made
-  the refusal (a `Choice`, `LabeledChoice` or `AllowedValues`), it goes
-  on to list the values the key allows as refined for these values,
-  each label with the value to send in brackets, a value with no label
-  of its own once: "The value you selected is not a valid choice when
-  Venue is Riverside Hall; choose Main hall (riverside_main) or East room
+- **The form.** The constraint's own message comes first, whole, still
+  the object it built. When the refiners changed the refused key's
+  constraints for these values, a second sentence names each watched key
+  with what it holds, by label, an option by its label: "This value
+  should be 3 or more. This applies when Capacity is 150." When a list
+  of allowed values made the refusal (a `Choice`, `LabeledChoice` or
+  `AllowedValues`), a sentence lists the values the key allows as
+  refined for these values, each label with the value to send in
+  brackets, a value with no label of its own once: "The value you
+  selected is not a valid choice. This applies when Venue is Riverside
+  Hall. Choose Main hall (riverside_main) or East room
   (riverside_east)." At most ten (`DataSurfacePipeline::CHOICES_SHOWN`),
-  then "and 2 more"; an empty list says "nothing may be chosen". A key
-  that does not apply keeps its sentence, "Send day does not apply when
-  Frequency is Monthly." A bound and a pattern say themselves, through
-  the constraint's message.
+  then "or one of 2 more"; an empty list says "Nothing may be chosen."
+  A key that does not apply keeps its sentence, "Send day does not apply
+  when Frequency is Monthly." A bound and a pattern say themselves,
+  through the constraint's message.
+- **Whole sentences, for translation** (decided 2026-10-20, from the
+  multilingual review, B10). Every sentence a refusal adds is one source
+  string a translator sees entire, in the context `data_surface
+  refusal`, and none is glued from translated fragments: the
+  constraint's message is no longer cut at its full stop (the old
+  `Pipeline\Clause` only knew an ASCII one), and the sentences are set
+  side by side by `Pipeline\Sentences`, outside translation. A condition
+  is one whole clause per kind: "@key is @value", "@key is empty", "@key
+  is empty (@value was refused)", "@key is set", "@key is on", "@key is
+  off", and "@key holds its current value" for a value no word can say.
+  The sentence that carries them is one source per count of conditions:
+  "This applies when @condition.", "This applies when @first and
+  @second.", and, plural by its count, "This applies when all @count of
+  these hold: @conditions.", where three or more whole clauses are set in
+  a row with semicolons; the same three shapes say "@label is required
+  when ..." and "@label does not apply when ...". The list of choices is
+  "Choose @choice.", "Choose @choices or @last.", and, plural, "Choose
+  @choices or one of @count more."; a key that cannot be cleared says
+  "on by default" and "off by default" in sentences of their own. So the
+  promise in [declaring a resource](declaring-a-resource.md) holds: a
+  refusal is never a concatenation of translated fragments.
+- **What the rule was handed** (decided 2026-10-20, from the AI agents
+  review, B11). A condition describes the values the refiners were
+  handed, not the values sent: a watched value its own key refused was
+  handed as nothing ([A refiner never sees an invalid
+  sibling](#a-refiner-never-sees-an-invalid-sibling)), so it is said as
+  empty, with what was refused. With an event licence of "EV-2048" and a
+  capacity of 150, the capacity's refusal reads "This value should be
+  between 1 and 100. This applies when Room is Main hall and Event
+  licence is empty (EV-2048 was refused)."; it read "... is set", the
+  opposite of the reason, and an agent cleared the licence
+  (`DataSurfaceInterface::withheldValues()`).
 - **Why each part.** The caller who sent stewards and no capacity learns
   which sibling to change, which the key's own message cannot say, and
   what it holds, so a caller that sent nothing for it sees that. Every
@@ -2059,7 +2128,8 @@ value not on its list unexplained.
   nothing says nothing more.
 
 (`DataSurfacePipeline::sayingWhatIsAllowed()`,
-`DataSurfacePipeline::conditions()`, `Entry::presenceDependencies()`,
+`DataSurfacePipeline::conditions()`, `DataSurfacePipeline::appliesWhen()`,
+`Pipeline\Sentences`, `Entry::presenceDependencies()`,
 `DataSurfacePipeline::choices()`,
 `DataSurfacePipeline::isRequired()`,
 `InputDefinitions::withDependencies()`, `ToolFeedbackTest`)
@@ -2090,7 +2160,14 @@ operation (`DerivedOperation`).
 - **The Tool API.** The tool deriver makes a read only operation the
   `Read` kind and every other the `Write` kind, and passes `destructive`
   to `setDestructive()`; a read tool is `Read` by what it is
-  (`ResourceOperationToolDeriver::behaves()`). The MCP bridge derives
+  (`ResourceOperationToolDeriver::behaves()`). A read only operation's
+  tool takes no `dry_run` and answers no `committed` and no `changes`,
+  since it writes nothing at any door; every write tool declares what it
+  answers, `committed`, `changes`, and, optional, `notes` (values sent
+  for a locked key, not taken) and `stale` (stored values no longer
+  available), each with a description, so a model reading a success
+  knows where to look for "accepted, but not as sent" (decided
+  2026-10-20, B14). The MCP bridge derives
   `readOnlyHint` from a kind that does not modify, `idempotentHint` from
   the kind, and `destructiveHint` from the flag. *Gap, to file:*
   idempotence is a property of the kind in the Tool API, not of the
@@ -2291,13 +2368,29 @@ the derivation, and a consumer reading it without an instance saw that
 account's view (the tool comparison and the field tools' tests now ask
 as an account the tools are open to, as a real client does).
 
+It is no language's either (decided 2026-10-20, from the multilingual
+review, B6): the definition is cached once for every language, so every
+string the module writes into it is lazy, a `TranslatableMarkup` that
+renders in the language that reads it, never one rendered in the
+language that discovered the tool ([A machine document carries plain
+text](#a-machine-document-carries-plain-text)). Two kinds of string are
+not yet lazy: a label read from configuration, which config translation
+overrides when it is loaded (a content type's, a field's), is a string
+in the language that loaded it, so a content entity resource's tools
+name the bundle and the field in the language that discovered them; and
+a slot's description lists each variant's keys joined into one string,
+whose word for a variant with none ("nothing") is rendered then.
+
 *Open, outside this module:* the MCP bridge's config deriver
 (`mcp_server_tool_bridge`'s `McpToolConfigDeriver`) normalizes a tool
 instance's input schema when it derives its MCP tools and caches that
 for every client, so the MCP `tools/list` is still the listing of the
 account that caused that derivation. An instance's listing is the
 account's by design; the bridge would need to normalize per request, or
-from the cached definition, to stop that.
+from the cached definition, to stop that. The same holds for language:
+the bridge casts a tool's description to a string when it derives, and
+normalizes the input schema in the language of that request, so the MCP
+listing is in the language that caused the derivation.
 (`OperationInputs::listedValues()`, `OperationInputs::listed()`,
 `ResourceOperationToolDeriver::getDerivativeDefinitions()`,
 `Resources::buildDeclared()`, `SecurityProjectionTest::testCachedToolDefinitionsAreNoAccounts()`)
@@ -2403,6 +2496,30 @@ attribute would ask for one item more than the rule does. The widgets'
 `#required_error` went with this. (`DataSurfaceFormBuilder::requiredHints()`,
 `DataSurfaceFormBuilder::preRenderRequired()`, `RefusalMessagesTest`,
 `FirstResourceTest`)
+
+The form names the field where the message is not printed beside it
+(decided 2026-10-20, from the Form API review, B15 of the reviews'
+synthesis). The rule still speaks the one message; a constraint's own
+words name no field, which is enough beside the element and nowhere
+else (WCAG 3.3.1). With Inline Form Errors off, a full submit's
+messages are printed at the top of the page, so each is put after the
+element's title in one translatable sentence, "@field: @message", the
+message object a placeholder in it: "Capacity: This value should be
+between 1 and 1000." A message that already begins with the title (a
+required key's) and an element with no title are left as they are; with
+Inline Form Errors on nothing is added, since it prints the message
+beside the element and names the field in its own summary. The tool
+and the served contract already say the path beside the message, and
+are unchanged. On an AJAX rebuild the trigger's error, printed under
+it, carries an id the input's `aria-describedby` names, and the
+response ends in one polite announcement (WCAG 4.1.3): the refusal,
+named, then what the rebuild changed on the dependents it replaced, in
+whole sentences ("Send day no longer applies. Items per issue now
+allows 1 to 20."), read off what each was drawn as on the page the
+request came from. (`DataSurfaceFormBuilder::flagSurfaceErrors()`,
+`DataSurfaceFormBuilder::named()`, `DataSurfaceFormBuilder::changesSaid()`,
+`Hook\InlineErrorHooks`, `ErrorsNameTheirFieldTest`,
+`RebuildAnnouncesTest`)
 
 ### A Regex is explained by its message
 
@@ -3129,6 +3246,62 @@ pipeline took `contact: null` whole, which the schema refused.
 (`DataSurfacePipeline::acceptKey()`, `DataSurfacePipeline::acceptChild()`,
 `ContractEmitter::nullable()`)
 
+**Writing back what was read changes nothing** (decided 2026-10-20, from
+the deterministic callers and AI agents reviews, B12). A read then a
+write of what it returned, or a form saved as it was drawn, is a fixed
+point: storage is left byte for byte as it was, nothing is saved, and
+the result says so. Three rules
+make it one:
+
+- **The stored representation is kept where the accepted forms are
+  equal.** A value sent whose accepted form is the accepted form of what
+  storage holds is written back as storage holds it: the `takes()`
+  comparison a locked key already made, for every key. So the empty
+  string a read returned, sent back, stays the empty string, and so does
+  `null` sent for a key that holds `''`: both mean nothing, and clearing
+  what holds nothing changes nothing. A key that holds a value is still
+  cleared by `null` or `''`, as above.
+- **Why this and not a read that answers `null`.** The read answers
+  what storage holds, as it holds it, which is what every door projects
+  ([Every door projects what the read tool
+  projects](#every-door-projects-what-the-read-tool-projects)); and on a
+  fully validatable schema ([A key its storage always
+  holds](#a-key-its-storage-always-holds)) a key that is not `nullable`
+  may hold `''` and can never hold `null`, so a read answering `null`
+  there would advertise a value the storage refuses, and a write turning
+  `''` into `null` would make the object invalid. Keeping the stored
+  representation is right under both the three-way rule and that one.
+- **A default storage never held is not written.** On a thing that
+  exists, a key storage holds nothing for reads as its declared default,
+  which the run validates against; left out, or sent as that default (a
+  form posts every element it drew, the compliance module's empty
+  licence and one steward among them), it is what it was, and nothing is
+  written for it, a property the default leaves out read as `null`. The
+  compliance module's keys, enabled after step 3 was saved, stay
+  unstored until a caller sends another value. A thing being created,
+  which storage holds nothing of, is written whole, its defaults
+  included: storage says whether the operation creates
+  (`Pipeline\CreatingStorageInterface`), and a slot whose chosen variant
+  is not the one stored starts that variant whole. A plugin reads its
+  configuration array whole, so `PluginConfigurationStorage` fills a
+  declared default back into what it hands the plugin.
+- **A write that changes nothing is not made.** `DataSurfaceResult`
+  carries `changes`, the dotted path of each stored value the write
+  changes against what storage held (a map by its own keys, a list
+  whole), on a dry run too, which is then a plan; with none, on a thing
+  that exists, the pipeline does not call `commit()`, and
+  `ConfigObjectStorage::commit()` saves nothing when the data is as
+  stored, so no config save event fires and an export does not differ.
+  The result is still `committed` (the call went through, and storage
+  holds what was accepted); `changed()` says whether anything moved.
+  Every door answers `changes`: the write tool as a declared output, the
+  React `/validate` and `/submit` beside `notes`.
+
+(`DataSurfacePipeline::kept()`, `DataSurfacePipeline::heldAlike()`,
+`DataSurfacePipeline::isDefault()`,
+`DataSurfacePipeline::changes()`, `DataSurfaceResult::$changes`,
+`ConfigObjectStorage::commit()`, `ReadWriteRoundTripTest`)
+
 ### A key its storage always holds
 
 Null clears where clearing is possible; where it is not, null is
@@ -3218,21 +3391,49 @@ stored for an integer" is an alignment now: `TRUE` is `1`.
 
 A Regex is PCRE and a `pattern` is ECMA-262 (opis, in the suite, reads
 it with PCRE again). Its body is carried only when it stays inside a
-subset both read alike: literals, character classes with `\d` `\w`
-`\s`, the quantifiers `*` `+` `?` `{n,m}` (lazy or not), alternation,
-capturing, named and non-capturing groups, `^`, `$` only with the `D`
-modifier, and `\b`; the modifiers `u` and `D` are carried, since ECMA's
-`$` is already the very end, which is what `D` says. Anything else (`\A`
-`\z` `\Z` `(?i)` `(?P<` `(?>` `a++` `[[:alpha:]]` `\x{…}` `\Q…\E` `\h`
-`\R`, `.`, a negated class escape, look-around, the `x` `s` `m`
-modifiers, a `$` without `D`, an escaped delimiter that is no ECMA
-syntax character) leaves `pattern` out, which is wider, and names
-`Regex` under `checkedOnServer`; `x-surface.patternMessage` still
+subset both read alike: literals, character classes with ranges, never
+negated; `\d` `\w` `\s`, inside a class or out, and `\b`, only without
+the `u` modifier; the quantifiers `*` `+` `?` `{n,m}` (lazy or not),
+alternation, capturing, named and non-capturing groups, `^`, and `$`
+only with the `D` modifier; the modifiers `u` and `D` are carried, since
+ECMA's `$` is already the very end, which is what `D` says. Anything
+else (`\A` `\z` `\Z` `(?i)` `(?P<` `(?>` `a++` `[[:alpha:]]` `\x{…}`
+`\Q…\E` `\h` `\R`, `.`, a negated class or class escape, look-around,
+the `x` `s` `m` modifiers, a `$` without `D`, an escaped delimiter that
+is no ECMA syntax character) leaves `pattern` out, which is wider, and
+names `Regex` under `checkedOnServer`; `x-surface.patternMessage` still
 carries the explanation. Never approximated. Every shipped pattern ends
 in `$`, so each gained `D`: a licence or a machine name with a trailing
 newline was never meant. One consequence outside this module: the Tool
 API's own schema leaves a pattern with a modifier out, so the derived
 tools no longer advertise the licence's. (`Contract\PatternTranslation`)
+
+Decided 2026-10-20, from the JSON Schema tooling review (B20): the
+subset carried `\d` `\w` `\s` `\b` under `u` and negated classes, and
+the schema refused what PHP accepts in four cases: `/^\d{4}$/uD` with
+`٢٠٤٨`, `/^\w+$/uD` with `café`, `/^\bé/uD` with `é`, and `/^[^\s]+$/D`
+with a no-break space between two letters. PHP's `u` also sets Unicode
+properties (PCRE2_UCP), and ajv reads a pattern with the `u` flag. An
+enumeration of every code point, PHP 8.4 with PCRE 10.46 against Node
+24, found: under `u`, PCRE's `\d` holds 750 code points ECMA's lacks
+(every decimal digit), its `\w` 144,906 (letters, numbers and marks),
+so its `\b` sees boundaries ECMA does not, and its `\s` holds U+0085
+and U+180E, which ECMA's lacks (ECMA's holds U+FEFF, which PCRE's does
+not); without `u`, PCRE reads bytes, and its `\d` and `\w` are exactly
+ECMA's ASCII classes (with the `u` flag, without it, or with `v`), under
+the C locale and under the C.UTF-8 one Drupal sets alike, its `\s` is
+the six ASCII white space characters, all in ECMA's, and none of the
+three matches a byte of a character outside ASCII. So without `u` the
+four are carried as written, not translated, only because both engines
+read `\d` `\w` `\b` as the same ASCII class and ECMA's `\s` is wider;
+with `u` none of them is. A negated class is never carried: without `u`
+PCRE's matches one byte of a character outside ASCII (`^[^a]{2}$`
+accepts `é`, which ECMA refuses), and ECMA's `[^\s]` leaves out the
+wider white space. No shipped pattern changed. The rows are
+`tests/fixtures/pattern-engines.json`, held to PHP by
+`PatternUnderUnicodeTest` and to an ECMA engine by the React app's
+Vitest (`src/test/patternEngines.test.ts`): a carried pattern accepts
+every value PHP accepts.
 
 ### `format` is an annotation
 
@@ -3280,7 +3481,21 @@ appends ("you&#039;d"). A client that renders nothing reads the text a
 person reads on the form; one that renders HTML is handed no markup it
 did not ask for. The form renders the markup as before. A tool listing's
 label stays translatable, read as plain text when it is read.
-(`Contract\PlainText`, `PlainTextMarkup`, `PlainTextDocumentsTest`)
+
+A tool listing's labels and descriptions stay lazy objects, translated
+when they are read (decided 2026-10-20, from the multilingual review,
+B6 and B7): the tool's label is the operation's own markup, the
+operation's label rides in the tool's description as an object, and a
+description a sentence is appended to ("Depends on", "Required") is
+joined as markup, never rendered first. And `PlainTextMarkup` decorates
+the original markup rather than rebuilding it from its source: it
+renders the original in the language that reads it and reduces that to
+plain text, so a plural keeps its count and picks one form. Until this,
+the listing was cached in the language that discovered it, so an agent
+read the tool in one language and its keys in another, and a plural
+description read as both of its forms with a literal `@count`.
+(`Contract\PlainText`, `PlainTextMarkup`, `PlainTextDocumentsTest`,
+`ToolListingLanguageTest`)
 
 ### A refused submit is an answer
 

@@ -417,7 +417,8 @@ So the full schema and the tool listing, which clients cache, are the
 account's: a static lock or omission is stated for the account that
 asks, and the full schema's cacheability carries the contexts the
 answers read. A static answer is asked once per context and account
-kind and kept. The kind is held, not trusted: with assertions on, a
+kind and kept (the latest 256 of them, so a long-lived worker does not
+keep one per entity it was asked about). The kind is held, not trusted: with assertions on, a
 static answer is asked again with the global container guarded and must
 answer the same having read no site state, and a test trait holds the
 full schema's marks to the build for sampled accounts
@@ -569,8 +570,8 @@ own is a tool, `data_surface:<resource id>:<operation id>`, derived by
   against the definitions the values sent narrow, so a refusal says
   what is allowed for them
   ([decision](decisions.md#a-refusal-names-what-it-depends-on)): "room:
-  The value you selected is not a valid choice when Venue is Riverside
-  Hall; choose Main hall (riverside_main) or East room
+  The value you selected is not a valid choice. This applies when Venue
+  is Riverside Hall. Choose Main hall (riverside_main) or East room
   (riverside_east)."
 - **Behavior** is the operation's: the `Read` kind for a read only
   operation, the `Write` kind for every other, and destructive when it

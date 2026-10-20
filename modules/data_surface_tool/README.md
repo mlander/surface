@@ -124,6 +124,22 @@ Five pieces:
   conversion, and executing is one call to
   `DataSurfacePipeline::submit()`, which accepts, validates, prepares and
   commits.
+- What a write tool answers, every output declared with a description:
+  `values` (as the read tool would answer them), `committed`, `changes`
+  (the dotted path of each stored value the write changed, or a dry run
+  would; empty, and nothing saved, when the values are what is stored,
+  so writing back what the read tool returned changes nothing), and,
+  only when there are any, `notes` (a value sent for a locked key, not
+  taken) and `stale` (a stored value no longer available). A read only
+  operation's tool takes no `dry_run` and answers no `committed` and no
+  `changes`: it writes nothing
+  ([decision](../../docs/decisions.md#absent-keeps-null-clears)). A
+  refusal is one violation per line after "The values were refused:",
+  in the Tool API's `Input` category; a permission refusal and a
+  resource locked whole are in the `Access` category, which no client
+  treats as correctable, so none is handed the input schema to retry
+  with
+  ([decision](../../docs/decisions.md#every-door-projects-what-the-read-tool-projects)).
 
 ### One deliberate difference from the Tool Belt pair
 
@@ -313,7 +329,10 @@ account with these parameters.", whether a field or storage does not
 exist or an access class refused it, so it never says whether an id
 exists; an account holding the operation's permission for what the
 parameters name hears the access class's own reason, and the rest is
-logged to the tool channel.
+logged to the tool channel. An account holding a permission as written
+(one with no `%key`) is let through when a parameter names nothing, and
+the call fails as input to correct, "Not found: there is none with the
+id ...", not as access denied, which reads as final.
 
 The operation's permission is also the tool's declared permission
 (`ToolDefinition::getPermission()`), so `tool:info` prints it and the

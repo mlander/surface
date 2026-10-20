@@ -152,6 +152,7 @@ abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsCle
    */
   public function commit(OperationContext $context, array $prepared): void {
     $config = $this->configFactory->getEditable($this->name());
+    $before = $config->getRawData();
     foreach ($prepared as $key => $value) {
       $config->set((string) $key, $value);
     }
@@ -159,6 +160,12 @@ abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsCle
       // Core's rule: no language code on an object with nothing
       // translatable in it.
       $config->clear('langcode');
+    }
+    // A write that changes nothing saves nothing: no save event, and
+    // nothing for a config export to differ by.
+    // Decision: see docs/decisions.md#absent-keeps-null-clears.
+    if (!$config->isNew() && $config->getRawData() === $before) {
+      return;
     }
     $config->save();
   }

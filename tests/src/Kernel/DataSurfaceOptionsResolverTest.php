@@ -131,6 +131,9 @@ class DataSurfaceOptionsResolverTest extends DataSurfaceKernelTestBase {
     $this->assertArrayNotHasKey('zxx', $set->options);
     // A language added later invalidates whatever cached the list.
     $this->assertSame(['config:configurable_language_list'], $set->getCacheTags());
+    // The names are translated into the interface language, so the list
+    // is good for one language at a time.
+    $this->assertContains('languages:language_interface', $set->getCacheContexts());
 
     $locked = DataDefinition::create('string')
       ->setLabel('Language')

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface\Hook;
 
+use Drupal\Component\Render\MarkupInterface;
 use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 
@@ -49,14 +50,28 @@ final class InlineErrorHooks {
   /**
    * Hands a marked element's errors to its template.
    *
+   * Wrapped in the id the mark carries, which the input names in its
+   * aria-describedby, so the error is read out with the field.
+   *
    * @param array $variables
    *   The template variables.
    */
   protected static function inline(array &$variables): void {
     $element = $variables['element'] ?? [];
-    if (!empty($element[DataSurfaceFormBuilderInterface::INLINE_ERROR_KEY]) && !empty($element['#errors'])) {
-      $variables['errors'] = $element['#errors'];
+    $id = $element[DataSurfaceFormBuilderInterface::INLINE_ERROR_KEY] ?? NULL;
+    if (empty($id) || empty($element['#errors'])) {
+      return;
     }
+    $errors = $element['#errors'];
+    $variables['errors'] = !is_string($id) ? $errors : [
+      '#type' => 'container',
+      '#attributes' => ['id' => $id],
+      'errors' => match (TRUE) {
+        is_array($errors) => $errors,
+        $errors instanceof MarkupInterface => ['#markup' => $errors],
+        default => ['#plain_text' => (string) $errors],
+      },
+    ];
   }
 
 }

@@ -204,6 +204,22 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
   public function changesNothing(): bool;
 
   /**
+   * Gets the watched values refinement handed over as nothing.
+   *
+   * A value a refiner watches that its own key's definition refuses is
+   * passed to the refiners as if the key held nothing; a refusal that
+   * names what a key depends on says so of it, not what was sent.
+   *
+   * Decision: see docs/decisions.md#a-refiner-never-sees-an-invalid-sibling.
+   *
+   * @return array<string, mixed>
+   *   The values, by the watched key's dotted path, each as it was given;
+   *   empty on a data surface refine() did not make, or when nothing was
+   *   refused.
+   */
+  public function withheldValues(): array;
+
+  /**
    * Gets which version of its stored values it describes.
    *
    * The `version` of the #[Resource] or #[Structure] it was built from, 1

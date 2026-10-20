@@ -7,6 +7,7 @@ namespace Drupal\data_surface\Contract;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
@@ -2914,9 +2915,16 @@ final class ContractEmitter {
           else {
             $keywords['pattern'] = $pattern;
           }
-          // A pattern is for machines; a person is told the message.
-          if (is_string($options['message'] ?? NULL) && $options['message'] !== '') {
-            $keywords[self::EXTENSION . '-pattern-message'] = $options['message'];
+          // A pattern is for machines; a person is told the message, in
+          // the document's language: the source core's validator
+          // translates when it refuses a value, read as plain text.
+          $message = $options['message'] ?? NULL;
+          if (is_string($message) && $message !== '') {
+            // phpcs:ignore Drupal.Semantics.FunctionT.NotLiteralString
+            $message = $this->t($message);
+          }
+          if ($message instanceof TranslatableMarkup) {
+            $keywords[self::EXTENSION . '-pattern-message'] = PlainText::of($message);
           }
           break;
 

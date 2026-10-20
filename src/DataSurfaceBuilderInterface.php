@@ -108,6 +108,10 @@ interface DataSurfaceBuilderInterface {
    *
    * @param string $name
    *   The definition key.
+   * @param string|\Stringable|null $reason
+   *   Why, when an access answer locked the key and said why: what a
+   *   form prints beside the fixed element. NULL for a lock an operation
+   *   makes, which a form says in words of its own.
    *
    * @return $this
    *
@@ -116,7 +120,7 @@ interface DataSurfaceBuilderInterface {
    *   output cannot be locked, because locking narrows what a caller
    *   may send and nothing sends an output.
    */
-  public function lock(string $name): static;
+  public function lock(string $name, string|\Stringable|null $reason = NULL): static;
 
   /**
    * Leaves a child's key out of what the data surface advertises.

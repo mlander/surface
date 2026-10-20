@@ -74,7 +74,21 @@ final class PluginConfigurationStorage implements DataSurfaceStorageInterface {
    */
   public function prepare(DataSurfaceInterface $surface, array $values): PreparedValues {
     $host_keys = array_diff_key($this->plugin->getConfiguration(), $surface->getDefinitions()->toArray());
-    return new PreparedValues($values, $values + $host_keys);
+    // A plugin reads its configuration whole, so every key it declares is
+    // there: a default the pipeline did not write, since the
+    // configuration never held it, is filled in here.
+    // Decision: see docs/decisions.md#absent-keeps-null-clears.
+    $complete = [];
+    $defaults = $surface->getDefaultValues();
+    foreach ($surface->getDefinitions()->names() as $name) {
+      if (array_key_exists($name, $values)) {
+        $complete[$name] = $values[$name];
+      }
+      elseif (array_key_exists($name, $defaults)) {
+        $complete[$name] = $defaults[$name];
+      }
+    }
+    return new PreparedValues($values, ($complete + $values) + $host_keys);
   }
 
   /**

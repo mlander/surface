@@ -259,8 +259,9 @@ class DataSurfaceOperationFormTest extends DataSurfaceKernelTestBase {
 
     $errors = $form_state->getErrors();
     $this->assertArrayHasKey('surface][type', $errors);
+    // Printed at the top of the page, so named for its field.
     $this->assertSame(
-      'A content type with the machine name recipe already exists.',
+      'Machine name: A content type with the machine name recipe already exists.',
       strip_tags((string) $errors['surface][type']),
     );
     $this->assertSame('Recipe', NodeType::load('recipe')->label());

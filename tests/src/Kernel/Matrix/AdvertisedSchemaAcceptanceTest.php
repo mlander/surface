@@ -878,7 +878,8 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * The body is carried when it stays inside the subset, with the `u`
    * and `D` modifiers; a `$` without `D`, any other modifier, a bracket
    * delimiter, `.`, and every PCRE-only construct leave `pattern` out and
-   * name the Regex checked on the server. The verdicts on values follow:
+   * name the Regex checked on the server, as do `\d` `\w` `\b` `\s` under
+   * `u` and every negated class. The verdicts on values follow:
    * a trailing newline is refused by both now, and every case the audit
    * found PHP and an ECMA engine to disagree on is wider, not narrower.
    */
@@ -886,8 +887,9 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $translations = [
       // Carried: the subset, with D.
       '/^\d{4}$/D' => '^\d{4}$',
-      '/^\d{4}$/uD' => '^\d{4}$',
       '/^[a-z0-9_]+$/D' => '^[a-z0-9_]+$',
+      '/^[a-z0-9_é]+$/uD' => '^[a-z0-9_é]+$',
+      '/^[a\d]+$/D' => '^[a\d]+$',
       '/^[a-z0-9]+(?:[ -][a-z0-9]+)*$/D' => '^[a-z0-9]+(?:[ -][a-z0-9]+)*$',
       '/^\+?[0-9 ]+$/D' => '^\+?[0-9 ]+$',
       '#^a/b$#D' => '^a/b$',
@@ -896,6 +898,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       '/^\w+\s\w+$/D' => '^\w+\s\w+$',
       '/\bcat\b/' => '\bcat\b',
       '/^a{2,3}?b$/D' => '^a{2,3}?b$',
+      '/^a\sb$/D' => '^a\sb$',
       '/^(a|b)+$/D' => '^(a|b)+$',
       // Left out: `$` without D, which PCRE reads before a final newline.
       '/^\d{4}$/' => NULL,
@@ -926,6 +929,16 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       '/^a.b$/D' => NULL,
       '/^(a)\1$/D' => NULL,
       '/^é+$/D' => NULL,
+      // Left out: with u, PHP reads \d \w \b \s by Unicode properties,
+      // and ECMA's are narrower; a negated class, u or not.
+      '/^\d{4}$/uD' => NULL,
+      '/^\w+$/uD' => NULL,
+      '/^\bé/uD' => NULL,
+      '/^a\sb$/uD' => NULL,
+      '/^[a\d]+$/uD' => NULL,
+      '/^[^\s]+$/D' => NULL,
+      '/^[^a]{2}$/D' => NULL,
+      '/^[^a-z]+$/uD' => NULL,
     ];
     foreach ($translations as $regex => $pattern) {
       $constraint = ['pattern' => $regex, 'message' => 'As it says.'];
@@ -950,6 +963,11 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       ['/^\S+$/D', "a\u{00A0}b", TRUE, TRUE],
       // A letter outside ASCII is a word character to opis alone.
       ['/^\W+$/D', 'é', TRUE, TRUE],
+      // The reviewer's four, each now left out and so accepted.
+      ['/^\d{4}$/uD', '٢٠٤٨', TRUE, TRUE],
+      ['/^\w+$/uD', 'café', TRUE, TRUE],
+      ['/^\bé/uD', 'é', TRUE, TRUE],
+      ['/^[^\s]+$/D', "a\u{00A0}b", TRUE, TRUE],
       // \Z no longer reaches opis, which could not compile it.
       ['/^\d{4}\Z/', '2048', TRUE, TRUE],
       // An inline flag, left out where an ECMA engine has a syntax error.
@@ -1278,8 +1296,11 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * honeypot writes them, two patterns end in `$` without `D` and one
    * reads `.`, which no pattern carries, so the composite is checked on
    * the server alone. Written so both engines read them alike, it is an
-   * `allOf` of the three, the third a `not`. An AtLeastOneOf is an
-   * `anyOf`, and a part no keyword states leaves either unstated.
+   * `allOf` of the three, the third a `not`; the second names the first's
+   * characters after the letter, since a negated class (`[^\n]`) is never
+   * carried, and a value the first refuses never reaches the second. An
+   * AtLeastOneOf is an `anyOf`, and a part no keyword states leaves
+   * either unstated.
    *
    * @see docs/decisions.md#a-composite-is-its-parts
    */
@@ -1303,13 +1324,13 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
 
     $carried = $name([
       ['Regex' => ['pattern' => '/^[-_a-zA-Z0-9]+$/D', 'message' => $letters]],
-      ['Regex' => ['pattern' => '/^[a-zA-Z][^\n]+$/D', 'message' => $first]],
+      ['Regex' => ['pattern' => '/^[a-zA-Z][-_a-zA-Z0-9]+$/D', 'message' => $first]],
       ['Regex' => ['pattern' => '/^(name|pass|website)$/D', 'match' => FALSE, 'message' => $common]],
     ]);
     $property = $this->decoded($emitter->emitFull($carried, 'audit')->document['schema'])['properties']['element_name'];
     $this->assertSame([
       ['pattern' => '^[-_a-zA-Z0-9]+$'],
-      ['pattern' => '^[a-zA-Z][^\n]+$'],
+      ['pattern' => '^[a-zA-Z][-_a-zA-Z0-9]+$'],
       ['not' => ['pattern' => '^(name|pass|website)$']],
     ], $property['allOf']);
     $this->assertArrayNotHasKey('checkedOnServer', $property['x-surface']);

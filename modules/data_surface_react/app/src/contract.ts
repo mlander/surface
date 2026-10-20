@@ -171,6 +171,8 @@ export interface Validation {
   violations: Violation[];
   stale: Violation[];
   notes: Violation[];
+  /** The dotted path of each stored value the write would change. */
+  changes: string[];
   values: Values;
 }
 
@@ -187,6 +189,8 @@ export interface Submission {
   valid: boolean;
   violations: Violation[];
   stale: Violation[];
+  /** The dotted path of each stored value the write changed; none, and nothing was saved, when the values were what is stored. */
+  changes: string[];
   outputs: Values;
   contract: Contract | null;
   created: Created | null;

@@ -47,7 +47,7 @@ final class OpeningHoursResource implements ResourceInterface {
       ->setSetting('widget', 'time')
       ->addConstraint('Regex', [
         'pattern' => '/^([01]\d|2[0-3]):[0-5]\d$/D',
-        'message' => 'Write the time as HH:MM, such as 09:00.',
+        'message' => t('Write the time as HH:MM, such as 09:00.'),
       ]);
 
     $inputs->add('closes', 'integer', t('Closes at, in minutes after midnight'), default: 1020)
@@ -88,7 +88,7 @@ final class OpeningHoursResource implements ResourceInterface {
       ->setRequired(TRUE)
       ->addConstraint('Count', [
         'min' => 1,
-        'minMessage' => 'Choose at least one day for after-hours access.',
+        'minMessage' => t('Choose at least one day for after-hours access.'),
       ]);
     $inputs->addDefinition('late_days', $late, default: []);
     $inputs->narrow('late_days')

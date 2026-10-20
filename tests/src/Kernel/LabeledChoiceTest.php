@@ -9,7 +9,8 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\data_surface\DataSurface;
 use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\Clause;
+use Drupal\data_surface\Pipeline\DataSurfacePipeline;
+use Drupal\data_surface\Pipeline\Sentences;
 use Drupal\data_surface\Plugin\Validation\Constraint\LabeledChoiceConstraint;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\Validator\Constraints\Choice;
@@ -178,16 +179,17 @@ class LabeledChoiceTest extends DataSurfaceKernelTestBase {
     // placeholders still placeholders: flattening it here would render
     // them once and leave whatever prints the violation to escape the
     // result a second time.
-    // The constraint's own message is the first clause of the refusal,
-    // which goes on to list what may be chosen.
+    // The constraint's own message is the refusal's first sentence, kept
+    // whole, and a sentence of its own lists what may be chosen.
     $message = $violations->byKey('mode')[0]->message;
-    $this->assertInstanceOf(TranslatableMarkup::class, $message);
-    $own = $message->getArguments()['@message'];
-    $this->assertInstanceOf(Clause::class, $own);
-    $this->assertInstanceOf(TranslatableMarkup::class, $own->message());
-    $this->assertSame('7', $own->message()->getArguments()['%value']);
-    $this->assertSame(self::MESSAGE, (string) $own->message());
-    $this->assertSame('The value you selected is not a valid choice; choose Disabled (0), Optional (1) or Required (2).', (string) $message);
+    $this->assertInstanceOf(Sentences::class, $message);
+    [$own, $choose] = $message->sentences();
+    $this->assertInstanceOf(TranslatableMarkup::class, $own);
+    $this->assertSame('7', $own->getArguments()['%value']);
+    $this->assertSame(self::MESSAGE, (string) $own);
+    $this->assertInstanceOf(TranslatableMarkup::class, $choose);
+    $this->assertSame(DataSurfacePipeline::REFUSAL_CONTEXT, $choose->getOption('context'));
+    $this->assertSame('The value you selected is not a valid choice. Choose Disabled (0), Optional (1) or Required (2).', (string) $message);
   }
 
   /**

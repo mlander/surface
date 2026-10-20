@@ -172,6 +172,9 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * @param string[] $runtimeAccess
    *   The keys an access answer decided once the subject is known would
    *   lock or leave out, which a build for the account alone kept open.
+   * @param array<string, string|\Stringable> $lockReasons
+   *   Why a locked key is locked, keyed by definition key, for a key an
+   *   access answer locked and said why.
    *
    * @return static
    *   The map.
@@ -196,6 +199,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
     array $mixins = [],
     array $held = [],
     array $runtimeAccess = [],
+    array $lockReasons = [],
   ): static {
     foreach (array_merge(array_keys($refiners), array_keys($contributions), $locked, array_keys($attachments), array_keys($slots), array_keys($lists), array_keys($mounted)) as $key) {
       if (!isset($definitions[$key])) {
@@ -246,6 +250,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
         mounted: $mounted[$name] ?? [],
         held: in_array($name, $held, TRUE),
         runtimeAccess: in_array($name, $runtimeAccess, TRUE),
+        lockedBecause: in_array($name, $locked, TRUE) ? ($lockReasons[$name] ?? NULL) : NULL,
       );
     }
     return new static($entries, $ports, $mixins);

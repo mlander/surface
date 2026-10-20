@@ -212,8 +212,7 @@ final class InputDefinitions {
         continue;
       }
       $note = $this->t('Depends on @keys.', ['@keys' => implode(', ', $keys)]);
-      $description = (string) $this->description($target);
-      $target->setDescription($this->appended($description, $note));
+      $target->setDescription($this->appended($this->description($target), $note));
     }
     return $map;
   }
@@ -509,10 +508,9 @@ final class InputDefinitions {
         '@by' => $slot->by,
         '@values' => implode(', ', $owners[$name]),
       ]);
-      $description = (string) $this->description($definition);
       if ($union instanceof DataDefinition) {
         $union->setRequired(FALSE);
-        $union->setDescription($this->appended($description, $note));
+        $union->setDescription($this->appended($this->description($definition), $note));
       }
       DefinitionMetadata::setDefaultValue($union, NULL);
       $properties[$name] = $this->fromDefinition($union);
@@ -521,10 +519,9 @@ final class InputDefinitions {
       '@by' => $slot->by,
       '@table' => $table === [] ? $this->t('No variant fills it') : implode('; ', array_map('strval', $table)),
     ]);
-    $description = (string) $this->description($placeholder);
     return new MapInputDefinition(
       label: $this->label($placeholder),
-      description: $this->appended($description, $note),
+      description: $this->appended($this->description($placeholder), $note),
       required: $placeholder->isRequired(),
       property_definitions: $properties,
     );
@@ -791,7 +788,7 @@ final class InputDefinitions {
       if ($property->isRequired()) {
         $property->setRequired(FALSE);
         if ($property instanceof DataDefinition) {
-          $property->setDescription($this->appended((string) $this->description($property), $this->t('Required; a value already stored stands when left out.')));
+          $property->setDescription($this->appended($this->description($property), $this->t('Required; a value already stored stands when left out.')));
         }
       }
       if ($property instanceof MapInputDefinition) {
@@ -914,7 +911,7 @@ final class InputDefinitions {
    *   The description with the note appended.
    */
   protected function secretNote(TranslatableMarkup|string $description): TranslatableMarkup {
-    return $this->appended((string) $description, $this->t('Write only: the stored value is never returned, and sending nothing leaves it unchanged.'));
+    return $this->appended($description, $this->t('Write only: the stored value is never returned, and sending nothing leaves it unchanged.'));
   }
 
   /**
@@ -934,9 +931,8 @@ final class InputDefinitions {
    */
   protected function runtimeAccessNote(InputDefinitionInterface $input): void {
     $note = $this->t('Whether this may be changed is decided once the thing it belongs to is known: a call may find it locked or left out.');
-    $description = (string) $this->description($input);
     if ($input instanceof DataDefinition) {
-      $input->setDescription($this->appended($description, $note));
+      $input->setDescription($this->appended($this->description($input), $note));
     }
   }
 
@@ -972,7 +968,11 @@ final class InputDefinitions {
    * read as rather than as TranslatableMarkup. A message option written
    * with Symfony's `{{ max }}` is respelled `%max`, which is what core's
    * translator fills in, so the Tool API's own refusal shows the number
-   * as the pipeline's does (ViolationMessage).
+   * as the pipeline's does (ViolationMessage). The respelled message is a
+   * second source for a translator; it has to stay, because the Tool API
+   * validates through core's translator, which fills in Drupal's
+   * placeholders alone. A message spelled Drupal's way, `%max`, is
+   * copied as it is, so every door meets the one source the author wrote.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition to read.
@@ -1025,7 +1025,9 @@ final class InputDefinitions {
    * nothing an invoker reads today, because the Tool API's normalizer
    * advertises a value list from Choice alone and never these labels;
    * the tool's own label and description stay TranslatableMarkup, which
-   * the Tool API takes as such.
+   * the Tool API takes as such, and so does each key's, sentences
+   * appended included: every one of them is rendered in the language
+   * that reads it.
    *
    * @param mixed $options
    *   A constraint's options, or one value inside them.
@@ -1060,20 +1062,29 @@ final class InputDefinitions {
   /**
    * Appends a sentence to a description, as plain text.
    *
-   * The description is plain text already, so the sentence joining the
-   * two is read as plain text too and escapes neither: "you'd" stays
-   * "you'd".
+   * Both stay objects, so a definition cached for every language reads
+   * in the language that reads it, the description and the sentence
+   * alike. A description read as plain text is joined as the markup it
+   * decorates, and the two are read as plain text together, so neither
+   * is escaped: "you'd" stays "you'd". A plain string is text, which the
+   * placeholder escapes and the reading decodes.
    *
-   * @param string $description
-   *   The description, plain text, or ''.
+   * Decision: see docs/decisions.md#a-machine-document-carries-plain-text.
+   *
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup|string $description
+   *   The description, or ''.
    * @param \Drupal\Core\StringTranslation\TranslatableMarkup $note
    *   The sentence.
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup
    *   The two, or the sentence alone.
    */
-  protected function appended(string $description, TranslatableMarkup $note): TranslatableMarkup {
-    return PlainTextMarkup::translatable($description === '' ? $note : $this->t('@description @note', [
+  protected function appended(TranslatableMarkup|string $description, TranslatableMarkup $note): TranslatableMarkup {
+    if ($description instanceof PlainTextMarkup) {
+      $description = $description->markup();
+    }
+    $empty = $description instanceof TranslatableMarkup ? $description->getUntranslatedString() === '' : $description === '';
+    return PlainTextMarkup::translatable($empty ? $note : $this->t('@description @note', [
       '@description' => $description,
       '@note' => $note,
     ]));

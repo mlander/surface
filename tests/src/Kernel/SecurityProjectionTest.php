@@ -183,7 +183,7 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
 
     $validated = $this->validate('event.program', 'configure', []);
     $this->assertTrue($validated['valid']);
-    $this->assertSame(['valid', 'violations', 'stale', 'notes', 'values'], array_keys($validated));
+    $this->assertSame(['valid', 'violations', 'stale', 'notes', 'changes', 'values'], array_keys($validated));
     $this->assertArrayNotHasKey('fees', $validated['values']);
     $this->assertStringNotContainsString('concession', (string) json_encode($validated));
 

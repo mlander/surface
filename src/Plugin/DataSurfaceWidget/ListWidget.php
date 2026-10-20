@@ -150,6 +150,8 @@ final class ListWidget extends DataSurfaceWidgetBase implements ContainerFactory
         '#suffix' => '</div>',
         '#weight' => 2 * $delta + 1,
       ];
+      // Every row's button says "Remove"; its accessible name says which.
+      $element['remove_' . $delta]['#attributes']['aria-label'] = $this->t('Remove @item', ['@item' => $row['#title']]);
     }
     $element['add'] = $this->control('add', NULL, $max !== NULL && count($rows) >= $max) + [
       '#weight' => 2 * count($rows),

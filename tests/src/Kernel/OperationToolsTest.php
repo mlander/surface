@@ -284,7 +284,7 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     $tool->setInputValue(OperationInputs::VALUES, ['name' => '', 'description' => 'Plates']);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
-    $this->assertSame('The values were refused: name: Name is required.', PlainTextOutput::renderFromHtml((string) $tool->getResult()->getMessage()));
+    $this->assertSame("The values were refused:\n" . 'name: Name is required.', PlainTextOutput::renderFromHtml((string) $tool->getResult()->getMessage()));
     $this->container->get('entity_type.manager')->getStorage('node_type')->resetCache();
     $this->assertSame('Dishes', NodeType::load('recipe')->getDescription());
 

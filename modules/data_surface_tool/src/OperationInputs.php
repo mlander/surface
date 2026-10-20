@@ -20,6 +20,7 @@ use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface_tool\Plugin\tool\Tool\ResourceOperationReadTool;
 use Drupal\tool\TypedData\InputDefinition;
 use Drupal\tool\TypedData\InputDefinitionInterface;
+use Drupal\tool\TypedData\ListOutputDefinition;
 use Drupal\tool\TypedData\MapInputDefinition;
 use Drupal\tool\TypedData\OutputDefinition;
 
@@ -107,6 +108,21 @@ final class OperationInputs {
   public const COMMITTED = 'committed';
 
   /**
+   * The output listing the paths a write changed, or a dry run would.
+   */
+  public const CHANGES = 'changes';
+
+  /**
+   * The output naming each value sent that a locked key did not take.
+   */
+  public const NOTES = 'notes';
+
+  /**
+   * The output naming each stored value that is no longer available.
+   */
+  public const STALE = 'stale';
+
+  /**
    * Builtin parameter types, as the Tool API's data types.
    */
   protected const DATA_TYPES = [
@@ -164,6 +180,11 @@ final class OperationInputs {
     $neutral = $this->neutral($resource, $operation, TRUE);
     $inputs = $this->parameterInputs($resource, $operation, $neutral);
     $inputs[self::VALUES] = $this->declaredValues($resource, $operation, $neutral, declared: TRUE);
+    if ($operation->readOnly) {
+      // Nothing is written, so there is nothing to rehearse.
+      // Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
+      return $inputs;
+    }
     $inputs[self::DRY_RUN] = new InputDefinition(
       data_type: 'boolean',
       label: $this->t('Dry run'),
@@ -556,12 +577,38 @@ final class OperationInputs {
         label: $this->t('Accepted values'),
         description: $this->t('The values as the resource accepted them, with every declared default and stored value filled in, as the read tool would answer them: a secret is never returned, nor a key this account may not see.'),
       ),
-      self::COMMITTED => new OutputDefinition(
+    ];
+    // A read only operation writes nothing at any door, so it says
+    // nothing about a write.
+    // Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
+    if (!$operation->readOnly) {
+      $outputs[self::COMMITTED] = new OutputDefinition(
         data_type: 'boolean',
         label: $this->t('Written'),
         description: $this->t('Whether the values were written; false for a dry run.'),
-      ),
-    ];
+      );
+      $outputs[self::CHANGES] = new ListOutputDefinition(
+        label: $this->t('Changes'),
+        description: $this->t('The dotted path of each stored value the write changed, or a dry run would change, a list as a whole. Empty when it changes nothing, and then nothing is saved: writing back what the read tool returned changes nothing.'),
+        item_definition: new OutputDefinition(
+          data_type: 'string',
+          label: $this->t('Path'),
+          description: $this->t('A dotted path in the values.'),
+        ),
+      );
+    }
+    $outputs[self::NOTES] = new OutputDefinition(
+      data_type: 'map',
+      label: $this->t('Values not taken'),
+      description: $this->t('Present when a value was sent for a key that is locked: each such key by its dotted path, with why it kept what it holds. The call succeeded, but not as sent.'),
+      required: FALSE,
+    );
+    $outputs[self::STALE] = new OutputDefinition(
+      data_type: 'map',
+      label: $this->t('Values no longer available'),
+      description: $this->t('Present when a stored value is no longer one that may be chosen: each such key by its dotted path, with what to do. The call succeeded; choose a new value when you can.'),
+      required: FALSE,
+    );
     if (!$resource->hasOutputs()) {
       return $outputs;
     }
@@ -588,7 +635,7 @@ final class OperationInputs {
   public function description(ResourceDefinition $resource, OperationDefinition $operation): TranslatableMarkup {
     $changes = $this->changesWhatExists($resource, $operation);
     $arguments = [
-      '@label' => (string) $operation->label,
+      '@label' => self::operationLabel($operation),
       '@operation' => $operation->id,
       '@resource' => $resource->id,
       '@kind' => $this->kind($resource, $operation),
@@ -618,11 +665,30 @@ final class OperationInputs {
    */
   public function readDescription(ResourceDefinition $resource, OperationDefinition $operation): TranslatableMarkup {
     return $this->t('Reads what is stored for @label: the "@operation" operation of the @resource resource, and writes nothing. @needs The values output is the resource itself, less what the operation already knows, in the shape the write tool takes, so a caller can read what is there before changing it. A secret is never returned.', [
-      '@label' => (string) $operation->label,
+      '@label' => self::operationLabel($operation),
       '@operation' => $operation->id,
       '@resource' => $resource->id,
       '@needs' => $this->needs($operation),
     ]);
+  }
+
+  /**
+   * Gets an operation's label as a placeholder value, still lazy.
+   *
+   * A tool definition is cached for every language, so a translatable
+   * label is handed over as itself and renders when the sentence holding
+   * it renders, in the language that reads it.
+   *
+   * Decision: see docs/decisions.md#a-static-tool-definition-is-no-accounts.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup|string
+   *   The label: the object, for a translatable one.
+   */
+  public static function operationLabel(OperationDefinition $operation): TranslatableMarkup|string {
+    return $operation->label instanceof TranslatableMarkup ? $operation->label : (string) $operation->label;
   }
 
   /**

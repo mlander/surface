@@ -240,6 +240,11 @@ The callback answers with an `AjaxResponse`:
 | `RemoveCommand`, then `AppendCommand` | The [stale marker](#stale-values-on-a-form): removed, and appended to the container again when the rebuild left one. It names stale selects across the whole container and may appear or disappear with the rebuild, so it is never replaced in place. |
 | `ReplaceCommand` | The trigger itself, by its own wrapper, in three cases only: its own value was refused (the error is printed under it), its previous request printed an error under it (so a fixed error goes away), or the rebuild changed the options it offers (a required select loses `- Select -` once something is chosen). |
 | `RemoveCommand`, then `PrependCommand` | Whatever else the request put in the messenger, a stale value kept, printed inside the container where the render-array path printed it, after the previous request's are taken away. An error on the trigger is never among them: it is printed under the trigger. |
+| `AnnounceCommand` | At most one, polite: what the rebuild changed, in whole sentences, for whoever cannot see it. The trigger's refusal comes first, named for its field, then each dependent the change moved, compared with what the page showed: "Send day no longer applies." or "Send day now applies.", "Items per issue now allows 1 to 20.", "<Label> is now required.", "The choices for Room have changed.", and, for a group whose fields changed (a slot's variant), "Ticket was updated." Nothing is announced when nothing moved. |
+
+**Coming from `#states`.** A dependent moves on a round trip to the
+server, a text trigger's on blur, and one taken out and brought back is
+drawn afresh from what is stored, not from what was typed in it before.
 
 Each refinement target, each trigger, each slot and each placed
 element gets a wrapper of its own, a `div` in its `#prefix` and `#suffix`, with its id
@@ -284,7 +289,10 @@ were not there, since [a refiner never sees an invalid
 sibling](decisions.md#a-refiner-never-sees-an-invalid-sibling)), and
 the callback replaces the trigger with the error under it, in the form
 element template's own error slot, with `aria-invalid` and the `error`
-class. Type `EV-2048` as example 3's licence: the licence is redrawn
+class. The error carries an id, the input's own followed by `--error`,
+which the input's `aria-describedby` names after its description, so
+the error is read with the field; and the rebuild's announcement says
+it, named for the field. Type `EV-2048` as example 3's licence: the licence is redrawn
 with "A licence number is four digits, such as 2048." under
 it, and the capacity with the no-licence ceiling of 100. The message is
 said there and nowhere else: not at the top of the container, and not
@@ -315,7 +323,8 @@ and an "Add another" button:
   alone, drawn the way an attached child is and titled with the list's
   label and the item's number ("Spice racks 2"). Its elements are named
   by delta, `surface[racks][1][spices]`. Each carries a "Remove"
-  button.
+  button, whose accessible name adds the item's title, "Remove Spice
+  racks 2", so no two buttons in a list read the same.
 - **Add and remove** are submit buttons, named for their place
   (`data_surface_racks_add`, `data_surface_racks_1_remove`), with
   `#limit_validation_errors` empty: nothing is judged, every value is
@@ -331,7 +340,8 @@ and an "Add another" button:
   empty item for each missing one; "Remove" is disabled while it holds
   no more than its minimum, and "Add another" once it holds its maximum.
 - **Locked** by its access, the list is drawn disabled, every item and
-  both buttons with it, and says so in its description.
+  both buttons with it, and says so in its description: the access
+  answer's own reason when it gave one.
 - **Inside an item**, refinement is wired in the item's own frame: a
   key another key of the same item refines against is a trigger whose
   path carries the delta (`shelves.1.unit`), and replaces only what it
@@ -364,7 +374,8 @@ in a `fieldset` of rows rather than a `details` of items
 - **Each row** is the element the item's own widget draws, its title
   the list's label and the row's number, read by screen readers and not
   shown, named by delta (`surface[keywords][1]`), with a "Remove" button
-  beside it and "Add another" under all of them.
+  beside it, its accessible name "Remove Keywords 2", and "Add another"
+  under all of them.
 - **The widget cannot know where it sits**, so it marks the list and its
   buttons, and the container's process callback wires them at any depth
   when the form is processed: the list gets its refresh wrapper, each
@@ -689,6 +700,17 @@ object the constraint built, never as text. Form API takes a
 placeholders is escaped once, by whoever prints it, rather than escaped
 at build time and escaped again on the page.
 
+A constraint's own words name no field, so where the message is printed
+away from its element, in the messages at the top of the page with
+Inline Form Errors off, the element's title is put before it, as one
+translatable sentence with the message a placeholder in it: posting
+5000 as example 1's capacity says "Capacity: This value should be
+between 1 and 1000." A message that already begins with the title (a
+required key's "Event title is required.") and an element with no title
+are left as they are, and with Inline Form Errors on nothing is added:
+it prints the message beside the element and names the field in its own
+summary ([decision](decisions.md#an-element-hints-and-the-rule-speaks)).
+
 ## Finding the container again
 
 Host protocols are inconsistent about what reaches a validate or submit
@@ -782,9 +804,16 @@ submits through the pipeline to that storage. A locked identity key
 renders as a disabled element holding the value the operation knows,
 and extraction keeps that value whatever is posted. A resource its
 access locks at the top renders every element disabled, says why above
-them and has no Save ([Locked at the top](decisions.md#locked-at-the-top));
-an operation that changes nothing says, on submit, that the values were
-accepted and nothing was written. The form id is
+them, once, and has no Save; nothing on it is marked required, since
+nothing is asked ([Locked at the top](decisions.md#locked-at-the-top)).
+A key locked on its own (a child its access locked, the fees of
+example 10 once the program is published) says why in its description:
+the access answer's reason, "The fees are fixed once the program is
+published.", or "Fixed for this operation." when the answer gave none,
+or the lock is an operation's (an identity key). An operation that
+changes nothing is offered under its own label, "Check a program", not
+"Save", and says, on submit, that the values were accepted and nothing
+was written. The form id is
 `data_surface_operation_form_<route name>`, so an alter hook can name
 one route's form and two of them on one page cannot share a form state.
 The content type demo's two routes are the worked example, and

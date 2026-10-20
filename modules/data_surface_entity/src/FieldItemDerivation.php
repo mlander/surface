@@ -127,7 +127,10 @@ final class FieldItemDerivation {
   /**
    * Lists the bundles a content entity resource is derived for.
    *
-   * @return array<string, array<string, string>>
+   * A translatable label is kept as the object core hands over, so a
+   * sentence that names it renders it in the language that reads it.
+   *
+   * @return array<string, array<string, \Drupal\Core\StringTranslation\TranslatableMarkup|string>>
    *   Bundle labels, keyed by entity type id and bundle, for every
    *   content entity type with a bundle key whose bundle has a stored
    *   default form display.
@@ -140,7 +143,8 @@ final class FieldItemDerivation {
       }
       foreach ($this->bundleInfo->getBundleInfo($entity_type_id) as $bundle => $info) {
         if ($this->formDisplay($entity_type_id, (string) $bundle) !== NULL) {
-          $bundles[$entity_type_id][(string) $bundle] = (string) ($info['label'] ?? $bundle);
+          $label = $info['label'] ?? $bundle;
+          $bundles[$entity_type_id][(string) $bundle] = $label instanceof TranslatableMarkup ? $label : (string) $label;
         }
       }
     }

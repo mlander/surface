@@ -7,7 +7,7 @@ namespace Drupal\data_surface\ResourceBuild;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
+use Drupal\data_surface\Pipeline\CreatingStorageInterface;
 use Drupal\data_surface\Pipeline\PreparedValues;
 use Drupal\data_surface\Pipeline\Violation;
 use Drupal\data_surface\Pipeline\StorageViolationsException;
@@ -50,7 +50,7 @@ use Drupal\data_surface\Entry;
  *
  * @internal
  */
-final class StorageAdapter implements DataSurfaceStorageInterface {
+final class StorageAdapter implements CreatingStorageInterface {
 
   use DependencySerializationTrait;
 
@@ -91,6 +91,13 @@ final class StorageAdapter implements DataSurfaceStorageInterface {
     protected array $identity = [],
     protected array $omitted = [],
   ) {
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function creates(): bool {
+    return $this->context->creates;
   }
 
   /**

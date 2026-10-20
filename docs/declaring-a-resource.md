@@ -117,7 +117,7 @@ class in the module's `src/Shape/` carrying `#[Shape]`, whose static
 final class Licence implements ShapeInterface {
 
   public static function define(): DataDefinition {
-    $pattern = ['pattern' => '/^\d{4}$/D', 'message' => 'A licence number is four digits, such as 2048.'];
+    $pattern = ['pattern' => '/^\d{4}$/D', 'message' => t('A licence number is four digits, such as 2048.')];
     $licence = DataDefinition::create('string')
       ->setLabel(t('Event licence'))
       ->setDescription(t('The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.'))
@@ -130,6 +130,12 @@ final class Licence implements ShapeInterface {
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+A constraint's message is a sentence a person reads, so a translator
+should find it beside every label: a message option may be written with
+`t()`, as the licence's is; the build hands Symfony its source string,
+which core's validator translates when it refuses a value ([Violation
+messages are objects](semantics.md#violation-messages-are-objects)).
 
 A key uses it in the type position of `add()`, with a label of its own:
 

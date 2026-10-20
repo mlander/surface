@@ -395,7 +395,10 @@ final class ContractPanel implements DataSurfaceFormPanelInterface {
   protected function regex(array $options): string {
     $message = $options['message'] ?? NULL;
     if (is_string($message) && $message !== '') {
-      return Html::escape($message);
+      // The source core's validator translates when it refuses a value,
+      // so the panel says it in the same language.
+      // phpcs:ignore Drupal.Semantics.FunctionT.NotLiteralString
+      return (string) $this->t($message);
     }
     return (string) $this->t('matches a required format: <code>@pattern</code>', ['@pattern' => $options['pattern'] ?? '']);
   }

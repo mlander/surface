@@ -82,7 +82,8 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
       $assert->pageTextContains($paragraph);
       $assert->pageTextContains('Ask the tool');
       $assert->pageTextContains('Behind the scenes: the contract, as it stands');
-      $this->submitForm([], 'Save');
+      // A check changes nothing, so its button says what it does.
+      $this->submitForm([], $path === 'surface-examples/10/check' ? 'Check a program' : 'Save');
       $assert->pageTextContains($path === 'surface-examples/10/check'
         ? 'The values were accepted. Check a program changes nothing, so nothing was written.'
         : 'The changes have been saved.');

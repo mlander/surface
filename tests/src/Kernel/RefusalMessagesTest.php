@@ -153,7 +153,8 @@ class RefusalMessagesTest extends DataSurfaceKernelTestBase {
     $this->container->get('form_builder')->submitForm(DataSurfaceOperationForm::class, $form_state);
 
     $errors = array_map(static fn ($error): string => strip_tags((string) $error), $form_state->getErrors());
-    $this->assertSame(['surface][max_recipients' => 'This value should be between 1 and 10000.'], $errors);
+    // Printed at the top of the page, so named for its field.
+    $this->assertSame(['surface][max_recipients' => 'Maximum recipients per send: This value should be between 1 and 10000.'], $errors);
     $this->assertSame(500, $this->config('data_surface_first.newsletter')->get('max_recipients'), 'Nothing was written.');
   }
 
@@ -192,7 +193,7 @@ class RefusalMessagesTest extends DataSurfaceKernelTestBase {
     $this->container->get('form_builder')->submitForm(DataSurfaceOperationForm::class, $form_state);
 
     $errors = array_map(static fn ($error): string => strip_tags((string) $error), $form_state->getErrors());
-    $this->assertSame(['surface][sender_name' => 'This value is too long. It should have 64 characters or less.'], $errors);
+    $this->assertSame(['surface][sender_name' => 'Sender name: This value is too long. It should have 64 characters or less.'], $errors);
     $this->assertSame('The newsletter', $this->config('data_surface_first.newsletter')->get('sender_name'), 'Nothing was written.');
   }
 

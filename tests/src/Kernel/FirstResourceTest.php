@@ -129,7 +129,9 @@ class FirstResourceTest extends DataSurfaceKernelTestBase {
         $tool->execute();
         $result = $tool->getResult();
         $answer = ($result->isSuccess() ? 'Success: ' : 'Failed: ') . PlainTextOutput::renderFromHtml((string) $result->getMessage());
-        $this->assertStringContainsString($answer, $text, sprintf('%s quotes another answer for %s.', $page, $run[0]));
+        // A refusal spans lines, one per violation, and a quote inside a
+        // list item is indented by two spaces on every line.
+        $this->assertTrue(str_contains($text, $answer) || str_contains((string) preg_replace('/^  /m', '', $text), $answer), sprintf('%s quotes another answer for %s: %s', $page, $run[0], $answer));
         $values = $result->getContextValues()[OperationInputs::VALUES] ?? NULL;
         if ($values !== NULL && str_contains($text, '  values: ')) {
           $this->assertStringContainsString('  values: ' . json_encode($values, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $text, sprintf('%s quotes other values for %s.', $page, $run[0]));

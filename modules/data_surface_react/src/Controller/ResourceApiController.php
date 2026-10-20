@@ -208,12 +208,12 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   The operation id, from the route's {operation} parameter.
    *
    * @return \Symfony\Component\HttpFoundation\JsonResponse
-   *   `{valid, violations, stale, notes, values}`: whether the values
-   *   would be written, each refusal by its dotted path, each stale
-   *   reference beside them, each value sent for a locked key that was
-   *   not taken, and the accepted values as the read tool would answer
-   *   them (no key left out for the caller, no secret); nothing is
-   *   written.
+   *   `{valid, violations, stale, notes, changes, values}`: whether the
+   *   values would be written, each refusal by its dotted path, each
+   *   stale reference beside them, each value sent for a locked key that
+   *   was not taken, the dotted path of each stored value the write would
+   *   change, and the accepted values as the read tool would answer them
+   *   (no key left out for the caller, no secret); nothing is written.
    */
   public function validate(Request $request, string $resource, string $operation): JsonResponse {
     $served = $this->served($resource, $operation, $request);
@@ -236,6 +236,8 @@ final class ResourceApiController implements ContainerInjectionInterface {
       'stale' => array_map($this->violation(...), $result->violations->stale()),
       // Decision: see docs/decisions.md#locked-at-the-top.
       'notes' => array_map($this->violation(...), $result->notes),
+      // Decision: see docs/decisions.md#absent-keeps-null-clears.
+      'changes' => $result->changes ?? [],
       // Every map an object, an empty one too, as the contract writes
       // it, and projected as every door's answer is.
       // Decision: see
@@ -262,10 +264,12 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   The operation id, from the route's {operation} parameter.
    *
    * @return \Symfony\Component\HttpFoundation\JsonResponse
-   *   `{committed, valid, violations, stale, notes, outputs, contract,
-   *   created}`: whether the values were written, each refusal by its
-   *   dotted path, each stale reference kept, each value sent for a locked
-   *   key that was not taken, the resource's outputs as the storage
+   *   `{committed, valid, violations, stale, notes, changes, outputs,
+   *   contract, created}`: whether the values were written, each refusal
+   *   by its dotted path, each stale reference kept, each value sent for a
+   *   locked key that was not taken, the dotted path of each stored value
+   *   the write changed (none, and nothing was saved, when the values
+   *   were what is stored), the resource's outputs as the storage
    *   reads them back, the contract rebuilt from what is stored now, and
    *   for an operation that creates, the operation the created thing now
    *   lives at. A refusal is answered 200 with `committed: false`.
@@ -306,6 +310,8 @@ final class ResourceApiController implements ContainerInjectionInterface {
       'stale' => array_map($this->violation(...), $result->violations->stale()),
       // Decision: see docs/decisions.md#locked-at-the-top.
       'notes' => array_map($this->violation(...), $result->notes),
+      // Decision: see docs/decisions.md#absent-keeps-null-clears.
+      'changes' => $result->changes ?? [],
     ];
     if (!$result->committed) {
       return $this->submitted($answer);
@@ -360,7 +366,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   The response, 200 whether or not anything was written.
    */
   protected function submitted(array $answer): JsonResponse {
-    $answer += ['stale' => [], 'notes' => [], 'outputs' => [], 'contract' => NULL, 'created' => NULL];
+    $answer += ['stale' => [], 'notes' => [], 'changes' => [], 'outputs' => [], 'contract' => NULL, 'created' => NULL];
     // An empty map is an object on the wire, as the contract's are.
     $answer['outputs'] = (object) $answer['outputs'];
     $response = new JsonResponse($answer);

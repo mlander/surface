@@ -134,6 +134,13 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   protected array $locked = [];
 
   /**
+   * Why a locked key is locked, when an access answer said why.
+   *
+   * @var array<string, string|\Stringable>
+   */
+  protected array $lockReasons = [];
+
+  /**
    * The ports the data surface reads from its container, by name.
    *
    * @var array<string, \Drupal\data_surface\Port>
@@ -261,7 +268,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * {@inheritdoc}
    */
-  public function lock(string $name): static {
+  public function lock(string $name, string|\Stringable|null $reason = NULL): static {
     $this->assertMutable();
     if (!isset($this->definitions[$name]) && isset($this->outputs[$name])) {
       throw new \LogicException(sprintf(
@@ -271,6 +278,9 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
     }
     if (!in_array($name, $this->locked, TRUE)) {
       $this->locked[] = $name;
+    }
+    if ($reason !== NULL) {
+      $this->lockReasons[$name] = $reason;
     }
     return $this;
   }
@@ -286,7 +296,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
     }
     // A collection's refiners are the parent's, bound before its child
     // was asked, and go with the key.
-    unset($this->definitions[$name], $this->attachments[$name], $this->slots[$name], $this->lists[$name], $this->refinements[$name], $this->refiners[$name], $this->declaredBy[$name], $this->watchedBy[$name], $this->contributions[$name]);
+    unset($this->definitions[$name], $this->attachments[$name], $this->slots[$name], $this->lists[$name], $this->refinements[$name], $this->refiners[$name], $this->declaredBy[$name], $this->watchedBy[$name], $this->contributions[$name], $this->lockReasons[$name]);
     $this->locked = array_values(array_diff($this->locked, [$name]));
     return $this;
   }
@@ -337,7 +347,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
     if (isset($this->attachments[$name]) || isset($this->slots[$name]) || isset($this->lists[$name])) {
       throw new \LogicException(sprintf('The "%s" key holds a child: omit() leaves a child out.', $name));
     }
-    unset($this->definitions[$name], $this->refinements[$name], $this->refiners[$name], $this->declaredBy[$name], $this->watchedBy[$name], $this->contributions[$name]);
+    unset($this->definitions[$name], $this->refinements[$name], $this->refiners[$name], $this->declaredBy[$name], $this->watchedBy[$name], $this->contributions[$name], $this->lockReasons[$name]);
     $this->locked = array_values(array_diff($this->locked, [$name]));
     $this->held = array_values(array_diff($this->held, [$name]));
     $this->runtimeAccess = array_values(array_diff($this->runtimeAccess, [$name]));
@@ -739,6 +749,11 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
     if ($this->thirdParty !== []) {
       $definitions['third_party_settings'] = $this->mountedMap($this->thirdParty, FALSE);
     }
+    // A message written with t() is handed to Symfony as its source, which
+    // core's validator translator translates when a violation is made.
+    foreach ($definitions as $definition) {
+      ConstraintMessages::sources($definition);
+    }
     // Locked whole: every key not fixed already holds what is stored. After
     // the slots, so a slot is chosen by what its deciding key holds, not
     // preselected by its default.
@@ -778,6 +793,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
         mixins: $this->mixins,
         held: $held,
         runtimeAccess: $this->runtimeAccessWhole ? array_map('strval', array_keys($definitions)) : array_values(array_intersect($this->runtimeAccess, array_keys($definitions))),
+        lockReasons: array_intersect_key($this->lockReasons, $definitions),
       ),
       $this->cacheability,
       DefinitionMap::fromArrays(definitions: $outputs),

@@ -521,7 +521,7 @@ final class Licence implements ShapeInterface {
    * {@inheritdoc}
    */
   public static function define(): DataDefinition {
-    $pattern = ['pattern' => '/^\d{4}$/D', 'message' => 'A licence number is four digits, such as 2048.'];
+    $pattern = ['pattern' => '/^\d{4}$/D', 'message' => t('A licence number is four digits, such as 2048.')];
     $licence = DataDefinition::create('string')
       ->setLabel(t('Event licence'))
       ->setDescription(t('The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.'))
@@ -695,15 +695,22 @@ ddev exec php web/modules/custom/data_surface/scripts/examples-dry-run.php
 Success: Configure registration: the values were accepted and written.
   values: {"title":"Autumn meetup","open":true,"venue":"harbour","room":"harbour_deck","capacity":50,"pricing":"paid","ticket":{"price":12.5,"currency":"EUR"},"contact":{"email":"events@example.com","phone":""}}
   committed: true
+  changes: ["title","venue","room","pricing","ticket.price","ticket.currency","ticket.note"]
 
 2. A capacity above the room's
-Failed: The values were refused: capacity: This value should be between 1 and 30 when Room is Garden room.
+Failed: The values were refused:
+capacity: This value should be between 1 and 30. This applies when Room is Garden room.
 
 3. A dry run
 Success: Dry run of Configure registration: the values were accepted and prepared, and nothing was written.
   values: {"title":"Winter social","open":true,"venue":"riverside","room":"riverside_east","capacity":40,"pricing":"free","ticket":{"note":"Donations welcome"},"contact":{"email":"events@example.com","phone":""}}
   committed: false
+  changes: ["title","venue","room","capacity","pricing","ticket.note","ticket.price","ticket.currency"]
 ```
+
+`changes` is every stored value the call changed, or a dry run would:
+writing back what the read tool returned answers none, and saves
+nothing.
 
 The same tool and the same three calls, from Drush, after a read of
 what is stored:
@@ -772,9 +779,12 @@ event to a room of another venue; then doubles the capacity to 240,
 leaving the stewards at three. The three refusals:
 
 ```
-Failed: The values were refused: venue: The value you selected is not a valid choice; choose Riverside Hall (riverside), Old Library (library) or Harbour Centre (harbour).
-Failed: The values were refused: room: The value you selected is not a valid choice when Venue is Riverside Hall; choose Main hall (riverside_main) or East room (riverside_east).
-Failed: The values were refused: third_party_settings.data_surface_examples_compliance.stewards: This value should be 5 or more when Capacity is 240.
+Failed: The values were refused:
+venue: The value you selected is not a valid choice. Choose Riverside Hall (riverside), Old Library (library) or Harbour Centre (harbour).
+Failed: The values were refused:
+room: The value you selected is not a valid choice. This applies when Venue is Riverside Hall. Choose Main hall (riverside_main) or East room (riverside_east).
+Failed: The values were refused:
+third_party_settings.data_surface_examples_compliance.stewards: This value should be 5 or more. This applies when Capacity is 240.
 ```
 
 Each time the agent reads the fix from the refusal alone and the next
@@ -912,10 +922,12 @@ drush tool:run data_surface:event.bulletin:configure --uid=1 --input='{"values":
 
 ```
 1. A send day for a monthly bulletin
-Failed: The values were refused: send_day: Send day does not apply when Frequency is Monthly.
+Failed: The values were refused:
+send_day: Send day does not apply when Frequency is Monthly.
 
 2. Eight items in a weekly issue
-Failed: The values were refused: items: This value should be between 1 and 5 when Frequency is Weekly.
+Failed: The values were refused:
+items: This value should be between 1 and 5. This applies when Frequency is Weekly.
 
 3. Eight items in a monthly issue, and no send day
 Success: Dry run of Configure the bulletin: the values were accepted and prepared, and nothing was written.
@@ -974,7 +986,7 @@ final class PhoneNumber implements ShapeInterface {
       ->setDescription(t('Digits, with spaces if you like, and a leading + for a country code.'))
       ->addConstraint('Regex', [
         'pattern' => '/^\+?[0-9 ]{7,20}$/D',
-        'message' => 'Write the number in digits, such as +1 555 0100.',
+        'message' => t('Write the number in digits, such as +1 555 0100.'),
       ]);
     DefinitionMetadata::setExamples($phone, ['+1 555 0100']);
     return $phone;
@@ -1002,7 +1014,7 @@ final class ReviewStructure implements StructureInterface {
       ->setDescription(t('YYYY-MM-DD.'))
       ->addConstraint('Regex', [
         'pattern' => '/^\d{4}-\d{2}-\d{2}$/D',
-        'message' => 'Write the date as YYYY-MM-DD, such as 2026-10-19.',
+        'message' => t('Write the date as YYYY-MM-DD, such as 2026-10-19.'),
       ]);
     $inputs->add('reviewed_by', 'string', t('Reviewed by'));
     $inputs->narrow('reviewed_by')
@@ -1095,14 +1107,16 @@ drush tool:run data_surface:event.press:configure --uid=1 --input='{"values":{"r
 
 ```
 1. A public contact with the email cleared
-Failed: The values were refused: contact.email: Email is required when Show on the press page is on.
+Failed: The values were refused:
+contact.email: Email is required when Show on the press page is on.
 
 2. The same contact, not shown on the press page
 Success: Dry run of Configure the press page: the values were accepted and prepared, and nothing was written.
   values: {"public":false,"contact":{"name":"Robin Lee","email":null,"phone":"+1 555 0100"},"reviewed_on":"2026-10-01","reviewed_by":"Sam Ortiz"}
 
 3. A review date with no reviewer
-Failed: The values were refused: reviewed_by: Reviewed by is required when Reviewed on is set.
+Failed: The values were refused:
+reviewed_by: Reviewed by is required when Reviewed on is set.
 ```
 
 ```bash
@@ -1111,7 +1125,8 @@ drush tool:run data_surface:event.desk:configure --uid=1 --input='{"values":{"ph
 
 ```
 1. A desk phone the shape refuses
-Failed: The values were refused: phone: Write the number in digits, such as +1 555 0100.
+Failed: The values were refused:
+phone: Write the number in digits, such as +1 555 0100.
 ```
 
 ## Example 9: keys that come from the site
@@ -1362,7 +1377,8 @@ Success: Check a program changes nothing: the values were accepted and prepared,
   values: {"headline":"Three days of talks","sessions":12,"published":false,"fees":{"standard":20.0,"concession":10.0}}
 
 2. A program with too many sessions, checked
-Failed: The values were refused: sessions: This value should be between 1 and 30.
+Failed: The values were refused:
+sessions: This value should be between 1 and 30.
 ```
 
 ### Another module answers too
@@ -1484,7 +1500,8 @@ drush state:delete data_surface_examples_workflow.state
 
 ```
 3. A new headline, once the workflow module has published the program
-Failed: The values were refused: @access: This may be seen and not changed, so nothing was written: The program is published in its workflow, so it is fixed.
+Failed: The values were refused:
+@access: This may be seen and not changed, so nothing was written: The program is published in its workflow, so it is fixed.
 ```
 
 Neither the program nor the fees changed, and Reset to defaults clears
@@ -1525,7 +1542,7 @@ final class DoorsResource implements ResourceInterface {
       ->setSetting('widget', 'time')
       ->addConstraint('Regex', [
         'pattern' => '/^([01]\d|2[0-3]):[0-5]\d$/D',
-        'message' => 'Write the time as HH:MM, such as 18:30.',
+        'message' => t('Write the time as HH:MM, such as 18:30.'),
       ]);
 
     $day = DataDefinition::create('string')
@@ -1592,7 +1609,8 @@ Success: Dry run of Configure the doors: the values were accepted and prepared, 
   values: {"opens":"19:00","days":["fri"],"badges":"printed","notes":"Doors close at ten.","greeters":["Ana","Ben"]}
 
 4. The badges sent null: refused, since they are always held
-Failed: The values were refused: badges: Badges cannot be cleared: it always holds a value, Printed at the door (printed) by default. Leave it out to keep what it holds.
+Failed: The values were refused:
+badges: Badges cannot be cleared: it always holds a value, Printed at the door (printed) by default. Leave it out to keep what it holds.
 ```
 
 ## How this page is kept true

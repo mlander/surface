@@ -27,7 +27,7 @@ final class ReviewStructure implements StructureInterface {
       ->setDescription(t('YYYY-MM-DD.'))
       ->addConstraint('Regex', [
         'pattern' => '/^\d{4}-\d{2}-\d{2}$/D',
-        'message' => 'Write the date as YYYY-MM-DD, such as 2026-10-19.',
+        'message' => t('Write the date as YYYY-MM-DD, such as 2026-10-19.'),
       ]);
     $inputs->add('reviewed_by', 'string', t('Reviewed by'));
     $inputs->narrow('reviewed_by')

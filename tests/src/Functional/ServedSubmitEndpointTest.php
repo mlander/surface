@@ -144,12 +144,18 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
       'stale' => [],
       'fingerprint' => $loaded['fingerprint'],
     ]));
-    $this->assertSame(['committed', 'valid', 'violations', 'stale', 'notes', 'outputs', 'contract', 'created'], array_keys($answer));
+    $keys = ['committed', 'valid', 'violations', 'stale', 'notes', 'changes', 'outputs', 'contract', 'created'];
+    $this->assertSame($keys, array_keys($answer));
     $this->assertTrue($answer['committed']);
     $this->assertTrue($answer['valid']);
     $this->assertSame([], $answer['violations']);
     $this->assertSame([], $answer['stale']);
     $this->assertSame([], $answer['outputs']);
+    // What moved, by path; sent again, nothing does, and nothing is saved.
+    $this->assertSame(['title', 'venue', 'room', 'capacity'], $answer['changes']);
+    $again = $this->json($this->post(self::STEP2 . '/submit', ['values' => self::VALID, 'stale' => []]));
+    $this->assertTrue($again['committed']);
+    $this->assertSame([], $again['changes']);
     // The operation configures; it creates nothing to move to.
     $this->assertNull($answer['created']);
 

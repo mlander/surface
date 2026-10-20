@@ -46,7 +46,10 @@ with two properties that matter here:
   properties; `$` only at the very end), not with an ECMA engine. Where
   the schema carries a PCRE construct ECMA does not have, opis agrees
   with PHP and an ECMA client (a browser, ajv) would refuse the pattern
-  as a syntax error or read it otherwise. No ECMA engine is run here.
+  as a syntax error or read it otherwise. No ECMA engine was run for
+  this audit; since 2026-10-20 the React app's Vitest reads the pattern
+  subset's rows (`tests/fixtures/pattern-engines.json`) with one
+  ([decision](decisions.md#a-pattern-both-engines-read-alike)).
 - **`Validator` runs with its extensions on.** One of them,
   `allowDefaults`, drops every property that has a `default` from
   `required` and fills it in before validating. A standard validator
@@ -516,8 +519,10 @@ Each is a line or two on the schema side; none is applied.
 
 ## Not verified
 
-- No ECMA engine runs in the suite: every ECMA reading in section 4 is
-  from the ECMA-262 grammar, not from a run.
+- No ECMA engine ran for this audit: every ECMA reading in section 4 is
+  from the ECMA-262 grammar, not from a run. Since 2026-10-20 one does,
+  over the rows of `tests/fixtures/pattern-engines.json` only, in the
+  React app's Vitest.
 - `Country`'s resolver against the address module's validator (the
   module is not in the suite).
 - Whether a content type or a field storage with a trailing newline in

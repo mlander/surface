@@ -1016,6 +1016,67 @@ renames sit in A because they are cheapest before new code exists.
       Open, in `mcp_server_tool_bridge`: its config deriver caches an
       instance's schema, the discovering account's, for every client.
 
+    Batch two, the doors and agents:
+    - **B6, B7, B9, the listing in the discovering language.** DONE
+      2026-10-20: labels and descriptions reach the Tool API as lazy
+      objects, `PlainTextMarkup` decorates the original so a plural keeps
+      its count, language names vary by the interface language
+      (`ToolListingLanguageTest`,
+      `docs/decisions.md#a-static-tool-definition-is-no-accounts`). Open:
+      bundle and field labels read from configuration, and the slot
+      variant table's joined text, are still the discovering language's.
+    - **B10, refusals glued from fragments.** DONE 2026-10-20: the
+      constraint's message is kept whole and each sentence a refusal
+      adds is one source with a context, one per kind of condition and
+      one per count of conditions, plural by its count
+      (`Pipeline\Sentences`,
+      `docs/decisions.md#a-refusal-names-what-it-depends-on`).
+    - **B11, the licence refusal names the wrong reason.** DONE
+      2026-10-20: a condition says what the refiners were handed, "Event
+      licence is empty (EV-2048 was refused)"
+      (`DataSurfaceInterface::withheldValues()`,
+      `ExamplesComplianceTest::testTheLicenceRefusalNamesWhatTheRuleWasHanded()`).
+    - **B12, a read then a write changes storage.** DONE 2026-10-20: the
+      stored representation is kept where the accepted forms are equal, a
+      default storage never held is not written, sent or not, a write that
+      changes nothing saves nothing, and every door answers `changes`
+      (`ReadWriteRoundTripTest`,
+      `docs/decisions.md#absent-keeps-null-clears`).
+    - **B13, failure categories.** DONE 2026-10-20: permission refusals
+      and a resource locked whole are `Access`, an id that names nothing
+      is "Not found" input for an account the permission lets in, one
+      violation per line (`ToolResultShapeTest`, `ReadToolTest`).
+    - **B14, undeclared outputs.** DONE 2026-10-20: `changes`, `notes` and
+      `stale` declared with descriptions; a read only operation's tool
+      takes no `dry_run` and answers no `committed` or `changes`
+      (`ToolResultShapeTest`).
+    - **B15, B16, B17, the form.** DONE 2026-10-20: with Inline Form
+      Errors off an error names its field; an AJAX error carries an id
+      in its input's `aria-describedby`; one polite announcement per
+      rebuild says what changed; a lock says its access answer's reason,
+      a form locked whole marks nothing required, a read only operation's
+      button is the operation's label; each Remove button names its item
+      (`ErrorsNameTheirFieldTest`, `RebuildAnnouncesTest`,
+      `LockReasonFormTest`, `RemoveButtonNamesTest`). Open: the stale
+      select's required marker (section 3.5).
+    - **B19, the memo leak.** DONE 2026-10-20: the options memo is a
+      `WeakMap`, the kept static answers are bounded at 256
+      (`LongLivedWorkerMemoryTest`).
+    - **B20, the pattern subset under Unicode.** DONE 2026-10-20: `\d`,
+      `\w`, `\s` and `\b` are carried only without `u`, a negated class
+      never; one fixture is checked by PHP and by the app's Vitest
+      (`PatternUnderUnicodeTest`,
+      `docs/decisions.md#a-pattern-both-engines-read-alike`).
+    - **B27, messages translators can see.** DONE 2026-10-20: a message
+      option may be written with `t()` and the build hands Symfony its
+      source; `patternMessage` is translated; a Symfony-spelled message
+      keeps a second source in the tool, by decision
+      (`ConstraintMessageTranslationTest`, `docs/semantics.md`).
+    - **B28, small stale facts.** DONE 2026-10-20: the tool README on an
+      unknown subject, `docs/entities.md` on the default translation;
+      `docs/evolution.md` already said nineteen baselines. The stale
+      select's wording stays a decision (section 3.5).
+
 ## Rejected, on the record
 
 So they are not re-proposed: imperative input-mutation hooks before

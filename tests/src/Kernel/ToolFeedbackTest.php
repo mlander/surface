@@ -60,7 +60,7 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
   /**
    * The venues, as a refusal lists them.
    */
-  protected const VENUES = 'choose Riverside Hall (riverside), Old Library (library) or Harbour Centre (harbour)';
+  protected const VENUES = 'Choose Riverside Hall (riverside), Old Library (library) or Harbour Centre (harbour)';
 
   /**
    * {@inheritdoc}
@@ -104,8 +104,8 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
   protected function refused(array $values): array {
     [$success, $message] = $this->call(ExampleCalls::TOOL, $values);
     $this->assertFalse($success, 'Refused.');
-    $this->assertMatchesRegularExpression('/^The values were refused: [^ ]+: .+$/', $message);
-    [$path, $sentence] = explode(': ', substr($message, strlen('The values were refused: ')), 2);
+    $this->assertMatchesRegularExpression('/^The values were refused:\n[^ ]+: .+$/', $message);
+    [$path, $sentence] = explode(': ', substr($message, strlen("The values were refused:\n")), 2);
     $this->assertStringNotContainsString(': ', $sentence, 'One key refused: ' . $message);
     return [$path, $sentence];
   }
@@ -128,7 +128,7 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
    */
   protected static function fix(array $values, array $refusal, ?string $meant = NULL): array {
     [$path, $sentence] = $refusal;
-    if (preg_match('/choose (.+)\.$/', $sentence, $list) && preg_match_all('/([^,]+?) \(([^)]+)\)/', preg_replace('/^(.*) or /', '$1, ', $list[1]), $choices, PREG_SET_ORDER)) {
+    if (preg_match('/Choose (.+)\.$/', $sentence, $list) && preg_match_all('/([^,]+?) \(([^)]+)\)/', preg_replace('/^(.*) or /', '$1, ', $list[1]), $choices, PREG_SET_ORDER)) {
       $fixed = $choices[0][2];
       foreach ($choices as [, $label, $value]) {
         if (trim($label) === $meant) {
@@ -234,24 +234,24 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
       'pricing' => 'free',
     ];
     $compliance = static fn (array $keys): array => ['third_party_settings' => ['data_surface_examples_compliance' => $keys]];
-    $rooms = 'choose Main hall (riverside_main) or East room (riverside_east)';
+    $rooms = 'Choose Main hall (riverside_main) or East room (riverside_east)';
     $not_valid = 'The value you selected is not a valid choice';
     $refusals = [
       'a value on no list' => [
         ['venue' => 'riverside_hall'] + $event,
-        'venue: ' . $not_valid . '; ' . self::VENUES . '.',
+        'venue: ' . $not_valid . '. ' . self::VENUES . '.',
       ],
       'a value on another venue\'s list' => [
         ['room' => 'library_reading'] + $event,
-        'room: ' . $not_valid . ' when Venue is Riverside Hall; ' . $rooms . '.',
+        'room: ' . $not_valid . '. This applies when Venue is Riverside Hall. ' . $rooms . '.',
       ],
       'a value on no room\'s list' => [
         ['room' => 'main_hall'] + $event,
-        'room: ' . $not_valid . ' when Venue is Riverside Hall; ' . $rooms . '.',
+        'room: ' . $not_valid . '. This applies when Venue is Riverside Hall. ' . $rooms . '.',
       ],
       'a bound siblings set' => [
         ['capacity' => 500] + $event,
-        'capacity: This value should be between 1 and 100 when Room is East room and Event licence is empty.',
+        'capacity: This value should be between 1 and 100. This applies when Room is East room and Event licence is empty.',
       ],
       'a pattern' => [
         $compliance(['licence' => 'EV-2048', 'stewards' => 1]) + $event,
@@ -259,7 +259,7 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
       ],
       'a bound through a port' => [
         $compliance(['stewards' => 1]) + ['capacity' => 100] + $event,
-        self::COMPLIANCE . '.stewards: This value should be 2 or more when Capacity is 100.',
+        self::COMPLIANCE . '.stewards: This value should be 2 or more. This applies when Capacity is 100.',
       ],
       'a key its own declaration requires names no condition' => [
         ['title' => ''] + $event,
@@ -267,22 +267,25 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
       ],
     ];
     foreach ($refusals as $which => [$values, $expected]) {
-      $this->assertSame([FALSE, 'The values were refused: ' . $expected], $this->call(ExampleCalls::TOOL, $values), $which);
+      $this->assertSame([FALSE, "The values were refused:\n" . $expected], $this->call(ExampleCalls::TOOL, $values), $which);
     }
 
     $shelves = array_slice(LogbookResource::SHELVES, 0, DataSurfacePipeline::CHOICES_SHOWN);
     $this->assertSame(
-      [FALSE, 'The values were refused: shelf: ' . $not_valid . '; choose ' . implode(', ', $shelves) . ' and 2 more.'],
+      [
+        FALSE,
+        "The values were refused:\n" . 'shelf: ' . $not_valid . '. Choose ' . implode(', ', $shelves) . ' or one of 2 more.',
+      ],
       $this->call('data_surface:tool_test.logbook:configure', ['shelf' => 'z9']),
       'A long list is capped, and says how many more.',
     );
     $this->assertSame(
-      [FALSE, 'The values were refused: pages: This value should be between 1 and 500.'],
+      [FALSE, "The values were refused:\n" . 'pages: This value should be between 1 and 500.'],
       $this->call('data_surface:tool_test.logbook:configure', ['pages' => 900]),
       'A bound no sibling sets says itself.',
     );
     $this->assertSame(
-      [FALSE, 'The values were refused: send_day: Send day does not apply when Frequency is Monthly.'],
+      [FALSE, "The values were refused:\n" . 'send_day: Send day does not apply when Frequency is Monthly.'],
       $this->call('data_surface:resource_test.bulletin:configure', ['frequency' => 'monthly', 'send_day' => 'monday']),
       'A key that does not apply says so, in the sentence it always said.',
     );
@@ -306,7 +309,7 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
     $this->assertSame([TRUE, $dry_run], $this->call(ExampleCalls::TOOL, ['capacity' => 40]), 'The required keys left out keep what is stored.');
     [$success, $message] = $this->call(ExampleCalls::TOOL, ['venue' => 'riverside_hall'] + $event);
     $this->assertFalse($success);
-    $this->assertSame('The values were refused: venue: The value you selected is not a valid choice; ' . self::VENUES . '.', $message);
+    $this->assertSame("The values were refused:\n" . 'venue: The value you selected is not a valid choice. ' . self::VENUES . '.', $message);
     $listed = $this->container->get('plugin.manager.tool')->getDefinition(ExampleCalls::TOOL)->getInputDefinition(OperationInputs::VALUES);
     $this->assertInstanceOf(MapInputDefinition::class, $listed);
     $venue = $listed->getPropertyDefinition('venue');
@@ -348,12 +351,15 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
       $this->assertTrue($success, $step . ', fixed in one retry: ' . $message);
     }
     $this->assertSame([
-      'the venue, by name' => ['venue', 'The value you selected is not a valid choice; ' . self::VENUES . '.'],
+      'the venue, by name' => ['venue', 'The value you selected is not a valid choice. ' . self::VENUES . '.'],
       'a room of another venue' => [
         'room',
-        'The value you selected is not a valid choice when Venue is Riverside Hall; choose Main hall (riverside_main) or East room (riverside_east).',
+        'The value you selected is not a valid choice. This applies when Venue is Riverside Hall. Choose Main hall (riverside_main) or East room (riverside_east).',
       ],
-      'twice the capacity' => [self::COMPLIANCE . '.stewards', 'This value should be 5 or more when Capacity is 240.'],
+      'twice the capacity' => [
+        self::COMPLIANCE . '.stewards',
+        'This value should be 5 or more. This applies when Capacity is 240.',
+      ],
     ], $said);
     $this->assertSame(['riverside', 'riverside_main', 240, 5], [
       $values['venue'],
@@ -365,7 +371,7 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
     // The examples' README quotes the three refusals.
     $readme = (string) file_get_contents(dirname(__DIR__, 3) . '/modules/data_surface_examples/README.md');
     foreach ($said as [$path, $sentence]) {
-      $this->assertStringContainsString('Failed: The values were refused: ' . $path . ': ' . $sentence, $readme);
+      $this->assertStringContainsString("Failed: The values were refused:\n" . $path . ': ' . $sentence, $readme);
     }
   }
 

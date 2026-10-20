@@ -481,21 +481,53 @@ the tool's refusal and the served contract all print the number. The
 tool's input definitions carry the constraint across respelled `%max`,
 so whatever holds a value to the listing's constraints says the same;
 the tool itself holds `values` to its shape alone before it runs, and
-leaves every rule to the pipeline.
+leaves every rule to the pipeline. The respelled copy is a second
+source a translator meets; a message spelled Drupal's way is copied as
+it is, so every door meets the one source its author wrote.
 
-A refusal says what is allowed for the values sent, in one sentence
-per key. One a refiner caused goes on to name what it depends on and
-what that holds: too few stewards for example 4's capacity reads "This
-value should be 3 or more when Capacity is 150." The pipeline adds it
-where the refused key, or the mounted property the refusal is about, is
-watched by a refiner and the refiners changed its constraints for these
-values; a rule the key declared itself names no condition. A value not
-on its key's list goes on to list what may be chosen, as refined for
-the values sent, each label with its value, at most ten and then how
-many more: "The value you selected is not a valid choice when Venue is
-Riverside Hall; choose Main hall (riverside_main) or East room
-(riverside_east)." The constraint's own message stays the first clause,
-the object it built ([decision](decisions.md#a-refusal-names-what-it-depends-on)).
+A message option may be written with `t()`; the build hands Symfony its
+source string. Written so, potx extracts it as it extracts every label:
+
+```php
+->addConstraint('Regex', [
+  'pattern' => '/^([01]\d|2[0-3]):[0-5]\d$/D',
+  'message' => t('Write the time as HH:MM, such as 18:30.'),
+]);
+```
+
+A Symfony constraint holds its message as a string, and core's
+validator translator translates that string when it makes a violation,
+in the language of the request. So when a data surface is sealed, and
+when a shape is copied for a key, each message option written with
+`t()` is replaced by its untranslated string (`ConstraintMessages`),
+and the validator, the served contract's `x-surface.patternMessage`
+(translated into the document's language, read as plain text) and the
+contract panel all meet that one source. Only a plain source is
+unwrapped: a message with arguments, a context or plural forms is left
+as the object it is, and Symfony reads it in the language of the
+request. A bare literal still validates and is still translated at
+violation time, but no translator sees it until someone has been
+refused with it.
+
+A refusal says what is allowed for the values sent, per key, in whole
+sentences. One a refiner caused goes on to name what it depends on and
+what that holds, as the refiners were handed it: too few stewards for
+example 4's capacity reads "This value should be 3 or more. This
+applies when Capacity is 150." The pipeline adds it where the refused
+key, or the mounted property the refusal is about, is watched by a
+refiner and the refiners changed its constraints for these values; a
+rule the key declared itself names no condition. A watched value its
+own key refused was handed over as nothing, and is said so: "... This
+applies when Room is Main hall and Event licence is empty (EV-2048 was
+refused)." A value not on its key's list is followed by what may be
+chosen, as refined for the values sent, each label with its value, at
+most ten and then how many more: "The value you selected is not a
+valid choice. This applies when Venue is Riverside Hall. Choose Main
+hall (riverside_main) or East room (riverside_east)." The constraint's
+own message comes first, whole, still the object it built, and each
+sentence added is one source a translator sees entire, never a
+concatenation of translated fragments
+([decision](decisions.md#a-refusal-names-what-it-depends-on)).
 
 There are exactly three places a message becomes text, all of them
 exception messages, because PHP has nowhere to put an object in one:

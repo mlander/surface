@@ -11,6 +11,7 @@ use Drupal\data_surface_tool_test\Storage\VaultStorage;
 use Drupal\node\Entity\NodeType;
 use Drupal\node\NodePreviewMode;
 use Drupal\Tests\user\Traits\UserCreationTrait;
+use Drupal\tool\FailureCategory;
 use Drupal\tool\Tool\ToolDefinition;
 use Drupal\tool\Tool\ToolInterface;
 use Drupal\tool\Tool\ToolOperation;
@@ -338,7 +339,11 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests a parameter that names nothing: refused as the write tool is.
+   * Tests a parameter that names nothing: not found, as the write tool says.
+   *
+   * B13 of the 2026-10-20 reviews: an account the operation's permission
+   * lets in heard "Access denied" for an id that names nothing, which an
+   * agent reads as final; a wrong id is input to correct.
    */
   public function testUnknownParameterFailsAsTheWriteToolDoes(): void {
     $read = $this->runTool('data_surface:node.type:edit:read', ['type' => 'nowhere']);
@@ -353,9 +358,12 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($read['success']);
     $this->assertFalse($write['success']);
     $this->assertSame($write['message'], $read['message']);
+    $this->assertStringStartsWith('Not found: ', $read['message']);
     $this->assertStringContainsString('there is none with the id "nowhere"', $read['message']);
+    $this->assertSame(FailureCategory::Input, $read['tool']->getResult()->getFailureCategory());
+    $this->assertSame(FailureCategory::Input, $write['tool']->getResult()->getFailureCategory());
     $this->assertSame($write['tool']->access(), $read['tool']->access());
-    $this->assertFalse($read['tool']->access());
+    $this->assertTrue($read['tool']->access(), 'An account the permission lets in hears that the id names nothing.');
   }
 
   /**

@@ -43,7 +43,7 @@ final class DoorsResource implements ResourceInterface {
       ->setSetting('widget', 'time')
       ->addConstraint('Regex', [
         'pattern' => '/^([01]\d|2[0-3]):[0-5]\d$/D',
-        'message' => 'Write the time as HH:MM, such as 18:30.',
+        'message' => t('Write the time as HH:MM, such as 18:30.'),
       ]);
 
     $day = DataDefinition::create('string')
