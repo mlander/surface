@@ -947,63 +947,71 @@ moved, and refuses it, as the form's Save does.
 run: `submit(dry_run: TRUE)` with the access answer. Every value was
 sent on purpose, so nothing is discarded, the full-submit rule: a stale
 path sent empty is read as the stored value, and the run judges it, so a
-room left stale after its venue moved is refused. It answers:
+room left stale after its venue moved is refused. It answers the one
+result shape every door answers a run in
+([decision](decisions.md#one-result-at-every-door)), every key always
+present, and nothing else. Example 2's harbour sent with the library's
+garden room:
 
 ```json
 {
-  "valid": false,
-  "violations": [{"path": "capacity", "message": "This value should be between 1 and 150. This applies when Room is Upper deck."}],
-  "stale": [],
-  "notes": [],
-  "changes": ["capacity"],
-  "values": {...}
+  "ok": false, "committed": false, "changed": false, "changes": [],
+  "values": {"title": "Spring meetup", "open": true, "venue": "harbour", "room": "library_garden", "capacity": 50},
+  "violations": [{"path": "room", "code": "no_such_choice", "message": "The value you selected is not a valid choice. This applies when Venue is Harbour Centre. Choose Auditorium or Upper deck."}],
+  "notes": [], "stale": []
 }
 ```
 
-`violations` are refusals by full dotted path (`ticket.price`,
-`contact.email`, `@access`), messages rendered to plain text at this
-boundary; `stale` the non-blocking stale references; `notes` what the
-caller is told and nothing blocks, `{path, message}` (below); `changes`
-the dotted path of each stored value the write would change, a plan,
-empty when the values are what is stored
-([decision](decisions.md#absent-keeps-null-clears)); `values` what
-`accept()` made of the input, as the read tool would answer it: no key
-the build left out for this account, no secret, no key that does not
-apply. What storage rehearsed is not served: it holds what the caller
-may not see, so a dry run answers the accepted document and its verdict
+| Key | Holds |
+| --- | --- |
+| `ok` | Whether nothing was refused. |
+| `committed` | Whether the values were written; `false` here, always. |
+| `changed` | Whether the write moved a stored value; `false` unless committed. |
+| `changes` | The dotted path of each stored value the write changes, or on a dry run would change, a map by its own keys, a list whole: a plan, empty when the values are what is stored, and on a refusal ([decision](decisions.md#absent-keeps-null-clears)). |
+| `values` | What `accept()` made of the input, as the read tool would answer it: no key the build left out for this account, no secret, no key that does not apply. |
+| `violations` | Each refusal, `{path, code, message}`: the full dotted path (`ticket.price`, `contact.email`; empty for a refusal of the whole call), a stable [code](semantics.md#codes), and the message as plain text, rendered for a person as the form renders it, a key it depends on and a value by their labels alone. The tool renders the same refusal for a machine, a key by its path and a value by what is sent with its label beside it; the path and the code are the same at both doors, so a program calling this endpoint branches on them ([decision](decisions.md#one-result-at-every-door)). |
+| `notes` | Each value sent for a locked key that the key did not take, `{path, code, message}`, code `locked`, once per key: "Machine name is locked and kept as stored; the value sent was not taken." The key keeps what it holds and nothing is refused ([decision](decisions.md#locked-at-the-top)); a value sent as it is held says nothing. |
+| `stale` | Each stale reference kept, `{path, code, message, stored}`, code `stale`, with the stored value it keeps: the operation form's warning, said out loud. |
+
+What storage rehearsed is not served: it holds what the caller may not
+see, so a dry run answers the accepted document and its verdict
 ([decision](decisions.md#every-door-projects-what-the-read-tool-projects);
-`prepared` was answered until 2026-10-20). Nothing is written.
+`prepared` was answered until 2026-10-20). Nothing is written. Until
+2026-10-20 it answered `valid` for `ok`, entries without a code, and a
+refusal of the whole call under the path `@access`.
 
 **`POST .../submit`**, body `{values, stale, parameters, fingerprint?}`,
 is the same run, not dry: validate's body, validate's stale rule, the
 same access answer handed to `submit()`, and a write when nothing is
 refused. A refusal is data, not an error: the answer is 200 with
-`committed: false`, and nothing is written
+`ok: false` and `committed: false`, and nothing is written
 ([decision](decisions.md#a-refused-submit-is-an-answer)). 403 is for a
 request access refuses, or that carries no token; 400 for a malformed
 body (not an object; `values` or `parameters` not an object; `stale`
 not a list of strings; `fingerprint` neither a string nor `null`) or a
-resource or structure with no storage. Every key is always present:
+resource or structure with no storage. It answers validate's shape,
+every key always present, `changes` and `changed` now of the write
+itself (a write of what is stored changes nothing, and nothing was
+saved), and three keys of its own after it:
 
 | Key | Holds |
 | --- | --- |
-| `committed` | Whether the values were written. |
-| `valid` | Whether nothing was refused; on this endpoint the same answer as `committed`. |
-| `violations` | Each refusal, `{path, message}`, as validate's. |
-| `stale` | Each stale reference the write kept, `{path, message}`: the operation form's warning, said out loud. Present on a write as on a refusal. |
-| `notes` | Each value sent for a locked key that the key did not take, `{path, message}`, once per key: "Machine name is locked and kept as stored; the value sent was not taken." The key keeps what it holds and nothing is refused ([decision](decisions.md#locked-at-the-top)); a value sent as it is held says nothing. Present on a write as on a refusal. |
-| `changes` | The dotted path of each stored value the write changed, a map by its own keys, a list whole. Empty on a refusal, and on a write of what is stored, when nothing was saved: writing back what the read returned changes nothing ([decision](decisions.md#absent-keeps-null-clears)). |
 | `outputs` | The declared outputs as storage reads them back after the write (`StorageAdapter::outputs()`), the tool's same answer; `{}` when none are declared, as the examples, the content type and the field do. |
 | `contract` | On a write, the whole document rebuilt from what is stored now, `fingerprint` included, so a client re-renders without a second request; `null` on a refusal. |
 | `created` | On a write by an operation that creates, where the created thing now lives: `{surface, situation, parameters}`: the resource's id, the id of an operation of it that does not create ([below](#where-a-created-thing-lives)), and that operation's parameters; otherwise `null`. |
+
+A submit whose `fingerprint` no longer matches is refused whole, its
+one violation's path empty and its code `conflict`
+([below](#the-fingerprint-rule)).
 
 A refused example 2, the library's garden room sent with the harbour:
 
 ```json
 {
-  "committed": false, "valid": false,
-  "violations": [{"path": "room", "message": "The value you selected is not a valid choice. This applies when Venue is Harbour Centre. Choose Auditorium (harbour_auditorium) or Upper deck (harbour_deck)."}],
-  "stale": [], "notes": [], "changes": [], "outputs": {}, "contract": null, "created": null
+  "ok": false, "committed": false, "changed": false, "changes": [],
+  "values": {"title": "Spring meetup", "open": true, "venue": "harbour", "room": "library_garden", "capacity": 50},
+  "violations": [{"path": "room", "code": "no_such_choice", "message": "The value you selected is not a valid choice. This applies when Venue is Harbour Centre. Choose Auditorium or Upper deck."}],
+  "notes": [], "stale": [], "outputs": {}, "contract": null, "created": null
 }
 ```
 
@@ -1011,8 +1019,10 @@ The harbour's deck, written:
 
 ```json
 {
-  "committed": true, "valid": true, "violations": [], "stale": [], "notes": [],
-  "changes": ["title", "venue", "room", "capacity"], "outputs": {},
+  "ok": true, "committed": true, "changed": true,
+  "changes": ["title", "venue", "room", "capacity"],
+  "values": {"title": "Autumn meetup", "open": true, "venue": "harbour", "room": "harbour_deck", "capacity": 90},
+  "violations": [], "notes": [], "stale": [], "outputs": {},
   "contract": {
     "surface": "registration.step2", "situation": "configure", "label": "Configure registration (step 2)",
     "schema": {...},
@@ -1061,7 +1071,8 @@ the stored values `load()` returned, narrowed to the data surface's keys
 (`ServedOperations::fingerprint()`). A submit body may send it back.
 When it is sent and no longer matches what storage holds when the
 submit arrives, the submit is refused before the pipeline runs:
-`committed: false` and one violation at path `''`, "The stored values
+`ok: false`, `committed: false` and one violation at path `''`, code
+`conflict`, "The stored values
 changed since this form was loaded. Reload it to see them, then make
 your changes again.", with nothing written. When it is not sent (absent
 or `null`), the last write wins, as on the operation form

@@ -6,7 +6,7 @@ namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
+use Drupal\data_surface\Pipeline\Violation;
 use Drupal\data_surface\ResourceBuild\Resources;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface_resource_test\Resource\Gallery\GalleryResource;
@@ -153,8 +153,9 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
     $result = $this->submit(['drawers' => 9]);
     $this->assertFalse($result->isValid());
     $this->assertFalse($result->committed);
-    $violation = $result->violations->byKey(DataSurfacePipelineInterface::ACCESS_VIOLATION_KEY)[0];
-    $this->assertSame(DataSurfacePipelineInterface::ACCESS_VIOLATION_KEY, $violation->key);
+    $violation = $result->violations->byKey('')[0];
+    $this->assertSame('', $violation->fullPath());
+    $this->assertSame(Violation::LOCKED, $violation->code);
     $this->assertSame('This may be seen and not changed, so nothing was written: The cabinet may be audited, not changed.', (string) $violation->message);
     $this->assertSame(self::STORED, $this->container->get('state')->get(CabinetStorage::KEY));
 
@@ -226,7 +227,7 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
     $this->assertSame([], $this->submit(['lock_settings' => ['digits' => 5]])->notes, 'What it holds, sent back, was taken.');
     $write = $this->runTool('data_surface:tool_test.cabinet:edit', [OperationInputs::VALUES => ['lock_settings' => ['digits' => 7]]]);
     $this->assertTrue($write['success'], $write['message']);
-    $this->assertSame('Edit the cabinet: the values were accepted, and they are what is stored, so nothing was written. lock_settings.digits: Digits is locked and kept as stored; the value sent was not taken.', $write['message']);
+    $this->assertSame("Edit the cabinet: the values were accepted, and they are what is stored, so nothing was written.\nlock_settings.digits: Digits is locked and kept as stored; the value sent was not taken.", $write['message']);
 
     // Chosen anew from the key lock, it starts from its defaults, fixed.
     $this->container->get('state')->set(CabinetStorage::KEY, ['lock' => 'key', 'lock_settings' => ['keys' => 3]] + self::STORED);

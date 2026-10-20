@@ -50,7 +50,7 @@ class OperationKindsTest extends DataSurfaceKernelTestBase {
    */
   protected const RULES = [
     'create' => 'Create: a key left out takes its default, and every key marked required must be sent.',
-    'update' => 'Update: send only the keys to change; a key left out keeps its value, null clears it. The read tool returns the current values.',
+    'update' => 'Update: send only the keys to change; a key left out keeps its value, null clears it, and values {} changes nothing. The read tool returns the current values.',
     'read' => 'Read only: nothing is written; a key left out is checked at its current value.',
   ];
 
@@ -130,7 +130,8 @@ class OperationKindsTest extends DataSurfaceKernelTestBase {
         continue;
       }
       $this->assertSame([], $this->required($values), $id . ': nothing is required at the door.');
-      $this->assertFalse($values->isRequired(), $id);
+      // The map itself is always sent, {} when nothing changes.
+      $this->assertTrue($values->isRequired(), $id);
       foreach ($requires as $name) {
         $this->assertStringEndsWith(self::NOTE, (string) $values->getPropertyDefinition($name)?->getDescription(), $id . ': ' . $name);
       }

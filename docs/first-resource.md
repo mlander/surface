@@ -266,14 +266,23 @@ drush tool:run data_surface:first.newsletter:configure:read --uid=1
 `tool:info` lists the same four keys, bounded as the class says. The
 operation changes settings that exist, so the tool requires none of
 them: the three the class requires say "Required; a value already
-stored stands when left out." in their descriptions. The write answers:
+stored stands when left out." in their descriptions. `values` itself is
+always sent, `{}` when nothing changes. The write answers, in the one
+result shape every door answers
+([decision](decisions.md#one-result-at-every-door)):
 
 ```
 Success: Configure the newsletter: the values were accepted and written.
 
 Outputs:
-  values: {"sender_name":"Weekly news","sender_email":"news@example.com","frequency":"monthly","max_recipients":500}
+  ok: true
   committed: true
+  changed: true
+  changes: ["sender_name","sender_email","frequency"]
+  values: {"sender_name":"Weekly news","sender_email":"news@example.com","frequency":"monthly","max_recipients":500}
+  violations: []
+  notes: []
+  stale: []
 ```
 
 The key left out, `max_recipients`, kept what was stored. A key the

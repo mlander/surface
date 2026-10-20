@@ -21,6 +21,7 @@ use Drupal\tool\TypedData\InputDefinition;
 use Drupal\tool\TypedData\InputDefinitionInterface;
 use Drupal\tool\TypedData\ListOutputDefinition;
 use Drupal\tool\TypedData\MapInputDefinition;
+use Drupal\tool\TypedData\MapOutputDefinition;
 use Drupal\tool\TypedData\OutputDefinition;
 
 /**
@@ -102,9 +103,24 @@ final class OperationInputs {
   public const DRY_RUN = 'dry_run';
 
   /**
+   * The output saying whether nothing was refused.
+   */
+  public const OK = 'ok';
+
+  /**
    * The output saying whether anything was written.
    */
   public const COMMITTED = 'committed';
+
+  /**
+   * The output saying whether a write moved a stored value.
+   */
+  public const CHANGED = 'changed';
+
+  /**
+   * The output listing each refusal.
+   */
+  public const VIOLATIONS = 'violations';
 
   /**
    * The output listing the paths a write changed, or a dry run would.
@@ -307,7 +323,7 @@ final class OperationInputs {
       $this->inputDefinitions->withStored($map, $built, $this->resources->storage($resource->name(), $context, $built)->load($built));
       $this->inputDefinitions->withoutRequired($map);
     }
-    return $map;
+    return $this->alwaysSent($map);
   }
 
   /**
@@ -387,6 +403,32 @@ final class OperationInputs {
         $this->inputDefinitions->withoutRequired($map);
       }
     }
+    return $input ? $this->alwaysSent($map) : $map;
+  }
+
+  /**
+   * Makes the `values` input one a call always sends, and never null.
+   *
+   * Required and NotNull, so a call without it, or with `null`, is
+   * refused by the Tool API's own validation before the tool runs, and
+   * the listing advertises an object and nothing else. What a key inside
+   * requires is the resource's: on an update none, so `{}` is a call that
+   * changes nothing. A top level null meant nothing while a nested one
+   * clears; now it is not sent at all.
+   *
+   * Decision: see
+   * docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door.
+   *
+   * @param \Drupal\tool\TypedData\MapInputDefinition $map
+   *   The map; changed in place.
+   *
+   * @return \Drupal\tool\TypedData\MapInputDefinition
+   *   The same map.
+   */
+  public function alwaysSent(MapInputDefinition $map): MapInputDefinition {
+    $map->setRequired(TRUE);
+    $map->addConstraint('NotNull');
+    $this->inputDefinitions->noted($map, $this->t('Always sent, as an object and never null: {} sends no key.'));
     return $map;
   }
 
@@ -554,33 +596,40 @@ final class OperationInputs {
   /**
    * Gets the tool's outputs for one resource.
    *
+   * The one result shape every door answers a run in, each key always
+   * present, then the resource's own outputs whose names do not collide
+   * with it. A read only operation answers the same keys: it writes
+   * nothing, so `committed` and `changed` are false and `changes` empty.
+   *
+   * Decision: see docs/decisions.md#one-result-at-every-door.
+   *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
    *
    * @return array<string, \Drupal\tool\TypedData\OutputDefinitionInterface>
-   *   `values` and `committed`, then the resource's own outputs whose
-   *   names do not collide with those two.
+   *   The result's keys, in ResultDocument::KEYS order, then the
+   *   resource's own outputs.
    */
   public function outputs(ResourceDefinition $resource, OperationDefinition $operation): array {
     $outputs = [
-      self::VALUES => new OutputDefinition(
-        data_type: 'map',
-        label: $this->t('Accepted values'),
-        description: $this->t('The values as the resource accepted them, with every declared default and stored value filled in, as the read tool would answer them: a secret is never returned, nor a key this account may not see.'),
+      self::OK => new OutputDefinition(
+        data_type: 'boolean',
+        label: $this->t('Accepted'),
+        description: $this->t('Whether nothing was refused. When false, violations says why, each by its path and its code.'),
       ),
-    ];
-    // A read only operation writes nothing at any door, so it says
-    // nothing about a write.
-    // Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
-    if (!$operation->readOnly) {
-      $outputs[self::COMMITTED] = new OutputDefinition(
+      self::COMMITTED => new OutputDefinition(
         data_type: 'boolean',
         label: $this->t('Written'),
-        description: $this->t('Whether the values were written; false for a dry run.'),
-      );
-      $outputs[self::CHANGES] = new ListOutputDefinition(
+        description: $this->t('Whether the values were written; false for a dry run, a refusal and an operation that writes nothing.'),
+      ),
+      self::CHANGED => new OutputDefinition(
+        data_type: 'boolean',
+        label: $this->t('Changed'),
+        description: $this->t('Whether the write moved a stored value; false when the values were what is stored, and nothing was saved.'),
+      ),
+      self::CHANGES => new ListOutputDefinition(
         label: $this->t('Changes'),
         description: $this->t('The dotted path of each stored value the write changed, or a dry run would change, a list as a whole. Empty when it changes nothing, and then nothing is saved: writing back what the read tool returned changes nothing.'),
         item_definition: new OutputDefinition(
@@ -588,25 +637,60 @@ final class OperationInputs {
           label: $this->t('Path'),
           description: $this->t('A dotted path in the values.'),
         ),
-      );
-    }
-    $outputs[self::NOTES] = new OutputDefinition(
-      data_type: 'map',
-      label: $this->t('Values not taken'),
-      description: $this->t('Present when a value was sent for a key that is locked: each such key by its dotted path, with why it kept what it holds. The call succeeded, but not as sent.'),
-      required: FALSE,
-    );
-    $outputs[self::STALE] = new OutputDefinition(
-      data_type: 'map',
-      label: $this->t('Values no longer available'),
-      description: $this->t('Present when a stored value is no longer one that may be chosen: each such key by its dotted path, with what to do. The call succeeded; choose a new value when you can.'),
-      required: FALSE,
-    );
+      ),
+      self::VALUES => new OutputDefinition(
+        data_type: 'map',
+        label: $this->t('Accepted values'),
+        description: $this->t('The values as the resource accepted them, with every declared default and stored value filled in, as the read tool would answer them: a secret is never returned, nor a key this account may not see.'),
+      ),
+      self::VIOLATIONS => $this->entries(
+        $this->t('Violations'),
+        $this->t('Each refusal: the dotted path of the key refused (empty for a refusal of the whole call), a stable code to branch on, and the message, which names a key it depends on by its path and a value by what is sent.'),
+      ),
+      self::NOTES => $this->entries(
+        $this->t('Values not taken'),
+        $this->t('Each value sent for a key that is locked, by its dotted path, code locked, with why it kept what it holds. The call succeeded, but not as sent.'),
+      ),
+      self::STALE => $this->entries(
+        $this->t('Values no longer available'),
+        $this->t('Each stored value kept that may no longer be chosen, by its dotted path, code stale, with what to do and the value kept. The call succeeded; choose a new value when you can.'),
+        TRUE,
+      ),
+    ];
     if (!$resource->hasOutputs()) {
       return $outputs;
     }
     $built = $this->resources->buildDeclared($resource->name(), new OperationContext($operation->id));
     return $outputs + $this->inputDefinitions->outputsFromSurface($built);
+  }
+
+  /**
+   * Declares a list of `{path, code, message}` entries.
+   *
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup $label
+   *   The list's label.
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup $description
+   *   The list's description.
+   * @param bool $stored
+   *   Whether each entry also carries `stored`, the value it keeps.
+   *
+   * @return \Drupal\tool\TypedData\ListOutputDefinition
+   *   The list.
+   */
+  protected function entries(TranslatableMarkup $label, TranslatableMarkup $description, bool $stored = FALSE): ListOutputDefinition {
+    $properties = [
+      'path' => new OutputDefinition(data_type: 'string', label: $this->t('Path'), description: $this->t('A dotted path in the values; empty for the whole call.')),
+      'code' => new OutputDefinition(data_type: 'string', label: $this->t('Code'), description: $this->t('A stable code: the same whatever the language and whatever the message says.')),
+      'message' => new OutputDefinition(data_type: 'string', label: $this->t('Message'), description: $this->t('What to say about it, as plain text.')),
+    ];
+    if ($stored) {
+      $properties['stored'] = new OutputDefinition(data_type: 'any', label: $this->t('Stored'), description: $this->t('The value kept.'), required: FALSE);
+    }
+    return new ListOutputDefinition(
+      label: $label,
+      description: $description,
+      item_definition: new MapOutputDefinition($label, $description, property_definitions: $properties),
+    );
   }
 
   /**
@@ -633,7 +717,7 @@ final class OperationInputs {
     return match ($operation->kind()) {
       OperationDefinition::READ => $this->t('@description Read only: nothing is written; a key left out is checked at its current value.', $arguments),
       OperationDefinition::CREATE => $this->t('@description Create: a key left out takes its default, and every key marked required must be sent.', $arguments),
-      default => $this->t('@description Update: send only the keys to change; a key left out keeps its value, null clears it. The read tool returns the current values.', $arguments),
+      default => $this->t('@description Update: send only the keys to change; a key left out keeps its value, null clears it, and values {} changes nothing. The read tool returns the current values.', $arguments),
     };
   }
 

@@ -282,7 +282,7 @@ abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsCle
         $violations[] = new Violation(static::THIRD_PARTY, (string) $module, $this->t('No config schema describes the settings the @module module stores in @name. That module declares them in its config schema.', [
           '@module' => $module,
           '@name' => $name,
-        ]));
+        ]), Violation::NO_SCHEMA);
       }
     }
     return $violations;

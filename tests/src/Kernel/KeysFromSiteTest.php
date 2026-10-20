@@ -217,8 +217,14 @@ class KeysFromSiteTest extends DataSurfaceKernelTestBase {
     $tool->setInputValue(OperationInputs::VALUES, ['lights' => ['press' => TRUE]]);
     $tool->execute();
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResult()->getMessage());
-    $this->assertSame('Configure the workshop: the values were accepted, and they are what is stored, so nothing was written. lights.press: Drill press is locked and kept as stored; the value sent was not taken.', PlainTextOutput::renderFromHtml((string) $tool->getResult()->getMessage()));
-    $this->assertSame(['lights.press' => 'Drill press is locked and kept as stored; the value sent was not taken.'], $tool->getResult()->getContextValues()['notes'] ?? NULL);
+    $this->assertSame("Configure the workshop: the values were accepted, and they are what is stored, so nothing was written.\nlights.press: Drill press is locked and kept as stored; the value sent was not taken.", PlainTextOutput::renderFromHtml((string) $tool->getResult()->getMessage()));
+    $this->assertSame([
+      [
+        'path' => 'lights.press',
+        'code' => 'locked',
+        'message' => 'Drill press is locked and kept as stored; the value sent was not taken.',
+      ],
+    ], $tool->getResult()->getContextValues()['notes'] ?? NULL);
     $this->assertFalse($this->config('data_surface_resource_test.workshop')->get('lights.press'));
   }
 

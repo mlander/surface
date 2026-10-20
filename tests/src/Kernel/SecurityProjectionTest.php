@@ -182,8 +182,8 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
     $this->assertSame($read['outputs'][OperationInputs::VALUES], $dry['outputs'][OperationInputs::VALUES], 'The dry run answers what the read answers.');
 
     $validated = $this->validate('event.program', 'configure', []);
-    $this->assertTrue($validated['valid']);
-    $this->assertSame(['valid', 'violations', 'stale', 'notes', 'changes', 'values'], array_keys($validated));
+    $this->assertTrue($validated['ok']);
+    $this->assertSame(['ok', 'committed', 'changed', 'changes', 'values', 'violations', 'notes', 'stale'], array_keys($validated));
     $this->assertArrayNotHasKey('fees', $validated['values']);
     $this->assertStringNotContainsString('concession', (string) json_encode($validated));
 
@@ -219,7 +219,7 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
     ]);
     $this->assertTrue($dry['success'], $dry['message']);
     $validated = $this->validate('tool_test.vault', 'configure', ['endpoint' => 'https://other.example.com']);
-    $this->assertTrue($validated['valid']);
+    $this->assertTrue($validated['ok']);
 
     foreach (['written' => $written['outputs'], 'dry run' => $dry['outputs'], 'validate' => $validated] as $door => $answer) {
       $encoded = (string) json_encode($answer);
@@ -382,6 +382,7 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
     foreach (['field_note', 'field_none'] as $name) {
       $tool = $tools->createInstance('data_surface:field.instance:edit');
       $tool->setInputValue('field', 'entity_test.entity_test.' . $name);
+      $tool->setInputValue(OperationInputs::VALUES, []);
       $result = $tool->access(User::getAnonymousUser(), TRUE);
       $this->assertFalse($result->isAllowed());
       $reasons[] = $result instanceof AccessResultReasonInterface ? (string) $result->getReason() : '';

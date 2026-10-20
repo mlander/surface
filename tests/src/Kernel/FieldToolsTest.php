@@ -723,9 +723,13 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
     $this->addField();
     $account = $this->createUser([self::PERMISSION]);
 
-    $this->assertTrue($this->createTool(self::EDIT)->access($account));
-    // The two that create take values that are required, so their own
-    // access check is asked directly, with the parameters alone.
+    // Every tool takes values, which a call always sends; the edit sends
+    // none to change.
+    $edit = $this->createTool(self::EDIT);
+    $edit->setInputValue(OperationInputs::VALUES, []);
+    $this->assertTrue($edit->access($account));
+    // The two that create take values whose keys are required, so their
+    // own access check is asked directly, with the parameters alone.
     $this->assertTrue($this->toolAccess(self::ADD, ['entity_type_id' => 'entity_test', 'bundle' => 'entity_test'], $account)->isAllowed());
     $reuse = ['storage' => 'entity_test.field_address', 'bundle' => 'entity_test'];
     $this->assertTrue($this->toolAccess(self::REUSE, $reuse, $account)->isAllowed());

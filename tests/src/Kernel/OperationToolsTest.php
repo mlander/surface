@@ -180,11 +180,12 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     $this->assertStringEndsWith('Required; a value already stored stands when left out.', (string) $values->getPropertyDefinitions()['name']->getDescription());
     $this->assertFalse($values->getPropertyDefinitions()['description']->isRequired());
     $this->assertStringNotContainsString('Required;', (string) $values->getPropertyDefinitions()['description']->getDescription());
-    $this->assertFalse($values->isRequired());
+    // The map is always sent, and requires nothing inside on an update.
+    $this->assertTrue($values->isRequired());
     // Adding one creates, so what the resource requires is required.
     $this->assertTrue($add->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['name']->isRequired());
     $this->assertStringEndsWith(' Create: a key left out takes its default, and every key marked required must be sent.', (string) $add->getDescription());
-    $this->assertStringEndsWith(' Update: send only the keys to change; a key left out keeps its value, null clears it. The read tool returns the current values.', (string) $edit->getDescription());
+    $this->assertStringEndsWith(' Update: send only the keys to change; a key left out keeps its value, null clears it, and values {} changes nothing. The read tool returns the current values.', (string) $edit->getDescription());
     // Editing changes what exists, so the listing carries no default,
     // declared or stored: a key left out keeps its current value.
     $this->assertNull($values->getPropertyDefinitions()['title_label']->getDefaultValue());
@@ -264,7 +265,7 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Recipe', $properties['name']->getDefaultValue());
     $this->assertSame('Dish', $properties['title_label']->getDefaultValue());
     $this->assertSame('Food', $properties['description']->getDefaultValue());
-    $this->assertFalse($values->isRequired());
+    $this->assertTrue($values->isRequired());
     $this->assertSame([], array_keys(array_filter($properties, static fn ($property): bool => $property->isRequired())));
     $this->assertStringEndsWith('Required; a value already stored stands when left out.', (string) $properties['name']->getDescription());
     $this->assertStringEndsWith('Required; a value already stored stands when left out.', (string) $properties['title_label']->getDescription());

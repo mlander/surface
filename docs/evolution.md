@@ -32,6 +32,9 @@ From the first tagged release on:
   compatible change never moves it.
 - Once stored-value migrations are built, values stored by any tagged
   release are converted forward when they are read.
+- The result shape every door answers a run in, and each violation's
+  `code` ([Codes](semantics.md#codes)); a message's wording is not
+  promised, since it moves with the site's language and its alters.
 
 Not promised: the PHP API, which stays experimental; the other
 submodules' configuration and resources, which are demonstrations and

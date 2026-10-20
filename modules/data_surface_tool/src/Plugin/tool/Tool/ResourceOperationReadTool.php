@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_tool\Plugin\tool\Tool;
 
+use Drupal\data_surface\Pipeline\Violation;
 use Drupal\data_surface_tool\OperationInputs;
 use Drupal\tool\ExecutableResult;
 use Drupal\tool\FailureCategory;
@@ -54,10 +55,10 @@ final class ResourceOperationReadTool extends ResourceOperationToolBase {
     // Asked again here, as the write tool does: execute() is callable from
     // PHP without an access check.
     if (!$this->operationAccess($resource, $context, $this->currentUser)->isAllowed()) {
-      return ExecutableResult::failure($this->t('You do not have permission to do this.'), [], FailureCategory::Access);
+      return $this->accessRefused($resource, $operation, $context);
     }
     if ($context->creates) {
-      return ExecutableResult::failure($this->t('@label creates what it is about, so nothing is stored to read.', ['@label' => (string) $operation->label]));
+      return $this->refused($this->t('@label creates what it is about, so nothing is stored to read.', ['@label' => (string) $operation->label]), Violation::NOT_FOUND, FailureCategory::Input);
     }
     $built = $this->resources->build($resource->name(), $context);
     return ExecutableResult::success(

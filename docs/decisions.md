@@ -1965,6 +1965,87 @@ leaves a secret out" are promises about every door, or about none.
 `ReferenceableCacheabilityTest`,
 `AdvertisedSchemaAcceptanceTest::testSecretInCollectionItemKeepsItsPlace()`)
 
+### One result at every door
+
+Decided 2026-10-20, from the deterministic callers and AI agents
+reviews (group C of the reviews' synthesis, approved by the owner). A
+run is answered in one shape wherever it is asked, refused or not, and
+every refusal carries a code a program branches on beside the sentence
+a person reads. Before, the tool answered a refusal as one translated
+sentence with no context, `notes` and `stale` as maps by path, the
+React endpoints as lists of `{path, message}` with `valid` beside
+them, and a refusal of the whole call under the pseudo-path `@access`:
+three shapes for one result, and nothing to branch on but text that
+moves with the site's language and its alters.
+
+- **The shape.** `{ok, committed, changed, changes, values, violations,
+  notes, stale}`, every key always present (`Pipeline\ResultDocument`,
+  `DataSurfaceResult::document()`): whether nothing was refused, whether
+  anything was written, whether the write moved a stored value, the
+  paths it changed or a dry run would, the accepted values as the read
+  tool would answer them, and three lists. A violation and a note are
+  `{path, code, message}`, a stale reference `{path, code, message,
+  stored}`; the message is plain text, rendered by the renderer the
+  door chooses ([A refusal names what it depends on](#a-refusal-names-what-it-depends-on)):
+  for a machine at the tool, keys by path and values as sent; for a
+  person at React, which a person reads as a form, labels alone, as the
+  form says it. The paths and the codes are the same at every door, so
+  an agent calling React still has the machine's facts in `path` and
+  `code` (decided 2026-10-20, the owner's follow-up: the renderer is
+  the door's choice, `DataSurfaceResult::document(machine:)`, not the
+  sentence's).
+- **A code on every violation.** `Violation::$code`, required by its
+  constructor: a constraint's Symfony code by the name its constraint
+  gives it (`not_in_range`, `too_long`, `no_such_choice`), a
+  constraint with no code named for itself in snake case, and the
+  module's own for its own refusals (`required`, `does_not_apply`,
+  `unknown_key`, `locked`, `cannot_clear`, `type_mismatch`,
+  `wrong_variant`, `no_variant`, `secret_in_item`, `not_found`,
+  `access`, `permission`, `conflict`, `no_schema`, `stale`). The table
+  is in [semantics](semantics.md#codes). Why the name and not Symfony's
+  UUID: the name stands for it one to one (`Constraint::getErrorName()`)
+  and reads in a log and a transcript. The pipeline dropped the
+  constraint's code until now.
+- **No `@access`.** A refusal of the whole call is a violation with an
+  empty path and its code, `access`, `permission`, `locked`,
+  `not_found` or `conflict`; `DataSurfacePipelineInterface::ACCESS_VIOLATION_KEY`
+  is gone. The pseudo-path was a path that named nothing, and the only
+  way to tell a resource locked whole from a refusal by access; the
+  code says which. A form files it as a form-level error, as before.
+- **`notes` and `stale` are lists.** The same entries as `violations`,
+  with codes: a value sent for a locked key and not taken is `locked`,
+  a stored value kept that the key no longer offers is `stale`, and
+  carries the value it keeps (left out for a secret).
+- **At each door.** The write tool's result carries the shape as its
+  context, on a refusal as on a success (`drush tool:run --json` prints
+  it as `outputs`), and declares each key as an output, a read only
+  operation's too, whose `committed` and `changed` are false and
+  `changes` empty; its text is one line per violation, "path:
+  message", after "The values were refused:", a refusal of the whole
+  call its message alone on its line, and a line per note after. The
+  resource's own outputs follow the shape, never over one of its keys.
+  React's `/validate` answers the shape and nothing else; `/submit`
+  answers it with its own `outputs`, `contract` and `created` after.
+  The read tool answers a read, `values` alone, and its refusals in the
+  shape. The form reads the same violations and renders them for a
+  person.
+- **The one place it cannot.** The Tool API holds a call to its input
+  definitions before the tool runs; through its runner (`drush
+  tool:run`, MCP, the AI connector) such a refusal, a `values` sent
+  null or a key of the wrong type, is answered by the Tool API itself,
+  `{success, error, error_type}`, and the tool never sees it. Where the
+  tool is the one answering, `execute()` called directly as a PHP
+  caller, ECA or a page does, the same refusal is answered in the
+  shape, each violation by its path in `values` with a code, `required`
+  for a property left out.
+
+(`Pipeline\Violation`, `Pipeline\ResultDocument`,
+`DataSurfaceResult::document()`, `ResourceOperationTool::doExecute()`,
+`ResourceOperationTool::execute()`, `ResourceOperationToolBase::refused()`,
+`OperationInputs::outputs()`, `ResourceApiController::validate()`,
+`ResourceApiController::submit()`, `ResultCodesTest`,
+`ToolResultShapeTest`)
+
 ### Locked at the top
 
 A resource whose own access class answers locked, asked on its own, is
@@ -1991,7 +2072,8 @@ reading under which a locked answer at the top was a refusal.
 - **The doors.** The form draws every element disabled, says why above
   them and offers no Save. The pipeline refuses a submit before storage
   is loaded, by name ("This may be seen and not changed, so nothing was
-  written: ..."), under `@access`, so the form, the write tool and the
+  written: ..."), a violation of the whole call with the code `locked`
+  (until 2026-10-20 under `@access`), so the form, the write tool and the
   React `/submit` and `/validate` refuse alike, the write tool in the
   Tool API's `Access` category, since no other values would be taken
   (2026-10-20, B13); the read tool answers.
@@ -2033,13 +2115,14 @@ keeps, read as though the key were open (a form's `"0"` for a stored
 `FALSE`, or a map sent with fewer keys, each as held, is what it keeps
 and says nothing), "<Label> is locked and kept as stored; the value
 sent was not taken." The notes block nothing and are no violation
-(`DataSurfaceResult::$notes`): the write tool puts each after its
-message by its full path and lists them under `notes` beside `stale`;
-the React `/validate` and `/submit` answer `notes`, `{path, message}`,
-beside `stale`. The form needs none: it draws the key disabled, and
-posts what it holds. A resource locked whole is refused above, not
-noted. (`DataSurfacePipeline::acceptKey()`, `DataSurfacePipeline::takes()`,
-`ResultReportingTrait::notesSaid()`, `LockedAccessTest`,
+(`DataSurfaceResult::$notes`): the write tool puts each on a line of
+its own after its message, by its full path, and every door lists them
+under `notes` beside `stale`, `{path, code, message}`, code `locked`
+([One result at every door](#one-result-at-every-door)). The form
+needs none: it draws the key disabled, and posts what it holds. A
+resource locked whole is refused above, not noted.
+(`DataSurfacePipeline::acceptKey()`, `DataSurfacePipeline::takes()`,
+`ResultReportingTrait::withNotes()`, `LockedAccessTest`,
 `KeysFromSiteTest`, `ServedSubmitEndpointTest`)
 
 ### A variant is open, locked or not offered
@@ -2163,15 +2246,36 @@ value not on its list unexplained.
   should be 3 or more. This applies when Capacity is 150." When a list
   of allowed values made the refusal (a `Choice`, `LabeledChoice` or
   `AllowedValues`), a sentence lists the values the key allows as
-  refined for these values, each label with the value to send in
-  brackets, a value with no label of its own once: "The value you
-  selected is not a valid choice. This applies when Venue is Riverside
-  Hall. Choose Main hall (riverside_main) or East room
-  (riverside_east)." At most ten (`DataSurfacePipeline::CHOICES_SHOWN`),
+  refined for these values, each by its label, a value with no label of
+  its own by itself: "The value you selected is not a valid choice.
+  This applies when Venue is Riverside Hall. Choose Main hall or East
+  room." At most ten (`DataSurfacePipeline::CHOICES_SHOWN`),
   then "or one of 2 more"; an empty list says "Nothing may be chosen."
   A key that does not apply keeps its sentence, "Send day does not apply
   when Frequency is Monthly." A bound and a pattern say themselves,
   through the constraint's message.
+- **The machine's rendering: keys by path, values as sent** (decided
+  2026-10-20, from the AI agents review, group C of the reviews'
+  synthesis, approved by the owner, amending the form's bullet above,
+  whose list named each label with its value in brackets). The tool's
+  text and the `message` of its result ([One result at every
+  door](#one-result-at-every-door)) render the same sentences for a
+  machine: a key a condition names by its dotted path in the values a
+  caller sends, a port by the path of the key it reads, an item's
+  sibling by its path with the item's delta, and a value by what is
+  sent with its label beside it: "This applies when venue is riverside
+  (Riverside Hall). Choose riverside_main (Main hall) or
+  riverside_east (East room)." The form keeps labels alone, which is
+  what a person reads beside the field, and so does React's `message`,
+  a person's door too; its `path` and `code` are the tool's. Why: the listing names a key
+  by its path and the refusal named it by its label, which an alter
+  relabels and a language translates, so an agent matched two
+  vocabularies; and a label alone does not say what to send. One set of
+  sentences, two renderings: the keys and values are `Pipeline\Named`
+  placeholders, spelled by the renderer `Pipeline\Sentences::machine()`
+  chooses, so a translator still meets each sentence once. The refused
+  key itself keeps its label in "@label is required when ...": the
+  violation's path already names it.
 - **Whole sentences, for translation** (decided 2026-10-20, from the
   multilingual review, B10). Every sentence a refusal adds is one source
   string a translator sees entire, in the context `data_surface
@@ -2267,7 +2371,7 @@ value not on its list unexplained.
 
 (`DataSurfacePipeline::sayingWhatIsAllowed()`,
 `DataSurfacePipeline::conditions()`, `DataSurfacePipeline::appliesWhen()`,
-`Pipeline\Sentences`, `Entry::presenceDependencies()`,
+`Pipeline\Sentences`, `Pipeline\Named`, `Entry::presenceDependencies()`,
 `DataSurfacePipeline::choices()`,
 `DataSurfacePipeline::isRequired()`,
 `InputDefinitions::withDependencies()`, `ToolFeedbackTest`)
@@ -2315,13 +2419,16 @@ that destroys, or that is not idempotent, is refused at discovery.
   `Read` kind and every other the `Write` kind, and passes `destructive`
   to `setDestructive()`; a read tool is `Read` by what it is
   (`ResourceOperationToolDeriver::behaves()`). A read only operation's
-  tool takes no `dry_run` and answers no `committed` and no `changes`,
-  since it writes nothing at any door; every write tool declares what it
-  answers, `committed`, `changes`, and, optional, `notes` (values sent
+  tool takes no `dry_run`, since it writes nothing at any door; every
+  tool declares what it answers, each with a description, so a model
+  reading a success knows where to look for "accepted, but not as sent"
+  (decided 2026-10-20, B14): the one result shape, `ok`, `committed`,
+  `changed`, `changes`, `values`, `violations`, `notes` (values sent
   for a locked key, not taken) and `stale` (stored values no longer
-  available), each with a description, so a model reading a success
-  knows where to look for "accepted, but not as sent" (decided
-  2026-10-20, B14). The MCP bridge derives
+  available), a read only operation's too, whose `committed` and
+  `changed` are false and `changes` empty (*changed 2026-10-20: it
+  answered no `committed` and no `changes`; [One result at every
+  door](#one-result-at-every-door)*). The MCP bridge derives
   `readOnlyHint` from a kind that does not modify, `idempotentHint` from
   the kind, and `destructiveHint` from the flag. *Gap, to file:*
   idempotence is a property of the kind in the Tool API, not of the
@@ -2364,8 +2471,10 @@ that destroys, or that is not idempotent, is refused at discovery.
   literal quotes, which the MCP bridge escapes into entities: "Create: a
   key left out takes its default, and every key marked required must be
   sent.", "Update: send only the keys to change; a key left out keeps
-  its value, null clears it. The read tool returns the current
-  values.", "Read only: nothing is written; a key left out is checked at
+  its value, null clears it, and values {} changes nothing. The read
+  tool returns the current values." (the last clause since 2026-10-20,
+  [`values` required](#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)),
+  "Read only: nothing is written; a key left out is checked at
   its current value." It replaced a template that gave 38 of 65 tools
   one 32-word sentence. The read tool is named by what it does, not by
   its Tool API id, which an MCP client renames. No two tools share a
@@ -2404,7 +2513,8 @@ A derived tool's refusal names each violation with its message rendered
 as plain text before the line is handed on as a placeholder value. The
 line is escaped there, so a message's own placeholder markup (Range's
 `<em class="placeholder">`) would otherwise reach the caller, Drush
-included, as literal tags. (`ResultReportingTrait::violationSummary()`)
+included, as literal tags. Every door's `message` is rendered the same
+way. (`ResultDocument::message()`, `ResultReportingTrait::refusedMessage()`)
 
 ### Required is the resource's, and an update tool requires nothing at its door
 
@@ -2435,8 +2545,29 @@ listing, depends on whether the operation creates. One that creates
 lists the declared defaults, which are what a key left out becomes. One
 that changes a thing that exists lists none, at any depth, and its
 description's call rules say "Update: send only the keys to change; a
-key left out keeps its value, null clears it. The read tool returns the
-current values."
+key left out keeps its value, null clears it, and values {} changes
+nothing. The read tool returns the current values."
+
+**`values` itself is required, and never null** (decided 2026-10-20,
+from the AI agents review, group C of the reviews' synthesis, approved
+by the owner; section 3.6 of the synthesis). The map is required and
+carries `NotNull` (`OperationInputs::alwaysSent()`), and its
+description says "Always sent, as an object and never null: {} sends
+no key.", so the listing advertises an object and nothing else, and a
+call that leaves `values` out or sends `null` is refused by the Tool
+API's own validation before the tool runs ("values: This value should
+not be null."): the tool keeps the input as it was sent rather than the
+Tool API's reading of a required map left out, its definition's
+default, a map of every key's default, which on an update is a map of
+nulls (`ResourceOperationTool::resolveInputValues()`). Required here is
+the door's, not a key's: what a key inside requires is still the
+resource's, nothing on an update, so an update with nothing to change
+is `values: {}`, and the round trip rule keeps it a no-op
+([Absent keeps, null clears](#absent-keeps-null-clears)): it writes
+nothing and answers `changed: false`. Why: at the top `null` meant
+nothing while one level down it clears, so a caller that learned "null
+clears" read `values: null` as "clear everything", and a call with no
+`values` was read as every key's default.
 
 Why no required key on an update (decided 2026-10-19, replacing "a
 required key cannot be left out"): the Tool API refuses a required input
@@ -2465,7 +2596,8 @@ loads now, and the schema for these answers keeps current values in
 `values`; the full schema keeps declared defaults. A write through the
 tool no longer clears the definition cache, since nothing in the
 listing changed. (`OperationInputs::declaredValues()`,
-`OperationInputs::values()`, `InputDefinitions::withoutRequired()`,
+`OperationInputs::values()`, `OperationInputs::alwaysSent()`,
+`ResourceOperationTool::resolveInputValues()`, `InputDefinitions::withoutRequired()`,
 `InputDefinitions::withoutDefaults()`, `InputDefinitions::withStored()`,
 `OperationKindsTest`)
 
@@ -3690,8 +3822,9 @@ both the same way from the same keys. A status code is kept for what is
 not an answer about the values: 403 when access refuses the request
 before it runs, 400 when the body cannot be read. Access refused inside
 the pipeline (a forbidden answer the route did not already give) is
-still filed as the `@access` violation, the pipeline's own rule.
-(`ResourceApiController::submit()`)
+still filed as a violation of the whole call, its path empty and its
+code `access`, the pipeline's own rule ([One result at every
+door](#one-result-at-every-door)). (`ResourceApiController::submit()`)
 
 ### An empty identity key names nothing
 

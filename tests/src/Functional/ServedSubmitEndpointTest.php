@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Functional;
 
+use Drupal\data_surface\Pipeline\ResultDocument;
 use Drupal\Tests\BrowserTestBase;
 use Drupal\node\Entity\NodeType;
 use PHPUnit\Framework\Attributes\Group;
@@ -144,10 +145,13 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
       'stale' => [],
       'fingerprint' => $loaded['fingerprint'],
     ]));
-    $keys = ['committed', 'valid', 'violations', 'stale', 'notes', 'changes', 'outputs', 'contract', 'created'];
+    // The one result shape, then this door's own keys.
+    $keys = [...ResultDocument::KEYS, 'outputs', 'contract', 'created'];
     $this->assertSame($keys, array_keys($answer));
+    $this->assertTrue($answer['changed']);
+    $this->assertSame('harbour_deck', $answer['values']['room']);
     $this->assertTrue($answer['committed']);
-    $this->assertTrue($answer['valid']);
+    $this->assertTrue($answer['ok']);
     $this->assertSame([], $answer['violations']);
     $this->assertSame([], $answer['stale']);
     $this->assertSame([], $answer['outputs']);
@@ -195,9 +199,11 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
     // The garden room is the library's: a refusal, answered as data.
     $refused = $this->json($this->post($path, ['values' => ['room' => 'library_garden', 'capacity' => 20] + self::VALID]));
     $this->assertFalse($refused['committed']);
-    $this->assertFalse($refused['valid']);
-    $this->assertSame(['room'], array_column($refused['violations'], 'path'));
-    $this->assertNotSame('', $refused['violations'][0]['message']);
+    $this->assertFalse($refused['ok']);
+    $this->assertSame(['room' => 'no_such_choice'], array_column($refused['violations'], 'code', 'path'));
+    // A person's door: the message reads as the form's, by labels alone,
+    // while the path and the code are the tool's.
+    $this->assertSame('The value you selected is not a valid choice. This applies when Venue is Harbour Centre. Choose Auditorium or Upper deck.', $refused['violations'][0]['message']);
     $this->assertNull($refused['contract']);
     $this->assertNull($refused['created']);
 
@@ -220,9 +226,10 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
       'fingerprint' => $loaded['fingerprint'],
     ]));
     $this->assertFalse($refused['committed']);
-    $this->assertFalse($refused['valid']);
+    $this->assertFalse($refused['ok']);
     $this->assertCount(1, $refused['violations']);
     $this->assertSame('', $refused['violations'][0]['path']);
+    $this->assertSame('conflict', $refused['violations'][0]['code']);
     $this->assertStringContainsString('changed since this form was loaded', $refused['violations'][0]['message']);
     $this->assertSame($elsewhere, $this->stored());
 
@@ -287,7 +294,11 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
     ]));
     $this->assertTrue($renamed['committed'], (string) json_encode($renamed['violations']));
     $this->assertSame([
-      ['path' => 'type', 'message' => 'Machine name is locked and kept as stored; the value sent was not taken.'],
+      [
+        'path' => 'type',
+        'code' => 'locked',
+        'message' => 'Machine name is locked and kept as stored; the value sent was not taken.',
+      ],
     ], $renamed['notes']);
     $this->assertSame('recipe', $renamed['contract']['values']['type']);
 

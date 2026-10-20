@@ -27,6 +27,7 @@ interface Summary {
   kind: 'submit';
   valid: boolean;
   violations: Violation[];
+  notes: Violation[];
   stale: Violation[];
 }
 
@@ -238,7 +239,7 @@ export function SurfaceForm({
       const result = await api.submit(current.current, stale.current, send ? fingerprint.current : null);
       setFailure(null);
       setErrors(byPath(result.violations));
-      setSummary({ kind: 'submit', valid: result.committed, violations: result.violations, stale: result.stale });
+      setSummary({ kind: 'submit', valid: result.committed, violations: result.violations, notes: result.notes, stale: result.stale });
       if (!result.committed) {
         return;
       }
@@ -313,6 +314,15 @@ export function SurfaceForm({
               </ul>
             </>
           )}
+          {summary.notes.length > 0 ? (
+            <ul className="dsr-summary__notes">
+              {summary.notes.map((note) => (
+                <li key={note.path}>
+                  <code>{note.path}</code>: {note.message}
+                </li>
+              ))}
+            </ul>
+          ) : null}
           {summary.stale.length > 0 ? (
             <ul className="dsr-summary__stale">
               {summary.stale.map((reference) => (

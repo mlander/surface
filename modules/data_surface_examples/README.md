@@ -686,19 +686,37 @@ ddev exec php web/modules/custom/data_surface/scripts/examples-dry-run.php
 ```
 1. Valid values
 Success: Configure registration (step 3): the values were accepted and written.
-  values: {"title":"Autumn meetup","open":true,"venue":"harbour","room":"harbour_deck","capacity":50,"pricing":"paid","ticket":{"price":12.5,"currency":"EUR"},"contact":{"email":"events@example.com","phone":""}}
+  ok: true
   committed: true
+  changed: true
   changes: ["title","venue","room","pricing","ticket.price","ticket.currency","ticket.note"]
+  values: {"title":"Autumn meetup","open":true,"venue":"harbour","room":"harbour_deck","capacity":50,"pricing":"paid","ticket":{"price":12.5,"currency":"EUR"},"contact":{"email":"events@example.com","phone":""}}
+  violations: []
+  notes: []
+  stale: []
 
 2. A capacity above the room's
 Failed: The values were refused:
-capacity: This value should be between 1 and 30. This applies when Room is Garden room.
+capacity: This value should be between 1 and 30. This applies when room is library_garden (Garden room).
+  ok: false
+  committed: false
+  changed: false
+  changes: []
+  values: {"title":"Garden party","open":true,"venue":"library","room":"library_garden","capacity":45,"pricing":"free","ticket":{"note":null},"contact":{"email":"events@example.com","phone":""}}
+  violations: [{"path":"capacity","code":"not_in_range","message":"This value should be between 1 and 30. This applies when room is library_garden (Garden room)."}]
+  notes: []
+  stale: []
 
 3. A dry run
 Success: Dry run of Configure registration (step 3): the values were accepted and prepared, and nothing was written.
-  values: {"title":"Winter social","open":true,"venue":"riverside","room":"riverside_east","capacity":40,"pricing":"free","ticket":{"note":"Donations welcome"},"contact":{"email":"events@example.com","phone":""}}
+  ok: true
   committed: false
+  changed: false
   changes: ["title","venue","room","capacity","pricing","ticket.note","ticket.price","ticket.currency"]
+  values: {"title":"Winter social","open":true,"venue":"riverside","room":"riverside_east","capacity":40,"pricing":"free","ticket":{"note":"Donations welcome"},"contact":{"email":"events@example.com","phone":""}}
+  violations: []
+  notes: []
+  stale: []
 ```
 
 `changes` is every stored value the call changed, or a dry run would:
@@ -764,9 +782,11 @@ and the room's "Depends on venue. Required; a value already stored stands
 when left out."
 
 A refusal says what is allowed for the values sent, in one sentence per
-key: what the key depends on and what that holds, and for a value not
-on its list, the list as it stands for them, each label with the value
-to send. An agent fixes each key in one retry. `ToolFeedbackTest` plays
+key: what the key depends on, by its path, and what that holds, and for
+a value not on its list, the list as it stands for them, each value to
+send with its label beside it. The result carries the same refusal as
+data, each violation's path, a stable code and its message, which the
+agent reads instead of the text. An agent fixes each key in one retry. `ToolFeedbackTest` plays
 that loop as a dry run through the Tool API's runner, the way MCP and
 ECA call a tool: the agent sends the venue by name; then moves the
 event to a room of another venue; then doubles the capacity to 240,
@@ -774,11 +794,11 @@ leaving the stewards at three. The three refusals:
 
 ```
 Failed: The values were refused:
-venue: The value you selected is not a valid choice. Choose Riverside Hall (riverside), Old Library (library) or Harbour Centre (harbour).
+venue: The value you selected is not a valid choice. Choose riverside (Riverside Hall), library (Old Library) or harbour (Harbour Centre).
 Failed: The values were refused:
-room: The value you selected is not a valid choice. This applies when Venue is Riverside Hall. Choose Main hall (riverside_main) or East room (riverside_east).
+room: The value you selected is not a valid choice. This applies when venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room).
 Failed: The values were refused:
-third_party_settings.data_surface_examples_compliance.stewards: This value should be 5 or more. This applies when Capacity is 240.
+third_party_settings.data_surface_examples_compliance.stewards: This value should be 5 or more. This applies when capacity is 240.
 ```
 
 Each time the agent reads the fix from the refusal alone and the next
@@ -914,11 +934,11 @@ drush tool:run data_surface:event.bulletin:configure --uid=1 --input='{"values":
 ```
 1. A send day for a monthly bulletin
 Failed: The values were refused:
-send_day: Send day does not apply when Frequency is Monthly.
+send_day: Send day does not apply when frequency is monthly (Monthly).
 
 2. Eight items in a weekly issue
 Failed: The values were refused:
-items: This value should be between 1 and 5. This applies when Frequency is Weekly.
+items: This value should be between 1 and 5. This applies when frequency is weekly (Weekly).
 
 3. Eight items in a monthly issue, and no send day
 Success: Dry run of Configure the bulletin: the values were accepted and prepared, and nothing was written.
@@ -1093,7 +1113,7 @@ drush tool:run data_surface:event.press:configure --uid=1 --input='{"values":{"r
 ```
 1. A public contact with the email cleared
 Failed: The values were refused:
-contact.email: Email is required when Show on the press page is on.
+contact.email: Email is required when public is on.
 
 2. The same contact, not shown on the press page
 Success: Dry run of Configure the press page: the values were accepted and prepared, and nothing was written.
@@ -1101,7 +1121,7 @@ Success: Dry run of Configure the press page: the values were accepted and prepa
 
 3. A review date with no reviewer
 Failed: The values were refused:
-reviewed_by: Reviewed by is required when Reviewed on is set.
+reviewed_by: Reviewed by is required when reviewed_on is set.
 ```
 
 ```bash
@@ -1212,7 +1232,8 @@ drush tool:run data_surface:event.sales:configure --uid=1 --input='{"values":{"o
 
 ```
 1. Speaker tickets put on sale
-Success: Dry run of Configure ticket sales: the values were accepted and prepared, and nothing was written. on_sale.speaker: Speaker is locked and kept as stored; the value sent was not taken.
+Success: Dry run of Configure ticket sales: the values were accepted and prepared, and nothing was written.
+on_sale.speaker: Speaker is locked and kept as stored; the value sent was not taken.
   values: {"on_sale":{"standard":true,"student":true,"speaker":false},"limits":{"standard":{"per_order":4,"waiting_list":false},"student":{"per_order":1,"waiting_list":true},"speaker":{"per_order":1,"waiting_list":false}}}
 ```
 
@@ -1478,7 +1499,7 @@ drush state:delete data_surface_examples_workflow.state
 ```
 3. A new headline, once the workflow module has published the program
 Failed: The values were refused:
-@access: This may be seen and not changed, so nothing was written: The program is published in its workflow, so it is fixed.
+This may be seen and not changed, so nothing was written: The program is published in its workflow, so it is fixed.
 ```
 
 Neither the program nor the fees changed, and Reset to defaults clears
@@ -1584,7 +1605,7 @@ Success: Dry run of Configure the doors: the values were accepted and prepared, 
 
 4. The badges sent null: refused, since they are always held
 Failed: The values were refused:
-badges: Badges cannot be cleared: it always holds a value, Printed at the door (printed) by default. Leave it out to keep what it holds.
+badges: Badges cannot be cleared: it always holds a value, printed (Printed at the door) by default. Leave it out to keep what it holds.
 ```
 
 ## How this page is kept true

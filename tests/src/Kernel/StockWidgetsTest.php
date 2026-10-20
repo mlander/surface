@@ -295,8 +295,8 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
       }
       return $messages;
     };
-    $this->assertSame(['holidays' => 'On public holidays cannot be cleared: it always holds a value, Closed (closed) by default. Leave it out to keep what it holds.'], $refusals(['holidays' => NULL]));
-    $this->assertSame(['holidays' => 'On public holidays cannot be cleared: it always holds a value, Closed (closed) by default. Leave it out to keep what it holds.'], $refusals(['holidays' => '']), 'The empty string a form posts for nothing is null.');
+    $this->assertSame(['holidays' => 'On public holidays cannot be cleared: it always holds a value, Closed by default. Leave it out to keep what it holds.'], $refusals(['holidays' => NULL]));
+    $this->assertSame(['holidays' => 'On public holidays cannot be cleared: it always holds a value, Closed by default. Leave it out to keep what it holds.'], $refusals(['holidays' => '']), 'The empty string a form posts for nothing is null.');
     $this->assertSame(['after_hours' => 'After-hours access cannot be cleared: it always holds a value, off by default. Leave it out to keep what it holds.'], $refusals(['after_hours' => NULL]));
     $this->assertSame([], $refusals(['notes' => NULL]), 'Nullable in the schema: null clears it.');
     $this->assertSame([], $refusals(['holidays' => 'open']));

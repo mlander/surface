@@ -154,8 +154,12 @@ describe('the React form of example 2', () => {
       '/surface-api/registration.step2/configure/refine': answered,
       '/surface-api/registration.step2/configure/submit': () => ({
         committed: false,
-        valid: false,
-        violations: [{ path: 'room', message: 'The value you selected is not a valid choice.' }],
+        ok: false,
+        changed: false,
+        changes: [],
+        values: {},
+        notes: [],
+        violations: [{ path: 'room', code: 'no_such_choice', message: 'The value you selected is not a valid choice.' }],
         stale: [],
         outputs: {},
         contract: null,
@@ -198,8 +202,12 @@ describe('the React form of example 2', () => {
       '/surface-api/registration.step2/configure/refine': () => library,
       '/surface-api/registration.step2/configure/submit': () => ({
         committed: false,
-        valid: false,
-        violations: [{ path: 'room', message: 'The value you selected is not a valid choice.' }],
+        ok: false,
+        changed: false,
+        changes: [],
+        values: {},
+        notes: [],
+        violations: [{ path: 'room', code: 'no_such_choice', message: 'The value you selected is not a valid choice.' }],
         stale: [],
         outputs: {},
         contract: null,
@@ -237,9 +245,13 @@ describe('the React form of example 2', () => {
 
 describe('submitting example 2', () => {
   const loaded = { ...(example2 as unknown as Contract), fingerprint: 'fp-loaded' };
-  const refused = (violations: { path: string; message: string }[]) => ({
+  const refused = (violations: { path: string; code: string; message: string }[]) => ({
     committed: false,
-    valid: false,
+    ok: false,
+    changed: false,
+    changes: [],
+    values: {},
+    notes: [],
     violations,
     stale: [],
     outputs: {},
@@ -247,14 +259,18 @@ describe('submitting example 2', () => {
     created: null,
   });
 
-  it('writes, says so with the stale warnings, and re-renders from the contract it answers with', async () => {
+  it('writes, says so with the notes and the stale warnings, and re-renders from the contract it answers with', async () => {
     const written = { ...loaded, values: { ...loaded.values, title: 'Spring meetup, as stored' }, fingerprint: 'fp-written' };
     const { calls, fetcher } = server({
       '/surface-api/registration.step2/configure/submit': () => ({
         committed: true,
-        valid: true,
+        ok: true,
+        changed: true,
+        changes: ['title'],
+        values: {},
+        notes: [{ path: 'venue', code: 'locked', message: 'Venue is locked and kept as stored; the value sent was not taken.' }],
         violations: [],
-        stale: [{ path: 'room', message: 'The stored room is no longer offered; it was kept.' }],
+        stale: [{ path: 'room', code: 'stale', message: 'The stored room is no longer offered; it was kept.', stored: 'library_garden' }],
         outputs: {},
         contract: written,
         created: null,
@@ -270,6 +286,7 @@ describe('submitting example 2', () => {
     const summary = await screen.findByRole('status');
     expect(summary).toHaveTextContent('Saved: the values were written.');
     expect(summary).toHaveTextContent('room: The stored room is no longer offered; it was kept.');
+    expect(summary).toHaveTextContent('venue: Venue is locked and kept as stored; the value sent was not taken.');
     expect(screen.getByLabelText(/Event title/)).toHaveValue('Spring meetup, as stored');
     expect(navigate).not.toHaveBeenCalled();
 
@@ -290,7 +307,7 @@ describe('submitting example 2', () => {
   it('shows a refusal inline and in a summary, as Validate does', async () => {
     const { fetcher } = server({
       '/surface-api/registration.step2/configure/submit': () =>
-        refused([{ path: 'room', message: 'The value you selected is not a valid choice.' }]),
+        refused([{ path: 'room', code: 'no_such_choice', message: 'The value you selected is not a valid choice.' }]),
       '/surface-api/registration.step2/configure': () => loaded,
     });
     render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
@@ -306,7 +323,7 @@ describe('submitting example 2', () => {
   it('refuses a submit after someone else saved, the message without a path', async () => {
     const message = 'The stored values changed since this form was loaded. Reload it to see them, then make your changes again.';
     const { calls, fetcher } = server({
-      '/surface-api/registration.step2/configure/submit': () => refused([{ path: '', message }]),
+      '/surface-api/registration.step2/configure/submit': () => refused([{ path: '', code: 'conflict', message }]),
       '/surface-api/registration.step2/configure': () => loaded,
     });
     render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
@@ -319,7 +336,7 @@ describe('submitting example 2', () => {
 
   it('sends no fingerprint when the page turns it off', async () => {
     const { calls, fetcher } = server({
-      '/surface-api/registration.step2/configure/submit': () => refused([{ path: 'room', message: 'No.' }]),
+      '/surface-api/registration.step2/configure/submit': () => refused([{ path: 'room', code: 'no_such_choice', message: 'No.' }]),
       '/surface-api/registration.step2/configure': () => loaded,
     });
     render(<SurfaceForm settings={{ ...settings, sendFingerprint: false }} fetcher={fetcher} refineDelay={0} />);
@@ -356,7 +373,11 @@ describe('submitting an operation that creates', () => {
     const { fetcher } = server({
       '/surface-api/node.type/add/submit': () => ({
         committed: true,
-        valid: true,
+        ok: true,
+        changed: true,
+        changes: [],
+        values: {},
+        notes: [],
         violations: [],
         stale: [],
         outputs: {},
@@ -431,8 +452,12 @@ describe('the React form of example 3', () => {
     const { calls, fetcher } = server({
       '/surface-api/registration.step3/configure/submit': () => ({
         committed: false,
-        valid: false,
-        violations: [{ path: 'contact.email', message: 'This value is not a valid email address.' }],
+        ok: false,
+        changed: false,
+        changes: [],
+        values: {},
+        notes: [],
+        violations: [{ path: 'contact.email', code: 'invalid_format', message: 'This value is not a valid email address.' }],
         stale: [],
         outputs: {},
         contract: null,
@@ -508,7 +533,7 @@ describe('narrowing here, from the full schema', () => {
   it('shows the room the venue orphaned stale, on its empty option, and sends it back by its path', async () => {
     const { calls, fetcher } = recordedServer(narrowed2 as unknown as Recorded, 'registration.step2', {
       // Only what is sent matters here.
-      '/surface-api/registration.step2/configure/submit': () => ({ committed: false, valid: false, violations: [], stale: [], outputs: {}, contract: null, created: null }),
+      '/surface-api/registration.step2/configure/submit': () => ({ ok: false, committed: false, changed: false, changes: [], values: {}, violations: [], notes: [], stale: [], outputs: {}, contract: null, created: null }),
     });
     const submits = () => calls.filter((call) => call.url.endsWith('/submit'));
     render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
@@ -568,7 +593,7 @@ describe('narrowing here, from the full schema', () => {
 
   it('drops a key that does not apply, sends nothing for it, and requires it again where it applies', async () => {
     const { calls, fetcher } = recordedServer(bulletin as unknown as Recorded, 'resource_test.bulletin', {
-      '/surface-api/resource_test.bulletin/configure/submit': () => ({ committed: false, valid: false, violations: [], stale: [], outputs: {}, contract: null, created: null }),
+      '/surface-api/resource_test.bulletin/configure/submit': () => ({ ok: false, committed: false, changed: false, changes: [], values: {}, violations: [], notes: [], stale: [], outputs: {}, contract: null, created: null }),
     });
     const submits = () => calls.filter((call) => call.url.endsWith('/submit'));
     render(<SurfaceForm settings={{ ...settings, surface: 'resource_test.bulletin' }} fetcher={fetcher} refineDelay={0} />);

@@ -49,9 +49,9 @@ class ViolationSetTest extends UnitTestCase {
    * Tests that violations are read back by the key they were filed under.
    */
   public function testByKey(): void {
-    $first = new Violation('title', '', 'Too long.');
-    $second = new Violation('title', 'sub', 'Not a choice.');
-    $other = new Violation('limit', '', 'Too large.');
+    $first = new Violation('title', '', 'Too long.', 'invalid');
+    $second = new Violation('title', 'sub', 'Not a choice.', 'invalid');
+    $other = new Violation('limit', '', 'Too large.', 'invalid');
     $set = new ViolationSet([$first, $second, $other]);
 
     $this->assertFalse($set->isEmpty());
@@ -74,9 +74,9 @@ class ViolationSetTest extends UnitTestCase {
    */
   public function testIterationIsGroupedByKey(): void {
     $set = new ViolationSet([
-      new Violation('title', '', 'First.'),
-      new Violation('limit', '', 'Second.'),
-      new Violation('title', '', 'Third.'),
+      new Violation('title', '', 'First.', 'invalid'),
+      new Violation('limit', '', 'Second.', 'invalid'),
+      new Violation('title', '', 'Third.', 'invalid'),
     ]);
 
     $messages = array_map(
@@ -91,10 +91,10 @@ class ViolationSetTest extends UnitTestCase {
    * Tests the full path a violation names, with and without a sub-path.
    */
   public function testFullPath(): void {
-    $this->assertSame('title', (new Violation('title', '', 'Refused.'))->fullPath());
+    $this->assertSame('title', (new Violation('title', '', 'Refused.', 'invalid'))->fullPath());
     $this->assertSame(
       'extras.badge',
-      (new Violation('extras', 'badge', 'Refused.'))->fullPath(),
+      (new Violation('extras', 'badge', 'Refused.', 'invalid'))->fullPath(),
     );
   }
 
@@ -107,7 +107,7 @@ class ViolationSetTest extends UnitTestCase {
    */
   public function testMessagesStayObjects(): void {
     $message = new TranslatableMarkup('@label is required.', ['@label' => 'Title']);
-    $set = new ViolationSet([new Violation('title', '', $message)]);
+    $set = new ViolationSet([new Violation('title', '', $message, 'invalid')]);
 
     $this->assertSame($message, $set->byKey('title')[0]->message);
   }

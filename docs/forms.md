@@ -107,7 +107,8 @@ module spells the permission twice.
 
 An access refusal has no element to be flagged on (it belongs to the run
 rather than to a value), so `flagSurfaceErrors()` reports it as a
-form-level error under the reserved `@access` key. See
+form-level error: its key and path are empty, and its code says what
+refused. See
 [the access stage](pipeline.md#access).
 
 ## The merge rule

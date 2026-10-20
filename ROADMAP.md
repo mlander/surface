@@ -41,8 +41,9 @@ serving, and evolution.
 1. **Access on the contract** — DONE 2026-09-15. The method landed as
    `surfaceAccess()` because core action and block interfaces already
    own `access()` with incompatible signatures; the pipeline takes a
-   resolved `AccessResultInterface` on `submit()`; refusals land under
-   the reserved `@access` violation key; `DataSurfaceAccess::decisive()`
+   resolved `AccessResultInterface` on `submit()`; refusals land as a
+   violation of the whole call, code `access` (under the reserved
+   `@access` key until 2026-10-20); `DataSurfaceAccess::decisive()`
    is the idiom for a provider that owns an operation, since core
    permission and entity checks answer neutral on denial. (The headline
    net-new borrow, from Form
@@ -1049,8 +1050,8 @@ renames sit in A because they are cheapest before new code exists.
       violation per line (`ToolResultShapeTest`, `ReadToolTest`).
     - **B14, undeclared outputs.** DONE 2026-10-20: `changes`, `notes` and
       `stale` declared with descriptions; a read only operation's tool
-      takes no `dry_run` and answers no `committed` or `changes`
-      (`ToolResultShapeTest`).
+      takes no `dry_run` (`ToolResultShapeTest`); since group C it
+      answers every key of the result shape, nothing written.
     - **B15, B16, B17, the form.** DONE 2026-10-20: with Inline Form
       Errors off an error names its field; an AJAX error carries an id
       in its input's `aria-describedby`; one polite announcement per
@@ -1077,6 +1078,15 @@ renames sit in A because they are cheapest before new code exists.
       unknown subject, `docs/entities.md` on the default translation;
       `docs/evolution.md` already said nineteen baselines. The stale
       select's wording stays a decision (section 3.5).
+    - **Group C, one result at every door.** DONE 2026-10-20: a stable
+      code on every violation, a constraint's by the name of Symfony's
+      code; one shape, `{ok, committed, changed, changes, values,
+      violations, notes, stale}`, at the tool, React and `tool:run
+      --json`; no `@access` path; `values` required and never null; a
+      refusal for a machine names a key by its path and a value by what
+      is sent with its label (`ResultCodesTest`, `ToolResultShapeTest`,
+      `docs/decisions.md#one-result-at-every-door`,
+      `docs/semantics.md#codes`).
 
 ## Rejected, on the record
 

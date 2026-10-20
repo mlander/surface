@@ -165,7 +165,7 @@ class FirstResourceTest extends DataSurfaceKernelTestBase {
         // list item is indented by two spaces on every line.
         $this->assertTrue(str_contains($text, $answer) || str_contains((string) preg_replace('/^  /m', '', $text), $answer), sprintf('%s quotes another answer for %s: %s', $page, $run[0], $answer));
         $values = $result->getContextValues()[OperationInputs::VALUES] ?? NULL;
-        if ($values !== NULL && str_contains($text, '  values: ')) {
+        if ($result->isSuccess() && $values !== NULL && str_contains($text, '  values: ')) {
           $this->assertStringContainsString('  values: ' . json_encode($values, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $text, sprintf('%s quotes other values for %s.', $page, $run[0]));
         }
         $calls++;

@@ -6,7 +6,7 @@ namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Cache\CacheableMetadata;
-use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
+use Drupal\data_surface\Pipeline\Violation;
 use Drupal\data_surface_test\RecordingStorage;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -99,13 +99,13 @@ class PipelineAccessTest extends DataSurfaceKernelTestBase {
     );
 
     $this->assertCount(1, $result->violations);
-    $this->assertSame(
-      [DataSurfacePipelineInterface::ACCESS_VIOLATION_KEY],
-      $result->violations->keys(),
-    );
-    $violation = $result->violations->byKey(DataSurfacePipelineInterface::ACCESS_VIOLATION_KEY)[0];
-    // The refusal belongs to the run, not to a value inside a key.
+    // The refusal belongs to the run, not to a value inside a key: no
+    // key, no path, and its code.
+    $this->assertSame([''], $result->violations->keys());
+    $violation = $result->violations->byKey('')[0];
     $this->assertSame('', $violation->path);
+    $this->assertSame('', $violation->fullPath());
+    $this->assertSame(Violation::ACCESS, $violation->code);
     // A message object like every other violation's, with the reason
     // still a placeholder rather than text something would escape twice.
     $this->assertInstanceOf(\Stringable::class, $violation->message);
@@ -123,7 +123,7 @@ class PipelineAccessTest extends DataSurfaceKernelTestBase {
       access: AccessResult::forbidden(),
     );
 
-    $violation = $result->violations->byKey(DataSurfacePipelineInterface::ACCESS_VIOLATION_KEY)[0];
+    $violation = $result->violations->byKey('')[0];
     $this->assertSame('Access refused.', (string) $violation->message);
   }
 

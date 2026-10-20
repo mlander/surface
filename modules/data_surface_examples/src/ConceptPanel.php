@@ -504,7 +504,7 @@ final class ConceptPanel {
     }
     $lines = [($result->isSuccess() ? 'Success: ' : 'Failed: ') . PlainTextOutput::renderFromHtml((string) $result->getMessage())];
     foreach ($result->getContextValues() as $output => $value) {
-      if ($output === OperationInputs::VALUES && is_array($value) && !($result->getContextValues()[OperationInputs::COMMITTED] ?? FALSE)) {
+      if ($result->isSuccess() && $output === OperationInputs::VALUES && is_array($value) && !($result->getContextValues()[OperationInputs::COMMITTED] ?? FALSE)) {
         $lines[] = '  values: ' . json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
       }
     }

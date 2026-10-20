@@ -4,121 +4,69 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_tool;
 
-use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\data_surface\Pipeline\ResultDocument;
 use Drupal\data_surface\Pipeline\ViolationSet;
 
 /**
- * Turns what a pipeline run reported into what a tool result carries.
+ * Turns what a pipeline run reported into a tool result's text.
  *
- * The one boundary where a violation stops being a message object: a
- * tool result carries strings, so the objects are rendered here and
- * nowhere earlier. Shared by every tool in this module, because none of
- * them has anything to say about a violation that the pipeline did not
- * already say.
+ * The result's context is the run's one shape (ResultDocument); its text
+ * says the same for a reader, one line per violation and per note,
+ * "path: message", each message rendered for a machine: a key it depends
+ * on by its path, a value by what is sent and its label. A tool result
+ * carries strings, so the message objects are rendered here and nowhere
+ * earlier.
+ *
+ * Decision: see docs/decisions.md#one-result-at-every-door.
  */
 trait ResultReportingTrait {
 
   /**
-   * Turns pipeline violations into one message naming every path.
+   * Says why a run was refused, one violation per line.
    *
    * @param \Drupal\data_surface\Pipeline\ViolationSet $violations
    *   The violations, exactly as the pipeline reports them.
+   * @param \Drupal\data_surface\Pipeline\Violation[] $notes
+   *   The notes, as the pipeline reports them.
    *
-   * @return string
-   *   The violations, one per line, each prefixed by its full path. This
-   *   is the boundary a message object stops being one: a tool result
-   *   carries a single string, so the objects are rendered here and
-   *   nowhere earlier. Rendered as plain text, because the line is
-   *   handed on as a placeholder value and escaped there: a message's
-   *   own placeholder markup would otherwise reach the caller as
-   *   literal tags.
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   "The values were refused:" and a line per violation; a refusal of
+   *   the whole call, whose path is empty, is its message alone on its
+   *   line. Rendered as plain text inside, because the lines are handed
+   *   on as a placeholder value and escaped there.
    */
-  protected function violationSummary(ViolationSet $violations): string {
-    $lines = [];
-    foreach ($violations as $violation) {
-      $lines[] = $violation->fullPath() . ': ' . PlainTextOutput::renderFromHtml((string) $violation->message);
-    }
-    return implode("\n", $lines);
+  protected function refusedMessage(ViolationSet $violations, array $notes): TranslatableMarkup {
+    return $this->withNotes($this->t("The values were refused:\n@violations", [
+      '@violations' => ResultDocument::lines(...iterator_to_array($violations, FALSE)),
+    ]), $notes);
   }
 
   /**
-   * Names the stale references a run reported, as their own list.
-   *
-   * Beside the violations and never mixed into them, because they are a
-   * different instruction. A violation says "that input is wrong, send
-   * something else"; a stale reference says "nothing you sent is wrong,
-   * and a value that was already here points at something that is gone —
-   * choose again when you can". An agent that saw them as one list would
-   * either retry a request that succeeded or ignore a setting that has
-   * quietly stopped meaning anything.
-   *
-   * Empty for almost every run, and left out of the result entirely when
-   * it is, so nothing is added to the shape a caller reads on a normal
-   * save.
-   *
-   * @param \Drupal\data_surface\Pipeline\ViolationSet $violations
-   *   The violations, exactly as the pipeline reports them.
-   *
-   * @return array<string, string>
-   *   What to re-choose, keyed by the full path of the key holding it.
-   *   The messages are rendered here for the same reason the summary's
-   *   are: a tool result carries strings.
-   */
-  protected function staleReferences(ViolationSet $violations): array {
-    $stale = [];
-    foreach ($violations->stale() as $reference) {
-      $stale[$reference->fullPath()] = (string) $reference->message;
-    }
-    return $stale;
-  }
-
-  /**
-   * Names what a run told the caller and blocked nothing, by full path.
+   * Puts the notes after a result's message, one line per key.
    *
    * A value sent for a locked key is kept as stored, not refused, so a
-   * caller whose value did not land would otherwise not learn why. Once
-   * per key, beside the violations and the stale references and never
-   * mixed into either: nothing is wrong, and nothing needs choosing
-   * again.
+   * caller whose value did not land would otherwise not learn why. Beside
+   * the violations and never mixed into them: nothing is wrong.
    *
    * Decision: see docs/decisions.md#locked-at-the-top.
    *
-   * @param \Drupal\data_surface\Pipeline\Violation[] $notes
-   *   The notes, exactly as the pipeline reports them.
-   *
-   * @return array<string, string>
-   *   Each note's message, keyed by the full path of its key, rendered
-   *   as plain text for the reason the summary's are.
-   */
-  protected function notesSaid(array $notes): array {
-    $said = [];
-    foreach ($notes as $note) {
-      $said[$note->fullPath()] = PlainTextOutput::renderFromHtml((string) $note->message);
-    }
-    return $said;
-  }
-
-  /**
-   * Puts the notes after a result's message, one sentence per key.
-   *
    * @param \Drupal\Core\StringTranslation\TranslatableMarkup $message
    *   The message.
-   * @param array<string, string> $notes
-   *   The notes, as notesSaid() names them.
+   * @param \Drupal\data_surface\Pipeline\Violation[] $notes
+   *   The notes, as the pipeline reports them.
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup
-   *   The message, each note after it by its full path.
+   *   The message, each note on a line after it, "path: message".
    */
   protected function withNotes(TranslatableMarkup $message, array $notes): TranslatableMarkup {
     if ($notes === []) {
       return $message;
     }
-    $lines = [];
-    foreach ($notes as $path => $note) {
-      $lines[] = $path . ': ' . $note;
-    }
-    return $this->t('@message @notes', ['@message' => $message, '@notes' => implode(' ', $lines)]);
+    return $this->t("@message\n@notes", [
+      '@message' => $message,
+      '@notes' => ResultDocument::lines(...array_values($notes)),
+    ]);
   }
 
 }

@@ -189,7 +189,7 @@ class LabeledChoiceTest extends DataSurfaceKernelTestBase {
     $this->assertSame(self::MESSAGE, (string) $own);
     $this->assertInstanceOf(TranslatableMarkup::class, $choose);
     $this->assertSame(DataSurfacePipeline::REFUSAL_CONTEXT, $choose->getOption('context'));
-    $this->assertSame('The value you selected is not a valid choice. Choose Disabled (0), Optional (1) or Required (2).', (string) $message);
+    $this->assertSame('The value you selected is not a valid choice. Choose Disabled, Optional or Required.', (string) $message);
   }
 
   /**

@@ -520,14 +520,26 @@ rule the key declared itself names no condition. A watched value its
 own key refused was handed over as nothing, and is said so: "... This
 applies when Room is Main hall and Event license is empty (EV-2048 was
 refused)." A value not on its key's list is followed by what may be
-chosen, as refined for the values sent, each label with its value, at
-most ten and then how many more: "The value you selected is not a
-valid choice. This applies when Venue is Riverside Hall. Choose Main
-hall (riverside_main) or East room (riverside_east)." The constraint's
-own message comes first, whole, still the object it built, and each
-sentence added is one source a translator sees entire, never a
+chosen, as refined for the values sent, at most ten and then how many
+more: "The value you selected is not a valid choice. This applies when
+Venue is Riverside Hall. Choose Main hall or East room." The
+constraint's own message comes first, whole, still the object it built,
+and each sentence added is one source a translator sees entire, never a
 concatenation of translated fragments
 ([decision](decisions.md#a-refusal-names-what-it-depends-on)).
+
+The same sentence has two renderings. Rendered for a form, the
+default, a key it depends on is named by its label and a value by its
+option label, as above. Rendered for a machine
+(`Sentences::machine()`), which the tool's text and the `message` of
+its result are, a key is named by its dotted path in the
+values a caller sends and a value by what is sent, its label beside
+it: "... This applies when venue is riverside (Riverside Hall). Choose
+riverside_main (Main hall) or riverside_east (East room)." The keys and
+values are `Pipeline\Named` placeholders, so a translator still meets
+one source per sentence. The renderer is the door's choice: React's
+`/validate` and `/submit`, a person's door, render `message` as the
+form does, with the same `path` and `code` as the tool.
 
 There are exactly three places a message becomes text, all of them
 exception messages, because PHP has nowhere to put an object in one:
@@ -535,6 +547,53 @@ exception messages, because PHP has nowhere to put an object in one:
 `DataSurfaceConfigurationTrait::setConfiguration()` throws. All three
 render through `Pipeline\ViolationSummary`, which names the first five
 entries and counts the rest; the full list is still on the exception.
+
+## Codes
+
+Every violation carries a stable `code` beside its message, for a
+script or an agent to branch on: the message moves with the site's
+language and with what an alter relabels, the code does not
+([decision](decisions.md#one-result-at-every-door)). A refusal a
+constraint made has its constraint's code: Symfony's own where the
+constraint defines one, by the name its constraint gives it, lower case
+and without `_ERROR` (Symfony's code is a UUID, and
+`Constraint::getErrorName()` names it one to one); a constraint that
+sets no code is named for itself, in snake case
+(`UniqueNodeTypeConstraint` is `unique_node_type`,
+`ReferenceableConstraint` `referenceable`). Every refusal the module
+makes itself has one of its own (`Pipeline\Violation`'s constants). A
+refusal of the whole call has an empty path.
+
+| Code | Path | Says |
+| --- | --- | --- |
+| `required` | the key | A key, or a property of a map, that must hold a value holds none; also a required output not emitted. |
+| `does_not_apply` | the key | A value was sent for a key a rule ruled out for the values sent. |
+| `unknown_key` | the key | A key the resource does not declare, at any depth. |
+| `type_mismatch` | the key | A value in a shape its definition cannot hold. |
+| `wrong_variant` | the key | A key sent for a variant its deciding key did not choose. |
+| `no_variant` | the key | A key with variants holds a value while its deciding key holds none. |
+| `cannot_clear` | the key | Null sent for a key its storage always holds. |
+| `secret_in_item` | the secret | A secret stored for a collection's item whose position items added or removed have moved. |
+| `no_schema` | the module's mount | A storage holds settings no config schema describes. |
+| `has_data` | `settings` | A field's storage settings would change its columns while it has data. |
+| `access` | empty | The resource's access answer refused the whole call. |
+| `permission` | empty | The operation's permission refused the whole call. |
+| `locked` | empty | The resource may be seen and not changed, so nothing was written. |
+| `not_found` | empty | The call's parameters name nothing, or a read is asked of what an operation creates. |
+| `conflict` | empty | What storage holds changed since the caller read it (React's fingerprint). |
+| `locked` | the key | In `notes`: a value sent for a locked key, not taken. |
+| `stale` | the key | In `stale`: a stored value kept that the key no longer offers, with `stored`. |
+| `not_in_range`, `too_high`, `too_low` | the key | Range: a number outside its bounds. |
+| `too_long`, `too_short` | the key | Length: a string outside its bounds. |
+| `no_such_choice`, `too_few`, `too_many` | the key | Choice, AllowedValues or LabeledChoice: a value not on the list; Count on a list: too few or too many items. |
+| `regex_failed` | the key | Regex: a value not matching its pattern. |
+| `invalid_format` | the key | Email and the other format constraints. |
+| `is_null`, `is_blank` | the key | NotNull, NotBlank, where a definition carries them; `is_null` with an empty path for a tool's `values` sent null or left out, where the tool answers the Tool API's own refusal. |
+
+Symfony's codes are listed as the module's examples meet them; any
+other constraint's are its own, read the same way. The codes and the
+result shape are promised from the first tagged release; the messages
+are not ([What is promised](evolution.md#what-is-promised)).
 
 ## Locked keys
 

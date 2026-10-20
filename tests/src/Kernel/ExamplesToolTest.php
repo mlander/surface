@@ -103,7 +103,7 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($results['valid']['outputs'][OperationInputs::COMMITTED]);
 
     $this->assertFalse($results['over_capacity']['success']);
-    $this->assertSame("The values were refused:\n" . 'capacity: This value should be between 1 and 30. This applies when Room is Garden room.', $results['over_capacity']['message']);
+    $this->assertSame("The values were refused:\n" . 'capacity: This value should be between 1 and 30. This applies when room is library_garden (Garden room).', $results['over_capacity']['message']);
 
     $this->assertTrue($results['dry_run']['success'], $results['dry_run']['message']);
     $this->assertSame('Dry run of Configure registration (step 3): the values were accepted and prepared, and nothing was written.', $results['dry_run']['message']);
@@ -147,7 +147,8 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
     $definition = $manager->getDefinition(ExampleCalls::TOOL);
     $values = $definition->getInputDefinition(OperationInputs::VALUES);
     $this->assertInstanceOf(MapInputDefinition::class, $values);
-    $this->assertFalse($values->isRequired());
+    // The map is always sent, and requires nothing inside.
+    $this->assertTrue($values->isRequired());
     $this->assertSame([], $this->required($values));
     $properties = $values->getPropertyDefinitions();
     $note = 'Required; a value already stored stands when left out.';
@@ -160,7 +161,7 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
     // installed title is.
     $this->assertSame([], $this->defaults($values));
     // The operation's own description, then the update's call rules.
-    $this->assertSame('Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact. Update: send only the keys to change; a key left out keeps its value, null clears it. The read tool returns the current values.', (string) $definition->getDescription());
+    $this->assertSame('Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact. Update: send only the keys to change; a key left out keeps its value, null clears it, and values {} changes nothing. The read tool returns the current values.', (string) $definition->getDescription());
     $contact = $properties['contact'];
     $this->assertInstanceOf(MapInputDefinition::class, $contact);
     $this->assertFalse($contact->isRequired());

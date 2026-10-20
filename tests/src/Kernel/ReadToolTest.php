@@ -377,7 +377,7 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
       $this->assertFalse($read['tool']->access(), $id);
       $this->assertFalse($read['success'], $id);
       $this->assertSame('You do not have permission to do this.', $read['message'], $id);
-      $this->assertNull($read['values'], $id);
+      $this->assertSame([], $read['values'], $id . ': nothing read, in the one result shape.');
     }
 
     // The content type's operation asks for the demo's permission beside

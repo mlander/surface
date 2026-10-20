@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace Drupal\data_surface_tool\Plugin\tool\Tool;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\Core\TypedData\DataDefinition;
+use Drupal\Core\TypedData\TypedDataInterface;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
+use Drupal\data_surface\Pipeline\ResultDocument;
+use Drupal\data_surface\Pipeline\Violation;
 use Drupal\data_surface\ResourceBuild\StorageAdapter;
 use Drupal\data_surface_tool\Plugin\Derivative\ResourceOperationToolDeriver;
 use Drupal\data_surface_tool\InputDefinitions;
@@ -177,13 +181,84 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     }
     // Decision: see
     // docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door.
-    $this->inputDefinitions[OperationInputs::VALUES] = InputDefinitions::shapeOf($listed, $update);
+    $shape = InputDefinitions::shapeOf($listed, $update);
+    // Sent always, and never null, whatever the keys inside require: the
+    // Tool API refuses a required map left out or sent null, and takes {}.
+    if ($shape instanceof DataDefinition) {
+      $shape->setRequired(TRUE);
+    }
+    $this->inputDefinitions[OperationInputs::VALUES] = $shape;
     try {
       return parent::validateInputValues($values);
     }
     finally {
       $this->inputDefinitions[OperationInputs::VALUES] = $listed;
     }
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * A call the Tool API refuses on its shape, before the tool runs, is
+   * answered in the one result shape too, wherever this tool is the one
+   * that answers it: execute() called directly, as a PHP caller, ECA or a
+   * page does. Each violation by its path in `values` (another input by
+   * its name), with a code: a constraint's (Violation::codeOf()), or
+   * `required` for a property left out. The Tool API's runner (`drush
+   * tool:run`, MCP, the AI connector) validates before it calls execute()
+   * and answers such a refusal itself, as `{success, error, error_type}`:
+   * the one place the shape cannot be given.
+   *
+   * Decision: see docs/decisions.md#one-result-at-every-door.
+   */
+  public function execute(): static {
+    parent::execute();
+    $result = $this->result;
+    if ($result === NULL || $result->isSuccess() || $result->getContextValues() !== [] || $result->getViolations()->count() === 0) {
+      return $this;
+    }
+    $refused = [];
+    foreach ($result->getViolations() as $violation) {
+      $path = (string) $violation->getPropertyPath();
+      $message = $violation->getMessage();
+      $constraint = $violation->getConstraint();
+      $code = $constraint === NULL && $message instanceof TranslatableMarkup && $message->getUntranslatedString() === 'This property is required.'
+        ? Violation::REQUIRED
+        : Violation::codeOf($violation);
+      if ($path === OperationInputs::VALUES || str_starts_with($path, OperationInputs::VALUES . '.')) {
+        [$key, $below] = array_pad(explode('.', substr($path, strlen(OperationInputs::VALUES) + 1), 2), 2, '');
+        $refused[] = new Violation($key, $below, $message, $code);
+        continue;
+      }
+      // Another input than the values, by its name.
+      $refused[] = new Violation('', $path, $message, $code);
+    }
+    $this->result = ExecutableResult::failure($result->getMessage(), ResultDocument::refused([], ...$refused), $result->getFailureCategory() ?? FailureCategory::Input, $result->getViolations());
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * `values` as it was sent: left out, or sent null, it stays null, so
+   * the Tool API's own validation refuses it as a required input before
+   * the tool runs (validateInputValues()). The Tool API would otherwise
+   * read it as its definition's default, a map of every key's default,
+   * which on an update is a map of nulls: a call that sent nothing would
+   * clear every key. An update that changes nothing sends {}.
+   *
+   * Decision: see
+   * docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door.
+   */
+  protected function resolveInputValues(): array {
+    $values = parent::resolveInputValues();
+    if (array_key_exists(OperationInputs::VALUES, $values)) {
+      $sent = $this->storage[self::STORAGE_INPUT][OperationInputs::VALUES] ?? $this->storage[self::STORAGE_CONFIGURATION][OperationInputs::VALUES] ?? NULL;
+      if (!$sent instanceof TypedDataInterface) {
+        $values[OperationInputs::VALUES] = NULL;
+      }
+    }
+    return $values;
   }
 
   /**
@@ -202,7 +277,7 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     // before reading storage when it is a refusal.
     $access = $this->operationAccess($resource, $context, $this->currentUser);
     if (!$access->isAllowed()) {
-      return ExecutableResult::failure($this->t('You do not have permission to do this.'), [], FailureCategory::Access);
+      return $this->accessRefused($resource, $operation, $context);
     }
     $built = $this->resources->build($resource->name(), $context);
     $storage = $this->resources->storage($resource->name(), $context, $built);
@@ -214,40 +289,25 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
       dry_run: (bool) ($values[OperationInputs::DRY_RUN] ?? FALSE),
       access: $access,
     );
-    // Decision: see docs/decisions.md#locked-at-the-top.
-    $notes = $this->notesSaid($result->notes);
+    // One shape at every door, refused or not: what the read tool would
+    // answer of the values, never more, and every violation, note and
+    // stale reference with its path and its code.
+    // Decision: see docs/decisions.md#one-result-at-every-door, and
+    // docs/decisions.md#every-door-projects-what-the-read-tool-projects.
+    $answer = $result->document($this->pipeline->outbound($built, $result->values));
     if (!$result->isValid()) {
       // Refused by access, or by a resource locked whole, which no other
       // values would change: no retry with corrected input can help.
       // Decision: see docs/decisions.md#locked-at-the-top.
       $category = $result->isAccessRefused() || $built->lockedWhole() !== NULL ? FailureCategory::Access : FailureCategory::Input;
-      return ExecutableResult::failure($this->withNotes($this->t("The values were refused:\n@violations", [
-        '@violations' => $this->violationSummary($result->violations),
-      ]), $notes), [], $category);
+      return ExecutableResult::failure($this->refusedMessage($result->violations, $result->notes), $answer, $category);
     }
+    // The resource's own outputs, beside the shape and never over it.
     $outputs = $result->committed && $storage instanceof StorageAdapter
       ? $storage->outputs($built, $result->values)
       : [];
-    $stale = $this->staleReferences($result->violations);
-    // What the read tool would answer of them, never more: a dry run's
-    // caller is answered the document it would write, as it may see it.
-    // Decision: see
-    // docs/decisions.md#every-door-projects-what-the-read-tool-projects.
-    $answer = [OperationInputs::VALUES => $this->pipeline->outbound($built, $result->values)];
-    // A read only operation says nothing about a write.
-    // Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
-    if (!$built->changesNothing()) {
-      $answer[OperationInputs::COMMITTED] = $result->committed;
-      // Decision: see docs/decisions.md#absent-keeps-null-clears.
-      $answer[OperationInputs::CHANGES] = $result->changes ?? [];
-    }
     $answer += $outputs;
-    if ($stale !== []) {
-      $answer[OperationInputs::STALE] = $stale;
-    }
-    if ($notes !== []) {
-      $answer[OperationInputs::NOTES] = $notes;
-    }
+    // Decision: see docs/decisions.md#locked-at-the-top.
     return ExecutableResult::success(
       $this->withNotes(match (TRUE) {
         $result->committed && !$result->changed() => $this->t('@label: the values were accepted, and they are what is stored, so nothing was written.', ['@label' => (string) $operation->label]),
@@ -255,7 +315,7 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
         // Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
         $built->changesNothing() => $this->t('@label changes nothing: the values were accepted and prepared, and nothing was written.', ['@label' => (string) $operation->label]),
         default => $this->t('Dry run of @label: the values were accepted and prepared, and nothing was written.', ['@label' => (string) $operation->label]),
-      }, $notes),
+      }, $result->notes),
       $answer,
     );
   }

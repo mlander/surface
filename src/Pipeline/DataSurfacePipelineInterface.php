@@ -31,18 +31,6 @@ use Drupal\data_surface\DataSurfaceInterface;
 interface DataSurfacePipelineInterface {
 
   /**
-   * The key a refusal by access is filed under in a violation set.
-   *
-   * Reserved, and spelled so it cannot collide: a data surface key is a
-   * definition name and no definition is named with a leading "@", so
-   * the whole "@" prefix is the pipeline's own namespace for a refusal
-   * that belongs to no particular key. A caller reporting per key skips
-   * it or renders it as the run's own message; a generated form has no
-   * element for it, so it becomes a form-level error.
-   */
-  public const ACCESS_VIOLATION_KEY = '@access';
-
-  /**
    * The value a caller sends to empty a secret key on purpose.
    *
    * A secret key keeps what it holds when the input says nothing, which
@@ -51,12 +39,12 @@ interface DataSurfacePipelineInterface {
    * and never unset, so this is it: a caller that means "there is no
    * secret any more" sends this marker and the key becomes NULL.
    *
-   * Spelled in the same reserved "@" namespace as ACCESS_VIOLATION_KEY
-   * and long enough that nobody types it as a password by accident. A
-   * host offering a companion "remove the stored token" checkbox sends
-   * this when the box is ticked; an API caller sends it directly. It is
-   * the marker for secret keys and nothing else: sent for any other key
-   * it is an ordinary string.
+   * Spelled in a reserved "@" namespace, since no definition is named
+   * with a leading "@", and long enough that nobody types it as a
+   * password by accident. A host offering a companion "remove the stored
+   * token" checkbox sends this when the box is ticked; an API caller
+   * sends it directly. It is the marker for secret keys and nothing else:
+   * sent for any other key it is an ordinary string.
    *
    * @see docs/semantics.md
    */
@@ -313,8 +301,9 @@ interface DataSurfacePipelineInterface {
    * the result over, so a form, a tool, a config action and an agent all
    * pass the same answer through the same gate. A forbidden answer
    * refuses before the storage is read at all (nothing is loaded,
-   * nothing is accepted, nothing is written) and comes back as a
-   * violation under ACCESS_VIOLATION_KEY carrying the refusal's reason.
+   * nothing is accepted, nothing is written) and comes back as one
+   * violation of the whole call, with an empty path and the code
+   * `access`, carrying the refusal's reason.
    * Neutral and allowed both proceed, identically: a resource or
    * structure with no opinion blocks nothing.
    *

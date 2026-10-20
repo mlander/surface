@@ -294,8 +294,20 @@ is written.
 
 `DataSurfaceResult` carries `values`, `violations`, the `prepared`
 artifact when the values were valid, `committed`, the `access` answer
-the run was gated by, and `notes`. `isValid()` is the question most
-callers ask.
+the run was gated by, `notes` and `changes`. `isValid()` is the question
+most callers ask.
+
+Every door answers a run in one shape, `DataSurfaceResult::document()`
+(`Pipeline\ResultDocument`): `{ok, committed, changed, changes, values,
+violations, notes, stale}`, each key always present, `values` as the
+door may return them (what `outbound()` projected), each violation and
+note `{path, code, message}` and each stale reference `{path, code,
+message, stored}`, the message as plain text, rendered by the door's
+choice: for a machine at the tool, as the form renders it at React.
+The write tool, React's `/validate` and `/submit` and Drush's `tool:run
+--json` all answer it ([decision](decisions.md#one-result-at-every-door)).
+Every violation carries a stable `code`; the table is in
+[Value semantics](semantics.md#codes).
 
 `notes` are what the caller is told and nothing blocks: a `Violation`
 per locked key whose value sent was not taken, "Machine name is locked
@@ -334,11 +346,11 @@ $result = $pipeline->submit(
 caller written before this stage existed means, and what a host that
 gates somewhere else means.
 
-A forbidden answer comes back as one violation under the reserved key
-`DataSurfacePipelineInterface::ACCESS_VIOLATION_KEY`, which is `'@access'`:
-every other key is a definition name and no definition is named with a
-leading `@`, so the whole `@` prefix is the pipeline's namespace for a
-refusal belonging to no particular key. The violation's message is the
+A forbidden answer comes back as one violation of the whole call: no
+key and an empty path, since it belongs to no particular key, and the
+code `access`; a resource locked whole is refused the same way with the
+code `locked` (until 2026-10-20 both were filed under the pseudo-key
+`@access`). The violation's message is the
 refusal's reason, as a message object like every other violation's, and
 `isValid()` is `FALSE` for the same reason an out-of-range number makes
 it false: a caller that only branches on `isValid()` needs to know

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_react\Controller;
 
-use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Cache\CacheableJsonResponse;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
@@ -13,6 +12,7 @@ use Drupal\data_surface\Contract\ContractEmitter;
 use Drupal\data_surface\Contract\ServedContract;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
+use Drupal\data_surface\Pipeline\ResultDocument;
 use Drupal\data_surface\Pipeline\Violation;
 use Drupal\data_surface\ResourceBuild\StorageAdapter;
 use Drupal\data_surface_react\ServedOperation;
@@ -208,12 +208,13 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   The operation id, from the route's {operation} parameter.
    *
    * @return \Symfony\Component\HttpFoundation\JsonResponse
-   *   `{valid, violations, stale, notes, changes, values}`: whether the
-   *   values would be written, each refusal by its dotted path, each
-   *   stale reference beside them, each value sent for a locked key that
-   *   was not taken, the dotted path of each stored value the write would
-   *   change, and the accepted values as the read tool would answer them
-   *   (no key left out for the caller, no secret); nothing is written.
+   *   The one result shape, `{ok, committed, changed, changes, values,
+   *   violations, notes, stale}` (ResultDocument): whether the values
+   *   would be written, the dotted path of each stored value the write
+   *   would change, the accepted values as the read tool would answer
+   *   them (no key left out for the caller, no secret), each refusal,
+   *   each value sent for a locked key that was not taken and each stale
+   *   reference kept, by path and code; nothing is written.
    */
   public function validate(Request $request, string $resource, string $operation): JsonResponse {
     $served = $this->served($resource, $operation, $request);
@@ -230,20 +231,10 @@ final class ResourceApiController implements ContainerInjectionInterface {
       dry_run: TRUE,
       access: $this->servedOperations->access($served),
     );
-    $response = new JsonResponse([
-      'valid' => $result->isValid(),
-      'violations' => array_map($this->violation(...), iterator_to_array($result->violations, FALSE)),
-      'stale' => array_map($this->violation(...), $result->violations->stale()),
-      // Decision: see docs/decisions.md#locked-at-the-top.
-      'notes' => array_map($this->violation(...), $result->notes),
-      // Decision: see docs/decisions.md#absent-keeps-null-clears.
-      'changes' => $result->changes ?? [],
-      // Every map an object, an empty one too, as the contract writes
-      // it, and projected as every door's answer is.
-      // Decision: see
-      // docs/decisions.md#every-door-projects-what-the-read-tool-projects.
-      'values' => $this->pipeline->document($served->surface, $this->pipeline->outbound($served->surface, $result->values)),
-    ]);
+    // A person's door: messages as the form renders them, labels alone;
+    // the paths and codes are the tool's.
+    // Decision: see docs/decisions.md#one-result-at-every-door.
+    $response = new JsonResponse($result->document($this->values($served, $result->values), machine: FALSE));
     $response->setEncodingOptions(JsonResponse::DEFAULT_ENCODING_OPTIONS | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     return $response;
   }
@@ -264,15 +255,13 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   The operation id, from the route's {operation} parameter.
    *
    * @return \Symfony\Component\HttpFoundation\JsonResponse
-   *   `{committed, valid, violations, stale, notes, changes, outputs,
-   *   contract, created}`: whether the values were written, each refusal
-   *   by its dotted path, each stale reference kept, each value sent for a
-   *   locked key that was not taken, the dotted path of each stored value
-   *   the write changed (none, and nothing was saved, when the values
-   *   were what is stored), the resource's outputs as the storage
-   *   reads them back, the contract rebuilt from what is stored now, and
-   *   for an operation that creates, the operation the created thing now
-   *   lives at. A refusal is answered 200 with `committed: false`.
+   *   The one result shape, `{ok, committed, changed, changes, values,
+   *   violations, notes, stale}` (ResultDocument), as validate answers
+   *   it; then this door's own `outputs`, the resource's outputs as the
+   *   storage reads them back, `contract`, rebuilt from what is stored
+   *   now, and `created`, for an operation that creates, the operation
+   *   the created thing now lives at. A refusal is answered 200 with
+   *   `ok: false` and `committed: false`.
    *
    * @throws \Symfony\Component\HttpKernel\Exception\BadRequestHttpException
    *   When the body is malformed or the resource names no storage.
@@ -288,14 +277,9 @@ final class ResourceApiController implements ContainerInjectionInterface {
     // Decision: see docs/decisions.md#a-fingerprint-is-opt-in.
     $sent = $body['fingerprint'] ?? NULL;
     if (is_string($sent) && !hash_equals((string) $this->servedOperations->fingerprint($served), $sent)) {
-      return $this->submitted([
-        'committed' => FALSE,
-        'valid' => FALSE,
-        'violations' => [
-          // Filed under no key: it is about the whole form, not a value.
-          $this->violation(new Violation('', '', $this->t('The stored values changed since this form was loaded. Reload it to see them, then make your changes again.'))),
-        ],
-      ]);
+      // A refusal of the whole call: it is about the whole form, not a
+      // value.
+      return $this->submitted(ResultDocument::refused(new \stdClass(), new Violation('', '', $this->t('The stored values changed since this form was loaded. Reload it to see them, then make your changes again.'), Violation::CONFLICT)));
     }
     $result = $this->pipeline->submit(
       $served->surface,
@@ -303,16 +287,8 @@ final class ResourceApiController implements ContainerInjectionInterface {
       $served->storage,
       access: $this->servedOperations->access($served),
     );
-    $answer = [
-      'committed' => $result->committed,
-      'valid' => $result->isValid(),
-      'violations' => array_map($this->violation(...), iterator_to_array($result->violations, FALSE)),
-      'stale' => array_map($this->violation(...), $result->violations->stale()),
-      // Decision: see docs/decisions.md#locked-at-the-top.
-      'notes' => array_map($this->violation(...), $result->notes),
-      // Decision: see docs/decisions.md#absent-keeps-null-clears.
-      'changes' => $result->changes ?? [],
-    ];
+    // Decision: see docs/decisions.md#one-result-at-every-door.
+    $answer = $result->document($this->values($served, $result->values), machine: FALSE);
     if (!$result->committed) {
       return $this->submitted($answer);
     }
@@ -366,7 +342,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   The response, 200 whether or not anything was written.
    */
   protected function submitted(array $answer): JsonResponse {
-    $answer += ['stale' => [], 'notes' => [], 'changes' => [], 'outputs' => [], 'contract' => NULL, 'created' => NULL];
+    $answer += ['outputs' => [], 'contract' => NULL, 'created' => NULL];
     // An empty map is an object on the wire, as the contract's are.
     $answer['outputs'] = (object) $answer['outputs'];
     $response = new JsonResponse($answer);
@@ -450,20 +426,24 @@ final class ResourceApiController implements ContainerInjectionInterface {
   }
 
   /**
-   * Writes one violation for the wire.
+   * Writes a run's values as a door answers them.
    *
-   * @param \Drupal\data_surface\Pipeline\Violation $violation
-   *   The violation.
+   * Every map an object, an empty one too, as the contract writes it, and
+   * projected as every door's answer is.
    *
-   * @return array{path: string, message: string}
-   *   Its full dotted path, and its message as plain text: the message
-   *   object is rendered here, at the boundary, once.
+   * Decision: see
+   * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
+   *
+   * @param \Drupal\data_surface_react\ServedOperation $served
+   *   The operation.
+   * @param array $values
+   *   The run's accepted values.
+   *
+   * @return \stdClass
+   *   The document.
    */
-  protected function violation(Violation $violation): array {
-    return [
-      'path' => $violation->fullPath(),
-      'message' => PlainTextOutput::renderFromHtml((string) $violation->message),
-    ];
+  protected function values(ServedOperation $served, array $values): \stdClass {
+    return $this->pipeline->document($served->surface, $this->pipeline->outbound($served->surface, $values));
   }
 
 }

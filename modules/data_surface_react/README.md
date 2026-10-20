@@ -9,8 +9,8 @@ One operation of one resource becomes five endpoints and a page:
 | Contract | `GET /surface-api/{resource}/{operation}` | The JSON contract with the values the form opens with, and the stored values' `fingerprint`. |
 | Full schema | `GET /surface-api/{resource}/{operation}/schema` | The contract for any values: every listable dependency a conditional, the rest `dynamic` or `runtime`; no values. Cacheable. |
 | Refine | `POST /surface-api/{resource}/{operation}/refine` | The contract re-narrowed against in-progress values: the AJAX rebuild's equivalent. |
-| Validate | `POST /surface-api/{resource}/{operation}/validate` | The pipeline's dry run: `{valid, violations, stale, notes, values}`, the values as the read tool would answer them, nothing written. |
-| Submit | `POST /surface-api/{resource}/{operation}/submit` | The write: `{committed, valid, violations, stale, notes, outputs, contract, created}`; a refusal is 200 with `committed: false`. |
+| Validate | `POST /surface-api/{resource}/{operation}/validate` | The pipeline's dry run, in the one result shape every door answers: `{ok, committed, changed, changes, values, violations, notes, stale}`, each entry `{path, code, message}`, the message read as the form says it (the tool's names keys by path), the values as the read tool would answer them, nothing written. |
+| Submit | `POST /surface-api/{resource}/{operation}/submit` | The write: the same shape, then `outputs`, `contract` and `created`; a refusal is 200 with `ok: false` and `committed: false`. |
 
 `{resource}` is the `#[Resource]` id (`registration.step2`), `{operation}`
 the operation id (`configure`). An operation's parameters arrive in the

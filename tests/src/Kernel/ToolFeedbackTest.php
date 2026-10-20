@@ -60,7 +60,7 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
   /**
    * The venues, as a refusal lists them.
    */
-  protected const VENUES = 'Choose Riverside Hall (riverside), Old Library (library) or Harbour Centre (harbour)';
+  protected const VENUES = 'Choose riverside (Riverside Hall), library (Old Library) or harbour (Harbour Centre)';
 
   /**
    * {@inheritdoc}
@@ -79,47 +79,56 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
    *   The tool.
    * @param array $values
    *   The values input.
+   * @param array|null $answered
+   *   Set to the result's context: the one result shape.
    *
    * @return array{0: bool, 1: string}
    *   Whether it succeeded, and its result message as plain text.
    */
-  protected function call(string $tool, array $values): array {
+  protected function call(string $tool, array $values, ?array &$answered = NULL): array {
     $invocation = $this->container->get('tool.runner')->run($tool, [
       OperationInputs::VALUES => $values,
       OperationInputs::DRY_RUN => TRUE,
     ]);
     $result = $invocation->getResult();
+    $answered = $result->getContextValues();
     return [$result->isSuccess(), PlainTextOutput::renderFromHtml((string) $result->getMessage())];
   }
 
   /**
-   * Calls example 3's tool and reads its one refusal.
+   * Calls example 3's tool and reads its one refusal, as data.
+   *
+   * The agent reads the result's violations, never the text: the path to
+   * fix, the code to branch on, and the message that says what to send.
+   * The text says the same, one line per violation.
    *
    * @param array $values
    *   The values input.
    *
-   * @return array{0: string, 1: string}
-   *   The refused key's path and what was said about it.
+   * @return array{0: string, 1: string, 2: string}
+   *   The refused key's path, its code and what was said about it.
    */
   protected function refused(array $values): array {
-    [$success, $message] = $this->call(ExampleCalls::TOOL, $values);
+    [$success, $message] = $this->call(ExampleCalls::TOOL, $values, $answered);
     $this->assertFalse($success, 'Refused.');
-    $this->assertMatchesRegularExpression('/^The values were refused:\n[^ ]+: .+$/', $message);
-    [$path, $sentence] = explode(': ', substr($message, strlen("The values were refused:\n")), 2);
-    $this->assertStringNotContainsString(': ', $sentence, 'One key refused: ' . $message);
-    return [$path, $sentence];
+    $this->assertFalse($answered['ok']);
+    $this->assertCount(1, $answered['violations'], 'One key refused: ' . $message);
+    ['path' => $path, 'code' => $code, 'message' => $sentence] = $answered['violations'][0];
+    $this->assertSame("The values were refused:\n" . $path . ': ' . $sentence, $message);
+    return [$path, $code, $sentence];
   }
 
   /**
    * Fixes one key from what its refusal said, as an agent would.
    *
-   * Reads nothing but the refusal: a list to choose from, the value
-   * whose label the agent meant or else the first; a bound, the bound.
+   * Reads nothing but the refusal, by its code: a list to choose from,
+   * the value whose label the agent meant or else the first, each
+   * written as what is sent with its label beside it; a bound, the bound.
    *
    * @param array $values
    *   The values sent.
-   * @param array{0: string, 1: string} $refusal
-   *   The refused key's path and what was said about it.
+   * @param array{0: string, 1: string, 2: string} $refusal
+   *   The refused key's path, its code and what was said about it.
    * @param string|null $meant
    *   The label the agent meant, when it chose from a list.
    *
@@ -127,16 +136,16 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
    *   The values to send again.
    */
   protected static function fix(array $values, array $refusal, ?string $meant = NULL): array {
-    [$path, $sentence] = $refusal;
-    if (preg_match('/Choose (.+)\.$/', $sentence, $list) && preg_match_all('/([^,]+?) \(([^)]+)\)/', preg_replace('/^(.*) or /', '$1, ', $list[1]), $choices, PREG_SET_ORDER)) {
-      $fixed = $choices[0][2];
-      foreach ($choices as [, $label, $value]) {
-        if (trim($label) === $meant) {
-          $fixed = $value;
+    [$path, $code, $sentence] = $refusal;
+    if ($code === 'no_such_choice' && preg_match('/Choose (.+)\.$/', $sentence, $list) && preg_match_all('/([^,]+?) \(([^)]+)\)/', preg_replace('/^(.*) or /', '$1, ', $list[1]), $choices, PREG_SET_ORDER)) {
+      $fixed = trim($choices[0][1]);
+      foreach ($choices as [, $value, $label]) {
+        if ($label === $meant) {
+          $fixed = trim($value);
         }
       }
     }
-    elseif (preg_match('/should be (\d+) or more/', $sentence, $bound) || preg_match('/between \d+ and (\d+)/', $sentence, $bound)) {
+    elseif (($code === 'too_low' && preg_match('/should be (\d+) or more/', $sentence, $bound)) || ($code === 'not_in_range' && preg_match('/between \d+ and (\d+)/', $sentence, $bound))) {
       $fixed = (int) $bound[1];
     }
     else {
@@ -234,7 +243,7 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
       'pricing' => 'free',
     ];
     $compliance = static fn (array $keys): array => ['third_party_settings' => ['data_surface_examples_compliance' => $keys]];
-    $rooms = 'Choose Main hall (riverside_main) or East room (riverside_east)';
+    $rooms = 'Choose riverside_main (Main hall) or riverside_east (East room)';
     $not_valid = 'The value you selected is not a valid choice';
     $refusals = [
       'a value on no list' => [
@@ -243,15 +252,15 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
       ],
       'a value on another venue\'s list' => [
         ['room' => 'library_reading'] + $event,
-        'room: ' . $not_valid . '. This applies when Venue is Riverside Hall. ' . $rooms . '.',
+        'room: ' . $not_valid . '. This applies when venue is riverside (Riverside Hall). ' . $rooms . '.',
       ],
       'a value on no room\'s list' => [
         ['room' => 'main_hall'] + $event,
-        'room: ' . $not_valid . '. This applies when Venue is Riverside Hall. ' . $rooms . '.',
+        'room: ' . $not_valid . '. This applies when venue is riverside (Riverside Hall). ' . $rooms . '.',
       ],
       'a bound siblings set' => [
         ['capacity' => 500] + $event,
-        'capacity: This value should be between 1 and 100. This applies when Room is East room and Event license is empty.',
+        'capacity: This value should be between 1 and 100. This applies when room is riverside_east (East room) and ' . self::COMPLIANCE . '.license is empty.',
       ],
       'a pattern' => [
         $compliance(['license' => 'EV-2048', 'stewards' => 1]) + $event,
@@ -259,7 +268,7 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
       ],
       'a bound through a port' => [
         $compliance(['stewards' => 1]) + ['capacity' => 100] + $event,
-        self::COMPLIANCE . '.stewards: This value should be 2 or more. This applies when Capacity is 100.',
+        self::COMPLIANCE . '.stewards: This value should be 2 or more. This applies when capacity is 100.',
       ],
       'a key its own declaration requires names no condition' => [
         ['title' => ''] + $event,
@@ -285,7 +294,7 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
       'A bound no sibling sets says itself.',
     );
     $this->assertSame(
-      [FALSE, "The values were refused:\n" . 'send_day: Send day does not apply when Frequency is Monthly.'],
+      [FALSE, "The values were refused:\n" . 'send_day: Send day does not apply when frequency is monthly (Monthly).'],
       $this->call('data_surface:resource_test.bulletin:configure', ['frequency' => 'monthly', 'send_day' => 'monday']),
       'A key that does not apply says so, in the sentence it always said.',
     );
@@ -351,14 +360,20 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
       $this->assertTrue($success, $step . ', fixed in one retry: ' . $message);
     }
     $this->assertSame([
-      'the venue, by name' => ['venue', 'The value you selected is not a valid choice. ' . self::VENUES . '.'],
+      'the venue, by name' => [
+        'venue',
+        'no_such_choice',
+        'The value you selected is not a valid choice. ' . self::VENUES . '.',
+      ],
       'a room of another venue' => [
         'room',
-        'The value you selected is not a valid choice. This applies when Venue is Riverside Hall. Choose Main hall (riverside_main) or East room (riverside_east).',
+        'no_such_choice',
+        'The value you selected is not a valid choice. This applies when venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room).',
       ],
       'twice the capacity' => [
         self::COMPLIANCE . '.stewards',
-        'This value should be 5 or more. This applies when Capacity is 240.',
+        'too_low',
+        'This value should be 5 or more. This applies when capacity is 240.',
       ],
     ], $said);
     $this->assertSame(['riverside', 'riverside_main', 240, 5], [
@@ -370,7 +385,7 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
 
     // The examples' README quotes the three refusals.
     $readme = (string) file_get_contents(dirname(__DIR__, 3) . '/modules/data_surface_examples/README.md');
-    foreach ($said as [$path, $sentence]) {
+    foreach ($said as [$path, , $sentence]) {
       $this->assertStringContainsString("Failed: The values were refused:\n" . $path . ': ' . $sentence, $readme);
     }
   }

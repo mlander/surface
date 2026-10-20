@@ -82,23 +82,23 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
 
     // The answer's first line and, after a refusal, its first violation.
     $first = static fn (string $answer): string => implode("\n", array_slice(explode("\n", $answer), 0, str_starts_with($answer, 'Failed: ') ? 2 : 1));
-    $this->assertSame("Failed: The values were refused:\n" . 'send_day: Send day does not apply when Frequency is Monthly.', $first($answers['event.bulletin']['monthly_with_day']));
-    $this->assertSame("Failed: The values were refused:\n" . 'items: This value should be between 1 and 5. This applies when Frequency is Weekly.', $first($answers['event.bulletin']['weekly_items']));
+    $this->assertSame("Failed: The values were refused:\n" . 'send_day: Send day does not apply when frequency is monthly (Monthly).', $first($answers['event.bulletin']['monthly_with_day']));
+    $this->assertSame("Failed: The values were refused:\n" . 'items: This value should be between 1 and 5. This applies when frequency is weekly (Weekly).', $first($answers['event.bulletin']['weekly_items']));
     $this->assertStringContainsString('values: {"frequency":"monthly","items":8}', $answers['event.bulletin']['monthly_items'], 'The send day does not apply, so no answer says it; storage keeps it.');
-    $this->assertSame("Failed: The values were refused:\n" . 'contact.email: Email is required when Show on the press page is on.', $first($answers['event.press']['listed_without_email']));
+    $this->assertSame("Failed: The values were refused:\n" . 'contact.email: Email is required when public is on.', $first($answers['event.press']['listed_without_email']));
     $this->assertStringStartsWith('Success: ', $answers['event.press']['unlisted_without_email']);
-    $this->assertSame("Failed: The values were refused:\n" . 'reviewed_by: Reviewed by is required when Reviewed on is set.', $first($answers['event.press']['reviewed_by_nobody']));
+    $this->assertSame("Failed: The values were refused:\n" . 'reviewed_by: Reviewed by is required when reviewed_on is set.', $first($answers['event.press']['reviewed_by_nobody']));
     $this->assertSame("Failed: The values were refused:\n" . 'phone: Write the number in digits, such as +1 555 0100.', $first($answers['event.desk']['phone_with_dashes']));
-    $this->assertStringEndsWith('on_sale.speaker: Speaker is locked and kept as stored; the value sent was not taken.', $first($answers['event.sales']['speaker_on_sale']));
+    $this->assertStringContainsString("nothing was written.\non_sale.speaker: Speaker is locked and kept as stored; the value sent was not taken.\n", $answers['event.sales']['speaker_on_sale'], 'A note on a line of its own, after the message.');
     $this->assertStringContainsString('"speaker":false', $answers['event.sales']['speaker_on_sale']);
     $this->assertSame('Success: Check a program changes nothing: the values were accepted and prepared, and nothing was written.', $first($answers['event.program']['check']));
     $this->assertSame("Failed: The values were refused:\n" . 'sessions: This value should be between 1 and 30.', $first($answers['event.program']['check_too_many']));
-    $this->assertSame("Failed: The values were refused:\n" . '@access: This may be seen and not changed, so nothing was written: The program is published in its workflow, so it is fixed.', $first($answers['event.program']['published_in_workflow']));
+    $this->assertSame("Failed: The values were refused:\n" . 'This may be seen and not changed, so nothing was written: The program is published in its workflow, so it is fixed.', $first($answers['event.program']['published_in_workflow']));
     $this->assertNull($this->container->get('state')->get('data_surface_examples_workflow.state'), 'The State the call was made in is put back.');
     $this->assertStringContainsString('"notes":"Hand out the maps."', $answers['event.doors']['left_out'], 'Left out: kept.');
     $this->assertStringContainsString('"notes":null', $answers['event.doors']['null'], 'Null: cleared.');
     $this->assertStringContainsString('"notes":"Doors close at ten."', $answers['event.doors']['value'], 'A value: replaced.');
-    $this->assertSame("Failed: The values were refused:\n" . 'badges: Badges cannot be cleared: it always holds a value, Printed at the door (printed) by default. Leave it out to keep what it holds.', $first($answers['event.doors']['always_held']));
+    $this->assertSame("Failed: The values were refused:\n" . 'badges: Badges cannot be cleared: it always holds a value, printed (Printed at the door) by default. Leave it out to keep what it holds.', $first($answers['event.doors']['always_held']));
 
     // The examples' README quotes every command, and every answer under
     // its call's label.

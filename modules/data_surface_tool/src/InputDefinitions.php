@@ -1061,6 +1061,21 @@ final class InputDefinitions {
   }
 
   /**
+   * Adds a sentence to the end of a definition's description.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinition $definition
+   *   The definition; changed in place.
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup $note
+   *   The sentence.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinition
+   *   The same definition.
+   */
+  public function noted(DataDefinition $definition, TranslatableMarkup $note): DataDefinition {
+    return $definition->setDescription($this->appended($this->description($definition), $note));
+  }
+
+  /**
    * Appends a sentence to a description, as plain text.
    *
    * Both stay objects, so a definition cached for every language reads

@@ -9,7 +9,6 @@ use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\CreatingStorageInterface;
 use Drupal\data_surface\Pipeline\PreparedValues;
-use Drupal\data_surface\Pipeline\Violation;
 use Drupal\data_surface\Pipeline\StorageViolationsException;
 use Drupal\data_surface\Pipeline\ViolationSet;
 use Drupal\data_surface\Resource\OperationContext;
@@ -169,7 +168,7 @@ final class StorageAdapter implements CreatingStorageInterface {
       }
       catch (StorageViolationsException $e) {
         foreach ($e->getViolations() as $violation) {
-          $refused[] = new Violation((string) $key, $violation->fullPath(), $violation->message, $violation->stale);
+          $refused[] = $violation->at((string) $key, $violation->fullPath());
         }
       }
     }

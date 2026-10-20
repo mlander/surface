@@ -332,14 +332,14 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     // The garden room seats 30, so the capacity asked for fits it: only
     // the room is wrong.
     $wrong_room = $this->json($this->post($path, ['values' => ['room' => 'library_garden', 'capacity' => 20] + $values]));
-    $this->assertFalse($wrong_room['valid']);
-    $this->assertSame(['room'], array_column($wrong_room['violations'], 'path'));
+    $this->assertFalse($wrong_room['ok']);
+    $this->assertSame(['room' => 'no_such_choice'], array_column($wrong_room['violations'], 'code', 'path'));
     // What storage rehearsed is never served: it may hold what the caller
     // may not see.
     $this->assertArrayNotHasKey('prepared', $wrong_room);
 
     $too_many = $this->json($this->post($path, ['values' => ['capacity' => 151] + $values]));
-    $this->assertFalse($too_many['valid']);
+    $this->assertFalse($too_many['ok']);
     $this->assertSame(['capacity'], array_column($too_many['violations'], 'path'));
     $this->assertStringContainsString('150', $too_many['violations'][0]['message']);
 
@@ -349,14 +349,14 @@ class ServedContractEndpointsTest extends BrowserTestBase {
       'values' => ['room' => NULL, 'capacity' => 20] + $values,
       'stale' => ['room'],
     ]));
-    $this->assertFalse($moved['valid']);
+    $this->assertFalse($moved['ok']);
     $this->assertSame(['room'], array_column($moved['violations'], 'path'));
 
     $valid = $this->json($this->post($path, ['values' => $values]));
-    $this->assertTrue($valid['valid']);
+    $this->assertTrue($valid['ok']);
     $this->assertSame([], $valid['violations']);
     $this->assertSame('harbour_deck', $valid['values']['room']);
-    $this->assertSame(['valid', 'violations', 'stale', 'notes', 'changes', 'values'], array_keys($valid));
+    $this->assertSame(['ok', 'committed', 'changed', 'changes', 'values', 'violations', 'notes', 'stale'], array_keys($valid));
 
     // Nothing was written by any of them.
     $this->container->get('config.factory')->reset();

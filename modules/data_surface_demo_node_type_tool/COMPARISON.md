@@ -297,7 +297,7 @@ caller sends that.
                 "title_label",
                 "preview_mode"
             ],
-            "description": "node.type values: The values, as the node.type resource describes them: every key it takes that the operation does not already know, including those other modules add, with its label, its meaning and the values it allows.",
+            "description": "node.type values: The values, as the node.type resource describes them: every key it takes that the operation does not already know, including those other modules add, with its label, its meaning and the values it allows. Always sent, as an object and never null: {} sends no key.",
             "title": "node.type values"
         },
         "dry_run": {

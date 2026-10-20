@@ -123,22 +123,7 @@ Five pieces:
   conversion, and executing is one call to
   `DataSurfacePipeline::submit()`, which accepts, validates, prepares and
   commits.
-- What a write tool answers, every output declared with a description:
-  `values` (as the read tool would answer them), `committed`, `changes`
-  (the dotted path of each stored value the write changed, or a dry run
-  would; empty, and nothing saved, when the values are what is stored,
-  so writing back what the read tool returned changes nothing), and,
-  only when there are any, `notes` (a value sent for a locked key, not
-  taken) and `stale` (a stored value no longer available). A read only
-  operation's tool takes no `dry_run` and answers no `committed` and no
-  `changes`: it writes nothing
-  ([decision](../../docs/decisions.md#absent-keeps-null-clears)). A
-  refusal is one violation per line after "The values were refused:",
-  in the Tool API's `Input` category; a permission refusal and a
-  resource locked whole are in the `Access` category, which no client
-  treats as correctable, so none is handed the input schema to retry
-  with
-  ([decision](../../docs/decisions.md#every-door-projects-what-the-read-tool-projects)).
+- What a write tool takes and answers: [below](#what-a-tool-answers).
 
 ### One deliberate difference from the Tool Belt pair
 
@@ -156,6 +141,79 @@ keeps the stored secret, and only the clear marker
 (`@data_surface:clear-secret`) empties it. The label could be left out
 too: the edit tool requires no key, and a required one left out keeps
 what is stored, which the pipeline judges (below).
+
+## What a tool answers
+
+A write tool answers a run in the one result shape every door answers
+([decision](../../docs/decisions.md#one-result-at-every-door)), on a
+refusal as on a success, as its result's context, which `drush tool:run
+--json` prints as `outputs`. Every key is declared as an output, with a
+description, and always present:
+
+| Key | Holds |
+| --- | --- |
+| `ok` | Whether nothing was refused. |
+| `committed` | Whether the values were written; false for a dry run, a refusal and a read only operation. |
+| `changed` | Whether the write moved a stored value; false when the values were what is stored, and then nothing was saved. |
+| `changes` | The dotted path of each stored value the write changed, or a dry run would, so writing back what the read tool returned changes nothing ([decision](../../docs/decisions.md#absent-keeps-null-clears)). |
+| `values` | The accepted values, as the read tool would answer them: no secret, no key this account may not see. |
+| `violations` | Each refusal, `{path, code, message}`; a refusal of the whole call has an empty path. |
+| `notes` | Each value sent for a locked key and not taken, `{path, code, message}`, code `locked`. |
+| `stale` | Each stored value kept that may no longer be chosen, `{path, code, message, stored}`, code `stale`. |
+
+The codes are a table in [Value semantics](../../docs/semantics.md#codes):
+a constraint's (`not_in_range`, `no_such_choice`, `too_long`), or the
+module's own (`required`, `does_not_apply`, `unknown_key`,
+`type_mismatch`, `locked`, `access`, `permission`, `not_found`). A
+message names a key it depends on by its path and a value by what is
+sent with its label beside it, the vocabulary of the listing. The
+resource's own outputs, from `defineOutputs()`, follow the shape, and
+never take one of its keys.
+
+The result's text says the same for a reader: one line per violation,
+"path: message", after "The values were refused:", a refusal of the
+whole call its message alone on its line, and a line per note after.
+Example 3, a room of another venue and a capacity too large, as a dry
+run:
+
+```
+drush tool:run data_surface:registration.step3:configure --uid=1 --json \
+  --input='{"values":{"room":"harbour_deck","capacity":500},"dry_run":true}'
+```
+
+```json
+{"success": false,
+ "message": "The values were refused:\nroom: The value you selected is not a valid choice. This applies when venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room).\ncapacity: This value should be between 1 and 100. This applies when room is empty (harbour_deck was refused) and third_party_settings.data_surface_examples_compliance.license is empty.",
+ "outputs": {
+   "ok": false, "committed": false, "changed": false, "changes": [],
+   "values": {"title": "Spring meetup", "open": true, "venue": "riverside", "room": "harbour_deck", "capacity": 500, ...},
+   "violations": [
+     {"path": "room", "code": "no_such_choice", "message": "The value you selected is not a valid choice. This applies when venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room)."},
+     {"path": "capacity", "code": "not_in_range", "message": "This value should be between 1 and 100. This applies when room is empty (harbour_deck was refused) and third_party_settings.data_surface_examples_compliance.license is empty."}],
+   "notes": [], "stale": []}}
+```
+
+A refused value is in the Tool API's `Input` category; a permission
+refusal, an access refusal and a resource locked whole are in the
+`Access` category, which no client treats as correctable, so none is
+handed the input schema to retry with
+([decision](../../docs/decisions.md#every-door-projects-what-the-read-tool-projects)).
+A read only operation's tool takes no `dry_run` and answers the same
+keys, `committed` and `changed` false and `changes` empty: it writes
+nothing. The read tool answers a read, `values` alone, and its
+refusals in the shape.
+
+`values` is always sent, an object and never null: `{}` on an update
+changes nothing. The Tool API refuses a call that leaves it out or
+sends `null` before the tool runs
+([decision](../../docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
+That refusal, and any other the Tool API makes on the input's shape (a
+key of the wrong type, a key a create requires left out), is the one
+answer not in the shape when it comes through the Tool API's runner
+(`drush tool:run`, MCP, the AI connector), which answers it itself:
+`{"success": false, "error": "Invalid input:\nvalues: This value should
+not be null.", "error_type": "invalid_input"}`. Called directly,
+`execute()` answers it in the shape.
 
 ## How to try it
 
@@ -177,8 +235,8 @@ default at all, because a listing is cached by its clients and a key
 left out keeps its current value: each key the resource requires says
 "Required; a value already stored stands when left out.", and the
 description says "Update: send only the keys to change; a key left out
-keeps its value, null clears it. The read tool returns the current
-values." An edit of a thing
+keeps its value, null clears it, and values {} changes nothing. The
+read tool returns the current values." An edit of a thing
 that holds no value for a required key is refused by the pipeline, in
 the key's own words. A key another narrows says so in its description,
 by the path a caller sends it under ("Depends on venue."), and a
@@ -305,6 +363,8 @@ The routes of `data_surface_examples` name it.
 | `Kernel\ReadToolTest` | The read tools: one per operation that changes a thing that exists and none for one that creates, a read operation taking exactly the parameters, an output map of the write tool's keys, step 3's stored values with the compliance module's mounted keys before and after a write, the content type read by its type, an unknown parameter failing as for the write tool, access as the write tool's, and a secret never returned. |
 | `Kernel\OperationFactsTest` | How an operation behaves: the attribute's defaults, `creates` read off the attribute and stamped on the context, idempotence derived from it, an operation on the class with no method, a method's context taking the attribute's id and `creates` and its docblock summary as its description, a context naming another id or creating against its attribute refused at discovery, contradicting facts refused, the Tool API's kind and destructive flag as the MCP bridge reads them, no read tool beside a read only operation, and `x-surface.operation` and the description at the top of both documents. |
 | `Kernel\ToolFeedbackTest` | What the listing and a refusal say: each key another narrows naming what it depends on, once, through a port at its site; every refusal form (a list, a list another key narrows, a long list capped, a bound, a pattern, a key that does not apply); `values` held to its shape before the tool runs; and an agent's retry loop on example 3 fixing each key from its refusal in one try, through the runner MCP and ECA call. |
+| `Kernel\ToolResultShapeTest` | What a tool answers: exactly the result shape's keys, refused or not, at the write tool, a read only one and React's `/validate` and `/submit`, the same refusal by paths at the tool and by labels at React, with one path and code; the failure category; one violation per line, each the entry's path and message; `values` required and never null, `{}` changing nothing. |
+| `Kernel\ResultCodesTest` | Every refusal path's code, by path: the module's own, a constraint's, a refusal of the whole call with an empty path, a note and a stale reference. |
 | `Kernel\SecurityProjectionTest` | Every door projecting what the read projects: a dry run and React `/validate` answering no key access left out and no `prepared`, no door echoing a secret, a collection item keeping its position's secret or refused when positions moved, a note saying nothing of a secret, the React and tool doors asking the permission first and naming no id, a child permission nothing can name refused, and the cached definitions no account's. |
 | `Kernel\DerivedToolDefinitionsTest` | Tool Explorer showing every derived tool, read tools included, installing a module deriving its tools, and each tool declaring its operation's permission unless it has a placeholder. |
 

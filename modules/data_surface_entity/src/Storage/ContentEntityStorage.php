@@ -167,7 +167,7 @@ final class ContentEntityStorage implements ResourceStorageInterface, ContainerI
     $violations->filterByFields(array_diff(array_keys($entity->getFieldDefinitions()), array_keys($fields)));
     $refused = [];
     foreach ($violations as $violation) {
-      $refused[] = static::violation($violation->getPropertyPath(), ViolationMessage::of($violation));
+      $refused[] = static::violation($violation->getPropertyPath(), ViolationMessage::of($violation), Violation::codeOf($violation));
     }
     if ($refused !== []) {
       throw new StorageViolationsException(new ViolationSet($refused));
@@ -312,14 +312,16 @@ final class ContentEntityStorage implements ResourceStorageInterface, ContainerI
    *   empty for the entity as a whole.
    * @param string|\Stringable $message
    *   Its message.
+   * @param string $code
+   *   Its code (Violation::codeOf()).
    *
    * @return \Drupal\data_surface\Pipeline\Violation
    *   The violation, under the field's key and at the property inside it,
    *   or under self::ENTITY.
    */
-  public static function violation(string $path, string|\Stringable $message): Violation {
+  public static function violation(string $path, string|\Stringable $message, string $code = 'invalid'): Violation {
     if ($path === '') {
-      return new Violation(self::ENTITY, '', $message);
+      return new Violation(self::ENTITY, '', $message, $code);
     }
     $segments = explode('.', $path);
     $field = array_shift($segments);
@@ -327,7 +329,7 @@ final class ContentEntityStorage implements ResourceStorageInterface, ContainerI
     if ($segments !== [] && ctype_digit($segments[0])) {
       array_shift($segments);
     }
-    return new Violation($field, implode('.', $segments), $message);
+    return new Violation($field, implode('.', $segments), $message, $code);
   }
 
 }

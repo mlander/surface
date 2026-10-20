@@ -8,8 +8,12 @@ use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Access\AccessResultReasonInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\DataSurfaceAccess;
+use Drupal\data_surface\Pipeline\ResultDocument;
+use Drupal\data_surface\Pipeline\Violation;
 use Drupal\data_surface\Resource\OperationContext;
+use Drupal\data_surface\ResourceBuild\OperationDefinition;
 use Drupal\data_surface\ResourceBuild\ResourceDefinition;
 use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
@@ -140,7 +144,54 @@ abstract class ResourceOperationToolBase extends ToolBase {
    *   The failure, in the input category.
    */
   protected function notFound(\InvalidArgumentException $e): ExecutableResult {
-    return ExecutableResult::failure($this->t('Not found: @reason', ['@reason' => $e->getMessage()]), [], FailureCategory::Input);
+    return $this->refused($this->t('Not found: @reason', ['@reason' => $e->getMessage()]), Violation::NOT_FOUND, FailureCategory::Input);
+  }
+
+  /**
+   * Answers a call refused whole before the pipeline runs.
+   *
+   * In the one shape every door answers a run in, its one violation with
+   * an empty path: nothing was accepted and nothing written.
+   *
+   * Decision: see docs/decisions.md#one-result-at-every-door.
+   *
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup $message
+   *   Why, which is also the result's message.
+   * @param string $code
+   *   The violation's code: `permission`, `access` or `not_found`.
+   * @param \Drupal\tool\FailureCategory $category
+   *   The Tool API's category: Access where no other input can help.
+   *
+   * @return \Drupal\tool\ExecutableResult
+   *   The failure.
+   */
+  protected function refused(TranslatableMarkup $message, string $code, FailureCategory $category): ExecutableResult {
+    return ExecutableResult::failure($message, ResultDocument::refused([], new Violation('', '', $message, $code)), $category);
+  }
+
+  /**
+   * Answers a refusal by access for an operation's context.
+   *
+   * The operation's permission or the resource's access class: which one
+   * refused is the code, `permission` or `access`.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
+   *   The resource.
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The context.
+   *
+   * @return \Drupal\tool\ExecutableResult
+   *   The failure, in the Access category.
+   */
+  protected function accessRefused(ResourceDefinition $resource, OperationDefinition $operation, OperationContext $context): ExecutableResult {
+    $permission = $this->resources->permissionAccess($resource->name(), $operation->id, $this->currentUser, $context);
+    return $this->refused(
+      $this->t('You do not have permission to do this.'),
+      $permission !== NULL && !$permission->isAllowed() ? Violation::PERMISSION : Violation::ACCESS,
+      FailureCategory::Access,
+    );
   }
 
   /**

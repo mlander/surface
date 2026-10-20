@@ -425,7 +425,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
     $refused = $this->pipeline()->validate($surface, ['scope' => 'basic', 'mode' => 2])->byKey('mode');
     $this->assertSame('', $refused[0]->path);
     $this->assertSame(
-      'The value you selected is not a valid choice. This applies when Scope is basic. Choose Disabled (0) or Optional (1).',
+      'The value you selected is not a valid choice. This applies when Scope is basic. Choose Disabled or Optional.',
       (string) $refused[0]->message,
     );
   }

@@ -308,7 +308,7 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['signature' => 'Signed for by is required when Insured is on and Declared value is 100.'], $refusals(['insured' => TRUE]));
     $this->assertSame([], $refusals(['insured' => TRUE, 'signature' => 'Ann']));
     $this->assertSame([
-      'handling' => 'The value you selected is not a valid choice. This applies when Service is Standard. Choose Fragile (fragile) or This way up (upright).',
+      'handling' => 'The value you selected is not a valid choice. This applies when Service is Standard. Choose Fragile or This way up.',
     ], $refusals(['handling' => 'cold']));
     $this->assertSame([
       'note' => 'Note for the driver does not apply when Service is Standard.',
@@ -602,7 +602,7 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
     $tool->setInputValue(OperationInputs::VALUES, $parcel);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
-    $this->assertStringContainsString('signature: Signed for by is required when Insured is on and Declared value is 100.', (string) $tool->getResult()->getMessage());
+    $this->assertStringContainsString('signature: Signed for by is required when insured is on and declared_value is 100.', (string) $tool->getResult()->getMessage());
 
     $tool = $tools->createInstance('data_surface:resource_test.parcel:configure');
     $tool->setInputValue(OperationInputs::VALUES, $parcel + ['signature' => 'Ann', 'declared_value' => 400]);

@@ -157,23 +157,38 @@ export interface Contract {
   discarded?: string[];
 }
 
+/** One refusal or note: its dotted path ('' for the whole call), a stable code, and the message. */
 export interface Violation {
   path: string;
+  code: string;
   message: string;
 }
 
+/** A stored value kept that its key no longer offers, and the value. */
+export interface StaleValue extends Violation {
+  stored: unknown;
+}
+
 /**
- * What /validate answers: the dry run's verdict and the accepted values,
- * as the read tool would answer them (no secret, nothing hidden).
+ * The one result shape every door answers a run in (ResultDocument):
+ * /validate answers exactly this, the accepted values as the read tool
+ * would answer them (no secret, nothing hidden).
  */
 export interface Validation {
-  valid: boolean;
-  violations: Violation[];
-  stale: Violation[];
-  notes: Violation[];
-  /** The dotted path of each stored value the write would change. */
+  /** Nothing was refused. */
+  ok: boolean;
+  /** The values were written; never on a dry run. */
+  committed: boolean;
+  /** The write moved a stored value. */
+  changed: boolean;
+  /** The dotted path of each stored value the write changed, or would change. */
   changes: string[];
   values: Values;
+  violations: Violation[];
+  /** Each value sent for a locked key, not taken: code `locked`. */
+  notes: Violation[];
+  /** Each stored value kept that is no longer offered: code `stale`. */
+  stale: StaleValue[];
 }
 
 /** Where a created thing now lives: an operation and its parameters. */
@@ -183,14 +198,8 @@ export interface Created {
   parameters: Record<string, string | number>;
 }
 
-/** What /submit answers: refused, or written with the fresh contract. */
-export interface Submission {
-  committed: boolean;
-  valid: boolean;
-  violations: Violation[];
-  stale: Violation[];
-  /** The dotted path of each stored value the write changed; none, and nothing was saved, when the values were what is stored. */
-  changes: string[];
+/** What /submit answers: the result shape, and, when written, the fresh contract. */
+export interface Submission extends Validation {
   outputs: Values;
   contract: Contract | null;
   created: Created | null;

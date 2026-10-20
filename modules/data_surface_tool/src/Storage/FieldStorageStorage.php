@@ -93,7 +93,7 @@ final class FieldStorageStorage implements ResourceStorageInterface {
       $message = $this->t('The field %field has data, so its storage settings cannot change in a way that changes its database columns.', [
         '%field' => $original->getName(),
       ]);
-      throw new StorageViolationsException(new ViolationSet([new Violation('settings', '', $message)]));
+      throw new StorageViolationsException(new ViolationSet([new Violation('settings', '', $message, 'has_data')]));
     }
     return $record;
   }
@@ -165,7 +165,7 @@ final class FieldStorageStorage implements ResourceStorageInterface {
       '%expected' => $expected,
       '%type' => $type,
     ]);
-    throw new StorageViolationsException(new ViolationSet([new Violation('field_type', '', $message)]));
+    throw new StorageViolationsException(new ViolationSet([new Violation('field_type', '', $message, Violation::TYPE_MISMATCH)]));
   }
 
   /**

@@ -6,7 +6,6 @@ namespace Drupal\data_surface\Storage;
 
 use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\data_surface\Pipeline\Violation;
-use Drupal\data_surface\Pipeline\ViolationMessage;
 use Drupal\data_surface\Pipeline\StorageViolationsException;
 use Drupal\data_surface\Pipeline\ViolationSet;
 
@@ -99,7 +98,7 @@ final class SchemaViolations {
       }
       // The schema's message object travels on as an object, exactly as
       // the pipeline's own violations do, so a caller renders it once.
-      $violations[] = new Violation($placed[0], $placed[1], ViolationMessage::of($violation));
+      $violations[] = Violation::fromConstraint($placed[0], $placed[1], $violation);
     }
     return new ViolationSet($violations);
   }

@@ -105,6 +105,20 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   protected array $unmatched = [];
 
   /**
+   * Where the level being validated sits in the values a caller sends.
+   *
+   * The dotted prefix of the level's keys, and each port it reads mapped
+   * to the full path of the key it reads, so a refusal rendered for a
+   * machine names a key it depends on by the path a caller sends it at.
+   * Set by validateFramed() for each child and put back after it.
+   *
+   * Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
+   *
+   * @var array{0: string, 1: array<string, string>}
+   */
+  protected array $frame = ['', []];
+
+  /**
    * Constructs a DataSurfacePipeline.
    *
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
@@ -532,7 +546,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         [$key, $below] = array_pad(explode('.', $path, 2), 2, '');
         $this->notTaken[$path] = new Violation($key, $below, $this->t('@label is locked and kept as stored; the value sent was not taken.', [
           '@label' => $entry->definition->getLabel() ?? $name,
-        ]));
+        ]), Violation::LOCKED);
       }
       return $kept;
     }
@@ -794,7 +808,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     [$key, $below] = array_pad(explode('.', $at . '.' . implode('.', $parents), 2), 2, '');
     return new Violation($key, $below, $this->t('@label is stored for the item at this position, and items are matched to what is stored by position, which items added or removed have moved: send it again, or the clear marker to remove it.', [
       '@label' => static::definitionAt($child, $parents)?->getLabel() ?? end($parents),
-    ]));
+    ]), Violation::SECRET_IN_ITEM);
   }
 
   /**
@@ -896,7 +910,43 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * {@inheritdoc}
    */
   public function validate(DataSurfaceInterface $surface, array $values, array $current = []): ViolationSet {
+    $this->frame = ['', []];
     return new ViolationSet($this->validateLevel($surface, $values, $current));
+  }
+
+  /**
+   * Validates a child's level in its own frame, then puts the frame back.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   *   The child.
+   * @param array $values
+   *   Its values.
+   * @param array $current
+   *   What it holds in storage.
+   * @param string $at
+   *   Its dotted path below the current level: the key, and for an item
+   *   its delta.
+   * @param array<string, string> $reads
+   *   Its ports, each mapped to the path in the current level's frame of
+   *   the key it reads.
+   *
+   * @return \Drupal\data_surface\Pipeline\Violation[]
+   *   The violations, filed under the child's own keys.
+   */
+  protected function validateFramed(DataSurfaceInterface $child, array $values, array $current, string $at, array $reads): array {
+    $outer = $this->frame;
+    [$prefix, $ports] = $outer;
+    $resolved = [];
+    foreach ($reads as $port => $path) {
+      $resolved[(string) $port] = $ports[$path] ?? $prefix . $path;
+    }
+    $this->frame = [$prefix . $at . '.', $resolved];
+    try {
+      return $this->validateLevel($child, $values, $current);
+    }
+    finally {
+      $this->frame = $outer;
+    }
   }
 
   /**
@@ -924,7 +974,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         // a rule; a value sent for it other than what it holds is refused.
         // Decision: see docs/decisions.md#a-key-that-does-not-apply.
         if (array_key_exists($name, $values) && ValueState::isConfigured($value) && !(array_key_exists($name, $current) && $current[$name] == $value)) {
-          $errors[] = new Violation($name, '', $this->doesNotApply($surface, $refined, $name, '', $values));
+          $errors[] = new Violation($name, '', $this->doesNotApply($surface, $refined, $name, '', $values), Violation::DOES_NOT_APPLY);
         }
         continue;
       }
@@ -935,7 +985,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
           $held = is_array($value) ? NestedArray::getValue($value, $parents) : NULL;
           $stored = is_array($current[$name] ?? NULL) && NestedArray::keyExists($current[$name], $parents) ? NestedArray::getValue($current[$name], $parents) : NULL;
           if (ValueState::isConfigured($held) && $held != $stored) {
-            $errors[] = new Violation($name, $path, $this->doesNotApply($surface, $refined, $name, $path, $values));
+            $errors[] = new Violation($name, $path, $this->doesNotApply($surface, $refined, $name, $path, $values), Violation::DOES_NOT_APPLY);
           }
         }
         $definition = static::withoutRuledOut($definition);
@@ -952,16 +1002,16 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         // was never set is this case whether it is required or not, and
         // it is never stale: there is no value to keep.
         if ($definition->isRequired()) {
-          $errors[] = new Violation($name, '', $this->isRequired($surface, $refined, $name, '', $definition->getLabel() ?? $name, $values));
+          $errors[] = new Violation($name, '', $this->isRequired($surface, $refined, $name, '', $definition->getLabel() ?? $name, $values), Violation::REQUIRED);
         }
         elseif (DefinitionMetadata::isAlwaysHeld($definition)) {
           // Null clears where clearing is possible; here the storage
           // holds a value whatever is sent, so null is no answer.
           // Decision: see docs/decisions.md#a-key-its-storage-always-holds.
-          $errors[] = new Violation($name, '', $this->cannotBeCleared($definition, $name));
+          $errors[] = new Violation($name, '', $this->cannotBeCleared($definition, $name), Violation::CANNOT_CLEAR);
         }
         foreach ($missing as $path => $label) {
-          $errors[] = new Violation($name, $path, $this->isRequired($surface, $refined, $name, $path, $label, $values));
+          $errors[] = new Violation($name, $path, $this->isRequired($surface, $refined, $name, $path, $label, $values), Violation::REQUIRED);
         }
         continue;
       }
@@ -982,8 +1032,8 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         if (!ValueState::isConfigured($values[$entry->variants->by] ?? NULL)) {
           $errors[] = new Violation($name, '', $this->t('@label depends on @by, which holds no value.', [
             '@label' => $definition->getLabel() ?? $name,
-            '@by' => $refined->getDefinition($entry->variants->by)?->getLabel() ?? $entry->variants->by,
-          ]));
+            '@by' => Named::key($refined->getDefinition($entry->variants->by)?->getLabel() ?? $entry->variants->by, $this->frame[0] . $entry->variants->by),
+          ]), Violation::NO_VARIANT);
         }
         continue;
       }
@@ -1017,11 +1067,11 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
           // A value not on a list: the refusal names the list.
           $choices[count($refusals)] = TRUE;
         }
-        $refusals[] = new Violation($name, $path, ViolationMessage::of($violation));
+        $refusals[] = Violation::fromConstraint($name, $path, $violation);
       }
       foreach ($missing as $path => $label) {
         // What a rule made required is said below, with the rest.
-        $refusals[] = new Violation($name, $path, $this->t('@label is required.', ['@label' => $label]));
+        $refusals[] = new Violation($name, $path, $this->t('@label is required.', ['@label' => $label]), Violation::REQUIRED);
       }
       if ($refusals !== [] && $this->isStale($definition, $value, $name, $current, $refined->getDefinitions()->dependencies($name), $values)) {
         // The whole key is reported as stale and not re-judged. What
@@ -1053,10 +1103,14 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *   refined one property at a time, so its refusals are matched to the
    *   property each is about.
    * - A value not on its key's list is followed by a sentence listing
-   *   what may be chosen, as refined for these values, each label with
-   *   its value, so it says what to send ("... Choose Main hall
-   *   (riverside_main) or East room (riverside_east)."), capped at
-   *   CHOICES_SHOWN.
+   *   what may be chosen, as refined for these values ("... Choose Main
+   *   hall or East room." for a form; for a machine, what to send with
+   *   its label beside it, "... Choose riverside_main (Main hall) or
+   *   riverside_east (East room)."), capped at CHOICES_SHOWN.
+   *
+   * A key and a value these sentences name are Named placeholders, so
+   * each renders for whoever reads it: by label for a form, by path and
+   * by what is sent for a machine (Sentences::machine()).
    *
    * Decision: see
    * docs/decisions.md#a-refusal-names-what-it-depends-on.
@@ -1107,7 +1161,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       // sentence a required key does.
       $message = $refusal->message;
       if ($allowed === NULL && $message instanceof TranslatableMarkup && $message->getUntranslatedString() === '@label is required.') {
-        $refusals[$index] = new Violation($refusal->key, $refusal->path, $this->requiredWhen($message->getArguments()['@label'], $conditions));
+        $refusals[$index] = $refusal->saying($this->requiredWhen($message->getArguments()['@label'], $conditions));
         continue;
       }
       // The constraint's message is kept whole, and what this adds is said
@@ -1119,7 +1173,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       if ($allowed !== NULL) {
         $sentences[] = $allowed;
       }
-      $refusals[$index] = new Violation($refusal->key, $refusal->path, new Sentences(...$sentences));
+      $refusals[$index] = $refusal->saying(new Sentences(...$sentences));
     }
     return $refusals;
   }
@@ -1161,11 +1215,13 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     $presence = $entry?->presenceDependencies() ?? [];
     $withheld = $refined->withheldValues();
     $context = ['context' => self::REFUSAL_CONTEXT];
+    [$prefix, $ports] = $this->frame;
     foreach ($dependencies as $dependency) {
       $at = explode('.', $dependency);
       $watched = static::definitionAt($refined, $at);
-      $key = $watched?->getLabel() ?? $dependency;
-      $arguments = ['@key' => $key];
+      // By its label for a form, by its path for a machine; a port by the
+      // path of the key it reads.
+      $arguments = ['@key' => Named::key($watched?->getLabel() ?? $dependency, $ports[$dependency] ?? $prefix . $dependency)];
       if (array_key_exists($dependency, $withheld)) {
         // What the rule was handed: nothing, since its own key refused it.
         // Decision: see
@@ -1181,7 +1237,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       $set = $watched === NULL || !is_scalar($held) ? NULL : $this->options->resolve($watched);
       $labeled = $set !== NULL && isset($set->options[$held]);
       if ($labeled || (is_scalar($held) && !is_bool($held))) {
-        $arguments['@value'] = $labeled ? $set->options[$held] : (string) $held;
+        $arguments['@value'] = $labeled ? Named::value($set->options[$held], (string) $held) : (string) $held;
       }
       $conditions[] = match (TRUE) {
         !ValueState::isConfigured($held) => $this->t('@key is empty', $arguments, $context),
@@ -1250,8 +1306,9 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *   The refused property below it, or ''.
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup|null
-   *   "Choose Main hall (riverside_main) or East room (riverside_east).",
-   *   at most CHOICES_SHOWN of them and how many more; "Nothing may be
+   *   "Choose Main hall or East room." for a form, "Choose riverside_main
+   *   (Main hall) or riverside_east (East room)." for a machine, at most
+   *   CHOICES_SHOWN of them and how many more; "Nothing may be
    *   chosen." for an empty list; NULL when the key offers no list.
    */
   protected function choices(DataSurfaceInterface $refined, string $name, string $path): ?TranslatableMarkup {
@@ -1265,21 +1322,21 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     if ($set->options === []) {
       return $this->t('Nothing may be chosen.', [], $context);
     }
+    // Each by its label for a form; for a machine, what is sent, its
+    // label beside it.
     $choices = [];
     foreach ($set->options as $value => $label) {
-      $choices[] = (string) $label === (string) $value
-        ? (string) $value
-        : (string) $this->t('@label (@value)', ['@label' => $label, '@value' => $value], $context);
+      $choices[] = Named::value($label, (string) $value);
     }
     $shown = array_slice($choices, 0, self::CHOICES_SHOWN);
     $more = count($choices) - count($shown);
     if ($more > 0) {
-      return $this->formatPlural($more, 'Choose @choices or 1 more.', 'Choose @choices or one of @count more.', ['@choices' => implode(', ', $shown)], $context);
+      return $this->formatPlural($more, 'Choose @choices or 1 more.', 'Choose @choices or one of @count more.', ['@choices' => new NamedList(...$shown)], $context);
     }
     $last = array_pop($shown);
     return $shown === []
       ? $this->t('Choose @choice.', ['@choice' => $last], $context)
-      : $this->t('Choose @choices or @last.', ['@choices' => implode(', ', $shown), '@last' => $last], $context);
+      : $this->t('Choose @choices or @last.', ['@choices' => new NamedList(...$shown), '@last' => $last], $context);
   }
 
   /**
@@ -1311,7 +1368,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         : $this->t('@label cannot be cleared: it always holds a value, off by default. Leave it out to keep what it holds.', ['@label' => $label], $context);
     }
     $shown = $set !== NULL && isset($set->options[$value])
-      ? $this->t('@label (@value)', ['@label' => $set->options[$value], '@value' => $value], $context)
+      ? Named::value($set->options[$value], (string) $value)
       : (string) $default;
     return $this->t('@label cannot be cleared: it always holds a value, @default by default. Leave it out to keep what it holds.', [
       '@label' => $label,
@@ -1559,25 +1616,29 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         new Violation($name, '', $this->t('This value must be of type @expected, @actual given.', [
           '@expected' => 'map',
           '@actual' => get_debug_type($value),
-        ])),
+        ]), Violation::TYPE_MISMATCH),
       ];
     }
     $errors = [];
+    // The ports the child reads, each by the path in this level's frame
+    // of the key it reads, for what its refusals name.
+    $reads = $entry->attachment->reads ?? [];
     if ($entry->variants !== NULL) {
       $chosen = (string) $entry->variants->chosen($values[$entry->variants->by] ?? NULL);
+      $reads = isset($entry->variants->variants[$chosen]) ? $entry->variants->variants[$chosen]->reads : [];
       $strangers = $entry->variants->strangers($chosen, $value);
       $owners = $entry->variants->owners($strangers, $chosen);
       foreach ($strangers as $stranger) {
-        $errors[] = new Violation($name, $stranger, isset($owners[$stranger])
-          ? $this->variantMismatchMessage($name . '.' . $stranger, $entry->variants->by, $chosen, $owners[$stranger])
-          : $this->t('Unknown key @key.', ['@key' => $name . '.' . $stranger]));
+        $errors[] = isset($owners[$stranger])
+          ? new Violation($name, $stranger, $this->variantMismatchMessage($name . '.' . $stranger, $entry->variants->by, $chosen, $owners[$stranger]), Violation::WRONG_VARIANT)
+          : new Violation($name, $stranger, $this->t('Unknown key @key.', ['@key' => $name . '.' . $stranger]), Violation::UNKNOWN_KEY);
       }
       // Judged as the variant would judge it on its own: the keys it
       // declares, and nothing it does not.
       $value = array_diff_key($value, array_flip($strangers));
     }
-    foreach ($this->validateLevel($child, $value, is_array($current) ? $current : []) as $violation) {
-      $errors[] = new Violation($name, $violation->fullPath(), $violation->message, $violation->stale);
+    foreach ($this->validateFramed($child, $value, is_array($current) ? $current : [], $name, $reads) as $violation) {
+      $errors[] = $violation->at($name, $violation->fullPath());
     }
     return $errors;
   }
@@ -1614,7 +1675,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         new Violation($name, '', $this->t('This value must be of type @expected, @actual given.', [
           '@expected' => 'list',
           '@actual' => get_debug_type($value),
-        ])),
+        ]), Violation::TYPE_MISMATCH),
       ];
     }
     $items = array_values($value);
@@ -1627,7 +1688,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     }
     $errors = [];
     foreach (DefinitionTypedData::create($this->typedDataManager, $own, $items, $name)->validate() as $violation) {
-      $errors[] = new Violation($name, (string) $violation->getPropertyPath(), ViolationMessage::of($violation));
+      $errors[] = Violation::fromConstraint($name, (string) $violation->getPropertyPath(), $violation);
     }
     $stored = is_array($current) ? array_values($current) : [];
     $child = $list->child();
@@ -1636,12 +1697,12 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         $errors[] = new Violation($name, (string) $delta, $this->t('This value must be of type @expected, @actual given.', [
           '@expected' => 'map',
           '@actual' => get_debug_type($item),
-        ]));
+        ]), Violation::TYPE_MISMATCH);
         continue;
       }
       $held = is_array($stored[$delta] ?? NULL) ? $stored[$delta] : [];
-      foreach ($this->validateLevel($child, $item, $held) as $violation) {
-        $errors[] = new Violation($name, $delta . '.' . $violation->fullPath(), $violation->message, $violation->stale);
+      foreach ($this->validateFramed($child, $item, $held, $name . '.' . $delta, $list->item->reads) as $violation) {
+        $errors[] = $violation->at($name, $delta . '.' . $violation->fullPath());
       }
     }
     return $errors;
@@ -1753,7 +1814,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     return new Violation($name, '', $this->t('@label keeps the value @value, which is no longer available. Choose a new one when you can.', [
       '@label' => $definition->getLabel() ?? $name,
       '@value' => (string) $value,
-    ]), TRUE);
+    ]), Violation::STALE, TRUE, DefinitionMetadata::isSecret($definition) ? NULL : $value);
   }
 
   /**
@@ -1769,7 +1830,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     foreach (array_keys(array_diff_key($output, $definitions->toArray())) as $unknown) {
       $errors[] = new Violation((string) $unknown, '', $this->t('Unknown output key @key.', [
         '@key' => $unknown,
-      ]));
+      ]), Violation::UNKNOWN_KEY);
     }
     foreach ($definitions as $name => $definition) {
       $name = (string) $name;
@@ -1780,7 +1841,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         if ($definition->isRequired()) {
           $errors[] = new Violation($name, '', $this->t('@label was not emitted.', [
             '@label' => $definition->getLabel() ?? $name,
-          ]));
+          ]), Violation::REQUIRED);
         }
         continue;
       }
@@ -1797,7 +1858,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       }
       $typed_data = DefinitionTypedData::create($this->typedDataManager, $definition, $output[$name], $name);
       foreach ($typed_data->validate() as $violation) {
-        $errors[] = new Violation($name, (string) $violation->getPropertyPath(), ViolationMessage::of($violation));
+        $errors[] = Violation::fromConstraint($name, (string) $violation->getPropertyPath(), $violation);
       }
     }
     return new ViolationSet($errors);
@@ -1870,7 +1931,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       $unknown_path = static::joinPath($path, (string) $unknown);
       $errors[] = new Violation($key, $unknown_path, $this->t('Unknown output key @key.', [
         '@key' => $key . '.' . $unknown_path,
-      ]));
+      ]), Violation::UNKNOWN_KEY);
     }
     foreach ($properties as $property => $property_definition) {
       if (array_key_exists($property, $value)) {
@@ -1954,7 +2015,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     return new Violation($key, $path, $this->t('This value must be of type @expected, @actual given.', [
       '@expected' => $expected,
       '@actual' => get_debug_type($value),
-    ]));
+    ]), Violation::TYPE_MISMATCH);
   }
 
   /**
@@ -2008,7 +2069,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     $locked = $surface->lockedWhole();
     if ($locked !== NULL) {
       return new DataSurfaceResult([], new ViolationSet([
-        new Violation(self::ACCESS_VIOLATION_KEY, '', $this->t('This may be seen and not changed, so nothing was written: @reason', ['@reason' => $locked])),
+        new Violation('', '', $this->t('This may be seen and not changed, so nothing was written: @reason', ['@reason' => $locked]), Violation::LOCKED),
       ]), access: $access);
     }
     $current = $storage->load($surface);
@@ -2262,20 +2323,23 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   /**
    * Turns a refusal by access into the one violation it is.
    *
-   * Filed under the reserved key rather than under a top level key,
-   * because nothing about any particular value was wrong: the run itself
-   * was refused. The reason travels as a message object, like every
-   * other violation, so whoever prints it escapes it once.
+   * Filed under no key, with an empty path, rather than under a top
+   * level key, because nothing about any particular value was wrong: the
+   * run itself was refused, which its code says. The reason travels as a
+   * message object, like every other violation, so whoever prints it
+   * escapes it once.
+   *
+   * Decision: see docs/decisions.md#one-result-at-every-door.
    *
    * @param \Drupal\Core\Access\AccessResultInterface $access
    *   The forbidden answer.
    *
    * @return \Drupal\data_surface\Pipeline\ViolationSet
-   *   One violation, under ACCESS_VIOLATION_KEY.
+   *   One violation, with an empty path and the code `access`.
    */
   protected function accessViolations(AccessResultInterface $access): ViolationSet {
     return new ViolationSet([
-      new Violation(self::ACCESS_VIOLATION_KEY, '', DataSurfaceAccess::message($access)),
+      new Violation('', '', DataSurfaceAccess::message($access), Violation::ACCESS),
     ]);
   }
 
@@ -2302,6 +2366,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         (string) $name,
         implode('.', $segments),
         $this->t('Unknown key @key.', ['@key' => $path]),
+        Violation::UNKNOWN_KEY,
       );
     }
     return new ViolationSet($violations);
@@ -2329,6 +2394,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         $name,
         implode('.', [...$segments, $key]),
         $this->variantMismatchMessage($exception->getPath() . '.' . $key, $exception->getBy(), $exception->getChosen(), $owners),
+        Violation::WRONG_VARIANT,
       );
     }
     return new ViolationSet($violations);
@@ -2355,6 +2421,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
           '@expected' => $exception->getExpected(),
           '@actual' => $exception->getActual(),
         ]),
+        Violation::TYPE_MISMATCH,
       ),
     ]);
   }
