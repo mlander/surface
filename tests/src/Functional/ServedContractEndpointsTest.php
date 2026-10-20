@@ -334,7 +334,9 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $wrong_room = $this->json($this->post($path, ['values' => ['room' => 'library_garden', 'capacity' => 20] + $values]));
     $this->assertFalse($wrong_room['valid']);
     $this->assertSame(['room'], array_column($wrong_room['violations'], 'path'));
-    $this->assertNull($wrong_room['prepared']);
+    // What storage rehearsed is never served: it may hold what the caller
+    // may not see.
+    $this->assertArrayNotHasKey('prepared', $wrong_room);
 
     $too_many = $this->json($this->post($path, ['values' => ['capacity' => 151] + $values]));
     $this->assertFalse($too_many['valid']);
@@ -354,7 +356,7 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $this->assertTrue($valid['valid']);
     $this->assertSame([], $valid['violations']);
     $this->assertSame('harbour_deck', $valid['values']['room']);
-    $this->assertSame('harbour_deck', $valid['prepared']['room']);
+    $this->assertSame(['valid', 'violations', 'stale', 'notes', 'values'], array_keys($valid));
 
     // Nothing was written by any of them.
     $this->container->get('config.factory')->reset();

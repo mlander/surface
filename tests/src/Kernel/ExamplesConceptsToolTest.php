@@ -83,7 +83,7 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
     $first = static fn (string $answer): string => strtok($answer, "\n");
     $this->assertSame('Failed: The values were refused: send_day: Send day does not apply when Frequency is Monthly.', $first($answers['event.bulletin']['monthly_with_day']));
     $this->assertSame('Failed: The values were refused: items: This value should be between 1 and 5 when Frequency is Weekly.', $first($answers['event.bulletin']['weekly_items']));
-    $this->assertStringContainsString('prepared: {"frequency":"monthly","send_day":"friday","items":8}', $answers['event.bulletin']['monthly_items'], 'The send day kept as stored.');
+    $this->assertStringContainsString('values: {"frequency":"monthly","items":8}', $answers['event.bulletin']['monthly_items'], 'The send day does not apply, so no answer says it; storage keeps it.');
     $this->assertSame('Failed: The values were refused: contact.email: Email is required when Show on the press page is on.', $first($answers['event.press']['listed_without_email']));
     $this->assertStringStartsWith('Success: ', $answers['event.press']['unlisted_without_email']);
     $this->assertSame('Failed: The values were refused: reviewed_by: Reviewed by is required when Reviewed on is set.', $first($answers['event.press']['reviewed_by_nobody']));

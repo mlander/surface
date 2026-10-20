@@ -27,8 +27,11 @@ document. What a caller sends moved:
 `values` holds what used to be top-level inputs (`label`,
 `description`, `required`, `settings`) beside `storage` (cardinality,
 translatability, and the storage settings its field type chooses, such
-as a string's `max_length`), and every tool takes `dry_run`, which answers with
-what would be stored, after storage's own checks, as `prepared`. The
+as a string's `max_length`), and every tool takes `dry_run`, which runs
+storage's own checks and writes nothing, and answers the accepted
+`values` as the read tool would: what storage would have been handed is
+never served, since it holds what the caller may not see
+([decision](../../docs/decisions.md#every-door-projects-what-the-read-tool-projects)). The
 field type key offers every field type offered in the UI. One whose
 module marks a settings class with `#[Variant]` is described
 by that class; every other, a plain `string` or `integer` field
@@ -225,8 +228,14 @@ base plugin id:
 - **Secrets.** A key the resource marks secret is never returned, at any
   depth, and is not in the output definition: left out, as the write
   tool's defaults leave it out, not sent as a placeholder.
-  `InputDefinitions::secrets()` finds every one, under a slot in
+  `Pipeline\Outbound::secrets()` finds every one, under a slot in
   any of its variants, and cuts both the definition and the values.
+- **Every door answers the same.** What the read answers is the one
+  projection of stored values (`Pipeline\Outbound::project()`): no key
+  the build left out for the account, at any depth, no secret, no key
+  that does not apply. The write tool's `values`, on a dry run and on a
+  write, go through the same, so neither door says more than the other
+  ([decision](../../docs/decisions.md#every-door-projects-what-the-read-tool-projects)).
 - **Access.** The write tool's, deliberately, for now: the operation's
   permission, then the resource's access class, for the context the
   parameters build. A caller who may not change a thing may not read it
@@ -279,6 +288,7 @@ The routes of `data_surface_examples` name it.
 | `Kernel\ReadToolTest` | The read tools: one per operation that changes a thing that exists and none for one that creates, a read operation taking exactly the parameters, an output map of the write tool's keys, step 3's stored values with the compliance module's mounted keys before and after a write, the content type read by its type, an unknown parameter failing as for the write tool, access as the write tool's, and a secret never returned. |
 | `Kernel\OperationFactsTest` | How an operation behaves: the attribute's defaults, idempotence derived from whether it creates, contradicting facts refused, the Tool API's kind and destructive flag as the MCP bridge reads them, no read tool beside a read only operation, and `x-surface.operation` at the top of both documents. |
 | `Kernel\ToolFeedbackTest` | What the listing and a refusal say: each key another narrows naming what it depends on, once, through a port at its site; every refusal form (a list, a list another key narrows, a long list capped, a bound, a pattern, a key that does not apply); `values` held to its shape before the tool runs; and an agent's retry loop on example 3 fixing each key from its refusal in one try, through the runner MCP and ECA call. |
+| `Kernel\SecurityProjectionTest` | Every door projecting what the read projects: a dry run and React `/validate` answering no key access left out and no `prepared`, no door echoing a secret, a collection item keeping its position's secret or refused when positions moved, a note saying nothing of a secret, the React and tool doors asking the permission first and naming no id, a child permission nothing can name refused, and the cached definitions no account's. |
 | `Kernel\DerivedToolDefinitionsTest` | Tool Explorer showing every derived tool, read tools included, installing a module deriving its tools, and each tool declaring its operation's permission unless it has a placeholder. |
 
 ## Who may run them
@@ -294,9 +304,16 @@ fields`, named from the identity the operation's context knows (the
 entity type the add tool is given, or the one the storage or field it
 names is on), then `FieldInstanceAccess`, which refuses a locked
 storage, then the access class of the settings variant the field type
-chose, which may refuse (the gated test field type does). A field or
-storage that does not exist builds no context, and is refused without
-saying why.
+chose, which may refuse (the gated test field type does). A tool asks a
+permission as written first, from its id alone, before it reads a
+parameter or loads what one names, and refines `values` (which reads
+what is stored) only for an account the operation is open to. A refusal
+past that gives one reason, "The operation cannot be run by this
+account with these parameters.", whether a field or storage does not
+exist or an access class refused it, so it never says whether an id
+exists; an account holding the operation's permission for what the
+parameters name hears the access class's own reason, and the rest is
+logged to the tool channel.
 
 The operation's permission is also the tool's declared permission
 (`ToolDefinition::getPermission()`), so `tool:info` prints it and the
@@ -320,10 +337,15 @@ same one.
 A listing is cached by clients, so it says only what the account's own
 permissions and roles decide, for the account that asks
 ([decision](../../docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability)).
-The derived definitions are built for the account alone
-(`ResourcesInterface::buildStatic()`), and a tool instance lists
-`values` again for the current account
-(`OperationInputs::listedValues()`), so `tool:info` and anything that
+The derived definitions, cached for every account, are no account's:
+built for no account (`ResourcesInterface::buildDeclared()`), every key
+as declared and each one an access answer could lock or leave out
+marked, and derived as the anonymous account, so an option list read
+from the site is never a privileged account's
+([decision](../../docs/decisions.md#a-static-tool-definition-is-no-accounts)).
+A tool instance lists `values` again for the current account, built for
+the account alone (`OperationInputs::listedValues()`,
+`ResourcesInterface::buildStatic()`), so `tool:info` and anything that
 normalizes an instance's inputs see the caller's own listing:
 
 - a key a static access answer locks is a locked property, and one it
@@ -340,8 +362,11 @@ normalizes an instance's inputs see the caller's own listing:
 Once the parameters arrive, `values` is refined from the resource built
 with every answer applied, which is what the pipeline holds a call to.
 A consumer that lists from the cached plugin definitions without making
-an instance, as the MCP bridge's config deriver does, sees the account
-that discovered them.
+an instance sees every key, as declared, the marked ones saying a call
+may find them locked or left out. The MCP bridge's config deriver makes
+an instance when it derives its MCP tools and caches what it normalized
+for every client, so its `tools/list` is the listing of the account that
+caused that derivation: the bridge's caching, open there.
 
 The tool asks again inside `doExecute()`. `ToolInterface::execute()`
 runs no access check of its own, so a caller reaching a tool directly

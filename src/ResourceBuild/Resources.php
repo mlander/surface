@@ -159,6 +159,11 @@ final class Resources implements ResourcesInterface {
   protected bool $accountAlone = FALSE;
 
   /**
+   * Whether the build under way is for no account (buildDeclared()).
+   */
+  protected bool $declaring = FALSE;
+
+  /**
    * The static access answers asked so far, by class, context and account kind.
    *
    * @var array<string, \Drupal\data_surface\Resource\AccessAnswer>
@@ -181,14 +186,7 @@ final class Resources implements ResourcesInterface {
    * {@inheritdoc}
    */
   public function build(string $resource, OperationContext $context): DataSurfaceInterface {
-    $alone = $this->accountAlone;
-    $this->accountAlone = FALSE;
-    try {
-      return $this->buildResource($resource, $context, [], top: TRUE);
-    }
-    finally {
-      $this->accountAlone = $alone;
-    }
+    return $this->buildAs($resource, $context, FALSE, FALSE);
   }
 
   /**
@@ -197,13 +195,40 @@ final class Resources implements ResourcesInterface {
   public function buildStatic(string $resource, OperationContext $context): DataSurfaceInterface {
     // Decision: see
     // docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
-    $alone = $this->accountAlone;
-    $this->accountAlone = TRUE;
+    return $this->buildAs($resource, $context, TRUE, FALSE);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildDeclared(string $resource, OperationContext $context): DataSurfaceInterface {
+    // Decision: see docs/decisions.md#a-static-tool-definition-is-no-accounts.
+    return $this->buildAs($resource, $context, TRUE, TRUE);
+  }
+
+  /**
+   * Builds at the top, with the access answers applied as asked.
+   *
+   * @param string $resource
+   *   The class, or its id.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   Where it is being asked for.
+   * @param bool $alone
+   *   TRUE to set a runtime answer aside (buildStatic()).
+   * @param bool $declaring
+   *   TRUE to set every answer aside, asking none (buildDeclared()).
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The sealed data surface.
+   */
+  protected function buildAs(string $resource, OperationContext $context, bool $alone, bool $declaring): DataSurfaceInterface {
+    [$was_alone, $was_declaring] = [$this->accountAlone, $this->declaring];
+    [$this->accountAlone, $this->declaring] = [$alone, $declaring];
     try {
       return $this->buildResource($resource, $context, [], top: TRUE);
     }
     finally {
-      $this->accountAlone = $alone;
+      [$this->accountAlone, $this->declaring] = [$was_alone, $was_declaring];
     }
   }
 
@@ -1659,7 +1684,18 @@ final class Resources implements ResourcesInterface {
     // that built the child's context itself took responsibility for entry.
     $resolved = $operation?->permission === NULL ? NULL : static::resolvePermission((string) $operation->permission, $context);
     // Decision: see docs/decisions.md#a-permission-a-child-cannot-name.
-    if ($resolved !== NULL && $resolved !== $gate) {
+    if ($operation?->permission !== NULL && $resolved === NULL && !$this->accountAlone) {
+      // Only a static listing, built before any subject, may describe a
+      // child whose permission it cannot name: anywhere else a permission
+      // nothing can name refuses, as it does at the top, rather than
+      // letting the child through unasked.
+      $reason = sprintf('The "%s" operation\'s permission, "%s", names identity its context does not know.', $operation->id, $operation->permission);
+      return [AccessAnswer::omitted($reason), FALSE];
+    }
+    // For no account, a permission is not asked: whoever lacks it finds
+    // the child left out, so it is marked.
+    $marked = $this->declaring && $resolved !== NULL && $resolved !== $gate;
+    if ($resolved !== NULL && $resolved !== $gate && !$marked) {
       $result = AccessResult::allowedIfHasPermission($account, $resolved);
       if (!$result->isAllowed()) {
         $omitted = AccessAnswer::omitted(sprintf('The "%s" operation needs the "%s" permission.', $operation?->id, $resolved));
@@ -1668,7 +1704,7 @@ final class Resources implements ResourcesInterface {
       $access->addCacheableDependency($result);
     }
     if ($answering === []) {
-      return [$access, FALSE];
+      return [$access, $marked];
     }
     // Its access class, then each alter that answers access, the stricter
     // standing; built for the account alone, each runtime answer is set
@@ -1681,7 +1717,7 @@ final class Resources implements ResourcesInterface {
     if ($applied !== NULL) {
       $access = $access->andIf($applied);
     }
-    return [$aside ? $access->addCacheContexts($contexts) : $access, $aside];
+    return [$aside ? $access->addCacheContexts($contexts) : $access, $aside || $marked];
   }
 
   /**
@@ -1741,6 +1777,13 @@ final class Resources implements ResourcesInterface {
    *   aside read, which chose their kind.
    */
   protected function answers(array $answering, OperationContext $context, AccountInterface $account): array {
+    if ($this->declaring) {
+      // For no account: nothing is asked, and whatever answers may lock
+      // or leave out, so every key it answers for is marked.
+      // Decision: see
+      // docs/decisions.md#a-static-tool-definition-is-no-accounts.
+      return [NULL, $answering !== [], []];
+    }
     $applied = NULL;
     $aside = FALSE;
     $contexts = [];
@@ -2003,6 +2046,17 @@ final class Resources implements ResourcesInterface {
       }
     }
     return $answer;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function permissionAccess(string $resource, string $operation, ?AccountInterface $account = NULL, ?OperationContext $context = NULL): ?AccessResultInterface {
+    $found = $this->registry->getOperation($this->registry->getDefinition($resource)->name(), $operation);
+    $permission = $context === NULL || $found->permission === NULL
+      ? $found->staticPermission()
+      : static::resolvePermission($found->permission, $context);
+    return $permission === NULL ? NULL : AccessResult::allowedIfHasPermission($account ?? $this->currentUser, $permission);
   }
 
   /**

@@ -987,6 +987,35 @@ renames sit in A because they are cheapest before new code exists.
       Open: an answer for one key of an owner; a structure at a mount
       an alter locks.
 
+    From the reviews (2026-10-20), the fix-now list of
+    `docs/reviews-2026-10-20/synthesis.md`, section 1, batch one:
+    - **B18, discovery order.** DONE 2026-10-20: a call made while the
+      plugin hosts are being read is answered from the others, what is
+      kept is assigned only once every host was read, and the registry memoizes and caches only a read made from
+      the whole answer, so it holds the same definitions whichever end
+      is asked first (`DiscoveryOrderTest`).
+    - **B25, the contract diff fails open.** DONE 2026-10-20: a missing
+      directory or baseline fails, baselines record their module and a
+      run touches only the named modules', `--uid` names the account and
+      is printed, `--format=json` (`ContractDiffCommandTest`,
+      `docs/evolution.md#the-contract-diff`).
+    - **B1, B2, B3, B4, B5, B26, the security findings.** DONE
+      2026-10-20: every door projects what the read tool projects, no
+      door serves `prepared`, a collection item keeps its position's
+      secret or the write is refused, a note says nothing of a secret,
+      the React and tool doors ask the permission first and give one
+      reason, reference options carry node grants, a child permission
+      nothing can name refuses (`SecurityProjectionTest`,
+      `ReferenceableCacheabilityTest`,
+      `docs/decisions.md#every-door-projects-what-the-read-tool-projects`).
+    - **The static listing per account consumer.** DONE 2026-10-20: the
+      derived tool definitions are no account's, built for no account
+      and derived as the anonymous one; an instance lists for the
+      account that asks
+      (`docs/decisions.md#a-static-tool-definition-is-no-accounts`).
+      Open, in `mcp_server_tool_bridge`: its config deriver caches an
+      instance's schema, the discovering account's, for every client.
+
 ## Rejected, on the record
 
 So they are not re-proposed: imperative input-mutation hooks before

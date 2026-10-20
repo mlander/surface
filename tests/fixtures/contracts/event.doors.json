@@ -1,5 +1,6 @@
 {
     "surface": "event.doors",
+    "module": "data_surface_examples",
     "documents": [
         {
             "surface": "event.doors",

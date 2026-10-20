@@ -81,6 +81,16 @@ final class ResourceRegistry {
   protected ?array $shapes = NULL;
 
   /**
+   * What was read while the plugin hosts were being read, by cache id.
+   *
+   * Answered to the calls made then, so a deriver asking many times does
+   * not discover each time, and never kept past them.
+   *
+   * @var array<string, array{resources: array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>, shapes: array<class-string, \Drupal\data_surface\ResourceBuild\ShapeDefinition>}>
+   */
+  protected array $provisional = [];
+
+  /**
    * The cache tags what is read depends on, once read.
    *
    * @var string[]
@@ -124,22 +134,50 @@ final class ResourceRegistry {
    *   colon.
    */
   public function getDefinitions(): array {
-    if ($this->definitions !== NULL) {
-      return $this->definitions;
+    return $this->read()['resources'];
+  }
+
+  /**
+   * Reads every resource, structure and shape, once.
+   *
+   * Asked while the plugin hosts are being read, from inside a deriver
+   * one of them runs (eca_tool's action deriver asks the tool deriver,
+   * which asks here), the plugins that are their own structure come
+   * from every other host, which is not the whole answer: what is
+   * discovered from it is answered and neither kept nor cached, so the
+   * memo and the discovery bin only ever hold what every host said,
+   * whichever was asked first.
+   *
+   * @return array{resources: array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>, shapes: array<class-string, \Drupal\data_surface\ResourceBuild\ShapeDefinition>}
+   *   The resources and structures, keyed by name, and the shapes, keyed
+   *   by class.
+   */
+  protected function read(): array {
+    if ($this->definitions !== NULL && $this->shapes !== NULL) {
+      return ['resources' => $this->definitions, 'shapes' => $this->shapes];
     }
     $own = $this->plugins?->ownStructures() ?? [];
+    $complete = $this->plugins?->isComplete() ?? TRUE;
     $cid = self::CACHE_PREFIX . hash('xxh3', serialize($own === [] ? $this->classes : [$this->classes, $own]));
+    if (!$complete && isset($this->provisional[$cid])) {
+      return $this->provisional[$cid];
+    }
     $cached = $this->cache->get($cid);
     $hit = $cached !== FALSE && is_array($cached->data) && isset($cached->data['resources'], $cached->data['shapes']);
-    ['resources' => $this->definitions, 'shapes' => $this->shapes] = $hit ? $cached->data : $this->discover($own);
+    $read = $hit ? $cached->data : $this->discover($own);
+    if (!$complete) {
+      return $this->provisional[$cid] = $read;
+    }
+    $this->provisional = [];
     $this->cacheTags = [];
-    foreach ($this->definitions as $definition) {
+    foreach ($read['resources'] as $definition) {
       $this->cacheTags = Cache::mergeTags($this->cacheTags, $definition->cacheTags);
     }
     if (!$hit) {
-      $this->cache->set($cid, ['resources' => $this->definitions, 'shapes' => $this->shapes], Cache::PERMANENT, $this->cacheTags);
+      $this->cache->set($cid, $read, Cache::PERMANENT, $this->cacheTags);
     }
-    return $this->definitions;
+    ['resources' => $this->definitions, 'shapes' => $this->shapes] = $read;
+    return $read;
   }
 
   /**
@@ -156,6 +194,7 @@ final class ResourceRegistry {
     if ($this->definitions !== NULL && array_intersect($tags, $this->cacheTags) !== []) {
       $this->definitions = NULL;
       $this->shapes = NULL;
+      $this->provisional = [];
       $this->cacheTags = [];
     }
   }
@@ -203,10 +242,7 @@ final class ResourceRegistry {
    *   The shapes, keyed by class.
    */
   public function getShapes(): array {
-    if ($this->shapes === NULL) {
-      $this->getDefinitions();
-    }
-    return $this->shapes ?? [];
+    return $this->read()['shapes'];
   }
 
   /**

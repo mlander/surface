@@ -28,6 +28,14 @@ use Symfony\Component\Validator\Constraint;
  * past it this resolver does not apply, so the key takes any id and the
  * constraint's validator decides, which the contract says is checked on
  * the server.
+ *
+ * What the list varies by is what the selection read: the account's
+ * permissions decide whether unpublished or blocked targets are offered,
+ * and the query's access tag lets a module narrow it further, node grants
+ * by the account's grants. Core's handlers for these target types read
+ * no more than that (CONTEXTS); any other type's handler may read the
+ * account itself (a file's selection offers what the account uploaded),
+ * so its list varies by the account, `user`.
  */
 #[DataSurfaceOptionsResolver(
   id: 'data_surface_referenceable',
@@ -35,6 +43,25 @@ use Symfony\Component\Validator\Constraint;
   constraint: 'DataSurfaceReferenceable',
 )]
 final class ReferenceableOptions extends DataSurfaceOptionsResolverBase {
+
+  /**
+   * The cache contexts core's selection of each target type varies by.
+   *
+   * Node grants, for a node and for a comment (whose selection asks the
+   * commented node's access), vary by the account's grants, which core
+   * says with `user.node_grants:view`; the rest by permissions alone. A
+   * type not listed varies by the account.
+   *
+   * Decision: see
+   * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
+   */
+  public const CONTEXTS = [
+    'node' => ['user.permissions', 'user.node_grants:view'],
+    'comment' => ['user.permissions', 'user.node_grants:view'],
+    'user' => ['user.permissions'],
+    'taxonomy_term' => ['user.permissions'],
+    'media' => ['user.permissions'],
+  ];
 
   /**
    * Constructs a ReferenceableOptions resolver.
@@ -106,7 +133,7 @@ final class ReferenceableOptions extends DataSurfaceOptionsResolverBase {
     $target = (string) $field?->getSetting('target_type');
     $cacheability = (new CacheableMetadata())
       ->addCacheTags($target === '' ? [] : [$target . '_list'])
-      ->addCacheContexts(['user.permissions']);
+      ->addCacheContexts(self::CONTEXTS[$target] ?? ['user']);
     return new OptionSet($options, [], $cacheability);
   }
 

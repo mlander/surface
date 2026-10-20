@@ -342,4 +342,21 @@ class ContractDiffTest extends UnitTestCase {
     $version->invoke(NULL, self::class, 2);
   }
 
+  /**
+   * Tests a declaration with no baseline fails, and needs no allowance.
+   *
+   * Bug B25 of the reviews (2026-10-20): it was compatible, so a mistyped
+   * directory, which holds no baseline, passed every declaration as new.
+   * Writing the baselines pins it, with no reason asked.
+   */
+  public function testNoBaselineFailsAndIsPinnedByWriting(): void {
+    $unpinned = new ContractChange('event', 'event', '#', 'no baseline yet', ContractDiff::NOTE, ContractChange::UNPINNED);
+    $this->assertTrue($unpinned->fails());
+    $this->assertFalse($unpinned->isBreaking());
+    $this->assertFalse($unpinned->needsAllowance());
+    $breaking = new ContractChange('event', 'event', '#', 'no longer declared', ContractDiff::BREAKS, ContractChange::BREAKING);
+    $this->assertTrue($breaking->fails());
+    $this->assertTrue($breaking->needsAllowance());
+  }
+
 }

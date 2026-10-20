@@ -83,6 +83,21 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   protected array $notTaken = [];
 
   /**
+   * The secrets a sent collection item would erase, matched by position.
+   *
+   * Collected while accepting, by full path: an item that leaves out a
+   * secret storage holds at its position, in a list sent with items added
+   * or removed, where the position may hold another item now. submit()
+   * refuses the run with them. Every accept() starts it again.
+   *
+   * Decision: see
+   * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
+   *
+   * @var array<string, \Drupal\data_surface\Pipeline\Violation>
+   */
+  protected array $unmatched = [];
+
+  /**
    * Constructs a DataSurfacePipeline.
    *
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
@@ -113,6 +128,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    */
   public function accept(DataSurfaceInterface $surface, array $input, array $current = []): array {
     $this->notTaken = [];
+    $this->unmatched = [];
     return $this->acceptLevel($surface, $input, $current, '');
   }
 
@@ -214,6 +230,13 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       }
     }
     return $values;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function outbound(DataSurfaceInterface $surface, array $values): array {
+    return Outbound::project($surface, $values);
   }
 
   /**
@@ -446,6 +469,25 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     try {
       $sent = $this->acceptKey($surface, $entry, $input, $current, $prefix, $values, TRUE);
       $held = $this->acceptKey($surface, $entry, [$entry->name => $kept], $current, $prefix, $values, TRUE);
+      // A secret inside is never compared either: whether a note is said
+      // must not tell a caller what the secret holds. Anything sent for
+      // one was not taken.
+      // Decision: see
+      // docs/decisions.md#every-door-projects-what-the-read-tool-projects.
+      $secrets = Outbound::secretsAt($entry);
+      if (is_array($secrets) && $secrets !== []) {
+        $tree = [$entry->name => $secrets];
+        $raw = is_array($input[$entry->name]) ? Outbound::onlySecrets([$entry->name => $input[$entry->name]], $tree) : [];
+        $said = FALSE;
+        array_walk_recursive($raw, static function (mixed $value) use (&$said): void {
+          $said = $said || ValueState::isConfigured($value);
+        });
+        if ($said) {
+          return FALSE;
+        }
+        $sent = Outbound::withoutSecrets([$entry->name => $sent], $tree)[$entry->name] ?? NULL;
+        $held = Outbound::withoutSecrets([$entry->name => $held], $tree)[$entry->name] ?? NULL;
+      }
       return static::sameValue($sent, $held);
     }
     catch (\InvalidArgumentException) {
@@ -498,7 +540,16 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * not over what is stored at the same position, since the list is sent
    * whole and an item may have moved.
    *
-   * Decision: see docs/decisions.md#empty-items-are-dropped.
+   * Except a secret, which no read returns and so no caller can send
+   * back: an item that leaves one out keeps what is stored for it at the
+   * item's position, as a key left out keeps what it holds, when the list
+   * sent is as long as the one stored, an edit in place. In a list sent
+   * with items added or removed a position may hold another item now, so
+   * a secret stored there is neither kept, which could hand it to another
+   * item, nor erased: the run is refused by the secret's path.
+   *
+   * Decision: see docs/decisions.md#empty-items-are-dropped, and
+   * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
    *
    * @param \Drupal\data_surface\Entry $entry
    *   The collection.
@@ -546,10 +597,10 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     if (!is_array($raw)) {
       throw new TypeMismatchException($path, 'list', get_debug_type($raw));
     }
-    $items = [];
+    $sent = [];
     foreach (array_values($raw) as $item) {
       $item = Coercion::decoded($item, FALSE);
-      $at = $path . '.' . count($items);
+      $at = $path . '.' . count($sent);
       if (Collection::isEmptyItem($item)) {
         // A blank row is dropped, but its keys are the child's first: an
         // unknown key in it is refused by its path, as in any other item.
@@ -561,9 +612,43 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       if (!is_array($item)) {
         throw new TypeMismatchException($at, 'map', get_debug_type($item));
       }
-      $items[] = $this->acceptLevel($child, $item, [], $at);
+      $sent[] = $item;
+    }
+    $secrets = Outbound::secrets($child);
+    $stored = is_array($fallback) ? array_values($fallback) : [];
+    $in_place = count($sent) === count($stored);
+    $items = [];
+    foreach ($sent as $delta => $item) {
+      $at = $path . '.' . $delta;
+      $held = $secrets !== [] && is_array($stored[$delta] ?? NULL) ? $stored[$delta] : [];
+      if ($held !== [] && !$in_place) {
+        foreach (Outbound::leftOutSecrets($secrets, $item, $held) as $parents) {
+          $this->unmatched[$at . '.' . implode('.', $parents)] = $this->unmatchedSecret($child, $at, $parents);
+        }
+      }
+      $items[] = $this->acceptLevel($child, $item, $in_place ? Outbound::onlySecrets($held, $secrets) : [], $at);
     }
     return $items;
+  }
+
+  /**
+   * Says that a collection item would erase a secret stored at its place.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   *   The child every item is.
+   * @param string $at
+   *   The dotted path of the item.
+   * @param list<string> $parents
+   *   The secret's parents inside the item.
+   *
+   * @return \Drupal\data_surface\Pipeline\Violation
+   *   The refusal, filed under the secret's full path.
+   */
+  protected function unmatchedSecret(DataSurfaceInterface $child, string $at, array $parents): Violation {
+    [$key, $below] = array_pad(explode('.', $at . '.' . implode('.', $parents), 2), 2, '');
+    return new Violation($key, $below, $this->t('@label is stored for the item at this position, and items are matched to what is stored by position, which items added or removed have moved: send it again, or the clear marker to remove it.', [
+      '@label' => static::definitionAt($child, $parents)?->getLabel() ?? end($parents),
+    ]));
   }
 
   /**
@@ -1698,6 +1783,13 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     // Blocking nothing: a value sent for a locked key was not taken, and
     // the caller is told so whatever else the run answers.
     $notes = array_values($this->notTaken);
+    // Refused, not erased: a secret a collection item would lose because
+    // its position may now hold another item.
+    // Decision: see
+    // docs/decisions.md#every-door-projects-what-the-read-tool-projects.
+    if ($this->unmatched !== []) {
+      return new DataSurfaceResult($values, new ViolationSet(array_values($this->unmatched)), access: $access, notes: $notes);
+    }
     $violations = $this->validate($surface, $values, $current);
     if (!$violations->isEmpty()) {
       return new DataSurfaceResult($values, $violations, access: $access, notes: $notes);

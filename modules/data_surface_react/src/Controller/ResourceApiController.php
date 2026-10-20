@@ -46,6 +46,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * - `POST .../validate`, body `{values, stale}`: the pipeline's dry run,
  *   which accepts, validates and prepares and writes nothing. Every
  *   value was sent on purpose, so nothing is discarded: it is judged.
+ *   It answers the accepted document as the read tool would, never what
+ *   storage rehearsed, which held what the caller may not see.
  * - `POST .../submit`, body `{values, stale, parameters, fingerprint?}`:
  *   the same run, written, and the contract rebuilt from what was
  *   stored. A refusal is an answer, not an error.
@@ -206,11 +208,12 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   The operation id, from the route's {operation} parameter.
    *
    * @return \Symfony\Component\HttpFoundation\JsonResponse
-   *   `{valid, violations, stale, notes, values, prepared}`: whether the
-   *   values would be written, each refusal by its dotted path, each
-   *   stale reference beside them, each value sent for a locked key that
-   *   was not taken, the accepted values, and what the storage rehearsed
-   *   writing; nothing is written.
+   *   `{valid, violations, stale, notes, values}`: whether the values
+   *   would be written, each refusal by its dotted path, each stale
+   *   reference beside them, each value sent for a locked key that was
+   *   not taken, and the accepted values as the read tool would answer
+   *   them (no key left out for the caller, no secret); nothing is
+   *   written.
    */
   public function validate(Request $request, string $resource, string $operation): JsonResponse {
     $served = $this->served($resource, $operation, $request);
@@ -227,19 +230,17 @@ final class ResourceApiController implements ContainerInjectionInterface {
       dry_run: TRUE,
       access: $this->servedOperations->access($served),
     );
-    $prepared = NULL;
-    if ($result->prepared !== NULL && $served->storage instanceof StorageAdapter) {
-      $prepared = $served->storage->preview($result->prepared);
-    }
     $response = new JsonResponse([
       'valid' => $result->isValid(),
       'violations' => array_map($this->violation(...), iterator_to_array($result->violations, FALSE)),
       'stale' => array_map($this->violation(...), $result->violations->stale()),
       // Decision: see docs/decisions.md#locked-at-the-top.
       'notes' => array_map($this->violation(...), $result->notes),
-      // Every map an object, an empty one too, as the contract writes it.
-      'values' => $this->pipeline->document($served->surface, $result->values),
-      'prepared' => $prepared,
+      // Every map an object, an empty one too, as the contract writes
+      // it, and projected as every door's answer is.
+      // Decision: see
+      // docs/decisions.md#every-door-projects-what-the-read-tool-projects.
+      'values' => $this->pipeline->document($served->surface, $this->pipeline->outbound($served->surface, $result->values)),
     ]);
     $response->setEncodingOptions(JsonResponse::DEFAULT_ENCODING_OPTIONS | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     return $response;

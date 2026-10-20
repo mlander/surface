@@ -81,6 +81,37 @@ interface ResourcesInterface {
   public function buildStatic(string $resource, OperationContext $context): DataSurfaceInterface;
 
   /**
+   * Builds a resource or structure for no account: what it declares.
+   *
+   * The build buildStatic() makes, with every access answer set aside,
+   * static or runtime, the operation's permission at a child among them,
+   * and none asked: each key an answer could lock or leave out is kept as
+   * declared and marked (DefinitionMap::isRuntimeAccess()), so nothing in
+   * it is any account's view. It is what a listing cached for every
+   * account is made from, the derived tool definitions, and a listing an
+   * account asks for applies that account's answers again
+   * (buildStatic()). Options it enumerates are the current account's, so
+   * a caller wanting no account's view asks it as the anonymous one.
+   *
+   * Decision: see
+   * docs/decisions.md#a-static-tool-definition-is-no-accounts.
+   *
+   * @param string $resource
+   *   The class, or its #[Resource] or #[Structure] id.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   Where it is being asked for.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The sealed data surface.
+   *
+   * @throws \InvalidArgumentException
+   *   When nothing by that name was discovered.
+   * @throws \LogicException
+   *   When it fails a seal-time check, naming the offender.
+   */
+  public function buildDeclared(string $resource, OperationContext $context): DataSurfaceInterface;
+
+  /**
    * Builds the context one operation describes.
    *
    * @param string $resource
@@ -115,6 +146,38 @@ interface ResourcesInterface {
    *   The sealed data surface.
    */
   public function buildOperation(string $resource, string $operation, array $arguments = []): DataSurfaceInterface;
+
+  /**
+   * Answers an operation's static permission, before anything is read.
+   *
+   * The first static access answer (OperationDefinition::staticPermission()),
+   * asked from the resource and operation ids alone: nothing is invoked,
+   * built or loaded, so a door asks it before it reads a request's
+   * parameters, and a caller without the permission learns nothing of
+   * what the parameters name. access() asks it again, with the rest.
+   *
+   * Decision: see
+   * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
+   *
+   * @param string $resource
+   *   The class, or its #[Resource] or #[Structure] id.
+   * @param string $operation
+   *   The operation id.
+   * @param \Drupal\Core\Session\AccountInterface|null $account
+   *   The account, or NULL for the current user.
+   * @param \Drupal\data_surface\Resource\OperationContext|null $context
+   *   The context, once built, whose identity fills a `%key` placeholder;
+   *   NULL asks the permission as written.
+   *
+   * @return \Drupal\Core\Access\AccessResultInterface|null
+   *   Allowed, or neutral naming the permission, varying by the account's
+   *   permissions; NULL when the operation has no permission, or one with
+   *   a `%key` placeholder the context (or its absence) cannot fill.
+   *
+   * @throws \InvalidArgumentException
+   *   When the resource or the operation is not discovered.
+   */
+  public function permissionAccess(string $resource, string $operation, ?AccountInterface $account = NULL, ?OperationContext $context = NULL): ?AccessResultInterface;
 
   /**
    * Answers whether an account may submit one, in a context.

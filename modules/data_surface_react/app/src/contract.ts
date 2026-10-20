@@ -162,12 +162,16 @@ export interface Violation {
   message: string;
 }
 
+/**
+ * What /validate answers: the dry run's verdict and the accepted values,
+ * as the read tool would answer them (no secret, nothing hidden).
+ */
 export interface Validation {
   valid: boolean;
   violations: Violation[];
   stale: Violation[];
+  notes: Violation[];
   values: Values;
-  prepared: unknown;
 }
 
 /** Where a created thing now lives: an operation and its parameters. */

@@ -1,5 +1,6 @@
 {
     "surface": "event.desk",
+    "module": "data_surface_examples",
     "documents": [
         {
             "surface": "event.desk",

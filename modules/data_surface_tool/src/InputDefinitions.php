@@ -12,6 +12,7 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceInterface;
+use Drupal\data_surface\Pipeline\Outbound;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Pipeline\ViolationMessage;
@@ -86,10 +87,8 @@ final class InputDefinitions {
 
   /**
    * The key of a secrets tree that holds what is secret inside each item.
-   *
-   * In the "@" namespace, which no definition is named in.
    */
-  public const EACH = '@each';
+  public const EACH = Outbound::EACH;
 
   use StringTranslationTrait;
 
@@ -806,43 +805,17 @@ final class InputDefinitions {
   /**
    * Finds every key a data surface marks secret, at any depth.
    *
-   * A secret is a scalar key of its own (DefinitionMetadata::setSecret()
-   * refuses anything else), but it can sit anywhere: on the data surface, in
-   * a plain map such as a module's mounted settings, in an attached
-   * child, or in any variant of a slot. A slot's secrets are every
-   * variant's, whichever variant the values choose, so a key one variant
-   * keeps secret is never returned under that slot, even when another
-   * variant names a plain key the same. Inside a list of maps, a
-   * collection's or a plain list's, the secrets of each item are under
-   * EACH, so only they are left out of every item and the list stays.
-   *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The data surface.
    *
    * @return array<string, true|array>
-   *   A tree keyed like the values: TRUE where a key is secret, an array
-   *   where one below it is. Empty when nothing is.
+   *   As Outbound::secrets() answers: TRUE where a key is secret, an
+   *   array where one below it is, a list's items' under EACH.
+   *
+   * @see \Drupal\data_surface\Pipeline\Outbound::secrets()
    */
   public function secrets(DataSurfaceInterface $surface): array {
-    $secrets = [];
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
-      $found = $this->secretsOf($entry->definition);
-      $children = $entry->slot === NULL ? [] : array_map(static fn ($variant): DataSurfaceInterface => $variant->child, $entry->slot->variants);
-      if ($entry->attachment !== NULL) {
-        $children[] = $entry->attachment->child;
-      }
-      foreach ($children as $child) {
-        $found = $this->mergeSecrets($found, $this->secrets($child));
-      }
-      $item = $entry->list === NULL ? [] : $this->secrets($entry->list->item->child);
-      if ($item !== []) {
-        $found = $this->mergeSecrets($found, [self::EACH => $item]);
-      }
-      if ($found !== []) {
-        $secrets[(string) $name] = $found;
-      }
-    }
-    return $secrets;
+    return Outbound::secrets($surface);
   }
 
   /**
@@ -858,27 +831,7 @@ final class InputDefinitions {
    */
   public function withoutSecrets(array $values, array $secrets): array {
     // Decision: see docs/decisions.md#a-read-leaves-a-secret-out.
-    $each = $secrets[self::EACH] ?? NULL;
-    unset($secrets[self::EACH]);
-    if (is_array($each)) {
-      foreach ($values as $delta => $item) {
-        if (is_array($item)) {
-          $values[$delta] = $this->withoutSecrets($item, $each);
-        }
-      }
-    }
-    foreach ($secrets as $name => $secret) {
-      if (!array_key_exists($name, $values)) {
-        continue;
-      }
-      if ($secret === TRUE) {
-        unset($values[$name]);
-      }
-      elseif (is_array($values[$name])) {
-        $values[$name] = $this->withoutSecrets($values[$name], $secret);
-      }
-    }
-    return $values;
+    return Outbound::withoutSecrets($values, $secrets);
   }
 
   /**
@@ -941,60 +894,6 @@ final class InputDefinitions {
       required: $required,
       multiple: $input->isMultiple(),
     );
-  }
-
-  /**
-   * Finds the secrets inside one core data definition.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
-   *
-   * @return true|array
-   *   TRUE when it is secret, or a list whose items are; the secrets
-   *   among a map's properties, keyed like them, or under EACH among a
-   *   list's items; empty when none.
-   */
-  protected function secretsOf(DataDefinitionInterface $definition): true|array {
-    if (DefinitionMetadata::isSecret($definition)) {
-      return TRUE;
-    }
-    if ($definition instanceof ListDataDefinitionInterface) {
-      // A list of secrets is secret; a list of maps keeps each item's
-      // secrets under EACH, and the rest of every item is read.
-      $item = $this->secretsOf($definition->getItemDefinition());
-      return $item === [] || $item === TRUE ? $item : [self::EACH => $item];
-    }
-    $secrets = [];
-    if ($definition instanceof ComplexDataDefinitionInterface) {
-      foreach ($definition->getPropertyDefinitions() as $name => $property) {
-        $found = $this->secretsOf($property);
-        if ($found !== []) {
-          $secrets[(string) $name] = $found;
-        }
-      }
-    }
-    return $secrets;
-  }
-
-  /**
-   * Merges two trees secrets() builds; a secret anywhere wins.
-   *
-   * @param true|array $one
-   *   One tree, or TRUE.
-   * @param true|array $other
-   *   The other.
-   *
-   * @return true|array
-   *   Both.
-   */
-  protected function mergeSecrets(true|array $one, true|array $other): true|array {
-    if ($one === TRUE || $other === TRUE) {
-      return TRUE;
-    }
-    foreach ($other as $name => $secret) {
-      $one[$name] = isset($one[$name]) ? $this->mergeSecrets($one[$name], $secret) : $secret;
-    }
-    return $one;
   }
 
   /**

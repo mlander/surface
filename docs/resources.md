@@ -495,8 +495,10 @@ $context, array $prepared)` writes exactly it.
   pipeline's result carries it as `PreparedValues`; the adapter's
   `preview()` turns it into plain arrays (a resource with routed
   children reports its own under `own` and each child's under
-  `children`, by the key it sits at), and a derived tool's dry run
-  answers with it as the `prepared` output.
+  `children`, by the key it sits at), for a PHP caller; a derived tool's
+  dry run answers the accepted `values` instead, as the read tool would,
+  since what storage rehearsed holds what the caller may not see
+  ([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 - **A real submit prepares first**, so `commit()` is never the first to
   find out storage would refuse. A refusal is a
   `StorageViolationsException` carrying violations filed under the
@@ -577,9 +579,10 @@ own is a tool, `data_surface:<resource id>:<operation id>`, derived by
   locked deciding key chose may refuse through its own access class.
 - **Execution** is the operation, the build, and one pipeline submit to
   the composed storage; a dry run stops after prepare.
-- **Outputs** are the accepted `values`, `committed`, and the resource's
-  own outputs, as its storage reads them back after the write; a dry run
-  answers with `prepared`, what prepare rehearsed, instead.
+- **Outputs** are the accepted `values`, as the read tool would answer
+  them (no key left out for the caller, no secret), `committed`, and the
+  resource's own outputs, as its storage reads them back after the
+  write; a dry run answers the same `values` and no outputs.
 
 Two rules say what is not a tool, and the catalogue applies the same
 two (`ResourceCatalogue::standalone()`):

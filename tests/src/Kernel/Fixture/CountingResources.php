@@ -56,6 +56,14 @@ final class CountingResources implements ResourcesInterface {
   /**
    * {@inheritdoc}
    */
+  public function buildDeclared(string $resource, OperationContext $context): DataSurfaceInterface {
+    $this->builds[] = $resource;
+    return $this->inner->buildDeclared($resource, $context);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function operation(string $resource, string $operation, array $arguments = []): OperationContext {
     return $this->inner->operation($resource, $operation, $arguments);
   }
@@ -72,6 +80,13 @@ final class CountingResources implements ResourcesInterface {
    */
   public function access(string $resource, OperationContext $context, ?AccountInterface $account = NULL): AccessResultInterface {
     return $this->inner->access($resource, $context, $account);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function permissionAccess(string $resource, string $operation, ?AccountInterface $account = NULL, ?OperationContext $context = NULL): ?AccessResultInterface {
+    return $this->inner->permissionAccess($resource, $operation, $account, $context);
   }
 
   /**

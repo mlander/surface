@@ -12,6 +12,7 @@ use Drupal\Core\Site\Settings;
 use Drupal\data_surface\DataSurfaceAccess;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\ValueState;
+use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -80,6 +81,28 @@ final class ServedOperations {
       }
     }
     return $this->resolve($resource, $operation, $given);
+  }
+
+  /**
+   * Answers an operation's static permission, before anything is read.
+   *
+   * @param string $resource
+   *   The resource's `#[Resource]` id, or its class.
+   * @param string $operation
+   *   The operation id.
+   * @param \Drupal\Core\Session\AccountInterface|null $account
+   *   The account, or NULL for the current user.
+   * @param \Drupal\data_surface\Resource\OperationContext|null $context
+   *   The context, once built, whose identity fills a `%key`.
+   *
+   * @return \Drupal\Core\Access\AccessResultInterface|null
+   *   As ResourcesInterface::permissionAccess() answers.
+   *
+   * @throws \InvalidArgumentException
+   *   When the resource or the operation is not discovered.
+   */
+  public function permissionAccess(string $resource, string $operation, ?AccountInterface $account = NULL, ?OperationContext $context = NULL): ?AccessResultInterface {
+    return $this->resources->permissionAccess($resource, $operation, $account, $context);
   }
 
   /**

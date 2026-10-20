@@ -6,6 +6,7 @@ namespace Drupal\data_surface_tool\Plugin\tool\Tool;
 
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
+use Drupal\Core\Access\AccessResultReasonInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\data_surface\DataSurfaceAccess;
 use Drupal\data_surface\Resource\OperationContext;
@@ -63,17 +64,82 @@ abstract class ResourceOperationToolBase extends ToolBase {
   }
 
   /**
+   * The one reason a refusal past the permission gives.
+   */
+  public const REFUSED = 'The operation cannot be run by this account with these parameters.';
+
+  /**
    * {@inheritdoc}
+   *
+   * The operation's permission first, from the tool's id alone, before a
+   * parameter is read or the subject loaded; then the whole answer for
+   * the context the parameters build. A refusal past the permission
+   * gives one fixed reason, whether a parameter named nothing or the
+   * access class refused what it named, so it never says whether an id
+   * exists, and the real one goes to the log; only an account holding
+   * the operation's permission for the context the parameters name (one
+   * with a `%key` filled in) hears the access class's reason.
+   *
+   * Decision: see
+   * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
    */
   protected function checkAccess(array $values, AccountInterface $account, $return_as_object = FALSE): bool|AccessResultInterface {
-    try {
-      [$resource, , $context] = $this->operation($values);
-      $result = $this->operationAccess($resource, $context, $account);
+    $result = $this->permissionAccess($account);
+    if ($result === NULL || $result->isAllowed()) {
+      $held = FALSE;
+      try {
+        [$resource, $operation, $context] = $this->operation($values);
+        $result = $this->operationAccess($resource, $context, $account);
+        $held = $this->resources->permissionAccess($resource->name(), $operation->id, $account, $context)?->isAllowed() ?? FALSE;
+      }
+      catch (\InvalidArgumentException $e) {
+        $result = AccessResult::forbidden($e->getMessage())->setCacheMaxAge(0);
+      }
+      // An account that holds the operation's permission for what the
+      // parameters name may hear why the rest refused; any other learns
+      // nothing of what they name.
+      if (!$result->isAllowed() && !$held) {
+        $this->logRefusal($result);
+        $result = AccessResult::forbidden(self::REFUSED)->addCacheableDependency($result);
+      }
     }
-    catch (\InvalidArgumentException $e) {
-      $result = AccessResult::forbidden($e->getMessage());
+    else {
+      $result = DataSurfaceAccess::decisive($result, $result instanceof AccessResultReasonInterface ? $result->getReason() : NULL);
     }
     return $return_as_object ? $result : $result->isAllowed();
+  }
+
+  /**
+   * Answers the operation's static permission, from the tool's id alone.
+   *
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account.
+   *
+   * @return \Drupal\Core\Access\AccessResultInterface|null
+   *   As ResourcesInterface::permissionAccess() answers; a tool that is
+   *   not one of the derived ones is refused.
+   */
+  protected function permissionAccess(AccountInterface $account): ?AccessResultInterface {
+    try {
+      [$resource, $operation] = $this->found();
+      return $this->resources->permissionAccess($resource->name(), $operation->id, $account);
+    }
+    catch (\InvalidArgumentException | \LogicException) {
+      return AccessResult::forbidden();
+    }
+  }
+
+  /**
+   * Writes why a call was refused to the tool log, not to the caller.
+   *
+   * @param \Drupal\Core\Access\AccessResultInterface $result
+   *   The refusal.
+   */
+  protected function logRefusal(AccessResultInterface $result): void {
+    $reason = $result instanceof AccessResultReasonInterface ? (string) $result->getReason() : '';
+    if ($reason !== '') {
+      $this->logger->info('The @tool tool was refused: @reason', ['@tool' => $this->getPluginId(), '@reason' => $reason]);
+    }
   }
 
   /**

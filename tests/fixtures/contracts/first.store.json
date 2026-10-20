@@ -1,5 +1,6 @@
 {
     "surface": "first.store",
+    "module": "data_surface_first",
     "documents": [
         {
             "surface": "first.store",

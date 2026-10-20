@@ -243,14 +243,40 @@ interface DataSurfacePipelineInterface {
   public function commit(PreparedValues $prepared, DataSurfaceStorageInterface $storage): void;
 
   /**
+   * Projects values as any door may return them to its caller.
+   *
+   * The read tool's projection, for every door and every answer: a key
+   * the build left out for the caller is not there at any depth, nor is a
+   * secret, nor a key that does not apply; a locked key is there as the
+   * values hold it, which is as stored.
+   *
+   * Decision: see
+   * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface the values are for, built for the caller.
+   * @param array $values
+   *   Accepted values, or what storage loads.
+   *
+   * @return array
+   *   The values a caller may be handed.
+   *
+   * @see \Drupal\data_surface\Pipeline\Outbound::project()
+   */
+  public function outbound(DataSurfaceInterface $surface, array $values): array;
+
+  /**
    * Writes accepted values as the JSON document they are.
    *
    * Values are arrays, and an empty PHP array encodes as a JSON list:
    * here every map is an object, an empty one included (a map whose
    * every key does not apply, a mount with nothing in it), and every
-   * list a list, as the served contract writes its own `values`.
+   * list a list, as the served contract writes its own `values`. It
+   * writes what it is handed: a door hands it what outbound() projected,
+   * never the accepted values as they are.
    *
-   * Decision: see docs/decisions.md#a-key-that-does-not-apply.
+   * Decision: see docs/decisions.md#a-key-that-does-not-apply, and
+   * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The data surface the values were accepted by.

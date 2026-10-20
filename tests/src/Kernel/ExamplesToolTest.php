@@ -108,7 +108,8 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($results['dry_run']['success'], $results['dry_run']['message']);
     $this->assertSame('Dry run of Configure registration: the values were accepted and prepared, and nothing was written.', $results['dry_run']['message']);
     $this->assertFalse($results['dry_run']['outputs'][OperationInputs::COMMITTED]);
-    $this->assertSame('Winter social', $results['dry_run']['outputs'][OperationInputs::PREPARED]['title']);
+    $this->assertSame('Winter social', $results['dry_run']['outputs'][OperationInputs::VALUES]['title']);
+    $this->assertArrayNotHasKey('prepared', $results['dry_run']['outputs']);
 
     // Only the first call wrote anything.
     $stored = $config();

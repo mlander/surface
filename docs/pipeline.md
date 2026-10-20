@@ -146,6 +146,14 @@ was sent nothing or what it holds, and stays, for `validate()` to refuse,
 when it was sent anything else; `submit()` hands storage what it holds
 there (`kept()`), so it survives until it applies again.
 
+A collection's item is accepted over the child's defaults, the list
+being sent whole, but a secret the item leaves out keeps what is stored
+at its position when the list is as long as the one stored; with items
+added or removed, an item leaving out a secret stored where it now sits
+is noted for `submit()` to refuse by the secret's path, since that
+position may hold another item now
+([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
+
 The rules it applies (what counts as configured, the coercion table, how
 lists and maps merge) are [Value semantics](semantics.md), which is the
 reference for this page.
@@ -296,6 +304,9 @@ violation, so `isValid()` never reads them; the write tool and the
 React endpoints say them beside the stale references
 ([decision](decisions.md#locked-at-the-top)).
 
+A secret inside a locked key is never compared: anything sent for one
+was not taken, so whether a note is said tells a caller nothing of it.
+
 A committed result can still carry violations, and there is exactly one
 way that happens: the set holds stale references and nothing else. They
 travel on rather than being replaced by an empty set, because that is
@@ -351,12 +362,35 @@ if ($result->access !== NULL) {
 when a permission or a config entity changes, so its cacheability is as
 real as a refusal's.
 
+### outbound
+
+```php
+public function outbound(DataSurfaceInterface $surface, array $values): array;
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+What any door may hand a caller of a set of values, the read tool's
+projection (`Pipeline\Outbound::project()`): no key the build left out
+for the caller, at any depth; no secret, at any depth, under every
+variant of a slot that keeps it secret and inside each item of a list;
+no key that does not apply to the values; a locked key as stored. The
+read tool answers what storage loads through it, the write tool answers
+its accepted `values` through it, dry run or written, and React's
+`/validate` writes its `values` document from it. `document()` writes
+what it is handed, so a door hands it what this projected. The
+`prepared` artifact is never handed to a caller: it is storage's own
+shape, with what the caller could not see put back
+([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
+
 ## Dry runs
 
 `submit()` takes a `$dry_run` flag: everything up to and including
 `prepare()` runs, and the artifact comes back with `committed` false.
-Nothing has been written, and the caller has the exact object a commit
-would have stored.
+Nothing has been written, and a PHP caller has the exact object a commit
+would have stored. A door does not hand it on: the write tool and React's
+`/validate` answer the accepted values through `outbound()`, and the
+run's verdict, which says whether storage's own checks passed.
 
 Config entities write through the container's config factory, so an
 entity cannot be pointed at another bin for one call: an unsaved clone,

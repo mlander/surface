@@ -1,5 +1,6 @@
 {
     "surface": "registration.step3.ticket.free",
+    "module": "data_surface_examples",
     "documents": [
         {
             "surface": "registration.step3.ticket.free",

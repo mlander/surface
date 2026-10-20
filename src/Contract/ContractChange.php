@@ -37,6 +37,16 @@ final class ContractChange {
   public const BREAKING = 'breaking';
 
   /**
+   * Declared with no baseline yet: the lint fails until one is written.
+   *
+   * Not a breaking change, so writing the baselines pins it with no
+   * allowance; but a lint that passed it could not tell a declaration
+   * nobody pinned, or a directory mistyped, from one that kept its
+   * promise.
+   */
+  public const UNPINNED = 'unpinned';
+
+  /**
    * Constructs a ContractChange.
    *
    * @param string $surface
@@ -55,7 +65,8 @@ final class ContractChange {
    *   One of the ContractDiff effects: what the change does to the
    *   documents the schema accepts.
    * @param string $status
-   *   self::COMPATIBLE, self::VERSIONED, self::ALLOWED or self::BREAKING.
+   *   self::COMPATIBLE, self::VERSIONED, self::ALLOWED, self::BREAKING or
+   *   self::UNPINNED.
    */
   public function __construct(
     public readonly string $surface,
@@ -73,16 +84,28 @@ final class ContractChange {
    *   TRUE for a breaking change, versioned, allowed or not.
    */
   public function isBreaking(): bool {
-    return $this->status !== self::COMPATIBLE;
+    return !in_array($this->status, [self::COMPATIBLE, self::UNPINNED], TRUE);
   }
 
   /**
    * Answers whether the lint fails on it.
    *
    * @return bool
-   *   TRUE for a breaking change no version and no allowance answers for.
+   *   TRUE for a breaking change no version and no allowance answers for,
+   *   and for a declaration with no baseline.
    */
   public function fails(): bool {
+    return in_array($this->status, [self::BREAKING, self::UNPINNED], TRUE);
+  }
+
+  /**
+   * Answers whether writing the baselines needs a reason to accept it.
+   *
+   * @return bool
+   *   TRUE for a breaking change no version and no allowance answers for;
+   *   a declaration with no baseline is pinned by writing it.
+   */
+  public function needsAllowance(): bool {
     return $this->status === self::BREAKING;
   }
 

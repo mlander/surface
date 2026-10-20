@@ -1,5 +1,6 @@
 {
     "surface": "first.newsletter",
+    "module": "data_surface_first",
     "documents": [
         {
             "surface": "first.newsletter",

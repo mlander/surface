@@ -43,9 +43,12 @@ use Symfony\Component\Validator\ConstraintViolationListInterface;
  *   composed storage, or stops after prepare for a dry run. Prepare is
  *   where storage's own checks run, so a dry run is refused for what a
  *   write would be refused for.
- * - **Outputs**: the accepted values, whether they were written, and the
- *   resource's own outputs as its storage reads them back; for a dry run,
- *   instead of outputs, what prepare rehearsed.
+ * - **Outputs**: the accepted values, projected as the read tool
+ *   projects them (no key left out for the caller, no secret), whether
+ *   they were written, and the resource's own outputs as its storage
+ *   reads them back once written. What prepare rehearsed is storage's own
+ *   shape and stays with the PHP result: it held what the caller may not
+ *   see.
  *
  * The same deriver gives an operation that changes a thing that exists a
  * read tool beside this one, ResourceOperationReadTool, under this base
@@ -122,8 +125,19 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     if ($name !== OperationInputs::VALUES) {
       return $definition;
     }
+    // Nothing is built or loaded for an account the operation is not
+    // open to: what is stored is defaulted into the refined values.
+    // Decision: see
+    // docs/decisions.md#every-door-projects-what-the-read-tool-projects.
+    $permission = $this->permissionAccess($this->currentUser);
+    if ($permission !== NULL && !$permission->isAllowed()) {
+      return $definition;
+    }
     try {
       [$resource, , $context] = $this->operation($values);
+      if (!$this->operationAccess($resource, $context, $this->currentUser)->isAllowed()) {
+        return $definition;
+      }
       return $this->operationInputs->values($resource, $this->resources->build($resource->name(), $context), $context);
     }
     catch (\InvalidArgumentException) {
@@ -160,7 +174,8 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     catch (\InvalidArgumentException | \LogicException) {
       $update = FALSE;
     }
-    // Decision: see docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door.
+    // Decision: see
+    // docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door.
     $this->inputDefinitions[OperationInputs::VALUES] = InputDefinitions::shapeOf($listed, $update);
     try {
       return parent::validateInputValues($values);
@@ -203,11 +218,6 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     $outputs = $result->committed && $storage instanceof StorageAdapter
       ? $storage->outputs($built, $result->values)
       : [];
-    // A dry run stops after prepare, and what prepare rehearsed is the
-    // preview: what storage would have been handed.
-    if (!$result->committed && $result->prepared !== NULL && $storage instanceof StorageAdapter) {
-      $outputs = [OperationInputs::PREPARED => $storage->preview($result->prepared)];
-    }
     $stale = $this->staleReferences($result->violations);
     return ExecutableResult::success(
       $this->withNotes(match (TRUE) {
@@ -217,7 +227,11 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
         default => $this->t('Dry run of @label: the values were accepted and prepared, and nothing was written.', ['@label' => (string) $operation->label]),
       }, $notes),
       [
-        OperationInputs::VALUES => $result->values,
+        // What the read tool would answer of them, never more: a dry run's
+        // caller is answered the document it would write, as it may see it.
+        // Decision: see
+        // docs/decisions.md#every-door-projects-what-the-read-tool-projects.
+        OperationInputs::VALUES => $this->pipeline->outbound($built, $result->values),
         OperationInputs::COMMITTED => $result->committed,
       ] + $outputs + ($stale === [] ? [] : ['stale' => $stale]) + ($notes === [] ? [] : ['notes' => $notes]),
     );

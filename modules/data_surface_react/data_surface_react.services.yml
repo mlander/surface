@@ -8,6 +8,6 @@ services:
   # its permission, then the resource's access class.
   data_surface_react.access:
     class: Drupal\data_surface_react\Access\ServedOperationAccessCheck
-    arguments: ['@data_surface_react.served_operations', '@request_stack']
+    arguments: ['@data_surface_react.served_operations', '@request_stack', '@logger.channel.data_surface']
     tags:
       - { name: access_check, applies_to: _data_surface_react_access }

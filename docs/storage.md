@@ -403,8 +403,9 @@ everything up to and including prepare and hands back the artifact with
 Config entities write through the container's config factory, so an
 entity cannot be pointed at another bin for one call. An unsaved clone,
 held to the schema, is as far as a dry run goes; a resource's storage
-class returns that clone's exported array from `prepare()`, which is
-what a derived tool's dry run reports as `prepared`.
+class returns that clone's exported array from `prepare()`, which a
+PHP caller reads on the result; a derived tool's dry run answers the
+accepted values instead ([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 
 ## The seven engine storage classes
 

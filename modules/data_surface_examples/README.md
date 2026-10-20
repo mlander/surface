@@ -703,7 +703,6 @@ Failed: The values were refused: capacity: This value should be between 1 and 30
 Success: Dry run of Configure registration: the values were accepted and prepared, and nothing was written.
   values: {"title":"Winter social","open":true,"venue":"riverside","room":"riverside_east","capacity":40,"pricing":"free","ticket":{"note":"Donations welcome"},"contact":{"email":"events@example.com","phone":""}}
   committed: false
-  prepared: {"title":"Winter social","open":true,"venue":"riverside","room":"riverside_east","capacity":40,"pricing":"free","ticket":{"note":"Donations welcome"},"contact":{"email":"events@example.com","phone":""}}
 ```
 
 The same tool and the same three calls, from Drush, after a read of
@@ -898,8 +897,9 @@ written, an `if`/`then` marked `x-surface.declared`, and the send day as
 `false` under the monthly conditional and `required` under the other:
 the panel shows the rules beside those three conditionals. Choose
 Monthly and the send day is gone from the form, over AJAX; the stored
-Friday is kept for the day the bulletin goes weekly again, which the
-third call's `prepared` shows. Choose Weekly and the items stop at five,
+Friday is kept for the day the bulletin goes weekly again: the third
+call's values leave it out, as every answer leaves out a key that does
+not apply, and storage still holds it. Choose Weekly and the items stop at five,
 said under the field: "Up to 5 in a weekly issue."
 
 ```bash
@@ -919,7 +919,7 @@ Failed: The values were refused: items: This value should be between 1 and 5 whe
 
 3. Eight items in a monthly issue, and no send day
 Success: Dry run of Configure the bulletin: the values were accepted and prepared, and nothing was written.
-  prepared: {"frequency":"monthly","send_day":"friday","items":8}
+  values: {"frequency":"monthly","items":8}
 ```
 
 ## Example 8: one part, used twice
@@ -1099,7 +1099,7 @@ Failed: The values were refused: contact.email: Email is required when Show on t
 
 2. The same contact, not shown on the press page
 Success: Dry run of Configure the press page: the values were accepted and prepared, and nothing was written.
-  prepared: {"public":false,"contact":{"name":"Robin Lee","email":null,"phone":"+1 555 0100"},"reviewed_on":"2026-10-01","reviewed_by":"Sam Ortiz"}
+  values: {"public":false,"contact":{"name":"Robin Lee","email":null,"phone":"+1 555 0100"},"reviewed_on":"2026-10-01","reviewed_by":"Sam Ortiz"}
 
 3. A review date with no reviewer
 Failed: The values were refused: reviewed_by: Reviewed by is required when Reviewed on is set.
@@ -1216,7 +1216,7 @@ drush tool:run data_surface:event.sales:configure --uid=1 --input='{"values":{"o
 ```
 1. Speaker tickets put on sale
 Success: Dry run of Configure ticket sales: the values were accepted and prepared, and nothing was written. on_sale.speaker: Speaker is locked and kept as stored; the value sent was not taken.
-  prepared: {"on_sale":{"standard":true,"student":true,"speaker":false},"limits":{"standard":{"per_order":4,"waiting_list":false},"student":{"per_order":1,"waiting_list":true},"speaker":{"per_order":1,"waiting_list":false}}}
+  values: {"on_sale":{"standard":true,"student":true,"speaker":false},"limits":{"standard":{"per_order":4,"waiting_list":false},"student":{"per_order":1,"waiting_list":true},"speaker":{"per_order":1,"waiting_list":false}}}
 ```
 
 ## Example 10: who may change what
@@ -1359,7 +1359,7 @@ drush tool:run data_surface:event.program:check --uid=1 --input='{"values":{"hea
 ```
 1. A program checked
 Success: Check a program changes nothing: the values were accepted and prepared, and nothing was written.
-  prepared: {"headline":"Three days of talks","sessions":12,"published":false,"fees":{"standard":20.0,"concession":10.0}}
+  values: {"headline":"Three days of talks","sessions":12,"published":false,"fees":{"standard":20.0,"concession":10.0}}
 
 2. A program with too many sessions, checked
 Failed: The values were refused: sessions: This value should be between 1 and 30.
@@ -1581,15 +1581,15 @@ drush tool:run data_surface:event.doors:configure --uid=1 --input='{"values":{"o
 ```
 1. The notes left out: kept
 Success: Dry run of Configure the doors: the values were accepted and prepared, and nothing was written.
-  prepared: {"opens":"19:00","days":["fri"],"badges":"printed","notes":"Hand out the maps.","greeters":["Ana","Ben"],"langcode":"en"}
+  values: {"opens":"19:00","days":["fri"],"badges":"printed","notes":"Hand out the maps.","greeters":["Ana","Ben"]}
 
 2. The notes sent null: cleared
 Success: Dry run of Configure the doors: the values were accepted and prepared, and nothing was written.
-  prepared: {"opens":"19:00","days":["fri"],"badges":"printed","notes":null,"greeters":["Ana","Ben"],"langcode":"en"}
+  values: {"opens":"19:00","days":["fri"],"badges":"printed","notes":null,"greeters":["Ana","Ben"]}
 
 3. The notes sent a value: replaced
 Success: Dry run of Configure the doors: the values were accepted and prepared, and nothing was written.
-  prepared: {"opens":"19:00","days":["fri"],"badges":"printed","notes":"Doors close at ten.","greeters":["Ana","Ben"],"langcode":"en"}
+  values: {"opens":"19:00","days":["fri"],"badges":"printed","notes":"Doors close at ten.","greeters":["Ana","Ben"]}
 
 4. The badges sent null: refused, since they are always held
 Failed: The values were refused: badges: Badges cannot be cleared: it always holds a value, Printed at the door (printed) by default. Leave it out to keep what it holds.

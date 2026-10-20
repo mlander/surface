@@ -10,8 +10,8 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceInterface;
+use Drupal\data_surface\Pipeline\Outbound;
 use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\Refinement\DoesNotApply;
 use Drupal\data_surface\ResourceBuild\OperationArguments;
 use Drupal\data_surface\ResourceBuild\OperationDefinition;
 use Drupal\data_surface\ResourceBuild\OperationParameter;
@@ -37,8 +37,9 @@ use Drupal\tool\TypedData\OutputDefinition;
  *   converts them, less the identity keys the operation knows, which
  *   are locked and so are not inputs at all.
  * - **`dry_run`**, which stops the pipeline after prepare.
- * - Outputs: the accepted `values`, whether anything was `committed`,
- *   and the resource's own outputs, from defineOutputs().
+ * - Outputs: the accepted `values`, as the read tool would answer them,
+ *   whether anything was `committed`, and the resource's own outputs,
+ *   from defineOutputs().
  *
  * And the read tool beside it, for an operation that changes a thing that
  * exists: the same parameters, nothing else, and one output, `values`,
@@ -71,12 +72,14 @@ use Drupal\tool\TypedData\OutputDefinition;
  * reading it is told what the tool's door enforces
  * (ResourceOperationTool::validateInputValues()).
  *
- * Access in a listing is the account's: the static definitions are built
- * for the account alone (ResourcesInterface::buildStatic()), so a key a
- * static answer locks is locked, one it leaves out is not there, and one
- * whose access only the subject decides is there and says so in its
- * description; the tool instance lists `values` again for the account
- * that asks (listedValues()). Once the parameters arrive, the refined
+ * The definitions the deriver caches are no account's: built for no
+ * account (ResourcesInterface::buildDeclared()), every key as declared,
+ * and each one an access answer could lock or leave out saying so in its
+ * description. Access in a listing is the account's: the tool instance
+ * lists `values` again for the account that asks (listedValues(), built
+ * for the account alone), so a key a static answer locks is locked, one
+ * it leaves out is not there, and one whose access only the subject
+ * decides is there and says so. Once the parameters arrive, the refined
  * `values` is built with every answer applied.
  */
 final class OperationInputs {
@@ -102,11 +105,6 @@ final class OperationInputs {
    * The output saying whether anything was written.
    */
   public const COMMITTED = 'committed';
-
-  /**
-   * The output carrying what a dry run rehearsed.
-   */
-  public const PREPARED = 'prepared';
 
   /**
    * Builtin parameter types, as the Tool API's data types.
@@ -163,9 +161,9 @@ final class OperationInputs {
    *   inputs) or the resource cannot be built.
    */
   public function inputs(ResourceDefinition $resource, OperationDefinition $operation): array {
-    $neutral = $this->neutral($resource, $operation);
+    $neutral = $this->neutral($resource, $operation, TRUE);
     $inputs = $this->parameterInputs($resource, $operation, $neutral);
-    $inputs[self::VALUES] = $this->declaredValues($resource, $operation, $neutral);
+    $inputs[self::VALUES] = $this->declaredValues($resource, $operation, $neutral, declared: TRUE);
     $inputs[self::DRY_RUN] = new InputDefinition(
       data_type: 'boolean',
       label: $this->t('Dry run'),
@@ -191,7 +189,7 @@ final class OperationInputs {
    *   When a parameter cannot be an input, as inputs() says.
    */
   public function parameters(ResourceDefinition $resource, OperationDefinition $operation): array {
-    return $this->parameterInputs($resource, $operation, $this->neutral($resource, $operation));
+    return $this->parameterInputs($resource, $operation, $this->neutral($resource, $operation, TRUE));
   }
 
   /**
@@ -217,13 +215,13 @@ final class OperationInputs {
    *   When the resource cannot be built.
    */
   public function readOutputs(ResourceDefinition $resource, OperationDefinition $operation): array {
-    $neutral = $this->neutral($resource, $operation);
+    $neutral = $this->neutral($resource, $operation, TRUE);
     // Where the secrets are: the neutral build, or, for an operation that
     // takes nothing, its own.
-    $built = $neutral ?? $this->resources->buildStatic($resource->name(), $this->resources->operation($resource->name(), $operation->id));
+    $built = $neutral ?? $this->resources->buildDeclared($resource->name(), $this->resources->operation($resource->name(), $operation->id));
     return [
       self::VALUES => $this->inputDefinitions->outputFromInput(
-        $this->declaredValues($resource, $operation, $neutral, FALSE),
+        $this->declaredValues($resource, $operation, $neutral, FALSE, TRUE),
         $this->inputDefinitions->secrets($built),
         $this->t('Stored values'),
         $this->t('What is stored now, as the @resource resource describes it: every key the operation does not already know, including those other modules add, in the shape the write tool takes. A key storage holds nothing for is absent, and a secret is never returned.', ['@resource' => $resource->id]),
@@ -234,10 +232,11 @@ final class OperationInputs {
   /**
    * Gets what the read tool answers: what is stored now, less secrets.
    *
-   * What the resource's composed storage loads, less the identity keys the
-   * context knows, which are the tool's inputs and not its values, and
-   * less every key the resource marks secret, at any depth, which is
-   * never read back to a caller (docs/semantics.md, Secrets).
+   * What the resource's composed storage loads, projected as every door
+   * projects its answer (Outbound::project(): no key the build left out
+   * for the caller, no secret at any depth, docs/semantics.md, Secrets),
+   * less the identity keys the context knows, which are the tool's inputs
+   * and not its values.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
@@ -251,12 +250,13 @@ final class OperationInputs {
    */
   public function stored(ResourceDefinition $resource, DataSurfaceInterface $built, OperationContext $context): array {
     $stored = $this->resources->storage($resource->name(), $context, $built)->load($built);
-    // What does not apply to what is stored is not read back, as the
-    // schema for those values leaves it out; storage still keeps it.
-    // Decision: see docs/decisions.md#a-key-that-does-not-apply.
-    $stored = DoesNotApply::leftOut($built, $stored);
-    $stored = array_diff_key($stored, array_flip($this->knownIdentity($resource, $context)));
-    return $this->inputDefinitions->withoutSecrets($stored, $this->inputDefinitions->secrets($built));
+    // What any door may answer: nothing the build left out, no secret,
+    // nothing that does not apply to what is stored (storage still keeps
+    // it). The write tool answers its accepted values the same way.
+    // Decision: see
+    // docs/decisions.md#every-door-projects-what-the-read-tool-projects.
+    $stored = Outbound::project($built, $stored);
+    return array_diff_key($stored, array_flip($this->knownIdentity($resource, $context)));
   }
 
   /**
@@ -282,7 +282,8 @@ final class OperationInputs {
   public function values(ResourceDefinition $resource, DataSurfaceInterface $built, OperationContext $context): MapInputDefinition {
     $map = $this->inputDefinitions->withDependencies($this->map($resource, $built, $this->knownIdentity($resource, $context)), $built);
     if (!$context->creates) {
-      // Decision: see docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door.
+      // Decision: see
+      // docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door.
       $this->inputDefinitions->withStored($map, $built, $this->resources->storage($resource->name(), $context, $built)->load($built));
       $this->inputDefinitions->withoutRequired($map);
     }
@@ -308,7 +309,7 @@ final class OperationInputs {
    *   The map.
    */
   public function listedValues(ResourceDefinition $resource, OperationDefinition $operation): MapInputDefinition {
-    return $this->declaredValues($resource, $operation, $this->neutral($resource, $operation));
+    return $this->declaredValues($resource, $operation, $this->neutral($resource, $operation, FALSE));
   }
 
   /**
@@ -335,19 +336,23 @@ final class OperationInputs {
    *   what they depend on and whose required keys, on an operation that
    *   changes what exists, say so in words; the read tool's output does
    *   neither.
+   * @param bool $declared
+   *   TRUE for the cached definition, built for no account
+   *   (ResourcesInterface::buildDeclared()); FALSE for the listing an
+   *   account asks for, built for that account alone.
    *
    * @return \Drupal\tool\TypedData\MapInputDefinition
    *   The map.
    */
-  protected function declaredValues(ResourceDefinition $resource, OperationDefinition $operation, ?DataSurfaceInterface $neutral, bool $input = TRUE): MapInputDefinition {
+  protected function declaredValues(ResourceDefinition $resource, OperationDefinition $operation, ?DataSurfaceInterface $neutral, bool $input = TRUE, bool $declared = FALSE): MapInputDefinition {
     if ($operation->needsNothing()) {
       $context = $this->resources->operation($resource->name(), $operation->id);
-      $built = $this->resources->buildStatic($resource->name(), $context);
+      $built = $this->listed($resource, $context, $declared);
       $map = $this->map($resource, $built, $this->knownIdentity($resource, $context));
     }
     else {
       // Decision: see docs/decisions.md#identity-before-the-parameters.
-      $built = $neutral ?? $this->resources->buildStatic($resource->name(), new OperationContext($operation->id));
+      $built = $neutral ?? $this->listed($resource, new OperationContext($operation->id), $declared);
       $map = $this->map($resource, $built, $this->suppliedIdentity($resource, $operation));
     }
     if ($input) {
@@ -355,7 +360,8 @@ final class OperationInputs {
       $this->inputDefinitions->withDependencies($map, $built);
     }
     if ($this->changesWhatExists($resource, $operation)) {
-      // Decision: see docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door.
+      // Decision: see
+      // docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door.
       $this->inputDefinitions->withoutDefaults($map);
       if ($input) {
         $this->inputDefinitions->withoutRequired($map);
@@ -427,14 +433,40 @@ final class OperationInputs {
    *   The resource.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
+   * @param bool $declared
+   *   TRUE to build for no account, FALSE for the account alone.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface|null
    *   The built resource, in a context that knows the operation's id and
-   *   nothing else, for the account alone, or NULL for an operation that
-   *   takes no parameters.
+   *   nothing else, or NULL for an operation that takes no parameters.
    */
-  protected function neutral(ResourceDefinition $resource, OperationDefinition $operation): ?DataSurfaceInterface {
-    return $operation->parameters === [] ? NULL : $this->resources->buildStatic($resource->name(), new OperationContext($operation->id));
+  protected function neutral(ResourceDefinition $resource, OperationDefinition $operation, bool $declared): ?DataSurfaceInterface {
+    return $operation->parameters === [] ? NULL : $this->listed($resource, new OperationContext($operation->id), $declared);
+  }
+
+  /**
+   * Builds the resource a listing is made from.
+   *
+   * For the definition cached for every account, for no account: every
+   * access answer set aside and its key marked. For the listing an
+   * account asks for, for that account alone: its static answers applied.
+   *
+   * Decision: see docs/decisions.md#a-static-tool-definition-is-no-accounts.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
+   *   The resource.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The context.
+   * @param bool $declared
+   *   TRUE to build for no account, FALSE for the account alone.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The built resource.
+   */
+  protected function listed(ResourceDefinition $resource, OperationContext $context, bool $declared): DataSurfaceInterface {
+    return $declared
+      ? $this->resources->buildDeclared($resource->name(), $context)
+      : $this->resources->buildStatic($resource->name(), $context);
   }
 
   /**
@@ -514,32 +546,26 @@ final class OperationInputs {
    *   The operation.
    *
    * @return array<string, \Drupal\tool\TypedData\OutputDefinitionInterface>
-   *   `values`, `committed` and `prepared`, then the resource's own outputs
-   *   whose names do not collide with those three.
+   *   `values` and `committed`, then the resource's own outputs whose
+   *   names do not collide with those two.
    */
   public function outputs(ResourceDefinition $resource, OperationDefinition $operation): array {
     $outputs = [
       self::VALUES => new OutputDefinition(
         data_type: 'map',
         label: $this->t('Accepted values'),
-        description: $this->t('The values as the resource accepted them, with every declared default and stored value filled in.'),
+        description: $this->t('The values as the resource accepted them, with every declared default and stored value filled in, as the read tool would answer them: a secret is never returned, nor a key this account may not see.'),
       ),
       self::COMMITTED => new OutputDefinition(
         data_type: 'boolean',
         label: $this->t('Written'),
         description: $this->t('Whether the values were written; false for a dry run.'),
       ),
-      self::PREPARED => new OutputDefinition(
-        data_type: 'map',
-        label: $this->t('Prepared'),
-        description: $this->t('On a dry run only: what would have been stored, in storage\'s own shape, after every check storage makes. A resource with parts stored apart has its own under "own" and each part\'s under "children".'),
-        required: FALSE,
-      ),
     ];
     if (!$resource->hasOutputs()) {
       return $outputs;
     }
-    $built = $this->resources->build($resource->name(), new OperationContext($operation->id));
+    $built = $this->resources->buildDeclared($resource->name(), new OperationContext($operation->id));
     return $outputs + $this->inputDefinitions->outputsFromSurface($built);
   }
 

@@ -17,7 +17,10 @@ use Drupal\data_surface\ResourceBuild\ResourcesInterface;
  * the full schema of each of its operations that needs no subject (or,
  * for one that declares no operation, the one it is described in alone),
  * for the account that asks, as the promise made to every client that
- * read it. ContractDiff judges today's emission against it.
+ * read it. ContractDiff judges today's emission against it. Each records
+ * the module that declares it, so one directory may hold several modules'
+ * baselines and a run naming some of them compares and writes only
+ * theirs.
  *
  * Decision: see docs/decisions.md#a-resource-evolves-in-the-open.
  */
@@ -66,8 +69,9 @@ final class ContractBaselines {
    * @param string[] $modules
    *   The modules.
    *
-   * @return array<string, array{surface: string, documents: list<array>}>
-   *   Each baseline, by id, its documents as emitted.
+   * @return array<string, array{surface: string, module: string, documents: list<array>}>
+   *   Each baseline, by id: the module declaring it and its documents as
+   *   emitted.
    */
   public function emit(array $modules): array {
     $baselines = [];
@@ -89,7 +93,11 @@ final class ContractBaselines {
         $documents[] = $this->emitter->emitFull($this->resources->buildStatic($name, $context), $definition->id, $operation->id, $operation->label, operation: $operation->facts($context))->document;
       }
       if ($documents !== []) {
-        $baselines[$definition->id] = ['surface' => $definition->id, 'documents' => $documents];
+        $baselines[$definition->id] = [
+          'surface' => $definition->id,
+          'module' => $definition->module,
+          'documents' => $documents,
+        ];
       }
     }
     ksort($baselines);
@@ -132,12 +140,68 @@ final class ContractBaselines {
   }
 
   /**
+   * Names the module a baseline belongs to.
+   *
+   * The module it records; for one written before baselines recorded it,
+   * the module declaring a resource or structure of its id today; NULL
+   * when neither says.
+   *
+   * @param string $id
+   *   The id its file is named for.
+   * @param array $baseline
+   *   The baseline.
+   *
+   * @return string|null
+   *   The module, or NULL.
+   */
+  public function moduleOf(string $id, array $baseline): ?string {
+    if (is_string($baseline['module'] ?? NULL) && $baseline['module'] !== '') {
+      return $baseline['module'];
+    }
+    foreach ($this->registry->getDefinitions() as $definition) {
+      if ($definition->id === $id && !$definition->isDerived()) {
+        return $definition->module;
+      }
+    }
+    return NULL;
+  }
+
+  /**
+   * Keeps the baselines of some modules, and those that name none.
+   *
+   * A baseline whose module is not listed is another module's promise in
+   * a shared directory: it is not compared, and never written or removed.
+   * One whose module is unknown (written before baselines recorded it,
+   * for a declaration no longer there) is kept as theirs, since nothing
+   * says it is another's.
+   *
+   * @param array<string, array> $baselines
+   *   The baselines, by id.
+   * @param string[] $modules
+   *   The modules.
+   *
+   * @return array<string, array>
+   *   The baselines of those modules, by id.
+   */
+  public function ofModules(array $baselines, array $modules): array {
+    $kept = [];
+    foreach ($baselines as $id => $baseline) {
+      $module = $this->moduleOf((string) $id, $baseline);
+      if ($module === NULL || in_array($module, $modules, TRUE)) {
+        $kept[$id] = $baseline;
+      }
+    }
+    return $kept;
+  }
+
+  /**
    * Writes one baseline.
    *
    * @param string $directory
    *   The directory.
    * @param array $baseline
-   *   The baseline: `surface`, `documents` and, when any, `allowed`.
+   *   The baseline: `surface`, `module`, `documents` and, when any,
+   *   `allowed`.
    */
   public function write(string $directory, array $baseline): void {
     if (!is_dir($directory) && !mkdir($directory, 0775, TRUE) && !is_dir($directory)) {
@@ -159,8 +223,8 @@ final class ContractBaselines {
    *
    * @return \Drupal\data_surface\Contract\ContractChange[]
    *   Every difference, judged, in id order. A declaration or a document
-   *   no longer emitted breaks; one with no baseline yet is a note, which
-   *   writing the baselines pins.
+   *   no longer emitted breaks; one with no baseline yet fails, unpinned,
+   *   until writing the baselines pins it.
    */
   public function compare(array $baselines, array $current): array {
     $diff = new ContractDiff();
@@ -176,7 +240,7 @@ final class ContractBaselines {
         continue;
       }
       if (!isset($baselines[$id])) {
-        $changes[] = new ContractChange($id, $id, '#', 'no baseline yet', ContractDiff::NOTE, ContractChange::COMPATIBLE);
+        $changes[] = new ContractChange($id, $id, '#', 'no baseline yet', ContractDiff::NOTE, ContractChange::UNPINNED);
         continue;
       }
       $before = self::bySituation($baselines[$id]['documents'] ?? []);

@@ -1296,7 +1296,9 @@ it is dropped: an unknown key in a blank item is refused by its path,
 as in any other item, never dropped silently (the never-stricter audit,
 case 2). An item is accepted over
 the child's defaults, not over what is stored at its delta, since the
-list is sent whole and an item may have moved.
+list is sent whole and an item may have moved; except a secret, which
+keeps its position's ([Every door projects what the read tool
+projects](#every-door-projects-what-the-read-tool-projects)).
 (`Collection::isEmptyItem()`, `DataSurfacePipeline::acceptCollection()`)
 
 ### An item is never null
@@ -1497,10 +1499,10 @@ is known. Decided 2026-10-18, point by point.
   a full schema and a listing are what clients cache, so they can only
   hold what the subject cannot change; an account's own permissions are
   that, and anything read from the subject would be stale once the
-  subject changes. *Open:* a consumer that lists from the cached plugin
-  definitions without making an instance, as the MCP bridge's config
-  deriver does, sees the account that discovered them ([A static tool
-  definition is one account's](#a-static-tool-definition-is-one-accounts)).
+  subject changes. The derived definitions themselves, cached for every
+  account, are built for no account (*changed 2026-10-20*: they were the
+  discovering account's; [A static tool definition is no
+  account's](#a-static-tool-definition-is-no-accounts)).
 - **Narrowing by account is a runtime refiner, not access.** Access
   answers whether keys may be changed, seen, or neither; which of its
   values a key allows for an account is the key's own definition,
@@ -1673,12 +1675,17 @@ a reason an alter gives at a child is not shown, as no child's is.
 ### A permission a child cannot name
 
 A child operation's permission whose `%key` the child's context cannot
-fill says nothing at a child, where at the top it is a refusal ([An
-unknown placeholder](#an-unknown-placeholder)). At a child the parent's
-own access has already gated the caller, and the one context that knows
-too little on purpose is the one a tool's static definition is built in,
-before any subject: there the child is described as it may be, and the
-per call definition, built in the real context, applies the permission.
+fill is a refusal, as at the top ([An unknown
+placeholder](#an-unknown-placeholder)): the child is left out. Except
+in a static listing (`buildStatic()`, `buildDeclared()`), the one build
+that knows too little on purpose, before any subject: there the child
+is described as it may be, and the per call definition, built in the
+real context, applies the permission. *Changed 2026-10-20 (B26): it
+said nothing at any child, on the reading that the parent's access had
+gated the caller; that left a child one author's mistake away from
+being let through unasked, and a build that knows too little anywhere
+else is that mistake ([Every door projects what the read tool
+projects](#every-door-projects-what-the-read-tool-projects)).*
 Adding a field invokes its storage's `add`, whose permission names the
 entity type the field's context knows; a bare context knows none. For
 the same reason a child operation's permission that resolves to the very
@@ -1695,11 +1702,109 @@ An omitted child is not in the data surface, so it is in no contract,
 no form and no tool input, and a value posted for it is an unknown key,
 which the pipeline already refuses. It is also not read: the read tool
 leaves it out, because a caller who may not see a thing should not
-learn it through the other door. And it is not written: the storage
-adapter hands what is stored under the key back to the parent's
-storage, which may store its values whole and would otherwise drop what
-the caller never saw. (`DataSurfaceBuilder::omit()`,
-`StorageAdapter::prepare()`)
+learn it through the other door, and no door answers it ([Every door
+projects what the read tool
+projects](#every-door-projects-what-the-read-tool-projects)). And it is
+not written: the storage adapter hands what is stored under the key
+back to the parent's storage, which may store its values whole and
+would otherwise drop what the caller never saw; which is why what
+storage rehearsed is never served. (`DataSurfaceBuilder::omit()`,
+`StorageAdapter::prepare()`, `Pipeline\Outbound::declared()`)
+
+### Every door projects what the read tool projects
+
+Decided 2026-10-20, from the security review (B1, B2, B3, B4, B5 and
+B26 of the reviews' synthesis). One rule: whatever a door hands a
+caller of a resource's values is what the read tool would hand that
+caller of them, never more. The projection is the read tool's, now one
+function of the built data surface (`Pipeline\Outbound::project()`,
+`DataSurfacePipelineInterface::outbound()`): a key the build left out
+for the caller is not there, at any depth (a child the parent stores
+whole included, which only the read's top level left out before); a
+secret is not there, at any depth, under every variant of a slot that
+keeps it secret and inside each item of a list; a key that does not
+apply to the values is not there; a locked key is there as stored,
+which the accepted values hold for it. It applies to the read tool's
+`values`, the write tool's `values` on a dry run and on a write, React
+`/validate`'s `values` (projected, then written as a document), and the
+contract `/submit` rebuilds, which the emitter already masked; the
+form draws no omitted key and never fills a secret's box. Why: the
+read tool's filter was the only one, so a caller who could not read a
+key through the read could read it through a dry run (the fees example
+10 leaves out, a field a field permissions module hides), and a secret
+came back from every write; "omitted is omitted both ways" and "a read
+leaves a secret out" are promises about every door, or about none.
+
+- **`prepared` is not served.** What prepare rehearsed is storage's own
+  shape, and the one answer no access rule read: storage puts back what
+  the caller could not see so the write does not drop it, and a layout
+  (third-party settings, an encrypted layout) is storage's to know. A
+  dry run's caller needs the accepted document as it may see it, which
+  is `values`, and whether storage's own checks passed, which is the
+  run's success; so the write tool declares no `prepared` output and
+  React's `/validate` answers no `prepared` key. It stays on
+  `DataSurfaceResult` for PHP callers, who hold the storage anyway.
+  Projecting it instead was weighed and refused: storage's shape is not
+  the resource's, and a projection that must know every layout is one a
+  new layout breaks.
+- **A secret in a collection's item keeps its place's.** The read never
+  returns an item's secret, so a caller sending back what it read sends
+  none; accepted over the child's defaults, the item erased it. Now an
+  item that leaves a secret out keeps what is stored at its position,
+  as a key left out keeps what it holds, when the list sent is as long
+  as the one stored: an edit in place, which is what a read, edit, write
+  loop and a form's rows send. Every other key of the item is still the
+  child's default when left out: the list is sent whole. With an item
+  added or removed a position may hold another item, and positions are
+  all a list has until items carry an identity, so a secret stored
+  there is neither kept, which could hand one item's credential to
+  another, nor erased: the run is refused by the secret's path
+  ("Password is stored for the item at this position, ..."), and the
+  caller sends the secret again or the clear marker. A list reordered at
+  the same length is read as an edit in place; a caller that reorders
+  items with secrets sends them again. *Open:* an item identity to match
+  by.
+- **A note says nothing of a secret.** A value sent for a locked key is
+  noted when it is not what the key keeps; a secret inside a locked map
+  or child was compared too, so a right guess went unnoted. Now anything
+  sent for a secret is not taken and is noted, and the rest is compared
+  without it.
+- **The permission first, and one reason.** The React route's access
+  check and the tool's access ask the operation's static permission
+  from the resource and operation ids alone
+  (`ResourcesInterface::permissionAccess()`), before a parameter is
+  read, the subject loaded or anything built, and the tool does not
+  refine its `values` (which reads what is stored) for an account the
+  operation is not open to. A refusal past the permission gives one
+  fixed reason, whether a parameter named nothing or the access class
+  refused what it named, so the reason never says whether an id exists;
+  the real one goes to the log. Only an account holding the operation's
+  permission for the context the parameters name hears the access
+  class's reason. Before, the reason was the exception text, an
+  anonymous existence oracle for entity ids.
+- **What an option list read, it says.** A reference's options are the
+  selection handler's referenceable entities, which core's handlers
+  narrow by the account's permissions and, for a node (and a comment,
+  through its node), by node grants. They now vary by
+  `user.node_grants:view` beside `user.permissions` for those, by
+  `user.permissions` for a term, a user and a media item, and by `user`
+  for any other target type, whose handler may read the account itself
+  (a file's offers what the account uploaded)
+  (`ReferenceableOptions::CONTEXTS`). The full schema's cacheability
+  carries them, so a cached schema is never another account's labels.
+- **A permission nothing can name refuses.** A child operation's
+  permission whose `%key` its context cannot fill leaves the child out
+  outside a static listing, as it refuses at the top ([A permission a
+  child cannot name](#a-permission-a-child-cannot-name)).
+
+(`Pipeline\Outbound`, `DataSurfacePipeline::outbound()`,
+`DataSurfacePipeline::acceptCollection()`, `DataSurfacePipeline::takes()`,
+`ResourceOperationTool::doExecute()`, `ResourceApiController::validate()`,
+`OperationInputs::stored()`, `Resources::permissionAccess()`,
+`ServedOperationAccessCheck`, `ResourceOperationToolBase::checkAccess()`,
+`ReferenceableOptions::CONTEXTS`, `SecurityProjectionTest`,
+`ReferenceableCacheabilityTest`,
+`AdvertisedSchemaAcceptanceTest::testSecretInCollectionItemKeepsItsPlace()`)
 
 ### Locked at the top
 
@@ -2146,23 +2251,56 @@ whichever variant holds. Inside a list of maps, a collection's items
 among them, only the secret is left out of each item, and the list and
 the rest of every item are read (decided 2026-10-19; until then a secret
 in an item hid the whole list); a list of secrets is left out whole.
-(`InputDefinitions::secrets()`, `InputDefinitions::EACH`,
+No other door returns one either ([Every door projects what the read
+tool projects](#every-door-projects-what-the-read-tool-projects)).
+(`Pipeline\Outbound::secrets()`, `Pipeline\Outbound::EACH`,
 `OperationInputs::stored()`, `ReadToolTest`)
 
-### A static tool definition is one account's
+### A static tool definition is no account's
 
-A derived tool's static definition builds the resource once, at
-discovery, for whichever account is current then, so a child whose
-access depends on the account is as that account saw it. It is built for
-the account alone (`buildStatic()`), so what a runtime answer decides is
-marked, never stated; and a tool instance lists `values` again for the
-account that asks ([Access is static or runtime, read from its
-cacheability](#access-is-static-or-runtime-read-from-its-cacheability)).
-The `values` input is refined for the caller on every call, which is what
-the pipeline holds a payload to. *Open:* a consumer that reads the
-cached definitions without making an instance (the MCP bridge's config
-deriver) still sees the discovering account's.
-(`OperationInputs::declaredValues()`, `OperationInputs::listedValues()`)
+A derived tool's definition is cached for every account, so it is built
+for none (decided 2026-10-20, replacing "a static tool definition is one
+account's"). The deriver builds each resource for no account
+(`ResourcesInterface::buildDeclared()`): every access answer is set
+aside, static or runtime, the operation's permission at a child among
+them, and none is asked, so every key is there as declared and each one
+an answer could lock or leave out is marked, its description saying a
+call may find it locked or left out. And it derives as the anonymous
+account, so what an option list reads of the site (a reference's
+targets) is never a privileged account's. A tool instance lists
+`values` again for the account that asks, built for that account alone
+(`buildStatic()`): a static lock stated, a static omission left out, a
+runtime answer marked ([Access is static or runtime, read from its
+cacheability](#access-is-static-or-runtime-read-from-its-cacheability));
+and the `values` input is refined for the caller on every call, which
+is what the pipeline holds a payload to.
+
+Why no account's rather than the least privileged one's: built as the
+anonymous account with its static answers applied, the cached
+definition would leave out every key some account may not see, so a
+consumer reading the definitions without an instance (ECA's model
+editor through `eca_tool`, which lists a tool's inputs for an
+administrator) could not offer them; and built as whoever discovered
+it, it was that account's view, cached for everyone, which is what the
+security review found. What it holds now is what the code and the site's
+structure declare, the shape a module's source and its configuration
+already say, never a stored value and never one account's answers;
+what an account may do with each key is the listing and the call's to
+say. Until this, the definition was built for whichever account caused
+the derivation, and a consumer reading it without an instance saw that
+account's view (the tool comparison and the field tools' tests now ask
+as an account the tools are open to, as a real client does).
+
+*Open, outside this module:* the MCP bridge's config deriver
+(`mcp_server_tool_bridge`'s `McpToolConfigDeriver`) normalizes a tool
+instance's input schema when it derives its MCP tools and caches that
+for every client, so the MCP `tools/list` is still the listing of the
+account that caused that derivation. An instance's listing is the
+account's by design; the bridge would need to normalize per request, or
+from the cached definition, to stop that.
+(`OperationInputs::listedValues()`, `OperationInputs::listed()`,
+`ResourceOperationToolDeriver::getDerivativeDefinitions()`,
+`Resources::buildDeclared()`, `SecurityProjectionTest::testCachedToolDefinitionsAreNoAccounts()`)
 
 ### Reading asks what writing asks
 
@@ -3319,7 +3457,13 @@ resource](evolution.md#compatible-and-breaking). Each choice, and why:
   pins the examples and `data_surface_first`, and `drush
   data_surface:contract-diff` prints the verdicts and, with `--write`,
   pins a change once it is accepted. In the main module, because the
-  contract and its emitter are.
+  contract and its emitter are. The lint fails closed (decided
+  2026-10-20, B25 of the reviews): a declaration with no baseline fails,
+  unpinned, so a mistyped directory cannot pass as "0 breaking"; each
+  baseline records its module, and a run compares, writes and removes
+  only the named modules', so modules may share a directory; the account
+  the documents are emitted for is named (`--uid`) and printed; and the
+  verdicts print as JSON for a program (`--format=json`).
 - **What is promised.** `main` promises nothing today. From the first
   tagged release, every resource and structure of the examples and
   `data_surface_first` keeps a baseline (as will any the main module

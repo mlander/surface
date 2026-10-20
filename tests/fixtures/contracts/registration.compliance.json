@@ -1,5 +1,6 @@
 {
     "surface": "registration.compliance",
+    "module": "data_surface_examples_compliance",
     "documents": [
         {
             "surface": "registration.compliance",

@@ -476,8 +476,8 @@ final class ConceptPanel {
    *   The call's name.
    *
    * @return string
-   *   The answer, as tool:run prints it: the message, and what would be
-   *   stored for a call accepted.
+   *   The answer, as tool:run prints it: the message, and the values a
+   *   call accepted and did not write, as the read tool would answer them.
    */
   public function answer(string $resource, string $name): string {
     $tool_id = ConceptCalls::tool($resource, $name);
@@ -501,8 +501,8 @@ final class ConceptPanel {
     }
     $lines = [($result->isSuccess() ? 'Success: ' : 'Failed: ') . PlainTextOutput::renderFromHtml((string) $result->getMessage())];
     foreach ($result->getContextValues() as $output => $value) {
-      if ($output === OperationInputs::PREPARED && is_array($value)) {
-        $lines[] = '  prepared: ' . json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
+      if ($output === OperationInputs::VALUES && is_array($value) && !$result->getContextValues()[OperationInputs::COMMITTED]) {
+        $lines[] = '  values: ' . json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
       }
     }
     return implode("\n", $lines);

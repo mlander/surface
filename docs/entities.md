@@ -183,8 +183,11 @@ item derivation's keys, which the engine does not own
   the entity type's default (none, for a node saved outside a form).
 - **Secrets**: none; a node has no secret field.
 
-A dry run stops after prepare and reports the prepared values: the
-identity, whether a revision would be made, and each field's item.
+A dry run stops after prepare; a PHP caller reads the prepared values
+on the result (the identity, whether a revision would be made, and each
+field's item), and a door answers the accepted values as the read tool
+would, a field whose view access is denied left out
+([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 
 ## The doors
 
@@ -269,23 +272,24 @@ done about it.
     selection handler checks access, so the list is live: a constraint,
     `DataSurfaceReferenceable`, points at it, and its options resolver
     lists the targets for the account asking while there are at most
-    64 (the served contract's cap), carrying `user.permissions`; past
-    that the key is free and the validator asks the handler.
+    64 (the served contract's cap), carrying what the selection read:
+    `user.permissions`, and `user.node_grants:view` for a node or a
+    comment, `user` for a target type core does not list
+    ([decided](decisions.md#every-door-projects-what-the-read-tool-projects));
+    past that the key is free and the validator asks the handler.
 11. **Which text formats an account may use** is a fact about the
     account, so it is a runtime refiner, never run ahead of time; the
     full schema lists the field's formats and marks the key `runtime`.
     Core's text widget also preselects the account's first format; the
     structure leaves the format unanswered, and a body saved without one
     renders through the fallback format.
-12. **A static tool definition is one account's.** Already
-    [open](decisions.md#a-static-tool-definition-is-one-accounts); it
-    bites harder here, since field access differs by account: the
-    `add` tool's cached `values`, which no parameter refines, is as
-    whoever caused the tool definitions to be derived saw it. A tool
-    instance lists `values` again for the account that asks, its static
-    field access stated and its runtime field access marked; a consumer
-    reading the cached definitions without an instance still sees the
-    discovering account's.
+12. **A static tool definition is no account's.**
+    [Decided](decisions.md#a-static-tool-definition-is-no-accounts):
+    the `add` tool's cached `values`, which no parameter refines, is
+    built for no account, every field there and the ones field access
+    may lock or leave out marked, and derived as the anonymous account.
+    A tool instance lists `values` again for the account that asks, its
+    static field access stated and its runtime field access marked.
 13. **Tool definitions are cached apart.** The registry clears itself
     when a field or a display changes, and the tool plugin manager's
     cache did not, so a new field reached the `add` tool's static

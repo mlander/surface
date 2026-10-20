@@ -1,5 +1,6 @@
 {
     "surface": "event.fees",
+    "module": "data_surface_examples",
     "documents": [
         {
             "surface": "event.fees",

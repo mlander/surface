@@ -1,5 +1,6 @@
 {
     "surface": "event.program",
+    "module": "data_surface_examples",
     "documents": [
         {
             "surface": "event.program",

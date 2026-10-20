@@ -1142,6 +1142,56 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Case 6, in a collection's item: a secret left out keeps its place's.
+   *
+   * The read never returns an item's secret, so a document written from
+   * it leaves it out; the full schema accepts that, as the secret is
+   * optional. Sent as long as stored, each item keeps the secret stored
+   * at its position, and the accepted document carries it. With an item
+   * added or removed a position may hold another item, so the pipeline
+   * refuses an item leaving out a secret stored where it now sits, by
+   * the secret's path: a runtime refusal, read from what is stored, where
+   * the schema is wider.
+   *
+   * Decision: see
+   * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
+   */
+  public function testSecretInCollectionItemKeepsItsPlace(): void {
+    $resources = $this->container->get('data_surface.resources');
+    $this->container->get('state')->set('data_surface_tool_test.vault', [
+      'mirrors' => [
+        ['host' => 'east.example.com', 'password' => 'mirror-one'],
+        ['host' => 'west.example.com', 'password' => 'mirror-two'],
+      ],
+    ]);
+    $context = $resources->operation('tool_test.vault', 'configure');
+    $vault = $resources->build('tool_test.vault', $context);
+    $full = $this->decoded($this->container->get('data_surface.contract_emitter')->emitFull($vault, 'tool_test.vault')->document['schema']);
+    $east = ['host' => 'east.example.com'];
+    $west = ['host' => 'west.example.com'];
+    $rows = [
+      'renamed, as long as stored' => [[$east, ['host' => 'west-2.example.com']], ['mirror-one', 'mirror-two'], []],
+      'one removed' => [[$west], NULL, ['mirrors.0.password']],
+      'one added' => [
+        [$east, $west, ['host' => 'north.example.com']],
+        NULL,
+        ['mirrors.0.password', 'mirrors.1.password'],
+      ],
+    ];
+    foreach ($rows as $label => [$mirrors, $kept, $refused]) {
+      $this->assertTrue($this->validates($full, ['mirrors' => $mirrors]), $label . ': the full schema accepts it.');
+      $result = $this->pipeline()->submit($vault, ['mirrors' => $mirrors], $resources->storage('tool_test.vault', $context, $vault), dry_run: TRUE);
+      $this->assertSame($kept !== NULL, $result->isValid(), $label);
+      if ($kept !== NULL) {
+        $this->assertSame($kept, array_column($result->values['mirrors'], 'password'), $label . ': each item keeps its place\'s.');
+      }
+      else {
+        $this->assertSame($refused, array_map(static fn ($violation): string => $violation->fullPath(), iterator_to_array($result->violations, FALSE)), $label);
+      }
+    }
+  }
+
+  /**
    * Case 7: constraints JSON Schema has no keyword for.
    *
    * A constraint with no keyword and no options resolver is named under

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
-use Drupal\data_surface_demo_node_type\Storage\NodeTypeStorage;
 use Drupal\data_surface_resource_test\Resource\PinnedNoteResource;
 use Drupal\data_surface_tool\OperationInputs;
 use Drupal\field\Entity\FieldConfig;
@@ -325,11 +324,10 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($result->isSuccess(), (string) $result->getMessage());
     $this->assertFalse($result->getContextValues()[OperationInputs::COMMITTED]);
     $this->assertNull(NodeType::load('rehearsal'));
-    // What prepare rehearsed is the preview: the node type as config
-    // storage would have been handed it.
-    $prepared = $result->getContextValues()[OperationInputs::PREPARED];
-    $this->assertSame('Rehearsal', $prepared[NodeTypeStorage::NODE_TYPE]['name']);
-    $this->assertSame([], $prepared[NodeTypeStorage::OVERRIDES]);
+    // The answer is the accepted document; what storage rehearsed stays
+    // with the PHP result.
+    $this->assertSame('Rehearsal', $result->getContextValues()[OperationInputs::VALUES]['name']);
+    $this->assertArrayNotHasKey('prepared', $result->getContextValues());
 
     // A dry run is refused for what storage would refuse.
     $tool = $this->tool('data_surface:node.type:add');

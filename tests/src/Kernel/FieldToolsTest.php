@@ -289,8 +289,8 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
    * Tests a dry run: every part rehearsed, nothing written.
    *
    * Prepare builds each part as storage would be handed it and holds it
-   * to its config schema: the field under `own`, and the storage and
-   * the settings, each stored apart, under `children`.
+   * to its config schema, and the answer is the accepted document, as the
+   * read tool would answer it, never what storage rehearsed.
    */
   public function testDryRunPreviewsEveryPartAndWritesNothing(): void {
     $tool = $this->createTool(self::ADD);
@@ -306,14 +306,13 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
 
     $result = $tool->getResult();
     $this->assertTrue($result->isSuccess(), (string) $tool->getResultMessage());
-    $this->assertFalse($result->getContextValues()[OperationInputs::COMMITTED]);
-    $prepared = $result->getContextValues()[OperationInputs::PREPARED];
-    $this->assertSame('entity_test.entity_test.field_home', $prepared['own']['id']);
-    $this->assertSame('Home', $prepared['own']['label']);
-    $this->assertSame(['storage', 'settings'], array_keys($prepared['children']));
-    $this->assertSame('entity_test.field_home', $prepared['children']['storage']['id']);
-    $this->assertSame(2, $prepared['children']['storage']['cardinality']);
-    $this->assertSame(['organization' => ['override' => 'hidden']], $prepared['children']['settings']['field_overrides']);
+    $outputs = $result->getContextValues();
+    $this->assertFalse($outputs[OperationInputs::COMMITTED]);
+    $this->assertArrayNotHasKey('prepared', $outputs, 'What storage rehearsed stays with the PHP result.');
+    $values = $outputs[OperationInputs::VALUES];
+    $this->assertSame('Home', $values['label']);
+    $this->assertSame(2, $values['storage']['cardinality']);
+    $this->assertSame('hidden', $values['settings']['field_overrides']['organization']);
 
     $this->assertNull(FieldStorageConfig::loadByName('entity_test', 'field_home'));
     $this->assertNull($this->reloadField('field_home'));

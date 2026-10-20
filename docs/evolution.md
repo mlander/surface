@@ -207,11 +207,14 @@ schema with a committed baseline and classifies every difference.
 `tests/fixtures/contracts/<id>.json`, in the module that keeps them:
 the full schema of each operation that needs no subject, and for a
 structure with no operation of its own, the one it is described in
-alone. They are emitted for one fixed account, the site's first, so the
-documents do not depend on who runs the lint. This module pins the
-examples and `data_surface_first`: nine files, the five resources and
-the four structures they hold. An adopter commits its own, in its own
-module.
+alone. They are emitted for one fixed account, the site's first unless
+the command's `--uid` names another, so the documents do not depend on
+who runs the lint. Each records the module that declares it
+(`"module"`), so one directory may hold several modules' baselines and
+a run naming some of them compares, writes and removes only theirs.
+This module pins the examples and `data_surface_first` in its own
+`tests/fixtures/contracts/`: nineteen files, the resources and the
+structures they hold. An adopter commits its own, in its own module.
 
 **Verdicts.** `Contract\ContractDiff` compares two documents and names
 each difference with its path (`configure#/properties/capacity/maximum`)
@@ -229,6 +232,11 @@ never more lenient than it can show. Each breaking change is then:
   reason;
 - **breaking** otherwise, and the lint fails.
 
+A declaration with no baseline is **unpinned**, and fails too: it is no
+breaking change, so writing the baselines pins it with no reason asked,
+but a lint that passed it could not tell a declaration nobody pinned,
+or a directory mistyped, from one that kept its promise.
+
 **The test.** `ContractBaselineTest` emits every pinned declaration and
 fails on a breaking change that is neither versioned nor allowed, and
 on a declaration with no baseline. Compatible changes pass; the
@@ -243,13 +251,36 @@ ddev drush data_surface:contract-diff \
   --dir=modules/custom/data_surface/tests/fixtures/contracts
 ```
 
-prints every difference with its verdict and exits non-zero on a
-failing one. `--dir` defaults to the first module's
-`tests/fixtures/contracts`, which is where an adopter keeps its own.
-`--write` pins today's full schemas as the baselines, and refuses to
-while a breaking change is neither versioned nor allowed, unless
-`--allow="<reason>"` says why, which is recorded in that baseline beside
-each change it accepted.
+prints every difference with its verdict and the account the documents
+were emitted for, and exits non-zero on a failing one. It fails closed:
+
+- **`--dir`** is the directory the baselines are kept in, read from the
+  Drupal root, by default the first module's `tests/fixtures/contracts`,
+  which is where an adopter keeps its own. One that does not exist fails
+  ("nothing was compared"), unless `--write` makes it; a declaration
+  with no baseline in it fails as unpinned.
+- **`--module`** names the modules compared. Only their baselines are
+  read from the directory: another module's, by the `module` it records
+  (or, for one written before baselines recorded it, the module
+  declaring its id today), is its own promise, never compared, written
+  or removed by this run.
+- **`--write`** pins today's full schemas as the named modules'
+  baselines, removes a baseline of theirs no longer declared, and
+  refuses to write while a breaking change is neither versioned nor
+  allowed, unless `--allow="<reason>"` says why, which is recorded in
+  that baseline beside each change it accepted. An unpinned declaration
+  needs no reason.
+- **`--uid`** is the account the documents are emitted for, `1` by
+  default and printed with the verdicts: another account's static
+  access answers give other documents (example 10's fees are left out
+  for an account that may not see them), and a site that turns the
+  super user policy off may want a role's account instead.
+- **`--format=json`** prints the same for a program: `modules`,
+  `directory`, `uid`, `declarations`, `changes` (each `surface`,
+  `owner`, `path`, `change`, `effect`, `status`, `fails`), `failing`,
+  `passed`, and with `--write`, `written` and `removed`; a refusal
+  before comparing answers `error` beside them. The exit code is the
+  verdict either way.
 
 **What it cannot see.** A storage layout, which no document states; the
 answer of a runtime refiner or an options list read from the site; and

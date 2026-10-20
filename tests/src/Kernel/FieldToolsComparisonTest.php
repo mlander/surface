@@ -6,6 +6,7 @@ namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\data_surface_tool\OperationInputs;
 use Drupal\field\Entity\FieldStorageConfig;
+use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolManager;
 use Drupal\tool\TypedData\MapInputDefinition;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -34,6 +35,8 @@ use PHPUnit\Framework\Attributes\Group;
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
 class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
+
+  use UserCreationTrait;
 
   /**
    * {@inheritdoc}
@@ -69,6 +72,9 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
     require_once dirname(__DIR__, 3) . '/scripts/DataSurfaceComparisonDocument.php';
     $this->installEntitySchema('user');
     $this->installEntitySchema('entity_test');
+    // An account the field tools are open to, as a real client's is: the
+    // values input is refined to what is stored only for one.
+    $this->setUpCurrentUser(admin: TRUE);
     $this->toolManager = $this->container->get('plugin.manager.tool');
     FieldStorageConfig::create([
       'field_name' => 'field_address',

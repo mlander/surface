@@ -7,6 +7,8 @@ namespace Drupal\data_surface_tool\Plugin\Derivative;
 use Drupal\Component\Plugin\Derivative\DeriverBase;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Plugin\Discovery\ContainerDeriverInterface;
+use Drupal\Core\Session\AccountSwitcherInterface;
+use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
@@ -54,6 +56,12 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * its current value, which its read tool returns, and the definitions are
  * cached, so a stored value listed here would go stale unseen.
  *
+ * The definitions are cached for every account, so they are no account's:
+ * each resource is built for no account (every access answer set aside
+ * and its key marked) and derived as the anonymous account, so an option
+ * list read from the site is never a privileged account's. A tool
+ * instance lists `values` again for the account that asks.
+ *
  * The operation's permission is the tool's declared permission, which
  * the Tool API checks before the tool's own access and prints in
  * `tool:info`, when it is one permission as written: one with a `%key`
@@ -96,6 +104,8 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
    * @param \Drupal\data_surface_tool\ToolDefinitionsInvalidator|null $invalidator
    *   What clears the definitions when what they were read from changes;
    *   NULL remembers nothing.
+   * @param \Drupal\Core\Session\AccountSwitcherInterface|null $accountSwitcher
+   *   What derives as the anonymous account; NULL derives as the current.
    */
   public function __construct(
     protected readonly ResourceRegistry $registry,
@@ -105,6 +115,7 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
     TranslationInterface $string_translation,
     protected readonly ResourceCatalogue $catalogue,
     protected readonly ?ToolDefinitionsInvalidator $invalidator = NULL,
+    protected readonly ?AccountSwitcherInterface $accountSwitcher = NULL,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -121,6 +132,7 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
       $container->get('string_translation'),
       $container->get('data_surface.resource_catalogue'),
       $container->get('data_surface_tool.tool_definitions_invalidator'),
+      $container->get('account_switcher'),
     );
   }
 
@@ -129,6 +141,29 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
    */
   public function getDerivativeDefinitions($base_plugin_definition) {
     assert($base_plugin_definition instanceof ToolDefinition);
+    // Cached for every account, so derived as none: no access answer is
+    // applied (OperationInputs builds for no account), and what an option
+    // list reads of the site is what the anonymous account is offered.
+    // Decision: see docs/decisions.md#a-static-tool-definition-is-no-accounts.
+    $this->accountSwitcher?->switchTo(new AnonymousUserSession());
+    try {
+      return $this->derive($base_plugin_definition);
+    }
+    finally {
+      $this->accountSwitcher?->switchBack();
+    }
+  }
+
+  /**
+   * Derives every tool, as getDerivativeDefinitions() describes.
+   *
+   * @param \Drupal\tool\Tool\ToolDefinition $base_plugin_definition
+   *   The base definition.
+   *
+   * @return array<string, \Drupal\tool\Tool\ToolDefinition>
+   *   The derived definitions, by derivative id.
+   */
+  protected function derive(ToolDefinition $base_plugin_definition): array {
     $this->derivatives = [];
     // What the definitions are read from, beside what the Tool API keeps
     // them by: a derived resource's facts, and every built resource's

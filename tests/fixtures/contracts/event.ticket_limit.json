@@ -1,5 +1,6 @@
 {
     "surface": "event.ticket_limit",
+    "module": "data_surface_examples",
     "documents": [
         {
             "surface": "event.ticket_limit",

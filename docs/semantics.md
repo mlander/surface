@@ -212,7 +212,9 @@ holds, and emptying it is said with `[]`.
 
 - **Each item is the child's.** It is accepted by the child in its own
   frame, over the child's defaults and not over what is stored at the
-  same delta, since the list is sent whole and an item may have moved;
+  same delta, since the list is sent whole and an item may have moved
+  (a secret the item leaves out excepted: [it keeps its
+  position's](#secrets-keep-what-they-hold));
   an unknown key inside an item is refused by its path
   (`racks.1.brand`), as is an item that is not a map (`racks.1`) and a
   list that is not a list (`racks`).
@@ -315,7 +317,20 @@ Two consequences:
   ([decision](decisions.md#a-secret-is-optional-never-nullable)).
 - **Locked wins.** A key that is both locked and secret takes what
   storage holds and ignores the input, marker included, because that is
-  what locked means.
+  what locked means. Anything sent for it is noted as not taken, a right
+  value as a wrong one, and so is a secret inside a locked map or
+  child, so a note never tells a caller what a secret holds.
+- **Inside a collection's item, by position.** An item that leaves a
+  secret out keeps what is stored at its position, when the list sent
+  is as long as the one stored (an edit in place: what a read, edit,
+  write loop sends, since no read returns the secret). With items added
+  or removed, a position may hold another item, so an item that leaves
+  out a secret stored where it now sits is refused by the secret's path
+  (`mirrors.0.password`): send it again, or the marker
+  ([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
+- **No door answers it.** The read leaves a secret out, and so does
+  every other answer: the write tool's `values`, dry run or written, and
+  React's `/validate`.
 
 Encryption is a separate concern and lives one layer down, at the
 storage layout: see [Storage](storage.md#secrets-at-the-codec).

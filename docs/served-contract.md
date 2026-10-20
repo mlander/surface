@@ -868,8 +868,16 @@ All six routes take the operation's parameters from the query string
 (and a POST body's `parameters`), and are gated by
 `_data_surface_react_access`: the operation's permission, then the
 access class the resource or structure names, through
-`Resources::access()`, with no opinion read as a refusal. A resource,
-operation or parameter that names nothing is refused. The POSTs require
+`Resources::access()`, with no opinion read as a refusal. The
+permission is asked first, from the two ids alone, before a parameter
+is read or the subject loaded; a refusal past it (a resource, operation
+or parameter that names nothing, or an access class refusing what it
+names) gives one fixed reason, "The operation cannot be served to this
+account with these parameters.", so it never says whether an id exists,
+and only an account holding the operation's permission for what the
+parameters name hears the access class's own
+([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
+The POSTs require
 `X-CSRF-Token` from `/session/token`
 (`_csrf_request_header_token`). A POST body that is not a JSON object is
 a 400: the access check reads the operation from the query string alone
@@ -938,8 +946,7 @@ room left stale after its venue moved is refused. It answers:
   "violations": [{"path": "capacity", "message": "This value should be between 1 and 150 when Room is Upper deck."}],
   "stale": [],
   "notes": [],
-  "values": {...},
-  "prepared": null
+  "values": {...}
 }
 ```
 
@@ -947,8 +954,12 @@ room left stale after its venue moved is refused. It answers:
 `contact.email`, `@access`), messages rendered to plain text at this
 boundary; `stale` the non-blocking stale references; `notes` what the
 caller is told and nothing blocks, `{path, message}` (below); `values` what
-`accept()` made of the input; `prepared` what storage rehearsed
-writing, when the run reached prepare. Nothing is written.
+`accept()` made of the input, as the read tool would answer it: no key
+the build left out for this account, no secret, no key that does not
+apply. What storage rehearsed is not served: it holds what the caller
+may not see, so a dry run answers the accepted document and its verdict
+([decision](decisions.md#every-door-projects-what-the-read-tool-projects);
+`prepared` was answered until 2026-10-20). Nothing is written.
 
 **`POST .../submit`**, body `{values, stale, parameters, fingerprint?}`,
 is the same run, not dry: validate's body, validate's stale rule, the
@@ -1059,7 +1070,11 @@ stored value is in it, so what it says it depends on is all it depends
 on. Its access is the account's: it varies by what the static answers
 read (`user.permissions`, `user.roles`) and by the cache contexts of
 the runtime answers it set aside, which chose their kind, and never by
-their tags or max-age, since it states none of their answers.
+their tags or max-age, since it states none of their answers. An option list varies by what it read: a reference's targets by
+`user.permissions`, and by `user.node_grants:view` for a node or a
+comment, whose selection node grants narrow, so a cached schema is never
+another account's labels
+([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 
 ## A drawing client that narrows locally
 

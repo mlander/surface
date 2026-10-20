@@ -191,9 +191,10 @@ inputs get. What is lost, on top of the two the inputs already lose
   ordinary property of the `third_party_outputs` map.
 
 The tools `data_surface_tool` derives from operations answer with the
-accepted `values`, `committed`, and the resource's own outputs converted
-here; a dry run answers with what prepare rehearsed, in storage layout,
-as `prepared`.
+accepted `values`, as the read tool would answer them, `committed`, and
+the resource's own outputs converted here; a dry run answers the same
+`values` and no outputs. What prepare rehearsed, in storage layout, is
+never served ([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 
 ## Contributing an output
 

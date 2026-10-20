@@ -99,6 +99,8 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
       'registration.step3.ticket.paid',
     ], array_keys($current));
 
+    $this->assertSame(array_column($current, 'module', 'surface'), array_column($committed, 'module', 'surface'), 'Each baseline records the module declaring it.');
+
     $failing = array_filter($baselines->compare($committed, $current), static fn (ContractChange $change): bool => $change->fails());
     $this->assertSame([], array_map(static fn (ContractChange $change): string => sprintf('%s %s: %s', $change->surface, $change->path, $change->change), array_values($failing)), 'A breaking change raises its owner\'s version, or its baseline allows it.');
   }
