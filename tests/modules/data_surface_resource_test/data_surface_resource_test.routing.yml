@@ -1,0 +1,180 @@
+# The larder's edit operation as a route, served by the generic form, so
+# a test reads what the form draws for a child its access locked or left
+# out.
+data_surface_resource_test.larder.edit:
+  path: '/surface-test/larder/{larder}'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Edit a larder'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Larder\LarderResource'
+    _data_surface_operation: 'edit'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
+# The larder's stock operation, which hands both racks a context whole.
+data_surface_resource_test.larder.stock:
+  path: '/surface-test/larder/{larder}/stock'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Stock a larder'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Larder\LarderResource'
+    _data_surface_operation: 'stock'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
+# The cellar's edit operation, served by the generic form: two
+# collections, each with Add another and Remove, over AJAX.
+data_surface_resource_test.cellar.edit:
+  path: '/surface-test/cellar/{larder}'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Edit a cellar'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Cellar\CellarResource'
+    _data_surface_operation: 'edit'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
+# The digest's one operation, served by the generic form: variants, two
+# of which declare no keys.
+data_surface_resource_test.digest:
+  path: '/surface-test/digest'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Configure the digest'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Digest\DigestResource'
+    _data_surface_operation: 'configure'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
+# The bulletin's one operation, served by the generic form: a send day
+# that is drawn only while the bulletin goes out weekly.
+data_surface_resource_test.bulletin:
+  path: '/surface-test/bulletin'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Configure the bulletin'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Bulletin\BulletinResource'
+    _data_surface_operation: 'configure'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
+# The parcel's one operation, served by the generic form: every rule
+# between its keys declared as data, rebuilt over AJAX.
+data_surface_resource_test.parcel:
+  path: '/surface-test/parcel'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Configure the parcel'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Parcel\ParcelResource'
+    _data_surface_operation: 'configure'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
+# The venue's one operation, served by the generic form: a structure whose
+# ports read the venue's layout and capacity.
+data_surface_resource_test.venue:
+  path: '/surface-test/venue'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Configure the venue'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Venue\VenueResource'
+    _data_surface_operation: 'configure'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
+# The journal's one operation, served by the generic form: two structures
+# mixed in, their members drawn as the journal's own keys.
+data_surface_resource_test.journal:
+  path: '/surface-test/journal'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Configure the journal'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Journal\JournalResource'
+    _data_surface_operation: 'configure'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
+# The depot's one operation, served by the generic form: one shape at two
+# keys, each narrowing it its own way.
+data_surface_resource_test.depot:
+  path: '/surface-test/depot'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Configure the depot'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Depot\DepotResource'
+    _data_surface_operation: 'configure'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
+# The exhibit's one operation, served by the generic form: access of both
+# kinds on a mixed-in structure's members and on an attached child.
+data_surface_resource_test.exhibit:
+  path: '/surface-test/exhibit'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Configure the exhibit'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Exhibit\ExhibitResource'
+    _data_surface_operation: 'configure'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
+# The gallery's one operation, served by the generic form: access answered
+# by alters, after the owner's.
+data_surface_resource_test.gallery:
+  path: '/surface-test/gallery'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Configure the gallery'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Gallery\GalleryResource'
+    _data_surface_operation: 'configure'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
+# The opening hours' one operation, served by the generic form: the
+# common settings recipes, drawn by the stock widgets (docs/recipes.md).
+data_surface_resource_test.opening_hours:
+  path: '/surface-test/opening-hours'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Configure the opening hours'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Library\OpeningHoursResource'
+    _data_surface_operation: 'configure'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
+# The storeroom's edit operation, served by the generic form: a list of
+# aisles, each with a list of shelves of its own.
+data_surface_resource_test.storeroom.edit:
+  path: '/surface-test/storeroom'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Edit the storeroom'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Storeroom\StoreroomResource'
+    _data_surface_operation: 'edit'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
+# The workshop's one operation, served by the generic form: one bench, one
+# light and one stock code per bench the site lists.
+data_surface_resource_test.workshop:
+  path: '/surface-test/workshop'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Configure the workshop'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Workshop\WorkshopResource'
+    _data_surface_operation: 'configure'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
+# The studio's one operation, served by the generic form: its keys
+# arranged in two groups, with weights, a placeholder, a prefix, a suffix
+# and a help text, one of them reworded by an alter.
+data_surface_resource_test.studio:
+  path: '/surface-test/studio'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Configure the studio'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Studio\StudioResource'
+    _data_surface_operation: 'configure'
+  requirements:
+    _data_surface_operation_access: 'TRUE'

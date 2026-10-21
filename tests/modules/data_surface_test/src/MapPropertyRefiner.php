@@ -13,7 +13,7 @@ use Drupal\data_surface\DataSurfaceRefinerInterface;
  *
  * The case a shallow clone gets wrong: core's MapDataDefinition has no
  * __clone of its own, so a cloned map shares its property definitions
- * with the original and this refiner would tighten the sealed surface
+ * with the original and this refiner would tighten the sealed data surface
  * rather than the copy it was handed.
  */
 final class MapPropertyRefiner implements DataSurfaceRefinerInterface {

@@ -9,27 +9,27 @@ use Drupal\Core\Field\Plugin\Field\FieldType\StringItem;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Form\DataSurfaceFieldTypeTrait;
 use Drupal\data_surface\Form\FieldSurfaceProviderInterface;
-use Drupal\data_surface\Surface\Attribute\UsesSurface;
-use Drupal\data_surface_test\Surface\GatedFieldSettingsSurface;
+use Drupal\data_surface\Resource\Attribute\UsesStructure;
+use Drupal\data_surface_test\Structure\GatedFieldSettingsStructure;
 
 /**
- * A field type whose settings surface can refuse an account.
+ * A field type whose settings structure can refuse an account.
  *
  * The one thing no other fixture can show: a field type that allows
  * everything core's field permissions allow and still says no to
- * configuring its own settings. Everything else about it is ordinary —
- * one string setting, the plain settings target — so a test that sees a
- * caller refused has seen the surface's answer refuse it and nothing
- * else.
+ * configuring its own settings. Everything else about it is ordinary
+ * (one string setting, the plain settings storage), so a test that sees
+ * a caller refused has seen the structure's answer refuse it and
+ * nothing else.
  *
- * The settings are GatedFieldSettingsSurface, named
- * with #[UsesSurface], and the refusal is that surface's access class.
+ * The settings are GatedFieldSettingsStructure, named with
+ * #[UsesStructure], and the refusal is that structure's access class.
  * The field type host reads both, and so do the derived field tools,
- * because the same surface fills the field instance surface's settings
- * slot for this field type. The class writes nothing else but the static
- * defaults its host protocol asks of it.
+ * because the same structure is the field instance resource's settings
+ * variant for this field type. The class writes nothing else but
+ * the static defaults its host protocol asks of it.
  *
- * @see \Drupal\data_surface_test\Surface\GatedFieldSettingsSurface
+ * @see \Drupal\data_surface_test\Structure\GatedFieldSettingsStructure
  * @see \Drupal\data_surface_test\Access\GatedFieldSettingsAccess
  */
 #[FieldType(
@@ -40,7 +40,7 @@ use Drupal\data_surface_test\Surface\GatedFieldSettingsSurface;
   default_widget: 'string_textfield',
   default_formatter: 'string',
 )]
-#[UsesSurface(GatedFieldSettingsSurface::class)]
+#[UsesStructure(GatedFieldSettingsStructure::class)]
 class SurfaceGatedItem extends StringItem implements FieldSurfaceProviderInterface {
 
   use DataSurfaceFieldTypeTrait;

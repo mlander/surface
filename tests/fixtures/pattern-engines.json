@@ -1,0 +1,107 @@
+{
+  "description": "PHP regular expressions beside the JSON Schema pattern PatternTranslation::ecma() makes of each (null when it leaves pattern out), and values with whether PHP's preg_match accepts them. PatternUnderUnicodeTest asserts both columns in PHP; the React app's Vitest (src/test/patternEngines.test.ts) reads the same rows with an ECMA engine: a carried pattern accepts every value PHP accepts, and a row left out holds a value PHP accepts that the body read by ECMA would refuse.",
+  "rows": [
+    {
+      "regex": "/^\\d{4}$/uD",
+      "ecma": null,
+      "why": "With u, PCRE's \\d takes in every decimal digit; ECMA's is 0-9.",
+      "values": [
+        { "value": "٢٠٤٨", "php": true },
+        { "value": "2048", "php": true }
+      ]
+    },
+    {
+      "regex": "/^\\w+$/uD",
+      "ecma": null,
+      "why": "With u, PCRE's \\w takes in every letter; ECMA's is ASCII.",
+      "values": [
+        { "value": "café", "php": true }
+      ]
+    },
+    {
+      "regex": "/^\\bé/uD",
+      "ecma": null,
+      "why": "With u, PCRE reads a letter outside ASCII as a word character, so a boundary stands before it; ECMA sees none.",
+      "values": [
+        { "value": "é", "php": true }
+      ]
+    },
+    {
+      "regex": "/^[^\\s]+$/D",
+      "ecma": null,
+      "why": "ECMA's \\s holds the no-break space, so its [^\\s] leaves out what PCRE's keeps.",
+      "values": [
+        { "value": "a b", "php": true }
+      ]
+    },
+    {
+      "regex": "/^[^a]{2}$/D",
+      "ecma": null,
+      "why": "Without u, PCRE's negated class matches one byte of a character outside ASCII.",
+      "values": [
+        { "value": "é", "php": true },
+        { "value": "bc", "php": true }
+      ]
+    },
+    {
+      "regex": "/^\\s$/uD",
+      "ecma": null,
+      "why": "With u, PCRE's \\s holds U+0085 and U+180E, which ECMA's lacks.",
+      "values": [
+        { "value": "\u0085", "php": true },
+        { "value": "᠎", "php": true },
+        { "value": " ", "php": true }
+      ]
+    },
+    {
+      "regex": "/^\\d{4}$/D",
+      "ecma": "^\\d{4}$",
+      "why": "Without u, both read \\d as 0-9.",
+      "values": [
+        { "value": "2048", "php": true },
+        { "value": "٢٠٤٨", "php": false },
+        { "value": "2048\n", "php": false }
+      ]
+    },
+    {
+      "regex": "/^\\w+$/D",
+      "ecma": "^\\w+$",
+      "why": "Without u, both read \\w as A-Z, a-z, 0-9 and _.",
+      "values": [
+        { "value": "cafe_1", "php": true },
+        { "value": "café", "php": false }
+      ]
+    },
+    {
+      "regex": "/^[a\\d]+$/D",
+      "ecma": "^[a\\d]+$",
+      "why": "Without u, \\d inside a class is 0-9 in both.",
+      "values": [
+        { "value": "a1a2", "php": true },
+        { "value": "a٢", "php": false }
+      ]
+    },
+    {
+      "regex": "/\\bcat\\b/D",
+      "ecma": "\\bcat\\b",
+      "why": "Without u, both find a boundary by ASCII word characters, and a byte of a character outside ASCII is none.",
+      "values": [
+        { "value": "a cat sat", "php": true },
+        { "value": "écat", "php": true },
+        { "value": "caté", "php": true },
+        { "value": "concat", "php": false },
+        { "value": "cats", "php": false }
+      ]
+    },
+    {
+      "regex": "/^a\\sb$/D",
+      "ecma": "^a\\sb$",
+      "why": "Without u, PCRE's \\s is six ASCII characters, all of them in ECMA's, which is wider.",
+      "values": [
+        { "value": "a b", "php": true },
+        { "value": "a\tb", "php": true },
+        { "value": "a b", "php": false }
+      ]
+    }
+  ]
+}

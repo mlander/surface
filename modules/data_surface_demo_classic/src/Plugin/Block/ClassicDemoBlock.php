@@ -17,7 +17,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * The demo block, written the way blocks were written before surfaces.
+ * The demo block, written the way blocks were written before Data Surface.
  *
  * Behaviorally identical to `data_surface_demo`: the same settings, the
  * same defaults, the same entity-type-to-bundle-to-field narrowing over
@@ -274,7 +274,7 @@ final class ClassicDemoBlock extends BlockBase implements ContainerFactoryPlugin
   public function blockSubmit($form, FormStateInterface $form_state): void {
     $this->configuration['headline'] = (string) $form_state->getValue('headline');
     $this->configuration['entity_type'] = (string) $form_state->getValue('entity_type');
-    // An unchosen select submits the empty string, and the stored shape
+    // An unchosen select submits the empty string, and the stored layout
     // is a nullable string, so the two notations are reconciled here.
     $this->configuration['bundle'] = $this->storedChoice($form_state->getValue('bundle'));
     $this->configuration['field'] = $this->storedChoice($form_state->getValue('field'));

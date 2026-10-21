@@ -6,10 +6,9 @@ namespace Drupal\Tests\data_surface\Unit;
 
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Pipeline\DataSurfaceResult;
 use Drupal\data_surface\Pipeline\PreparedValues;
-use Drupal\data_surface\Pipeline\SurfaceViolation;
+use Drupal\data_surface\Pipeline\Violation;
 use Drupal\data_surface\Pipeline\ViolationSet;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -42,8 +41,8 @@ class PipelineResultTest extends UnitTestCase {
    *   whether the run counts as valid.
    */
   public static function validityCases(): array {
-    $title = new SurfaceViolation('title', '', 'Refused.');
-    $limit = new SurfaceViolation('limit', '', 'Refused.');
+    $title = new Violation('title', '', 'Refused.', 'invalid');
+    $limit = new Violation('limit', '', 'Refused.', 'invalid');
     return [
       'nothing refused, nothing prepared' => [new ViolationSet(), FALSE, TRUE],
       'nothing refused, a dry run prepared' => [new ViolationSet(), TRUE, TRUE],
@@ -101,7 +100,7 @@ class PipelineResultTest extends UnitTestCase {
     $message = new TranslatableMarkup('@label is required.', ['@label' => 'Title']);
     $result = new DataSurfaceResult(
       values: [],
-      violations: new ViolationSet([new SurfaceViolation('title', '', $message)]),
+      violations: new ViolationSet([new Violation('title', '', $message, 'invalid')]),
     );
 
     $this->assertFalse($result->isValid());
@@ -125,13 +124,13 @@ class PipelineResultTest extends UnitTestCase {
     $refused = new DataSurfaceResult(
       values: [],
       violations: new ViolationSet([
-        new SurfaceViolation(DataSurfacePipelineInterface::ACCESS_VIOLATION_KEY, '', 'Access refused.'),
+        new Violation('', '', 'Access refused.', Violation::ACCESS),
       ]),
       access: AccessResult::forbidden(),
     );
     $invalid = new DataSurfaceResult(
       values: ['title' => ''],
-      violations: new ViolationSet([new SurfaceViolation('title', '', 'Refused.')]),
+      violations: new ViolationSet([new Violation('title', '', 'Refused.', 'invalid')]),
       access: AccessResult::allowed(),
     );
 
@@ -163,12 +162,12 @@ class PipelineResultTest extends UnitTestCase {
   /**
    * Tests that a prepared artifact carries the write without doing it.
    *
-   * The preview object: the values in surface shape, whatever storage
-   * shape the target turned them into, and the dependencies that shape
+   * The preview object: the values in input layout, whatever storage
+   * layout the storage class turned them into, and the dependencies that layout
    * carries. A caller can render or discard all three, and nothing has
    * been written until commit takes the same object.
    */
-  public function testPreparedValuesCarryTheStorageShape(): void {
+  public function testPreparedValuesCarryTheStorageLayout(): void {
     $values = ['available_countries' => ['US']];
     $artifact = ['available_countries' => ['US' => 'US'], 'fields' => []];
     $dependencies = ['module' => ['address']];
@@ -181,12 +180,12 @@ class PipelineResultTest extends UnitTestCase {
   }
 
   /**
-   * Tests that a target with nothing to declare declares nothing.
+   * Tests that a storage class with nothing to declare declares nothing.
    */
   public function testPreparedValuesDefaultToNoDependencies(): void {
     $this->assertSame([], (new PreparedValues([], NULL))->dependencies);
-    // The artifact is whatever the target commits, which for some
-    // targets is an object and for others is nothing at all.
+    // The artifact is whatever the storage commits, which for some
+    // storage classes is an object and for others is nothing at all.
     $this->assertNull((new PreparedValues([], NULL))->artifact);
   }
 

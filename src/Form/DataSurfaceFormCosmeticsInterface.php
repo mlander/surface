@@ -10,14 +10,17 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\DataSurfaceResult;
 
 /**
- * The bespoke part of a generated situation form.
+ * The bespoke part of a generated operation form.
  *
- * DataSurfaceSituationForm builds every element from the surface, which
- * leaves exactly three things a form still has an opinion about and a
- * surface never will: how the elements are arranged on the page, what a
- * person is told when the write succeeds, and where they are sent
- * afterwards. This interface is those three, and nothing else — a
- * cosmetic layer that cannot change what a value means, because it runs
+ * DataSurfaceOperationForm builds every element from the data surface,
+ * and draws them as their keys' arrangements say (groups, weights,
+ * placeholders, help), which every door reads. That leaves exactly three
+ * things one form still has an opinion about and a data surface never
+ * will: what it borrows or adds around the elements (an element of
+ * core's, such as vertical tabs around the declared groups, or markup),
+ * what a person is told when the write succeeds, and where they are sent
+ * afterwards. This interface is those three, and nothing else:
+ * a cosmetic layer that cannot change what a value means, because it runs
  * after the container is built and its return is rendered, not read.
  *
  * The route names it, as a service id or class in its cosmetics
@@ -28,44 +31,48 @@ use Drupal\data_surface\Pipeline\DataSurfaceResult;
  * done on its own. A cosmetic layer is never obliged to have an opinion
  * about all three.
  *
- * @see \Drupal\data_surface\Form\DataSurfaceSituationForm
+ * @see \Drupal\data_surface\Form\DataSurfaceOperationForm
  * @see docs/forms.md
  */
 interface DataSurfaceFormCosmeticsInterface {
 
   /**
-   * Arranges the built form, after every element exists.
+   * Borrows or adds what this one form draws, after every element exists.
    *
-   * Presentation only. Every element keeps its name and its #parents, so
-   * grouping, weights, #states, a machine name mirror, an extra
-   * description or a different widget type change nothing about
-   * extraction, validation, or the machine-visible surface: deleting
-   * this method's whole body yields the same flat working form.
+   * Presentation only, and only what is this form's alone: grouping,
+   * weights, placeholders and help are the keys' arrangement
+   * (docs/decisions.md#arrangement-is-declared-once), already drawn, each
+   * group under DataSurfaceFormBuilderInterface::GROUP_PREFIX and its id.
+   * Every element keeps its name and its #parents, so a borrowed element
+   * (vertical tabs gathering the groups, a machine name mirror), markup
+   * or a different widget type change nothing about extraction,
+   * validation, or the machine-visible data surface: deleting this
+   * method's whole body yields the same working form.
    *
-   * An implementation that needs to change what a value MEANS — its
-   * allowed values, its default, whether it is required — is in the
-   * wrong place: that is the surface's, or a surface alter's.
+   * An implementation that needs to change what a value MEANS (its
+   * allowed values, its default, whether it is required) is in the wrong
+   * place: that belongs to the resource or structure, or to an alter.
    *
    * Borrowing an element type for what it draws borrows what it checks
    * as well, and that half has to go: an element's own #element_validate
    * runs before any form level handler, and a form state keeps only the
    * first error per element, so a check the element brings with it
-   * silently replaces the surface's own violation message. Clear
+   * silently replaces the data surface's own violation message. Clear
    * #element_validate on an element whose type was swapped for
-   * presentation, and let the surface's constraints answer.
+   * presentation, and let the data surface's constraints answer.
    *
    * @param array $form
-   *   The complete form, with the surface container under its own key
-   *   and the actions element already in place.
+   *   The complete form, with the data surface container under its own
+   *   key and the actions element already in place.
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface the elements were built from.
+   *   The data surface the elements were built from.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state.
    * @param string $operation
    *   The operation the form is serving.
    * @param string|null $subject
-   *   The raw value of the situation's first route parameter, or NULL
-   *   when the situation takes none.
+   *   The raw value of the operation's first route parameter, or NULL
+   *   when the operation takes none.
    *
    * @return array
    *   The form, arranged.

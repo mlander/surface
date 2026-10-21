@@ -21,8 +21,8 @@ use Drupal\KernelTests\KernelTestBase;
  * Base class for this module's kernel tests.
  *
  * Two things every kernel test here needed and five of them wrote out:
- * the four services a surface is exercised through, and the casing and
- * variant fixture that is this module's smallest interesting surface —
+ * the four services a data surface is exercised through, and the casing and
+ * variant fixture that is this module's smallest interesting data surface:
  * one key whose value space narrows another's. A fixture repeated per
  * class is a fixture that drifts per class, and a test asserting a
  * narrowing rule against its own private version of the rule's subject
@@ -44,7 +44,7 @@ use Drupal\KernelTests\KernelTestBase;
 abstract class DataSurfaceKernelTestBase extends KernelTestBase {
 
   /**
-   * Gets the surface pipeline, which is where validation lives.
+   * Gets the data surface pipeline, which is where validation lives.
    *
    * @return \Drupal\data_surface\Pipeline\DataSurfacePipelineInterface
    *   The pipeline.
@@ -54,7 +54,7 @@ abstract class DataSurfaceKernelTestBase extends KernelTestBase {
   }
 
   /**
-   * Gets the surface form builder.
+   * Gets the data surface form builder.
    *
    * @return \Drupal\data_surface\Form\DataSurfaceFormBuilderInterface
    *   The form builder.
@@ -76,7 +76,7 @@ abstract class DataSurfaceKernelTestBase extends KernelTestBase {
   /**
    * Builds the casing and variant definitions the fixtures share.
    *
-   * The smallest surface that has something to say: casing is a required
+   * The smallest data surface that has something to say: casing is a required
    * choice of three, variant is the key casing narrows. A caller that
    * wants the variant's own value space declared passes it; a caller
    * testing what narrowing does to an undeclared key leaves it open.
@@ -86,7 +86,7 @@ abstract class DataSurfaceKernelTestBase extends KernelTestBase {
    *   to leave it an open string.
    *
    * @return array<string, \Drupal\Core\TypedData\DataDefinitionInterface>
-   *   The definitions, keyed by surface key.
+   *   The definitions, keyed by definition key.
    */
   protected function casingVariantDefinitions(array $variant_choices = []): array {
     $variant = DataDefinition::create('string')
@@ -104,19 +104,19 @@ abstract class DataSurfaceKernelTestBase extends KernelTestBase {
   }
 
   /**
-   * Seals the shared fixture into a surface refined by casing.
+   * Seals the shared fixture into a data surface refined by casing.
    *
    * @param array $refiners
    *   Extra refiners to register, keyed by contributor name.
    * @param array $defaults
-   *   Declared defaults, keyed by surface key.
+   *   Declared defaults, keyed by definition key.
    * @param array $locked
    *   The keys to lock.
    * @param array $variant_choices
    *   The values the variant key declares for itself.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface.
+   *   The data surface.
    */
   protected function casingVariantSurface(array $refiners = [], array $defaults = [], array $locked = [], array $variant_choices = []): DataSurfaceInterface {
     $definitions = $this->casingVariantDefinitions($variant_choices);

@@ -1,7 +1,7 @@
 # Data Surface Demo - Classic
 
 The demo block and the demo formatter, written the way they would have
-been written before surfaces, so the two can be read side by side.
+been written before Data Surface, so the two can be read side by side.
 
 This module depends on `block` and `field` and on nothing from Data
 Surface. Install it beside `data_surface_demo` and the site has two of
@@ -9,10 +9,10 @@ each plugin, behaving the same way, written two ways.
 
 ## Read them in pairs
 
-| The classic way | The surface way |
+| The classic way | The Data Surface way |
 | --- | --- |
-| [`ClassicDemoBlock`](src/Plugin/Block/ClassicDemoBlock.php) | [`DataSurfaceDemoBlock`](../data_surface_demo/src/Plugin/Block/DataSurfaceDemoBlock.php) and its [`DemoBlockSurface`](../data_surface_demo/src/Surface/DemoBlockSurface.php) |
-| [`ClassicDemoFormatter`](src/Plugin/Field/FieldFormatter/ClassicDemoFormatter.php) | [`DataSurfaceDemoFormatter`](../data_surface_demo/src/Plugin/Field/FieldFormatter/DataSurfaceDemoFormatter.php), which is its own surface |
+| [`ClassicDemoBlock`](src/Plugin/Block/ClassicDemoBlock.php) | [`DataSurfaceDemoBlock`](../data_surface_demo/src/Plugin/Block/DataSurfaceDemoBlock.php) and its [`DemoBlockStructure`](../data_surface_demo/src/Structure/DemoBlockStructure.php) |
+| [`ClassicDemoFormatter`](src/Plugin/Field/FieldFormatter/ClassicDemoFormatter.php) | [`DataSurfaceDemoFormatter`](../data_surface_demo/src/Plugin/Field/FieldFormatter/DataSurfaceDemoFormatter.php), which is its own structure |
 
 The classic side is written to be good code, not to lose. It uses the
 element-level validation core already provides (`#required`, `#min` and
@@ -39,51 +39,51 @@ blank lines and comment lines removed, because the two sides comment at
 different rates and the raw count would flatter whichever writes less
 prose.
 
-| | Classic | | Surface | |
+| | Classic | | Data Surface | |
 | --- | ---: | ---: | ---: | ---: |
 | | **lines** | **code** | **lines** | **code** |
-| Block plugin and its surfaces | 434 | 264 | 262 | 139 |
+| Block plugin and its structures | 434 | 264 | 262 | 139 |
 | Field list (constraint, validator, resolver) | — | — | 198 | 103 |
-| Formatter plugin, which is its own surface | 285 | 167 | 147 | 86 |
+| Formatter plugin, which is its own structure | 285 | 167 | 147 | 86 |
 | Variant vocabulary | — | — | 120 | 40 |
 | Config schema | 64 | 58 | 81 | 70 |
 | **Total** | **783** | **489** | **808** | **438** |
 
 Five of those rows are worth a sentence.
 
-- The **variant vocabulary** is `DemoVariant`, an enum the surface
+- The **variant vocabulary** is `DemoVariant`, an enum the Data Surface
   formatter shares between its declaration and its refiner. It is counted
-  on the surface side in full, even though most of it is documentation,
+  on the Data Surface side in full, even though most of it is documentation,
   because the classic formatter has no equivalent file: it writes the
   same vocabulary inline in `variants()` and `variantsFor()`, beside a
-  `casings()` list the surface side gets from its declaration, and those
+  `casings()` list the Data Surface side gets from its declaration, and those
   lines are already inside its 285.
-- The **formatter** is one file on the surface side: the plugin is its
-  own surface (`#[UsesSurface]` with no argument), so its static
+- The **formatter** is one file on the Data Surface side: the plugin is its
+  own structure (`#[UsesStructure]` with no argument), so its static
   `defineInputs()` and `defineOutputs()` declare its settings and its
   outputs beside `formatValue()`, the one thing it does. Its refiner is
   one static `#[RefinesInput]` method, and its outputs have none,
   because outputs are never refined. It was two files, the plugin and a
-  surface class it named, until a plugin could be its own surface. The
+  structure class it named, until a plugin could be its own structure. The
   merge saved 21 lines, 9 of them code, all of it the second file's own
-  scaffolding; what the shape says did not change.
-- The **config schema** is *longer* on the surface side, not shorter.
-  Both versions hand-maintain a schema file; the surface one also
+  scaffolding; what the declaration says did not change.
+- The **config schema** is *longer* on the Data Surface side, not shorter.
+  Both versions hand-maintain a schema file; the Data Surface one also
   declares the `third_party_settings` namespace other modules mount into,
   which the classic version has no way to offer.
-- The **block plugin** is four files on the surface side: the plugin,
-  which only renders; `DemoBlockSurface`, which its `#[UsesSurface]`
-  names; and the two presentation surfaces its slot names,
-  `ListPresentationSurface` and `GridPresentationSurface`. None holds a
-  service. The slot is where the classic block grew most: a third
+- The **block plugin** is four files on the Data Surface side: the plugin,
+  which only renders; `DemoBlockStructure`, which its `#[UsesStructure]`
+  names; and the two presentation structures that are its variants,
+  `ListPresentationStructure` and `GridPresentationStructure`. None holds a
+  service. The variants are where the classic block grew most: a third
   AJAX-wired select, a details element whose children depend on it,
   per-presentation defaults, and storage written per presentation, all
-  by hand. On the surface side it is one `attachBy()` and two classes of
+  by hand. On the Data Surface side it is one `attachVariants()` and two classes of
   a few lines each.
-- The **field list** is where the services went. A surface refiner
-  points at a list rather than fetching it, and no core constraint names
-  a bundle's fields, so the demo brings one, its validator, and the
-  options resolver that reads it — more lines than the classic block
+- The **field list** is where the services went. A refiner points at a
+  list rather than fetching it, and no core constraint names a bundle's
+  fields, so the demo brings one, its validator, and the options
+  resolver that reads it: more lines than the classic block
   spends fetching the same list inline. The bundle list needs nothing of
   the kind, because core's `EntityBundleExists` already says it.
 
@@ -91,14 +91,14 @@ Five of those rows are worth a sentence.
 
 Line counts are a proxy. What actually costs an author is the number of
 separate mechanisms they have to know about, get right, and keep in step
-with each other. Counted from the same files. What each plugin *does* —
-the block's `build()`, the formatter's showing step — is one method on
+with each other. Counted from the same files. What each plugin *does*
+(the block's `build()`, the formatter's showing step) is one method on
 each side and is left out of both columns, because it is the part neither
 approach changes.
 
 ### The block
 
-| What the author has to touch | Classic | Surface |
+| What the author has to touch | Classic | Data Surface |
 | --- | ---: | ---: |
 | Form API element definitions | 11 | 0 |
 | AJAX wiring (`#ajax` arrays, callbacks, wrappers) | 5 | 0 |
@@ -109,14 +109,14 @@ approach changes.
 | Label lists kept in step with the form | 1 | 0 |
 | Live option lists read from the site | 3 | 1 |
 | Constraint naming a list, with its validator | 0 | 1 |
-| Surface classes (the block's, and its slot's two children) | 0 | 3 |
+| Structure classes (the block's, and its two variants) | 0 | 3 |
 | Refiner methods pointing at those lists | 0 | 2 |
 | Config schema files | 1 | 1 |
 | **Distinct mechanisms in play** | **9** | **5** |
 
 ### The formatter
 
-| What the author has to touch | Classic | Surface |
+| What the author has to touch | Classic | Data Surface |
 | --- | ---: | ---: |
 | Form API element definitions | 3 | 0 |
 | AJAX wiring (`#ajax` array, callback, wrapper, rebuild read) | 4 | 0 |
@@ -124,19 +124,19 @@ approach changes.
 | Vocabulary lists kept in step | 4 | 1 |
 | Default values written out | 3 | 0 |
 | Settings summary assembled by hand | 1 | 0 |
-| Surface shape, on the plugin itself (settings and outputs together) | 0 | 1 |
+| Structure declaration, on the plugin itself (settings and outputs together) | 0 | 1 |
 | Refiner methods | 0 | 1 |
 | Config schema files | 1 | 1 |
 | **Distinct mechanisms in play** | **8** | **4** |
 
 Nine against five on the block, eight against four on the formatter. The
-mechanisms the classic version sheds — form elements, AJAX, storage,
-defaults, validation — are also the ones that have to agree with each
+mechanisms the classic version sheds (form elements, AJAX, storage,
+defaults, validation) are also the ones that have to agree with each
 other, and nothing checks that they do: a key added to
 `defaultConfiguration()` and forgotten in `blockForm()` can never be
 set, one added to `blockForm()` and forgotten in the schema
 fails on save, and one added everywhere except `blockValidate()` is
-stored unchecked. On the surface side they are one declaration, so there
+stored unchecked. On the Data Surface side they are one declaration, so there
 is nothing to keep in step.
 
 ## What the classic version does not get
@@ -153,8 +153,8 @@ out of the select instead of being reported as stale and kept. Nothing it
 emits is described, so nothing it emits can be checked against a
 contract. And no other module can extend it: a third party that wants one
 more variant or one more setting has to alter the form, which reaches the
-form and nothing else — not the validator, not the schema, not any
-machine reading the contract — whereas a contribution to a surface joins
+form and nothing else (not the validator, not the schema, not any
+machine reading the contract), whereas a contribution to a structure joins
 the advertisement itself, under the contributing module's name, held to
 narrowing forever after. See [Refinement and
 contributions](../../docs/refinement.md).
@@ -175,4 +175,4 @@ drush pm:install data_surface_demo data_surface_demo_classic
 | Test | Covers |
 | --- | --- |
 | `Kernel\ClassicParityTest` | That the two versions of each plugin really do the same thing. |
-| `Kernel\DemoBlockTest`, `Kernel\DemoFormatterTest` | The surface side of each pair, in its own right. |
+| `Kernel\DemoBlockTest`, `Kernel\DemoFormatterTest` | The Data Surface side of each pair, in its own right. |

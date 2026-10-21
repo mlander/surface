@@ -23,7 +23,7 @@ serving, and evolution.
 0. **The definitions map** — DONE 2026-09-15. (groundwork; done first, while the interfaces
    are still ours to reshape). Replace the surface's parallel arrays
    (definitions, refinements, refiner chains, locked, contributions)
-   with one typed, ordered, immutable `DefinitionMap` of `SurfaceEntry`
+   with one typed, ordered, immutable `DefinitionMap` of `Entry`
    value objects, each entry carrying its definition plus contributor,
    locked state, and dependency edges. Validated once at construction;
    iterator and array-access compatible so call sites keep working;
@@ -41,8 +41,9 @@ serving, and evolution.
 1. **Access on the contract** — DONE 2026-09-15. The method landed as
    `surfaceAccess()` because core action and block interfaces already
    own `access()` with incompatible signatures; the pipeline takes a
-   resolved `AccessResultInterface` on `submit()`; refusals land under
-   the reserved `@access` violation key; `DataSurfaceAccess::decisive()`
+   resolved `AccessResultInterface` on `submit()`; refusals land as a
+   violation of the whole call, code `access` (under the reserved
+   `@access` key until 2026-10-20); `DataSurfaceAccess::decisive()`
    is the idiom for a provider that owns an operation, since core
    permission and entity checks answer neutral on denial. (The headline
    net-new borrow, from Form
@@ -55,7 +56,7 @@ serving, and evolution.
    to it. Form, Drush, config action, agent: one resolution.
 2. **The output surface** — DONE 2026-09-15. Landed as a second
    definitions map on the surface with `refineOutputs()` against input
-   values, the `Omitted` sentinel, strict-typed `conformOutput()`, the
+   values, the `NotEmitted` sentinel, strict-typed `conformOutput()`, the
    formatter split (`formatValue()` with byte-identical rendering), and
    the tool converter. The tool bridge consumer landed as the converter
    plus a recorded limitation: the Tool API has no output-definition
@@ -67,7 +68,7 @@ serving, and evolution.
    descriptions, examples); differs where outputs differ: no defaults,
    no locking, refinement runs against the *input* values (a dry run
    emits a prepared artifact and no committed flag). Includes the
-   **Omitted sentinel** (from JSON resources' MissingValue): a gated or
+   **NotEmitted sentinel** (from JSON resources' MissingValue): a gated or
    irrelevant output field is absent, never NULL, and the presence
    condition is declared data so the emitted schema states it.
    First consumers: the tool bridge (converted to Tool API output
@@ -81,9 +82,9 @@ serving, and evolution.
    password rendering that never echoes, keep-on-empty semantics with
    the `CLEAR_SECRET` marker (a documented exception to D3), and the
    write-only note in the tool conversion. Riders left open: a
-   target-level decorator for targets that use no settings shape
+   storage-level decorator for storage classes that use no settings shape
    (state, config, plugin configuration currently store a secret in
-   the clear, documented honestly in docs/targets.md); builder
+   the clear, documented honestly in docs/storage.md); builder
    `secret()` sugar; a guard against secret plus Choice rendering as a
    visible select. Original spec: a `secret` flag on `DefinitionMetadata`
    plus an encrypting `SettingsShapeInterface` decorator, so plaintext
@@ -110,7 +111,7 @@ and the dry-run endpoint address surfaces by: host type, host id,
 operation, subject.
 
 Prerequisite, second half — DONE 2026-09-15. The triple is complete
-(`getDataSurfaceTarget()` on both provider contracts, the field-side
+(`getDataSurfaceStorage()` on both provider contracts, the field-side
 accessor renamed to match), `DataSurfaceProviderForm` serves provider
 forms from route coordinates with a three-method cosmetics seam, and
 the node type demo's form class is gone, not shrunk: routing plus a
@@ -134,7 +135,7 @@ Prerequisite, third half — DONE 2026-09-15. The attribute is deleted;
 defaults protocol reads the same declaration the instance path builds
 from, with no container and no plugin constructed out of season; the
 awareness service slimmed to interface detection for the future
-catalogue; nine classes converted with semantic parity proven by the
+catalog; nine classes converted with semantic parity proven by the
 suite and the byte-identical comparison document. Original spec: **the
 method becomes the one home; the attribute stops declaring.** The static-harvest claim the attribute was
 built on has shrunk to detection, which the interface already provides,
@@ -155,8 +156,8 @@ which serves the real contract.
 
 4. **Emission as a plugin type.** — DELIVERED 2026-10-08 as the main
    module's emitter, `data_surface.contract_emitter`: JSON Schema
-   2020-12, labeled options as `oneOf` const/title, each slot as `if`/
-   `then` on its deciding sibling, dependency edges and locking under
+   2020-12, labeled options as `oneOf` const/title, variants as `if`/
+   `then` on their deciding sibling, dependency edges and locking under
    `x-surface`, widget hints only when a renderer asks
    (`docs/served-contract.md`). Still open: the constraints it knows
    are a list in the emitter, not yet a plugin type. Original spec:
@@ -167,10 +168,14 @@ which serves the real contract.
    Schema 2020-12; labeled options as `oneOf` const/title; refinement
    edges as `dependentSchemas`/`if-then` where declared, honestly
    marked runtime-narrowed where an object refiner is in play.
-5. **Generate the config schema from the surface.** The hand-written
+5. **Generate the config schema from the shape.** The hand-written
    `block.settings.*` and formatter-settings YAML becomes an emitted
    artifact via config schema discovery, deleting the parallel
-   declaration every critique named first among Drupalisms.
+   declaration every critique named first among Drupalisms. CLOSED
+   2026-10-20 for a simple config object: its schema and install file
+   are written from the resource, committed and checked for drift
+   (`drush data_surface:config-schema`, group D of item 14 below); a
+   plugin's settings and discovery-time emission are not built.
    Backbone, added 2026-09-17 after the owner named the gap: **the
    coordinate space is declared, not free.** A provider declares its
    operations, and per operation its subject space as a data
@@ -187,10 +192,10 @@ which serves the real contract.
    concrete subject answer is the runtime tier the endpoint re-asks.
    Staticness is not a second result type: it is the answer's own
    cacheability, a permissions-context result is the static tier the
-   catalogue may cache per permissions hash, a subject-tagged or
+   catalog may cache per permissions hash, a subject-tagged or
    max-age-zero result is runtime. The node type provider's current
    missing-subject refusal on edit changes to the general answer when
-   this lands. The catalogue enumerates
+   this lands. The catalog enumerates
    coordinates first; the endpoint validates coordinates against the
    declaration before dispatching. The rule underneath, stated once:
    nothing may vary a surface except a declared coordinate or a
@@ -215,10 +220,10 @@ which serves the real contract.
 
    Discoverability, folded into discovery after the human-search
    review: standalone providers get a **service tag** carrying host
-   type and id, and a **catalogue service** unions tagged providers
+   type and id, and a **catalog service** unions tagged providers
    with surface-aware plugin definitions to answer "all surfaces on
    this site" with provider class, operations, and file. The discovery
-   document serves from the catalogue, so standalone providers stop
+   document serves from the catalog, so standalone providers stop
    being invisible to enumeration. On top of it, a **list tool**
    through the bridge (drush is broken on this site) giving a human
    the thirty-second answer: every surface, where it lives, who
@@ -253,12 +258,13 @@ which serves the real contract.
    reports it as runtime-narrowed.
    - **Options alters** (later concept, from the sketch): a class in
      `src/OptionsAlter/` changing one list of allowed values everywhere
-     it is used, not per surface.
+     it is used, not per resource or structure.
    - **Remove-only policy** (later concept, beside options alters): a
      site hiding an owner's key, and an options alter removing an entry
      stored values use; both need the stale rule (item 11).
 9. **A closed vocabulary of dependent effects** (the Laravel negative
-   result made policy). Declared edge effects on the refinement map:
+   result made policy). Landed 2026-10-18 as declared rules (Next,
+   item 3), all but locked-when. Declared edge effects on the refinement map:
    narrow-choices-to, required-when, excluded-when, locked-when, as
    equality-on-dependency data (`required_if` shaped). Serializable,
    emitted, and evaluated by the pipeline, so required-or-not and
@@ -267,7 +273,8 @@ which serves the real contract.
     relevance predicate means the key contributes nothing to prepare
     and commit and stored values stand (never pruned: the no-silent-
     loss rule holds against both Laravel's `exclude_unless` and the
-    clean rooms' `when`-pruning, which we reject).
+    clean rooms' `when`-pruning, which we reject). Landed 2026-10-18
+    as a refiner's answer, "This key does not apply" (Next, item 2).
 11. **Stale values: stash, warn, never reset** (decided 2026-09-16
     after the owner hit it live; supersedes the earlier
     reset-versus-keep policy menu, deleting the per-edge knob).
@@ -291,17 +298,43 @@ which serves the real contract.
 
 ## Phase D: evolution
 
-13. **Surface versioning with pure stored-value migrations** (decided;
-    refined). A version on the attribute; pure shape-to-shape
-    transforms shipped with the definition; the pipeline's accept
-    stage converts stored values forward on read. Borrowed discipline: only
+13. **Shape versioning with pure stored-value migrations** (decided;
+    refined). DESIGNED 2026-10-19, build when the first adopter needs it
+    (`docs/evolution.md#stored-value-migrations-as-they-will-be`,
+    `docs/decisions.md#a-resource-evolves-in-the-open`). Landed with the
+    design: `version:` on `#[Resource]` and `#[Structure]` (from 1; a
+    structure versions itself, a shape has none), stamped
+    `x-surface.version` in both documents, and refused above 1 at
+    discovery until the runner exists; `StoredValueMigrationInterface`,
+    one pure static step per version on the declaring class, as a stub
+    nothing calls. To build: the pipeline converting what `load()` hands
+    it before `accept()`, step by step from the ledger's version; the
+    ledger as the storage's (`ConfigObjectStorage` keeping
+    `_data_surface.versions` beside `_core`, described for every config
+    object by altering core's `config_object` type; a config entity's in
+    its `third_party_settings.data_surface`); a refusal for a version
+    above 1 on storage that keeps no ledger, and for a stored version
+    above the declared; the eager pass (a command and a service a
+    post-update calls) for code that reads its storage directly; then
+    lifting the discovery refusal. Borrowed discipline: only
     up-transforms are required (down is a restore), and a
     per-destination ledger stamps the applied version at commit so
     environments converge in recorded order.
-14. **Additive-diff lint.** Emit each surface's schema against a
-    committed snapshot in CI; fail on removed keys, tightened
-    constraints, or type changes without a version bump. The
-    registry's publish-time diff, as a test any module can run.
+14. **Additive-diff lint.** DONE 2026-10-19
+    (`docs/evolution.md#the-contract-diff`): `Contract\ContractDiff`
+    classifies each difference between a committed full schema and
+    today's (narrows, widens, adds an optional key, replaces, notes;
+    inputs and outputs judged the opposite ways round; a keyword it does
+    not read is breaking), a breaking one passing only with its owner's
+    version raised or an allowance with a reason in the baseline;
+    baselines in `tests/fixtures/contracts/<id>.json` of the module that
+    keeps them; `ContractBaselineTest` pins the examples and
+    `data_surface_first`; `drush data_surface:contract-diff` prints the
+    verdicts and pins with `--write`. As planned: emit each resource's
+    and structure's schema against a committed snapshot in CI; fail on
+    removed keys, tightened constraints, or type changes without a
+    version bump. The registry's publish-time diff, as a test any module
+    can run.
 15. **Deprecation as definition metadata.** `deprecated` and sunset
     keys through `DefinitionMetadata`; widgets flag dying options; a
     report enumerates stored usages before removal.
@@ -343,25 +376,29 @@ which serves the real contract.
     attribute, validated through the pipeline at build, surfaced as
     placement starting points and reused as test fixtures.
 18. **Derived host cache metadata**: the base classes merge the
-    surface's cacheability union into the host's contexts and tags
+    data surface's cacheability union into the host's contexts and tags
     automatically, closing the last hand-authored cache seam.
 19. **Storage settings for field types** with the has-data lock (safe
     now that locked keys keep stored values), and the storage-settings
     tool bridge.
-20. **Contributor dependencies**: `PluginConfigurationTarget` reads
+20. **Contributor dependencies**: `PluginConfigurationStorage` reads
     `getDefinitions()->contributions()` into `calculateDependencies()` so
     uninstalling a contributor cleans up its keys.
 21. **Retire `config_surface`** once the functional suite runs in CI.
 
 ## After the rework
 
-The concepts the surface pattern deferred, in the order they come
+The concepts the pattern deferred, in the order they come
 next. `docs/pattern.md` (Deferred) records the position each is held
 to.
 
-1. **Collections**: `attachList()` / `attachListBy()`, an ordered list
-   whose items are a child surface, delta as position, stable identity
-   an identity key on the child, weights the target's business.
+1. **Collections**: ~~`attachList()`, an ordered list whose items are a
+   child structure, delta as position~~ DONE 2026-10-16 (`docs/resources.md`,
+   Collections). Still open: `attachListBy()`, each item choosing its own
+   child; an item routed to its child's own storage, its stable identity
+   an identity key on the child and weights the storage's business; a
+   collection inside an item on the form; content entity fields of more
+   than one value, with the entity side.
 2. **Input shapes**: another way to enter the same value, converted to
    one canonical value; the widget alter layer on the `variants` branch.
 3. **Options**: options sources, the `OptionsList` constraint naming
@@ -372,16 +409,791 @@ to.
 5. **Per-method refinement gating**, if a case needs it: today a key's
    refiners wait for the union of what they watch.
 6. **Partial updates of a collection item**: changing one item without
-   resending the list, probably a situation on the child.
+   resending the list, probably an operation on the child.
 7. **Plugin hosts overlay a full submission**: a host supplies its
    subform's parents to `surfaceSubmissionPath()`, so a save without
    JavaScript that moves a parent and its dependent together is not
    refused by Form API (`docs/decisions.md`).
 8. **Served contract, first shape** — DONE 2026-10-08: `data_surface_react`
-   serves one situation as JSON Schema 2020-12 with `x-surface`, refine
+   serves one operation as JSON Schema 2020-12 with `x-surface`, refine
    and validate (dry run) endpoints, and a React form rendered from it
    (`docs/served-contract.md`). Writes since: `/submit`, with `created`
-   for a situation that creates and an opt-in stored-values fingerprint.
+   for an operation that creates and an opt-in stored-values fingerprint.
+
+## Next, ranked (2026-10-18)
+
+What makes the pattern better from here, in the order it pays off. The
+developer-facing side on `next` (reusable subschemas, static and runtime
+refinement with its enforcement, child operations with three-way access,
+collections, the vocabulary) is complete as scoped; the entity side is
+tabled until the user resumes it.
+
+Priority, in milestones (2026-10-18). A before anything: a known bug
+and an unverified invariant make everything above them suspect. B before
+C: B changes what a schema can state, and C reads that schema. The
+renames sit in A because they are cheapest before new code exists.
+
+- **A, merge-ready:** the refinement leak; the never-stricter audit; the
+  blueprint and storage layout renames (item 6); the docs reading pass
+  and the leftover-words decision; then merge `next` to `main`, the React
+  local resolution included.
+- **A, from the first fresh-eyes run (2026-10-18, `docs/fresh-eyes-2026-10-18.md`),
+  before the merge** — DONE 2026-10-18: `ConfigObjectStorage`, the pinned
+  pages `docs/first-resource.md` and `docs/second-resource.md` on
+  `data_surface_first`, `docs/concepts.md`, the guesses documented where
+  the log asked, the two contradictions, the three bugs, and defaults
+  out of the tool listing (item 9). As planned: ship a storage class for a simple config object
+  (the most common case has none; the docs only say it was removed);
+  a settings-page recipe at the top of the README, which becomes the
+  pinned "Your first resource" page; document the permissions file and
+  the config schema convention for keys another module mounts; fix the
+  two contradictions (a page saying nothing emits a schema; two
+  spellings of the operation label); two bugs: a `{{ max }}` placeholder
+  printed literally in a refusal, and core's number element check
+  overriding the rule's own message; and a variant with no keys
+  must not crash the form (HTTP 500, "No data surface widget serves the
+  map data type").
+- **B, what the contract can say:** inapplicable keys (2, done); declarative
+  narrowing (3, done); ports (4, done); mixins (5, done); named scalar
+  shapes (7, done).
+- **C, access and the doors:** static and runtime access (8, done); operation
+  behavior facts and the tool door's refusal feedback (9).
+- **D, edges as they bite:** item 10.
+- **E, the entity side** when resumed: item 11.
+- **F, confidence in the direction** (gates, not features; several run
+  alongside B and C): item 13 below.
+- **In parallel from now:** file the drafted core issues (item 12),
+  now including one for conditional data definitions (a complex
+  definition declares `when`/`then`/`required` conditions that only
+  narrow; typed data validates them, the JSON Schema normalizer emits
+  `if`/`then` and `dependentRequired`; the companion to the dependency
+  metadata issue); the core conversation is slow and depends on nothing
+  above.
+
+1. **Make `next` trustworthy, then merge it to `main`.**
+   - The refinement leak, DONE 2026-10-18 (bc0e1b1, core's typed data
+     prototype cache keyed without the definition): one call to the registration tool changes the
+     verdict of the next call in the same process (a capacity of 50 is
+     refused after an 80, with the stewards rule from the 80). Separate
+     requests are fine. Suspect the definition of an alter's mounted key
+     being shared between builds. The one known bug on the branch.
+   - The audit's fixes, DONE 2026-10-18 (e1abf5b, with one change to the
+     rule below: on an optional key absent keeps, null or '' clears, a
+     value replaces, and the schema keeps null in such a key's type; see
+     "Absent keeps, null clears" in the decisions). Decided with the Tool API as the
+     precedent (it coerces first by a documented table, validates after,
+     and its matrix tests check the advertised schema against what the
+     tool accepts post-coercion): the invariant's scope is the accepted
+     document; `required` means present and not null and says nothing
+     about size; on an optional key null, absent and '' all mean "the
+     stored value or default stands", and the schema advertises such a
+     key as optional without null in its type (so a stale key allowing
+     null is the same rule, not a special case); a secret is optional,
+     absent or null meaning keep what is stored, its type not nullable;
+     the casting table is replaced by the Tool API's coercions, called
+     where the module can and mirrored on the form door, which makes
+     the "boolean stored as integer" finding an alignment rather than a
+     bug; shipped regexes gain `D` and translation carries only a safe
+     subset of pattern syntax, else omits `pattern`; a locked list's
+     items carry no `const`; blank collection items have their keys
+     checked before they are dropped; `format` stays, as an annotation
+     per the spec, with the test validator configured so; the audit's
+     one-off pins become matrix tests in the Tool API's shape (advertised
+     schema acceptance, input coercion). Found by the ports unit and fixed
+     with mixins (2026-10-18): a child sent `null` was taken whole by the
+     pipeline where the schema refused it; it is now each of its keys sent
+     `null`, an optional one cleared and a required one refused in its own
+     words, at the form and the tool alike (the "Absent keeps, null
+     clears" decision; matrix rows on example 3 and the ledger).
+   - The "never stricter than the runtime" audit, DONE 2026-10-18 (3d43d8f,
+     `docs/audit-never-stricter.md`), deferred for the demo:
+     the form posts `"50"` as text where the schema says integer; the
+     schema refuses unknown keys, and whether the pipeline does is
+     unchecked; an untouched stale stored value is accepted while the
+     full schema's list refuses it; a Regex translated from PCRE to ECMA
+     may refuse what the original accepts. Each is a schema to widen or
+     a runtime to tighten, decided case by case.
+   - A reading pass over the docs and decisions after the rename, then
+     the leftover old words in one decision, DONE 2026-10-18
+     (`docs/decisions.md#the-product-keeps-its-name`): module name and
+     namespaces, the `data_surface.` service prefix, route names and
+     paths, the `x-surface` keyword, the `surface[...]` form key, the
+     React app's internal names, the `DataSurface*` engine prefix keep
+     the word; concept names in code took the new one. With it, three
+     fresh-eyes entries: a derived tool declares its operation's
+     permission (12), a refusal a refiner caused names the keys it
+     depends on (15), and the README's "never contradicted" says what
+     only the runtime settles (17).
+2. **"This key does not apply"**: DONE 2026-10-18
+   (`docs/decisions.md#a-key-that-does-not-apply`). Found by the
+   fresh-eyes run: a send day that only applies when the frequency is
+   weekly had no good spelling. A refiner now answers
+   `DoesNotApply::here()`, declared in its return type, for a key, a
+   mounted key, an attached child's key or a key with variants: the form draws
+   no element, the pipeline reads it as left out and refuses any other
+   value sent for it, naming what it depends on, storage keeps what it
+   holds, the read tool and the schema for these answers leave it out,
+   and the full schema states it `false` under the conditional that
+   rules it out and its `required` conditionally (a `then` may carry
+   `required` now, fresh-eyes entry 19); the React page narrows it from
+   the full schema. A list narrowed to nothing is a select offering
+   nothing, never a text field. Phase B item 10 (relevance shapes the
+   payload) is the older note of the same idea, and its no-silent-loss
+   rule is the one kept.
+3. **Declarative narrowing** (Phase C): DONE 2026-10-18
+   (`docs/decisions.md#a-rule-declared-as-data`). An author states a
+   condition instead of coding it, for example "a license is absent",
+   and the emitter writes it as a conditional without executing
+   anything. A blueprint's `narrow($key)->when(Condition::...)` takes a
+   closed vocabulary of conditions (present, absent, equals, in, the four
+   bounds, not, allOf, anyOf) and of effects (a Range, Length or Count
+   bound, a subset of the key's list, a pattern, required, does not
+   apply, a description), each with one exact JSON Schema spelling; the
+   rule is a static refiner in the key's chain, after its contributor's
+   coded ones, waiting for nothing, and only tightening. The full schema
+   states each as written (`x-surface.declared`); the compliance capacity
+   was the first case and is exact now, its stewards still `dynamic`.
+   Left out: a conditional lock, and an alter's rule on values it
+   offered with `extendChoices()`.
+4. **Ports: a structure declares what it reads from its container.**
+   DONE 2026-10-18 (`docs/decisions.md#a-port-is-a-live-sibling-value`,
+   `docs/resources.md#ports`): `$inputs->reads('capacity', 'integer',
+   required: TRUE)` declares a port and `attach($key, Child::class,
+   reads: ['capacity' => 'seats'])` wires it; an alter attaches at its own
+   mount, `third_party_settings.<module>`, as an adapter
+   (`docs/decisions.md#an-alter-attaches-at-its-own-mount`); what depends
+   on a port is stated at the site, on the container's `allOf`, with
+   `x-surface.reads` there and `x-surface.ports` on the def; the
+   compliance example is the first case, its storage and tools
+   unchanged. Left open: a container opting out of the structure's
+   alters; ports on a variant or a collection's item; a
+   structure at a key inside a mount, a collection under a mount, and a
+   mounted structure with children of its own or access other than open.
+   As planned: the wall says a child never names a parent's key, and structures
+   obey it; an alter may watch the owner's keys by name, and the
+   compliance example does (its stewards rule watches `capacity`),
+   which binds the reusable piece to one owner's key names. Instead a
+   structure declares a port under a name of its own
+   (`$inputs->reads('capacity', 'integer')`) and its refiners watch the
+   port; the container wires each port to one of its keys when it
+   attaches the structure (`attach('compliance', Compliance::class,
+   reads: ['capacity' => 'seats'])`), whether the container is a
+   resource or an alter. Consequences: an alter's blueprint must be able to
+   `attach()` and `attachList()` under its mount, so an alter becomes
+   an adapter that attaches a reusable structure and wires it; a
+   port-dependent conditional is emitted at the site on the parent's
+   `allOf`, never in the structure's def, which stays reusable; the
+   child's `dependsOn` is translated to the parent's path at the site;
+   identity handed through `withChild(known:)` is documented as a port
+   of a fixed kind, a port being a live sibling value. Rewording an
+   owner's label or tightening an owner's key directly stays an
+   alter's own business, as glue for one owner.
+   Reuse from another module follows: the reusing module attaches the
+   structure and wires its ports; the structure brings its refiners,
+   access class and operations and keeps its def id in the contract;
+   storage is the container's (its config schema describes the keys, and
+   it depends on the structure's module); alters on the structure apply
+   wherever it is used, which a container may want to opt out of (to
+   decide); a change to the structure changes every container's stored
+   layout, which is Phase D with an explicit contract to diff: settled
+   2026-10-19, a structure versions itself and migrates its own map
+   wherever it is stored, and the contract diff attributes a def's change
+   to the structure (`docs/decisions.md#a-resource-evolves-in-the-open`).
+5. **Mixins: a structure merged flat.** DONE 2026-10-18
+   (`docs/decisions.md#a-mixin-is-merged-flat`, `docs/resources.md#mixins`):
+   `$inputs->mixIn(TimestampsStructure::class, reads: [...])` on the
+   owner's blueprint, refused on an alter's; an ordinary `#[Structure]`,
+   no marker; stored flat, the owner's config schema listing the members;
+   clashes, cycles, a child, a resource, outputs refused at build; emitted
+   as `allOf` of the def's `$ref` and the owner's properties under
+   `unevaluatedProperties: false`, each member in its place (`true`, what
+   differs, `false`), the def open in a document that mixes it in and
+   closed where it is attached; refiners and rules in the owner's frame
+   on the structure's members and ports, every port wired; the owner's
+   refiners may read and narrow members, not rule one out nor name one
+   whose structure has an access class; the structure's access locks
+   (held to what is stored) or omits (kept in storage) its members, the
+   stricter answer standing; the tool flat, React and `SchemaResolver`
+   inline flat. Fixtures: the test module's journal (the ownership with a
+   port, the timestamps), its archive, the ledger. Left open: the
+   catalog listing mixins, an optional port left unwired, a mixed-in
+   structure's alter that mounts or a mixin holding a child, opting out
+   of a structure's alters. As planned: Today composition only nests
+   (attach, with its frame and wall; an alter's mount under its module's
+   name). A mixin, Smithy's word, merges a structure's members into the
+   owner's own keys: declared by the owner only (`with: [Timestamps::class]`),
+   never by an alter, since an alter's keys must live under its own name;
+   stored flat and described by the owner's config schema; emitted as
+   `allOf` of the mixin's `$ref` and the owner's properties with
+   `unevaluatedProperties`, so the def stays reusable; its refiners run
+   in the owner's frame but watch only the mixin's own members and
+   ports; its access locks or omits its members. Nest for a thing of its
+   own inside this one (a contact, a ticket); mix in for shared members
+   that are part of this thing (timestamps, ownership, publishing
+   flags), which is how an entity's base-field traits already compose
+   and what the bundle resource will want. With ports, in B.
+6. **Rename the builders to blueprints.** DONE 2026-10-18 (`BlueprintInterface`,
+   `BlueprintAdditionsInterface`, `StorageLayoutInterface`,
+   `AltersStorageLayoutInterface::storageLayout()`). Before named scalar shapes
+   exist, `ShapeInterface` and `ShapeAdditionsInterface`, the builders
+   passed to `defineInputs()`, `defineOutputs()` and `alterInputs()`,
+   become `BlueprintInterface` and `BlueprintAdditionsInterface` (decided
+   2026-10-18 over "members" and "builder": a blueprint is the thing you
+   declare members into, as in a migration's table blueprint), so that a
+   `#[Shape]` class and the thing you declare into never share a name.
+   The members a blueprint holds keep Smithy's word in prose. Also
+   `HasStorageShapeInterface::storageShape()` and `SettingsShapeInterface`,
+   which describe how values are laid out in storage, take a name that
+   says so (layout). Mechanical, with the snapshot.
+7. **Named scalar shapes.** DONE 2026-10-18
+   (`docs/decisions.md#a-shape-is-a-named-definition`,
+   `docs/declaring-a-resource.md#named-shapes`): a `#[Shape('event.license')]`
+   class in `src/Shape/` whose static `define()` returns a plain
+   `DataDefinition` (a scalar, no default, not required), used as
+   `$inputs->add('license', License::class, t('Event license'))`; what the
+   key adds is held to the narrowing check against the shape at build; a
+   port may read a shape, wired only to a key declared with it; an alter
+   of the shape tightens it at every key (`narrow('<id>')` with no
+   condition, `describe('<id>')`), and mounting, attaching or offering
+   more is refused; both documents write it once as `$defs.<id>`, each
+   key `$ref` first with what it adds as sibling keywords, the def
+   allowing null; the compliance license is the first case, its tool
+   definitions unchanged. With it `ShapeMismatchException` became
+   `TypeMismatchException`. Left open: a key opting out of a shape's
+   alters, the catalog listing shapes. As planned: the one Smithy
+   level the pattern lacks: a named simple shape with its traits, reused
+   anywhere (`string License @pattern`). Today a scalar's constraints, message and description are
+   written inline at each key, and core's answer, a data type plugin, is
+   too heavy for a four-digit string with a label. A `#[Shape('event.license')]`
+   class whose static `define()` returns the data definition, used as
+   `$inputs->add('license', License::class)`: the contract emits it once
+   as a def and references it; an alter can target the shape and so
+   tighten every use on the site; a port can declare it as its type;
+   and "shape" takes its Smithy place, resources, structures and named
+   scalars all being shapes. Small, additive, after ports.
+8. **Static and runtime access**, the same split as refinement. DONE
+   2026-10-18 (`docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability`,
+   `docs/resources.md#static-and-runtime-access`): the kind is read from
+   an answer's cacheability (only `user.permissions`, `user.roles`,
+   `user.roles:<role>`, no tag, a permanent max-age is static; an answer
+   with no cacheability at all is runtime); `buildStatic()` builds for
+   the account alone, static answers applied, runtime ones set aside and
+   their keys marked; a static answer is asked once per context and
+   account kind and kept, asked again under `assert()` with the container
+   guarded (`StaticRefinerContainer::guardAccess()`), and held to the
+   build by `StaticAccessAgreementTrait`; the full schema (the schema
+   route, the contract panel) and the tool listing, a tool instance
+   listing `values` for the account that asks, state static answers and
+   mark runtime ones (`x-surface.access: "runtime"`, in words in a tool's
+   description); the operation's permission is the first static answer
+   (`OperationDefinition::staticPermission()`); narrowing values by
+   account is a runtime refiner; the React page keeps the server's answer
+   for a marked key. Fixture: the test module's exhibit. Left open: a
+   consumer that lists the cached tool definitions without an instance
+   sees the discovering account's; a State read through an injected
+   service passes the guard. As planned: Static
+   access is decidable from the account alone (an operation's
+   permission, a role) and is stated in the full schema and the tool
+   listing for the account asking. Runtime access depends on the
+   subject or on values ("may edit this node", field permissions' "edit
+   own") and is applied only once the subject is known. The kind is
+   read from the answer's cacheability, which Drupal already requires
+   to be honest: permission or role contexts only, no entity tags, no
+   per-user context, means static. The full schema marks a key under
+   runtime access (`x-surface.access: "runtime"`) as one that may be
+   locked or omitted later. Access answers per key or structure;
+   narrowing allowed values by account is a runtime refiner, not
+   access.
+9. **The tool door's feedback.** DONE 2026-10-19
+   (`docs/decisions.md#a-refusal-names-what-it-depends-on`,
+   `docs/decisions.md#an-operation-states-how-it-behaves`): a listing
+   names what each key another narrows depends on, once, in its
+   description, by the path a caller sends it under, through a port at
+   its site ("Depends on venue."); a refusal says what is allowed for
+   the values sent in one sentence per key, the constraint's message
+   then "when" each watched key and what it holds, then, for a value not
+   on its list, the list as refined, each label with its value, at most
+   ten and "and N more" ("The value you selected is not a valid choice
+   when Venue is Riverside Hall; choose Main hall (riverside_main) or
+   East room (riverside_east)."); the tool holds `values` to its shape
+   before it runs and leaves every rule to the pipeline, which narrows
+   from the document sent; `ToolFeedbackTest` plays an agent's retry
+   loop on example 3 through the Tool API's runner, one retry per key.
+   `#[Operation]` gains `readOnly` and `destructive`, and idempotence
+   derived from `creates` unless declared; the deriver maps read only to
+   the `Read` kind and destructive to `setDestructive()`; both documents
+   state `x-surface.operation` at the top; no read tool beside a read
+   only operation. Checked over MCP: the annotations reach `tools/list`,
+   the descriptions reach the input schema, a refusal reaches the
+   result's text, and the MCP server itself refuses a value off an
+   advertised list with that list before the tool runs. Left open: the
+   Tool API gap on idempotence (filed by the owner); nothing holds a
+   read only operation to writing nothing; open world as a flag on the
+   storage. As planned:
+   Keep the listing small, as intended.
+   Name each dependency in the input's description. Make a refusal on a
+   dependent key say what is allowed for the values sent ("room: not
+   offered for Riverside Hall; choose Main hall or East room"), which
+   means narrowing the `values` map from its own partial value in the
+   tool bridge. One retry per dependent key is the target. Applies to
+   ECA and MCP alike.
+   Defaults in the listing (decided 2026-10-18, DONE 2026-10-18,
+   `docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door`): a tool listing is
+   cached by clients and is a discovery channel, so it stops carrying
+   current stored values as `default`. A create operation lists the
+   declared defaults; an edit operation lists none and says in its
+   description that a key left out keeps its current value and that the
+   read tool returns current values. The schema for these answers keeps
+   current values in `values` (per request, never cached) and the full
+   schema keeps declared defaults. Updates stay a patch.
+   Also the operation's behavior facts, which MCP reads as its tool
+   annotations and the bridge already derives from the Tool API:
+   `#[Operation]` gains `destructive` and `readOnly` (both false by
+   default); idempotent is derived from `creates` unless declared; the
+   tool deriver maps read-only to the `Read` kind and sets destructive;
+   both schema documents carry the facts at the top beside the
+   operation's id and label, so a client reading the contract directly
+   has them; open-world is a later flag on the storage. Tool API gap to
+   file: idempotence is a property of the operation kind, not the tool,
+   so an edit cannot say it is idempotent while an add says it is not.
+10. **Pattern edges**, each small. Worked through 2026-10-19, each with
+   its decision and its test:
+   - A read-only operation form for the top-level locked answer. DONE:
+     locked at the top lets the caller in to a resource built locked
+     whole, every element disabled and no Save, `readOnly` at the top
+     of both documents, a submit refused by name at every door, the
+     read tool answering (`docs/decisions.md#locked-at-the-top`).
+   - A view-only variant. DONE: a variant its access locks is
+     offered, built locked whole, drawn and stated fixed
+     (`docs/decisions.md#a-variant-is-open-locked-or-not-offered`).
+   - `childrenMayAnswer()` skipping the build. DONE: `access()` builds
+     only when some declared variant names an access class, the one
+     child that may refuse (`docs/decisions.md#a-chosen-variant-may-refuse`).
+   - A collection inside an item on the form. DONE: drawn as one in its
+     place, its own buttons, read back into its item, its violations
+     flagged at both deltas (`docs/forms.md#a-collection-on-a-form`).
+   - A secret inside a collection item hiding the whole list from the
+     read tool. DONE: only the secret is left out of each item
+     (`docs/decisions.md#a-read-leaves-a-secret-out`).
+   - `attachListBy()`. Not small, a design question, not built. A list
+     whose items each choose their variant by a key inside the item is
+     expressible today, nested: a collection of a structure that holds
+     the deciding key and its `attachVariants()` variants (`{plugin, settings}` per
+     item), which the engine, the pipeline and both documents recurse
+     into. Two things stand between that and `attachListBy()`. The
+     design question: whether the variant's keys sit flat beside the
+     deciding key in each item (a discriminated union, one `oneOf` per
+     item, variants with no key of their own, which no door has a
+     spelling for) or nested under the variants' key (no new concept, one
+     more level). And the form reads a drawn item back through the
+     child's sealed map, which holds only the variants' placeholder, so
+     variants inside an item are not read back on the form (read in
+     `extractCollection()`, not yet pinned by a test); that is the first
+     fix whichever spelling wins.
+   - An item routed to its child's own storage. Not small, a design
+     question, not built: an item needs an identity key on the child to
+     say which stored thing it is, removing an item from the list then
+     deletes a stored thing (an operation that destroys, which the
+     parent's edit does not declare), the write order of many children
+     against their parent is unsettled, and the read tool would read
+     each item from its own storage. Recorded under
+     `docs/decisions.md#a-list-of-child-invocations`, still open.
+   - The phpstan rule for static refiners. DONE: the module's PHPStan
+     configuration flags a static `#[RefinesInput]` method calling
+     `\Drupal::`, run by `scripts/check.sh`
+     (`docs/decisions.md#static-by-default-runtime-by-declaration`).
+   - The "Right now" wording for a key both narrowed and under a
+     runtime rule. DONE: "narrowed, and checked at runtime", in the
+     contract panel and the React page
+     (`docs/decisions.md#a-panel-inside-the-operation-form`).
+   - From the open points, DONE the same day: a read only operation
+     writes nothing at any door (its pipeline stops after prepare and
+     refuses `commit()`;
+     `docs/decisions.md#an-operation-states-how-it-behaves`); the map
+     mounted keys sit in is never null, the parcel's `courier`
+     workaround gone, and a map whose every key is ruled out is written
+     `{}` by `DataSurfacePipelineInterface::document()` and the emitter
+     alike; a ruled-out key inside a collection item is not put back,
+     by design (items are sent whole); keys inside a collection's items
+     say what they depend on in the tool listing; a required plain map
+     sent `[]` holds a value, as a required list does
+     (`docs/decisions.md#a-key-that-does-not-apply`,
+     `#a-refusal-names-what-it-depends-on`,
+     `#required-means-must-hold-a-value`).
+   Also, DONE 2026-10-19: a text key's `Length` max reached the
+   element as `#maxlength`, and on a POST past it core's message showed
+   instead of the rule's own (the gap the number widget had; found
+   2026-10-18 by the shapes unit); the maximum is now the `maxlength`
+   attribute and the rule's violation the one message. And a candidate held back on purpose (2026-10-18): a typed
+   reference to a sibling value inside a declared rule
+   (`constrain('Range', ['min' => Value::of('created')])`), which
+   would spare the coded refiner for key-to-key comparisons but puts
+   a declared rule on the `dynamic` side of the full schema, since
+   JSON Schema cannot state it; built only if the adopter gate (item
+   13) shows such comparisons are common. Drupal tokens in strings are
+   not a candidate: a string is a value, and tokens are runtime.
+11. **The entity side, when resumed.** Fields as two kinds: a `field`
+   resource (identity: entity and field name; a collection of items
+   with Count from cardinality; field access; a `set` operation whose
+   tool shares Tool Belt's `field_set_value` contract) and a
+   `field.item` structure (no identity; entity, field name and delta
+   from its container; keys derived at build from the known field).
+   Unit 4's per-field-per-bundle derivatives collapse into these. Then
+   multi-value fields through collections, the form display as the
+   cosmetic layer (a single-value field drawn as one element, not a
+   fieldset; timestamps and references drawn as such), address as the
+   first override (country narrows subdivisions), path alias as the
+   first alter with a storage of its own, and a placed block as a
+   config entity resource whose settings are variants chosen by plugin
+   id, each plugin's structure one of them. And base field items shared
+   across bundles (11 of a basic page's 14 field items are base fields,
+   derived again for every bundle), deferred here from the performance
+   review's H7 because it changes the id shape.
+12. **The core conversation**, bottom-up: the definition-level facts
+   first (constraints to JSON Schema keywords, `refined_by` on
+   definitions, a setter contract, labels on Choice; drafted), then
+   operations and access for config objects framed as what entity types
+   already have, then third-party settings for simple config, and Form
+   API last. Told once, in the new vocabulary, in `docs/core-gaps.md`
+   (rewritten 2026-10-19): five steps, each with the gap in core's
+   terms, what the module does today, the core change, the issue that
+   carries it (the ten drafts, unfiled; steps 2 to 5 not drafted) and
+   what it gives alone. There is no separate proposal document in this
+   repository; the page is the proposal.
+
+13. **Confidence in the direction.** The two risks the design carries
+    are weight and the untested half, so these are gates every later
+    item is held to, with the evidence each produces.
+    - **A concept budget, with a page that enforces it.** (The page and
+      the inventory exist: `docs/first-resource.md`, pinned to
+      `data_surface_first` by `FirstResourceDocsTest`, and
+      `docs/concepts.md`.) A doc page,
+      "Your first resource", that writes a working resource using only
+      resource, operation, storage and `add()`, and nothing else, with a
+      drift test that pins its code. Every item in B and C must leave
+      that page unchanged; a concept that cannot stay off it has to
+      justify itself. Beside it, a one-page concept inventory: each
+      concept, the question that makes you need it, and the sentence to
+      skip it. Smithy's recurring complaint is weight; this is the
+      defense.
+    - **Fresh eyes, twice.** First a reader with no context (an agent
+      given only the docs and a task, none of this history) writes a
+      resource with a structure, an alter and a runtime rule from the
+      docs alone, and logs every place it guessed, searched or got it
+      wrong; the log becomes doc fixes. Then the same exercise by a
+      person. Repeat the agent run after every milestone; it is cheap.
+      Agent half RUN 2026-10-18 and 2026-10-19
+      (`docs/fresh-eyes-2026-10-19.md`); verdict: yes for the contract
+      half today, every door agreeing on every rule, and yes for an admin
+      settings page, correct before it is pleasant. Third run 2026-10-19
+      (`docs/fresh-eyes-2026-10-19b.md`): yes for the contract half and
+      mostly yes for the form half, its gaps folded in. Fourth run
+      2026-10-21 (`docs/fresh-eyes-2026-10-21.md`): yes for the contract
+      half and mostly yes for the form half, the install order, `after:`
+      in a group and four tool answers folded in. The person half is
+      still to run.
+    - **Two real adopters.** Port two existing contrib settings forms
+      that we did not write (candidates: pathauto's settings, metatag's
+      defaults, or another module's `ConfigFormBase` with options and a
+      dependency between fields) as resources in a sandbox module, and
+      record what the pattern could not express or expressed badly.
+      Generality is only shown on forms designed without us in mind.
+      RUN 2026-10-19, pathauto and honeypot (`docs/adopters-2026-10-19.md`);
+      verdict: one set of rules at every door and `#states` became a
+      contract, while keys that come from the site, the widget set and
+      several rules per key are the gaps a contrib author hits first.
+    - **The entity proof, with a definition of done.** Item 11 counts as
+      done when one real bundle with a multi-value field, an entity
+      reference, an image and a path alias is created and edited through
+      the form, the React page, the tool and MCP, with field permissions
+      honored, and the "today" comparison beside it. Ports, mixins and
+      collections all have to hold at once there; nothing else exercises
+      them together.
+    - **The audit stays green.** the matrix tests (`AdvertisedSchemaAcceptanceTest`, `InputCoercionMatrixTest`) pin the
+      invariant; a breach decided and fixed changes a test on purpose,
+      never silently. New doors and new kinds add cases to it.
+    - **An evolution design before anyone depends on a resource.**
+      DONE 2026-10-19 (`docs/evolution.md`,
+      `docs/decisions.md#a-resource-evolves-in-the-open`): the
+      compatibility table, the version, the stored-value migrations as
+      designed (Phase D item 13, to build when the first adopter needs
+      it) and the contract diff (Phase D item 14, built). As planned:
+      Phase D, written after reading Smithy's defaults-and-model-evolution
+      design: which changes to a resource are compatible, what a stored
+      value migration looks like, how a contract diff is reported.
+    - **The core story told once, by an outsider's standard.** DONE
+      2026-10-19 (`docs/core-gaps.md`): five steps bottom-up, each with
+      the gap in core's terms, what the module does today, the core
+      change, the issue that carries it and what it gives alone; there
+      is no separate proposal document. A fresh-eyes reader, an agent
+      reading only that page as a core maintainer, found step 1's first
+      order breaking its own rule (the prototype cache and the setter
+      contract listed after what needs them, and the narrowing rule
+      nowhere), which became the order now on the page with "What
+      narrowing means" as an item of its own; its verdict: step 1 as
+      separate issues, the prototype cache first, the default value held
+      until its name does not collide with field definitions', and
+      conditions and `refined_by` held until narrowing is specified in
+      core terms. As planned: rewrite `docs/core-gaps.md` and the
+      proposal in the new vocabulary, bottom up (definition facts, then
+      operations and access for config, then third-party settings for
+      simple config, Form API last), and have the fresh-eyes reader read
+      that too.
+
+14. **From the gates (2026-10-19).** The two gates of item 13 were folded
+    in on 2026-10-19: the recipes page, a whole alter, the cosmetic
+    seam's posted shape, refusals naming a declared rule's condition,
+    plain text in the machine documents, items never null, composites
+    as `allOf` and `anyOf`, and the maxlength message. Not built, each
+    with the gate that found it:
+    - **Per-option state in a list**: an item shown and locked, as
+      pathauto's entity types with patterns are. (Adopters.) PARTLY DONE
+      2026-10-19: for a map of things, a key per option, a provider locks
+      an entry and it is held to what is stored at every door
+      (`docs/decisions.md#keys-that-come-from-the-site`). Still open: a
+      plain list of choices (a `list` of `string` with a Choice, as
+      pathauto's entity types are), where an option is a value, not a key.
+    - **An alter adding entries to a map the owner stores**: pathauto's
+      punctuation hook; alters mount only at their own key. (Adopters.)
+      For keys from the site the provider is where a module adds one
+      (pathauto's hook stays inside it); a fixed map an owner declares
+      is still open.
+    - **A default from a sibling key**: pathauto's punctuation rows start
+      from the separator, in storage `load()` today. (Adopters.)
+    - **"- None -" on every optional select**: the original offered no
+      empty choice; requiring the key means sending every row. (Adopters.)
+      DONE 2026-10-19: a key its storage always holds (a fully
+      validatable config schema that does not call it nullable) offers
+      no empty choice once a valid one is chosen, refuses null naming
+      its default, and both schemas leave null out of it
+      (`docs/decisions.md#a-key-its-storage-always-holds`).
+    - **The widget set**: checkboxes, radios, a list of free strings on
+      the Form API door. (Adopters; fresh eyes, 8.) DONE 2026-10-19:
+      checkboxes for a list of up to twelve choices, radios when asked
+      for, rows to add and remove for a list of free values, a time
+      input, each asked for with `setSetting('widget', ...)`, at both
+      doors (`docs/decisions.md#a-widget-is-chosen-from-the-definition`).
+    - **A time-of-day type**: today a string with a Regex, or minutes
+      when a rule compares it (`docs/recipes.md`). (Fresh eyes, 6.) The
+      widget is DONE 2026-10-19 (`setSetting('widget', 'time')`, a time
+      input at both doors); a type of its own is still not built.
+    - **Site-derived keys cost a deriver**: 107 lines for pathauto's,
+      against the original's loop of about 20. (Adopters.) DONE
+      2026-10-19: `addEach()` and `attachEach()` with a provider
+      (`docs/decisions.md#keys-that-come-from-the-site`); pathauto's
+      derivation is now 29 code lines (a shape and `keys()`), honeypot's
+      11, where the derivers were 44 and 38. Open: a rule naming one
+      entry, ports on an entry.
+    - **Required keys resent on every edit call**: a decision pending
+      with the user. (Fresh eyes, 16; adopters.)
+    - **Third-party access**: a workflow, group or field permissions
+      module could not lock or leave out keys of a resource it does not
+      own unless that resource was a content entity. (Found by the user,
+      2026-10-19.) DONE 2026-10-20: an alter implementing
+      `AltersAccessInterface` answers access for what it alters, after
+      the owner, the stricter standing, each answer's kind its own, in
+      every frame the thing is built in; a runtime answer set aside at
+      the top marks every key; example 10's workflow module is the case
+      on a site
+      (`docs/decisions.md#an-alter-may-answer-access-and-the-stricter-stands`).
+      Open: an answer for one key of an owner; a structure at a mount
+      an alter locks.
+
+    From the reviews (2026-10-20), the fix-now list of
+    `docs/reviews-2026-10-20/synthesis.md`, section 1, batch one:
+    - **B18, discovery order.** DONE 2026-10-20: a call made while the
+      plugin hosts are being read is answered from the others, what is
+      kept is assigned only once every host was read, and the registry memoizes and caches only a read made from
+      the whole answer, so it holds the same definitions whichever end
+      is asked first (`DiscoveryOrderTest`).
+    - **B25, the contract diff fails open.** DONE 2026-10-20: a missing
+      directory or baseline fails, baselines record their module and a
+      run touches only the named modules', `--uid` names the account and
+      is printed, `--format=json` (`ContractDiffCommandTest`,
+      `docs/evolution.md#the-contract-diff`).
+    - **B1, B2, B3, B4, B5, B26, the security findings.** DONE
+      2026-10-20: every door projects what the read tool projects, no
+      door serves `prepared`, a collection item keeps its position's
+      secret or the write is refused, a note says nothing of a secret,
+      the React and tool doors ask the permission first and give one
+      reason, reference options carry node grants, a child permission
+      nothing can name refuses (`SecurityProjectionTest`,
+      `ReferenceableCacheabilityTest`,
+      `docs/decisions.md#every-door-projects-what-the-read-tool-projects`).
+    - **The static listing per account consumer.** DONE 2026-10-20: the
+      derived tool definitions are no account's, built for no account
+      and derived as the anonymous one; an instance lists for the
+      account that asks
+      (`docs/decisions.md#a-static-tool-definition-is-no-accounts`).
+      Open, in `mcp_server_tool_bridge`: its config deriver caches an
+      instance's schema, the discovering account's, for every client.
+
+    Batch two, the doors and agents:
+    - **B6, B7, B9, the listing in the discovering language.** DONE
+      2026-10-20: labels and descriptions reach the Tool API as lazy
+      objects, `PlainTextMarkup` decorates the original so a plural keeps
+      its count, language names vary by the interface language
+      (`ToolListingLanguageTest`,
+      `docs/decisions.md#a-static-tool-definition-is-no-accounts`). Open:
+      bundle and field labels read from configuration, and the
+      variant table's joined text, are still the discovering language's.
+    - **B10, refusals glued from fragments.** DONE 2026-10-20: the
+      constraint's message is kept whole and each sentence a refusal
+      adds is one source with a context, one per kind of condition and
+      one per count of conditions, plural by its count
+      (`Pipeline\Sentences`,
+      `docs/decisions.md#a-refusal-names-what-it-depends-on`).
+    - **B11, the license refusal names the wrong reason.** DONE
+      2026-10-20: a condition says what the refiners were handed, "Event
+      license is empty (EV-2048 was refused)"
+      (`DataSurfaceInterface::withheldValues()`,
+      `ExamplesComplianceTest::testTheLicenseRefusalNamesWhatTheRuleWasHanded()`).
+    - **B12, a read then a write changes storage.** DONE 2026-10-20: the
+      stored representation is kept where the accepted forms are equal, a
+      default storage never held is not written, sent or not, a write that
+      changes nothing saves nothing, and every door answers `changes`
+      (`ReadWriteRoundTripTest`,
+      `docs/decisions.md#absent-keeps-null-clears`).
+    - **B13, failure categories.** DONE 2026-10-20: permission refusals
+      and a resource locked whole are `Access`, an id that names nothing
+      is "Not found" input for an account the permission lets in, one
+      violation per line (`ToolResultShapeTest`, `ReadToolTest`).
+    - **B14, undeclared outputs.** DONE 2026-10-20: `changes`, `notes` and
+      `stale` declared with descriptions; a read only operation's tool
+      takes no `dry_run` (`ToolResultShapeTest`); since group C it
+      answers every key of the result shape, nothing written.
+    - **B15, B16, B17, the form.** DONE 2026-10-20: with Inline Form
+      Errors off an error names its field; an AJAX error carries an id
+      in its input's `aria-describedby`; one polite announcement per
+      rebuild says what changed; a lock says its access answer's reason,
+      a form locked whole marks nothing required, a read only operation's
+      button is the operation's label; each Remove button names its item
+      (`ErrorsNameTheirFieldTest`, `RebuildAnnouncesTest`,
+      `LockReasonFormTest`, `RemoveButtonNamesTest`). Open: the stale
+      select's required marker (section 3.5).
+    - **B19, the memo leak.** DONE 2026-10-20: the options memo is a
+      `WeakMap`, the kept static answers are bounded at 256
+      (`LongLivedWorkerMemoryTest`).
+    - **B20, the pattern subset under Unicode.** DONE 2026-10-20: `\d`,
+      `\w`, `\s` and `\b` are carried only without `u`, a negated class
+      never; one fixture is checked by PHP and by the app's Vitest
+      (`PatternUnderUnicodeTest`,
+      `docs/decisions.md#a-pattern-both-engines-read-alike`).
+    - **B27, messages translators can see.** DONE 2026-10-20: a message
+      option may be written with `t()` and the build hands Symfony its
+      source; `patternMessage` is translated; a Symfony-spelled message
+      keeps a second source in the tool, by decision
+      (`ConstraintMessageTranslationTest`, `docs/semantics.md`).
+    - **B28, small stale facts.** DONE 2026-10-20: the tool README on an
+      unknown subject, `docs/entities.md` on the default translation;
+      `docs/evolution.md` already said nineteen baselines. The stale
+      select's wording stays a decision (section 3.5).
+    - **Group C, one result at every door.** DONE 2026-10-20: a stable
+      code on every violation, a constraint's by the name of Symfony's
+      code; one shape, `{ok, committed, changed, changes, values,
+      violations, notes, stale}`, at the tool, React and `tool:run
+      --json`; no `@access` path; `values` required and never null; a
+      refusal for a machine names a key by its path and a value by what
+      is sent with its label (`ResultCodesTest`, `ToolResultShapeTest`,
+      `docs/decisions.md#one-result-at-every-door`,
+      `docs/semantics.md#codes`).
+
+    Group D, say each key once (synthesis 2c and 3.1):
+    - **D1, a key declared once, the class the source.** DONE
+      2026-10-20: `drush data_surface:config-schema` writes a simple
+      config object's schema entry and install file from its resource,
+      fully validatable, mounted keys by the existing convention, and
+      prints the difference without `--write`; `ConfigSchemaDriftTest`
+      holds the examples, the first module, the compliance module and the
+      test fixtures to it; a schema the module did not generate is held to
+      at build, the resource refused where it is wider, naming the key
+      (`ConfigSchemaCheckTest`, the node type resource against core's
+      `node.type.*`;
+      `docs/decisions.md#a-config-object-is-described-by-its-resource`).
+      Open: whether every generated object declares
+      `third_party_settings` whatever is on; a translatable key, which a
+      resource cannot say yet; a list of values, left out of the schema
+      while a stale value is kept rather than refused.
+    - **D2, `addList()`.** DONE 2026-10-20: a list of values is one
+      blueprint call, returning the list definition.
+    - **D3, `#[Variant(label:)]`.** DONE 2026-10-20: the deciding key's
+      choices and labels come from its variants unless it declares a
+      list, which may only narrow them
+      (`docs/decisions.md#variants-not-slots`).
+    - **D4, `Rule::unless()`.** DONE 2026-10-20, and the emitter writes
+      `c` where `not(not(c))` would stand.
+    - **D5, `message` on a rule's `Range`, `Length` and `Count`.** DONE
+      2026-10-20, spelled as `Regex`'s is and reaching the form and the
+      tool; neither document carries it, as neither carries a key's own
+      bound message (`docs/decisions.md#a-rule-declared-as-data`).
+
+    Group E, the contract's wire (synthesis section 1 B21 to B24, 2a's
+    wire rows, 3.7), one contract version
+    (`docs/decisions.md#contract-2`):
+    - **E1 (B21, B22), plain JSON Schema below an applicator.** DONE
+      2026-10-20: no `x-surface` below `allOf`, `anyOf`, `oneOf`, `if`,
+      `then`, `else` or `not`; the owning object says it, `rules` for a
+      declared rule's conditional and `within` by JSON pointer for a
+      narrowing; the declared type beside a keyword one type reads; every
+      live document and baseline compiles under ajv's strict mode.
+    - **E2, `$id` and a title per def.** DONE 2026-10-20: a document a
+      route serves says its URL; every def's `title` is its id.
+    - **E3, the union of a key's variants.** DONE 2026-10-20: `anyOf` of
+      each variant's def, and null where it may be cleared, so a type
+      generator writes `Free | Paid | null`.
+    - **E4 and E5, `refine` and `live`.** DONE 2026-10-20: for `dynamic`
+      and `runtime`, and `access: "live"` for `access: "runtime"`.
+    - **E6, `checkedOnServer` says what it checks.** DONE 2026-10-20:
+      each entry `{constraint, message}`.
+    - **E7, no `operation.readOnly`.** DONE 2026-10-20: `kind: "read"`
+      says it; the lint compares `kind`.
+    - **E8 (B23), `idn-email`.** DONE 2026-10-20: Drupal admits a
+      non-ASCII local part, and `email` did not.
+    - **E9, the old words off the wire.** DONE 2026-10-20: `resource`
+      and `operation` for `surface` and `situation`, in every document,
+      `created`, the React page's settings and a baseline; the widget
+      hint `variants` for `slot`.
+    - **E10, the contract's own version.** DONE 2026-10-20:
+      `x-surface.contract` and the `Contract-Version` header; the React
+      app refuses another; the lint reports a baseline of another version
+      as one `contract` change that `--write` re-pins with no reason;
+      baselines record it (`docs/evolution.md#the-contracts-own-version`).
+    - **B24, the markers table on `runtime`.** DONE 2026-10-20: closed by
+      the served contract page's rewrite; `live` is in the full schema,
+      on the key.
+
+    Open: `locked: false` and `dependsOn: []` are still on every
+    property; no `x-surface` metaschema is published; one `narrowing`
+    keyword and a root `exact: false` are left for later.
+
+    Group H, what is paid once and what per request (the performance
+    review, synthesis 2b and 2c,
+    `docs/decisions.md#what-is-paid-once-and-what-per-request`):
+    - **H1, discovery per definition.** DONE 2026-10-20: an index (names,
+      ids, kinds, modules, bases, shapes) and one entry per definition,
+      each tagged with what it read; a request building one bundle reads
+      the index and its entries, a field saved writes two
+      (`DiscoveryPerDefinitionTest`).
+    - **H2, tool definitions per resource.** DONE 2026-10-20: each
+      operation built once per derivation, each resource's tools an
+      entry under its tags, the rebuild under core's lock; one field
+      saved derives one bundle's tools (`ToolDefinitionsPerResourceTest`).
+    - **H3, a build kept for the request.** DONE 2026-10-20: by
+      resource, context, kind and account kind, dropped by tag; the React
+      route's access check builds nothing (`BuildMemoTest`,
+      `docs/decisions.md#a-build-is-not-cached-across-requests`).
+    - **H4, one refine per combination per document.** DONE 2026-10-20
+      (`EmitMemoTest`); the field instance resource no longer repeats any,
+      its settings being variants now, so it pays where keys share a
+      watched sibling.
+    - **H5, a resource's own variants.** DONE 2026-10-20: access builds
+      only for a resource that holds, at any depth, a variant that
+      answers access (`VariantsOfThisResourceTest`).
+    - **H6, assertions in production.** DONE 2026-10-20:
+      `docs/installation.md` says `zend.assertions = -1`, and why.
+    - Held by `PerformanceBudgetTest` (builds counted, entries sized) and
+      `LongLivedWorkerMemoryTest`. Open: the Tool API's single item,
+      read whole by every listing; H7 is ROADMAP item 11.
 
 ## Rejected, on the record
 

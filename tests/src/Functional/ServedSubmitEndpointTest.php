@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Functional;
 
+use Drupal\data_surface\Pipeline\ResultDocument;
 use Drupal\Tests\BrowserTestBase;
 use Drupal\node\Entity\NodeType;
 use PHPUnit\Framework\Attributes\Group;
@@ -19,7 +20,7 @@ use Psr\Http\Message\ResponseInterface;
  * without the session's token never runs, and a fingerprint from before
  * someone else's write refuses the submit while leaving that write
  * alone. A content type added through it answers where it now lives,
- * its edit situation, by the machine name it was given.
+ * its edit operation, by the machine name it was given.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -109,7 +110,7 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
    * @param string $path
    *   The contract's path.
    * @param array $query
-   *   The situation's parameters.
+   *   The operation's parameters.
    *
    * @return array
    *   The contract.
@@ -144,13 +145,22 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
       'stale' => [],
       'fingerprint' => $loaded['fingerprint'],
     ]));
-    $this->assertSame(['committed', 'valid', 'violations', 'stale', 'outputs', 'contract', 'created'], array_keys($answer));
+    // The one result shape, then this door's own keys.
+    $keys = [...ResultDocument::KEYS, 'outputs', 'contract', 'created'];
+    $this->assertSame($keys, array_keys($answer));
+    $this->assertTrue($answer['changed']);
+    $this->assertSame('harbour_deck', $answer['values']['room']);
     $this->assertTrue($answer['committed']);
-    $this->assertTrue($answer['valid']);
+    $this->assertTrue($answer['ok']);
     $this->assertSame([], $answer['violations']);
     $this->assertSame([], $answer['stale']);
     $this->assertSame([], $answer['outputs']);
-    // The situation configures; it creates nothing to move to.
+    // What moved, by path; sent again, nothing does, and nothing is saved.
+    $this->assertSame(['title', 'venue', 'room', 'capacity'], $answer['changes']);
+    $again = $this->json($this->post(self::STEP2 . '/submit', ['values' => self::VALID, 'stale' => []]));
+    $this->assertTrue($again['committed']);
+    $this->assertSame([], $again['changes']);
+    // The operation configures; it creates nothing to move to.
     $this->assertNull($answer['created']);
 
     // Written, and the contract answered is the one storage now builds:
@@ -160,7 +170,7 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
     $this->assertSame('harbour_deck', $stored['room']);
     $this->assertSame(90, $stored['capacity']);
     $contract = $answer['contract'];
-    $this->assertSame('registration.step2', $contract['surface']);
+    $this->assertSame('registration.step2', $contract['resource']);
     $this->assertEquals(self::VALID, array_intersect_key($contract['values'], self::VALID));
     $this->assertSame('harbour_deck', $contract['values']['room']);
     $this->assertContains('harbour_deck', array_column($contract['schema']['properties']['room']['oneOf'], 'const'));
@@ -189,9 +199,11 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
     // The garden room is the library's: a refusal, answered as data.
     $refused = $this->json($this->post($path, ['values' => ['room' => 'library_garden', 'capacity' => 20] + self::VALID]));
     $this->assertFalse($refused['committed']);
-    $this->assertFalse($refused['valid']);
-    $this->assertSame(['room'], array_column($refused['violations'], 'path'));
-    $this->assertNotSame('', $refused['violations'][0]['message']);
+    $this->assertFalse($refused['ok']);
+    $this->assertSame(['room' => 'no_such_choice'], array_column($refused['violations'], 'code', 'path'));
+    // A person's door: the message reads as the form's, by labels alone,
+    // while the path and the code are the tool's.
+    $this->assertSame('The value you selected is not a valid choice. This applies when Venue is Harbour Centre. Choose Auditorium or Upper deck.', $refused['violations'][0]['message']);
     $this->assertNull($refused['contract']);
     $this->assertNull($refused['created']);
 
@@ -214,9 +226,10 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
       'fingerprint' => $loaded['fingerprint'],
     ]));
     $this->assertFalse($refused['committed']);
-    $this->assertFalse($refused['valid']);
+    $this->assertFalse($refused['ok']);
     $this->assertCount(1, $refused['violations']);
     $this->assertSame('', $refused['violations'][0]['path']);
+    $this->assertSame('conflict', $refused['violations'][0]['code']);
     $this->assertStringContainsString('changed since this form was loaded', $refused['violations'][0]['message']);
     $this->assertSame($elsewhere, $this->stored());
 
@@ -244,8 +257,8 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
     ]));
     $this->assertTrue($answer['committed'], (string) json_encode($answer['violations']));
     $this->assertSame([
-      'surface' => 'node.type',
-      'situation' => 'edit',
+      'resource' => 'node.type',
+      'operation' => 'edit',
       'parameters' => ['type' => 'recipe'],
     ], $answer['created']);
 
@@ -271,6 +284,23 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
     $this->assertTrue($edited['committed']);
     $this->assertNull($edited['created']);
     $this->assertSame('Recipes', $edited['contract']['values']['name']);
+    $this->assertSame([], $edited['notes'], 'The locked machine name, sent as it is held, was taken.');
+
+    // Another machine name sent for it is kept as stored, not refused,
+    // and the answer says so.
+    $renamed = $this->json($this->post('surface-api/node.type/edit/submit', [
+      'values' => ['type' => 'recipes'] + $edited['contract']['values'],
+      'parameters' => ['type' => 'recipe'],
+    ]));
+    $this->assertTrue($renamed['committed'], (string) json_encode($renamed['violations']));
+    $this->assertSame([
+      [
+        'path' => 'type',
+        'code' => 'locked',
+        'message' => 'Machine name is locked and kept as stored; the value sent was not taken.',
+      ],
+    ], $renamed['notes']);
+    $this->assertSame('recipe', $renamed['contract']['values']['type']);
 
     $type->delete();
     $this->assertNull(NodeType::load('recipe'));

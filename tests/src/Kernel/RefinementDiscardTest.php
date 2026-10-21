@@ -12,9 +12,9 @@ use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceHostTrait;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
-use Drupal\data_surface\SurfaceAttachment;
+use Drupal\data_surface\Attachment;
 use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
-use Drupal\data_surface_surface_test\Surface\Pantry\PantrySurface;
+use Drupal\data_surface_resource_test\Resource\Pantry\PantryResource;
 use Drupal\data_surface_test\Plugin\Block\DataSurfaceChainTestBlock;
 use Drupal\node\Entity\NodeType;
 use PHPUnit\Framework\Attributes\Group;
@@ -46,8 +46,8 @@ use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
  * and otherwise to nothing chosen at all.
  *
  * The bug this closes was the opposite of every line of that. The
- * refinement AJAX limited validation to the whole surface container, so
- * the rebuild judged the orphan as a wrong answer and flagged it — and
+ * refinement AJAX limited validation to the whole data surface container,
+ * so the rebuild judged the orphan as a wrong answer and flagged it, and
  * because Form API skips a rebuild outright once anything has errored,
  * the container came back refined against the choice the person had just
  * replaced. One line, both halves: the error nobody caused, and the
@@ -73,7 +73,7 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
     'data_surface',
     'data_surface_demo',
     'data_surface_test',
-    'data_surface_surface_test',
+    'data_surface_resource_test',
   ];
 
   /**
@@ -98,14 +98,14 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
    * @param array $stored
    *   What the block has saved.
    * @param string $trigger
-   *   The surface key that was touched.
+   *   The key that was touched.
    * @param array $input
-   *   The whole surface as the browser sent it back.
+   *   The container's whole input, as the browser sent it back.
    * @param \Drupal\Core\Form\FormStateInterface|null $form_state
    *   The form state to drive, so a caller can read it afterwards.
    *
    * @return array
-   *   The rebuilt surface container.
+   *   The rebuilt data surface container.
    */
   protected function rebuild(array $stored, string $trigger, array $input, ?FormStateInterface $form_state = NULL): array {
     $block = $this->container->get('plugin.manager.block')
@@ -163,7 +163,7 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
     $form = $this->container->get('form_builder')
       ->buildForm('Drupal\data_surface_demo\Form\DataSurfaceDemoForm', $form_state);
 
-    // Nothing was submitted, so nothing is judged: the surface's AJAX is
+    // Nothing was submitted, so nothing is judged: the container's AJAX is
     // limited to the one element that was touched.
     $this->assertSame(
       [['surface', 'entity_type']],
@@ -463,7 +463,7 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
    */
   public function testTheOrphanOfChildIsNamedByItsPath(): void {
     $parent = new DataSurfaceBuilder();
-    $parent->attach('style', new SurfaceAttachment($this->casingVariantSurface()));
+    $parent->attach('style', new Attachment($this->casingVariantSurface()));
     $surface = $parent->seal();
     $stored = ['style' => ['casing' => 'uppercase', 'variant' => 'bold']];
 
@@ -485,9 +485,9 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
    * Posts the demo form as an AJAX request naming a trigger does.
    *
    * @param array $surface
-   *   The surface's input, keyed by surface key.
+   *   The structure's input, keyed by structure key.
    * @param string $trigger
-   *   The surface key that was touched.
+   *   The structure key that was touched.
    * @param string|null $build_id
    *   The build id of the form a previous request rebuilt and cached,
    *   which a browser posts back; NULL for the first request.
@@ -551,7 +551,7 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
     $this->assertStringContainsString('value="title"', $this->ajaxMarkup($response, $this->wrapperSelector($container['field'])));
     $this->assertNotContains('#' . $container['#attributes']['id'], $replaced);
 
-    // The presentation decides a slot: the slot's own wrapper goes, whole.
+    // The presentation decides variants: their own wrapper goes, whole.
     $state = $this->postDemo(['entity_type' => 'node', 'bundle' => 'article', 'field' => '', 'presentation' => 'grid'], 'presentation', $state->getCompleteForm()['#build_id']);
     $container = $state->getCompleteForm()['surface'];
     $response = $this->ajaxResponse($state);
@@ -562,7 +562,7 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
   /**
    * Builds the pantry into a form with nothing else in it.
    *
-   * The pantry is the one surface with a child whose own refiner narrows
+   * The pantry is the one resource with a child whose own refiner narrows
    * one of the child's keys: the shelf's unit caps its height. Not
    * cached, since an anonymous class cannot be serialized; nothing about
    * the AJAX path depends on the cache.
@@ -571,8 +571,8 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
    *   The form.
    */
   protected function pantryForm(): FormInterface {
-    $surfaces = $this->container->get('data_surface.surfaces');
-    return new class($surfaces->build(PantrySurface::class, PantrySurface::add())) extends FormBase {
+    $resources = $this->container->get('data_surface.resources');
+    return new class($resources->build(PantryResource::class, PantryResource::add())) extends FormBase {
 
       use DataSurfaceHostTrait;
 
@@ -612,7 +612,7 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
    * Posts the pantry form as an AJAX request naming a trigger does.
    *
    * @param array $surface
-   *   The surface's input over the pantry's defaults.
+   *   The pantry's input, over its defaults.
    * @param string $trigger
    *   The trigger's name.
    *
@@ -668,8 +668,8 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
     $this->assertNotContains($this->wrapperSelector($container['shelf']['unit']), $this->ajaxSelectors($response, 'replaceWith'));
     $this->assertStringContainsString('max="80"', $this->ajaxMarkup($response, $this->wrapperSelector($container['shelf']['height'])));
 
-    // The kind decides a slot of the parent's: the slot goes whole, as
-    // the variant the new kind chose, and the shelf does not move.
+    // The kind decides the parent's variants: the key goes whole, as the
+    // variant the new kind chose, and the shelf does not move.
     $state = $this->postPantry(['kind' => 'tin', 'kind_settings' => ['lid' => 'screw']], 'surface[kind]');
     $container = $state->getCompleteForm()['surface'];
     $response = $this->ajaxResponse($state);
@@ -678,16 +678,16 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests a slot whose deciding key chose nothing still has a wrapper.
+   * Tests variants whose deciding key chose nothing still have a wrapper.
    *
    * Nothing is rendered for it but the wrapper, so the rebuild that
    * chooses a variant has a place on the page to put it, and the empty
    * wrapper says nothing on extraction.
    */
-  public function testAnUnchosenSlotKeepsItsWrapper(): void {
+  public function testUnchosenVariantsKeepTheirWrapper(): void {
     $state = $this->postPantry(['kind' => ''], 'surface[kind]');
     $container = $state->getCompleteForm()['surface'];
-    // No kind, no variant: the slot is its wrapper and nothing else.
+    // No kind, no variant: the key is its wrapper and nothing else.
     $this->assertArrayHasKey(DataSurfaceFormBuilderInterface::REFRESH_ID_KEY, $container['kind_settings']);
     $this->assertSame([], array_values(array_filter(array_keys($container['kind_settings']), static fn ($key): bool => !str_starts_with((string) $key, '#'))));
     $response = $this->ajaxResponse($state);
@@ -696,8 +696,8 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
       '<div id="' . $container['kind_settings'][DataSurfaceFormBuilderInterface::REFRESH_ID_KEY] . '"></div>',
       trim($this->ajaxMarkup($response, $this->wrapperSelector($container['kind_settings']))),
     );
-    $surfaces = $this->container->get('data_surface.surfaces');
-    $surface = $surfaces->build(PantrySurface::class, PantrySurface::add());
+    $resources = $this->container->get('data_surface.resources');
+    $surface = $resources->build(PantryResource::class, PantryResource::add());
     $values = $this->formBuilder()->extractSurfaceValues($surface, $container, $state, ['kind_settings' => ['lid' => 'clip']]);
     $this->assertSame(['lid' => 'clip'], $values['kind_settings']);
   }

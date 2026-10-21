@@ -4,17 +4,14 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface\Plugin\DataSurfaceWidget;
 
-use Drupal\Core\Cache\CacheableMetadata;
-use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\data_surface\Attribute\DataSurfaceWidget;
-use Drupal\data_surface\Options\DataSurfaceOptions;
+use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Options\OptionSet;
 use Drupal\data_surface\Pipeline\ValueState;
-use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
-use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drupal\data_surface\Widget\ChoiceWidgetBase;
 
 /**
  * Select list for any definition whose constraints name a value list.
@@ -23,7 +20,11 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * asks the options service, which is the one place that reads
  * constraints as options. A definition of a list of such values renders
  * as a multiple select over the same options, read from the item
- * definition.
+ * definition, when the checkboxes widget leaves it: a list of more
+ * options than a column of checkboxes shows, or one that asks for a
+ * select. A single value is a select unless it asks for radios.
+ *
+ * Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
  *
  * @see \Drupal\data_surface\Options\DataSurfaceOptions
  */
@@ -32,7 +33,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
   label: new TranslatableMarkup('Options'),
   weight: -10,
 )]
-final class OptionsWidget extends DataSurfaceWidgetBase implements ContainerFactoryPluginInterface {
+final class OptionsWidget extends ChoiceWidgetBase {
 
   /**
    * How many rows a multiple select shows at most.
@@ -40,60 +41,47 @@ final class OptionsWidget extends DataSurfaceWidgetBase implements ContainerFact
   protected const MAXIMUM_SIZE = 8;
 
   /**
-   * Constructs an OptionsWidget.
+   * Render key on a stale select: the empty option it has when not stale.
    *
-   * @param array $configuration
-   *   The plugin configuration.
-   * @param string $plugin_id
-   *   The plugin ID.
-   * @param mixed $plugin_definition
-   *   The plugin definition.
-   * @param \Drupal\data_surface\Options\DataSurfaceOptions $options
-   *   The options service.
+   * A select stands for a stored value on its empty option in two cases.
+   * Stale, the value is kept by a save that leaves it, and the option
+   * says so ("- Keep @value (no longer offered) -"). An orphan of an edit
+   * (what it refines against moved in the same edit) is refused by that
+   * save instead, so the form builder puts this label back on it: the
+   * widget reads the definition alone and cannot tell the two apart.
    */
-  public function __construct(
-    array $configuration,
-    string $plugin_id,
-    mixed $plugin_definition,
-    protected readonly DataSurfaceOptions $options,
-  ) {
-    parent::__construct($configuration, $plugin_id, $plugin_definition);
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition): static {
-    return new static($configuration, $plugin_id, $plugin_definition, $container->get('data_surface.options'));
-  }
+  public const UNKEPT_LABEL_KEY = '#data_surface_unkept_label';
 
   /**
    * {@inheritdoc}
    *
-   * An empty set is not the same as a set of no interest: a resolver
-   * that answered with zero values would render a select with nothing
-   * in it, and a required one would then be impossible to satisfy. So
-   * this widget declines, the next widget serves the definition as a
-   * free input, and the constraint that produced the empty set still
-   * refuses every value at validation — the person is told why rather
-   * than handed a control that cannot be used.
+   * An empty set is a list too: a refiner that narrowed it to nothing, or
+   * a resolver that found nothing, still says the value is one of a list,
+   * and the list offers none. So the key is a select offering its empty
+   * option alone, and the constraint refuses any value. Served as a free
+   * text input, as it once was, it showed what was stored as something to
+   * edit, on a field that could accept nothing. A key that does not apply
+   * at all is said with DoesNotApply, and is not drawn.
+   *
+   * Decision: see docs/decisions.md#a-key-that-does-not-apply.
    */
   public function isApplicable(DataDefinitionInterface $definition): bool {
-    $set = $this->optionSet($definition);
-    return $set !== NULL && $set->options !== [];
+    return $this->optionSet($definition) !== NULL;
   }
 
   /**
    * {@inheritdoc}
    *
    * One rule decides whether a single select shows its empty option: the
-   * empty option is there whenever no valid choice is selected, and an
-   * optional select keeps it besides, because choosing nothing is one of
-   * its answers. A valid choice is a value the list offers — what is
-   * stored, or failing that the declared default, since the form builder
-   * hands over whichever applies and the surface author chose the
-   * default. Anything else comes up on the empty option, selected: a key
-   * never answered, and a stored value the list no longer offers.
+   * empty option is there whenever no valid choice is selected, and a
+   * select that may be cleared keeps it besides, because choosing nothing
+   * is one of its answers. A required key may not be cleared, and nor
+   * may one its storage always holds. A valid choice is a value the list
+   * offers — what is stored, or failing that the declared default, since
+   * the form builder hands over whichever applies and the shape's author
+   * chose the default. Anything else comes up on the empty option,
+   * selected: a key never answered, and a stored value the list no longer
+   * offers.
    */
   public function buildElement(DataDefinitionInterface $definition, mixed $value): array {
     $set = $this->optionSet($definition);
@@ -105,23 +93,20 @@ final class OptionsWidget extends DataSurfaceWidgetBase implements ContainerFact
     ];
     if ($multiple) {
       // A list offers every value at once and needs no empty choice:
-      // choosing nothing is the empty list.
+      // choosing nothing is the empty list. Never #required, as the
+      // checkboxes are not: a required list must hold a value, and the
+      // empty list is one.
       $element['#default_value'] = is_array($value) ? $value : [];
       $element['#multiple'] = TRUE;
       $element['#size'] = min(max(count($options), 2), self::MAXIMUM_SIZE);
+      $element['#required'] = FALSE;
     }
     else {
       $element = $this->singleSelect($element, $definition, $set, $value);
     }
-    if ($set !== NULL) {
-      // The resolver said how long its answer may be reused, and this is
-      // where that answer is rendered: an element built from a list read
-      // out of site state may only be cached for as long as that state
-      // holds. Without this the whole declaration is computed and
-      // dropped. (The surface's own cacheability is a separate half.)
-      CacheableMetadata::createFromObject($set)->applyTo($element);
-    }
-    return $element;
+    // The resolver said how long its answer may be reused, and this is
+    // where that answer is rendered.
+    return static::cachedBy($element, $set);
   }
 
   /**
@@ -155,7 +140,9 @@ final class OptionsWidget extends DataSurfaceWidgetBase implements ContainerFact
     $configured = ValueState::isConfigured($value);
     $chosen = $configured && $set !== NULL && $set->allows($value);
     $required = $definition->isRequired();
-    if ($chosen && $required) {
+    // Decision: see docs/decisions.md#a-key-its-storage-always-holds.
+    $holds = DefinitionMetadata::holdsValue($definition);
+    if ($chosen && $holds) {
       // A valid choice is selected and emptiness is not an answer: no
       // empty option. Core adds none either, since a default is set.
       $element['#default_value'] = $value;
@@ -163,53 +150,54 @@ final class OptionsWidget extends DataSurfaceWidgetBase implements ContainerFact
     }
     $element['#default_value'] = $chosen ? $value : '';
     $element['#empty_value'] = '';
-    $element['#empty_option'] = $required ? $this->t('- Select -') : $this->t('- None -');
+    $element['#empty_option'] = $holds ? $this->t('- Select -') : $this->t('- None -');
     if ($configured && !$chosen) {
       // Stale: the value travels on the element, so extraction can read
-      // an untouched select as the stored value it could not show.
+      // an untouched select as the stored value it could not show, and
+      // the empty option says that is what it stands for. It still
+      // posts the empty string, never a value the key does not take.
       $element[self::STALE_KEY] = $value;
+      $element[self::UNKEPT_LABEL_KEY] = $element['#empty_option'];
+      $element['#empty_option'] = static::keepLabel($value);
       if ($required) {
-        // Empty is not a refusal here, it is "keep": so not core's
-        // required check, which would refuse it before the surface is
-        // asked. The marker stays on the label, where it is drawn.
+        // Empty is not a refusal here, it is "keep": so no `required`
+        // attribute, which would have the browser refuse the option that
+        // keeps it. The rest of the required hint is drawn as on every
+        // required element: the marker on the label, and aria-required,
+        // so what a screen reader says agrees with what the eye sees.
+        // Decision: see docs/decisions.md#an-element-hints-and-the-rule-speaks.
         $element['#required'] = FALSE;
         $element['#label_attributes']['class'] = ['js-form-required', 'form-required'];
+        $element['#attributes']['aria-required'] = 'true';
       }
     }
-    elseif ($required) {
-      // First entry: nothing stored, so nothing to keep, and saving with
-      // the empty option still selected is refused in the surface's own
-      // words. Core's required check runs first and a form state keeps
-      // only the first error on an element, so its generic "field is
-      // required" would otherwise be the one shown.
-      $element['#required_error'] = $this->t('@label is required.', [
-        '@label' => $definition->getLabel() ?? '',
-      ]);
-    }
+    // Otherwise, a required select with nothing chosen is refused in the
+    // data surface's own words: the form builder keeps Form API's own
+    // required check off every element it draws.
+    // Decision: see docs/decisions.md#an-element-hints-and-the-rule-speaks.
     return $element;
   }
 
   /**
-   * Resolves the values a definition offers, list or single.
+   * Words the empty option of a select standing for a stale value.
    *
-   * A list definition offers what one of its items may be, so the
-   * options come from the item definition; anything else offers what it
-   * may be itself.
+   * @param mixed $value
+   *   The stored value no longer offered.
    *
-   * The service memoizes its answer per definition object for the rest
-   * of the request, so asking here for applicability and again for the
-   * element costs one resolution, not two.
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   "- Keep @value (no longer offered) -".
    *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition to read.
-   *
-   * @return \Drupal\data_surface\Options\OptionSet|null
-   *   The option set, or NULL when the definition names no list.
+   * @see docs/decisions.md#the-empty-option-rule
    */
-  protected function optionSet(DataDefinitionInterface $definition): ?OptionSet {
-    return $definition instanceof ListDataDefinitionInterface
-      ? $this->options->resolve($definition->getItemDefinition())
-      : $this->options->resolve($definition);
+  public static function keepLabel(mixed $value): TranslatableMarkup {
+    return t('- Keep @value (no longer offered) -', ['@value' => is_scalar($value) ? (string) $value : (string) json_encode($value)]);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function answersTo(): array {
+    return ['select', $this->getPluginId()];
   }
 
 }

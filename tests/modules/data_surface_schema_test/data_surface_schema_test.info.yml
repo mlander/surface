@@ -1,0 +1,8 @@
+name: Data Surface Schema Test
+type: module
+description: 'Test support for the config schema check: a resource whose hand-written config schema is narrower than the resource.'
+package: Testing
+version: VERSION
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - data_surface:data_surface

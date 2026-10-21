@@ -21,9 +21,9 @@ use Symfony\Component\Validator\Constraint;
  * The constraint already says a value is a country code, and says which
  * countries when it limits them, so a settings form that wants a country
  * select has nothing left to declare. This is the resolver that made the
- * address field's surface static: before it, the country list had to be
- * built into the definition at runtime, which is the one reason that
- * surface could not be declared on the class it describes.
+ * address field's settings resource static: before it, the country list
+ * had to be built into the definition at runtime, which is the one reason
+ * that resource could not be declared on the class it describes.
  *
  * The resolver lives in data_surface rather than in an address specific
  * module because a resolver is inert until something declares the

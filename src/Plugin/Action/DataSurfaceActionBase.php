@@ -10,17 +10,17 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Form\DataSurfacePluginFormTrait;
 
 /**
- * Base class for actions whose settings are described by a surface.
+ * Base class for actions whose settings are described by a structure.
  *
- * An action extending this contains #[UsesSurface] naming the surface
- * class its configuration is, and its output: execute() and access().
- * The thinnest group A host there is, because the action host owns no
- * configuration keys of its own — what is stored under an action's
- * configuration is the
- * plugin's alone — and it supplies neither a build nor a submit of its
- * own for the surface to compose with. So the two traits are the whole
- * adoption: storage from the configuration trait, the plugin triple from
- * the plugin form trait, and not one line of translation between them.
+ * An action extending this contains #[UsesStructure] naming the
+ * structure class its configuration is, and its output: execute() and
+ * access(). The thinnest group A host there is, because the action host
+ * owns no configuration keys of its own (what is stored under an
+ * action's configuration is the plugin's alone), and it supplies neither
+ * a build nor a submit of its own for the structure to compose with. So
+ * the two traits are the whole adoption: storage from the configuration
+ * trait, the plugin triple from the plugin form trait, and not one line
+ * of translation between them.
  *
  * Two things about the host are worth stating rather than discovering:
  * - ConfigurableActionBase uses core's ConfigurableTrait, which declares
@@ -30,10 +30,10 @@ use Drupal\data_surface\Form\DataSurfacePluginFormTrait;
  *   here replaces an inherited method, so the configuration trait wins
  *   with no conflict to resolve. The deep merge ConfigurableTrait would
  *   have applied is therefore never reached, which is the point: the
- *   pipeline's merge rule is the only one that decides what a surface
+ *   pipeline's merge rule is the only one that decides what a structure
  *   key holds.
  * - ConfigurableActionBase's constructor calls setConfiguration(), which
- *   asks the surface for its defaults before any subclass constructor
+ *   asks the structure for its defaults before any subclass constructor
  *   body has run. The same construction-order rule as every other group
  *   A host follows: promote collaborators in the constructor signature
  *   and call the parent constructor last, never assign them in create()
@@ -43,14 +43,14 @@ use Drupal\data_surface\Form\DataSurfacePluginFormTrait;
  * own access() asks whether this action may be *executed* on an object,
  * which is the host's protocol and stays the plugin's to answer.
  * surfaceAccess(), from the host trait, asks whether an account may
- * *configure* the values the surface describes —
- * what a form, a config action or an agent is doing when it writes the
- * plugin's configuration. An action that may be run by anyone with a
- * content permission is very often an action only an administrator may
- * reconfigure, so conflating the two would be a real mistake rather than
- * a stylistic one. It is also why the method is not called access():
- * ActionInterface already owns that name with an incompatible signature,
- * and a class cannot answer both with one method.
+ * *configure* the values the structure describes: what a form, a config
+ * action or an agent is doing when it writes the plugin's configuration.
+ * An action that may be run by anyone with a content permission is very
+ * often an action only an administrator may reconfigure, so conflating
+ * the two would be a real mistake rather than a stylistic one. It is also
+ * why the method is not called access(): ActionInterface already owns
+ * that name with an incompatible signature, and a class cannot answer
+ * both with one method.
  *
  * @see \Drupal\data_surface\Plugin\Block\DataSurfaceBlockBase
  * @see \Drupal\data_surface\Plugin\Condition\DataSurfaceConditionBase
@@ -61,17 +61,17 @@ abstract class DataSurfaceActionBase extends ConfigurableActionBase {
   use DataSurfacePluginFormTrait;
 
   /**
-   * Builds the surface the class's #[UsesSurface] names.
+   * Builds the structure the class's #[UsesStructure] names.
    *
    * In the action host's `configure` context, stored as the host always
-   * stored it, through the plugin configuration target this host
+   * stored it, through the plugin configuration storage this host
    * supplies.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface, alters applied.
+   *   The built structure, alters applied.
    */
   public function getDataSurface(): DataSurfaceInterface {
-    return $this->hostedSurface();
+    return $this->hostedStructure();
   }
 
 }

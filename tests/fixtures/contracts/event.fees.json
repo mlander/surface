@@ -1,0 +1,51 @@
+{
+    "resource": "event.fees",
+    "module": "data_surface_examples",
+    "contract": 2,
+    "documents": [
+        {
+            "resource": "event.fees",
+            "operation": null,
+            "label": null,
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "x-surface": {
+                    "contract": 2,
+                    "version": 1
+                },
+                "type": "object",
+                "properties": {
+                    "standard": {
+                        "title": "Standard fee",
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "minimum": 0,
+                        "default": 20,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "access": "live"
+                        }
+                    },
+                    "concession": {
+                        "title": "Concession fee",
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "minimum": 0,
+                        "default": 10,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "access": "live"
+                        }
+                    }
+                },
+                "additionalProperties": false
+            }
+        }
+    ]
+}

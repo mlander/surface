@@ -76,10 +76,55 @@ export function MultipleSelectField(props: FieldProps): JSX.Element {
 }
 
 /**
- * Radios over the same options a select offers.
+ * Checkboxes: a list whose items each name one option, a box per option.
  *
- * In the vocabulary for a contract that asks for it; the module's own
- * emitter never does, since the Form API mapping renders no radios.
+ * As the checkboxes widget draws them: never required, since the empty
+ * list is a value, and what is checked is sent as the list of those
+ * values, in option order. Options are matched by index, so an integer
+ * value comes back an integer.
+ */
+export function CheckboxesField(props: FieldProps): JSX.Element {
+  const options = choices(props.schema.items ?? {});
+  const selected = Array.isArray(props.value) ? props.value : [];
+  const id = fieldId(props.path);
+  const checked = (value: unknown) => selected.some((held) => sameValue(held, value));
+  return (
+    <fieldset className="dsr-item dsr-item--checkboxes" id={id} aria-describedby={describedBy(props, id)}>
+      <legend className="dsr-label">{props.schema.title ?? props.name}</legend>
+      {options.map((choice, position) => (
+        <label key={String(choice.const)} className="dsr-option" title={choice.description}>
+          <input
+            type="checkbox"
+            name={`${props.path}.${position}`}
+            value={String(position)}
+            checked={checked(choice.const)}
+            disabled={isLocked(props)}
+            onChange={(event) =>
+              props.onChange(
+                props.path,
+                options
+                  .filter((other) => (other === choice ? event.target.checked : checked(other.const)))
+                  .map((other) => other.const),
+              )
+            }
+          />{' '}
+          {choice.title ?? String(choice.const)}
+        </label>
+      ))}
+      <Description props={props} id={id} />
+      <Errors props={props} id={id} />
+    </fieldset>
+  );
+}
+
+/**
+ * Radios over the same options a select offers, for a key that asks for
+ * them.
+ *
+ * "- None -" is a radio only where the contract's `emptyOption` shows it:
+ * an optional key that may be cleared. A key that holds a value shows
+ * nothing checked while it holds no valid choice, a stale value among
+ * them, as the radios widget does.
  */
 export function RadiosField(props: FieldProps): JSX.Element {
   const extension = props.schema['x-surface'];
@@ -152,69 +197,95 @@ function standsForStored(props: FieldProps): boolean {
   return Boolean(props.schema['x-surface']?.stale);
 }
 
+/**
+ * The placeholder an input shows while empty: only the one its
+ * arrangement declares, never an example, which would read as filled.
+ */
+function placeholderOf(props: FieldProps): string | undefined {
+  return props.schema['x-surface']?.arrangement?.placeholder;
+}
+
+/** An input between the prefix and the suffix its arrangement gives. */
+function Affixed({ props, children }: { props: FieldProps; children: JSX.Element }): JSX.Element {
+  const arrangement = props.schema['x-surface']?.arrangement;
+  if (arrangement?.prefix === undefined && arrangement?.suffix === undefined) {
+    return children;
+  }
+  return (
+    <span className="dsr-affixed">
+      {arrangement.prefix !== undefined ? <span className="dsr-prefix">{arrangement.prefix}</span> : null}
+      {children}
+      {arrangement.suffix !== undefined ? <span className="dsr-suffix">{arrangement.suffix}</span> : null}
+    </span>
+  );
+}
+
 /** A number input: Range's bounds as min and max, a step by type. */
 export function NumberField(props: FieldProps): JSX.Element {
   const id = fieldId(props.path);
-  const example = props.schema.examples?.[0];
   return (
     <Item props={props} marker={props.required}>
-      <input
-        type="number"
-        id={id}
-        name={props.path}
-        value={isEmpty(props.value) ? '' : String(props.value)}
-        min={props.schema.minimum}
-        max={props.schema.maximum}
-        step={jsonType(props.schema) === 'integer' ? 1 : 'any'}
-        placeholder={example === undefined ? undefined : String(example)}
-        required={props.required && !standsForStored(props)}
-        disabled={isLocked(props)}
-        aria-describedby={describedBy(props, id)}
-        aria-invalid={(props.errors[props.path] ?? []).length > 0 || undefined}
-        onChange={(event) => {
-          const raw = event.target.value;
-          // Sent as typed when it is not a number: the pipeline casts
-          // what means the same and refuses the rest, with its message.
-          props.onChange(props.path, raw === '' ? null : Number.isNaN(Number(raw)) ? raw : Number(raw));
-        }}
-      />
+      <Affixed props={props}>
+        <input
+          type="number"
+          id={id}
+          name={props.path}
+          value={isEmpty(props.value) ? '' : String(props.value)}
+          min={props.schema.minimum}
+          max={props.schema.maximum}
+          step={jsonType(props.schema) === 'integer' ? 1 : 'any'}
+          placeholder={placeholderOf(props)}
+          required={props.required && !standsForStored(props)}
+          disabled={isLocked(props)}
+          aria-describedby={describedBy(props, id)}
+          aria-invalid={(props.errors[props.path] ?? []).length > 0 || undefined}
+          onChange={(event) => {
+            const raw = event.target.value;
+            // Sent as typed when it is not a number: the pipeline casts
+            // what means the same and refuses the rest, with its message.
+            props.onChange(props.path, raw === '' ? null : Number.isNaN(Number(raw)) ? raw : Number(raw));
+          }}
+        />
+      </Affixed>
     </Item>
   );
 }
 
 /**
- * A text input: email or url by type, a password for a secret.
+ * A text input: email, time or url by type, a password for a secret.
  *
- * Length's max is the maxlength and the first example the placeholder;
- * a secret is never shown a value and gets no placeholder.
+ * Length's max is the maxlength, and the placeholder the one its
+ * arrangement declares; a secret is never shown a value and gets no
+ * placeholder.
  */
 export function TextField(props: FieldProps): JSX.Element {
   const id = fieldId(props.path);
   const secret = Boolean(props.schema.writeOnly);
   const widget = props.schema['x-surface']?.widget;
-  const type = secret ? 'password' : widget === 'email' ? 'email' : props.schema.format === 'uri' ? 'url' : 'text';
-  const example = props.schema.examples?.[0];
+  const type = secret ? 'password' : widget === 'email' ? 'email' : widget === 'time' ? 'time' : props.schema.format === 'uri' ? 'url' : 'text';
   return (
     <Item props={props} marker={props.required}>
-      <input
-        type={type}
-        id={id}
-        name={props.path}
-        value={isEmpty(props.value) ? '' : String(props.value)}
-        maxLength={props.schema.maxLength}
-        placeholder={secret || example === undefined ? undefined : String(example)}
-        required={props.required && !secret && !standsForStored(props)}
-        disabled={isLocked(props)}
-        autoComplete={secret ? 'new-password' : undefined}
-        aria-describedby={describedBy(props, id)}
-        aria-invalid={(props.errors[props.path] ?? []).length > 0 || undefined}
-        onChange={(event) => props.onChange(props.path, event.target.value)}
-      />
+      <Affixed props={props}>
+        <input
+          type={type}
+          id={id}
+          name={props.path}
+          value={isEmpty(props.value) ? '' : String(props.value)}
+          maxLength={props.schema.maxLength}
+          placeholder={secret ? undefined : placeholderOf(props)}
+          required={props.required && !secret && !standsForStored(props)}
+          disabled={isLocked(props)}
+          autoComplete={secret ? 'new-password' : undefined}
+          aria-describedby={describedBy(props, id)}
+          aria-invalid={(props.errors[props.path] ?? []).length > 0 || undefined}
+          onChange={(event) => props.onChange(props.path, event.target.value)}
+        />
+      </Affixed>
     </Item>
   );
 }
 
-/** A textarea: no maxlength and no placeholder, as the string widget. */
+/** A textarea: no maxlength, and only a declared placeholder, as the string widget. */
 export function TextareaField(props: FieldProps): JSX.Element {
   const id = fieldId(props.path);
   return (
@@ -223,6 +294,7 @@ export function TextareaField(props: FieldProps): JSX.Element {
         id={id}
         name={props.path}
         rows={5}
+        placeholder={placeholderOf(props)}
         value={isEmpty(props.value) ? '' : String(props.value)}
         required={props.required && !standsForStored(props)}
         disabled={isLocked(props)}

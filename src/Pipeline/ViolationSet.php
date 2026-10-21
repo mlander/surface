@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Drupal\data_surface\Pipeline;
 
 /**
- * Everything one run refused, grouped by surface key.
+ * Everything one run refused, grouped by top level key.
  *
  * Modeled on core's constraint violation list: a countable, iterable
  * collection of violations rather than an array of arrays whose shape
  * every reader had to remember. What used to be
- * `$violations['title'][0]['message']` is a SurfaceViolation with a
+ * `$violations['title'][0]['message']` is a Violation with a
  * key, a path and a message, and what used to be `$violations === []`
  * is isEmpty().
  *
@@ -34,17 +34,17 @@ namespace Drupal\data_surface\Pipeline;
  * learn anything new to keep saving a value that went stale, and a
  * reader that wants to say so out loud asks stale() on purpose.
  *
- * @see \Drupal\data_surface\Pipeline\SurfaceViolation
+ * @see \Drupal\data_surface\Pipeline\Violation
  * @see \Drupal\data_surface\Pipeline\DataSurfacePipelineInterface::validate()
  *
- * @implements \IteratorAggregate<int, \Drupal\data_surface\Pipeline\SurfaceViolation>
+ * @implements \IteratorAggregate<int, \Drupal\data_surface\Pipeline\Violation>
  */
 final class ViolationSet implements \IteratorAggregate, \Countable {
 
   /**
-   * The violations, keyed by surface key, in first-refused order.
+   * The violations, keyed by top level key, in first-refused order.
    *
-   * @var array<string, \Drupal\data_surface\Pipeline\SurfaceViolation[]>
+   * @var array<string, \Drupal\data_surface\Pipeline\Violation[]>
    */
   private readonly array $grouped;
 
@@ -56,14 +56,14 @@ final class ViolationSet implements \IteratorAggregate, \Countable {
    * reader so far wants all of them — a messenger warning, an agent's
    * "re-choose these" list.
    *
-   * @var \Drupal\data_surface\Pipeline\SurfaceViolation[]
+   * @var \Drupal\data_surface\Pipeline\Violation[]
    */
   private readonly array $staleEntries;
 
   /**
    * Constructs a ViolationSet.
    *
-   * @param \Drupal\data_surface\Pipeline\SurfaceViolation[] $violations
+   * @param \Drupal\data_surface\Pipeline\Violation[] $violations
    *   The violations, in the order they were found. Entries flagged
    *   stale are separated out here and answered by stale() alone.
    */
@@ -84,7 +84,7 @@ final class ViolationSet implements \IteratorAggregate, \Countable {
   /**
    * Gets the stale references, in the order they were found.
    *
-   * @return \Drupal\data_surface\Pipeline\SurfaceViolation[]
+   * @return \Drupal\data_surface\Pipeline\Violation[]
    *   The stale entries; empty when nothing went stale.
    */
   public function stale(): array {
@@ -115,10 +115,10 @@ final class ViolationSet implements \IteratorAggregate, \Countable {
   }
 
   /**
-   * Returns whether a surface key was refused.
+   * Returns whether a top level key was refused.
    *
    * @param string $key
-   *   The surface key.
+   *   The top level key.
    *
    * @return bool
    *   TRUE when the key carries at least one violation.
@@ -128,12 +128,12 @@ final class ViolationSet implements \IteratorAggregate, \Countable {
   }
 
   /**
-   * Gets the violations filed under one surface key.
+   * Gets the violations filed under one top level key.
    *
    * @param string $key
-   *   The surface key.
+   *   The top level key.
    *
-   * @return \Drupal\data_surface\Pipeline\SurfaceViolation[]
+   * @return \Drupal\data_surface\Pipeline\Violation[]
    *   The violations, in the order they were found; empty when the key
    *   was not refused.
    */
@@ -142,7 +142,7 @@ final class ViolationSet implements \IteratorAggregate, \Countable {
   }
 
   /**
-   * Gets the refused surface keys, in the order they were first refused.
+   * Gets the refused top level keys, in the order they were first refused.
    *
    * @return string[]
    *   The keys.

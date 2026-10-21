@@ -1,13 +1,13 @@
 services:
-  # Resolves a surface id, a situation id and its parameters into the
-  # context, the built surface and its target, and answers access.
-  data_surface_react.served_situations:
-    class: Drupal\data_surface_react\ServedSituations
-    arguments: ['@data_surface.surface_registry', '@data_surface.surfaces']
-  # Gates the page and the three endpoints by the situation they name:
-  # its permission, then the surface's access class.
+  # Resolves a resource id, an operation id and its parameters into the
+  # context, the built resource and its storage, and answers access.
+  data_surface_react.served_operations:
+    class: Drupal\data_surface_react\ServedOperations
+    arguments: ['@data_surface.resource_registry', '@data_surface.resources']
+  # Gates the page and the three endpoints by the operation they name:
+  # its permission, then the resource's access class.
   data_surface_react.access:
-    class: Drupal\data_surface_react\Access\ServedSituationAccessCheck
-    arguments: ['@data_surface_react.served_situations', '@request_stack']
+    class: Drupal\data_surface_react\Access\ServedOperationAccessCheck
+    arguments: ['@data_surface_react.served_operations', '@request_stack', '@logger.channel.data_surface']
     tags:
       - { name: access_check, applies_to: _data_surface_react_access }

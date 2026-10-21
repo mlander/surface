@@ -6,7 +6,7 @@ matches what that script produces, and every cell of the table below is
 what the test observed, not what anybody expected.
 
 `data_surface_demo_extras` adds two editorial review settings to every
-content type, and adds them twice: once to the content type surface
+content type, and adds them twice: once to the content type resource
 through an alter, and once to core's own content type form
 through a form alter, written the way core's own modules write one. Both
 store the same third party settings, under the same config schema, with
@@ -18,10 +18,10 @@ the same rules:
   2592000, and the key is not named for what it counts. Core's form asks
   a person for an amount and a unit, hours, days, weeks or business
   days, and turns the pair into seconds in its element validator. The
-  surface asks for the same amount and unit, and the same conversion is
-  a storage shape the extras module's alter hands the surface, applied
+  resource asks for the same amount and unit, and the same conversion is
+  a storage layout the extras module's alter hands the resource, applied
   to that module's settings, and nothing else, before the content type's
-  target writes them and after it reads them. Business days follow one
+  storage writes them and after it reads them. Business days follow one
   rule on both sides: counted from the start of a Monday, N business
   days of 24 hours span `N + 2 * floor((N - 1) / 5)` calendar days, so
   ten are twelve days, 1036800 seconds.
@@ -38,23 +38,23 @@ agent will read 3600 and 2592000 as an hour and thirty days in seconds
 and guess the unit right; the table records that it does. The claim is
 not that it cannot, but that a correct guess is still unverified
 inference, found right or wrong only after the value is stored, while
-the surface's caller never infers, because the unit is part of the
+the resource's caller never infers, because the unit is part of the
 contract. Business days are the case no reading of the schema can
 answer: the schema-only agent's best inference is in range, accepted,
 and wrong.
 
 Neither tool below was written with those settings in mind.
 `data_surface:node.type:add` is not written at all: it is generated from
-the content type surface's `add` situation, one tool per situation of
-every surface that names a target, and no tool class names a surface or
-a key. Its values input is the surface in that situation, in the static
-plugin definition. (It was `data_surface:node_type_add`, a hand-written
-tool over the old provider, until the content type surface moved to the
-new spelling.) `tool_belt:entity_bundle_add` is what an agent has
-for creating a content type without surfaces. It derives its
-`properties` input from the node type's config schema and the labels on
-core's form, and it leaves `third_party_settings` out of what it
-advertises on purpose.
+the content type resource's `add` operation, one tool per operation of
+every resource that names storage, and no tool class names a resource
+or a key. Its values input is the resource as built for that operation,
+in the static plugin definition. (It was `data_surface:node_type_add`, a
+hand-written tool over the old provider, until the content type
+resource moved to the new spelling.) `tool_belt:entity_bundle_add` is
+what an agent has for creating a content type without data surfaces.
+It derives its `properties` input from the node type's config schema
+and the labels on core's form, and it leaves `third_party_settings` out
+of what it advertises on purpose.
 
 Both schemas below were produced by the Tool API's own definition
 serializer, which is the document an MCP client or a function calling
@@ -70,20 +70,20 @@ person would type it. "Stored" is the content type's
 `data_surface_demo_extras` third party settings after the call. Where a
 stored value breaks the stored schema, the cell says so: the classic
 tool writes without asking it, as core's config save does on any site.
-The surface refuses tags it would have to rewrite rather than rewriting
+The resource refuses tags it would have to rewrite rather than rewriting
 them: the pipeline never turns a value into a different one on a
 caller's behalf, so the contract says what a stored tag looks like and a
 caller sends that.
 
 | Case | `data_surface:node.type:add` | `tool_belt:entity_bundle_add` | Core's content type form, for a person |
 | --- | --- | --- | --- |
-| One week. Surface: `{"amount": 1, "unit": "weeks"}`; classic: `604800`, by a schema-only agent that reads 3600 and 2592000 as an hour and thirty days in seconds and infers the unit, rightly, though nothing tells it so before storage; form: 1, Weeks | Created. Stored `{"review_deadline":604800,"audience_tags":[]}`. | Created. Stored `{"review_deadline":604800}`. | Stored `{"review_deadline":604800,"audience_tags":[]}`. |
-| Forty-five days, past the ceiling. Surface: `{"amount": 45, "unit": "days"}`; classic: `3888000`; form: 45, Days | Refused; nothing created. `values.amount`: (property third_party_settings) (property data_surface_demo_extras) (property review_deadline) A review deadline is at least one hour and at most thirty days; 45 days is outside that. | Created. Stored `{"review_deadline":3888000}`. The stored schema refuses it (This value should be between 3600 and 2592000.), but nothing on the write path asked. | Refused: The review deadline must be between one hour and thirty days. |
+| One week. Resource: `{"amount": 1, "unit": "weeks"}`; classic: `604800`, by a schema-only agent that reads 3600 and 2592000 as an hour and thirty days in seconds and infers the unit, rightly, though nothing tells it so before storage; form: 1, Weeks | Created. Stored `{"review_deadline":604800,"audience_tags":[]}`. | Created. Stored `{"review_deadline":604800}`. | Stored `{"review_deadline":604800,"audience_tags":[]}`. |
+| Forty-five days, past the ceiling. Resource: `{"amount": 45, "unit": "days"}`; classic: `3888000`; form: 45, Days | Refused; nothing created. `third_party_settings.data_surface_demo_extras.review_deadline.amount`: A review deadline is at least one hour and at most thirty days; 45 days is outside that. | Created. Stored `{"review_deadline":3888000}`. The stored schema refuses it (This value should be between 3600 and 2592000.), but nothing on the write path asked. | Refused: The review deadline must be between one hour and thirty days. |
 | A schema-only agent that infers instead that the integer counts days sends `7`, meaning seven. Form: 7, Days, which is what it meant | Refused; nothing created. `values`: (property third_party_settings) (property data_surface_demo_extras) (property review_deadline) Invalid values given. Values must be represented as an associative array. | Created. Stored `{"review_deadline":7}`. The stored schema refuses it (This value should be between 3600 and 2592000.), but nothing on the write path asked. | Stored `{"review_deadline":604800,"audience_tags":[]}`. |
-| Ten business days. Surface: `{"amount": 10, "unit": "business_days"}`; classic: `864000`, a schema-only agent's best inference, ten days in seconds: plausible, in range, and wrong, since no reading of the schema says what a business day becomes; form: 10, Business days | Created. Stored `{"review_deadline":1036800,"audience_tags":[]}`. | Created. Stored `{"review_deadline":864000}`. | Stored `{"review_deadline":1036800,"audience_tags":[]}`. |
+| Ten business days. Resource: `{"amount": 10, "unit": "business_days"}`; classic: `864000`, a schema-only agent's best inference, ten days in seconds: plausible, in range, and wrong, since no reading of the schema says what a business day becomes; form: 10, Business days | Created. Stored `{"review_deadline":1036800,"audience_tags":[]}`. | Created. Stored `{"review_deadline":864000}`. | Stored `{"review_deadline":1036800,"audience_tags":[]}`. |
 | Set the tags `["news", "sports"]`. Form: news, sports | Created. Stored `{"review_deadline":null,"audience_tags":["news","sports"]}`. | Created. Stored `{"audience_tags":["news","sports"]}`. | Stored `{"review_deadline":null,"audience_tags":["news","sports"]}`. |
-| Tags as a person types them: `["News", "news ", "Sports"]`. Form: News, news , Sports | Refused; nothing created. `values`: (property third_party_settings) (property data_surface_demo_extras) (property audience_tags) (item 2) An audience tag is lower case letters and digits, words joined by one space or one hyphen, with nothing around it. | Created. Stored `{"audience_tags":["News","news ","Sports"]}`. | Stored `{"review_deadline":null,"audience_tags":["news","sports"]}`. |
-| Unsplit tags: `"News, Sports"`. Form: the same text | Refused; nothing created. `values`: (property third_party_settings) (property data_surface_demo_extras) (property audience_tags) (item 0) An audience tag is lower case letters and digits, words joined by one space or one hyphen, with nothing around it. | Created. Stored `{"audience_tags":"News, Sports"}`. Not the type the stored schema declares. | Stored `{"review_deadline":null,"audience_tags":["news","sports"]}`. |
+| Tags as a person types them: `["News", "news ", "Sports"]`. Form: News, news , Sports | Refused; nothing created. `third_party_settings.data_surface_demo_extras.audience_tags.0`, `third_party_settings.data_surface_demo_extras.audience_tags.1`, `third_party_settings.data_surface_demo_extras.audience_tags.2`: An audience tag is lower case letters and digits, words joined by one space or one hyphen, with nothing around it. | Created. Stored `{"audience_tags":["News","news ","Sports"]}`. | Stored `{"review_deadline":null,"audience_tags":["news","sports"]}`. |
+| Unsplit tags: `"News, Sports"`. Form: the same text | Refused; nothing created. `third_party_settings.data_surface_demo_extras.audience_tags.0`: An audience tag is lower case letters and digits, words joined by one space or one hyphen, with nothing around it. | Created. Stored `{"audience_tags":"News, Sports"}`. Not the type the stored schema declares. | Stored `{"review_deadline":null,"audience_tags":["news","sports"]}`. |
 | Dry run of one week | Accepted and prepared; nothing created. | No such input: This input is not defined for the tool. | No equivalent. |
 
 ## What an agent is handed: `data_surface:node.type:add`
@@ -104,7 +104,6 @@ caller sends that.
                 "type": {
                     "type": "string",
                     "maxLength": 32,
-                    "pattern": "^[a-z0-9_]+$",
                     "description": "Machine name: Unique machine readable name: lowercase letters, numbers, and underscores only.",
                     "title": "Machine name"
                 },
@@ -280,7 +279,6 @@ caller sends that.
                                                 "type": "null"
                                             }
                                         ],
-                                        "pattern": "^[a-z0-9]+(?:[ -][a-z0-9]+)*$",
                                         "title": "Audience tag"
                                     },
                                     "title": "Audience tags"
@@ -299,7 +297,7 @@ caller sends that.
                 "title_label",
                 "preview_mode"
             ],
-            "description": "node.type values: The values, as the node.type surface describes them: every key it takes that the situation does not already know, including those other modules add, with its label, its meaning and the values it allows.",
+            "description": "node.type values: The values, as the node.type resource describes them: every key it takes that the operation does not already know, including those other modules add, with its label, its meaning and the values it allows. Always sent, as an object and never null: {} sends no key.",
             "title": "node.type values"
         },
         "dry_run": {

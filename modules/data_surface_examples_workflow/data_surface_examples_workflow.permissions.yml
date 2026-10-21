@@ -1,0 +1,5 @@
+# Example 10, with this module: an account without it does not see the
+# program's fees at all.
+see event fees:
+  title: 'See the fees of the examples'' event program'
+  restrict access: true

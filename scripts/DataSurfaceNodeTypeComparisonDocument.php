@@ -40,13 +40,13 @@ final class DataSurfaceNodeTypeComparisonDocument {
    * Renders the comparison document.
    *
    * @param array $surface
-   *   The input schema the surface driven tool advertises.
+   *   The input schema the resource driven tool advertises.
    * @param array $classic
    *   The input schema the classic tool advertises once the entity type
    *   is known to be node.
    * @param array<int, array{0: string, 1: string, 2: string, 3: string}> $outcomes
-   *   One row per case: the case, then what the surface tool, the classic
-   *   tool and core's content type form each did with it.
+   *   One row per case: the case, then what the resource tool, the
+   *   classic tool and core's content type form each did with it.
    *
    * @return string
    *   The markdown.
@@ -98,7 +98,7 @@ matches what that script produces, and every cell of the table below is
 what the test observed, not what anybody expected.
 
 `data_surface_demo_extras` adds two editorial review settings to every
-content type, and adds them twice: once to the content type surface
+content type, and adds them twice: once to the content type resource
 through an alter, and once to core's own content type form
 through a form alter, written the way core's own modules write one. Both
 store the same third party settings, under the same config schema, with
@@ -110,10 +110,10 @@ the same rules:
   2592000, and the key is not named for what it counts. Core's form asks
   a person for an amount and a unit, hours, days, weeks or business
   days, and turns the pair into seconds in its element validator. The
-  surface asks for the same amount and unit, and the same conversion is
-  a storage shape the extras module's alter hands the surface, applied
+  resource asks for the same amount and unit, and the same conversion is
+  a storage layout the extras module's alter hands the resource, applied
   to that module's settings, and nothing else, before the content type's
-  target writes them and after it reads them. Business days follow one
+  storage writes them and after it reads them. Business days follow one
   rule on both sides: counted from the start of a Monday, N business
   days of 24 hours span `N + 2 * floor((N - 1) / 5)` calendar days, so
   ten are twelve days, 1036800 seconds.
@@ -130,23 +130,23 @@ agent will read 3600 and 2592000 as an hour and thirty days in seconds
 and guess the unit right; the table records that it does. The claim is
 not that it cannot, but that a correct guess is still unverified
 inference, found right or wrong only after the value is stored, while
-the surface's caller never infers, because the unit is part of the
+the resource's caller never infers, because the unit is part of the
 contract. Business days are the case no reading of the schema can
 answer: the schema-only agent's best inference is in range, accepted,
 and wrong.
 
 Neither tool below was written with those settings in mind.
 `data_surface:node.type:add` is not written at all: it is generated from
-the content type surface's `add` situation, one tool per situation of
-every surface that names a target, and no tool class names a surface or
-a key. Its values input is the surface in that situation, in the static
-plugin definition. (It was `data_surface:node_type_add`, a hand-written
-tool over the old provider, until the content type surface moved to the
-new spelling.) `tool_belt:entity_bundle_add` is what an agent has
-for creating a content type without surfaces. It derives its
-`properties` input from the node type's config schema and the labels on
-core's form, and it leaves `third_party_settings` out of what it
-advertises on purpose.
+the content type resource's `add` operation, one tool per operation of
+every resource that names storage, and no tool class names a resource
+or a key. Its values input is the resource as built for that operation,
+in the static plugin definition. (It was `data_surface:node_type_add`, a
+hand-written tool over the old provider, until the content type
+resource moved to the new spelling.) `tool_belt:entity_bundle_add` is
+what an agent has for creating a content type without data surfaces.
+It derives its `properties` input from the node type's config schema
+and the labels on core's form, and it leaves `third_party_settings` out
+of what it advertises on purpose.
 
 Both schemas below were produced by the Tool API's own definition
 serializer, which is the document an MCP client or a function calling
@@ -171,7 +171,7 @@ person would type it. "Stored" is the content type's
 `data_surface_demo_extras` third party settings after the call. Where a
 stored value breaks the stored schema, the cell says so: the classic
 tool writes without asking it, as core's config save does on any site.
-The surface refuses tags it would have to rewrite rather than rewriting
+The resource refuses tags it would have to rewrite rather than rewriting
 them: the pipeline never turns a value into a different one on a
 caller's behalf, so the contract says what a stored tag looks like and a
 caller sends that.

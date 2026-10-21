@@ -11,11 +11,11 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Form\DataSurfacePluginFormTrait;
 
 /**
- * Base class for conditions whose settings are described by a surface.
+ * Base class for conditions whose settings are described by a structure.
  *
- * A condition extending this contains #[UsesSurface] naming the surface
- * class its configuration is, and its output: evaluate() and summary(). No
- * defaultConfiguration, no buildConfigurationForm, no
+ * A condition extending this contains #[UsesStructure] naming the
+ * structure class its configuration is, and its output: evaluate() and
+ * summary(). No defaultConfiguration, no buildConfigurationForm, no
  * validateConfigurationForm, no submitConfigurationForm.
  *
  * The condition host names the plugin triple exactly as the interface
@@ -27,16 +27,16 @@ use Drupal\data_surface\Form\DataSurfacePluginFormTrait;
  *   comes from the parent's defaultConfiguration(), its element from the
  *   parent's form build, and its stored value from the parent's submit,
  *   so all three keep core's behavior by calling the parent around the
- *   surface's own work rather than by restating it.
+ *   structure's own work rather than by restating it.
  * - id is not stored at all: core's getConfiguration() prepends the
  *   plugin ID to whatever is stored, and callers (the block visibility
  *   UI among them) depend on it being there and first.
  * - context_mapping is set by the parent's submit through
- *   setContextMapping(); the surface neither advertises nor destroys it,
+ *   setContextMapping(); the structure neither advertises nor destroys it,
  *   because the configuration trait passes undeclared keys through.
  *
  * Construction order, as for every group A host: ConditionPluginBase's
- * constructor calls setConfiguration(), which asks the surface for its
+ * constructor calls setConfiguration(), which asks the structure for its
  * defaults before any subclass constructor body has run, so a condition
  * needing collaborators promotes them in its constructor signature and
  * calls the parent constructor last.
@@ -54,23 +54,23 @@ abstract class DataSurfaceConditionBase extends ConditionPluginBase {
   use DataSurfacePluginFormTrait;
 
   /**
-   * Builds the surface the class's #[UsesSurface] names.
+   * Builds the structure the class's #[UsesStructure] names.
    *
    * In the condition host's `configure` context, stored as the host always
-   * stored it, through the plugin configuration target this host
+   * stored it, through the plugin configuration storage this host
    * supplies.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface, alters applied.
+   *   The built structure, alters applied.
    */
   public function getDataSurface(): DataSurfaceInterface {
-    return $this->hostedSurface();
+    return $this->hostedStructure();
   }
 
   /**
    * {@inheritdoc}
    *
-   * The surface's defaults plus the host's own, which for a condition is
+   * The structure's defaults plus the host's own, which for a condition is
    * negate alone. Read from the parent rather than written out again, so
    * a core change to the host's keys arrives here for free.
    */
@@ -102,10 +102,10 @@ abstract class DataSurfaceConditionBase extends ConditionPluginBase {
   /**
    * {@inheritdoc}
    *
-   * The surface's elements first, then the parent's negate checkbox and
+   * The structure's elements first, then the parent's negate checkbox and
    * context assignment on top of them. The parent unwraps a subform
    * state before reading gathered contexts, which does not disturb the
-   * surface: the host form trait locates in-progress refinement input on
+   * structure: the host form trait locates in-progress refinement input on
    * the complete form state itself, so both halves see the same state
    * whichever kind the host hands over.
    */
@@ -116,7 +116,7 @@ abstract class DataSurfaceConditionBase extends ConditionPluginBase {
   /**
    * {@inheritdoc}
    *
-   * The surface stores through the pipeline; the parent then stores
+   * The structure stores through the pipeline; the parent then stores
    * negate and the context mapping exactly as core does.
    */
   public function submitConfigurationForm(array &$form, FormStateInterface $form_state): void {

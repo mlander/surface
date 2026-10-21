@@ -1,0 +1,2720 @@
+{
+  "schema": {
+    "resource": "registration.step3",
+    "operation": "configure",
+    "label": "Configure registration (step 3)",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "http://localhost/surface-api/registration.step3/configure/schema",
+      "title": "Configure registration (step 3)",
+      "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
+      "x-surface": {
+        "contract": 2,
+        "operation": {
+          "id": "configure",
+          "label": "Configure registration (step 3)",
+          "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
+          "kind": "update",
+          "creates": false,
+          "destructive": false,
+          "idempotent": true
+        },
+        "version": 1,
+        "rules": [
+          9
+        ]
+      },
+      "type": "object",
+      "properties": {
+        "title": {
+          "title": "Public event title",
+          "type": "string",
+          "x-surface": {
+            "widget": "text",
+            "locked": false,
+            "dependsOn": []
+          }
+        },
+        "open": {
+          "title": "Registration open",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": true,
+          "x-surface": {
+            "widget": "checkbox",
+            "locked": false,
+            "dependsOn": []
+          }
+        },
+        "venue": {
+          "title": "Venue",
+          "type": "string",
+          "oneOf": [
+            {
+              "const": "riverside",
+              "title": "Riverside Hall"
+            },
+            {
+              "const": "library",
+              "title": "Old Library"
+            },
+            {
+              "const": "harbour",
+              "title": "Harbour Centre"
+            }
+          ],
+          "x-surface": {
+            "widget": "select",
+            "locked": false,
+            "dependsOn": []
+          }
+        },
+        "room": {
+          "title": "Room",
+          "type": "string",
+          "oneOf": [
+            {
+              "const": "riverside_main",
+              "title": "Main hall"
+            },
+            {
+              "const": "riverside_east",
+              "title": "East room"
+            },
+            {
+              "const": "library_reading",
+              "title": "Reading room"
+            },
+            {
+              "const": "library_garden",
+              "title": "Garden room"
+            },
+            {
+              "const": "harbour_auditorium",
+              "title": "Auditorium"
+            },
+            {
+              "const": "harbour_deck",
+              "title": "Upper deck"
+            }
+          ],
+          "x-surface": {
+            "widget": "select",
+            "locked": false,
+            "dependsOn": [
+              "venue"
+            ],
+            "enumerated": true,
+            "live": true
+          }
+        },
+        "capacity": {
+          "title": "Capacity",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "default": 50,
+          "x-surface": {
+            "widget": "number",
+            "locked": false,
+            "dependsOn": [
+              "room",
+              "third_party_settings.data_surface_examples_compliance.license"
+            ],
+            "enumerated": true,
+            "declared": true
+          }
+        },
+        "pricing": {
+          "title": "Pricing",
+          "type": "string",
+          "oneOf": [
+            {
+              "const": "free",
+              "title": "Free"
+            },
+            {
+              "const": "paid",
+              "title": "Paid"
+            }
+          ],
+          "default": "free",
+          "x-surface": {
+            "widget": "select",
+            "locked": false,
+            "dependsOn": []
+          }
+        },
+        "ticket": {
+          "title": "Ticket",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/registration.step3.ticket.free"
+            },
+            {
+              "$ref": "#/$defs/registration.step3.ticket.paid"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-surface": {
+            "widget": "variants",
+            "locked": false,
+            "dependsOn": [
+              "pricing"
+            ],
+            "by": "pricing",
+            "variants": {
+              "free": "#/$defs/registration.step3.ticket.free",
+              "paid": "#/$defs/registration.step3.ticket.paid"
+            }
+          }
+        },
+        "contact": {
+          "title": "Contact",
+          "$ref": "#/$defs/registration.contact",
+          "x-surface": {
+            "widget": "fieldset",
+            "locked": false,
+            "dependsOn": []
+          }
+        },
+        "third_party_settings": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "data_surface_examples_compliance": {
+              "title": "Compliance",
+              "$ref": "#/$defs/registration.compliance",
+              "x-surface": {
+                "widget": "fieldset",
+                "locked": false,
+                "dependsOn": [],
+                "after": "capacity",
+                "reads": {
+                  "capacity": "capacity"
+                }
+              }
+            }
+          },
+          "additionalProperties": false,
+          "x-surface": {
+            "widget": "fieldset",
+            "locked": false,
+            "dependsOn": [
+              "capacity"
+            ],
+            "group": true,
+            "refine": true
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "venue",
+        "room",
+        "pricing"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "venue": {
+                "const": "riverside"
+              }
+            },
+            "required": [
+              "venue"
+            ]
+          },
+          "then": {
+            "properties": {
+              "room": {
+                "oneOf": [
+                  {
+                    "const": "riverside_main",
+                    "title": "Main hall"
+                  },
+                  {
+                    "const": "riverside_east",
+                    "title": "East room"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "venue": {
+                "const": "library"
+              }
+            },
+            "required": [
+              "venue"
+            ]
+          },
+          "then": {
+            "properties": {
+              "room": {
+                "oneOf": [
+                  {
+                    "const": "library_reading",
+                    "title": "Reading room"
+                  },
+                  {
+                    "const": "library_garden",
+                    "title": "Garden room"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "venue": {
+                "const": "harbour"
+              }
+            },
+            "required": [
+              "venue"
+            ]
+          },
+          "then": {
+            "properties": {
+              "room": {
+                "oneOf": [
+                  {
+                    "const": "harbour_auditorium",
+                    "title": "Auditorium"
+                  },
+                  {
+                    "const": "harbour_deck",
+                    "title": "Upper deck"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "room": {
+                "const": "riverside_main"
+              }
+            },
+            "required": [
+              "room"
+            ]
+          },
+          "then": {
+            "properties": {
+              "capacity": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "Up to 400 for the Main hall.",
+                "maximum": 400
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "room": {
+                "const": "riverside_east"
+              }
+            },
+            "required": [
+              "room"
+            ]
+          },
+          "then": {
+            "properties": {
+              "capacity": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "Up to 120 for the East room.",
+                "maximum": 120
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "room": {
+                "const": "library_reading"
+              }
+            },
+            "required": [
+              "room"
+            ]
+          },
+          "then": {
+            "properties": {
+              "capacity": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "Up to 60 for the Reading room.",
+                "maximum": 60
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "room": {
+                "const": "library_garden"
+              }
+            },
+            "required": [
+              "room"
+            ]
+          },
+          "then": {
+            "properties": {
+              "capacity": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "Up to 30 for the Garden room.",
+                "maximum": 30
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "room": {
+                "const": "harbour_auditorium"
+              }
+            },
+            "required": [
+              "room"
+            ]
+          },
+          "then": {
+            "properties": {
+              "capacity": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "Up to 800 for the Auditorium.",
+                "maximum": 800
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "room": {
+                "const": "harbour_deck"
+              }
+            },
+            "required": [
+              "room"
+            ]
+          },
+          "then": {
+            "properties": {
+              "capacity": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "Up to 150 for the Upper deck.",
+                "maximum": 150
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "third_party_settings": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "data_surface_examples_compliance": {
+                    "type": "object",
+                    "properties": {
+                      "license": {
+                        "type": "null"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "capacity": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "Up to 100 without an event license.",
+                "maximum": 100
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "pricing": {
+                "const": "free"
+              }
+            },
+            "required": [
+              "pricing"
+            ]
+          },
+          "then": {
+            "properties": {
+              "ticket": {
+                "title": "Ticket",
+                "$ref": "#/$defs/registration.step3.ticket.free"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "pricing": {
+                "const": "paid"
+              }
+            },
+            "required": [
+              "pricing"
+            ]
+          },
+          "then": {
+            "properties": {
+              "ticket": {
+                "title": "Ticket",
+                "$ref": "#/$defs/registration.step3.ticket.paid"
+              }
+            }
+          }
+        }
+      ],
+      "$defs": {
+        "registration.step3.ticket.free": {
+          "title": "registration.step3.ticket.free",
+          "type": "object",
+          "properties": {
+            "note": {
+              "title": "Note",
+              "description": "Shown beside the register button, for example \"Donations welcome\".",
+              "type": [
+                "string",
+                "null"
+              ],
+              "x-surface": {
+                "widget": "text",
+                "locked": false,
+                "dependsOn": []
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "registration.step3.ticket.paid": {
+          "title": "registration.step3.ticket.paid",
+          "type": "object",
+          "properties": {
+            "price": {
+              "title": "Price",
+              "type": "number",
+              "minimum": 0.01,
+              "x-surface": {
+                "widget": "number",
+                "locked": false,
+                "dependsOn": []
+              }
+            },
+            "currency": {
+              "title": "Currency",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "EUR",
+                  "title": "EUR"
+                },
+                {
+                  "const": "GBP",
+                  "title": "GBP"
+                },
+                {
+                  "const": "USD",
+                  "title": "USD"
+                }
+              ],
+              "default": "EUR",
+              "x-surface": {
+                "widget": "select",
+                "locked": false,
+                "dependsOn": []
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "price",
+            "currency"
+          ]
+        },
+        "registration.contact": {
+          "title": "registration.contact",
+          "type": "object",
+          "properties": {
+            "email": {
+              "title": "Email",
+              "type": "string",
+              "format": "idn-email",
+              "x-surface": {
+                "widget": "email",
+                "locked": false,
+                "dependsOn": []
+              }
+            },
+            "phone": {
+              "title": "Phone",
+              "type": [
+                "string",
+                "null"
+              ],
+              "x-surface": {
+                "widget": "text",
+                "locked": false,
+                "dependsOn": []
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "email"
+          ]
+        },
+        "registration.compliance": {
+          "title": "registration.compliance",
+          "type": "object",
+          "properties": {
+            "license": {
+              "$ref": "#/$defs/event.license",
+              "title": "Event license",
+              "x-surface": {
+                "widget": "text",
+                "locked": false,
+                "dependsOn": [],
+                "patternMessage": "A license number is four digits, such as 2048."
+              }
+            },
+            "stewards": {
+              "title": "Stewards",
+              "type": "integer",
+              "default": 1,
+              "x-surface": {
+                "widget": "number",
+                "locked": false,
+                "dependsOn": [
+                  "capacity"
+                ]
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "stewards"
+          ],
+          "x-surface": {
+            "ports": {
+              "capacity": {
+                "type": "integer",
+                "required": true
+              }
+            }
+          }
+        },
+        "event.license": {
+          "title": "event.license",
+          "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}$",
+          "examples": [
+            "2048"
+          ],
+          "x-surface": {
+            "patternMessage": "A license number is four digits, such as 2048."
+          }
+        }
+      }
+    }
+  },
+  "contract": {
+    "resource": "registration.step3",
+    "operation": "configure",
+    "label": "Configure registration (step 3)",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "http://localhost/surface-api/registration.step3/configure",
+      "title": "Configure registration (step 3)",
+      "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
+      "x-surface": {
+        "contract": 2,
+        "operation": {
+          "id": "configure",
+          "label": "Configure registration (step 3)",
+          "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
+          "kind": "update",
+          "creates": false,
+          "destructive": false,
+          "idempotent": true
+        },
+        "version": 1
+      },
+      "type": "object",
+      "properties": {
+        "title": {
+          "title": "Public event title",
+          "type": "string",
+          "x-surface": {
+            "widget": "text",
+            "locked": false,
+            "dependsOn": [],
+            "refined": false,
+            "stale": false
+          }
+        },
+        "open": {
+          "title": "Registration open",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": true,
+          "x-surface": {
+            "widget": "checkbox",
+            "locked": false,
+            "dependsOn": [],
+            "refined": false,
+            "stale": false
+          }
+        },
+        "venue": {
+          "title": "Venue",
+          "type": "string",
+          "oneOf": [
+            {
+              "const": "riverside",
+              "title": "Riverside Hall"
+            },
+            {
+              "const": "library",
+              "title": "Old Library"
+            },
+            {
+              "const": "harbour",
+              "title": "Harbour Centre"
+            }
+          ],
+          "x-surface": {
+            "widget": "select",
+            "locked": false,
+            "dependsOn": [],
+            "refined": false,
+            "stale": false,
+            "emptyOption": {
+              "show": false,
+              "label": "- Select -"
+            }
+          }
+        },
+        "room": {
+          "title": "Room",
+          "type": "string",
+          "oneOf": [
+            {
+              "const": "riverside_main",
+              "title": "Main hall"
+            },
+            {
+              "const": "riverside_east",
+              "title": "East room"
+            }
+          ],
+          "x-surface": {
+            "widget": "select",
+            "locked": false,
+            "dependsOn": [
+              "venue"
+            ],
+            "refined": true,
+            "stale": false,
+            "emptyOption": {
+              "show": false,
+              "label": "- Select -"
+            },
+            "live": true
+          }
+        },
+        "capacity": {
+          "title": "Capacity",
+          "description": "Up to 100 without an event license.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 100,
+          "default": 50,
+          "x-surface": {
+            "widget": "number",
+            "locked": false,
+            "dependsOn": [
+              "room",
+              "third_party_settings.data_surface_examples_compliance.license"
+            ],
+            "refined": true,
+            "stale": false
+          }
+        },
+        "pricing": {
+          "title": "Pricing",
+          "type": "string",
+          "oneOf": [
+            {
+              "const": "free",
+              "title": "Free"
+            },
+            {
+              "const": "paid",
+              "title": "Paid"
+            }
+          ],
+          "default": "free",
+          "x-surface": {
+            "widget": "select",
+            "locked": false,
+            "dependsOn": [],
+            "refined": false,
+            "stale": false,
+            "emptyOption": {
+              "show": false,
+              "label": "- Select -"
+            }
+          }
+        },
+        "ticket": {
+          "title": "Ticket",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/registration.step3.ticket.free"
+            },
+            {
+              "$ref": "#/$defs/registration.step3.ticket.paid"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-surface": {
+            "widget": "variants",
+            "locked": false,
+            "dependsOn": [
+              "pricing"
+            ],
+            "refined": true,
+            "stale": false,
+            "by": "pricing",
+            "variants": {
+              "free": "#/$defs/registration.step3.ticket.free",
+              "paid": "#/$defs/registration.step3.ticket.paid"
+            },
+            "chosen": "free"
+          }
+        },
+        "contact": {
+          "title": "Contact",
+          "$ref": "#/$defs/registration.contact",
+          "x-surface": {
+            "widget": "fieldset",
+            "locked": false,
+            "dependsOn": [],
+            "refined": false,
+            "stale": false
+          }
+        },
+        "third_party_settings": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "data_surface_examples_compliance": {
+              "title": "Compliance",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/registration.compliance"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "stewards": {
+                      "type": "integer",
+                      "description": "At least 1 steward for 50 attendees.",
+                      "minimum": 1
+                    }
+                  }
+                }
+              ],
+              "x-surface": {
+                "widget": "fieldset",
+                "locked": false,
+                "dependsOn": [],
+                "refined": true,
+                "stale": false,
+                "after": "capacity",
+                "reads": {
+                  "capacity": "capacity"
+                },
+                "within": {
+                  "/allOf/1/properties/stewards": {
+                    "widget": "number",
+                    "locked": false,
+                    "dependsOn": [
+                      "capacity"
+                    ],
+                    "refined": true,
+                    "stale": false
+                  }
+                }
+              }
+            }
+          },
+          "additionalProperties": false,
+          "x-surface": {
+            "widget": "fieldset",
+            "locked": false,
+            "dependsOn": [
+              "capacity"
+            ],
+            "refined": true,
+            "stale": false,
+            "group": true
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "venue",
+        "room",
+        "pricing"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "pricing": {
+                "const": "free"
+              }
+            },
+            "required": [
+              "pricing"
+            ]
+          },
+          "then": {
+            "properties": {
+              "ticket": {
+                "title": "Ticket",
+                "$ref": "#/$defs/registration.step3.ticket.free"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "pricing": {
+                "const": "paid"
+              }
+            },
+            "required": [
+              "pricing"
+            ]
+          },
+          "then": {
+            "properties": {
+              "ticket": {
+                "title": "Ticket",
+                "$ref": "#/$defs/registration.step3.ticket.paid"
+              }
+            }
+          }
+        }
+      ],
+      "$defs": {
+        "registration.step3.ticket.free": {
+          "title": "registration.step3.ticket.free",
+          "type": "object",
+          "properties": {
+            "note": {
+              "title": "Note",
+              "description": "Shown beside the register button, for example \"Donations welcome\".",
+              "type": [
+                "string",
+                "null"
+              ],
+              "x-surface": {
+                "widget": "text",
+                "locked": false,
+                "dependsOn": [],
+                "refined": false,
+                "stale": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "registration.step3.ticket.paid": {
+          "title": "registration.step3.ticket.paid",
+          "type": "object",
+          "properties": {
+            "price": {
+              "title": "Price",
+              "type": "number",
+              "minimum": 0.01,
+              "x-surface": {
+                "widget": "number",
+                "locked": false,
+                "dependsOn": [],
+                "refined": false,
+                "stale": false
+              }
+            },
+            "currency": {
+              "title": "Currency",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "EUR",
+                  "title": "EUR"
+                },
+                {
+                  "const": "GBP",
+                  "title": "GBP"
+                },
+                {
+                  "const": "USD",
+                  "title": "USD"
+                }
+              ],
+              "default": "EUR",
+              "x-surface": {
+                "widget": "select",
+                "locked": false,
+                "dependsOn": [],
+                "refined": false,
+                "stale": false,
+                "emptyOption": {
+                  "show": false,
+                  "label": "- Select -"
+                }
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "price",
+            "currency"
+          ]
+        },
+        "registration.contact": {
+          "title": "registration.contact",
+          "type": "object",
+          "properties": {
+            "email": {
+              "title": "Email",
+              "type": "string",
+              "format": "idn-email",
+              "x-surface": {
+                "widget": "email",
+                "locked": false,
+                "dependsOn": [],
+                "refined": false,
+                "stale": false
+              }
+            },
+            "phone": {
+              "title": "Phone",
+              "type": [
+                "string",
+                "null"
+              ],
+              "x-surface": {
+                "widget": "text",
+                "locked": false,
+                "dependsOn": [],
+                "refined": false,
+                "stale": false
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "email"
+          ]
+        },
+        "registration.compliance": {
+          "title": "registration.compliance",
+          "type": "object",
+          "properties": {
+            "license": {
+              "$ref": "#/$defs/event.license",
+              "title": "Event license",
+              "x-surface": {
+                "widget": "text",
+                "locked": false,
+                "dependsOn": [],
+                "refined": false,
+                "stale": false,
+                "patternMessage": "A license number is four digits, such as 2048."
+              }
+            },
+            "stewards": {
+              "title": "Stewards",
+              "type": "integer",
+              "default": 1,
+              "x-surface": {
+                "widget": "number",
+                "locked": false,
+                "dependsOn": [
+                  "capacity"
+                ],
+                "refined": false,
+                "stale": false
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "stewards"
+          ],
+          "x-surface": {
+            "ports": {
+              "capacity": {
+                "type": "integer",
+                "required": true
+              }
+            }
+          }
+        },
+        "event.license": {
+          "title": "event.license",
+          "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}$",
+          "examples": [
+            "2048"
+          ],
+          "x-surface": {
+            "patternMessage": "A license number is four digits, such as 2048."
+          }
+        }
+      }
+    },
+    "values": {
+      "title": "Spring meetup",
+      "open": true,
+      "venue": "riverside",
+      "room": "riverside_main",
+      "capacity": 50,
+      "pricing": "free",
+      "ticket": {
+        "note": ""
+      },
+      "contact": {
+        "email": "events@example.com",
+        "phone": ""
+      },
+      "third_party_settings": {
+        "data_surface_examples_compliance": {
+          "license": null,
+          "stewards": 1
+        }
+      }
+    },
+    "stale": []
+  },
+  "steps": [
+    {
+      "changes": [
+        {
+          "path": "third_party_settings.data_surface_examples_compliance.license",
+          "value": "2048"
+        }
+      ],
+      "sent": {
+        "stale": []
+      },
+      "answer": {
+        "resource": "registration.step3",
+        "operation": "configure",
+        "label": "Configure registration (step 3)",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "$id": "http://localhost/surface-api/registration.step3/configure",
+          "title": "Configure registration (step 3)",
+          "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
+          "x-surface": {
+            "contract": 2,
+            "operation": {
+              "id": "configure",
+              "label": "Configure registration (step 3)",
+              "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
+              "kind": "update",
+              "creates": false,
+              "destructive": false,
+              "idempotent": true
+            },
+            "version": 1
+          },
+          "type": "object",
+          "properties": {
+            "title": {
+              "title": "Public event title",
+              "type": "string",
+              "x-surface": {
+                "widget": "text",
+                "locked": false,
+                "dependsOn": [],
+                "refined": false,
+                "stale": false
+              }
+            },
+            "open": {
+              "title": "Registration open",
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "default": true,
+              "x-surface": {
+                "widget": "checkbox",
+                "locked": false,
+                "dependsOn": [],
+                "refined": false,
+                "stale": false
+              }
+            },
+            "venue": {
+              "title": "Venue",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "riverside",
+                  "title": "Riverside Hall"
+                },
+                {
+                  "const": "library",
+                  "title": "Old Library"
+                },
+                {
+                  "const": "harbour",
+                  "title": "Harbour Centre"
+                }
+              ],
+              "x-surface": {
+                "widget": "select",
+                "locked": false,
+                "dependsOn": [],
+                "refined": false,
+                "stale": false,
+                "emptyOption": {
+                  "show": false,
+                  "label": "- Select -"
+                }
+              }
+            },
+            "room": {
+              "title": "Room",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "riverside_main",
+                  "title": "Main hall"
+                },
+                {
+                  "const": "riverside_east",
+                  "title": "East room"
+                }
+              ],
+              "x-surface": {
+                "widget": "select",
+                "locked": false,
+                "dependsOn": [
+                  "venue"
+                ],
+                "refined": true,
+                "stale": false,
+                "emptyOption": {
+                  "show": false,
+                  "label": "- Select -"
+                },
+                "live": true
+              }
+            },
+            "capacity": {
+              "title": "Capacity",
+              "description": "Up to 400 for the Main hall.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 400,
+              "default": 50,
+              "x-surface": {
+                "widget": "number",
+                "locked": false,
+                "dependsOn": [
+                  "room",
+                  "third_party_settings.data_surface_examples_compliance.license"
+                ],
+                "refined": true,
+                "stale": false
+              }
+            },
+            "pricing": {
+              "title": "Pricing",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "free",
+                  "title": "Free"
+                },
+                {
+                  "const": "paid",
+                  "title": "Paid"
+                }
+              ],
+              "default": "free",
+              "x-surface": {
+                "widget": "select",
+                "locked": false,
+                "dependsOn": [],
+                "refined": false,
+                "stale": false,
+                "emptyOption": {
+                  "show": false,
+                  "label": "- Select -"
+                }
+              }
+            },
+            "ticket": {
+              "title": "Ticket",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/registration.step3.ticket.free"
+                },
+                {
+                  "$ref": "#/$defs/registration.step3.ticket.paid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "x-surface": {
+                "widget": "variants",
+                "locked": false,
+                "dependsOn": [
+                  "pricing"
+                ],
+                "refined": true,
+                "stale": false,
+                "by": "pricing",
+                "variants": {
+                  "free": "#/$defs/registration.step3.ticket.free",
+                  "paid": "#/$defs/registration.step3.ticket.paid"
+                },
+                "chosen": "free"
+              }
+            },
+            "contact": {
+              "title": "Contact",
+              "$ref": "#/$defs/registration.contact",
+              "x-surface": {
+                "widget": "fieldset",
+                "locked": false,
+                "dependsOn": [],
+                "refined": false,
+                "stale": false
+              }
+            },
+            "third_party_settings": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "data_surface_examples_compliance": {
+                  "title": "Compliance",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/registration.compliance"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "stewards": {
+                          "type": "integer",
+                          "description": "At least 1 steward for 50 attendees.",
+                          "minimum": 1
+                        }
+                      }
+                    }
+                  ],
+                  "x-surface": {
+                    "widget": "fieldset",
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": true,
+                    "stale": false,
+                    "after": "capacity",
+                    "reads": {
+                      "capacity": "capacity"
+                    },
+                    "within": {
+                      "/allOf/1/properties/stewards": {
+                        "widget": "number",
+                        "locked": false,
+                        "dependsOn": [
+                          "capacity"
+                        ],
+                        "refined": true,
+                        "stale": false
+                      }
+                    }
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "x-surface": {
+                "widget": "fieldset",
+                "locked": false,
+                "dependsOn": [
+                  "capacity"
+                ],
+                "refined": true,
+                "stale": false,
+                "group": true
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "title",
+            "venue",
+            "room",
+            "pricing"
+          ],
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "pricing": {
+                    "const": "free"
+                  }
+                },
+                "required": [
+                  "pricing"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "ticket": {
+                    "title": "Ticket",
+                    "$ref": "#/$defs/registration.step3.ticket.free"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "pricing": {
+                    "const": "paid"
+                  }
+                },
+                "required": [
+                  "pricing"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "ticket": {
+                    "title": "Ticket",
+                    "$ref": "#/$defs/registration.step3.ticket.paid"
+                  }
+                }
+              }
+            }
+          ],
+          "$defs": {
+            "registration.step3.ticket.free": {
+              "title": "registration.step3.ticket.free",
+              "type": "object",
+              "properties": {
+                "note": {
+                  "title": "Note",
+                  "description": "Shown beside the register button, for example \"Donations welcome\".",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "x-surface": {
+                    "widget": "text",
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": false,
+                    "stale": false
+                  }
+                }
+              },
+              "additionalProperties": false
+            },
+            "registration.step3.ticket.paid": {
+              "title": "registration.step3.ticket.paid",
+              "type": "object",
+              "properties": {
+                "price": {
+                  "title": "Price",
+                  "type": "number",
+                  "minimum": 0.01,
+                  "x-surface": {
+                    "widget": "number",
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": false,
+                    "stale": false
+                  }
+                },
+                "currency": {
+                  "title": "Currency",
+                  "type": "string",
+                  "oneOf": [
+                    {
+                      "const": "EUR",
+                      "title": "EUR"
+                    },
+                    {
+                      "const": "GBP",
+                      "title": "GBP"
+                    },
+                    {
+                      "const": "USD",
+                      "title": "USD"
+                    }
+                  ],
+                  "default": "EUR",
+                  "x-surface": {
+                    "widget": "select",
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": false,
+                    "stale": false,
+                    "emptyOption": {
+                      "show": false,
+                      "label": "- Select -"
+                    }
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "price",
+                "currency"
+              ]
+            },
+            "registration.contact": {
+              "title": "registration.contact",
+              "type": "object",
+              "properties": {
+                "email": {
+                  "title": "Email",
+                  "type": "string",
+                  "format": "idn-email",
+                  "x-surface": {
+                    "widget": "email",
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": false,
+                    "stale": false
+                  }
+                },
+                "phone": {
+                  "title": "Phone",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "x-surface": {
+                    "widget": "text",
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": false,
+                    "stale": false
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "email"
+              ]
+            },
+            "registration.compliance": {
+              "title": "registration.compliance",
+              "type": "object",
+              "properties": {
+                "license": {
+                  "$ref": "#/$defs/event.license",
+                  "title": "Event license",
+                  "x-surface": {
+                    "widget": "text",
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": false,
+                    "stale": false,
+                    "patternMessage": "A license number is four digits, such as 2048."
+                  }
+                },
+                "stewards": {
+                  "title": "Stewards",
+                  "type": "integer",
+                  "default": 1,
+                  "x-surface": {
+                    "widget": "number",
+                    "locked": false,
+                    "dependsOn": [
+                      "capacity"
+                    ],
+                    "refined": false,
+                    "stale": false
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "stewards"
+              ],
+              "x-surface": {
+                "ports": {
+                  "capacity": {
+                    "type": "integer",
+                    "required": true
+                  }
+                }
+              }
+            },
+            "event.license": {
+              "title": "event.license",
+              "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^\\d{4}$",
+              "examples": [
+                "2048"
+              ],
+              "x-surface": {
+                "patternMessage": "A license number is four digits, such as 2048."
+              }
+            }
+          }
+        },
+        "values": {
+          "title": "Spring meetup",
+          "open": true,
+          "venue": "riverside",
+          "room": "riverside_main",
+          "capacity": 50,
+          "pricing": "free",
+          "ticket": {
+            "note": ""
+          },
+          "contact": {
+            "email": "events@example.com",
+            "phone": ""
+          },
+          "third_party_settings": {
+            "data_surface_examples_compliance": {
+              "license": "2048",
+              "stewards": 1
+            }
+          }
+        },
+        "stale": [],
+        "discarded": []
+      }
+    },
+    {
+      "changes": [
+        {
+          "path": "room",
+          "value": "riverside_east"
+        }
+      ],
+      "sent": {
+        "stale": []
+      },
+      "answer": {
+        "resource": "registration.step3",
+        "operation": "configure",
+        "label": "Configure registration (step 3)",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "$id": "http://localhost/surface-api/registration.step3/configure",
+          "title": "Configure registration (step 3)",
+          "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
+          "x-surface": {
+            "contract": 2,
+            "operation": {
+              "id": "configure",
+              "label": "Configure registration (step 3)",
+              "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
+              "kind": "update",
+              "creates": false,
+              "destructive": false,
+              "idempotent": true
+            },
+            "version": 1
+          },
+          "type": "object",
+          "properties": {
+            "title": {
+              "title": "Public event title",
+              "type": "string",
+              "x-surface": {
+                "widget": "text",
+                "locked": false,
+                "dependsOn": [],
+                "refined": false,
+                "stale": false
+              }
+            },
+            "open": {
+              "title": "Registration open",
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "default": true,
+              "x-surface": {
+                "widget": "checkbox",
+                "locked": false,
+                "dependsOn": [],
+                "refined": false,
+                "stale": false
+              }
+            },
+            "venue": {
+              "title": "Venue",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "riverside",
+                  "title": "Riverside Hall"
+                },
+                {
+                  "const": "library",
+                  "title": "Old Library"
+                },
+                {
+                  "const": "harbour",
+                  "title": "Harbour Centre"
+                }
+              ],
+              "x-surface": {
+                "widget": "select",
+                "locked": false,
+                "dependsOn": [],
+                "refined": false,
+                "stale": false,
+                "emptyOption": {
+                  "show": false,
+                  "label": "- Select -"
+                }
+              }
+            },
+            "room": {
+              "title": "Room",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "riverside_main",
+                  "title": "Main hall"
+                },
+                {
+                  "const": "riverside_east",
+                  "title": "East room"
+                }
+              ],
+              "x-surface": {
+                "widget": "select",
+                "locked": false,
+                "dependsOn": [
+                  "venue"
+                ],
+                "refined": true,
+                "stale": false,
+                "emptyOption": {
+                  "show": false,
+                  "label": "- Select -"
+                },
+                "live": true
+              }
+            },
+            "capacity": {
+              "title": "Capacity",
+              "description": "Up to 120 for the East room.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 120,
+              "default": 50,
+              "x-surface": {
+                "widget": "number",
+                "locked": false,
+                "dependsOn": [
+                  "room",
+                  "third_party_settings.data_surface_examples_compliance.license"
+                ],
+                "refined": true,
+                "stale": false
+              }
+            },
+            "pricing": {
+              "title": "Pricing",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "free",
+                  "title": "Free"
+                },
+                {
+                  "const": "paid",
+                  "title": "Paid"
+                }
+              ],
+              "default": "free",
+              "x-surface": {
+                "widget": "select",
+                "locked": false,
+                "dependsOn": [],
+                "refined": false,
+                "stale": false,
+                "emptyOption": {
+                  "show": false,
+                  "label": "- Select -"
+                }
+              }
+            },
+            "ticket": {
+              "title": "Ticket",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/registration.step3.ticket.free"
+                },
+                {
+                  "$ref": "#/$defs/registration.step3.ticket.paid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "x-surface": {
+                "widget": "variants",
+                "locked": false,
+                "dependsOn": [
+                  "pricing"
+                ],
+                "refined": true,
+                "stale": false,
+                "by": "pricing",
+                "variants": {
+                  "free": "#/$defs/registration.step3.ticket.free",
+                  "paid": "#/$defs/registration.step3.ticket.paid"
+                },
+                "chosen": "free"
+              }
+            },
+            "contact": {
+              "title": "Contact",
+              "$ref": "#/$defs/registration.contact",
+              "x-surface": {
+                "widget": "fieldset",
+                "locked": false,
+                "dependsOn": [],
+                "refined": false,
+                "stale": false
+              }
+            },
+            "third_party_settings": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "data_surface_examples_compliance": {
+                  "title": "Compliance",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/registration.compliance"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "stewards": {
+                          "type": "integer",
+                          "description": "At least 1 steward for 50 attendees.",
+                          "minimum": 1
+                        }
+                      }
+                    }
+                  ],
+                  "x-surface": {
+                    "widget": "fieldset",
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": true,
+                    "stale": false,
+                    "after": "capacity",
+                    "reads": {
+                      "capacity": "capacity"
+                    },
+                    "within": {
+                      "/allOf/1/properties/stewards": {
+                        "widget": "number",
+                        "locked": false,
+                        "dependsOn": [
+                          "capacity"
+                        ],
+                        "refined": true,
+                        "stale": false
+                      }
+                    }
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "x-surface": {
+                "widget": "fieldset",
+                "locked": false,
+                "dependsOn": [
+                  "capacity"
+                ],
+                "refined": true,
+                "stale": false,
+                "group": true
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "title",
+            "venue",
+            "room",
+            "pricing"
+          ],
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "pricing": {
+                    "const": "free"
+                  }
+                },
+                "required": [
+                  "pricing"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "ticket": {
+                    "title": "Ticket",
+                    "$ref": "#/$defs/registration.step3.ticket.free"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "pricing": {
+                    "const": "paid"
+                  }
+                },
+                "required": [
+                  "pricing"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "ticket": {
+                    "title": "Ticket",
+                    "$ref": "#/$defs/registration.step3.ticket.paid"
+                  }
+                }
+              }
+            }
+          ],
+          "$defs": {
+            "registration.step3.ticket.free": {
+              "title": "registration.step3.ticket.free",
+              "type": "object",
+              "properties": {
+                "note": {
+                  "title": "Note",
+                  "description": "Shown beside the register button, for example \"Donations welcome\".",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "x-surface": {
+                    "widget": "text",
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": false,
+                    "stale": false
+                  }
+                }
+              },
+              "additionalProperties": false
+            },
+            "registration.step3.ticket.paid": {
+              "title": "registration.step3.ticket.paid",
+              "type": "object",
+              "properties": {
+                "price": {
+                  "title": "Price",
+                  "type": "number",
+                  "minimum": 0.01,
+                  "x-surface": {
+                    "widget": "number",
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": false,
+                    "stale": false
+                  }
+                },
+                "currency": {
+                  "title": "Currency",
+                  "type": "string",
+                  "oneOf": [
+                    {
+                      "const": "EUR",
+                      "title": "EUR"
+                    },
+                    {
+                      "const": "GBP",
+                      "title": "GBP"
+                    },
+                    {
+                      "const": "USD",
+                      "title": "USD"
+                    }
+                  ],
+                  "default": "EUR",
+                  "x-surface": {
+                    "widget": "select",
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": false,
+                    "stale": false,
+                    "emptyOption": {
+                      "show": false,
+                      "label": "- Select -"
+                    }
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "price",
+                "currency"
+              ]
+            },
+            "registration.contact": {
+              "title": "registration.contact",
+              "type": "object",
+              "properties": {
+                "email": {
+                  "title": "Email",
+                  "type": "string",
+                  "format": "idn-email",
+                  "x-surface": {
+                    "widget": "email",
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": false,
+                    "stale": false
+                  }
+                },
+                "phone": {
+                  "title": "Phone",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "x-surface": {
+                    "widget": "text",
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": false,
+                    "stale": false
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "email"
+              ]
+            },
+            "registration.compliance": {
+              "title": "registration.compliance",
+              "type": "object",
+              "properties": {
+                "license": {
+                  "$ref": "#/$defs/event.license",
+                  "title": "Event license",
+                  "x-surface": {
+                    "widget": "text",
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": false,
+                    "stale": false,
+                    "patternMessage": "A license number is four digits, such as 2048."
+                  }
+                },
+                "stewards": {
+                  "title": "Stewards",
+                  "type": "integer",
+                  "default": 1,
+                  "x-surface": {
+                    "widget": "number",
+                    "locked": false,
+                    "dependsOn": [
+                      "capacity"
+                    ],
+                    "refined": false,
+                    "stale": false
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "stewards"
+              ],
+              "x-surface": {
+                "ports": {
+                  "capacity": {
+                    "type": "integer",
+                    "required": true
+                  }
+                }
+              }
+            },
+            "event.license": {
+              "title": "event.license",
+              "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^\\d{4}$",
+              "examples": [
+                "2048"
+              ],
+              "x-surface": {
+                "patternMessage": "A license number is four digits, such as 2048."
+              }
+            }
+          }
+        },
+        "values": {
+          "title": "Spring meetup",
+          "open": true,
+          "venue": "riverside",
+          "room": "riverside_east",
+          "capacity": 50,
+          "pricing": "free",
+          "ticket": {
+            "note": ""
+          },
+          "contact": {
+            "email": "events@example.com",
+            "phone": ""
+          },
+          "third_party_settings": {
+            "data_surface_examples_compliance": {
+              "license": "2048",
+              "stewards": 1
+            }
+          }
+        },
+        "stale": [],
+        "discarded": []
+      }
+    },
+    {
+      "changes": [
+        {
+          "path": "third_party_settings.data_surface_examples_compliance.license",
+          "value": ""
+        }
+      ],
+      "sent": {
+        "stale": []
+      },
+      "answer": {
+        "resource": "registration.step3",
+        "operation": "configure",
+        "label": "Configure registration (step 3)",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "$id": "http://localhost/surface-api/registration.step3/configure",
+          "title": "Configure registration (step 3)",
+          "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
+          "x-surface": {
+            "contract": 2,
+            "operation": {
+              "id": "configure",
+              "label": "Configure registration (step 3)",
+              "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
+              "kind": "update",
+              "creates": false,
+              "destructive": false,
+              "idempotent": true
+            },
+            "version": 1
+          },
+          "type": "object",
+          "properties": {
+            "title": {
+              "title": "Public event title",
+              "type": "string",
+              "x-surface": {
+                "widget": "text",
+                "locked": false,
+                "dependsOn": [],
+                "refined": false,
+                "stale": false
+              }
+            },
+            "open": {
+              "title": "Registration open",
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "default": true,
+              "x-surface": {
+                "widget": "checkbox",
+                "locked": false,
+                "dependsOn": [],
+                "refined": false,
+                "stale": false
+              }
+            },
+            "venue": {
+              "title": "Venue",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "riverside",
+                  "title": "Riverside Hall"
+                },
+                {
+                  "const": "library",
+                  "title": "Old Library"
+                },
+                {
+                  "const": "harbour",
+                  "title": "Harbour Centre"
+                }
+              ],
+              "x-surface": {
+                "widget": "select",
+                "locked": false,
+                "dependsOn": [],
+                "refined": false,
+                "stale": false,
+                "emptyOption": {
+                  "show": false,
+                  "label": "- Select -"
+                }
+              }
+            },
+            "room": {
+              "title": "Room",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "riverside_main",
+                  "title": "Main hall"
+                },
+                {
+                  "const": "riverside_east",
+                  "title": "East room"
+                }
+              ],
+              "x-surface": {
+                "widget": "select",
+                "locked": false,
+                "dependsOn": [
+                  "venue"
+                ],
+                "refined": true,
+                "stale": false,
+                "emptyOption": {
+                  "show": false,
+                  "label": "- Select -"
+                },
+                "live": true
+              }
+            },
+            "capacity": {
+              "title": "Capacity",
+              "description": "Up to 100 without an event license.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50,
+              "x-surface": {
+                "widget": "number",
+                "locked": false,
+                "dependsOn": [
+                  "room",
+                  "third_party_settings.data_surface_examples_compliance.license"
+                ],
+                "refined": true,
+                "stale": false
+              }
+            },
+            "pricing": {
+              "title": "Pricing",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "free",
+                  "title": "Free"
+                },
+                {
+                  "const": "paid",
+                  "title": "Paid"
+                }
+              ],
+              "default": "free",
+              "x-surface": {
+                "widget": "select",
+                "locked": false,
+                "dependsOn": [],
+                "refined": false,
+                "stale": false,
+                "emptyOption": {
+                  "show": false,
+                  "label": "- Select -"
+                }
+              }
+            },
+            "ticket": {
+              "title": "Ticket",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/registration.step3.ticket.free"
+                },
+                {
+                  "$ref": "#/$defs/registration.step3.ticket.paid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "x-surface": {
+                "widget": "variants",
+                "locked": false,
+                "dependsOn": [
+                  "pricing"
+                ],
+                "refined": true,
+                "stale": false,
+                "by": "pricing",
+                "variants": {
+                  "free": "#/$defs/registration.step3.ticket.free",
+                  "paid": "#/$defs/registration.step3.ticket.paid"
+                },
+                "chosen": "free"
+              }
+            },
+            "contact": {
+              "title": "Contact",
+              "$ref": "#/$defs/registration.contact",
+              "x-surface": {
+                "widget": "fieldset",
+                "locked": false,
+                "dependsOn": [],
+                "refined": false,
+                "stale": false
+              }
+            },
+            "third_party_settings": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "data_surface_examples_compliance": {
+                  "title": "Compliance",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/registration.compliance"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "stewards": {
+                          "type": "integer",
+                          "description": "At least 1 steward for 50 attendees.",
+                          "minimum": 1
+                        }
+                      }
+                    }
+                  ],
+                  "x-surface": {
+                    "widget": "fieldset",
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": true,
+                    "stale": false,
+                    "after": "capacity",
+                    "reads": {
+                      "capacity": "capacity"
+                    },
+                    "within": {
+                      "/allOf/1/properties/stewards": {
+                        "widget": "number",
+                        "locked": false,
+                        "dependsOn": [
+                          "capacity"
+                        ],
+                        "refined": true,
+                        "stale": false
+                      }
+                    }
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "x-surface": {
+                "widget": "fieldset",
+                "locked": false,
+                "dependsOn": [
+                  "capacity"
+                ],
+                "refined": true,
+                "stale": false,
+                "group": true
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "title",
+            "venue",
+            "room",
+            "pricing"
+          ],
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "pricing": {
+                    "const": "free"
+                  }
+                },
+                "required": [
+                  "pricing"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "ticket": {
+                    "title": "Ticket",
+                    "$ref": "#/$defs/registration.step3.ticket.free"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "pricing": {
+                    "const": "paid"
+                  }
+                },
+                "required": [
+                  "pricing"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "ticket": {
+                    "title": "Ticket",
+                    "$ref": "#/$defs/registration.step3.ticket.paid"
+                  }
+                }
+              }
+            }
+          ],
+          "$defs": {
+            "registration.step3.ticket.free": {
+              "title": "registration.step3.ticket.free",
+              "type": "object",
+              "properties": {
+                "note": {
+                  "title": "Note",
+                  "description": "Shown beside the register button, for example \"Donations welcome\".",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "x-surface": {
+                    "widget": "text",
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": false,
+                    "stale": false
+                  }
+                }
+              },
+              "additionalProperties": false
+            },
+            "registration.step3.ticket.paid": {
+              "title": "registration.step3.ticket.paid",
+              "type": "object",
+              "properties": {
+                "price": {
+                  "title": "Price",
+                  "type": "number",
+                  "minimum": 0.01,
+                  "x-surface": {
+                    "widget": "number",
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": false,
+                    "stale": false
+                  }
+                },
+                "currency": {
+                  "title": "Currency",
+                  "type": "string",
+                  "oneOf": [
+                    {
+                      "const": "EUR",
+                      "title": "EUR"
+                    },
+                    {
+                      "const": "GBP",
+                      "title": "GBP"
+                    },
+                    {
+                      "const": "USD",
+                      "title": "USD"
+                    }
+                  ],
+                  "default": "EUR",
+                  "x-surface": {
+                    "widget": "select",
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": false,
+                    "stale": false,
+                    "emptyOption": {
+                      "show": false,
+                      "label": "- Select -"
+                    }
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "price",
+                "currency"
+              ]
+            },
+            "registration.contact": {
+              "title": "registration.contact",
+              "type": "object",
+              "properties": {
+                "email": {
+                  "title": "Email",
+                  "type": "string",
+                  "format": "idn-email",
+                  "x-surface": {
+                    "widget": "email",
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": false,
+                    "stale": false
+                  }
+                },
+                "phone": {
+                  "title": "Phone",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "x-surface": {
+                    "widget": "text",
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": false,
+                    "stale": false
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "email"
+              ]
+            },
+            "registration.compliance": {
+              "title": "registration.compliance",
+              "type": "object",
+              "properties": {
+                "license": {
+                  "$ref": "#/$defs/event.license",
+                  "title": "Event license",
+                  "x-surface": {
+                    "widget": "text",
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": false,
+                    "stale": false,
+                    "patternMessage": "A license number is four digits, such as 2048."
+                  }
+                },
+                "stewards": {
+                  "title": "Stewards",
+                  "type": "integer",
+                  "default": 1,
+                  "x-surface": {
+                    "widget": "number",
+                    "locked": false,
+                    "dependsOn": [
+                      "capacity"
+                    ],
+                    "refined": false,
+                    "stale": false
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "stewards"
+              ],
+              "x-surface": {
+                "ports": {
+                  "capacity": {
+                    "type": "integer",
+                    "required": true
+                  }
+                }
+              }
+            },
+            "event.license": {
+              "title": "event.license",
+              "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^\\d{4}$",
+              "examples": [
+                "2048"
+              ],
+              "x-surface": {
+                "patternMessage": "A license number is four digits, such as 2048."
+              }
+            }
+          }
+        },
+        "values": {
+          "title": "Spring meetup",
+          "open": true,
+          "venue": "riverside",
+          "room": "riverside_east",
+          "capacity": 50,
+          "pricing": "free",
+          "ticket": {
+            "note": ""
+          },
+          "contact": {
+            "email": "events@example.com",
+            "phone": ""
+          },
+          "third_party_settings": {
+            "data_surface_examples_compliance": {
+              "license": "",
+              "stewards": 1
+            }
+          }
+        },
+        "stale": [],
+        "discarded": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+# Example 10: an account without it finds the program's fees locked.
+set event fees:
+  title: 'Set the fees of the examples'' event program'
+  restrict access: true

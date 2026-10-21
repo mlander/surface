@@ -1,0 +1,59 @@
+{
+    "resource": "registration.step3.ticket.paid",
+    "module": "data_surface_examples",
+    "contract": 2,
+    "documents": [
+        {
+            "resource": "registration.step3.ticket.paid",
+            "operation": null,
+            "label": null,
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "x-surface": {
+                    "contract": 2,
+                    "version": 1
+                },
+                "type": "object",
+                "properties": {
+                    "price": {
+                        "title": "Price",
+                        "type": "number",
+                        "minimum": 0.01,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "currency": {
+                        "title": "Currency",
+                        "type": "string",
+                        "oneOf": [
+                            {
+                                "const": "EUR",
+                                "title": "EUR"
+                            },
+                            {
+                                "const": "GBP",
+                                "title": "GBP"
+                            },
+                            {
+                                "const": "USD",
+                                "title": "USD"
+                            }
+                        ],
+                        "default": "EUR",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "price",
+                    "currency"
+                ]
+            }
+        }
+    ]
+}

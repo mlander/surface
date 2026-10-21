@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Unit;
 
+use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
@@ -17,7 +18,7 @@ use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Pipeline\DataSurfacePipeline;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
-use Drupal\data_surface\Pipeline\ShapeMismatchException;
+use Drupal\data_surface\Pipeline\TypeMismatchException;
 use Drupal\data_surface\Pipeline\UnknownKeysException;
 use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\Tests\UnitTestCase;
@@ -26,7 +27,7 @@ use PHPUnit\Framework\Attributes\Group;
 use Symfony\Component\Validator\ConstraintViolationList;
 
 /**
- * The specification of the surface's value semantics.
+ * The specification of the data surface's value semantics.
  *
  * Every rule about absent, empty, NULL, required and casting is stated
  * here as a row rather than as prose, because prose is what let the
@@ -37,8 +38,11 @@ use Symfony\Component\Validator\ConstraintViolationList;
  * expected to be checked against each other.
  *
  * The pipeline is built here with a stub typed data manager, which is
- * the point: accept() coerces without a container, so a caller that
- * holds a surface and some strings needs nothing else.
+ * the point: accept() coerces with nothing but the typed data manager's
+ * default constraints behind it (read to find a key's choices), so a
+ * caller that holds a data surface and some strings needs nothing else.
+ * The coercion table is the Tool API's (InputTypeCoercionSubscriber);
+ * InputCoercionMatrixTest holds the form and the tool to it.
  *
  * @see \Drupal\data_surface\Pipeline\DataSurfacePipeline
  * @see docs/semantics.md
@@ -71,6 +75,11 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
     $typed_data->method('validate')->willReturn(new ConstraintViolationList());
     $manager = $this->createMock(TypedDataManagerInterface::class);
     $manager->method('create')->willReturn($typed_data);
+    $manager->method('getDefaultConstraints')->willReturn([]);
+    // A definition reads its default constraints from the container.
+    $container = new ContainerBuilder();
+    $container->set('typed_data_manager', $manager);
+    \Drupal::setContainer($container);
     $options = (new \ReflectionClass(DataSurfaceOptions::class))->newInstanceWithoutConstructor();
     return new DataSurfacePipeline($manager, $options, $this->getStringTranslationStub());
   }
@@ -83,7 +92,7 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
    * @param mixed $input
    *   The raw input.
    * @param array $current
-   *   The stored values, in surface shape.
+   *   The stored values, in input layout.
    *
    * @return mixed
    *   The accepted value of the key.
@@ -141,16 +150,17 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
    *   Rows of definition, raw input, and the accepted value.
    */
   public static function castingMatrix(): \Generator {
-    // Rule 1, applied by accept(): input that is not configured means
-    // the key holds nothing, and holding nothing is NULL for every type.
+    // Applied by accept() before the table: input that is not configured
+    // means the key holds nothing, and holding nothing is NULL for every
+    // type.
     foreach (['string', 'integer', 'float', 'boolean', 'email', 'uri', 'any'] as $type) {
       yield $type . ': NULL holds nothing' => [DataDefinition::create($type), NULL, NULL];
       yield $type . ': the empty string holds nothing' => [DataDefinition::create($type), '', NULL];
     }
     // Including the two the old rules made exceptions of: a required
-    // string no longer keeps the empty value so a constraint can refuse
+    // string does not keep the empty value so a constraint can refuse
     // it (validate() refuses the absence itself), and an empty checkbox
-    // submission is no longer read as "off".
+    // submission is not read as "off".
     yield 'string: the empty string holds nothing even when required' => [
       DataDefinition::create('string')->setRequired(TRUE),
       '',
@@ -190,21 +200,22 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
       'seven',
       'seven',
     ];
-    yield 'integer: a boolean is left for the constraint' => [
-      DataDefinition::create('integer'),
-      TRUE,
-      TRUE,
-    ];
+    // The Tool API's table: a boolean for an integer is 0 or 1.
+    yield 'integer: TRUE is 1' => [DataDefinition::create('integer'), TRUE, 1];
+    yield 'integer: FALSE is 0' => [DataDefinition::create('integer'), FALSE, 0];
+    yield 'integer: exponent notation casts' => [DataDefinition::create('integer'), '1e3', 1000];
     yield 'integer: a literal beyond the integer range is left as it arrived' => [
       DataDefinition::create('integer'),
       '9223372036854775808',
       '9223372036854775808',
     ];
 
-    // Float. Every number is a float without losing anything.
+    // Float. A numeric string is a float; an integer is a float's value
+    // already, and passes as it is, as the Tool API leaves it.
     yield 'float: a float is itself' => [DataDefinition::create('float'), 1.5, 1.5];
     yield 'float: zero is a value, not an absence' => [DataDefinition::create('float'), 0.0, 0.0];
-    yield 'float: an integer casts' => [DataDefinition::create('float'), 2, 2.0];
+    yield 'float: an integer is left as it is' => [DataDefinition::create('float'), 2, 2];
+    yield 'float: an integer string casts' => [DataDefinition::create('float'), '2', 2.0];
     yield 'float: a numeric string casts' => [DataDefinition::create('float'), '1.5', 1.5];
     yield 'float: surrounding whitespace is trimmed' => [DataDefinition::create('float'), ' 1.5 ', 1.5];
     yield 'float: exponent notation casts' => [DataDefinition::create('float'), '1e3', 1000.0];
@@ -218,6 +229,8 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
     yield 'boolean: FALSE is a value, not an absence' => [DataDefinition::create('boolean'), FALSE, FALSE];
     yield 'boolean: the integer 1 casts' => [DataDefinition::create('boolean'), 1, TRUE];
     yield 'boolean: the integer 0 casts' => [DataDefinition::create('boolean'), 0, FALSE];
+    yield 'boolean: the float 1.0 casts' => [DataDefinition::create('boolean'), 1.0, TRUE];
+    yield 'boolean: the float 0.0 casts' => [DataDefinition::create('boolean'), 0.0, FALSE];
     yield "boolean: the string '1' casts" => [DataDefinition::create('boolean'), '1', TRUE];
     yield "boolean: the string '0' casts" => [DataDefinition::create('boolean'), '0', FALSE];
     yield "boolean: 'true' casts" => [DataDefinition::create('boolean'), 'true', TRUE];
@@ -242,21 +255,17 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
       2,
     ];
 
-    // String, email and uri share one rule: a scalar is that scalar
-    // written out.
+    // String: a bare number is its spelling. A boolean has no one
+    // spelling, so it is left as it is, as the Tool API leaves it.
     yield 'string: a string is itself' => [DataDefinition::create('string'), 'x', 'x'];
     yield "string: '0' is a value, not an absence" => [DataDefinition::create('string'), '0', '0'];
     yield 'string: an integer casts' => [DataDefinition::create('string'), 7, '7'];
     yield 'string: a float casts' => [DataDefinition::create('string'), 1.5, '1.5'];
-    yield 'string: TRUE casts the way PHP writes it' => [DataDefinition::create('string'), TRUE, '1'];
-    // FALSE writes out as the empty string, which holds nothing, so the
-    // key holds nothing.
-    yield 'string: FALSE writes out as nothing, so it holds nothing' => [
-      DataDefinition::create('string'),
-      FALSE,
-      NULL,
-    ];
-    yield 'email: a scalar casts like a string' => [DataDefinition::create('email'), 7, '7'];
+    yield 'string: a small float is fixed-point' => [DataDefinition::create('string'), 0.0000001, '0.0000001'];
+    yield 'string: TRUE is left as it is' => [DataDefinition::create('string'), TRUE, TRUE];
+    yield 'string: FALSE is left as it is' => [DataDefinition::create('string'), FALSE, FALSE];
+    // Email and uri have no rule of their own in the table.
+    yield 'email: a number is left as it is' => [DataDefinition::create('email'), 7, 7];
     yield 'email: an address passes through' => [
       DataDefinition::create('email'),
       'somebody@example.com',
@@ -281,13 +290,13 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
   /**
    * Tests the shapes a definition cannot hold at all.
    */
-  #[DataProvider('shapeMismatches')]
-  public function testShapeMismatchIsRefused(DataDefinitionInterface $definition, mixed $input, string $expected, string $actual): void {
+  #[DataProvider('typeMismatches')]
+  public function testTypeMismatchIsRefused(DataDefinitionInterface $definition, mixed $input, string $expected, string $actual): void {
     try {
       $this->accept($definition, $input);
-      $this->fail('Expected a ShapeMismatchException.');
+      $this->fail('Expected a TypeMismatchException.');
     }
-    catch (ShapeMismatchException $e) {
+    catch (TypeMismatchException $e) {
       $this->assertSame('value', $e->getPath());
       $this->assertSame($expected, $e->getExpected());
       $this->assertSame($actual, $e->getActual());
@@ -301,7 +310,7 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
    *   Rows of definition, raw input, expected type name, actual type
    *   name.
    */
-  public static function shapeMismatches(): \Generator {
+  public static function typeMismatches(): \Generator {
     yield 'an array where a string was advertised' => [
       DataDefinition::create('string'),
       ['a', 'b'],
@@ -319,18 +328,6 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
       [],
       'boolean',
       'array',
-    ];
-    yield 'a string where a list was advertised' => [
-      static::listDefinition(),
-      'us',
-      'list',
-      'string',
-    ];
-    yield 'a number where a list was advertised' => [
-      static::listDefinition(),
-      7,
-      'list',
-      'int',
     ];
     yield 'a string where a map was advertised' => [
       static::mapDefinition(),
@@ -374,9 +371,13 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
       ['us', 'ca'],
     ];
     yield 'an empty list is an empty list, not an absence' => [[], []];
-    // The items go through the casting table like any other value, so a
+    // The items go through the coercion table like any other value, so a
     // list of strings keeps a digit string a string.
-    yield 'items are cast through the item definition' => [['7', 8], ['7', '8']];
+    yield 'items are coerced through the item definition' => [['7', 8], ['7', '8']];
+    // A JSON list is read as one, and a single item is wrapped.
+    yield 'a JSON list is read' => ['["us","ca"]', ['us', 'ca']];
+    yield 'a single item is a list of one' => ['us', ['us']];
+    yield 'a single number is a list of one, coerced' => [7, ['7']];
   }
 
   /**
@@ -438,7 +439,12 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
     // A property submitted empty holds nothing, and says so.
     $this->assertSame(
       ['badge' => NULL, 'weight' => NULL],
-      $this->accept($definition, ['badge' => '', 'weight' => ''], ['value' => ['badge' => 'star', 'weight' => 2]]),
+      $this->accept($definition, ['badge' => '', 'weight' => NULL], ['value' => ['badge' => 'star', 'weight' => 2]]),
+    );
+    // A JSON object is read as the map.
+    $this->assertSame(
+      ['badge' => 'star', 'weight' => 4],
+      $this->accept($definition, '{"badge": "star", "weight": "4"}'),
     );
   }
 
@@ -447,7 +453,7 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
    *
    * A complex definition with declared properties says what the map
    * holds. Anything else in the stored array belongs to whatever wrote
-   * it, and carrying it back out of the surface would make the surface
+   * it, and carrying it back out would make the data surface
    * responsible for a value it never advertised.
    */
   public function testUndeclaredStoredKeysDoNotRoundTrip(): void {
@@ -465,6 +471,25 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
   public function testMapHoldingNothingIsNull(): void {
     $this->assertNull($this->accept(static::mapDefinition(), ''));
     $this->assertNull($this->accept(static::mapDefinition(), NULL));
+  }
+
+  /**
+   * Tests the three answers on an optional key: absent, nothing, a value.
+   *
+   * Left out, the key keeps what it holds, the stored value or the
+   * declared default; null or the empty string clears it; a value is
+   * that value. On a required key nothing is NULL too, refused by
+   * validate() as missing.
+   */
+  public function testAbsentKeepsNothingClearsValueReplaces(): void {
+    foreach (['string' => 'kept', 'integer' => 3, 'float' => 1.5, 'boolean' => FALSE, 'email' => 'a@example.com'] as $type => $stored) {
+      $surface = new DataSurface(DefinitionMap::fromArrays(definitions: ['value' => DataDefinition::create($type)]));
+      $this->assertSame($stored, $this->pipeline()->accept($surface, [], ['value' => $stored])['value'], $type . ' absent');
+      foreach ([NULL, ''] as $nothing) {
+        $this->assertNull($this->accept(DataDefinition::create($type), $nothing, ['value' => $stored]), $type);
+        $this->assertNull($this->accept(DataDefinition::create($type)->setRequired(TRUE), $nothing, ['value' => $stored]), $type);
+      }
+    }
   }
 
   /**
@@ -671,7 +696,7 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
     $this->assertCount(1, $errors->byKey('value'));
     $this->assertSame('', $errors->byKey('value')[0]->path);
     $message = $errors->byKey('value')[0]->message;
-    // The surface's own message, as a translatable string with the label
+    // The data surface's own message, as a translatable string with the label
     // as a placeholder, rather than whichever message a type-specific
     // constraint would have produced.
     $this->assertInstanceOf(TranslatableMarkup::class, $message);
@@ -691,8 +716,8 @@ class DataSurfacePipelineCastingTest extends UnitTestCase {
     yield 'a string is present' => ['x', FALSE];
     // The deliberate reading: a required checkbox that is off, a
     // required zero, and a required list or map with nothing in it are
-    // answers. A surface that wants more than an answer says so with a
-    // constraint of its own.
+    // answers. A resource or structure that wants more than an answer
+    // says so with a constraint of its own.
     yield 'FALSE is an answer' => [FALSE, FALSE];
     yield 'zero is an answer' => [0, FALSE];
     yield "the string '0' is an answer" => ['0', FALSE];

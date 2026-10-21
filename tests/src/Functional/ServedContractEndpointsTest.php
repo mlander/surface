@@ -4,22 +4,24 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Functional;
 
+use Drupal\data_surface\Contract\SchemaResolver;
 use Drupal\Tests\BrowserTestBase;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Psr\Http\Message\ResponseInterface;
 
 /**
- * Tests the React page and the three contract endpoints over HTTP.
+ * Tests the React page and the contract endpoints over HTTP.
  *
  * The examples' landing page links the React page of examples 1 to 3.
  * Example 2 is the subject throughout, because it is where an answer
  * narrows another: the venue the rooms, the room the capacity. The page
- * and the contract answer an administrator and refuse anonymous; refine
+ * and the contract answer an administrator and refuse anonymous; the full
+ * schema is the same whatever is stored, and may be cached; refine
  * narrows the room by the venue and shows an orphaned room stale; and
  * validate refuses a room of another venue and a capacity above the
  * room's, accepts a valid payload, and writes nothing either way. On
- * example 3, with example 4's module on, refine follows the licence the
+ * example 3, with example 4's module on, refine follows the license the
  * module's alter mounted.
  */
 #[Group('data_surface')]
@@ -101,6 +103,58 @@ class ServedContractEndpointsTest extends BrowserTestBase {
   }
 
   /**
+   * Tests the full schema: its access, its content, and that no value moves it.
+   */
+  public function testFullSchemaReadsNoValue(): void {
+    $this->drupalGet('surface-api/registration.step2/configure/schema');
+    $this->assertSession()->statusCodeEquals(403);
+
+    $this->drupalLogin($this->drupalCreateUser(['administer site configuration']));
+    $this->drupalGet('surface-api/registration.step2/configure/schema');
+    $this->assertSession()->statusCodeEquals(200);
+    $first = $this->getSession()->getPage()->getContent();
+    $full = json_decode($first, TRUE);
+    // The document and nothing that is one moment's: no values, no stale
+    // paths, no fingerprint.
+    $this->assertSame(['resource', 'operation', 'label', 'schema'], array_keys($full));
+    $this->assertSame('registration.step2', $full['resource']);
+    // In contract 2, said in the header and the document, which says where
+    // it is served. Decision: see docs/decisions.md#contract-2.
+    $this->assertSame('2', $this->getSession()->getResponseHeader('Contract-Version'));
+    $this->assertSame(2, $full['schema']['x-surface']['contract']);
+    $this->assertStringEndsWith('/surface-api/registration.step2/configure/schema', $full['schema']['$id']);
+    $this->assertSame(['$schema', '$id', 'title'], array_slice(array_keys($full['schema']), 0, 3));
+    $room = $full['schema']['properties']['room'];
+    $this->assertCount(6, $this->offered($room));
+    $this->assertSame(['widget' => 'select', 'locked' => FALSE, 'dependsOn' => ['venue'], 'enumerated' => TRUE], $room['x-surface']);
+    // Every listable dependency as a conditional: three venues, six rooms.
+    $this->assertCount(9, $full['schema']['allOf']);
+    // Cacheable: it reads nothing stored, so it is not max-age 0 as the
+    // contract is.
+    $this->assertSame('-1 (Permanent)', $this->getSession()->getResponseHeader('X-Drupal-Cache-Max-Age'));
+    $this->assertStringContainsString('url.query_args', (string) $this->getSession()->getResponseHeader('X-Drupal-Cache-Contexts'));
+    $this->drupalGet('surface-api/registration.step2/configure');
+    $this->assertSame('0 (Uncacheable)', $this->getSession()->getResponseHeader('X-Drupal-Cache-Max-Age'));
+
+    // Another stored state: the contract follows it, the full schema does
+    // not.
+    $this->config(self::CONFIG)
+      ->set('venue', 'harbour')
+      ->set('room', 'harbour_deck')
+      ->set('capacity', 90)
+      ->save();
+    $this->drupalGet('surface-api/registration.step2/configure');
+    $this->assertSame('harbour_deck', json_decode($this->getSession()->getPage()->getContent(), TRUE)['values']['room']);
+    $this->drupalGet('surface-api/registration.step2/configure/schema');
+    $this->assertSession()->statusCodeEquals(200);
+    $this->assertSame($first, $this->getSession()->getPage()->getContent());
+
+    // An operation that names nothing is refused, as on the contract.
+    $this->drupalGet('surface-api/registration.step2/nothing/schema');
+    $this->assertSession()->statusCodeEquals(403);
+  }
+
+  /**
    * Tests who may read the page and the contract, and its shape.
    */
   public function testAccessAndShape(): void {
@@ -118,25 +172,28 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     }
     $this->drupalGet('surface-react/registration.step2/configure');
     $this->assertSession()->statusCodeEquals(200);
-    $this->assertSession()->titleEquals('React: Configure registration | Drupal');
+    $this->assertSession()->titleEquals('React: Configure registration (step 2) | Drupal');
     $this->assertSession()->elementExists('css', '#data-surface-react');
     $settings = $this->getDrupalSettings()['dataSurfaceReact'];
-    $this->assertSame('registration.step2', $settings['surface']);
-    $this->assertSame('configure', $settings['situation']);
+    $this->assertSame('registration.step2', $settings['resource']);
+    $this->assertSame('configure', $settings['operation']);
     $this->assertStringEndsWith('/surface-api', $settings['apiBase']);
     $this->assertStringEndsWith('/session/token', $settings['tokenUrl']);
 
     $this->drupalGet('surface-api/registration.step2/configure');
     $this->assertSession()->statusCodeEquals(200);
     $contract = json_decode($this->getSession()->getPage()->getContent(), TRUE);
-    $this->assertSame(['surface', 'situation', 'label', 'schema', 'values', 'stale', 'fingerprint'], array_keys($contract));
+    $this->assertSame(['resource', 'operation', 'label', 'schema', 'values', 'stale', 'fingerprint'], array_keys($contract));
     $this->assertIsString($contract['fingerprint']);
-    $this->assertSame('registration.step2', $contract['surface']);
+    $this->assertSame('registration.step2', $contract['resource']);
     $this->assertSame('https://json-schema.org/draft/2020-12/schema', $contract['schema']['$schema']);
+    $this->assertSame('2', $this->getSession()->getResponseHeader('Contract-Version'));
+    $this->assertSame(2, $contract['schema']['x-surface']['contract']);
+    $this->assertStringEndsWith('/surface-api/registration.step2/configure', $contract['schema']['$id']);
     $this->assertSame(['venue'], $contract['schema']['properties']['room']['x-surface']['dependsOn']);
     $this->assertSame('riverside', $contract['values']['venue']);
 
-    // A surface or situation that names nothing is refused, and a POST
+    // A resource or operation that names nothing is refused, and a POST
     // without the session's token is refused before it is read.
     $this->drupalGet('surface-api/registration.step9/configure');
     $this->assertSession()->statusCodeEquals(403);
@@ -177,10 +234,11 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $this->assertSame('library', $refined['values']['venue']);
     $this->assertSame('Spring meetup', $refined['values']['title']);
     // The orphaned room is held unanswered, so the capacity is refined
-    // against no room at all: its declared limit, and no room's words
-    // under it. It falls back to what is stored.
+    // against no room at all: its declared lower bound and no upper one,
+    // and no room's words under it. It falls back to what is stored.
     $capacity = $refined['schema']['properties']['capacity'];
-    $this->assertSame(1000, $capacity['maximum']);
+    $this->assertSame(1, $capacity['minimum']);
+    $this->assertArrayNotHasKey('maximum', $capacity);
     $this->assertArrayNotHasKey('description', $capacity);
     $this->assertSame(50, $refined['values']['capacity']);
 
@@ -193,7 +251,7 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     ]));
     $this->assertSame(['room'], $again['stale']);
     $this->assertNull($again['values']['room']);
-    $this->assertSame(1000, $again['schema']['properties']['capacity']['maximum']);
+    $this->assertArrayNotHasKey('maximum', $again['schema']['properties']['capacity']);
 
     // Saved from there, the empty room stands for the stored one, which
     // the same submission's venue refuses, as the form refuses it
@@ -231,37 +289,39 @@ class ServedContractEndpointsTest extends BrowserTestBase {
   }
 
   /**
-   * Tests refine follows the licence example 4's alter mounted on step 3.
+   * Tests refine follows the license example 4's alter mounted on step 3.
    *
-   * The capacity's dependsOn names the licence by its path, which is
+   * The capacity's dependsOn names the license by its path, which is
    * what the app watches; refined without one the capacity stops at a
    * hundred, and with one it is the room's again.
    */
-  public function testRefineFollowsTheMountedLicence(): void {
+  public function testRefineFollowsTheMountedLicense(): void {
     $this->drupalLogin($this->drupalCreateUser(['administer site configuration']));
-    $licence = 'third_party_settings.data_surface_examples_compliance.licence';
+    $license = 'third_party_settings.data_surface_examples_compliance.license';
     $values = ['venue' => 'riverside', 'room' => 'riverside_main', 'capacity' => 150];
     $refined = $this->json($this->post('surface-api/registration.step3/configure/refine', ['values' => $values]));
     $capacity = $refined['schema']['properties']['capacity'];
-    $this->assertSame(['room', $licence], $capacity['x-surface']['dependsOn']);
+    $this->assertSame(['room', $license], $capacity['x-surface']['dependsOn']);
     $this->assertSame(100, $capacity['maximum']);
 
-    $values['third_party_settings'] = ['data_surface_examples_compliance' => ['licence' => '2048', 'stewards' => 3]];
+    $values['third_party_settings'] = ['data_surface_examples_compliance' => ['license' => '2048', 'stewards' => 3]];
     $refined = $this->json($this->post('surface-api/registration.step3/configure/refine', ['values' => $values]));
     $this->assertSame(400, $refined['schema']['properties']['capacity']['maximum']);
-    $this->assertSame('2048', $refined['values']['third_party_settings']['data_surface_examples_compliance']['licence']);
+    $this->assertSame('2048', $refined['values']['third_party_settings']['data_surface_examples_compliance']['license']);
 
-    // A licence in the wrong format is no licence to the refiner: the
+    // A license in the wrong format is no license to the refiner: the
     // ceiling of 100 again, the typed value handed back as it was, and
     // the pattern explained by its message.
-    $values['third_party_settings']['data_surface_examples_compliance']['licence'] = 'EV-2048';
+    $values['third_party_settings']['data_surface_examples_compliance']['license'] = 'EV-2048';
     $refined = $this->json($this->post('surface-api/registration.step3/configure/refine', ['values' => $values]));
     $this->assertSame(100, $refined['schema']['properties']['capacity']['maximum']);
-    $this->assertSame('Up to 100 without an event licence. With one, up to 400.', $refined['schema']['properties']['capacity']['description']);
-    $this->assertSame('EV-2048', $refined['values']['third_party_settings']['data_surface_examples_compliance']['licence']);
-    $schema = $refined['schema']['properties']['third_party_settings']['properties']['data_surface_examples_compliance']['properties']['licence'];
+    $this->assertSame('Up to 100 without an event license.', $refined['schema']['properties']['capacity']['description']);
+    $this->assertSame('EV-2048', $refined['values']['third_party_settings']['data_surface_examples_compliance']['license']);
+    // The license is the compliance structure's, defined once.
+    $site = $refined['schema']['properties']['third_party_settings']['properties']['data_surface_examples_compliance'];
+    $schema = SchemaResolver::inline($site, $refined['schema'])['properties']['license'];
     $this->assertSame('^\\d{4}$', $schema['pattern']);
-    $this->assertSame('A licence number is four digits, such as 2048.', $schema['x-surface']['patternMessage']);
+    $this->assertSame('A license number is four digits, such as 2048.', $schema['x-surface']['patternMessage']);
   }
 
   /**
@@ -281,12 +341,14 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     // The garden room seats 30, so the capacity asked for fits it: only
     // the room is wrong.
     $wrong_room = $this->json($this->post($path, ['values' => ['room' => 'library_garden', 'capacity' => 20] + $values]));
-    $this->assertFalse($wrong_room['valid']);
-    $this->assertSame(['room'], array_column($wrong_room['violations'], 'path'));
-    $this->assertNull($wrong_room['prepared']);
+    $this->assertFalse($wrong_room['ok']);
+    $this->assertSame(['room' => 'no_such_choice'], array_column($wrong_room['violations'], 'code', 'path'));
+    // What storage rehearsed is never served: it may hold what the caller
+    // may not see.
+    $this->assertArrayNotHasKey('prepared', $wrong_room);
 
     $too_many = $this->json($this->post($path, ['values' => ['capacity' => 151] + $values]));
-    $this->assertFalse($too_many['valid']);
+    $this->assertFalse($too_many['ok']);
     $this->assertSame(['capacity'], array_column($too_many['violations'], 'path'));
     $this->assertStringContainsString('150', $too_many['violations'][0]['message']);
 
@@ -296,14 +358,14 @@ class ServedContractEndpointsTest extends BrowserTestBase {
       'values' => ['room' => NULL, 'capacity' => 20] + $values,
       'stale' => ['room'],
     ]));
-    $this->assertFalse($moved['valid']);
+    $this->assertFalse($moved['ok']);
     $this->assertSame(['room'], array_column($moved['violations'], 'path'));
 
     $valid = $this->json($this->post($path, ['values' => $values]));
-    $this->assertTrue($valid['valid']);
+    $this->assertTrue($valid['ok']);
     $this->assertSame([], $valid['violations']);
     $this->assertSame('harbour_deck', $valid['values']['room']);
-    $this->assertSame('harbour_deck', $valid['prepared']['room']);
+    $this->assertSame(['ok', 'committed', 'changed', 'changes', 'values', 'violations', 'notes', 'stale'], array_keys($valid));
 
     // Nothing was written by any of them.
     $this->container->get('config.factory')->reset();

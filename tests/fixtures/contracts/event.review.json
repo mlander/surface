@@ -1,0 +1,81 @@
+{
+    "resource": "event.review",
+    "module": "data_surface_examples",
+    "contract": 2,
+    "documents": [
+        {
+            "resource": "event.review",
+            "operation": null,
+            "label": null,
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "x-surface": {
+                    "contract": 2,
+                    "version": 1,
+                    "rules": [
+                        0
+                    ]
+                },
+                "type": "object",
+                "properties": {
+                    "reviewed_on": {
+                        "title": "Reviewed on",
+                        "description": "YYYY-MM-DD.",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "patternMessage": "Write the date as YYYY-MM-DD, such as 2026-10-19."
+                        }
+                    },
+                    "reviewed_by": {
+                        "title": "Reviewed by",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [
+                                "reviewed_on"
+                            ],
+                            "declared": true
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "allOf": [
+                    {
+                        "if": {
+                            "properties": {
+                                "reviewed_on": {
+                                    "not": {
+                                        "type": "null"
+                                    }
+                                }
+                            },
+                            "required": [
+                                "reviewed_on"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "reviewed_by": {
+                                    "description": "Required once a review date is set.",
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "reviewed_by"
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}

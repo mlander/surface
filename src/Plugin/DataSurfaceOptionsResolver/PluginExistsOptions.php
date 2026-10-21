@@ -7,6 +7,7 @@ namespace Drupal\data_surface\Plugin\DataSurfaceOptionsResolver;
 use Drupal\Component\Plugin\Definition\PluginDefinitionInterface;
 use Drupal\Component\Plugin\Exception\PluginException;
 use Drupal\Component\Plugin\Factory\DefaultFactory;
+use Drupal\Component\Plugin\FallbackPluginManagerInterface;
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Plugin\Plugin\Validation\Constraint\PluginExistsConstraint;
@@ -25,6 +26,10 @@ use Symfony\Component\Validator\Constraint;
  * description of a list of options. Nothing beside it has to repeat the
  * manager service name, which is what the adapter-era select adapters
  * did.
+ *
+ * Except where the constraint takes any id: `allowFallback` on a manager
+ * with a fallback plugin accepts every id the fallback answers for,
+ * which is no list, so none is offered and the key is a free value.
  */
 #[DataSurfaceOptionsResolver(
   id: 'plugin_exists',
@@ -32,6 +37,14 @@ use Symfony\Component\Validator\Constraint;
   constraint: 'PluginExists',
 )]
 final class PluginExistsOptions extends DataSurfaceOptionsResolverBase {
+
+  /**
+   * {@inheritdoc}
+   */
+  public function applies(Constraint $constraint): bool {
+    return parent::applies($constraint)
+      && !($constraint instanceof PluginExistsConstraint && $constraint->allowFallback && $constraint->pluginManager instanceof FallbackPluginManagerInterface);
+  }
 
   /**
    * {@inheritdoc}

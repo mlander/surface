@@ -156,8 +156,8 @@ Rules for the whole rework:
    with `FieldStorageTarget` is attached at `storage`; `reuse()` hands it
    `FieldStorageSurface::edit()`, which adds the has-data constraint; the
    field tools' add path uses `reuse`. `SurfaceCatalogue`
-   (`data_surface.surface_catalogue`) and `docs/catalogue.md` via
-   `scripts/generate-catalogue.php`. Deviations: `data_surface:node_type_add`
+   (`data_surface.surface_catalogue`) and `docs/catalog.md` via
+   `scripts/generate-catalog.php`. Deviations: `data_surface:node_type_add`
    is renamed, not aliased, and `NodeTypeAdd` and
    `SurfaceProviderToolBase` are deleted; `NodeTypeSurfaceProvider` and
    `NodeTypeAddTarget` stay, deprecated and unrouted, because the old
@@ -320,7 +320,7 @@ Rules for the whole rework:
    deleted with its six tests (the composite tests now use two state
    targets). `ConfigEntityTarget` and `CompositeTarget` are also reached
    only by tests and are left for the owner. `ROADMAP.md` gained "After
-   the rework". `docs/catalogue.md` changed (storage identity and its
+   the rework". `docs/catalog.md` changed (storage identity and its
    derived slot); both `COMPARISON.md` files regenerated unchanged, as
    they compare instance settings only.
 

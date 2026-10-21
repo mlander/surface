@@ -8,8 +8,8 @@ use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\data_surface\Surface\SurfaceAccessInterface;
-use Drupal\data_surface\Surface\SurfaceContext;
+use Drupal\data_surface\Resource\OperationAccessInterface;
+use Drupal\data_surface\Resource\OperationContext;
 use Drupal\node\NodeTypeInterface;
 
 /**
@@ -19,10 +19,10 @@ use Drupal\node\NodeTypeInterface;
  * never grants more than core's own content type form grants: creating
  * asks the node type access handler whether one may be created, editing
  * asks the content type the context names whether it may be updated. The
- * situation's permission, this module's own, is checked first; both have
+ * operation's permission, this module's own, is checked first; both have
  * to allow, so neither alone opens anything.
  */
-final class NodeTypeAccess implements SurfaceAccessInterface {
+final class NodeTypeAccess implements OperationAccessInterface {
 
   /**
    * Constructs a NodeTypeAccess.
@@ -37,7 +37,7 @@ final class NodeTypeAccess implements SurfaceAccessInterface {
   /**
    * {@inheritdoc}
    */
-  public function access(SurfaceContext $context, AccountInterface $account): AccessResultInterface {
+  public function access(OperationContext $context, AccountInterface $account): AccessResultInterface {
     if ($context->creates) {
       return $this->entityTypeManager->getAccessControlHandler('node_type')
         ->createAccess(NULL, $account, [], TRUE);

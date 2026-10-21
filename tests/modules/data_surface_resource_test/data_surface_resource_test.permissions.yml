@@ -1,0 +1,48 @@
+keep a larder:
+  title: 'Keep a larder'
+  description: 'The larder fixture''s own operations.'
+stock spice rack:
+  title: 'Stock the spice rack'
+  description: 'The spice rack fixture is open: its keys may be changed.'
+inspect spice rack:
+  title: 'Inspect the spice rack'
+  description: 'The spice rack fixture is locked: its keys are shown and fixed.'
+hide spice rack:
+  title: 'Hide the spice rack'
+  description: 'The spice rack fixture is omitted: its keys are not there.'
+inspect ownership:
+  title: 'Inspect the ownership'
+  description: 'The ownership fixture is locked: its members are shown and fixed.'
+hide ownership:
+  title: 'Hide the ownership'
+  description: 'The ownership fixture is omitted: its members are not there.'
+inspect archive:
+  title: 'Inspect the archive'
+  description: 'The archive fixture is locked: its keys are shown and fixed.'
+hide archive:
+  title: 'Hide the archive'
+  description: 'The archive fixture is omitted: its keys are not there.'
+keep an exhibit:
+  title: 'Keep an exhibit'
+  description: 'The exhibit fixture''s own operation.'
+inspect exhibit:
+  title: 'Inspect the exhibit'
+  description: 'The exhibit fixture''s provenance and loan are locked, by the account alone.'
+use the vault:
+  title: 'Use the vault'
+  description: 'The exhibit fixture''s vault may be chosen: a runtime refiner, not access.'
+keep a gallery:
+  title: 'Keep a gallery'
+  description: 'The gallery fixture''s own operation.'
+inspect gallery:
+  title: 'Inspect the gallery'
+  description: 'The gallery fixture is locked whole, by an alter''s answer.'
+inspect walls:
+  title: 'Inspect the walls'
+  description: 'The gallery fixture''s walls are locked, by their own access class.'
+freeze walls:
+  title: 'Freeze the walls'
+  description: 'The gallery fixture''s walls and oil finish are locked, by alters'' answers.'
+hide plaques:
+  title: 'Hide the plaques'
+  description: 'The gallery fixture''s plaque is left out, by an alter''s answer.'

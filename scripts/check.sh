@@ -36,8 +36,9 @@ grep -qE '^(FAILURES|ERRORS)!' "$WORK/phpunit.txt" \
 echo "phpunit: $SUMMARY"
 
 # 2. Coding standards. The stored installed_paths point inside the container.
+# The module outgrew PHP's default memory limit, as phpstan did.
 echo "== phpcs =="
-(cd "$MODULE" && "$ROOT/vendor/bin/phpcs" --runtime-set installed_paths \
+(cd "$MODULE" && "$ROOT/vendor/bin/phpcs" -d memory_limit=1G --runtime-set installed_paths \
   "$ROOT/vendor/drupal/coder/coder_sniffer,$ROOT/vendor/slevomat/coding-standard") \
   || fail "phpcs"
 
@@ -54,8 +55,12 @@ cat > "$WORK/merge.php" <<'PHP'
 $config = json_decode(file_get_contents($core . '/.cspell.json'), TRUE);
 $config['globRoot'] = $module;
 // data_surface_react's built app and its lock file are generated, and its
-// Node dependencies are not this module's to spell.
-$config['ignorePaths'] = ['.git/**', '**/node_modules/**', '.cspell-project-words.txt', 'modules/data_surface_react/dist/**', '**/package-lock.json'];
+// Node dependencies are not this module's to spell. The dated reviews are
+// other readers' words, quoted as they wrote them (tool names, French).
+// The contract baselines are generated from code cspell already reads,
+// and an allowance in one names the path it accepted as it was, in the
+// old spelling when the change was a rename.
+$config['ignorePaths'] = ['.git/**', '**/node_modules/**', '.cspell-project-words.txt', 'modules/data_surface_react/dist/**', '**/package-lock.json', 'docs/reviews-*/**', 'tests/fixtures/contracts/**'];
 foreach ($config['dictionaryDefinitions'] as &$dictionary) {
   $dictionary['path'] = $core . '/' . ltrim($dictionary['path'], './');
 }

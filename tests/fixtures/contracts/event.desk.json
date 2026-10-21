@@ -1,0 +1,188 @@
+{
+    "resource": "event.desk",
+    "module": "data_surface_examples",
+    "contract": 2,
+    "documents": [
+        {
+            "resource": "event.desk",
+            "operation": "configure",
+            "label": "Configure the information desk",
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": "Configure the information desk",
+                "description": "Sets the information desk: its phone, whether it is listed in the printed program, its lead and up to four volunteers.",
+                "x-surface": {
+                    "contract": 2,
+                    "operation": {
+                        "id": "configure",
+                        "label": "Configure the information desk",
+                        "description": "Sets the information desk: its phone, whether it is listed in the printed program, its lead and up to four volunteers.",
+                        "kind": "update",
+                        "creates": false,
+                        "destructive": false,
+                        "idempotent": true
+                    },
+                    "version": 1,
+                    "rules": [
+                        0
+                    ]
+                },
+                "type": "object",
+                "properties": {
+                    "phone": {
+                        "$ref": "#/$defs/event.phone",
+                        "title": "Desk phone",
+                        "type": "string",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "patternMessage": "Write the number in digits, such as +1 555 0100."
+                        }
+                    },
+                    "in_program": {
+                        "title": "Listed in the printed program",
+                        "type": [
+                            "boolean",
+                            "null"
+                        ],
+                        "default": false,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "lead": {
+                        "title": "Desk lead",
+                        "$ref": "#/$defs/event.person",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [
+                                "in_program"
+                            ],
+                            "reads": {
+                                "listed": "in_program"
+                            },
+                            "declared": true
+                        }
+                    },
+                    "volunteers": {
+                        "title": "Volunteers",
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "maxItems": 4,
+                        "items": {
+                            "$ref": "#/$defs/event.person"
+                        },
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "list": true
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "phone"
+                ],
+                "allOf": [
+                    {
+                        "if": {
+                            "properties": {
+                                "in_program": {
+                                    "const": true
+                                }
+                            },
+                            "required": [
+                                "in_program"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "lead": {
+                                    "type": "object",
+                                    "properties": {
+                                        "email": {
+                                            "description": "Required while this person is listed publicly.",
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "email"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                ],
+                "$defs": {
+                    "event.person": {
+                        "title": "event.person",
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "title": "Name",
+                                "type": "string",
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "email": {
+                                "title": "Email",
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "idn-email",
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": [
+                                        "listed"
+                                    ]
+                                }
+                            },
+                            "phone": {
+                                "$ref": "#/$defs/event.phone",
+                                "title": "Phone",
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": [],
+                                    "patternMessage": "Write the number in digits, such as +1 555 0100."
+                                }
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "name"
+                        ],
+                        "x-surface": {
+                            "ports": {
+                                "listed": {
+                                    "type": "boolean",
+                                    "required": false
+                                }
+                            }
+                        }
+                    },
+                    "event.phone": {
+                        "title": "event.phone",
+                        "description": "Digits, with spaces if you like, and a leading + for a country code.",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "pattern": "^\\+?[0-9 ]{7,20}$",
+                        "examples": [
+                            "+1 555 0100"
+                        ],
+                        "x-surface": {
+                            "patternMessage": "Write the number in digits, such as +1 555 0100."
+                        }
+                    }
+                }
+            }
+        }
+    ]
+}

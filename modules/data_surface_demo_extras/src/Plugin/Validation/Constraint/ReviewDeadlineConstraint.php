@@ -12,7 +12,7 @@ use Symfony\Component\Validator\Constraint as SymfonyConstraint;
  * Checks that an amount and a unit make a deadline in the allowed range.
  *
  * The range is a property of the stored seconds, one hour to thirty
- * days, and the surface asks for an amount and a unit. Neither half
+ * days, and the resource asks for an amount and a unit. Neither half
  * alone can say whether "45 days" is too long, so the check sits on the
  * pair and reports on the amount, which is what a caller changes to fix
  * it, in the units the caller used.

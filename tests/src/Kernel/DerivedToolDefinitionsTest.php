@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Component\Serialization\Yaml;
+use Drupal\Core\Access\AccessResultReasonInterface;
 use Drupal\Core\Render\RenderContext;
+use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\data_surface_demo_node_type\Resource\NodeTypeResource;
 use Drupal\tool\Tool\ToolDefinition;
 use Drupal\tool\Tool\ToolManager;
 use Drupal\tool\TypedData\InputDefinitionInterface;
@@ -26,7 +29,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * object: a LabeledChoice's TranslatableMarkup labels on the node type's
  * preview mode and on the extras' deadline unit broke the page for
  * data_surface:node.type:add. And a module installed after the tool
- * definitions were cached has to have its surfaces' tools discovered
+ * definitions were cached has to have its resources' tools discovered
  * without anyone clearing a plugin cache by hand.
  */
 #[Group('data_surface')]
@@ -54,7 +57,7 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
     'data_surface_demo',
     'data_surface_demo_extras',
     'data_surface_demo_node_type',
-    'data_surface_surface_test',
+    'data_surface_resource_test',
     'data_surface_tool',
   ];
 
@@ -83,8 +86,8 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
    * Lists the derived tools' ids.
    *
    * @return list<string>
-   *   Every `data_surface:<surface>:<situation>` tool and every read tool
-   *   beside one, `data_surface:<surface>:<situation>:read`, sorted.
+   *   Every `data_surface:<id>:<operation>` tool and every read tool
+   *   beside one, `data_surface:<id>:<operation>:read`, sorted.
    */
   protected function derivedIds(): array {
     $ids = array_values(array_filter(
@@ -150,7 +153,7 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
       assert($definition instanceof ToolDefinition);
       $build = $explorer->viewTool($id);
       // Explorer suggests a config schema for a tool that takes inputs,
-      // which a read tool for a situation that needs nothing does not.
+      // which a read tool for an operation that needs nothing does not.
       $this->assertSame($definition->getInputDefinitions() !== [], isset($build['config_schema']), $id);
       $schema = $this->suggestedSchema($explorer, $definition->getInputDefinitions());
       $this->assertIsString(Yaml::encode(['tool.plugin.' . $id => $schema]), $id);
@@ -172,13 +175,13 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that installing a module with a surface derives its tools.
+   * Tests that installing a module with a resource derives its tools.
    *
    * The tool definitions are read, and so cached, before the module is
    * installed; installing it is all that happens before they are read
    * again, as on a site. Tool Explorer's index lists them too.
    */
-  public function testInstalledModuleSurfacesBecomeTools(): void {
+  public function testInstalledModuleResourcesBecomeTools(): void {
     $before = $this->derivedIds();
     $this->assertContains('data_surface:node.type:add', $before);
     $this->assertNotContains('data_surface:registration.step3:configure', $before);
@@ -188,6 +191,19 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
 
     $after = $this->derivedIds();
     $this->assertSame([
+      'data_surface:event.bulletin:configure',
+      'data_surface:event.bulletin:configure:read',
+      'data_surface:event.desk:configure',
+      'data_surface:event.desk:configure:read',
+      'data_surface:event.doors:configure',
+      'data_surface:event.doors:configure:read',
+      'data_surface:event.press:configure',
+      'data_surface:event.press:configure:read',
+      'data_surface:event.program:check',
+      'data_surface:event.program:configure',
+      'data_surface:event.program:configure:read',
+      'data_surface:event.sales:configure',
+      'data_surface:event.sales:configure:read',
       'data_surface:registration.step1:configure',
       'data_surface:registration.step1:configure:read',
       'data_surface:registration.step2:configure',
@@ -202,6 +218,29 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
     foreach ($after as $id) {
       $this->assertContains($id, $listed);
     }
+  }
+
+  /**
+   * Tests that a derived tool declares its operation's permission.
+   *
+   * The Tool API checks a declared permission before the tool's own
+   * access and prints it in `tool:info`; a permission with a `%key`
+   * placeholder names a different permission per call, so it is not
+   * declared and the tool's own access is the only check.
+   */
+  public function testDerivedToolsDeclareTheOperationsPermission(): void {
+    $definitions = $this->toolManager()->getDefinitions();
+    $this->assertSame(NodeTypeResource::PERMISSION, $definitions['data_surface:node.type:add']->getPermission());
+    $this->assertSame(NodeTypeResource::PERMISSION, $definitions['data_surface:node.type:edit']->getPermission());
+    $this->assertSame(NodeTypeResource::PERMISSION, $definitions['data_surface:node.type:edit:read']->getPermission());
+    $this->assertNull($definitions['data_surface:field.instance:add']->getPermission());
+    $this->assertNull($definitions['data_surface:field.instance:edit:read']->getPermission());
+
+    // The declared permission is asked first, before any input is read.
+    $refused = ToolManager::checkPermission($definitions['data_surface:node.type:add'], new AnonymousUserSession());
+    $this->assertFalse($refused->isAllowed());
+    $this->assertInstanceOf(AccessResultReasonInterface::class, $refused);
+    $this->assertStringContainsString(NodeTypeResource::PERMISSION, (string) $refused->getReason());
   }
 
   /**

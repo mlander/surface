@@ -14,7 +14,7 @@ namespace Drupal\data_surface_examples;
  * they answer, and the example 5 page and the README show them as Drush
  * commands. Every call says where the event is, so none depends on what
  * an earlier one wrote, and every capacity is fifty or fewer, which needs
- * no event licence and one steward, the default, so the compliance
+ * no event license and one steward, the default, so the compliance
  * module of example 4 does not change the answers.
  */
 final class ExampleCalls {
@@ -74,7 +74,7 @@ final class ExampleCalls {
    * Spells one call as the Tool API's Drush command.
    *
    * Run as user 1, because tool:run runs as anonymous unless told
-   * otherwise, and the situation asks for "administer site
+   * otherwise, and the operation asks for "administer site
    * configuration". The dry run is a second input, which tool:run reads
    * as name=value and decodes as JSON, so `true` is a boolean.
    *
@@ -98,7 +98,7 @@ final class ExampleCalls {
    * Spells the read call as the Tool API's Drush command.
    *
    * Run as user 1 for the same reason: reading asks what writing asks.
-   * The situation needs nothing, so the read takes no input.
+   * The operation needs nothing, so the read takes no input.
    *
    * @return string
    *   The command.

@@ -9,6 +9,8 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\data_surface\DataSurface;
 use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DataSurfaceInterface;
+use Drupal\data_surface\Pipeline\DataSurfacePipeline;
+use Drupal\data_surface\Pipeline\Sentences;
 use Drupal\data_surface\Plugin\Validation\Constraint\LabeledChoiceConstraint;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\Validator\Constraints\Choice;
@@ -41,7 +43,7 @@ class LabeledChoiceTest extends DataSurfaceKernelTestBase {
   protected const MESSAGE = 'The value you selected is not a valid choice.';
 
   /**
-   * Builds a one-key surface carrying a labeled choice.
+   * Builds a one-key data surface carrying a labeled choice.
    *
    * Spelled canonically: the allowed values are Choice's own list, the
    * labels hang beside them keyed by value. Integer choices have to be
@@ -49,7 +51,7 @@ class LabeledChoiceTest extends DataSurfaceKernelTestBase {
    * from a list of values.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface.
+   *   The data surface.
    */
   protected function surface(): DataSurfaceInterface {
     return new DataSurface(
@@ -114,7 +116,7 @@ class LabeledChoiceTest extends DataSurfaceKernelTestBase {
    * Tests that the constraint carries nothing but the list and its meaning.
    *
    * It is expected to land in core, so it may know about values, labels
-   * and help text and about nothing else: no surface, no widget, no
+   * and help text and about nothing else: no data surface, no widget, no
    * options resolver.
    */
   public function testCarriesNoModuleSpecificOption(): void {
@@ -177,10 +179,17 @@ class LabeledChoiceTest extends DataSurfaceKernelTestBase {
     // placeholders still placeholders: flattening it here would render
     // them once and leave whatever prints the violation to escape the
     // result a second time.
+    // The constraint's own message is the refusal's first sentence, kept
+    // whole, and a sentence of its own lists what may be chosen.
     $message = $violations->byKey('mode')[0]->message;
-    $this->assertInstanceOf(TranslatableMarkup::class, $message);
-    $this->assertSame('7', $message->getArguments()['%value']);
-    $this->assertSame(self::MESSAGE, (string) $message);
+    $this->assertInstanceOf(Sentences::class, $message);
+    [$own, $choose] = $message->sentences();
+    $this->assertInstanceOf(TranslatableMarkup::class, $own);
+    $this->assertSame('7', $own->getArguments()['%value']);
+    $this->assertSame(self::MESSAGE, (string) $own);
+    $this->assertInstanceOf(TranslatableMarkup::class, $choose);
+    $this->assertSame(DataSurfacePipeline::REFUSAL_CONTEXT, $choose->getOption('context'));
+    $this->assertSame('The value you selected is not a valid choice. Choose Disabled, Optional or Required.', (string) $message);
   }
 
   /**
@@ -212,7 +221,7 @@ class LabeledChoiceTest extends DataSurfaceKernelTestBase {
    * Core's ChoiceValidator compares with in_array(..., strict), so the
    * string '1' is not the integer 1 and a form submission, where every
    * value arrives as a string, would fail against integer choices. The
-   * surface makes the two agree one layer earlier: accept() casts every
+   * pipeline makes the two agree one layer earlier: accept() casts every
    * value to its definition's type before anything validates, so what
    * reaches the constraint is already the integer the choices are
    * written in. Keeping the reconciliation there is what lets the

@@ -1,0 +1,19 @@
+data_surface_first.newsletter:
+  path: '/admin/config/services/surface-newsletter'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Newsletter settings'
+    _data_surface_resource: 'Drupal\data_surface_first\Resource\NewsletterResource'
+    _data_surface_operation: 'configure'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
+data_surface_first.store:
+  path: '/admin/config/services/surface-store'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Store location'
+    _data_surface_resource: 'Drupal\data_surface_first\Resource\StoreResource'
+    _data_surface_operation: 'configure'
+  requirements:
+    _data_surface_operation_access: 'TRUE'

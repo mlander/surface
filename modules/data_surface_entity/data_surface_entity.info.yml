@@ -1,0 +1,11 @@
+name: Data Surface - Content entities
+type: module
+description: 'Derives a resource for every content entity bundle with a form display, one child per field derived from its typed data, with field access as each child''s access; add and edit a basic page through it.'
+package: Data Surface
+lifecycle: experimental
+lifecycle_link: 'https://git.drupalcode.org/project/data_surface/-/blob/1.0.x/README.md#experimental-submodules'
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - data_surface:data_surface
+  - data_surface:data_surface_tool
+  - drupal:node

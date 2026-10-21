@@ -17,17 +17,17 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * The group C exemplar, taken the whole way. A contrib field type is
  * pointed at a subclass by hook_field_info_alter() and its per instance
- * settings form is generated from a surface, while the storage shape is
+ * settings form is generated from a resource, while the storage layout is
  * unchanged. Every part of that had been checked by calling the field
- * item, the target and the shape object directly. What a browser adds is
- * the one thing those cannot: Field UI owns the write here. It builds
- * $form['settings'], copies whatever the elements produced onto the
- * field config entity, and saves it — so the values have to have been
- * through the target's prepare() by the time the element validate
- * callback returns, or the wrong shape is what gets stored.
+ * item, the storage class and the layout object directly. What a browser
+ * adds is the one thing those cannot: Field UI owns the write here. It
+ * builds $form['settings'], copies whatever the elements produced onto the
+ * field config entity, and saves it, so the values have to have been
+ * through the storage's prepare() by the time the element validate
+ * callback returns, or the wrong layout is what gets stored.
  *
  * Two assertions follow from that and are the point of this test: the
- * saved field config holds the address module's own storage shape, each
+ * saved field config holds the address module's own storage layout, each
  * override wrapped in its single-key array and each country keyed by
  * itself, and the parent class's own accessors — the ones the widget and
  * the formatter read settings through — answer from it unchanged.
@@ -95,13 +95,13 @@ class FieldUiAddressSettingsTest extends BrowserTestBase {
     $this->drupalGet(self::EDIT_PATH);
     $assert_session->statusCodeEquals(200);
 
-    // The surface's keys are Field UI's settings keys: no wrapper of the
+    // The resource's keys are Field UI's settings keys: no wrapper of the
     // module's own, so each one sits where the host stores it.
     $assert_session->fieldExists('settings[available_countries][]');
     $assert_session->fieldExists('settings[langcode_override]');
     // One element per overridable address property, named by the
     // property rather than by a row index, which is the thing the
-    // storage shape cannot say.
+    // storage layout cannot say.
     $assert_session->fieldExists('settings[field_overrides][' . AddressField::GIVEN_NAME . ']');
     $assert_session->fieldExists('settings[field_overrides][' . AddressField::ORGANIZATION . ']');
     // With the labels the address module itself uses, and the three
@@ -124,7 +124,7 @@ class FieldUiAddressSettingsTest extends BrowserTestBase {
     ], 'Save settings');
     $assert_session->pageTextContains('Saved Address configuration.');
 
-    // What is stored is the address module's own shape, unchanged: each
+    // What is stored is the address module's own layout, unchanged: each
     // country keyed by itself, each override wrapped in its single-key
     // array, and the deprecated key emptied so it can never shadow them.
     $this->container->get('entity_field.manager')->clearCachedFieldDefinitions();
@@ -132,8 +132,8 @@ class FieldUiAddressSettingsTest extends BrowserTestBase {
     $this->assertInstanceOf(FieldConfig::class, $field);
     $settings = $field->getSettings();
     $this->assertSame(['US' => 'US', 'CA' => 'CA'], $settings['available_countries']);
-    // In the order the surface declares the properties, not the order
-    // the form happened to be filled in: the shape object walks the
+    // In the order the resource declares the properties, not the order
+    // the form happened to be filled in: the layout object walks the
     // accepted values, and those are keyed by the definitions.
     $this->assertSame([
       AddressField::GIVEN_NAME => ['override' => FieldOverride::REQUIRED],
@@ -143,7 +143,7 @@ class FieldUiAddressSettingsTest extends BrowserTestBase {
 
     // And the accessors the parent class already had — what the widget
     // and the formatter read settings through — answer from that storage
-    // without knowing a surface was involved.
+    // without knowing a resource was involved.
     $item = $this->container->get('typed_data_manager')->create($field->getItemDefinition());
     $this->assertSame(['US' => 'US', 'CA' => 'CA'], $item->getAvailableCountries());
     $this->assertSame([
@@ -151,8 +151,8 @@ class FieldUiAddressSettingsTest extends BrowserTestBase {
       AddressField::ORGANIZATION => FieldOverride::HIDDEN,
     ], $item->getFieldOverrides());
 
-    // Reopening the form shows the input shape of what is stored, not
-    // the storage shape: a list of codes and one value per property.
+    // Reopening the form shows the input layout of what is stored, not
+    // the storage layout: a list of codes and one value per property.
     $this->drupalGet(self::EDIT_PATH);
     $assert_session->fieldValueEquals(
       'settings[field_overrides][' . AddressField::ORGANIZATION . ']',
@@ -172,8 +172,8 @@ class FieldUiAddressSettingsTest extends BrowserTestBase {
    * An empty override string makes the addressing library's
    * FieldOverrides throw, so "no override" has to be the absence of the
    * row. The form can only say it by submitting the empty choice, and
-   * the target's prepare step is the only place that can turn that into
-   * an absence — which is exactly why the transform lives there rather
+   * the storage's prepare step is the only place that can turn that into
+   * an absence, which is exactly why the transform lives there rather
    * than in a validate handler nothing but the form goes through.
    */
   public function testClearingAnOverrideRemovesIt(): void {

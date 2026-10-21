@@ -1,0 +1,22 @@
+# The cabinet's two operations, served by the generic form, so a test
+# reads what the form draws for a resource its access locks whole, a
+# variant its access locks, and an operation that changes nothing.
+data_surface_tool_test.cabinet.edit:
+  path: '/surface-test/cabinet'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Edit the cabinet'
+    _data_surface_resource: 'Drupal\data_surface_tool_test\Resource\CabinetResource'
+    _data_surface_operation: 'edit'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
+data_surface_tool_test.cabinet.count:
+  path: '/surface-test/cabinet/count'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Count the drawers'
+    _data_surface_resource: 'Drupal\data_surface_tool_test\Resource\CabinetResource'
+    _data_surface_operation: 'count'
+  requirements:
+    _data_surface_operation_access: 'TRUE'

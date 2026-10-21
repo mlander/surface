@@ -45,7 +45,7 @@ class ExamplesAjaxRefreshTest extends ExamplesWebDriverTestBase {
     $this->assertSame('', $page->findField('surface[room]')->getValue());
     $assert->hiddenFieldValueEquals('surface[@stale]', 'room');
     // The orphaned room no longer caps the capacity, nor describes it.
-    $this->assertSame('1000', $page->findField('surface[capacity]')->getAttribute('max'));
+    $this->assertNull($page->findField('surface[capacity]')->getAttribute('max'));
     $this->assertStringNotContainsString('Up to', $this->formItemText('surface[capacity]'));
     $assert->elementNotExists('css', '.messages');
     $assert->elementNotExists('css', '.error');
@@ -76,8 +76,8 @@ class ExamplesAjaxRefreshTest extends ExamplesWebDriverTestBase {
     $this->assertTrue($assert->fieldExists('surface[ticket][note]')->isVisible());
     $assert->fieldNotExists('surface[ticket][price]');
     // Under the contract, what config schema says, with the ticket's
-    // row of its table: the surface's side is its full schema, which
-    // names both shapes whatever the pricing is.
+    // row of its table: the resource's side is its full schema, which
+    // names both variants whatever the pricing is.
     $documents = $this->todayDocuments();
     $this->assertCount(2, $documents);
     $this->assertStringContainsString('No schema is defined for property of type', $documents[0]);
@@ -85,7 +85,7 @@ class ExamplesAjaxRefreshTest extends ExamplesWebDriverTestBase {
     $this->assertSame([
       'ticket',
       'title, $comment',
-      'title, type, if/then on pricing (2 shapes: free has note; paid has price, currency)',
+      'title, anyOf, if/then on pricing (2 variants: free has note, $ref (registration.step3.ticket.free); paid has price, currency, $ref (registration.step3.ticket.paid))',
     ], $this->todayRow('ticket'));
     $this->assertSame([
       'room',
@@ -101,8 +101,8 @@ class ExamplesAjaxRefreshTest extends ExamplesWebDriverTestBase {
     $this->assertTrue($currency->isVisible());
     $this->assertSame('EUR', $currency->getValue());
     $assert->fieldNotExists('surface[ticket][note]');
-    // The slot is replaced whole; its deciding key and the contact beside
-    // it are not.
+    // The variants are replaced whole; their deciding key and the contact
+    // beside them are not.
     $this->assertTrue($this->stillProbed('surface[pricing]'));
     $this->assertTrue($this->stillProbed('surface[contact][email]'));
     $assert->elementNotExists('css', '.messages');
@@ -112,7 +112,7 @@ class ExamplesAjaxRefreshTest extends ExamplesWebDriverTestBase {
     $this->assertSame([
       'ticket',
       'title, $comment',
-      'title, type, if/then on pricing (2 shapes: free has note; paid has price, currency)',
+      'title, anyOf, if/then on pricing (2 variants: free has note, $ref (registration.step3.ticket.free); paid has price, currency, $ref (registration.step3.ticket.paid))',
     ], $this->todayRow('ticket'));
     $this->assertSame($documents, $this->todayDocuments());
     $assert->elementsCount('css', 'details.data-surface-today-panel', 1);

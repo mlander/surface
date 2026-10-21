@@ -1,0 +1,14 @@
+opens: '09:00'
+closes: 1020
+days:
+  - mon
+  - tue
+  - wed
+  - thu
+  - fri
+notes: ''
+after_hours: false
+door_code: ~
+late_days: []
+keywords: []
+holidays: closed

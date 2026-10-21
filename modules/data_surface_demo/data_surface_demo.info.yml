@@ -1,6 +1,6 @@
 name: Data Surface Demo
 type: module
-description: 'Demonstrates surface-generated configuration: a block plugin, a field formatter and a standalone form, each driven entirely by one surface.'
+description: 'Demonstrates configuration generated from a structure: a block plugin, a field formatter and a standalone form, each driven entirely by one structure.'
 package: Data Surface
 lifecycle: experimental
 lifecycle_link: 'https://git.drupalcode.org/project/data_surface/-/blob/1.0.x/README.md#experimental-submodules'

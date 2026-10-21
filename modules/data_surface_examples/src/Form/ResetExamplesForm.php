@@ -10,6 +10,7 @@ use Drupal\Core\Config\InstallStorage;
 use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\Core\Form\ConfirmFormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\State\StateInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Url;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -18,18 +19,32 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Puts every example's settings back to what the module ships.
  *
  * For a retake: whatever the examples were saved with, and whatever
- * another module mounted on them — the compliance module's licence under
+ * another module mounted on them — the compliance module's license under
  * example 3's third party settings — each config object is replaced
  * whole by its file in config/install. Read from the files rather than
  * written down here, so a shipped value that changes is reset to the new
- * one without touching this form.
+ * one without touching this form. The rooms example 4 lets a site close,
+ * which it keeps in State rather than in any example's settings, are
+ * opened again too, and example 10's workflow state is cleared.
  */
 final class ResetExamplesForm extends ConfirmFormBase {
 
   /**
-   * The prefix every example's config object shares.
+   * The prefix every config object the examples ship shares.
+   *
+   * Every example's settings, and the ticket types example 9 reads its
+   * keys from.
    */
-  public const PREFIX = 'data_surface_examples.registration_step';
+  public const PREFIX = 'data_surface_examples.';
+
+  /**
+   * The State keys an example reads, cleared whether or not it is on.
+   *
+   * Named here rather than read from the other modules' classes, which
+   * are not loaded while those modules are off: the rooms example 4 closes,
+   * and example 10's workflow state.
+   */
+  public const STATE = ['data_surface_examples_compliance.closed_rooms', 'data_surface_examples_workflow.state'];
 
   /**
    * Constructs the form.
@@ -38,17 +53,21 @@ final class ResetExamplesForm extends ConfirmFormBase {
    *   The config factory, written through.
    * @param \Drupal\Core\Extension\ModuleExtensionList $moduleList
    *   The module list, which knows where this module's files are.
+   * @param \Drupal\Core\State\StateInterface $state
+   *   The State, where example 4 lists the rooms a site has closed and
+   *   example 10's workflow module keeps its state.
    */
   public function __construct(
     protected readonly ConfigFactoryInterface $configs,
     protected readonly ModuleExtensionList $moduleList,
+    protected readonly StateInterface $state,
   ) {}
 
   /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
-    return new static($container->get('config.factory'), $container->get('extension.list.module'));
+    return new static($container->get('config.factory'), $container->get('extension.list.module'), $container->get('state'));
   }
 
   /**
@@ -94,10 +113,12 @@ final class ResetExamplesForm extends ConfirmFormBase {
     foreach ($shipped->listAll(self::PREFIX) as $name) {
       $config = $this->configs->getEditable($name);
       // The installer's own bookkeeping stays: it says where the object
-      // came from, which a reset does not change.
-      $core = $config->get('_core');
-      $config->setData((array) $shipped->read($name) + ($core === NULL ? [] : ['_core' => $core]))->save();
+      // came from, which a reset does not change; so does the language of
+      // a translatable value, which the storage keeps and no file says.
+      $kept = array_intersect_key($config->getRawData(), ['_core' => TRUE, 'langcode' => TRUE]);
+      $config->setData((array) $shipped->read($name) + $kept)->save();
     }
+    $this->state->deleteMultiple(self::STATE);
     $this->messenger()->addStatus($this->t('The examples are back to the settings the module ships with.'));
     $form_state->setRedirectUrl($this->getCancelUrl());
   }

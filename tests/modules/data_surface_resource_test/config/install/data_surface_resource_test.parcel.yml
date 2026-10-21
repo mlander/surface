@@ -1,0 +1,10 @@
+service: standard
+weight: 1
+insured: false
+declared_value: 100
+reference: ~
+signature: ~
+tracking: ~
+handling: fragile
+labels: []
+note: ~

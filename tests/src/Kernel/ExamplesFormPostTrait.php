@@ -9,7 +9,7 @@ use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\Session\AnonymousUserSession;
-use Drupal\data_surface\Form\DataSurfaceSituationForm;
+use Drupal\data_surface\Form\DataSurfaceOperationForm;
 use Drupal\user\Entity\Role;
 use Drupal\user\RoleInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -28,7 +28,7 @@ trait ExamplesFormPostTrait {
    * @param int $step
    *   The step, 2 or 3.
    * @param array $surface
-   *   The surface's input, keyed by surface key, complete.
+   *   The step's input under 'surface', keyed by resource key, complete.
    * @param array $extra
    *   The rest of the POST: the button, or the AJAX trigger's name.
    *
@@ -46,11 +46,11 @@ trait ExamplesFormPostTrait {
     $stack->push($request);
     $form_state = new FormState();
     $form_state->setUserInput([
-      'form_id' => 'data_surface_situation_form_data_surface_examples_step' . $step,
+      'form_id' => 'data_surface_operation_form_data_surface_examples_step' . $step,
       'surface' => $surface,
     ] + $extra);
     try {
-      $this->container->get('form_builder')->buildForm(DataSurfaceSituationForm::class, $form_state);
+      $this->container->get('form_builder')->buildForm(DataSurfaceOperationForm::class, $form_state);
     }
     catch (EnforcedResponseException) {
       // The redirect a browser's successful submission answers with.

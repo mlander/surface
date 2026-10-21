@@ -14,7 +14,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Tests the examples' reset puts every example back to the shipped files.
  *
  * For a retake: whatever was saved, and whatever another module stored
- * on an example — the compliance module's licence under example 3's third
+ * on an example — the compliance module's license under example 3's third
  * party settings — goes, and the files in config/install are what is
  * left.
  */
@@ -74,7 +74,7 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests a changed example 2 and a mounted key on example 3 are reset.
+   * Tests a changed example 2, a mounted key and a closed room are reset.
    */
   public function testTheResetPutsBackWhatTheModuleShips(): void {
     $two = 'data_surface_examples.registration_step2';
@@ -84,20 +84,37 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
     $this->config($two)->set('venue', 'harbour')->set('room', 'harbour_deck')->set('capacity', 120)->save();
     $this->config($three)
       ->set('title', 'Changed')
-      ->set('third_party_settings', ['data_surface_examples_compliance' => ['licence' => '2048', 'stewards' => 3]])
+      ->set('third_party_settings', ['data_surface_examples_compliance' => ['license' => '2048', 'stewards' => 3]])
       ->save();
     $this->assertSame('harbour_deck', $this->stored($two)['room']);
+    // Example 4's closed rooms live in State, not in any example's
+    // settings, and are opened again too.
+    $this->container->get('state')->set('data_surface_examples_compliance.closed_rooms', ['riverside_east']);
+    // So does example 10's workflow state, which is cleared.
+    $this->container->get('state')->set('data_surface_examples_workflow.state', 'published');
+    // Examples 7 to 11 too, and the ticket types example 9 reads.
+    $this->config('data_surface_examples.bulletin')->set('frequency', 'monthly')->save();
+    $this->config('data_surface_examples.ticket_types')->set('types.vip', ['label' => 'VIP', 'locked' => FALSE])->save();
 
     $form_state = new FormState();
     $this->container->get('form_builder')->submitForm(ResetExamplesForm::class, $form_state);
     $this->assertSame([], $form_state->getErrors());
 
-    foreach (['data_surface_examples.registration_step1', $two, $three] as $name) {
+    $names = [
+      'data_surface_examples.registration_step1',
+      $two,
+      $three,
+      'data_surface_examples.bulletin',
+      'data_surface_examples.ticket_types',
+    ];
+    foreach ($names as $name) {
       $this->assertSame($this->shipped($name), $this->stored($name), $name);
     }
     $this->assertArrayNotHasKey('third_party_settings', $this->stored($three));
+    $this->assertNull($this->container->get('state')->get('data_surface_examples_compliance.closed_rooms'));
+    $this->assertNull($this->container->get('state')->get('data_surface_examples_workflow.state'));
     // Riverside Hall's main hall seats 400, more than example 4 allows
-    // without a licence, so its ceiling is what the shipped room shows.
+    // without a license, so its ceiling is what the shipped room shows.
     foreach ([$two, $three] as $name) {
       $stored = $this->stored($name);
       $this->assertSame(['riverside', 'riverside_main', 50], [$stored['venue'], $stored['room'], $stored['capacity']], $name);

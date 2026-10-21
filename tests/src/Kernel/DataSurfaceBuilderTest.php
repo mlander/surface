@@ -10,7 +10,7 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\Plugin\Validation\Constraint\LabeledChoiceConstraint;
-use Drupal\data_surface\Target\SettingsShapeInterface;
+use Drupal\data_surface\Storage\StorageLayoutInterface;
 use Drupal\data_surface_test\CasingVariantRefiner;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
@@ -19,7 +19,7 @@ use PHPUnit\Framework\Attributes\Group;
  * Tests the builder: the seal guard and contributions.
  *
  * The claim these tests hold the code to is the one the module makes
- * loudest: a surface is immutable once advertised. That means the
+ * loudest: a data surface is immutable once advertised. That means the
  * builder behind it has to refuse every later change rather than
  * quietly accept one — otherwise "immutable after seal" is a convention
  * and not a contract.
@@ -49,7 +49,7 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that seal() answers with the same surface every time.
+   * Tests that seal() answers with the same data surface every time.
    */
   public function testSealIsIdempotent(): void {
     $builder = $this->builder();
@@ -70,7 +70,7 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
       'lock' => static fn (DataSurfaceBuilderInterface $b) => $b->lock('casing'),
       'extendChoices' => static fn (DataSurfaceBuilderInterface $b) => $b->extendChoices('casing', ['lowercase'], 'other'),
       'setThirdPartyDefinition' => static fn (DataSurfaceBuilderInterface $b) => $b->setThirdPartyDefinition('other', 'badge', clone $definition),
-      'setThirdPartyShape' => fn (DataSurfaceBuilderInterface $b) => $b->setThirdPartyShape('other', $this->shape()),
+      'setThirdPartyLayout' => fn (DataSurfaceBuilderInterface $b) => $b->setThirdPartyLayout('other', $this->layout()),
       'addRefinement' => static fn (DataSurfaceBuilderInterface $b) => $b->addRefinement('casing', ['extras']),
       'addRefiner' => static fn (DataSurfaceBuilderInterface $b) => $b->addRefiner('casing', new CasingVariantRefiner()),
       'addCacheableDependency' => static fn (DataSurfaceBuilderInterface $b) => $b->addCacheableDependency(new CacheableMetadata()),
@@ -86,42 +86,42 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
       catch (\LogicException $e) {
         $this->assertStringContainsString('sealed', $e->getMessage());
       }
-      // The advertised surface is what it was: nothing half-applied.
+      // The advertised data surface is what it was: nothing half-applied.
       $this->assertSame(['casing', 'extras'], $surface->getDefinitions()->names());
     }
   }
 
   /**
-   * Tests that a provider's storage shape travels with the surface.
+   * Tests that a provider's storage layout travels with the data surface.
    *
    * It is asked for by provider, survives refinement, which builds a new
-   * surface, and is refused at seal time for a provider that mounts
-   * nothing: a translation for settings the surface never describes
+   * data surface, and is refused at seal time for a provider that mounts
+   * nothing: a translation for settings the data surface never describes
    * would be applied to nothing, or to somebody else's.
    */
-  public function testThirdPartyShapeTravelsWithTheSurface(): void {
-    $shape = $this->shape();
+  public function testThirdPartyLayoutTravelsWithTheSurface(): void {
+    $layout = $this->layout();
     $builder = $this->builder()
       ->setThirdPartyDefinition('other', 'badge', DataDefinition::create('string'))
-      ->setThirdPartyShape('other', $shape);
+      ->setThirdPartyLayout('other', $layout);
     $surface = $builder->seal();
-    $this->assertSame($shape, $surface->getThirdPartyShape('other'));
-    $this->assertNull($surface->getThirdPartyShape('data_surface_test'));
-    $this->assertSame($shape, $surface->refine(['casing' => 'uppercase'])->getThirdPartyShape('other'));
+    $this->assertSame($layout, $surface->getThirdPartyLayout('other'));
+    $this->assertNull($surface->getThirdPartyLayout('data_surface_test'));
+    $this->assertSame($layout, $surface->refine(['casing' => 'uppercase'])->getThirdPartyLayout('other'));
 
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('mount nothing');
-    $this->builder()->setThirdPartyShape('nobody', $this->shape())->seal();
+    $this->builder()->setThirdPartyLayout('nobody', $this->layout())->seal();
   }
 
   /**
-   * Builds a storage shape that translates nothing.
+   * Builds a storage layout that translates nothing.
    *
-   * @return \Drupal\data_surface\Target\SettingsShapeInterface
-   *   The shape.
+   * @return \Drupal\data_surface\Storage\StorageLayoutInterface
+   *   The layout.
    */
-  protected function shape(): SettingsShapeInterface {
-    return new class() implements SettingsShapeInterface {
+  protected function layout(): StorageLayoutInterface {
+    return new class() implements StorageLayoutInterface {
 
       /**
        * {@inheritdoc}
@@ -152,7 +152,7 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
       ['none', 'uppercase', 'lowercase', 'sentence'],
       $surface->getDefinition('casing')->getConstraints()['Choice']['choices'],
     );
-    // And the surface knows whose values those two are, which is what
+    // And the data surface knows whose values those two are, which is what
     // lets refinement hand them to that module's refiner and nobody
     // else's.
     $this->assertSame(
@@ -226,7 +226,7 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
       $this->fail('A contributor took over one of the owner\'s values.');
     }
     catch (\LogicException $e) {
-      $this->assertStringContainsString('already contributed by the surface owner', $e->getMessage());
+      $this->assertStringContainsString('already contributed by the declaring class', $e->getMessage());
     }
 
     $surface = $builder->seal();
@@ -243,7 +243,7 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
    */
   public function testExtendChoicesRefusesAnUnknownKey(): void {
     $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('Unknown surface definition "nothing"');
+    $this->expectExceptionMessage('Unknown data surface definition "nothing"');
     $this->builder()->extendChoices('nothing', ['a'], 'other');
   }
 
@@ -307,7 +307,7 @@ class DataSurfaceBuilderTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that what the builder was told it depends on reaches the surface.
+   * Tests that the builder's dependencies reach the data surface.
    */
   public function testCacheabilityReachesTheSealedSurface(): void {
     $builder = $this->builder();

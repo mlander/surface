@@ -25,7 +25,8 @@ use Symfony\Component\Validator\Constraint as SymfonyConstraint;
  * as a permission (allowLocked, as PluginExists has allowFallback) and
  * the message names the offending value in a placeholder, as
  * PluginExists and EntityBundleExists do. Nothing here knows about
- * surfaces; the options resolver reads this constraint, not the reverse.
+ * data surfaces; the options resolver reads this constraint, not the
+ * reverse.
  *
  * Locked languages are out by default. "Not specified" and "not
  * applicable" are the absence of a language rather than a language, so a

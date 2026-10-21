@@ -16,7 +16,9 @@ use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\Resource\Arrangement;
 use Drupal\data_surface\Form\DataSurfaceFormBuilder;
+use Drupal\data_surface\Pipeline\Sentences;
 use Drupal\data_surface_test\CacheableCasingRefiner;
 use Drupal\data_surface_test\CasingVariantRefiner;
 use Drupal\data_surface_test\ModeSubsetRefiner;
@@ -30,7 +32,7 @@ use PHPUnit\Framework\Attributes\Group;
  * The behaviors the adapter era masked are native here: defaults at
  * every depth, constraint-to-element mapping, empty options on optional
  * selects, options derived from the constraints that declare them,
- * examples as placeholder text, locked rendering, and extraction that
+ * only a declared placeholder, locked rendering, and extraction that
  * casts through the definition.
  */
 #[Group('data_surface')]
@@ -43,9 +45,14 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
   protected static $modules = ['system', 'data_surface'];
 
   /**
-   * Builds a surface exercising every stock widget.
+   * Builds a data surface exercising every stock widget.
+   *
+   * @param string[] $locked
+   *   The keys to lock.
+   * @param bool $arranged
+   *   Whether its keys declare a placeholder each.
    */
-  protected function surface(array $locked = []): DataSurfaceInterface {
+  protected function surface(array $locked = [], bool $arranged = FALSE): DataSurfaceInterface {
     $badge = DataDefinition::create('string')
       ->setLabel('Badge')
       ->addConstraint('Choice', ['choices' => ['star', 'flame']]);
@@ -83,6 +90,17 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
     DefinitionMetadata::setExamples($definitions['notes'], ['One line per change']);
     DefinitionMetadata::setExamples($definitions['mode'], [2]);
     DefinitionMetadata::setExamples($definitions['limit'], [10, 25]);
+    if ($arranged) {
+      $placeholders = [
+        'title' => 'A short title',
+        'notes' => 'One line per change',
+        'mode' => 'Pick one',
+        'active' => 'Tick it',
+      ];
+      foreach ($placeholders as $key => $placeholder) {
+        DefinitionMetadata::setArrangement($definitions[$key], new Arrangement(placeholder: $placeholder));
+      }
+    }
 
     return new DataSurface(
       DefinitionMap::fromArrays(
@@ -103,7 +121,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
    * carry the right values, and this owns what those keys render as.
    *
    * @return array<string, array{0: string, 1: array}>
-   *   Test cases, each a surface key and the element properties the
+   *   Test cases, each a key and the element properties the
    *   definitions on it must produce.
    */
   public static function constraintMappingCases(): array {
@@ -112,9 +130,9 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
         'title',
         ['#type' => 'textfield', '#default_value' => 'Hello'],
       ],
-      'Length caps the text field' => [
+      'Length caps the text field, as a hint the rule speaks for' => [
         'title',
-        ['#maxlength' => 40],
+        ['#attributes' => ['maxlength' => 40], '#maxlength' => NULL],
       ],
       'the multiline setting is a textarea' => [
         'notes',
@@ -173,18 +191,27 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the first declared example becomes placeholder text.
+   * Tests a placeholder is only ever declared, never an example.
+   *
+   * An empty field showing an example reads as filled, so a declared
+   * example stays an example (the documents say it) and the placeholder
+   * is the one the key's arrangement gives, on an input a value is typed
+   * into, a textarea among them.
+   *
+   * @see docs/decisions.md#arrangement-is-declared-once
    */
-  public function testExamplesAsPlaceholder(): void {
+  public function testOnlyDeclaredPlaceholdersAreDrawn(): void {
     $surface = $this->surface();
     $form = $this->formBuilder()->buildSurfaceForm($surface, $surface->getDefaultValues(), new FormState());
+    foreach (['title', 'limit', 'notes', 'mode', 'active'] as $key) {
+      $this->assertArrayNotHasKey('#placeholder', $form[$key], $key . ' declares examples and no placeholder.');
+    }
 
-    // String and number inputs show the first example, cast to string.
-    $this->assertSame('Quarterly report', $form['title']['#placeholder']);
-    $this->assertSame('10', $form['limit']['#placeholder']);
-    // A textarea, a select and a checkbox get none, even where the
-    // definition declares examples.
-    $this->assertArrayNotHasKey('#placeholder', $form['notes']);
+    $arranged = $this->surface(arranged: TRUE);
+    $form = $this->formBuilder()->buildSurfaceForm($arranged, $arranged->getDefaultValues(), new FormState());
+    $this->assertSame('A short title', (string) $form['title']['#placeholder']);
+    $this->assertSame('One line per change', (string) $form['notes']['#placeholder']);
+    // A select and a checkbox type nothing, so they take none.
     $this->assertArrayNotHasKey('#placeholder', $form['mode']);
     $this->assertArrayNotHasKey('#placeholder', $form['active']);
   }
@@ -246,7 +273,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($values['active']);
     $this->assertSame(['badge' => 'star'], $values['extras']);
 
-    // The extracted values validate against the surface — the choice
+    // The extracted values validate against the data surface: the choice
     // constraints hold because casting restored native types.
     $this->assertCount(0, $this->pipeline()->validate($surface, $values));
   }
@@ -285,7 +312,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
     $this->formBuilder()->flagSurfaceErrors($errors, $form, $form_state);
     $flagged = $form_state->getErrors();
 
-    // The surface's own required message, with the label in a
+    // The data surface's own required message, with the label in a
     // placeholder rather than rendered into the string.
     $this->assertInstanceOf(TranslatableMarkup::class, $flagged['title']);
     $this->assertSame('@label is required.', $flagged['title']->getUntranslatedString());
@@ -296,23 +323,32 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
     // too. The refused value rides along as a raw argument rather than
     // being substituted and escaped into the text, which is what makes
     // it safe for whatever prints the error to escape the message once.
+    // It is the refusal's first sentence, kept whole beside the one that
+    // lists what may be chosen, and reaches the form as an object all the
+    // same.
     $badge = $flagged['extras][badge'];
-    $this->assertInstanceOf(TranslatableMarkup::class, $badge);
-    $this->assertSame(
-      'The value you selected is not a valid choice.',
-      $badge->getUntranslatedString(),
-    );
-    $this->assertSame('"<em>bogus</em>"', $badge->getArguments()['%value']);
+    $this->assertInstanceOf(Sentences::class, $badge);
+    $own = $badge->sentences()[0];
+    $this->assertInstanceOf(TranslatableMarkup::class, $own);
+    $this->assertSame('The value you selected is not a valid choice.', $own->getUntranslatedString());
+    $this->assertSame('"<em>bogus</em>"', $own->getArguments()['%value']);
+    $this->assertStringNotContainsString('<em>bogus', (string) $badge, 'Escaped once, where it is rendered.');
   }
 
   /**
-   * Builds a surface holding one list of labeled choices.
+   * Builds a data surface holding one list of labeled choices.
+   *
+   * @param string|null $widget
+   *   The widget the list asks for, if any.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface.
+   *   The data surface.
    */
-  protected function tagsSurface(): DataSurfaceInterface {
+  protected function tagsSurface(?string $widget = NULL): DataSurfaceInterface {
     $tags = ListDataDefinition::create('string')->setLabel('Tags');
+    if ($widget !== NULL) {
+      $tags->setSetting('widget', $widget);
+    }
     $tags->getItemDefinition()->addConstraint('LabeledChoice', [
       'choices' => ['news', 'tips', 'events'],
       'labels' => ['news' => 'News', 'tips' => 'Tips', 'events' => 'Events'],
@@ -321,10 +357,14 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests a list of choices renders one select over the item's options.
+   * Tests a list of choices asking for a select renders one multiple select.
+   *
+   * Three choices are checkboxes unless the list asks for a select
+   * (StockWidgetsTest holds the rule).
    */
   public function testListOfChoicesRendersMultipleSelect(): void {
-    $surface = $this->tagsSurface();
+    $this->assertSame('checkboxes', $this->formBuilder()->buildSurfaceForm($this->tagsSurface(), ['tags' => ['tips']], new FormState())['tags']['#type']);
+    $surface = $this->tagsSurface('select');
     $form = $this->formBuilder()->buildSurfaceForm($surface, ['tags' => ['tips']], new FormState());
 
     $this->assertSame('select', $form['tags']['#type']);
@@ -369,7 +409,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['tags'], $violations->keys());
     $this->assertSame('1', $violations->byKey('tags')[0]->path);
     $this->assertSame(
-      'The value you selected is not a valid choice.',
+      'The value you selected is not a valid choice. Choose News, Tips or Events.',
       (string) $violations->byKey('tags')[0]->message,
     );
   }
@@ -411,7 +451,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
     $refused = $this->pipeline()->validate($surface, ['scope' => 'basic', 'mode' => 2])->byKey('mode');
     $this->assertSame('', $refused[0]->path);
     $this->assertSame(
-      'The value you selected is not a valid choice.',
+      'The value you selected is not a valid choice. This applies when Scope is basic. Choose Disabled or Optional.',
       (string) $refused[0]->message,
     );
   }
@@ -545,7 +585,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
 
     // Scoped to the element, not to the container around it. Touching
     // one select says one thing about one key; every other key on the
-    // surface is still mid-edit and has not been submitted, so nothing
+    // data surface is still mid-edit and has not been submitted, so nothing
     // else may be judged. Scoped to the container, a dependent the new
     // choice had just orphaned was flagged as a wrong answer — and Form
     // API skips the rebuild outright once anything has errored, so the
@@ -626,9 +666,11 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that an empty option set is not rendered as an empty select.
+   * Tests that an empty option set is a select offering nothing.
+   *
+   * Decision: see docs/decisions.md#a-key-that-does-not-apply.
    */
-  public function testEmptyOptionSetFallsThroughToTheNextWidget(): void {
+  public function testEmptyOptionSetIsSelectOfNothing(): void {
     $surface = new DataSurface(
       DefinitionMap::fromArrays(
         definitions: [
@@ -642,11 +684,13 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
 
     $form = $this->formBuilder()->buildSurfaceForm($surface, [], new FormState());
 
-    // A required select with nothing in it cannot be satisfied at all.
-    // The options widget declines, the string widget serves the key, and
-    // the constraint keeps refusing values on its own terms.
-    $this->assertSame('textfield', $form['badge']['#type']);
-    $this->assertArrayNotHasKey('#options', $form['badge']);
+    // A list of nothing is still a list: a select whose empty option is
+    // all it offers, never a text field to type a value no list allows.
+    // The constraint refuses any value; a key that does not apply at all
+    // says DoesNotApply, and is not drawn.
+    $this->assertSame('select', $form['badge']['#type']);
+    $this->assertSame([], $form['badge']['#options']);
+    $this->assertSame('- Select -', (string) $form['badge']['#empty_option']);
   }
 
   /**
@@ -692,7 +736,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the surface's own cacheability reaches the container.
+   * Tests that the data surface's own cacheability reaches the container.
    *
    * The other half of the same rule. The widget says how long one option
    * list may be reused; this says how long the shape the whole container
@@ -737,13 +781,13 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
     $this->assertSame('host-own-id', $merged['#attributes']['id']);
     $this->assertSame(['host'], $merged['#attributes']['class']);
     $this->assertSame('textfield', $merged['host_key']['#type']);
-    // The surface's children and its marker are added, and the AJAX now
+    // The data surface's children and its marker are added, and the AJAX now
     // replaces the element the host named rather than one that is not
     // in the document.
     $this->assertSame('host-own-id', $merged['#data_surface_wrapper']);
     $this->assertSame('host-own-id', $merged['kind']['#ajax']['wrapper']);
     $this->assertSame('textfield', $merged['detail']['#type']);
-    // A host that says nothing gets the surface's container.
+    // A host that says nothing gets the data surface's container.
     $this->assertSame('container', $this->formBuilder()->mergeSurfaceContainer($container, [])['#type']);
   }
 
@@ -772,7 +816,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
     ]);
     // What a host hands its plugin: a state that reads values relative
     // to the fragment it wraps. Read naively, every absolute path lands
-    // one level too deep and comes back NULL — which the surface would
+    // one level too deep and comes back NULL, which the data surface would
     // report as "not configured" and write over what is stored.
     $subform_state = SubformState::createForSubform($form['settings'], $form, $form_state);
 
@@ -784,10 +828,10 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Builds a two-key surface whose second key refines against the first.
+   * Builds a two-key data surface whose second key refines against the first.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface.
+   *   The data surface.
    */
   protected function dependencySurface(): DataSurfaceInterface {
     return new DataSurface(

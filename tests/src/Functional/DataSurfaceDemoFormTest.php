@@ -11,8 +11,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 /**
  * Tests the standalone demo form through a browser.
  *
- * The third host shape, and the one with no plugin behind it: an
- * ordinary FormBase that reads a surface off a block plugin and commits
+ * The third kind of host, and the one with no plugin behind it: an
+ * ordinary FormBase that reads a structure off a block plugin and commits
  * it to State. The kernel test drives buildForm() and submitForm()
  * directly, which is enough to check the delegation and nothing else.
  * What only a browser can show is that the route's permission is
@@ -67,11 +67,11 @@ class DataSurfaceDemoFormTest extends BrowserTestBase {
     $assert_session->statusCodeEquals(200);
 
     // Every key the block declares is on the page, at the value path the
-    // form nests its surface at, with the declaration's own defaults.
+    // form nests the data surface at, with the declaration's own defaults.
     $assert_session->fieldValueEquals('surface[headline]', 'Featured content');
     $assert_session->fieldValueEquals('surface[limit]', '10');
     $assert_session->fieldValueEquals('surface[presentation]', 'list');
-    // The presentation slot, rendered as the list it starts on.
+    // The presentation's variants, rendered as the list they start on.
     $assert_session->checkboxChecked('surface[presentation_settings][show_summary]');
     $assert_session->fieldNotExists('surface[presentation_settings][columns]');
     // The declared entity type already narrowed the bundle on the first

@@ -7,10 +7,10 @@ namespace Drupal\Tests\data_surface\Kernel;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Access\AccessResultReasonInterface;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\data_surface\Surface\Attribute\UsesSurface;
+use Drupal\data_surface\Resource\Attribute\UsesStructure;
 use Drupal\data_surface_test\Plugin\Field\FieldType\SurfaceGatedItem;
-use Drupal\data_surface_test\Surface\GatedFieldSettingsSurface;
-use Drupal\data_surface_tool\SituationInputs;
+use Drupal\data_surface_test\Structure\GatedFieldSettingsStructure;
+use Drupal\data_surface_tool\OperationInputs;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\tool\Tool\ToolManager;
@@ -23,21 +23,21 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * The tools already ask what core asks: may this account administer this
  * entity type's fields. What is new is the third question, asked of the
- * field type itself through the access class of its settings surface,
+ * field type itself through the access class of its settings structure,
  * and the only way to see it is a field type that refuses while
  * everything else allows. So the account below holds the field
  * administration permission the whole time and the refusal comes from
- * the surface alone — in both places a tool answers, the access check
+ * the structure alone: in both places a tool answers, the access check
  * an invoker runs and the execute method that writes, because execute()
  * is callable from PHP with no check in front of it. And in the field
  * type's own host, which Field UI asks.
  *
- * The derived tools reach the field type's surface as the field
- * instance surface's settings slot, resolved by the field type the
- * situation knows; a resolved child's access class may refuse its
- * parent.
+ * The derived tools reach the field type's structure as the field
+ * instance resource's settings variant, chosen by the field type the
+ * operation knows; a variant its locked deciding key chose may
+ * refuse its parent through its access class.
  *
- * @see \Drupal\data_surface_test\Surface\GatedFieldSettingsSurface
+ * @see \Drupal\data_surface_test\Structure\GatedFieldSettingsStructure
  * @see \Drupal\data_surface_test\Access\GatedFieldSettingsAccess
  */
 #[Group('data_surface')]
@@ -81,7 +81,7 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
     $this->installEntitySchema('user');
     $this->installEntitySchema('entity_test');
     // Everything core gates on is granted for the whole test, so a
-    // refusal below can only have come from the field type's surface.
+    // refusal below can only have come from the field type's structure.
     $this->setUpCurrentUser([], [self::PERMISSION]);
     $this->toolManager = $this->container->get('plugin.manager.tool');
     FieldStorageConfig::create([
@@ -157,7 +157,7 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
     $this->assertStringContainsString('gated test field type', $reason);
     $this->assertTrue($this->checkAccess('data_surface:field.instance:reuse', $reuse, $account)->isForbidden());
     // The permission is still held, which is what makes this the
-    // surface's refusal rather than core's.
+    // structure's refusal rather than core's.
     $this->assertTrue($account->hasPermission(self::PERMISSION));
   }
 
@@ -169,7 +169,7 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
     $this->setFieldTypeRefusal(TRUE);
     $tool = $this->toolManager->createInstance('data_surface:field.instance:edit');
     $tool->setInputValue('field', 'entity_test.entity_test.field_gated');
-    $tool->setInputValue(SituationInputs::VALUES, ['label' => 'Gated', 'settings' => ['note' => 'Refused.']]);
+    $tool->setInputValue(OperationInputs::VALUES, ['label' => 'Gated', 'settings' => ['note' => 'Refused.']]);
 
     $tool->execute();
 
@@ -188,14 +188,14 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
    *
    * The other half of the claim: the refusal is the field type's answer
    * and nothing else, so the identical payload goes through when the
-   * answer changes and only when it changes. The settings surface has
-   * no target, so the field stores them, under its settings.
+   * answer changes and only when it changes. The settings structure has
+   * no storage, so the field stores them, under its settings.
    */
   public function testTheSameCallSucceedsWhenTheFieldTypeAllows(): void {
     $this->createField();
     $tool = $this->toolManager->createInstance('data_surface:field.instance:edit');
     $tool->setInputValue('field', 'entity_test.entity_test.field_gated');
-    $tool->setInputValue(SituationInputs::VALUES, ['label' => 'Gated', 'settings' => ['note' => 'Allowed.']]);
+    $tool->setInputValue(OperationInputs::VALUES, ['label' => 'Gated', 'settings' => ['note' => 'Allowed.']]);
 
     $tool->execute();
 
@@ -208,15 +208,15 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
   /**
    * Tests the field type's own host: the attribute, and the same gate.
    *
-   * SurfaceGatedItem names its settings surface with #[UsesSurface] and
+   * SurfaceGatedItem names its settings structure with #[UsesStructure] and
    * writes nothing else; the field type trait reads the attribute from
-   * the field type's definition, builds the surface for Field UI, reads
+   * the field type's definition, builds the structure for Field UI, reads
    * the static defaults from it, and asks its access class.
    */
   public function testTheFieldTypeHostReadsTheAttribute(): void {
     $field = $this->createField();
     $definition = $this->container->get('plugin.manager.field.field_type')->getDefinition('data_surface_gated');
-    $this->assertSame(GatedFieldSettingsSurface::class, $definition[UsesSurface::DEFINITION_KEY]);
+    $this->assertSame(GatedFieldSettingsStructure::class, $definition[UsesStructure::DEFINITION_KEY]);
     $this->assertSame(['note' => NULL], SurfaceGatedItem::defaultFieldSettings());
 
     $item = $this->container->get('typed_data_manager')->create($field->getItemDefinition());
@@ -226,6 +226,30 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($item->surfaceAccess(account: $account)->isAllowed());
     $this->setFieldTypeRefusal(TRUE);
     $this->assertTrue($item->surfaceAccess(account: $account)->isForbidden());
+  }
+
+  /**
+   * Tests a variant answered at runtime is offered for the account alone.
+   *
+   * The gated type's settings answer from State, at max-age 0: runtime.
+   * Built with every answer applied, a refusal withholds the variant from
+   * the variants; built for the account alone, the variant is offered and
+   * the key marked, since a variant offered there may be withheld once the
+   * field is known.
+   *
+   * @see docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability
+   */
+  public function testRuntimeVariantIsOfferedForTheAccountAlone(): void {
+    $resources = $this->container->get('data_surface.resources');
+    $arguments = ['entity_type_id' => 'entity_test', 'bundle' => 'entity_test'];
+    $context = $resources->operation('field.instance', 'add', $arguments);
+    $this->setFieldTypeRefusal(TRUE);
+    $built = $resources->build('field.instance', $context)->getDefinitions()->entry('settings');
+    $this->assertArrayNotHasKey('data_surface_gated', $built->variants->variants);
+    $this->assertFalse($built->runtimeAccess);
+    $alone = $resources->buildStatic('field.instance', $context)->getDefinitions()->entry('settings');
+    $this->assertArrayHasKey('data_surface_gated', $alone->variants->variants);
+    $this->assertTrue($alone->runtimeAccess);
   }
 
 }

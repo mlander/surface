@@ -7,14 +7,14 @@ namespace Drupal\data_surface_test\Plugin\Field\FieldFormatter;
 use Drupal\Core\Field\Attribute\FieldFormatter;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\data_surface\Surface\Attribute\UsesSurface;
-use Drupal\data_surface_test\Surface\TestFormatterSurface;
+use Drupal\data_surface\Resource\Attribute\UsesStructure;
+use Drupal\data_surface_test\Structure\TestFormatterStructure;
 use Drupal\data_surface\Plugin\Field\FieldFormatter\DataSurfaceFormatterBase;
 
 /**
- * A formatter that adopts surfaces on a host that never heard of them.
+ * A formatter that adopts structures on a host that never heard of them.
  *
- * #[UsesSurface] and viewElements(). Field UI's missing
+ * #[UsesStructure] and viewElements(). Field UI's missing
  * validate and submit hooks, and the static defaults it prunes against,
  * are the base class's problem.
  */
@@ -23,7 +23,7 @@ use Drupal\data_surface\Plugin\Field\FieldFormatter\DataSurfaceFormatterBase;
   label: new TranslatableMarkup('Data surface test formatter'),
   field_types: ['string'],
 )]
-#[UsesSurface(TestFormatterSurface::class)]
+#[UsesStructure(TestFormatterStructure::class)]
 final class DataSurfaceTestFormatter extends DataSurfaceFormatterBase {
 
   /**

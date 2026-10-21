@@ -1,10 +1,25 @@
 {
-    "surface": "registration.step2",
-    "situation": "configure",
-    "label": "Configure registration",
+    "resource": "registration.step2",
+    "operation": "configure",
+    "label": "Configure registration (step 2)",
     "schema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "title": "Configure registration",
+        "$id": "http://localhost/surface-api/registration.step2/configure",
+        "title": "Configure registration (step 2)",
+        "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
+        "x-surface": {
+            "contract": 2,
+            "operation": {
+                "id": "configure",
+                "label": "Configure registration (step 2)",
+                "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
+                "kind": "update",
+                "creates": false,
+                "destructive": false,
+                "idempotent": true
+            },
+            "version": 1
+        },
         "type": "object",
         "properties": {
             "title": {
@@ -96,7 +111,6 @@
                     "null"
                 ],
                 "minimum": 1,
-                "maximum": 1000,
                 "default": 50,
                 "x-surface": {
                     "widget": "number",
@@ -131,6 +145,10 @@
                 "then": {
                     "properties": {
                         "capacity": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
                             "description": "Up to 60 for the Reading room.",
                             "maximum": 60
                         }
@@ -151,6 +169,10 @@
                 "then": {
                     "properties": {
                         "capacity": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
                             "description": "Up to 30 for the Garden room.",
                             "maximum": 30
                         }

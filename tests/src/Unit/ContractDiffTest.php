@@ -1,0 +1,521 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\Tests\data_surface\Unit;
+
+use Drupal\data_surface\Contract\ContractChange;
+use Drupal\data_surface\Contract\ContractDiff;
+use Drupal\data_surface\ResourceBuild\ResourceRegistry;
+use Drupal\Tests\UnitTestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Group;
+
+/**
+ * Tests the contract diff classifies each change as docs/evolution.md says.
+ *
+ * One row per row of the compatibility table that a schema can show, on
+ * a small resource with a capacity, a venue and a contact structure.
+ *
+ * @see docs/evolution.md
+ */
+#[Group('data_surface')]
+class ContractDiffTest extends UnitTestCase {
+
+  /**
+   * The baseline: a resource, one of its keys a structure's def.
+   */
+  protected const BASELINE = [
+    'resource' => 'event',
+    'operation' => 'configure',
+    'schema' => [
+      'x-surface' => [
+        'contract' => 2,
+        'operation' => [
+          'id' => 'configure',
+          'label' => 'Configure',
+          'kind' => 'update',
+          'creates' => FALSE,
+          'destructive' => FALSE,
+          'idempotent' => TRUE,
+        ],
+        'version' => 1,
+      ],
+      'type' => 'object',
+      'properties' => [
+        'capacity' => ['title' => 'Capacity', 'type' => ['integer', 'null'], 'minimum' => 1, 'maximum' => 1000],
+        'venue' => [
+          'title' => 'Venue',
+          'type' => 'string',
+          'oneOf' => [['const' => 'hall', 'title' => 'Hall'], ['const' => 'barn', 'title' => 'Barn']],
+        ],
+        'code' => ['title' => 'Code', 'type' => ['string', 'null']],
+        'contact' => ['$ref' => '#/$defs/event.contact', 'title' => 'Contact'],
+      ],
+      'required' => ['venue'],
+      'additionalProperties' => FALSE,
+      'allOf' => [
+        [
+          'if' => ['properties' => ['venue' => ['const' => 'barn']], 'required' => ['venue']],
+          'then' => ['properties' => ['capacity' => ['maximum' => 80]]],
+        ],
+      ],
+      '$defs' => [
+        'event.contact' => [
+          'type' => 'object',
+          'properties' => ['email' => ['title' => 'Email', 'type' => ['string', 'null']]],
+          'additionalProperties' => FALSE,
+        ],
+      ],
+    ],
+  ];
+
+  /**
+   * Marks a patch that removes what is at its path.
+   */
+  protected const REMOVE = '(removed)';
+
+  /**
+   * Tests one change is classified as the table says.
+   *
+   * The effect is among what is found, and the lint fails exactly when
+   * the verdict is breaking: a rename is a key removed and one added.
+   *
+   * @param array<string, mixed> $patches
+   *   What to set in a copy of the baseline's schema, by slash-separated
+   *   path; self::REMOVE removes it.
+   * @param string $effect
+   *   The effect expected.
+   * @param string $status
+   *   The verdict expected.
+   */
+  #[DataProvider('providerChanges')]
+  public function testChangeIsClassified(array $patches, string $effect, string $status): void {
+    $current = self::BASELINE;
+    foreach ($patches as $path => $value) {
+      $current['schema'] = self::patched($current['schema'], explode('/', $path), $value);
+    }
+    $found = array_values(array_filter(
+      (new ContractDiff())->compare(self::BASELINE, $current),
+      static fn (ContractChange $change): bool => $change->effect !== ContractDiff::NOTE,
+    ));
+    $said = implode("\n", array_map(static fn (ContractChange $change): string => sprintf('%s: %s (%s, %s)', $change->path, $change->change, $change->effect, $change->status), $found));
+    $verdicts = array_map(static fn (ContractChange $change): array => [$change->effect, $change->status], $found);
+    $this->assertContains([$effect, $status], $verdicts, $said);
+    $fails = array_filter($found, static fn (ContractChange $change): bool => $change->fails());
+    $this->assertSame($status === ContractChange::BREAKING, $fails !== [], $said);
+  }
+
+  /**
+   * Sets or removes one value at a path.
+   *
+   * @param array $schema
+   *   The schema.
+   * @param string[] $keys
+   *   The path, key by key.
+   * @param mixed $value
+   *   The value, or self::REMOVE.
+   *
+   * @return array
+   *   The schema, patched.
+   */
+  protected static function patched(array $schema, array $keys, mixed $value): array {
+    $key = array_shift($keys);
+    if ($keys !== []) {
+      $schema[$key] = self::patched($schema[$key] ?? [], $keys, $value);
+    }
+    elseif ($value === self::REMOVE) {
+      unset($schema[$key]);
+    }
+    else {
+      $schema[$key] = $value;
+    }
+    return $schema;
+  }
+
+  /**
+   * Gives one change per row of the compatibility table.
+   *
+   * @return array<string, array{0: array<string, mixed>, 1: string, 2: string}>
+   *   The patches, the effect and the verdict.
+   */
+  public static function providerChanges(): array {
+    $compatible = ContractChange::COMPATIBLE;
+    $breaking = ContractChange::BREAKING;
+    $notes = ['title' => 'Notes', 'type' => ['string', 'null']];
+    $tent = ['const' => 'tent', 'title' => 'Tent'];
+    $when = static fn (string $venue): array => [
+      'properties' => ['venue' => ['const' => $venue]],
+      'required' => ['venue'],
+    ];
+    return [
+      'an optional key with a default added' => [
+        ['properties/notes' => $notes + ['default' => 'None']],
+        ContractDiff::ADDS,
+        $compatible,
+      ],
+      'an optional key without a default added' => [['properties/notes' => $notes], ContractDiff::ADDS, $compatible],
+      'a constraint widened' => [['properties/capacity/maximum' => 2000], ContractDiff::WIDENS, $compatible],
+      'a choice added' => [['properties/venue/oneOf/2' => $tent], ContractDiff::WIDENS, $compatible],
+      'a variant added' => [
+        [
+          'properties/venue/oneOf/2' => $tent,
+          'allOf/1' => ['if' => $when('tent'), 'then' => ['properties' => ['capacity' => ['maximum' => 40]]]],
+        ],
+        ContractDiff::WIDENS,
+        $compatible,
+      ],
+      'a required key made optional' => [['required' => []], ContractDiff::WIDENS, $compatible],
+      'a rule dropped' => [['allOf' => []], ContractDiff::WIDENS, $compatible],
+      'a mixin with an optional member added' => [
+        [
+          'properties/created' => TRUE,
+          'allOf/1' => ['$ref' => '#/$defs/event.stamps'],
+          '$defs/event.stamps' => ['type' => 'object', 'properties' => ['created' => ['type' => ['integer', 'null']]]],
+        ],
+        ContractDiff::ADDS,
+        $compatible,
+      ],
+      'a key removed' => [['properties/code' => self::REMOVE], ContractDiff::BREAKS, $breaking],
+      'a key renamed' => [
+        ['properties/code' => self::REMOVE, 'properties/license' => ['title' => 'Code', 'type' => ['string', 'null']]],
+        ContractDiff::BREAKS,
+        $breaking,
+      ],
+
+      'a constraint tightened' => [['properties/capacity/maximum' => 500], ContractDiff::NARROWS, $breaking],
+      'a pattern added' => [['properties/code/pattern' => '^[A-Z]{2}$'], ContractDiff::NARROWS, $breaking],
+      'a choice removed' => [['properties/venue/oneOf/1' => self::REMOVE], ContractDiff::NARROWS, $breaking],
+      'an optional key made required' => [['required' => ['venue', 'code']], ContractDiff::NARROWS, $breaking],
+      'a type changed' => [['properties/capacity/type' => ['string', 'null']], ContractDiff::BREAKS, $breaking],
+      'null no longer allowed' => [['properties/capacity/type' => 'integer'], ContractDiff::NARROWS, $breaking],
+      'a rule added on a value the baseline allowed' => [
+        ['allOf/1' => ['if' => $when('hall'), 'then' => ['required' => ['code']]]],
+        ContractDiff::NARROWS,
+        $breaking,
+      ],
+      'a rule tightened' => [['allOf/0/then/properties/capacity/maximum' => 60], ContractDiff::NARROWS, $breaking],
+      'a constraint only the server checks added' => [
+        [
+          'properties/code/x-surface' => [
+            'checkedOnServer' => [
+              ['constraint' => 'UniqueCode', 'message' => 'A code no other event has'],
+            ],
+          ],
+        ],
+        ContractDiff::NARROWS,
+        $breaking,
+      ],
+      'a key inside a structure removed' => [
+        ['$defs/event.contact/properties/email' => self::REMOVE],
+        ContractDiff::BREAKS,
+        $breaking,
+      ],
+      'a required port added' => [
+        ['$defs/event.contact/x-surface' => ['ports' => ['seats' => ['type' => 'integer', 'required' => TRUE]]]],
+        ContractDiff::BREAKS,
+        $breaking,
+      ],
+      'the operation made destructive' => [['x-surface/operation/destructive' => TRUE], ContractDiff::BREAKS, $breaking],
+      'a keyword the lint does not read' => [
+        ['properties/code/if' => ['minLength' => 3]],
+        ContractDiff::BREAKS,
+        $breaking,
+      ],
+    ];
+  }
+
+  /**
+   * Tests a required key added says what a write must now supply.
+   *
+   * To the inputs of an update a note; to the outputs, what a client
+   * reads, a key always there narrows what it may meet, which is
+   * compatible.
+   */
+  public function testRequiredKeyAddedSaysWhatWritesSupply(): void {
+    $current = self::BASELINE;
+    $current['schema']['properties']['notes'] = ['title' => 'Notes', 'type' => 'string'];
+    $current['schema']['required'][] = 'notes';
+    $changes = (new ContractDiff())->compare(self::BASELINE, $current);
+    $this->assertSame(['configure#/properties/notes'], array_map(static fn (ContractChange $change): string => $change->path, $changes));
+    $this->assertSame('required key added: a write must now supply notes where nothing is stored', $changes[0]->change);
+    $this->assertSame([ContractDiff::NOTE, ContractChange::COMPATIBLE], [$changes[0]->effect, $changes[0]->status]);
+    $current['schema']['properties']['notes']['default'] = 'None';
+    [$change] = (new ContractDiff())->compare(self::BASELINE, $current);
+    $this->assertSame('required key added, with a default', $change->change);
+    $this->assertSame([ContractDiff::NOTE, ContractChange::COMPATIBLE], [$change->effect, $change->status]);
+
+    $baseline = self::BASELINE + ['outputs' => ['type' => 'object', 'properties' => [], 'required' => []]];
+    $current = $baseline;
+    $current['outputs']['properties']['sent'] = ['type' => 'integer'];
+    $current['outputs']['required'] = ['sent'];
+    [$change] = (new ContractDiff())->compare($baseline, $current);
+    $this->assertSame('required key added', $change->change);
+    $this->assertSame([ContractDiff::NARROWS, ContractChange::COMPATIBLE], [$change->effect, $change->status]);
+  }
+
+  /**
+   * Tests a required key added is judged by the operation's kind.
+   *
+   * With no default: a note on an update and on a read, which act on what
+   * is stored, so a key left out keeps what is there; breaking on a
+   * create, whose every old call leaves it out and is refused; and
+   * breaking where no kind is stated, a structure described alone, whose
+   * containers may create it. With a default, a note for every kind. One
+   * declaration is judged per document, so the same key can be a note on
+   * `configure` and breaking on `add`.
+   */
+  public function testRequiredKeyAddedIsJudgedByTheKind(): void {
+    $judged = static function (?string $kind, bool $default = FALSE): ContractChange {
+      $baseline = self::BASELINE;
+      if ($kind === NULL) {
+        unset($baseline['schema']['x-surface']['operation']);
+      }
+      else {
+        $baseline['schema']['x-surface']['operation']['kind'] = $kind;
+      }
+      $current = $baseline;
+      $current['schema']['properties']['notes'] = ['title' => 'Notes', 'type' => 'string'] + ($default ? ['default' => 'None'] : []);
+      $current['schema']['required'][] = 'notes';
+      $changes = (new ContractDiff())->compare($baseline, $current);
+      self::assertCount(1, $changes);
+      return $changes[0];
+    };
+
+    foreach (['update', 'read'] as $kind) {
+      $change = $judged($kind);
+      $this->assertSame('required key added: a write must now supply notes where nothing is stored', $change->change, $kind);
+      $this->assertSame([ContractDiff::NOTE, ContractChange::COMPATIBLE], [$change->effect, $change->status], $kind);
+    }
+    $change = $judged('create');
+    $this->assertSame('configure#/properties/notes', $change->path);
+    $this->assertSame('required key added with no default: a create that leaves notes out is refused', $change->change);
+    $this->assertSame([ContractDiff::NARROWS, ContractChange::BREAKING], [$change->effect, $change->status]);
+    $this->assertTrue($change->fails());
+    $change = $judged(NULL);
+    $this->assertSame('required key added with no default: a container that creates this structure and leaves notes out is refused', $change->change);
+    $this->assertSame([ContractDiff::NARROWS, ContractChange::BREAKING], [$change->effect, $change->status]);
+
+    foreach (['update', 'read', 'create', NULL] as $kind) {
+      $change = $judged($kind, TRUE);
+      $this->assertSame('required key added, with a default', $change->change, (string) $kind);
+      $this->assertSame([ContractDiff::NOTE, ContractChange::COMPATIBLE], [$change->effect, $change->status], (string) $kind);
+    }
+
+    // An allowance with a reason is the escape on a create, as for any
+    // breaking change.
+    $baseline = self::BASELINE;
+    $baseline['schema']['x-surface']['operation']['kind'] = 'create';
+    $current = $baseline;
+    $current['schema']['properties']['notes'] = ['title' => 'Notes', 'type' => 'string'];
+    $current['schema']['required'][] = 'notes';
+    [$change] = (new ContractDiff())->compare($baseline, $current, ['configure#/properties/notes' => 'Every caller sends notes already.']);
+    $this->assertSame(ContractChange::ALLOWED, $change->status);
+  }
+
+  /**
+   * Tests the operation's kind is compared, since contract 2.
+   *
+   * The documents no longer say `readOnly` under `x-surface.operation`:
+   * `kind: read` says it, so an update made a read, or a read made an
+   * update, is a change a client acts on.
+   */
+  public function testTheKindIsCompared(): void {
+    $current = self::BASELINE;
+    $current['schema']['x-surface']['operation']['kind'] = 'read';
+    [$change] = (new ContractDiff())->compare(self::BASELINE, $current);
+    $this->assertSame('configure#/x-surface/operation/kind', $change->path);
+    $this->assertSame([ContractDiff::BREAKS, ContractChange::BREAKING], [$change->effect, $change->status]);
+  }
+
+  /**
+   * Tests a document of another contract version is one change, not many.
+   *
+   * Contract 1 spelled the document's keys `surface` and `situation` and
+   * stated no `x-surface.contract`; every keyword may be spelled anew in
+   * contract 2, so nothing is compared keyword by keyword. The one change
+   * fails until the baseline is written again, which needs no reason.
+   */
+  public function testAnotherContractVersionIsOneChange(): void {
+    $before = [
+      'surface' => 'event',
+      'situation' => 'configure',
+      'schema' => [
+        'x-surface' => ['operation' => ['id' => 'configure', 'readOnly' => FALSE], 'version' => 1],
+        'type' => 'object',
+        'properties' => ['old' => ['type' => 'string']],
+      ],
+    ];
+    $changes = (new ContractDiff())->compare($before, self::BASELINE);
+    $this->assertCount(1, $changes);
+    [$change] = $changes;
+    $said = [$change->surface, $change->path, $change->change];
+    $this->assertSame(['event', 'configure#', 'contract version 1 to 2'], $said);
+    $this->assertSame([ContractDiff::CONTRACT, ContractChange::CONTRACT], [$change->effect, $change->status]);
+    $this->assertTrue($change->fails());
+    $this->assertFalse($change->isBreaking());
+    $this->assertFalse($change->needsAllowance());
+    $this->assertSame(1, ContractDiff::contractOf($before));
+    $this->assertSame(2, ContractDiff::contractOf(self::BASELINE));
+  }
+
+  /**
+   * Tests a declared rule is told apart by its frame's list, not a marker.
+   *
+   * In contract 2 no `x-surface` sits on a conditional: the frame lists
+   * its rules' indexes in `x-surface.rules`. A rule that moves to another
+   * index is the same rule, and a coded refiner's conditional with the
+   * same `if` is not it.
+   */
+  public function testRulesAreToldApartByTheFramesList(): void {
+    $rule = [
+      'if' => ['properties' => ['code' => ['type' => 'null']]],
+      'then' => ['properties' => ['capacity' => ['type' => ['integer', 'null'], 'maximum' => 100]]],
+    ];
+    $baseline = self::BASELINE;
+    $baseline['schema']['allOf'][] = $rule;
+    $baseline['schema']['x-surface']['rules'] = [1];
+    $moved = $baseline;
+    $moved['schema']['allOf'] = [$rule, ...self::BASELINE['schema']['allOf']];
+    $moved['schema']['x-surface']['rules'] = [0];
+    $narrowing = array_filter((new ContractDiff())->compare($baseline, $moved), static fn (ContractChange $change): bool => $change->effect !== ContractDiff::NOTE);
+    $this->assertSame([], $narrowing, 'The rule moved: nothing added, nothing dropped.');
+
+    $coded = $moved;
+    $coded['schema']['x-surface']['rules'] = [];
+    $said = array_map(static fn (ContractChange $change): string => $change->change, (new ContractDiff())->compare($baseline, $coded));
+    $this->assertContains('rule removed', $said);
+    $this->assertContains('rule added', $said);
+  }
+
+  /**
+   * Tests a key's union of its variants only notes.
+   *
+   * The conditionals state each variant exactly and are judged
+   * themselves; the `anyOf` beside them, for type generators, is never
+   * narrower than the one that applies.
+   */
+  public function testTheUnionOfVariantsOnlyNotes(): void {
+    $baseline = self::BASELINE;
+    $baseline['schema']['properties']['ticket'] = [
+      'title' => 'Ticket',
+      'type' => ['object', 'null'],
+      'anyOf' => [['$ref' => '#/$defs/event.ticket.free'], ['type' => 'null']],
+      'x-surface' => ['by' => 'venue', 'variants' => ['hall' => '#/$defs/event.ticket.free']],
+    ];
+    $current = $baseline;
+    $current['schema']['properties']['ticket']['anyOf'] = [
+      ['$ref' => '#/$defs/event.ticket.free'],
+      ['$ref' => '#/$defs/event.ticket.paid'],
+      ['type' => 'null'],
+    ];
+    $current['schema']['properties']['ticket']['x-surface']['variants']['barn'] = '#/$defs/event.ticket.paid';
+    $changes = (new ContractDiff())->compare($baseline, $current);
+    $this->assertNotEmpty($changes);
+    foreach ($changes as $change) {
+      $this->assertSame([ContractDiff::NOTE, ContractChange::COMPATIBLE], [$change->effect, $change->status], $change->change);
+    }
+  }
+
+  /**
+   * Tests a label, a description and a default only note.
+   */
+  public function testWordsAndDefaultsOnlyNote(): void {
+    $current = self::BASELINE;
+    $current['schema']['properties']['capacity']['title'] = 'Seats';
+    $current['schema']['properties']['capacity']['description'] = 'How many may come.';
+    $current['schema']['properties']['capacity']['default'] = 40;
+    $current['schema']['properties']['venue']['oneOf'][0]['title'] = 'Main hall';
+    $changes = (new ContractDiff())->compare(self::BASELINE, $current);
+    $this->assertCount(4, $changes);
+    foreach ($changes as $change) {
+      $this->assertSame([ContractDiff::NOTE, ContractChange::COMPATIBLE], [$change->effect, $change->status], $change->change);
+    }
+  }
+
+  /**
+   * Tests whose version answers for a breaking change.
+   *
+   * The document's for its own keys, a structure's for the keys of its
+   * def, and an allowance for its exact path.
+   */
+  public function testTheOwnersVersionOrAnAllowanceAnswers(): void {
+    $diff = new ContractDiff();
+    $current = self::BASELINE;
+    $current['schema']['properties']['capacity']['maximum'] = 500;
+    unset($current['schema']['$defs']['event.contact']['properties']['email']);
+    $verdicts = static fn (array $changes): array => array_map(static fn (ContractChange $change): string => $change->owner . ' ' . $change->change . ': ' . $change->status, $changes);
+
+    $this->assertSame([
+      'event maximum lowered from 1000 to 500: breaking',
+      'event.contact key removed: breaking',
+    ], $verdicts($diff->compare(self::BASELINE, $current)));
+
+    $current['schema']['x-surface']['version'] = 2;
+    $this->assertSame([
+      'event maximum lowered from 1000 to 500: versioned',
+      'event.contact key removed: breaking',
+      'event version raised from 1 to 2: compatible',
+    ], $verdicts($diff->compare(self::BASELINE, $current)));
+
+    $current['schema']['$defs']['event.contact']['x-surface'] = ['version' => 2];
+    $allowed = ['configure#/properties/capacity/maximum' => 'No room seats more than 500.'];
+    $current['schema']['x-surface']['version'] = 1;
+    $this->assertSame([
+      'event maximum lowered from 1000 to 500: allowed',
+      'event.contact key removed: versioned',
+      'event.contact version raised from 1 to 2: compatible',
+    ], $verdicts($diff->compare(self::BASELINE, $current, $allowed)));
+
+    $lowered = self::BASELINE;
+    $lowered['schema']['x-surface']['version'] = 2;
+    $this->assertSame(['event version lowered from 2 to 1: breaking'], $verdicts($diff->compare($lowered, self::BASELINE)));
+  }
+
+  /**
+   * Tests outputs are judged the other way round.
+   *
+   * A client reads them: a bound widened may hand it what it did not
+   * expect, and one tightened hands it less.
+   */
+  public function testOutputsAreJudgedAsRead(): void {
+    $id = ['type' => 'integer', 'maximum' => 100];
+    $baseline = self::BASELINE + ['outputs' => ['type' => 'object', 'properties' => ['id' => $id]]];
+    $wider = $baseline;
+    $wider['outputs']['properties']['id']['maximum'] = 200;
+    $narrower = $baseline;
+    $narrower['outputs']['properties']['id']['maximum'] = 50;
+    $diff = new ContractDiff();
+    $this->assertSame(ContractChange::BREAKING, $diff->compare($baseline, $wider)[0]->status);
+    $this->assertSame(ContractChange::COMPATIBLE, $diff->compare($baseline, $narrower)[0]->status);
+  }
+
+  /**
+   * Tests a version above 1 is refused until migrations run.
+   */
+  public function testVersionAboveOneIsRefusedForNow(): void {
+    $version = new \ReflectionMethod(ResourceRegistry::class, 'versionOf');
+    $this->assertSame(1, $version->invoke(NULL, self::class, 1));
+    $this->expectException(\LogicException::class);
+    $this->expectExceptionMessage('A version above 1 needs its stored-value migrations');
+    $version->invoke(NULL, self::class, 2);
+  }
+
+  /**
+   * Tests a declaration with no baseline fails, and needs no allowance.
+   *
+   * Bug B25 of the reviews (2026-10-20): it was compatible, so a mistyped
+   * directory, which holds no baseline, passed every declaration as new.
+   * Writing the baselines pins it, with no reason asked.
+   */
+  public function testNoBaselineFailsAndIsPinnedByWriting(): void {
+    $unpinned = new ContractChange('event', 'event', '#', 'no baseline yet', ContractDiff::NOTE, ContractChange::UNPINNED);
+    $this->assertTrue($unpinned->fails());
+    $this->assertFalse($unpinned->isBreaking());
+    $this->assertFalse($unpinned->needsAllowance());
+    $breaking = new ContractChange('event', 'event', '#', 'no longer declared', ContractDiff::BREAKS, ContractChange::BREAKING);
+    $this->assertTrue($breaking->fails());
+    $this->assertTrue($breaking->needsAllowance());
+  }
+
+}

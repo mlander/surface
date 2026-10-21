@@ -7,11 +7,11 @@ pass the same stages.
 
 ```
          ──access──▶ ──accept──▶ values ──validate──▶ values ──prepare──▶ prepared ──commit──▶ storage
-input    (surface)   (surface)            (surface)             (target)              (target)
+input    (class)     (data surface)       (data surface)        (storage)             (storage)
 ```
 
 Beside those, and running the other way, is `conformOutput()`: the same
-kind of check applied to what the host *emits*, against the surface's
+kind of check applied to what the host *emits*, against the data surface's
 [output definitions](outputs.md). It is not a stage of `submit()`,
 because emitting is the host's own act rather than something the
 pipeline does.
@@ -19,95 +19,100 @@ pipeline does.
 Only `commit()` has side effects, which is what makes a dry run a matter
 of not calling it.
 
-The pipeline is also the **only** place values are validated. A surface
-is pure data and reaches no service; running a surface's constraints
-needs the typed data manager, so validation belongs here — and putting it
-here is what guarantees every validation refines the surface against the
-values first, which a caller holding only a surface could forget to do.
+The pipeline is also the **only** place values are validated. A data
+surface is pure data and reaches no service; running its constraints
+needs the typed data manager, so validation belongs here, and putting it
+here is what guarantees every validation refines the data surface against
+the values first, which a caller holding only a data surface could forget
+to do.
 
 ## The stages
 
 ### access
 
 ```php
-public function access(string $surface, SurfaceContext $context, ?AccountInterface $account = NULL): AccessResultInterface;
+public function access(string $resource, OperationContext $context, ?AccountInterface $account = NULL): AccessResultInterface;
 ```
 
-Not a method on the pipeline: it is `SurfacesInterface::access()`, on
-the build step, and the pipeline is one of its callers. One answer per
-surface, context and account, read by the generated form, a route, a
-generated tool, a Drush command and an agent — which is what keeps a
-route's gate and a payload's gate from becoming two different rules.
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
-It is two tiers. The situation's permission first, from
-`#[Situation(permission:)]`, its `%key` placeholders filled from the
-identity the context knows; then, only if that allows, the surface's
-access class, `#[Surface(access:)]`, which may hold services and asks
-the thing itself. A context whose operation is no declared situation —
-a plugin host's `configure` — has no permission to check, so the access
-class is the whole answer, and a surface with neither answers neutral.
-Each subsurface the context resolves whose class names an access class
-of its own is asked too, and may refuse; a child never allows on its
-parent's behalf. A plugin host asks through its own `surfaceAccess()`,
-which takes the account and the host's operation and nothing else.
+Not a method on the pipeline: it is `ResourcesInterface::access()`, on
+the build step, and the pipeline is one of its callers. One answer per
+resource or structure, context and account, read by the generated form, a
+route, a generated tool, a Drush command and an agent, which is what keeps
+a route's gate and a payload's gate from becoming two different rules.
+
+It is two tiers. The operation's permission first, from
+`#[Operation(permission:)]`, its `%key` placeholders filled from the
+identity the context knows; then, only if that allows, the access class
+named by `#[Resource(access:)]` or `#[Structure(access:)]`, which may
+hold services and asks the thing itself. A context whose id names no
+declared operation (a plugin host's `configure`) has no permission to
+check, so the access class is the whole answer, and a class with neither
+answers neutral. A variant chosen by a locked deciding key whose
+class names an access class of its own is asked too, and may refuse; a
+child never allows on its parent's behalf. Every other child's access
+shaped its keys when it was built. A plugin host asks through its own
+`surfaceAccess()`, which takes the account and the host's operation and
+nothing else.
 
 The answer is core's `AccessResultInterface`, so it carries a reason and
 its own cacheability, and the third state carries weight:
 
 | Answer | Means | Effect |
 | --- | --- | --- |
-| **Forbidden** | The surface refuses. | `submit()` stops **before `$target->load()`**. Nothing is read, accepted, prepared or written. |
+| **Forbidden** | The resource or structure refuses. | `submit()` stops **before `$storage->load()`**. Nothing is read, accepted, prepared or written. |
 | **Neutral** | No opinion. | Nothing changes. The host's own gates stand exactly as they stood. |
 | **Allowed** | An affirmative grant. | Nothing is bypassed: the host's gates and every later stage still apply. |
 
-Neutral is what a surface with no access class answers in a host's
-context, so a plugin whose surface says nothing about access behaves
+Neutral is what a structure with no access class answers in a host's
+context, so a plugin whose structure says nothing about access behaves
 exactly as it did before this stage existed. `NULL` for the account
 means the current user.
 
-Combining a host's own answer with the surface's is one call, and
-writing it by hand is the way to get it wrong —
+Combining a host's own answer with the structure's is one call, and
+writing it by hand is the way to get it wrong:
 `allowed()->andIf(neutral())` is neutral, and neutral is not allowed, so
-every surface that says nothing would silently close its host's door:
+every structure that says nothing would silently close its host's door:
 
 ```php
 use Drupal\data_surface\DataSurfaceAccess;
 
 $access = DataSurfaceAccess::gate(
   $field->access('update', $account, TRUE),   // What the host decided.
-  $item->surfaceAccess(account: $account),    // What the surface says.
+  $item->surfaceAccess(account: $account),    // What the structure says.
 );
 ```
 
-The surface may **refuse** what a host allowed. It may never **allow**
+The structure may **refuse** what a host allowed. It may never **allow**
 what a host refused.
 
 One trap worth stating, because core's helpers set it:
 `AccessResult::allowedIfHasPermission()` and an entity access handler
 both answer **neutral** when the answer is no, since another checker
-might still allow it. A route reads that neutral as a refusal — a route
-requires allowed — while this gate reads it as "nothing to say". A
+might still allow it. A route reads that neutral as a refusal (a route
+requires allowed), while this gate reads it as "nothing to say". A
 caller that owns the operation therefore says no out loud, or the same
 account is turned away by the route and let through by the payload:
 
 ```php
-$result = $pipeline->submit($surface, $values, $target,
-  access: DataSurfaceAccess::decisive($access, 'The surface this form configures may not be written by this account.'),
+$result = $pipeline->submit($surface, $values, $storage,
+  access: DataSurfaceAccess::decisive($access, 'The resource this form configures may not be written by this account.'),
 );
 ```
 
 `decisive()` returns an allowed or already-forbidden answer untouched,
 and turns neutral into a refusal that keeps the assembled answer's
-cacheability. A situation owns its operation, so the situation form and
-the generated tools make the answer decisive before they hand it to the
-pipeline, as the route requirement does by requiring allowed. A plugin
-host's neutral is still the right answer for a surface that owns
-nothing.
+cacheability. A declared operation is owned by whoever runs it, so the
+operation form and the generated tools make the answer decisive before
+they hand it to the pipeline, as the route requirement does by requiring
+allowed. A plugin host's neutral is still the right answer for a
+structure that owns nothing.
 
 `setConfiguration()` deliberately does not consult access. A host
-constructs its plugins from what it has already stored — core's block,
+constructs its plugins from what it has already stored (core's block,
 condition and action bases all call `setConfiguration()` from inside
-their own constructors — so gating there would ask whether the current
+their own constructors), so gating there would ask whether the current
 account may configure a block during a cache warm, a cron run, or an
 anonymous page view. The gate belongs where something is written, which
 is `submit()`.
@@ -118,22 +123,39 @@ is `submit()`.
 public function accept(DataSurfaceInterface $surface, array $input, array $current = []): array;
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 Produces a complete, typed value set from partial, untyped input. Values
-merge in one order at every level: the surface's **declared defaults**,
-then the **current stored values** (so a partial update is legal), then
-the **input**, cast through each definition.
+merge in one order at every level: the data surface's **declared
+defaults**, then the **current stored values** (so a partial update is
+legal), then the **input**, cast through each definition.
 
 Locked keys take what storage holds, falling back to the declared
-default, and ignore whatever was submitted for them. Keys the surface
-does not declare are refused rather than dropped, at any depth, and so is
-input in a shape the definition cannot hold.
+default, and ignore whatever was submitted for them; a value submitted
+for one that is not what it holds is noted, once per key, for
+`submit()` to hand on (below). Keys the data
+surface does not declare are refused rather than dropped, at any depth,
+and so is input in a shape the definition cannot hold.
 
-It needs no services. After it runs, every surface key is present and
-every value is either `NULL` or a configured value in its declared type.
-That is the shape `validate()`, a target and any consumer can rely on.
+It needs no services. After it runs, every declared key is present but
+one a refiner answered [does not apply](refinement.md#when-a-key-does-not-apply)
+to these values, and every value is either `NULL` or a configured value
+in its declared type. That is the shape `validate()`, the storage and
+any consumer can rely on. A key that does not apply is left out when it
+was sent nothing or what it holds, and stays, for `validate()` to refuse,
+when it was sent anything else; `submit()` hands storage what it holds
+there (`kept()`), so it survives until it applies again.
 
-The rules it applies — what counts as configured, the casting table, how
-lists and maps merge — are [Value semantics](semantics.md), which is the
+A collection's item is accepted over the child's defaults, the list
+being sent whole, but a secret the item leaves out keeps what is stored
+at its position when the list is as long as the one stored; with items
+added or removed, an item leaving out a secret stored where it now sits
+is noted for `submit()` to refuse by the secret's path, since that
+position may hold another item now
+([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
+
+The rules it applies (what counts as configured, the coercion table, how
+lists and maps merge) are [Value semantics](semantics.md), which is the
 reference for this page.
 
 ### validate
@@ -142,19 +164,21 @@ reference for this page.
 public function validate(DataSurfaceInterface $surface, array $values, array $current = []): ViolationSet;
 ```
 
-Refines the surface against the values first, then runs the constraints,
-so the constraints the values are held to are the ones the values
-themselves selected — the same set the generated form rendered.
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+Refines the data surface against the values first, then runs the
+constraints, so the constraints the values are held to are the ones the
+values themselves selected, the same set the generated form rendered.
 
 It answers with a `ViolationSet`: a countable, iterable collection of
-`SurfaceViolation` objects, each carrying the surface `key` it is filed
-under, the `path` within that key's value (`''` for the value itself)
-and an unrendered `message`. `isEmpty()` means valid.
+`Violation` objects, each carrying the `key` it is filed under, the
+`path` within that key's value (`''` for the value itself) and an
+unrendered `message`. `isEmpty()` means valid.
 
 ```php
 $violations = $pipeline->validate($surface, $values);
 $violations->isEmpty();          // Nothing was refused.
-$violations->keys();             // The refused surface keys, in order.
+$violations->keys();             // The refused keys, in order.
 $violations->byKey('title');     // The violations on one key.
 foreach ($violations as $violation) {
   $violation->fullPath();        // 'extras.badge'
@@ -168,17 +192,17 @@ config schema reported them interleaved.
 #### Stale never blocks
 
 `$current` is what storage holds, and it is what makes one refusal not a
-refusal. A value that the refined surface will not take, which is
+refusal. A value that the refined data surface will not take, which is
 *exactly what is stored* for that key, whose dependencies this run left
 as they are stored, and which is no longer among the values the key
 offers, is **stale**: nothing about this run tried to change it, so
 refusing it would punish a caller for something the site did. A run that
-moves a dependency — the venue — and sends back the dependent stored
-under the old one — the room — has narrowed the list itself, and is
+moves a dependency (the venue) and sends back the dependent stored
+under the old one (the room) has narrowed the list itself, and is
 refused. The full rule and its two deliberate boundaries are in
 [value semantics](semantics.md#stale-values-the-third-state).
 
-A stale entry is a `SurfaceViolation` with its `stale` flag set, and the
+A stale entry is a `Violation` with its `stale` flag set, and the
 set holds it to one side:
 
 ```php
@@ -213,11 +237,13 @@ the same stored values it extracted against.
 public function conformOutput(DataSurfaceInterface $surface, array $output): ViolationSet;
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 The output half of `validate()`, and the only stage that runs after the
 host has done its work rather than before. It holds what was emitted to
-the surface's [output definitions](outputs.md), which are never
-refined: it strips the `Omitted` sentinel, refuses keys no output declares, and checks what is
-left against each definition's type and constraints — answering with the
+the data surface's [output definitions](outputs.md), which are never
+refined: it strips the `NotEmitted` sentinel, refuses keys no output declares, and checks what is
+left against each definition's type and constraints, answering with the
 same `ViolationSet` everything else answers with.
 
 Nothing is cast. Input arrives from people and payloads, so `accept()`
@@ -226,42 +252,72 @@ front of it, so a wrong type is a violation rather than a notation.
 
 It is not part of `submit()`. Emitting is the host's own act, not a
 pipeline stage, and the pipeline has no way to run it; what the pipeline
-offers is the check, so a host — or a generated test — can hold the
-emitted array to what the surface advertised.
+offers is the check, so a host, or a generated test, can hold the
+emitted array to what the data surface advertised.
 
 ### prepare
 
 ```php
-public function prepare(DataSurfaceInterface $surface, array $values, DataSurfaceTargetInterface $target): PreparedValues;
+public function prepare(DataSurfaceInterface $surface, array $values, DataSurfaceStorageInterface $storage): PreparedValues;
 ```
 
-Hands the values to a target for shaping. Writes nothing. Answers with a
-`PreparedValues`: the accepted `values`, the storage-shaped `artifact`,
-and any calculated `dependencies`. This is the preview artifact —
-everything a renderer or a diff needs, nothing stored.
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+Hands the values to the storage, which lays them out as it stores them.
+Writes nothing. Answers with a `PreparedValues`: the accepted `values`,
+the `artifact` in storage layout, and any calculated `dependencies`.
+This is the preview artifact: everything a renderer or a diff needs,
+nothing stored.
 
 ### commit
 
 ```php
-public function commit(PreparedValues $prepared, DataSurfaceTargetInterface $target): void;
+public function commit(PreparedValues $prepared, DataSurfaceStorageInterface $storage): void;
 ```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 Writes the artifact. The only stage with side effects.
 
 ### submit
 
 ```php
-public function submit(DataSurfaceInterface $surface, array $input, DataSurfaceTargetInterface $target, bool $dry_run = FALSE, ?AccessResultInterface $access = NULL): DataSurfaceResult;
+public function submit(DataSurfaceInterface $surface, array $input, DataSurfaceStorageInterface $storage, bool $dry_run = FALSE, ?AccessResultInterface $access = NULL): DataSurfaceResult;
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 Runs every stage, stopping at the first that refuses the values, so a
-caller reads one result rather than orchestrating five calls. The target
-is both where current values are read from and where the result is
-written.
+caller reads one result rather than orchestrating five calls. The
+storage is both where current values are read from and where the result
+is written.
 
 `DataSurfaceResult` carries `values`, `violations`, the `prepared`
-artifact when the values were valid, `committed`, and the `access` answer
-the run was gated by. `isValid()` is the question most callers ask.
+artifact when the values were valid, `committed`, the `access` answer
+the run was gated by, `notes` and `changes`. `isValid()` is the question
+most callers ask.
+
+Every door answers a run in one shape, `DataSurfaceResult::document()`
+(`Pipeline\ResultDocument`): `{ok, committed, changed, changes, values,
+violations, notes, stale}`, each key always present, `values` as the
+door may return them (what `outbound()` projected), each violation and
+note `{path, code, message}` and each stale reference `{path, code,
+message, stored}`, the message as plain text, rendered by the door's
+choice: for a machine at the tool, as the form renders it at React.
+The write tool, React's `/validate` and `/submit` and Drush's `tool:run
+--json` all answer it ([decision](decisions.md#one-result-at-every-door)).
+Every violation carries a stable `code`; the table is in
+[Value semantics](semantics.md#codes).
+
+`notes` are what the caller is told and nothing blocks: a `Violation`
+per locked key whose value sent was not taken, "Machine name is locked
+and kept as stored; the value sent was not taken." They are no
+violation, so `isValid()` never reads them; the write tool and the
+React endpoints say them beside the stale references
+([decision](decisions.md#locked-at-the-top)).
+
+A secret inside a locked key is never compared: anything sent for one
+was not taken, so whether a note is said tells a caller nothing of it.
 
 A committed result can still carry violations, and there is exactly one
 way that happens: the set holds stale references and nothing else. They
@@ -270,18 +326,19 @@ how a caller with no form in front of it learns there is something to
 re-choose.
 
 The access answer is the caller's own, already resolved, rather than
-something the pipeline would have to hold — no closures, and nothing in
-the pipeline that knows what a surface class or a host is. A caller asks
+something the pipeline would have to hold: no closures, and nothing in
+the pipeline that knows what a resource, a structure or a host is. A
+caller asks
 for the context it is running and hands the answer over:
 
 ```php
-$surfaces = \Drupal::service('data_surface.surfaces');
-$context = $surfaces->situation(NodeTypeSurface::class, 'edit', ['type' => 'article']);
+$resources = \Drupal::service('data_surface.resources');
+$context = $resources->operation(NodeTypeResource::class, 'edit', ['type' => 'article']);
 $result = $pipeline->submit(
-  $surfaces->build(NodeTypeSurface::class, $context),
+  $resources->build(NodeTypeResource::class, $context),
   $values,
-  $surfaces->target(NodeTypeSurface::class, $context),
-  access: DataSurfaceAccess::decisive($surfaces->access(NodeTypeSurface::class, $context)),
+  $resources->storage(NodeTypeResource::class, $context),
+  access: DataSurfaceAccess::decisive($resources->access(NodeTypeResource::class, $context)),
 );
 ```
 
@@ -289,14 +346,14 @@ $result = $pipeline->submit(
 caller written before this stage existed means, and what a host that
 gates somewhere else means.
 
-A forbidden answer comes back as one violation under the reserved key
-`DataSurfacePipelineInterface::ACCESS_VIOLATION_KEY`, which is `'@access'`:
-a surface key is a definition name and no definition is named with a
-leading `@`, so the whole `@` prefix is the pipeline's namespace for a
-refusal belonging to no particular key. The violation's message is the
+A forbidden answer comes back as one violation of the whole call: no
+key and an empty path, since it belongs to no particular key, and the
+code `access`; a resource locked whole is refused the same way with the
+code `locked` (until 2026-10-20 both were filed under the pseudo-key
+`@access`). The violation's message is the
 refusal's reason, as a message object like every other violation's, and
 `isValid()` is `FALSE` for the same reason an out-of-range number makes
-it false — a caller that only branches on `isValid()` needs to know
+it false: a caller that only branches on `isValid()` needs to know
 nothing new. A caller that wants to tell a 403 from a 422 asks
 `isAccessRefused()`.
 
@@ -313,40 +370,64 @@ if ($result->access !== NULL) {
 }
 ```
 
-"This surface had nothing to say" is a conclusion like any other: it can
-stop being true when a permission or a config entity changes, so its
-cacheability is as real as a refusal's.
+"Nothing to say" is a conclusion like any other: it can stop being true
+when a permission or a config entity changes, so its cacheability is as
+real as a refusal's.
+
+### outbound
+
+```php
+public function outbound(DataSurfaceInterface $surface, array $values): array;
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+What any door may hand a caller of a set of values, the read tool's
+projection (`Pipeline\Outbound::project()`): no key the build left out
+for the caller, at any depth; no secret, at any depth, under every
+variant that keeps it secret and inside each item of a list;
+no key that does not apply to the values; a locked key as stored. The
+read tool answers what storage loads through it, the write tool answers
+its accepted `values` through it, dry run or written, and React's
+`/validate` writes its `values` document from it. `document()` writes
+what it is handed, so a door hands it what this projected. The
+`prepared` artifact is never handed to a caller: it is storage's own
+shape, with what the caller could not see put back
+([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 
 ## Dry runs
 
 `submit()` takes a `$dry_run` flag: everything up to and including
 `prepare()` runs, and the artifact comes back with `committed` false.
-Nothing has been written, and the caller has the exact object a commit
-would have stored.
+Nothing has been written, and a PHP caller has the exact object a commit
+would have stored. A door does not hand it on: the write tool and React's
+`/validate` answer the accepted values through `outbound()`, and the
+run's verdict, which says whether storage's own checks passed.
 
 Config entities write through the container's config factory, so an
 entity cannot be pointed at another bin for one call: an unsaved clone,
 held to the schema, is as far as a dry run goes. See
-[Targets](targets.md#dry-runs).
+[Storage](storage.md#dry-runs).
 
 ## Who asks the access question
 
-The surface answers; the caller decides when to ask. The rule that keeps
-the two halves honest is that nothing spells the question twice:
+The resource or structure answers; the caller decides when to ask. The
+rule that keeps the two halves honest is that nothing spells the question
+twice:
 
 - **`data_surface_demo_node_type`** states its gate once: the
-  situations' permission on `NodeTypeSurface`, and the node type
+  operations' permission on `NodeTypeResource`, and the node type
   entity's own create or update answer in `NodeTypeAccess`. The routes'
-  `_data_surface_situation_access` requirement, the operation link in
-  the content type listing, the situation form's own write and the
-  generated tools all read `SurfacesInterface::access()` in the same
-  situation.
-- **The field tools** ask the field instance surface's access in their
-  situation, which reaches the settings variant's access class too, in
+  `_data_surface_operation_access` requirement, the operation link in
+  the content type listing, the operation form's own write and the
+  generated tools all read `ResourcesInterface::access()` in the same
+  operation.
+- **The field tools** ask the field instance resource's access in their
+  operation, which reaches the settings variant's access class too, in
   both `checkAccess()` and `doExecute()`, because `execute()` is
   callable from PHP with no check in front of it. A field type's Field
   UI host asks the field config entity, then the same access class.
-- **Blocks, formatters, conditions and actions** ask their surface's
+- **Blocks, formatters, conditions and actions** ask their structure's
   access class in the `configure` context, which is neutral when it
   names none. A host's own `access()`, where it has one, is a different
   question: an action's asks whether the action may be *executed* on an
@@ -359,36 +440,29 @@ the two halves honest is that nothing spells the question twice:
 
 ## Violations are objects
 
-Every message in a violation is a `TranslatableMarkup` — the
-surface's own required message, the pipeline's unknown-key and shape
-refusals, and whatever a constraint or a config schema produced — and it
-stays one the whole way out: through `DataSurfaceResult`, through
-`FormStateInterface::setError()`, into a caller's own report.
-
-Placeholders are still placeholders until something renders the message,
-so a value containing markup is escaped once, by whoever prints it,
-rather than escaped at build time and escaped again on the page.
-
-There are exactly three places a message becomes text, and all three are
-exception messages, because PHP has nowhere to put an object in one.
+Every message in a violation is a `TranslatableMarkup`, and it stays one
+the whole way out: through `DataSurfaceResult`, through
+`FormStateInterface::setError()`, into a caller's own report. Why, how a
+placeholder is filled in, and the three places a message becomes text
+are in [Value semantics](semantics.md#violation-messages-are-objects).
 
 ## Exceptions
 
 | Exception | Thrown by | When |
 | --- | --- | --- |
 | `UnknownKeysException` | `accept()` | The input carries a key no definition declares, at any depth. |
-| `ShapeMismatchException` | `accept()` | The input carries a value in a shape its definition cannot hold — a string where a map was advertised. Names the dotted path and what was expected. |
-| `VariantMismatchException` | `accept()` | A slot's value carries keys the chosen variant does not declare and another variant does. Names the slot, the deciding key and the misplaced keys. |
-| `TargetViolationsException` | `prepare()` | The target's storage refuses the values; a config schema, usually. |
+| `TypeMismatchException` | `accept()` | The input carries a value of a type its definition cannot hold, such as a string where a map was advertised. Names the dotted path and what was expected. |
+| `VariantMismatchException` | `accept()` | The value at a key with variants carries keys the chosen variant does not declare and another variant does. Names that key, the deciding key and the misplaced keys. |
+| `StorageViolationsException` | `prepare()` | What the storage writes to refuses the values; a config schema, usually. |
 
-`UnknownKeysException` and `TargetViolationsException` render their
+`UnknownKeysException` and `StorageViolationsException` render their
 message through `Pipeline\ViolationSummary`, which names the first five
 entries and counts the rest; the full list is still on the exception.
 `DataSurfaceConfigurationTrait::setConfiguration()` throws its refusal
 the same way.
 
 `submit()` catches all four and turns them into ordinary violations on
-the surface keys that carried them, rather than letting them escape. So a
+the keys that carried them, rather than letting them escape. So a
 caller that sends a misspelled key, the wrong shape, or something the
 config schema refuses gets the same path-aware report as one that sends
 an out-of-range number, instead of watching the value vanish. That is the
@@ -397,16 +471,11 @@ individually and you handle the exceptions yourself.
 
 ## The host-owns-the-write split
 
-Some hosts save for themselves. Field UI copies whatever a settings
-element produced onto the field config entity and saves it, so a field
-type's settings form runs accept, validate and **prepare**, writes the
-prepared artifact into form state, and deliberately does not commit —
-calling both would save the field twice.
-
-That is why the transform lives in `prepare()` and not in `commit()`. A
-caller that does own the write reaches the same transform through
-`submit()` and gets the same stored settings. The target owns the
-transform; the host owns the write.
+Some hosts save for themselves: a field type's settings form runs
+accept, validate and **prepare**, and never commits, because Field UI
+saves the field. That is why the transform lives in `prepare()` and not
+in `commit()`. The storage owns the transform; the host owns the write
+([Storage](storage.md#the-host-owns-the-write-split)).
 
 ## Calling it without a form
 
@@ -414,14 +483,16 @@ transform; the host owns the write.
 $result = \Drupal::service('data_surface.pipeline')->submit(
   $block->getDataSurface(),
   ['headline' => 'Latest', 'limit' => '5'],
-  new PluginConfigurationTarget($block),
+  new PluginConfigurationStorage($block),
 );
 if (!$result->isValid()) {
   // $result->violations, a ViolationSet.
 }
 ```
 
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 `'5'` arrives as a string and is stored as the integer `5`, because the
-definition says `integer` and the casting table says a numeric string
+definition says `integer` and the coercion table says a numeric string
 means the same number. That is the whole claim: the form and this call
 are the same call.

@@ -7,24 +7,25 @@ namespace Drupal\data_surface;
 use Drupal\data_surface\Pipeline\ViolationSummary;
 
 /**
- * Implements ConfigurableInterface from a surface.
+ * Implements ConfigurableInterface from a structure.
  *
  * Drop-in for plugins that own their state as a configuration array:
- * defaults come from the surface, and setConfiguration() runs the values
- * through the pipeline rather than trusting its caller, so a plugin
+ * the configuration is a structure, its defaults come from it, and
+ * setConfiguration() runs the values through the pipeline rather than
+ * trusting its caller, so a plugin
  * configured by a test, a config action or an agent is held to the same
  * contract a form holds it to.
  *
- * Two rules the hosts depend on. Keys the surface does not declare pass
+ * Two rules the hosts depend on. Keys the structure does not declare pass
  * through untouched, so host-owned keys (a block's id, label, provider;
  * a variant's weight; a context mapping) survive progressive adoption.
  * And the merge is the pipeline's, not the host's: accept() fills every
- * declared key from the surface's defaults before the input lands on
+ * declared key from the structure's defaults before the input lands on
  * top, which is why adopters set the configuration property from the
  * accepted values instead of calling a host's own deep or shallow merge.
  *
- * The surface is built once per instance. The host calls these three
- * methods freely and each of them needs the surface;
+ * The structure is built once per instance. The host calls these three
+ * methods freely and each of them needs the built structure;
  * memoizedDataSurface() says why nothing invalidates it.
  *
  * The configuration property is declared here without a type or an
@@ -34,67 +35,67 @@ use Drupal\data_surface\Pipeline\ViolationSummary;
  *
  * @see \Drupal\data_surface\DataSurfaceHostTrait
  *   For why the pipeline is fetched from the container rather than
- *   injected — the host constructor trap, documented there once.
+ *   injected: the host constructor trap, documented there once.
  */
 trait DataSurfaceConfigurationTrait {
 
   use DataSurfaceHostTrait;
 
   /**
-   * The stored values: the surface's keys plus whatever the host owns.
+   * The stored values: the structure's keys plus whatever the host owns.
    *
    * @var array
    */
   protected $configuration;
 
   /**
-   * The surface this instance has already built, once it has.
+   * The structure this instance has already built, once it has.
    */
   protected ?DataSurfaceInterface $memoizedDataSurface = NULL;
 
   /**
-   * Builds the surface describing this object's values.
+   * Builds the structure describing this object's values.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface.
+   *   The built structure.
    */
   abstract public function getDataSurface(): DataSurfaceInterface;
 
   /**
-   * Gets this instance's surface, built at most once.
+   * Gets this instance's built structure, built at most once.
    *
-   * Every method in this trait needs the surface, and the host calls
+   * Every method in this trait needs the built structure, and the host calls
    * them freely: one block submit asks for the configuration three
    * times. Building once per instance makes the advertisement stable for
-   * the life of the object, which is what "the surface is the single
-   * authority" has to mean in practice.
+   * the life of the object, which is what "the built structure is the
+   * single authority" has to mean in practice.
    *
-   * Nothing invalidates this. A surface is a per-request description: it
+   * Nothing invalidates this. A data surface is a per-request description: it
    * is built from live site state at the moment it is asked for, and the
    * request that would need a different one is the next request, with a
-   * new instance. A host whose state changes underneath it mid-request —
-   * a test installing a module between two calls, say — asks the build
+   * new instance. A host whose state changes underneath it mid-request
+   * (a test installing a module between two calls, say) asks the build
    * step itself rather than going through this trait.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface.
+   *   The built structure.
    */
   protected function memoizedDataSurface(): DataSurfaceInterface {
     return $this->memoizedDataSurface ??= $this->getDataSurface();
   }
 
   /**
-   * Gets the default configuration the surface declares.
+   * Gets the default configuration the structure declares.
    *
    * @return array
-   *   The default values, keyed by surface key.
+   *   The default values, keyed by definition key.
    */
   public function defaultConfiguration(): array {
     return $this->memoizedDataSurface()->getDefaultValues();
   }
 
   /**
-   * Gets the configuration, with surface defaults filled in.
+   * Gets the configuration, with the structure's defaults filled in.
    *
    * @return array
    *   The configuration values.
@@ -107,7 +108,7 @@ trait DataSurfaceConfigurationTrait {
    * Sets the configuration after running it through the pipeline.
    *
    * Replace semantics, as every host expects: the declared keys are
-   * accepted against the surface's defaults rather than against what is
+   * accepted against the structure's defaults rather than against what is
    * already stored, so setting one key resets its siblings to their
    * defaults instead of quietly keeping older values. Undeclared keys
    * are taken from the incoming array as they are.
@@ -139,7 +140,7 @@ trait DataSurfaceConfigurationTrait {
    * @return $this
    *
    * @throws \InvalidArgumentException
-   *   When a declared key's value violates the refined surface, stale
+   *   When a declared key's value violates the refined structure, stale
    *   references excepted.
    */
   public function setConfiguration(array $configuration): static {
@@ -157,7 +158,7 @@ trait DataSurfaceConfigurationTrait {
     // the block's own configuration form, the block listing, and every
     // page the block rendered on died with it: the one page that could
     // have fixed the value was the one page that could not be opened.
-    // What still throws is everything else a surface refuses, because
+    // What still throws is everything else a structure refuses, because
     // nothing else is something the site did underneath a value nobody
     // touched.
     $violations = $pipeline->validate($surface, $values, $values);
@@ -166,7 +167,10 @@ trait DataSurfaceConfigurationTrait {
       // message is a string and has nowhere to put an object.
       throw new \InvalidArgumentException('Invalid configuration: ' . ViolationSummary::fromViolations($violations));
     }
-    $this->configuration = $values + array_diff_key($configuration, $definitions);
+    // A key that does not apply is left out of what accept() made of the
+    // configuration, and kept as it was saved.
+    // Decision: see docs/decisions.md#a-key-that-does-not-apply.
+    $this->configuration = $pipeline->kept($surface, $values, $configuration) + array_diff_key($configuration, $definitions);
     return $this;
   }
 

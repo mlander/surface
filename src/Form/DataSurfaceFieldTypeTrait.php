@@ -12,15 +12,15 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DataSurfaceHostTrait;
-use Drupal\data_surface\Pipeline\DataSurfaceTargetInterface;
-use Drupal\data_surface\Pipeline\TargetViolationsException;
-use Drupal\data_surface\Target\FieldSettingsTarget;
+use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
+use Drupal\data_surface\Pipeline\StorageViolationsException;
+use Drupal\data_surface\Pipeline\Storage\FieldSettingsStorage;
 
 /**
- * Implements the field settings protocol of a field type from a surface.
+ * Implements the field settings protocol of a field type from a structure.
  *
  * The group C counterpart of the formatter trait: a field item class
- * whose per instance settings are described by a surface instead of by
+ * whose per instance settings are described by a structure instead of by
  * the form that collects them. The method it replaces,
  * fieldSettingsForm(), is the one ADOPTION.md calls out as "described by
  * nothing more than the form" — a field type may hand back any elements
@@ -29,44 +29,45 @@ use Drupal\data_surface\Target\FieldSettingsTarget;
  * settings mean, what they may be, or what shape they take.
  *
  * A class using this trait declares that it implements
- * FieldSurfaceProviderInterface, names its surface with #[UsesSurface],
- * and writes nothing else: the trait builds that surface, answers access
- * through the field config entity and the surface's access class, and
- * hands the field settings target the host supplies.
+ * FieldSurfaceProviderInterface, names its structure with
+ * #[UsesStructure], and writes nothing else: the trait builds that
+ * structure, answers access through the field config entity and the
+ * structure's access class, and hands over the field settings storage
+ * the host supplies.
  *
  * Two host realities it absorbs, both inherited from group B and one of
  * them sharper here:
  * - There is no validate or submit hook, so an #element_validate on the
- *   surface container is the whole pipeline: it extracts, validates,
+ *   data surface container is the whole pipeline: it extracts, validates,
  *   flags violations on their own elements, and writes the result into
  *   form state.
- * - What it writes is the STORAGE shape, not the surface shape. Field UI
+ * - What it writes is the STORAGE layout, not the input layout. Field UI
  *   builds $form['settings'] with #tree and merges the field type's
  *   elements into it flat, then copyFormValuesToEntity() copies the
  *   'settings' value onto the field config entity and saves it. So the
- *   values have to have been through the target's prepare() by the time
- *   validation ends. The target's commit() is deliberately NOT called on
+ *   values have to have been through the storage's prepare() by the time
+ *   validation ends. The storage's commit() is deliberately NOT called on
  *   the form path: the entity is the host's to save, and calling both
  *   would save the field twice.
  *
  * That split is the honest shape of the pipeline under a host that owns
  * the write. Prepare is where the transform lives, so a caller that does
- * own the write — a config action, a test, an agent — reaches the same
+ * own the write (a config action, a test, an agent) reaches the same
  * transform through submit() and gets the same stored settings.
  *
  * The other half of the field type protocol, storage settings, is a
- * separate surface with a different signature and a $has_data lock; it
- * is not in this trait. One plugin, two surfaces.
+ * separate structure with a different signature and a $has_data lock;
+ * it is not in this trait. One plugin, two structures.
  *
  * Nothing but identifiers rides on the element. The form cache
- * serializes the whole form array, and a surface holds its refiners
- * while a target holds services and a config entity, so putting either
+ * serializes the whole form array, and a data surface holds its refiners
+ * while a storage holds services and a config entity, so putting either
  * on an element made the cache responsible for objects nobody designed
  * to be stored. What the element carries instead is the field config's
  * identifier, and the static callback rebuilds both from it: the field
  * being edited comes from the form object when the host is Field UI,
  * which is also the only way an unsaved field can be found, and
- * otherwise it is loaded by id. See docs/targets.md.
+ * otherwise it is loaded by id. See docs/storage.md.
  */
 trait DataSurfaceFieldTypeTrait {
 
@@ -83,37 +84,37 @@ trait DataSurfaceFieldTypeTrait {
   protected const CURRENT_ELEMENT_KEY = '#data_surface_current';
 
   /**
-   * Builds the surface describing this field type's instance settings.
+   * Builds the data surface for this field type's instance settings.
    *
    * Named for the settings it describes, because a field type has two
-   * sets of settings and only the instance half is a surface here. The
-   * surface the field type's #[UsesSurface] names, read from its
+   * sets of settings and only the instance half is a structure here. The
+   * structure the field type's #[UsesStructure] names, read from its
    * definition, built in the host's `field_settings` context.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface.
+   *   The built structure.
    */
   public function getFieldSurface(): DataSurfaceInterface {
-    return $this->hostedSurface(FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS);
+    return $this->hostedStructure(FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS);
   }
 
   /**
-   * Gets the target the field settings are read from and written to.
+   * Gets the storage the field settings are read from and written to.
    *
-   * The default is the plain settings target: the surface shape is the
-   * storage shape. A field type whose storage shape differs overrides
-   * this and hands the target a SettingsShapeInterface, which is where
+   * The default is the plain settings storage: the input layout is the
+   * storage layout. A field type whose storage layout differs overrides
+   * this and hands the storage a StorageLayoutInterface, which is where
    * the transform becomes visible.
    *
-   * @return \Drupal\data_surface\Pipeline\DataSurfaceTargetInterface
-   *   The target.
+   * @return \Drupal\data_surface\Pipeline\DataSurfaceStorageInterface
+   *   The storage.
    *
    * @throws \LogicException
    *   When the item's field definition is not a field config entity,
    *   which is the only kind of definition whose settings are editable.
    */
-  public function getDataSurfaceTarget(): DataSurfaceTargetInterface {
-    return new FieldSettingsTarget($this->settingsFieldConfig());
+  public function getDataSurfaceStorage(): DataSurfaceStorageInterface {
+    return new FieldSettingsStorage($this->settingsFieldConfig());
   }
 
   /**
@@ -131,7 +132,7 @@ trait DataSurfaceFieldTypeTrait {
    * write and nothing to ask, so it expresses no opinion rather than
    * refusing: the host that reached it has its own gate.
    *
-   * The surface the field type names is then asked through its access
+   * The structure the field type names is then asked through its access
    * class, which may refuse.
    *
    * @param \Drupal\Core\Session\AccountInterface|null $account
@@ -147,14 +148,14 @@ trait DataSurfaceFieldTypeTrait {
     $answer = $definition instanceof FieldConfigInterface
       ? $definition->access('update', $account, TRUE)
       : AccessResult::neutral();
-    $surface = $this->usedSurface();
+    $surface = $this->usedStructure();
     if ($surface === NULL) {
       return $answer;
     }
-    // The surface's own access class may refuse what the entity allowed;
-    // it never allows on the entity's behalf, because the entity is the
-    // host's gate and the surface only knows its settings.
-    $own = $this->surfaces()->access($surface, $this->surfaceContext($operation), $this->surfaceAccount($account));
+    // The structure's own access class may refuse what the entity
+    // allowed; it never allows on the entity's behalf, because the entity
+    // is the host's gate and the structure only knows its settings.
+    $own = $this->resources()->access($surface, $this->operationContext($operation), $this->surfaceAccount($account));
     return $own->isForbidden() ? $answer->andIf($own) : $answer;
   }
 
@@ -171,7 +172,7 @@ trait DataSurfaceFieldTypeTrait {
     $definition = $this->getFieldDefinition();
     if (!$definition instanceof FieldConfigInterface) {
       throw new \LogicException(sprintf(
-        'The settings of %s are not stored on a field config entity, so there is nothing for the field settings target to write to.',
+        'The settings of %s are not stored on a field config entity, so there is nothing for the field settings storage to write to.',
         $definition->getName(),
       ));
     }
@@ -179,13 +180,13 @@ trait DataSurfaceFieldTypeTrait {
   }
 
   /**
-   * Reads the static default field settings from a class's surface.
+   * Reads the static default field settings from a class's structure.
    *
    * The same static-protocol problem the formatter trait has:
    * defaultFieldSettings() cannot consult an instance. A field type
-   * answers with the shape of the surface its #[UsesSurface] names,
+   * answers with the shape of the structure its #[UsesStructure] names,
    * which is static; a field type that wants its parent's static defaults
-   * (SurfaceAddressItem, whose parent still stores a key the surface
+   * (SurfaceAddressItem, whose parent still stores a key the structure
    * does not describe) keeps them.
    *
    * @param class-string $class
@@ -195,7 +196,7 @@ trait DataSurfaceFieldTypeTrait {
    *   The declared defaults keyed by setting name.
    *
    * @throws \LogicException
-   *   When the class names no surface.
+   *   When the class names no structure.
    */
   protected static function surfaceDefaultFieldSettings(string $class): array {
     return static::surfaceDeclaredDefaults($class);
@@ -207,11 +208,11 @@ trait DataSurfaceFieldTypeTrait {
   public function fieldSettingsForm(array $form, FormStateInterface $form_state): array {
     $field = $this->settingsFieldConfig();
     $surface = $this->getFieldSurface();
-    $target = $this->getDataSurfaceTarget();
-    // Current values come through the target, so the form shows the
-    // input shape of what is stored rather than the storage shape, and
+    $storage = $this->getDataSurfaceStorage();
+    // Current values come through the storage, so the form shows the
+    // input layout of what is stored rather than the storage layout, and
     // an in-progress refinement rebuild overlays what was just chosen.
-    $stored = array_intersect_key($target->load($surface), $surface->getDefinitions()->toArray());
+    $stored = array_intersect_key($storage->load($surface), $surface->getDefinitions()->toArray());
     $values = $this->surfaceFormValues($surface, $stored, $form_state);
     $element = $this->surfaceFormBuilder()->buildSurfaceForm(
       $surface,
@@ -220,7 +221,7 @@ trait DataSurfaceFieldTypeTrait {
       'data-surface-field-settings-' . $field->getName(),
     );
     // Identifiers, not objects: the static callback rebuilds the item,
-    // the surface and the target from the field this settings form is
+    // the data surface and the storage from the field this settings form is
     // for, and the form cache only ever holds strings and arrays.
     $element[static::FIELD_ELEMENT_KEY] = $field->id();
     // The stored settings ride along for the validate callback, which is
@@ -240,14 +241,14 @@ trait DataSurfaceFieldTypeTrait {
    * copied onto.
    *
    * @param array $element
-   *   The surface container element.
+   *   The data surface container element.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state.
    */
   public static function validateSurfaceFieldSettings(array $element, FormStateInterface $form_state): void {
     $item = static::surfaceFieldItem($element[static::FIELD_ELEMENT_KEY] ?? NULL, $form_state);
     $surface = $item->getFieldSurface();
-    $target = $item->getDataSurfaceTarget();
+    $storage = $item->getDataSurfaceStorage();
     // @phpstan-ignore globalDrupalDependencyInjection.useDependencyInjection
     $builder = \Drupal::service('data_surface.form_builder');
     $current = $element[static::CURRENT_ELEMENT_KEY] ?? [];
@@ -260,14 +261,14 @@ trait DataSurfaceFieldTypeTrait {
     }
     try {
       // @phpstan-ignore globalDrupalDependencyInjection.useDependencyInjection
-      $prepared = \Drupal::service('data_surface.pipeline')->prepare($surface, $values, $target);
+      $prepared = \Drupal::service('data_surface.pipeline')->prepare($surface, $values, $storage);
     }
-    catch (TargetViolationsException $e) {
+    catch (StorageViolationsException $e) {
       $builder->flagSurfaceErrors($e->getViolations(), $element, $form_state);
       return;
     }
     // The host copies what it finds here straight onto the field config
-    // entity, so this is the storage shape, not the surface shape.
+    // entity, so this is the storage layout, not the input layout.
     $form_state->setValueForElement($element, $prepared->artifact);
   }
 
@@ -286,8 +287,7 @@ trait DataSurfaceFieldTypeTrait {
    * the typed data manager's prototype cache, which is keyed by root
    * data type and property path and not by the field config object, so
    * two field configs with the same name hand back clones of the first
-   * one's item — and a target built from that writes to the wrong
-   * entity.
+   * one's item, and a storage built from that writes to the wrong entity.
    *
    * @param mixed $field_id
    *   The field config identifier the element carries.
@@ -299,7 +299,7 @@ trait DataSurfaceFieldTypeTrait {
    *
    * @throws \LogicException
    *   When the field cannot be found, or when its item class does not
-   *   describe its settings with a surface after all.
+   *   describe its settings with a structure after all.
    */
   protected static function surfaceFieldItem(mixed $field_id, FormStateInterface $form_state): FieldSurfaceProviderInterface {
     $field = static::surfaceFormField($form_state);
@@ -310,7 +310,7 @@ trait DataSurfaceFieldTypeTrait {
     }
     if ($field === NULL) {
       throw new \LogicException(sprintf(
-        'The %s settings element names no field this request can find, so its surface and its target cannot be rebuilt to validate it.',
+        'The %s settings element names no field this request can find, so its data surface and its storage cannot be rebuilt to validate it.',
         static::class,
       ));
     }
@@ -318,7 +318,7 @@ trait DataSurfaceFieldTypeTrait {
     $item = \Drupal::service('typed_data_manager')->create($field->getItemDefinition());
     if (!$item instanceof FieldSurfaceProviderInterface) {
       throw new \LogicException(sprintf(
-        'The %s field type does not describe its settings with a surface, so %s has nothing to validate.',
+        'The %s field type does not describe its settings with a structure, so %s has nothing to validate.',
         $field->getType(),
         static::class,
       ));

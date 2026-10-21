@@ -7,7 +7,6 @@ namespace Drupal\data_surface\Plugin\DataSurfaceWidget;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Attribute\DataSurfaceWidget;
-use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
 
 /**
@@ -35,8 +34,13 @@ final class NumberWidget extends DataSurfaceWidgetBase {
       '#type' => 'number',
       '#default_value' => $value,
       '#step' => $definition->getDataType() === 'integer' ? 1 : 'any',
+      // Core's number element checks #min, #max and #step itself, before
+      // any form level handler, and a form keeps the first error per
+      // element, so its own wording would replace the rule's message.
+      // Decision: see docs/decisions.md#an-element-hints-and-the-rule-speaks.
+      '#element_validate' => [],
     ];
-    // Constraint-to-element mapping: Range reaches the browser.
+    // Constraint-to-element mapping: Range reaches the browser, as a hint.
     $range = $this->constraint($definition, 'Range');
     if (isset($range['min'])) {
       $element['#min'] = $range['min'];
@@ -44,12 +48,10 @@ final class NumberWidget extends DataSurfaceWidgetBase {
     if (isset($range['max'])) {
       $element['#max'] = $range['max'];
     }
-    // The first declared example shows what a valid value looks like
-    // before the value is typed, rather than after validation fails.
-    $examples = DefinitionMetadata::getExamples($definition);
-    if ($examples !== []) {
-      $element['#placeholder'] = (string) reset($examples);
-    }
+    // No placeholder from the examples: an empty field showing a value
+    // reads as filled. A placeholder is declared, in the key's
+    // arrangement, and the form builder draws it.
+    // Decision: see docs/decisions.md#arrangement-is-declared-once.
     return $element;
   }
 

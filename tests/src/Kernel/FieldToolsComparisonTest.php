@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
-use Drupal\data_surface_tool\SituationInputs;
+use Drupal\data_surface_tool\OperationInputs;
 use Drupal\field\Entity\FieldStorageConfig;
+use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolManager;
 use Drupal\tool\TypedData\MapInputDefinition;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -18,9 +19,9 @@ use PHPUnit\Framework\Attributes\Group;
  * and a bundle to add its field to, what may the settings be? Tool
  * Belt's field_add derives its answer from the field type's config
  * schema; data_surface:field.instance:reuse, the tool derived from the
- * field instance surface's reuse situation, from the field type's
- * settings surface, which fills that surface's settings slot. The two
- * answers are put side by side in the data_surface_tool module's
+ * field instance resource's reuse operation, from the field type's
+ * settings resource, the field instance's settings variant for it. The
+ * two answers are put side by side in the data_surface_tool module's
  * COMPARISON.md.
  * That file is written by scripts/generate-comparison.php; the last test
  * here asserts on every ordinary run that it still says what the
@@ -34,6 +35,8 @@ use PHPUnit\Framework\Attributes\Group;
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
 class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
+
+  use UserCreationTrait;
 
   /**
    * {@inheritdoc}
@@ -69,6 +72,9 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
     require_once dirname(__DIR__, 3) . '/scripts/DataSurfaceComparisonDocument.php';
     $this->installEntitySchema('user');
     $this->installEntitySchema('entity_test');
+    // An account the field tools are open to, as a real client's is: the
+    // values input is refined to what is stored only for one.
+    $this->setUpCurrentUser(admin: TRUE);
     $this->toolManager = $this->container->get('plugin.manager.tool');
     FieldStorageConfig::create([
       'field_name' => 'field_address',
@@ -78,7 +84,7 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * The tool derived from the field instance surface's reuse situation.
+   * The tool derived from the field instance resource's reuse operation.
    */
   protected const SURFACE_TOOL = 'data_surface:field.instance:reuse';
 
@@ -122,14 +128,14 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
     $tool = $this->tool($id);
     $schema = $this->container->get('tool.definition_serializer')->normalizeInputSchema($tool);
     return $id === self::SURFACE_TOOL
-      ? $schema['properties'][SituationInputs::VALUES]['properties']['settings']
+      ? $schema['properties'][OperationInputs::VALUES]['properties']['settings']
       : $schema['properties']['settings'];
   }
 
   /**
-   * Tests what the surface derived settings input says.
+   * Tests what the resource derived settings input says.
    */
-  public function testSurfaceSchemaCarriesMeaning(): void {
+  public function testResourceSchemaCarriesMeaning(): void {
     $schema = $this->settingsSchema(self::SURFACE_TOOL);
 
     // Every address property that may be overridden is named, so a
@@ -158,7 +164,7 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
     // not offered at all.
     $this->assertArrayNotHasKey('fields', $schema['properties']);
     // Neither is the single-key wrapper the field type stores each
-    // override in; that is storage shape, and the target owns it.
+    // override in; that is storage layout, and the storage class owns it.
     $this->assertArrayNotHasKey('override', $overrides['givenName']);
     $this->assertArrayNotHasKey('items', $schema['properties']['field_overrides']);
   }
@@ -169,31 +175,35 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
    * The hand-written data_surface:field_add advertised an entity type
    * with its vocabulary, a label, help text and a required flag, each
    * with a sentence saying what it is, and the address settings. The
-   * tools derived from the field instance surface's situations say all
-   * of it, from the surface, and more: the storage's cardinality with
-   * its range, and the field name's shape.
+   * tools derived from the field instance resource's operations say all
+   * of it, from the resource, and more: the storage's cardinality with
+   * its range, and the field name's length.
    */
   public function testTheDerivedToolsSayAtLeastWhatTheRetiredOnesDid(): void {
     $add = $this->toolManager->createInstance('data_surface:field.instance:add');
     $add->setInputValue('entity_type_id', 'entity_test');
     $add->setInputValue('bundle', 'entity_test');
     $schema = $this->container->get('tool.definition_serializer')->normalizeInputSchema($add);
-    // A situation parameter named for a surface key is that key.
+    // An operation parameter named for a resource key is that key.
     $entity_type = $schema['properties']['entity_type_id'];
     $this->assertSame('Entity type', $entity_type['title']);
     $this->assertStringContainsString('The machine name of the entity type', $entity_type['description']);
     $this->assertContains('entity_test', $entity_type['enum']);
-    $this->assertSame(['entity_type_id', 'bundle', SituationInputs::VALUES], $schema['required']);
-    $values = $schema['properties'][SituationInputs::VALUES]['properties'];
-    // Every field type in the UI: address's own settings surface, the
+    $this->assertSame(['entity_type_id', 'bundle', OperationInputs::VALUES], $schema['required']);
+    $values = $schema['properties'][OperationInputs::VALUES]['properties'];
+    // Every field type in the UI: address's own settings resource, the
     // rest derived from config schema.
     $this->assertSame('address', $values['field_type']['enum'][0]);
     $this->assertContains('string', $values['field_type']['enum']);
-    $this->assertSame('^[_a-z]+[_a-z0-9]*$', $values['field_name']['pattern']);
+    // The field name's shape is a Regex with the D modifier, which the
+    // Tool API's own translation does not carry (it allows only i, m and
+    // s), so its schema leaves the pattern out and the Regex validates
+    // the call; the length is still said.
+    $this->assertArrayNotHasKey('pattern', $values['field_name']);
     $this->assertSame(32, $values['field_name']['maxLength']);
 
     $schema = $this->container->get('tool.definition_serializer')->normalizeInputSchema($this->tool(self::SURFACE_TOOL));
-    $values = $schema['properties'][SituationInputs::VALUES];
+    $values = $schema['properties'][OperationInputs::VALUES];
     $this->assertSame(['label'], $values['required']);
     $this->assertSame('Label', $values['properties']['label']['title']);
     $this->assertStringContainsString('The human readable label for the field on this bundle.', $values['properties']['label']['description']);
@@ -205,7 +215,7 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
     $this->assertSame(1, $values['properties']['storage']['properties']['cardinality']['default']);
     // A false default does not survive the normalizer; the definition
     // carries it.
-    $values = $this->tool(self::SURFACE_TOOL)->getInputDefinition(SituationInputs::VALUES);
+    $values = $this->tool(self::SURFACE_TOOL)->getInputDefinition(OperationInputs::VALUES);
     $this->assertInstanceOf(MapInputDefinition::class, $values);
     $this->assertFalse($values->getPropertyDefinitions()['required']->getDefaultValue());
   }
@@ -226,7 +236,7 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
     // overrides, not even for which properties may be overridden.
     $this->assertArrayNotHasKey('enum', $schema['properties']['available_countries']['items']);
     $this->assertArrayNotHasKey('enum', $schema['properties']['langcode_override']);
-    // The overrides arrive as the serialized storage shape, an array of
+    // The overrides arrive as the serialized storage layout, an array of
     // single-key objects with no key to put a property name in, so the
     // one thing a caller most needs to say cannot be said at all.
     $this->assertArrayHasKey('items', $schema['properties']['field_overrides']);
@@ -238,7 +248,7 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the surface's defaults survive the conversion.
+   * Tests that the resource's defaults survive the conversion.
    *
    * They do not survive normalization: the Tool API's JSON Schema
    * normalizer emits a default only on the scalar path and only when the
@@ -247,7 +257,7 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
    * the next consumer can pick them up.
    */
   public function testDefaultsSurviveTheConversionButNotTheSchema(): void {
-    $values = $this->tool(self::SURFACE_TOOL)->getInputDefinition(SituationInputs::VALUES);
+    $values = $this->tool(self::SURFACE_TOOL)->getInputDefinition(OperationInputs::VALUES);
     assert($values instanceof MapInputDefinition);
     $definition = $values->getPropertyDefinitions()['settings'];
     assert($definition instanceof MapInputDefinition);

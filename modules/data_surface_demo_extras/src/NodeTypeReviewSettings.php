@@ -10,14 +10,14 @@ namespace Drupal\data_surface_demo_extras;
  * Two settings, stored as this module's third party settings on the
  * node type: a review deadline, stored as a number of seconds, and the
  * audiences content of the type is written for. They are added twice
- * on purpose — once to the content type surface through an alter, and
- * once to core's own content type form through a form alter
- * — so that the two ways of extending a content type can be compared
+ * on purpose (once to the content type resource through an alter, and
+ * once to core's own content type form through a form alter)
+ * so that the two ways of extending a content type can be compared
  * with the same rules on both sides. The rules are here, once, so
  * neither side can be the stricter one by accident; what differs is only
  * where each side puts them and who can see them there.
  *
- * @see \Drupal\data_surface_demo_extras\SurfaceAlter\NodeTypeAlter
+ * @see \Drupal\data_surface_demo_extras\Alter\NodeTypeAlter
  * @see \Drupal\data_surface_demo_extras\Hook\NodeTypeFormHooks
  */
 final class NodeTypeReviewSettings {
@@ -87,7 +87,7 @@ final class NodeTypeReviewSettings {
    * Five business days are five calendar days, six are eight, ten are
    * twelve, twenty-two are thirty. There is no calendar, holidays or time
    * zone in it, so the same N is always the same seconds, on the classic
-   * form and on the surface alike, and the range is checked on those
+   * form and on the resource alike, and the range is checked on those
    * seconds exactly as for any other unit.
    *
    * It does not round-trip to its own unit: stored seconds carry no unit,
@@ -167,9 +167,9 @@ final class NodeTypeReviewSettings {
    *
    * @return array{amount: int, unit: string}|null
    *   The amount and unit, in the largest of UNITS that divides the
-   *   seconds exactly — never business days, which BUSINESS_DAYS says
+   *   seconds exactly, never business days, which BUSINESS_DAYS says
    *   why; NULL when not even whole hours do, which is a value no form
-   *   or surface of this module writes.
+   *   or alter of this module writes.
    */
   public static function split(int $seconds): ?array {
     foreach (array_reverse(self::UNITS, TRUE) as $unit => $size) {
@@ -190,10 +190,10 @@ final class NodeTypeReviewSettings {
    *
    * Lower case letters and digits, words joined by one space or one
    * hyphen, nothing around it. The classic form arrives here by
-   * transforming what a person typed; the surface states it, so a caller
+   * transforming what a person typed; the resource states it, so a caller
    * sends it. No modifier, so the Tool API can advertise it as a JSON
    * Schema pattern.
    */
-  public const TAG_PATTERN = '/^[a-z0-9]+(?:[ -][a-z0-9]+)*$/';
+  public const TAG_PATTERN = '/^[a-z0-9]+(?:[ -][a-z0-9]+)*$/D';
 
 }

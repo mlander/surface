@@ -1,12 +1,12 @@
 # Data Surface Demo - Node type tool
 
 The recorded comparison between `data_surface:node.type:add`, the tool
-generated from the content type surface's add situation, and the tool an
-agent has for the same job without surfaces.
+generated from the content type resource's add operation, and the tool an
+agent has for the same job without Data Surface.
 
-The tool is derived by `data_surface_tool` for every situation that can
-be asked on its own — its surface names a target, no plugin uses it, and
-its permission's placeholders are all parameters — so this module holds
+The tool is derived by `data_surface_tool` for every operation that can
+be asked on its own (its resource names storage, no plugin uses it, and
+its permission's placeholders are all parameters), so this module holds
 no code: it depends
 on the two modules the comparison needs, and keeps the comparison and
 its test.
@@ -17,21 +17,21 @@ A value another module adds to a form is not advertised by an AI tool
 unless the tool's author knew about it, and an agent that finds the
 value's stored schema anyway still has to infer what it means, because
 what the value means and how what a person says is turned into what is
-stored live in form code. A tool that reads a surface picks the
+stored live in form code. A tool that reads a resource picks the
 extension up with no change at all, and its caller infers nothing: the
 meaning is part of the contract.
 
 `data_surface_demo_extras` adds two editorial review settings to every
-content type — a review deadline of one hour to thirty days, stored as
-seconds, and a list of audience tags — and adds them twice: to the
-content type surface through its alter, `NodeTypeAlter`, and to core's
+content type (a review deadline of one hour to thirty days, stored as
+seconds, and a list of audience tags) and adds them twice: to the
+content type resource through its alter, `NodeTypeAlter`, and to core's
 own content type form through an
 ordinary `hook_form_node_type_form_alter`. Nothing in this module, and
 nothing in the tool's base class, names either setting, or any other key
 of a content type; `NodeTypeToolComparisonTest` greps the two files to
 keep that true. Enable the extras module and the tool advertises both
-settings — the deadline as an amount and a unit, the tags with their
-pattern — and holds every caller to them, storing one week as the
+settings (the deadline as an amount and a unit, the tags with their
+pattern) and holds every caller to them, storing one week as the
 604800 seconds core's form would store, and ten business days as the
 1036800 seconds core's form stores for them too.
 
@@ -42,27 +42,27 @@ the test asserts on every run that it has not drifted.
 
 ## How the tool is built
 
-It is not written. `SurfaceSituationToolDeriver` in `data_surface_tool`
-reads the content type surface's `add` situation and derives
-`data_surface:node.type:add`; `SurfaceSituationTool` runs it:
+It is not written. `ResourceOperationToolDeriver` in `data_surface_tool`
+reads the content type resource's `add` operation and derives
+`data_surface:node.type:add`; `ResourceOperationTool` runs it:
 
-- **Inputs.** The situation's parameters — `add()` has none — then one
-  `values` map, the surface built in the add situation, converted by
-  `SurfaceInputDefinitions`, and an optional `dry_run` boolean that
+- **Inputs.** The operation's parameters (`add()` has none), then one
+  `values` map, the resource as built in the add operation, converted by
+  `InputDefinitions`, and an optional `dry_run` boolean that
   stops the pipeline after prepare, where the content type is built and
   held to its config schema, and answers with what would be stored as
-  `prepared`. Because the add situation needs
+  `prepared`. Because the add operation needs
   nothing, that map is the exact contract in the static plugin
   definition: every consumer, `drush tool:info` and the AI connector's
   deriver included, sees the extras module's settings.
-- **Access.** The situation's permission, then the surface's access
+- **Access.** The operation's permission, then the resource's access
   class, asked in `checkAccess()` and again in `doExecute()`, and handed
   to the pipeline, decisively.
-- **Execution.** The situation builds the context, the surface is built
+- **Execution.** The operation builds the context, the resource is built
   in it, and one `DataSurfacePipeline::submit()` goes to its composed
-  target. Nothing is written by the tool itself.
+  storage. Nothing is written by the tool itself.
 
-One map rather than one input per surface key, because the Tool API
+One map rather than one input per resource key, because the Tool API
 treats top level input names as fixed by the plugin definition: the
 serializer closes the root schema on that assumption, and refiners may
 replace a named input but never add one.
@@ -93,8 +93,8 @@ thing, so it was written to be:
   outside one hour to thirty days; an `#element_validate` that splits,
   trims, lower cases and de-duplicates the typed tags; and an
   `#entity_builders` callback writing the third party settings. For a
-  person filling it in it is arguably friendlier than the surface: it
-  quietly fixes "News, news , Sports", where the surface refuses it.
+  person filling it in it is arguably friendlier than the resource: it
+  quietly fixes "News, news , Sports", where the resource refuses it.
 - **The deadline's schema is accurate and complete, validation
   included.** The extras module ships
   `node.type.*.third_party.data_surface_demo_extras` with the deadline
@@ -106,12 +106,12 @@ thing, so it was written to be:
   unit become the integer lives only in the form's validation callback.
 - **The demo does not rest on obscurity.** A capable agent reading only
   the schema will recognize 3600 and 2592000 as an hour and thirty days
-  in seconds, guess the unit, and send 604800 for a week — and be
+  in seconds, guess the unit, and send 604800 for a week, and be
   right. The claim is not that it cannot; it is that it has to infer.
   The stored schema is accurate but carries no meaning, so a
   schema-only agent's correct guess is still unverified inference,
   found right or wrong only after the value is stored, while the
-  surface's caller never infers, because the unit is part of the
+  resource's caller never infers, because the unit is part of the
   contract. The table records the right guess as well as a wrong one.
 - **Business days are the case no reading of the schema answers.**
   Both sides offer them and convert them by one rule, stated once in
@@ -121,7 +121,7 @@ thing, so it was written to be:
   agent asked for ten business days has no unit to find; its best
   inference, ten days in seconds, 864000, is plausible, inside the
   Range, accepted by the classic tool, and not what the form stores.
-- **The tags' schema says the stored shape and nothing more.** A
+- **The tags' schema says the stored layout and nothing more.** A
   sequence of strings. What a tag may look like, and the split, trim,
   lower casing and de-duplication, live in the form, which is the
   realistic common case.
@@ -144,15 +144,15 @@ thing, so it was written to be:
   classic path with a guard it does not have. Every other write in the
   test is checked by it.
 
-## How the surface side converts, and where
+## How the resource side converts, and where
 
-The surface asks for the deadline the way a person says it, an amount
+The resource asks for the deadline the way a person says it, an amount
 and a unit, and stores the seconds core's form stores. The conversion is
-`ReviewDeadlineShape`, a `SettingsShapeInterface` the extras module's
-alter, `NodeTypeAlter`, hands the surface by implementing
-`HasStorageShapeInterface`. The sealed surface carries it, and the
-target adapter applies it to that module's settings and nothing else:
-`toStorage()` before `NodeTypeTarget` writes them, `fromStorage()` after
+`ReviewDeadlineLayout`, a `StorageLayoutInterface` the extras module's
+alter, `NodeTypeAlter`, hands the resource by implementing
+`AltersStorageLayoutInterface`. The built resource carries it, and the
+storage adapter applies it to that module's settings and nothing else:
+`toStorage()` before `NodeTypeStorage` writes them, `fromStorage()` after
 it reads them, so an edit reads 604800 back as one week. Business days
 convert by the same `NodeTypeReviewSettings::seconds()` the form uses,
 and do not round-trip to their own unit: stored seconds carry no unit,
@@ -160,7 +160,7 @@ so `fromStorage()` reads them back in the largest of hours, days or
 weeks that divides them exactly. Under the business day rule that is
 always days, since a count of business days never ends on a weekend:
 ten business days read back as twelve days. The duration is kept; the
-way it was said is not. Neither the content type surface nor its target
+way it was said is not. Neither the content type resource nor its storage
 knows the extras module exists; the translation travels with the
 contribution.
 
@@ -171,19 +171,19 @@ through a constraint on the amount and unit together, judging business
 days on their converted seconds like any other unit: twenty-two are
 thirty calendar days and accepted, twenty-three are thirty-one and
 refused. The config schema's own Range on the stored seconds is a
-second gate: `NodeTypeTarget::prepare()` holds the node type it would
+second gate: `NodeTypeStorage::prepare()` holds the node type it would
 save, third party settings included, to `node.type.*` before anything
 is written.
 
 ## The one deliberate difference
 
-The surface does not transform tags; it refuses the ones it would have
+The resource does not transform tags; it refuses the ones it would have
 to transform. The pipeline never turns a value into a different one on
-a caller's behalf, so the contract says what a stored tag looks like — a
-list, each item matching a pattern, no item twice — and a caller sends
+a caller's behalf, so the contract says what a stored tag looks like (a
+list, each item matching a pattern, no item twice), and a caller sends
 that. The list type replaces the comma split outright; the lower casing
 and de-duplication become a pattern and a uniqueness constraint that a
-caller can read in the advertised schema. The surface driven form
+caller can read in the advertised schema. The resource-driven form
 renders the tags as one comma-separated field and refuses "News" with
 the same message a tool caller gets.
 
@@ -191,8 +191,8 @@ the same message a tool caller gets.
 
 | Test | Covers |
 | --- | --- |
-| `Kernel\NodeTypeToolComparisonTest` | The advertised schema, the stored schema, the tool naming no key, storage and read-back through the storage shape, refusals with paths, dry runs, what Tool Belt advertises and stores, the classic form for a person, the surface form with the extension, and `COMPARISON.md`. |
-| `Kernel\DataSurfaceBuilderTest` | A third-party storage shape travels with the surface, through refinement, and is refused for a module that mounts nothing. |
+| `Kernel\NodeTypeToolComparisonTest` | The advertised schema, the stored schema, the tool naming no key, storage and read-back through the storage layout, refusals with paths, dry runs, what Tool Belt advertises and stores, the classic form for a person, the resource's form with the extension, and `COMPARISON.md`. |
+| `Kernel\DataSurfaceBuilderTest` | A third-party storage layout travels with the resource, through refinement, and is refused for a module that mounts nothing. |
 
 ## Tool API limitations found
 
@@ -200,18 +200,18 @@ the same message a tool caller gets.
   the old tool replaced its values map per instance and some consumers
   (`drush tool:info`, the AI connector's function call deriver) read
   the static plugin definition. A derived tool's definition is static
-  and exact for a situation that needs nothing, so for this tool they
-  agree. A situation that needs an existing thing is refined to it through
+  and exact for an operation that needs nothing, so for this tool they
+  agree. An operation that needs an existing thing is refined to it through
   `input_definition_refiners`, which consumers reading the static
   definition do not see.
 - **The MCP bridge captures each tool's schema at derivative discovery**,
-  cached with the plugin definitions, so a surface change reaches MCP
+  cached with the plugin definitions, so a resource change reaches MCP
   clients on the next plugin cache clear. Installing a module clears it.
   The same is now true of the static definition itself: it is built
   when the tool plugins are discovered.
 - **Map validation treats "required" as "present in the payload".**
-  A surface's required key with a configured default is satisfied by
-  saying nothing, so `SurfaceInputDefinitions` converts it as not
+  A resource's required key with a configured default is satisfied by
+  saying nothing, so `InputDefinitions` converts it as not
   required.
 - **Only list items are validated, not the list.** The uniqueness
   constraint is enforced by the pipeline, not by the Tool API, and the

@@ -87,7 +87,12 @@ final class LanguageExistsOptions extends DataSurfaceOptionsResolverBase {
     foreach ($this->languageManager->getLanguages($constraint->languageStates()) as $langcode => $language) {
       $options[$langcode] = $language->getName();
     }
-    $cacheability = (new CacheableMetadata())->addCacheTags([self::LANGUAGE_LIST_TAG]);
+    // A language's name is configuration that config translation
+    // overrides in the interface language, so the list is good for this
+    // language alone.
+    $cacheability = (new CacheableMetadata())
+      ->addCacheTags([self::LANGUAGE_LIST_TAG])
+      ->addCacheContexts(['languages:language_interface']);
     return new OptionSet($options, [], $cacheability);
   }
 

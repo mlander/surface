@@ -1,35 +1,35 @@
 # Data Surface Demo Extras
 
 What a third-party module can do to another module's contract without
-touching a form — and, for content types, the same extension written
-both ways, so the two can be compared.
+touching a form (and, for content types, the same extension written
+both ways, so the two can be compared).
 
 ## What it shows
 
 - It mounts a `badge` setting under its own namespace on the demo
-  formatter's surface, with a default and a labeled choice. The setting
+  formatter's structure, with a default and a labeled choice. The setting
   is advertised, validated and rendered like any other, where the
   form-alter era gave an element no machine could see.
 - It contributes one more value, `ribbon`, to the formatter's `variant`
   key, with `extendChoices()`, and narrows it with a `#[RefinesInput]`
-  method of its own to say when that value is offered — here, only in
+  method of its own to say when that value is offered: here, only in
   upper case.
 
-Both live in one surface alter, `SurfaceAlter\DemoFormatterAlter`,
-carrying `#[AltersSurface(DataSurfaceDemoFormatter::class)]`: the
-formatter is its own surface, so the alter names the formatter's class.
+Both live in one alter, `Alter\DemoFormatterAlter`,
+carrying `#[Alters(DataSurfaceDemoFormatter::class)]`: the
+formatter is its own structure, so the alter names the formatter's class.
 Nothing registers it; discovery finds it and builds it as an autowired service.
-Nothing here alters a form, and every consumer of the surface — form,
-validation, defaults, and any machine-readable contract — sees the same
-extended surface.
+Nothing here alters a form, and every consumer of the structure (form,
+validation, defaults, and any machine-readable contract) sees the same
+extended structure.
 
 The contribution is the part worth reading twice. The value is added at
-build time, so it is part of what the surface advertises rather than
+build time, so it is part of what the structure advertises rather than
 something a refiner smuggles in afterwards; and the alter's method on a
 key it offered more values on is that contribution's refiner, handed
 that one value and nothing else, so it cannot narrow away a variant the
 formatter owns, and cannot hand back a value it was never given. What
-the refined surface offers is the union of what each contribution
+the refined structure offers is the union of what each contribution
 narrowed to:
 
 | Casing | The formatter's variants | This module's | Offered |
@@ -40,23 +40,23 @@ narrowed to:
 
 ## The demo block
 
-The demo block's configuration is a surface class,
-`DemoBlockSurface`, and this module alters it the same way: one class in
-`src/SurfaceAlter`, `DemoBlockAlter`, carrying
-`#[AltersSurface(DemoBlockSurface::class)]`. Nothing registers it;
+The demo block's configuration is a structure class,
+`DemoBlockStructure`, and this module alters it the same way: one class in
+`src/Alter`, `DemoBlockAlter`, carrying
+`#[Alters(DemoBlockStructure::class)]`. Nothing registers it;
 discovery finds it and builds it as an autowired service.
 
 - `alterInputs()` adds the same `badge` the formatter gets, which the
   build mounts at `third_party_settings.data_surface_demo_extras.badge`.
-- `#[RefinesInput('limit')]` on `shortInGrid()` watches
+- `#[RefinesInput('limit')]` on the static `shortInGrid()` watches
   `presentation`, by parameter name, and caps the number of items at
   twenty while the block is a grid. It used to watch `show_summary`;
-  that key now lives inside the list presentation's subsurface, and an
+  that key now lives inside the list presentation's structure, and an
   alter of the block cannot see into a child.
 - `describe('headline', ...)` rewords the headline's help text, the one
   change to an existing key an alter may make.
 
-`Kernel\SurfaceBuildTest` and `Kernel\SurfaceDiscoveryTest` assert
+`Kernel\ResourceBuildTest` and `Kernel\ResourceDiscoveryTest` assert
 them.
 
 ## The same extension, written twice
@@ -67,28 +67,29 @@ deadline of one hour to thirty days, stored as one integer of seconds
 under a key, `review_deadline`, that does not name its unit; and a list
 of audience tags.
 
-- **As contract**, in `SurfaceAlter\NodeTypeAlter`, carrying
-  `#[AltersSurface(NodeTypeSurface::class)]`: discovery finds it, and
+- **As contract**, in `Alter\NodeTypeAlter`, carrying
+  `#[Alters(NodeTypeResource::class)]`: discovery finds it, and
   skips it on a site without the node type demo, so nothing here
   depends on that module. The deadline is asked for as an amount and a
-  unit — hours, days, weeks or business days — with a constraint on the
+  unit (hours, days, weeks or business days) with a constraint on the
   pair that refuses anything past thirty days on the amount, and
-  `ReviewDeadlineShape` turns the pair into seconds and back; the alter
-  hands it to the surface by implementing `HasStorageShapeInterface`,
-  and the target adapter applies it to this module's settings before
-  the content type's target writes them and after it reads them. The
+  `ReviewDeadlineLayout` turns the pair into seconds and back; the alter
+  hands it to the resource by implementing `AltersStorageLayoutInterface`,
+  and the storage adapter applies it to this module's settings before
+  the content type's storage writes them and after it reads them. The
   tags are a list, with a pattern for each tag and a uniqueness
-  constraint. It brings a comma-separated widget for the list, because
-  the stock widgets draw a list only as a multiple select.
+  constraint. It brings a comma-separated widget for the list, typed
+  as the classic form types it, where the stock list widget would draw
+  a row per tag.
 - **The classic way**, in `Hook\NodeTypeFormHooks`: a
   `hook_form_node_type_form_alter` on core's own content type form, with
   an amount and a unit select whose `#element_validate` turns them into
   seconds and checks the range, an `#element_validate` that splits,
   trims, lower cases and de-duplicates the typed tags, and an
-  `#entity_builders` callback — what `menu_ui` does to the same form.
+  `#entity_builders` callback: what `menu_ui` does to the same form.
 
-The config schema is accurate and complete for the deadline — an
-integer with a Range of 3600 to 2592000 — so the classic side is not
+The config schema is accurate and complete for the deadline (an
+integer with a Range of 3600 to 2592000), so the classic side is not
 short of validation. What it does not carry is the unit, and how an
 amount of hours, days, weeks or business days becomes the integer: that
 lives in the form, and a reader of the schema alone has to infer it.
@@ -129,7 +130,7 @@ title `NodeTypeAlter` gives its mount.
 `Kernel\DemoFormatterTest` installs this module alongside the demo and
 asserts the mounted key, the contributed value, and the union each casing
 produces. `Kernel\NodeTypeToolComparisonTest` covers both content type
-extensions: the classic form for a person, the surface form, and what
+extensions: the classic form for a person, the resource's form, and what
 each content type tool advertises and stores.
 
 ## See also

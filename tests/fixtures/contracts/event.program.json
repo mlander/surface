@@ -1,0 +1,226 @@
+{
+    "resource": "event.program",
+    "module": "data_surface_examples",
+    "contract": 2,
+    "documents": [
+        {
+            "resource": "event.program",
+            "operation": "configure",
+            "label": "Configure the program",
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": "Configure the program",
+                "description": "Sets the program: its headline, how many sessions it has, whether it is published, and its fees.",
+                "x-surface": {
+                    "contract": 2,
+                    "operation": {
+                        "id": "configure",
+                        "label": "Configure the program",
+                        "description": "Sets the program: its headline, how many sessions it has, whether it is published, and its fees.",
+                        "kind": "update",
+                        "creates": false,
+                        "destructive": false,
+                        "idempotent": true
+                    },
+                    "version": 1
+                },
+                "type": "object",
+                "properties": {
+                    "headline": {
+                        "title": "Headline",
+                        "type": "string",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "access": "live"
+                        }
+                    },
+                    "sessions": {
+                        "title": "Sessions",
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 1,
+                        "maximum": 30,
+                        "default": 8,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "access": "live"
+                        }
+                    },
+                    "published": {
+                        "title": "Published",
+                        "type": [
+                            "boolean",
+                            "null"
+                        ],
+                        "default": false,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "access": "live"
+                        }
+                    },
+                    "fees": {
+                        "title": "Fees",
+                        "$ref": "#/$defs/event.fees",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "access": "live"
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "headline"
+                ],
+                "$defs": {
+                    "event.fees": {
+                        "title": "event.fees",
+                        "type": "object",
+                        "properties": {
+                            "standard": {
+                                "title": "Standard fee",
+                                "type": [
+                                    "number",
+                                    "null"
+                                ],
+                                "minimum": 0,
+                                "default": 20,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "concession": {
+                                "title": "Concession fee",
+                                "type": [
+                                    "number",
+                                    "null"
+                                ],
+                                "minimum": 0,
+                                "default": 10,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            }
+                        },
+                        "additionalProperties": false
+                    }
+                }
+            }
+        },
+        {
+            "resource": "event.program",
+            "operation": "check",
+            "label": "Check a program",
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": "Check a program",
+                "description": "Checks a program against every rule the program configuration applies, and saves nothing.",
+                "x-surface": {
+                    "contract": 2,
+                    "operation": {
+                        "id": "check",
+                        "label": "Check a program",
+                        "description": "Checks a program against every rule the program configuration applies, and saves nothing.",
+                        "kind": "read",
+                        "creates": false,
+                        "destructive": false,
+                        "idempotent": true
+                    },
+                    "version": 1
+                },
+                "type": "object",
+                "properties": {
+                    "headline": {
+                        "title": "Headline",
+                        "type": "string",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "sessions": {
+                        "title": "Sessions",
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 1,
+                        "maximum": 30,
+                        "default": 8,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "published": {
+                        "title": "Published",
+                        "type": [
+                            "boolean",
+                            "null"
+                        ],
+                        "default": false,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "fees": {
+                        "title": "Fees",
+                        "$ref": "#/$defs/event.fees",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "access": "live"
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "headline"
+                ],
+                "$defs": {
+                    "event.fees": {
+                        "title": "event.fees",
+                        "type": "object",
+                        "properties": {
+                            "standard": {
+                                "title": "Standard fee",
+                                "type": [
+                                    "number",
+                                    "null"
+                                ],
+                                "minimum": 0,
+                                "default": 20,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "concession": {
+                                "title": "Concession fee",
+                                "type": [
+                                    "number",
+                                    "null"
+                                ],
+                                "minimum": 0,
+                                "default": 10,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            }
+                        },
+                        "additionalProperties": false
+                    }
+                }
+            }
+        }
+    ]
+}

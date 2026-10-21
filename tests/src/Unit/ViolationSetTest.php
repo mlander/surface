@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\data_surface\Unit;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\data_surface\Pipeline\SurfaceViolation;
+use Drupal\data_surface\Pipeline\Violation;
 use Drupal\data_surface\Pipeline\ViolationSet;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
@@ -13,8 +13,8 @@ use PHPUnit\Framework\Attributes\Group;
 /**
  * Tests the collection every refusal in the module arrives in.
  *
- * What the pipeline, a target and a config schema each report is the
- * same three facts — a surface key, a path inside it, a message — and
+ * What the pipeline, a storage class and a config schema each report is
+ * the same three facts (an input key, a path inside it, a message), and
  * this is the one shape they report them in, so a form, a tool result
  * and a log line read one object rather than remembering an array of
  * arrays.
@@ -26,7 +26,7 @@ use PHPUnit\Framework\Attributes\Group;
  * built, so whatever prints it escapes it exactly once.
  *
  * @see \Drupal\data_surface\Pipeline\ViolationSet
- * @see \Drupal\data_surface\Pipeline\SurfaceViolation
+ * @see \Drupal\data_surface\Pipeline\Violation
  */
 #[Group('data_surface')]
 class ViolationSetTest extends UnitTestCase {
@@ -49,9 +49,9 @@ class ViolationSetTest extends UnitTestCase {
    * Tests that violations are read back by the key they were filed under.
    */
   public function testByKey(): void {
-    $first = new SurfaceViolation('title', '', 'Too long.');
-    $second = new SurfaceViolation('title', 'sub', 'Not a choice.');
-    $other = new SurfaceViolation('limit', '', 'Too large.');
+    $first = new Violation('title', '', 'Too long.', 'invalid');
+    $second = new Violation('title', 'sub', 'Not a choice.', 'invalid');
+    $other = new Violation('limit', '', 'Too large.', 'invalid');
     $set = new ViolationSet([$first, $second, $other]);
 
     $this->assertFalse($set->isEmpty());
@@ -68,19 +68,19 @@ class ViolationSetTest extends UnitTestCase {
    * Tests that iteration groups by key, whatever order they arrived in.
    *
    * A config schema validates a whole object and reports its complaints
-   * in its own order, which can interleave two surface keys. What a
+   * in its own order, which can interleave two input keys. What a
    * summary prints has to be every violation of one key together, in
    * the order that key was first refused.
    */
   public function testIterationIsGroupedByKey(): void {
     $set = new ViolationSet([
-      new SurfaceViolation('title', '', 'First.'),
-      new SurfaceViolation('limit', '', 'Second.'),
-      new SurfaceViolation('title', '', 'Third.'),
+      new Violation('title', '', 'First.', 'invalid'),
+      new Violation('limit', '', 'Second.', 'invalid'),
+      new Violation('title', '', 'Third.', 'invalid'),
     ]);
 
     $messages = array_map(
-      static fn (SurfaceViolation $violation): string => (string) $violation->message,
+      static fn (Violation $violation): string => (string) $violation->message,
       iterator_to_array($set),
     );
     $this->assertSame(['First.', 'Third.', 'Second.'], $messages);
@@ -91,10 +91,10 @@ class ViolationSetTest extends UnitTestCase {
    * Tests the full path a violation names, with and without a sub-path.
    */
   public function testFullPath(): void {
-    $this->assertSame('title', (new SurfaceViolation('title', '', 'Refused.'))->fullPath());
+    $this->assertSame('title', (new Violation('title', '', 'Refused.', 'invalid'))->fullPath());
     $this->assertSame(
       'extras.badge',
-      (new SurfaceViolation('extras', 'badge', 'Refused.'))->fullPath(),
+      (new Violation('extras', 'badge', 'Refused.', 'invalid'))->fullPath(),
     );
   }
 
@@ -107,7 +107,7 @@ class ViolationSetTest extends UnitTestCase {
    */
   public function testMessagesStayObjects(): void {
     $message = new TranslatableMarkup('@label is required.', ['@label' => 'Title']);
-    $set = new ViolationSet([new SurfaceViolation('title', '', $message)]);
+    $set = new ViolationSet([new Violation('title', '', $message, 'invalid')]);
 
     $this->assertSame($message, $set->byKey('title')[0]->message);
   }

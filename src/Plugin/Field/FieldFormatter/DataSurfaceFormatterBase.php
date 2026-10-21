@@ -9,20 +9,20 @@ use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FormatterBase;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Form\DataSurfaceFormatterTrait;
-use Drupal\data_surface\Pipeline\Omitted;
+use Drupal\data_surface\Pipeline\NotEmitted;
 
 /**
- * Base class for field formatters whose settings come from a surface.
+ * Base class for field formatters whose settings come from a structure.
  *
- * A formatter extending this contains #[UsesSurface] naming the surface
- * class its settings are, and one method per delta that says what it
- * shows. The settings form, the settings summary, validation and the
- * static defaults all come from the surface.
+ * A formatter extending this contains #[UsesStructure] naming the
+ * structure class its settings are, and one method per delta that says
+ * what it shows. The settings form, the settings summary, validation and
+ * the static defaults all come from the structure.
  *
  * The class composes the formatter trait, absorbs the one host quirk the
- * trait cannot — defaultSettings() is static, so it is answered here
- * from the surface class's own shape, which #[UsesSurface] names
- * statically for exactly this reason — and splits viewing in two.
+ * trait cannot (defaultSettings() is static, so it is answered here from
+ * the structure class's own shape, which #[UsesStructure] names
+ * statically for exactly this reason), and splits viewing in two.
  *
  * ## The split, and why it is here
  *
@@ -63,17 +63,17 @@ abstract class DataSurfaceFormatterBase extends FormatterBase {
   }
 
   /**
-   * Builds the surface the class's #[UsesSurface] names.
+   * Builds the structure the class's #[UsesStructure] names.
    *
    * In the formatter host's `configure` context, stored as the host always
-   * stored it, through the plugin configuration target this host
+   * stored it, through the plugin configuration storage this host
    * supplies.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface, alters applied.
+   *   The built structure, alters applied.
    */
   public function getDataSurface(): DataSurfaceInterface {
-    return $this->hostedSurface();
+    return $this->hostedStructure();
   }
 
   /**
@@ -85,7 +85,7 @@ abstract class DataSurfaceFormatterBase extends FormatterBase {
    * anything that wants the data without the presentation.
    *
    * A key the formatter has nothing to say about on this item is
-   * **absent**, and Pipeline\Omitted is how to say that from inside the
+   * **absent**, and Pipeline\NotEmitted is how to say that from inside the
    * array literal. NULL is not absence: it is a value, and it has to
    * satisfy the output definition like any other.
    *
@@ -95,12 +95,12 @@ abstract class DataSurfaceFormatterBase extends FormatterBase {
    * @param \Drupal\Core\Field\FieldItemInterface $item
    *   The field item being shown.
    * @param array $settings
-   *   This formatter's settings, as the surface accepted them.
+   *   This formatter's settings, as the structure accepted them.
    *
    * @return array
    *   The emitted values, keyed by output key.
    *
-   * @see \Drupal\data_surface\Pipeline\Omitted
+   * @see \Drupal\data_surface\Pipeline\NotEmitted
    */
   public function formatValue(FieldItemInterface $item, array $settings): array {
     $property = $item::mainPropertyName();
@@ -127,7 +127,7 @@ abstract class DataSurfaceFormatterBase extends FormatterBase {
     $elements = [];
     $settings = $this->getSettings();
     foreach ($items as $delta => $item) {
-      $data = Omitted::strip($this->formatValue($item, $settings));
+      $data = NotEmitted::strip($this->formatValue($item, $settings));
       $classes = $data['classes'] ?? [];
       $elements[$delta] = [
         '#type' => 'html_tag',

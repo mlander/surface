@@ -1,0 +1,11 @@
+phone: '+1 555 0199'
+in_program: false
+lead:
+  name: 'Alex Kim'
+  email: ''
+  phone: ''
+volunteers:
+  -
+    name: 'Jo Park'
+    email: ''
+    phone: ''

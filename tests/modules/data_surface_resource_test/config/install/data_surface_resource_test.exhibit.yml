@@ -1,0 +1,10 @@
+title: Ammonite
+status: open
+room: east
+source: 'Lyme Regis'
+acquired: 1820
+loan:
+  lender: 'The county museum'
+  until: 2030
+  insurance:
+    policy: P-7

@@ -9,12 +9,12 @@ use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\data_surface\Form\DataSurfaceSituationForm;
+use Drupal\data_surface\Form\DataSurfaceOperationForm;
 use Drupal\data_surface_demo_extras\NodeTypeReviewSettings;
-use Drupal\data_surface_demo_node_type\Surface\NodeTypeSurface;
-use Drupal\data_surface_tool\Plugin\Derivative\SurfaceSituationToolDeriver;
-use Drupal\data_surface_tool\Plugin\tool\Tool\SurfaceSituationTool;
-use Drupal\data_surface_tool\SituationInputs;
+use Drupal\data_surface_demo_node_type\Resource\NodeTypeResource;
+use Drupal\data_surface_tool\Plugin\Derivative\ResourceOperationToolDeriver;
+use Drupal\data_surface_tool\Plugin\tool\Tool\ResourceOperationTool;
+use Drupal\data_surface_tool\OperationInputs;
 use Drupal\node\Entity\NodeType;
 use Drupal\node\NodePreviewMode;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -30,13 +30,13 @@ use Symfony\Component\HttpFoundation\Request;
  * Compares two content type tools once another module has extended it.
  *
  * The data_surface_demo_extras module adds two review settings to every
- * content type, twice: to the content type surface through an alter, and
+ * content type, twice: to the content type resource through an alter, and
  * to core's own content type form through a form alter. Neither tool
- * compared here was written with those settings in mind. The surface
- * driven tool picks them up because its input is the surface; the
+ * compared here was written with those settings in mind. The resource
+ * driven tool picks them up because its input is the resource; the
  * classic one, Tool Belt's bundle add tool, is what an agent has without
- * surfaces, and this test records exactly what it offers and what it
- * does — including what it lets through that the form would not.
+ * Data Surface, and this test records exactly what it offers and what it
+ * does, including what it lets through that the form would not.
  *
  * The strict config schema checker stays on for everything except the
  * classic tool's calls, and runClassicTool() says why it is lifted there.
@@ -55,12 +55,12 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
   use UserCreationTrait;
 
   /**
-   * The surface driven tool.
+   * The resource driven tool.
    */
   protected const SURFACE_TOOL = 'data_surface:node.type:add';
 
   /**
-   * The tool an agent has for creating a content type without surfaces.
+   * The tool an agent has for creating a content type without Data Surface.
    */
   protected const CLASSIC_TOOL = 'tool_belt:entity_bundle_add';
 
@@ -121,16 +121,16 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests what the surface driven tool advertises for the extension.
+   * Tests what the resource driven tool advertises for the extension.
    *
    * Both review settings are in the advertised schema, labeled: the
    * deadline as the amount and unit a person says, with the units named,
    * and the tags as a list with the tag pattern. Every one of them is
-   * read off the surface, because nothing in the tool names them.
+   * read off the resource, because nothing in the tool names them.
    */
-  public function testSurfaceToolAdvertisesTheExtension(): void {
-    $schema = $this->surfaceSchema();
-    $values = $schema['properties'][SituationInputs::VALUES];
+  public function testResourceToolAdvertisesTheExtension(): void {
+    $schema = $this->resourceSchema();
+    $values = $schema['properties'][OperationInputs::VALUES];
     $extras = $values['properties']['third_party_settings']['properties'][self::EXTRAS]['properties'];
 
     $deadline = $extras[NodeTypeReviewSettings::DEADLINE];
@@ -147,10 +147,12 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
     $tags = $extras[NodeTypeReviewSettings::TAGS];
     $this->assertSame('Audience tags', $tags['title']);
     $this->assertContains('array', (array) $tags['type']);
-    $this->assertSame('^[a-z0-9]+(?:[ -][a-z0-9]+)*$', $tags['items']['pattern']);
+    // A Regex with the D modifier, which the Tool API's own translation
+    // does not carry: the tag's shape is validated, not advertised.
+    $this->assertArrayNotHasKey('pattern', $tags['items']);
     $this->assertStringContainsString('each tag listed once and in lower case', $tags['description']);
 
-    // Required is what the surface says, default or not: a key whose
+    // Required is what the resource says, default or not: a key whose
     // default already holds a value is still in `required`, and the
     // default is advertised beside it.
     $this->assertSame(['name', 'type', 'title_label', 'preview_mode'], $values['required']);
@@ -182,15 +184,15 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
    * The claim this whole comparison rests on, made checkable: the tool,
    * its deriver and what describes its inputs do not spell a single key
    * of a content type, nor anything the extras module adds, nor the
-   * mount it adds it under. Nor the surface: the tool is generated.
+   * mount it adds it under. Nor the resource: the tool is generated.
    */
-  public function testSurfaceToolNamesNoKey(): void {
+  public function testResourceToolNamesNoKey(): void {
     $sources = [
-      (new \ReflectionClass(SurfaceSituationTool::class))->getFileName(),
-      (new \ReflectionClass(SurfaceSituationToolDeriver::class))->getFileName(),
-      (new \ReflectionClass(SituationInputs::class))->getFileName(),
+      (new \ReflectionClass(ResourceOperationTool::class))->getFileName(),
+      (new \ReflectionClass(ResourceOperationToolDeriver::class))->getFileName(),
+      (new \ReflectionClass(OperationInputs::class))->getFileName(),
     ];
-    $surface = $this->container->get('data_surface.surfaces')->buildSituation(NodeTypeSurface::class, 'add');
+    $surface = $this->container->get('data_surface.resources')->buildOperation(NodeTypeResource::class, 'add');
     $keys = array_merge(
       $surface->getDefinitions()->names(),
       [self::EXTRAS, NodeTypeReviewSettings::DEADLINE, NodeTypeReviewSettings::TAGS],
@@ -208,29 +210,29 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the surface driven tool stores the extension.
+   * Tests that the resource driven tool stores the extension.
    *
    * One week, said as an amount and a unit, is stored as the seconds the
    * classic form stores, and reads back as one week: the conversion is
-   * the extras module's storage shape, applied by the target.
+   * the extras module's storage layout, applied by the storage.
    */
-  public function testSurfaceToolStoresTheExtension(): void {
+  public function testResourceToolStoresTheExtension(): void {
     $one_week = $this->extras($this->deadline(1, 'weeks'), ['news', 'sports']);
-    $result = $this->runSurfaceTool($this->contentType('deadline') + $one_week);
+    $result = $this->runResourceTool($this->contentType('deadline') + $one_week);
     $this->assertTrue($result->isSuccess(), (string) $result->getMessage());
     $this->assertSame(
       [NodeTypeReviewSettings::DEADLINE => 604800, NodeTypeReviewSettings::TAGS => ['news', 'sports']],
       $this->stored('deadline'),
     );
-    $this->assertTrue($result->getContextValues()[SituationInputs::COMMITTED]);
+    $this->assertTrue($result->getContextValues()[OperationInputs::COMMITTED]);
     // Stored as the schema the extras module declares says, range
     // included, and the content type now depends on the module whose
     // settings it carries.
     $this->assertSchemaHolds('deadline');
     $this->assertContains(self::EXTRAS, NodeType::load('deadline')?->getDependencies()['module'] ?? []);
 
-    // Read back through the same target, the seconds are a week again.
-    $loaded = $this->loadThroughTheSurface('deadline');
+    // Read back through the same storage, the seconds are a week again.
+    $loaded = $this->loadThroughTheResource('deadline');
     $this->assertSame(
       $this->deadline(1, 'weeks'),
       $loaded['third_party_settings'][self::EXTRAS][NodeTypeReviewSettings::DEADLINE],
@@ -241,31 +243,31 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
    * Tests that a deadline past thirty days is refused, on the amount.
    *
    * It is refused on what the caller sent, in the caller's units, at the
-   * amount's path; nothing is created. Through the tool, the Tool API's
-   * own input validation runs the surface's constraint first and reports
-   * it in its spelling; through the pipeline alone, the pipeline reports
-   * the full dotted path. The config schema's
+   * amount's path; nothing is created. Through the tool as through the
+   * pipeline alone, the pipeline reports it at the full dotted path: the
+   * tool holds the values to their shape alone before it runs. The
+   * config schema's
    * Range on the stored seconds is the second gate, and it holds too:
-   * the pipeline's check runs first, and every value the surface stores
+   * the pipeline's check runs first, and every value the resource stores
    * satisfies it.
    */
-  public function testSurfaceToolRefusesAnOutOfRangeDeadline(): void {
+  public function testResourceToolRefusesAnOutOfRangeDeadline(): void {
     $path = 'third_party_settings.' . self::EXTRAS . '.' . NodeTypeReviewSettings::DEADLINE . '.' . NodeTypeReviewSettings::AMOUNT;
-    $result = $this->runSurfaceTool($this->contentType('late') + $this->extras($this->deadline(45, 'days'), []));
+    $result = $this->runResourceTool($this->contentType('late') + $this->extras($this->deadline(45, 'days'), []));
     $this->assertFalse($result->isSuccess());
     $message = (string) $result->getMessage();
-    $this->assertStringContainsString(static::toolApiPath(NodeTypeReviewSettings::DEADLINE, NodeTypeReviewSettings::AMOUNT), $message);
+    $this->assertStringContainsString(static::refusedAt(NodeTypeReviewSettings::DEADLINE, NodeTypeReviewSettings::AMOUNT), $message);
     $this->assertStringContainsString('at most thirty days; 45 days is outside that', $message);
     $this->assertNull(NodeType::load('late'));
 
     // The same through the pipeline alone, and in weeks.
-    $surfaces = $this->container->get('data_surface.surfaces');
-    $add = NodeTypeSurface::add();
-    $surface = $surfaces->build(NodeTypeSurface::class, $add);
+    $resources = $this->container->get('data_surface.resources');
+    $add = $resources->operation(NodeTypeResource::class, 'add');
+    $surface = $resources->build(NodeTypeResource::class, $add);
     $pipeline_result = $this->pipeline()->submit(
       $surface,
       $this->contentType('late') + $this->extras($this->deadline(5, 'weeks'), []),
-      $surfaces->target(NodeTypeSurface::class, $add, $surface),
+      $resources->storage(NodeTypeResource::class, $add, $surface),
     );
     $this->assertSame(
       [$path],
@@ -275,7 +277,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
 
     // A bare number where the amount and unit go says nothing about its
     // unit, and is refused rather than guessed at.
-    $result = $this->runSurfaceTool($this->contentType('bare') + $this->extras(7, []));
+    $result = $this->runResourceTool($this->contentType('bare') + $this->extras(7, []));
     $this->assertFalse($result->isSuccess());
     $this->assertNull(NodeType::load('bare'));
   }
@@ -284,35 +286,34 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
    * Tests that tags the classic form would rewrite are refused instead.
    *
    * The deliberate difference. The classic form lower cases, trims and
-   * de-duplicates what a person typed; the surface states what a stored
+   * de-duplicates what a person typed; the resource states what a stored
    * tag looks like, and the pipeline never turns a value into a
    * different one on a caller's behalf, so a caller sending the typed
    * form is told which items are wrong and nothing is created.
    */
-  public function testSurfaceToolRefusesTagsItWouldHaveToRewrite(): void {
+  public function testResourceToolRefusesTagsItWouldHaveToRewrite(): void {
     $typed = $this->extras($this->deadline(1, 'weeks'), ['News', 'news ', 'Sports']);
-    $result = $this->runSurfaceTool($this->contentType('typed') + $typed);
+    $result = $this->runResourceTool($this->contentType('typed') + $typed);
     $this->assertFalse($result->isSuccess());
     $message = (string) $result->getMessage();
     foreach ([0, 1, 2] as $delta) {
-      $this->assertStringContainsString('(property ' . NodeTypeReviewSettings::TAGS . ') (item ' . $delta . ')', $message);
+      $this->assertStringContainsString(static::refusedAt(NodeTypeReviewSettings::TAGS, $delta), $message);
     }
     $this->assertNull(NodeType::load('typed'));
 
     // Every item well formed, one of them twice: the list is refused as a
-    // whole. The Tool API validates the list's own constraints now, so it
-    // refuses this before the pipeline is reached.
-    $result = $this->runSurfaceTool($this->contentType('repeat') + $this->extras(NULL, ['news', 'news']));
+    // whole, by the pipeline.
+    $result = $this->runResourceTool($this->contentType('repeat') + $this->extras(NULL, ['news', 'news']));
     $this->assertFalse($result->isSuccess());
-    $this->assertStringContainsString(static::toolApiPath(NodeTypeReviewSettings::TAGS) . 'Each item may be listed only once.', (string) $result->getMessage());
+    $this->assertStringContainsString(static::refusedAt(NodeTypeReviewSettings::TAGS) . 'Each item may be listed only once.', (string) $result->getMessage());
     $this->assertNull(NodeType::load('repeat'));
 
     // One string where the list goes: typed data wraps it into a list of
     // one item, and the item is refused, so the unsplit text never
     // reaches storage.
-    $result = $this->runSurfaceTool($this->contentType('unsplit') + $this->extras(NULL, 'News, Sports'));
+    $result = $this->runResourceTool($this->contentType('unsplit') + $this->extras(NULL, 'News, Sports'));
     $this->assertFalse($result->isSuccess());
-    $this->assertStringContainsString('(property ' . NodeTypeReviewSettings::TAGS . ') (item 0)', (string) $result->getMessage());
+    $this->assertStringContainsString(static::refusedAt(NodeTypeReviewSettings::TAGS, 0), (string) $result->getMessage());
     $this->assertNull(NodeType::load('unsplit'));
   }
 
@@ -341,13 +342,13 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
     $inferred = 10 * 86400;
     $this->assertSame(864000, $inferred);
 
-    // The surface: the unit is part of the contract, so it is stored by
+    // The resource: the unit is part of the contract, so it is stored by
     // the rule, and reads back as the same duration in days.
-    $result = $this->runSurfaceTool($this->contentType('business') + $this->extras($this->deadline(10, $business_days), NULL));
+    $result = $this->runResourceTool($this->contentType('business') + $this->extras($this->deadline(10, $business_days), NULL));
     $this->assertTrue($result->isSuccess(), (string) $result->getMessage());
     $this->assertSame($rule, $this->stored('business')[NodeTypeReviewSettings::DEADLINE] ?? NULL);
     $this->assertSchemaHolds('business');
-    $loaded = $this->loadThroughTheSurface('business');
+    $loaded = $this->loadThroughTheResource('business');
     $this->assertSame(
       $this->deadline(12, 'days'),
       $loaded['third_party_settings'][self::EXTRAS][NodeTypeReviewSettings::DEADLINE],
@@ -375,21 +376,21 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
     $this->assertSame([], $this->schemaErrors('business_classic'));
     $this->assertNotSame($rule, $inferred);
 
-    // The surface driven form offers the unit too.
-    $this->serveSurfaceAddRoute();
-    $form_state = $this->submitSurfaceForm('business_surface_form', '10', $business_days, '');
+    // The resource driven form offers the unit too.
+    $this->serveResourceAddRoute();
+    $form_state = $this->submitResourceForm('business_surface_form', '10', $business_days, '');
     $this->assertSame([], $form_state->getErrors());
     $this->assertSame($rule, $this->stored('business_surface_form')[NodeTypeReviewSettings::DEADLINE] ?? NULL);
 
     // The range judges the converted seconds: twenty-two business days
     // are thirty calendar days and accepted, twenty-three are thirty-one
     // and refused, on the amount, on both sides.
-    $result = $this->runSurfaceTool($this->contentType('business_max') + $this->extras($this->deadline(22, $business_days), NULL));
+    $result = $this->runResourceTool($this->contentType('business_max') + $this->extras($this->deadline(22, $business_days), NULL));
     $this->assertTrue($result->isSuccess(), (string) $result->getMessage());
     $this->assertSame(NodeTypeReviewSettings::DEADLINE_MAX, $this->stored('business_max')[NodeTypeReviewSettings::DEADLINE] ?? NULL);
-    $result = $this->runSurfaceTool($this->contentType('business_late') + $this->extras($this->deadline(23, $business_days), NULL));
+    $result = $this->runResourceTool($this->contentType('business_late') + $this->extras($this->deadline(23, $business_days), NULL));
     $this->assertFalse($result->isSuccess());
-    $this->assertStringContainsString(static::toolApiPath(NodeTypeReviewSettings::DEADLINE, NodeTypeReviewSettings::AMOUNT), (string) $result->getMessage());
+    $this->assertStringContainsString(static::refusedAt(NodeTypeReviewSettings::DEADLINE, NodeTypeReviewSettings::AMOUNT), (string) $result->getMessage());
     $this->assertNull(NodeType::load('business_late'));
     $form_state = $this->submitClassicForm('business_person_max', '22', $business_days, '');
     $this->assertSame([], $form_state->getErrors());
@@ -402,17 +403,17 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
    * Tests that a dry run prepares the values and creates nothing.
    */
   public function testDryRunCreatesNothing(): void {
-    $result = $this->runSurfaceTool($this->contentType('rehearsal') + $this->extras($this->deadline(1, 'weeks'), ['news']), TRUE);
+    $result = $this->runResourceTool($this->contentType('rehearsal') + $this->extras($this->deadline(1, 'weeks'), ['news']), TRUE);
     $this->assertTrue($result->isSuccess(), (string) $result->getMessage());
     $context = $result->getContextValues();
-    $this->assertFalse($context[SituationInputs::COMMITTED]);
+    $this->assertFalse($context[OperationInputs::COMMITTED]);
     $this->assertSame(
       $this->deadline(1, 'weeks'),
-      $context[SituationInputs::VALUES]['third_party_settings'][self::EXTRAS][NodeTypeReviewSettings::DEADLINE],
+      $context[OperationInputs::VALUES]['third_party_settings'][self::EXTRAS][NodeTypeReviewSettings::DEADLINE],
     );
     $this->assertNull(NodeType::load('rehearsal'));
     // And a dry run is still judged: an out-of-range value is refused.
-    $this->assertFalse($this->runSurfaceTool($this->contentType('rehearsal') + $this->extras($this->deadline(45, 'days'), []), TRUE)->isSuccess());
+    $this->assertFalse($this->runResourceTool($this->contentType('rehearsal') + $this->extras($this->deadline(45, 'days'), []), TRUE)->isSuccess());
   }
 
   /**
@@ -513,36 +514,36 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests the surface driven form, which the extension also reaches.
+   * Tests the resource driven form, which the extension also reaches.
    *
    * The generic form renders the deadline as an amount and a
    * unit select, and the tags as one comma-separated field, because the
    * extras module brings the widget for the list it mounts; without it,
    * building the form would be refused. Reading the field back only
-   * splits it, so tags the surface does not take are refused on the
+   * splits it, so tags the resource does not take are refused on the
    * form exactly as they are refused from the tool.
    */
-  public function testSurfaceFormRendersTheExtension(): void {
-    $this->serveSurfaceAddRoute();
-    $form = $this->container->get('form_builder')->getForm(DataSurfaceSituationForm::class);
-    $extras = $form[DataSurfaceSituationForm::SURFACE_KEY]['third_party_settings'][self::EXTRAS];
+  public function testResourceFormRendersTheExtension(): void {
+    $this->serveResourceAddRoute();
+    $form = $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class);
+    $extras = $form[DataSurfaceOperationForm::SURFACE_KEY]['third_party_settings'][self::EXTRAS];
     $deadline = $extras[NodeTypeReviewSettings::DEADLINE];
     $this->assertSame('number', $deadline[NodeTypeReviewSettings::AMOUNT]['#type']);
     $this->assertSame('select', $deadline[NodeTypeReviewSettings::UNIT]['#type']);
     $this->assertSame('textfield', $extras[NodeTypeReviewSettings::TAGS]['#type']);
 
-    $form_state = $this->submitSurfaceForm('surface_form', '2', 'weeks', 'local news, sports');
+    $form_state = $this->submitResourceForm('surface_form', '2', 'weeks', 'local news, sports');
     $this->assertSame([], $form_state->getErrors());
     $this->assertSame(
       [NodeTypeReviewSettings::DEADLINE => 1209600, NodeTypeReviewSettings::TAGS => ['local news', 'sports']],
       $this->stored('surface_form'),
     );
 
-    $form_state = $this->submitSurfaceForm('surface_form_late', '45', 'days', '');
+    $form_state = $this->submitResourceForm('surface_form_late', '45', 'days', '');
     $this->assertNotSame([], $form_state->getErrors());
     $this->assertNull(NodeType::load('surface_form_late'));
 
-    $form_state = $this->submitSurfaceForm('surface_form_typed', '2', 'weeks', 'Local News, sports');
+    $form_state = $this->submitResourceForm('surface_form_typed', '2', 'weeks', 'Local News, sports');
     $this->assertNotSame([], $form_state->getErrors());
     $this->assertNull(NodeType::load('surface_form_typed'));
   }
@@ -557,7 +558,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
    * is what scripts/generate-comparison.php does.
    */
   public function testComparisonHasNotDrifted(): void {
-    $document = \DataSurfaceNodeTypeComparisonDocument::render($this->surfaceSchema(), $this->classicSchema(), $this->outcomes());
+    $document = \DataSurfaceNodeTypeComparisonDocument::render($this->resourceSchema(), $this->classicSchema(), $this->outcomes());
     $path = dirname(__DIR__, 3) . '/' . \DataSurfaceNodeTypeComparisonDocument::PATH;
     if (getenv(\DataSurfaceNodeTypeComparisonDocument::WRITE_VARIABLE) === '1') {
       file_put_contents($path, $document);
@@ -574,21 +575,21 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
    * Runs every case against both tools and the form, for the document.
    *
    * Each case says what each column was sent, because they are asked in
-   * different shapes: the surface tool as its schema asks, the classic
+   * different shapes: the resource tool as its schema asks, the classic
    * tool as the stored schema reads, and the form as a person types.
    *
    * @return array<int, array{0: string, 1: string, 2: string, 3: string}>
-   *   One row per case: the case, then the surface tool's, the classic
+   *   One row per case: the case, then the resource tool's, the classic
    *   tool's and core's form's outcome.
    */
   protected function outcomes(): array {
     $cases = [
-      'One week. Surface: `{"amount": 1, "unit": "weeks"}`; classic: `604800`, by a schema-only agent that reads 3600 and 2592000 as an hour and thirty days in seconds and infers the unit, rightly, though nothing tells it so before storage; form: 1, Weeks' => [
+      'One week. Resource: `{"amount": 1, "unit": "weeks"}`; classic: `604800`, by a schema-only agent that reads 3600 and 2592000 as an hour and thirty days in seconds and infers the unit, rightly, though nothing tells it so before storage; form: 1, Weeks' => [
         $this->extras($this->deadline(1, 'weeks'), NULL),
         $this->extras(604800, NULL),
         ['1', 'weeks', ''],
       ],
-      'Forty-five days, past the ceiling. Surface: `{"amount": 45, "unit": "days"}`; classic: `3888000`; form: 45, Days' => [
+      'Forty-five days, past the ceiling. Resource: `{"amount": 45, "unit": "days"}`; classic: `3888000`; form: 45, Days' => [
         $this->extras($this->deadline(45, 'days'), NULL),
         $this->extras(3888000, NULL),
         ['45', 'days', ''],
@@ -598,7 +599,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
         $this->extras(7, NULL),
         ['7', 'days', ''],
       ],
-      'Ten business days. Surface: `{"amount": 10, "unit": "business_days"}`; classic: `864000`, a schema-only agent\'s best inference, ten days in seconds: plausible, in range, and wrong, since no reading of the schema says what a business day becomes; form: 10, Business days' => [
+      'Ten business days. Resource: `{"amount": 10, "unit": "business_days"}`; classic: `864000`, a schema-only agent\'s best inference, ten days in seconds: plausible, in range, and wrong, since no reading of the schema says what a business day becomes; form: 10, Business days' => [
         $this->extras($this->deadline(10, NodeTypeReviewSettings::BUSINESS_DAYS), NULL),
         $this->extras(864000, NULL),
         ['10', NodeTypeReviewSettings::BUSINESS_DAYS, ''],
@@ -626,17 +627,17 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
       $form = $this->nextType();
       $rows[] = [
         $case,
-        $this->describeToolResult($this->runSurfaceTool($this->contentType($surface) + $surface_extras), $surface),
+        $this->describeToolResult($this->runResourceTool($this->contentType($surface) + $surface_extras), $surface),
         $this->describeToolResult($this->runClassicTool($classic, $classic_extras), $classic),
         $this->describeFormResult($this->submitClassicForm($form, $amount, $unit, $tags), $form),
       ];
     }
 
     $surface = $this->nextType();
-    $dry_run = $this->runSurfaceTool($this->contentType($surface) + $this->extras($this->deadline(1, 'weeks'), NULL), TRUE);
+    $dry_run = $this->runResourceTool($this->contentType($surface) + $this->extras($this->deadline(1, 'weeks'), NULL), TRUE);
     $classic = $this->toolManager->createInstance(self::CLASSIC_TOOL);
     try {
-      $classic->setInputValue(SituationInputs::DRY_RUN, TRUE);
+      $classic->setInputValue(OperationInputs::DRY_RUN, TRUE);
       $classic_dry_run = 'Accepted.';
     }
     catch (InputException $e) {
@@ -652,28 +653,28 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Reads a content type back through the surface's edit situation.
+   * Reads a content type back through the resource's edit operation.
    *
    * @param string $type
    *   The machine name.
    *
    * @return array
-   *   What the composed target loads, in surface shape.
+   *   What the composed storage loads, in the resource's shape.
    */
-  protected function loadThroughTheSurface(string $type): array {
-    $surfaces = $this->container->get('data_surface.surfaces');
-    $context = $surfaces->situation(NodeTypeSurface::class, 'edit', ['type' => $type]);
-    $surface = $surfaces->build(NodeTypeSurface::class, $context);
-    return $surfaces->target(NodeTypeSurface::class, $context, $surface)->load($surface);
+  protected function loadThroughTheResource(string $type): array {
+    $resources = $this->container->get('data_surface.resources');
+    $context = $resources->operation(NodeTypeResource::class, 'edit', ['type' => $type]);
+    $surface = $resources->build(NodeTypeResource::class, $context);
+    return $resources->storage(NodeTypeResource::class, $context, $surface)->load($surface);
   }
 
   /**
-   * Builds the input schema the surface driven tool advertises.
+   * Builds the input schema the resource driven tool advertises.
    *
    * @return array
    *   The JSON Schema of the tool's inputs.
    */
-  protected function surfaceSchema(): array {
+  protected function resourceSchema(): array {
     $tool = $this->toolManager->createInstance(self::SURFACE_TOOL);
     return $this->container->get('tool.definition_serializer')->normalizeInputSchema($tool);
   }
@@ -691,7 +692,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Calls the surface driven tool.
+   * Calls the resource driven tool.
    *
    * @param array $values
    *   The values input.
@@ -701,12 +702,12 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
    * @return \Drupal\tool\ToolResultInterface
    *   The result.
    */
-  protected function runSurfaceTool(array $values, bool $dry_run = FALSE): ToolResultInterface {
+  protected function runResourceTool(array $values, bool $dry_run = FALSE): ToolResultInterface {
     $tool = $this->toolManager->createInstance(self::SURFACE_TOOL);
     try {
-      $tool->setInputValue(SituationInputs::VALUES, $values);
+      $tool->setInputValue(OperationInputs::VALUES, $values);
       if ($dry_run) {
-        $tool->setInputValue(SituationInputs::DRY_RUN, TRUE);
+        $tool->setInputValue(OperationInputs::DRY_RUN, TRUE);
       }
     }
     catch (InputException $e) {
@@ -741,7 +742,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
     // Left in place, it would throw inside the classic tool's save and
     // the tool would report a failure — crediting the classic path with
     // a guard a real site does not have. Every other write in this class,
-    // the surface's and the form's included, is checked by it.
+    // the resource's and the form's included, is checked by it.
     $dispatcher = $this->container->get('event_dispatcher');
     $checker = $this->container->get('testing.config_schema_checker');
     $dispatcher->removeSubscriber($checker);
@@ -792,9 +793,9 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Puts the surface driven add route on the request stack.
+   * Puts the resource driven add route on the request stack.
    */
-  protected function serveSurfaceAddRoute(): void {
+  protected function serveResourceAddRoute(): void {
     $route_name = 'data_surface_demo_node_type.add';
     $route = $this->container->get('router.route_provider')->getRouteByName($route_name);
     $stack = $this->container->get('request_stack');
@@ -806,7 +807,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Submits the surface driven add form as a person would.
+   * Submits the resource driven add form as a person would.
    *
    * @param string $type
    *   The machine name.
@@ -820,10 +821,10 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
    * @return \Drupal\Core\Form\FormStateInterface
    *   The form state after the submission.
    */
-  protected function submitSurfaceForm(string $type, string $amount, string $unit, string $tags): FormStateInterface {
+  protected function submitResourceForm(string $type, string $amount, string $unit, string $tags): FormStateInterface {
     $form_state = new FormState();
     $form_state->setValues([
-      DataSurfaceSituationForm::SURFACE_KEY => [
+      DataSurfaceOperationForm::SURFACE_KEY => [
         'name' => ucfirst($type),
         'type' => $type,
         'title_label' => 'Title',
@@ -839,7 +840,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
         ],
       ],
     ]);
-    $this->container->get('form_builder')->submitForm(DataSurfaceSituationForm::class, $form_state);
+    $this->container->get('form_builder')->submitForm(DataSurfaceOperationForm::class, $form_state);
     return $form_state;
   }
 
@@ -850,7 +851,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
    *   The machine name.
    *
    * @return array
-   *   The name and machine name, and the two keys the surface requires
+   *   The name and machine name, and the two keys the resource requires
    *   whose defaults already hold a value: the Tool API refuses a
    *   required property a payload leaves out, default or not.
    */
@@ -883,7 +884,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Builds a review deadline the way the surface asks for one.
+   * Builds a review deadline the way the resource asks for one.
    *
    * @param int $amount
    *   The amount.
@@ -1026,25 +1027,22 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Spells a path under this module's settings the way the Tool API does.
+   * Spells a path under this module's settings as a refusal names it.
    *
-   * Since #3583085 the Tool API prints each input violation as
-   * "<input>.<leaf>: (property a) (property b) <message>": the input's
-   * name, then the violation's own path, then the segments between them
-   * as typed data writes them into the message.
+   * The tool holds `values` to its shape alone before it runs, and the
+   * pipeline holds it to every rule, naming each refusal by its full
+   * dotted path: "third_party_settings.<module>.<key>.<leaf>: <message>".
    *
    * @param string $key
    *   The key under this module's third-party settings.
    * @param string|null $leaf
-   *   The property under that key the violation is on, if any.
+   *   The property or item under that key the violation is on, if any.
    *
    * @return string
-   *   The prefix of that violation's line in the failure message.
+   *   The prefix of that violation in the failure message.
    */
-  protected static function toolApiPath(string $key, ?string $leaf = NULL): string {
-    $segments = ['third_party_settings', self::EXTRAS, $key];
-    return SituationInputs::VALUES . ($leaf === NULL ? '' : '.' . $leaf) . ': '
-      . implode(' ', array_map(static fn (string $segment): string => '(property ' . $segment . ')', $segments)) . ' ';
+  protected static function refusedAt(string $key, string|int|null $leaf = NULL): string {
+    return implode('.', ['third_party_settings', self::EXTRAS, $key]) . ($leaf === NULL ? '' : '.' . $leaf) . ': ';
   }
 
   /**
@@ -1070,7 +1068,13 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
         $by_message[trim($text)][] = '`' . implode('.', $segments[1]) . '`';
       }
     }
-    elseif (preg_match_all('/(\S+): (.*?\.)(?= \S+: |$)/', preg_replace('/^The values were refused: /', '', $message) ?? '', $matches, PREG_SET_ORDER)) {
+    elseif (str_starts_with($message, 'The values were refused:') && preg_match_all('/^(\S+): (.*\.)$/m', $message, $matches, PREG_SET_ORDER)) {
+      // One violation per line.
+      foreach ($matches as [, $path, $text]) {
+        $by_message[trim($text)][] = '`' . $path . '`';
+      }
+    }
+    elseif (preg_match_all('/(\S+): (.*?\.)(?= \S+: |$)/', $message, $matches, PREG_SET_ORDER)) {
       foreach ($matches as [, $path, $text]) {
         $by_message[trim($text)][] = '`' . $path . '`';
       }

@@ -6,7 +6,7 @@ import { fieldId } from '../contract';
 export interface FieldProps {
   /** The key within the object it sits in. */
   name: string;
-  /** The dotted path from the top of the surface. */
+  /** The dotted path from the top of the data surface. */
   path: string;
   schema: Schema;
   value: unknown;
@@ -14,9 +14,9 @@ export interface FieldProps {
   onChange: (path: string, value: unknown) => void;
   /** Violation messages, by dotted path. */
   errors: Record<string, string[]>;
-  /** The object schema it sits in: where a slot's conditionals are. */
+  /** The object schema it sits in: where the variants' conditionals are. */
   parent?: Schema;
-  /** The values of the object it sits in: where a slot's deciding key is. */
+  /** The values of the object it sits in: where the variants' deciding key is. */
   parentValues?: Values;
   /** Set when an enclosing fieldset is locked. */
   disabled?: boolean;
@@ -41,10 +41,19 @@ export function RequiredMarker(): JSX.Element {
   );
 }
 
-/** The description, with the locked or secret note appended. */
-export function Description({ props, id }: { props: FieldProps; id: string }): JSX.Element | null {
-  const notes = [props.schema.description, isLocked(props) ? LOCKED_NOTE : undefined, props.schema.writeOnly ? SECRET_NOTE : undefined]
+/**
+ * What is said under an element: its description, the help its
+ * arrangement gives, and the locked or secret note, as the form builder
+ * appends them.
+ */
+function notesOf(props: FieldProps): string[] {
+  return [props.schema.description, props.schema['x-surface']?.arrangement?.help, isLocked(props) ? LOCKED_NOTE : undefined, props.schema.writeOnly ? SECRET_NOTE : undefined]
     .filter((note): note is string => typeof note === 'string' && note !== '');
+}
+
+/** The description, with the help and the locked or secret note appended. */
+export function Description({ props, id }: { props: FieldProps; id: string }): JSX.Element | null {
+  const notes = notesOf(props);
   if (notes.length === 0) {
     return null;
   }
@@ -73,7 +82,7 @@ export function Errors({ props, id }: { props: FieldProps; id: string }): JSX.El
 /** The ids an input is described by. */
 export function describedBy(props: FieldProps, id: string): string | undefined {
   const ids = [];
-  if (props.schema.description || isLocked(props) || props.schema.writeOnly) {
+  if (notesOf(props).length > 0) {
     ids.push(`${id}--description`);
   }
   if ((props.errors[props.path] ?? []).length > 0) {
@@ -83,7 +92,7 @@ export function describedBy(props: FieldProps, id: string): string | undefined {
 }
 
 /**
- * A labelled form item: label, the control, description, violations.
+ * A labeled form item: label, the control, description, violations.
  *
  * `marker` is whether the label carries the required marker, which is not
  * always the same as the control being required: a stale required select

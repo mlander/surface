@@ -27,7 +27,7 @@ use PHPUnit\Framework\Attributes\Group;
  *
  * The three roles of decision D2, each held to one rule. Contributors
  * widen at build time and own what they added. Their refiners narrow
- * their own contribution and nothing else, and the refined surface is
+ * their own contribution and nothing else, and the refined data surface is
  * the union. Policy filters run last and may only remove. Everything
  * here is checked rather than documented, because the module's loudest
  * claim — a consumer that read the advertisement is never surprised —
@@ -48,13 +48,13 @@ class DataSurfaceContributionTest extends DataSurfaceKernelTestBase {
   protected const OWNED = ['bold', 'strong', 'quiet', 'muted'];
 
   /**
-   * Builds a surface whose variant key carries one contribution.
+   * Builds a data surface whose variant key carries one contribution.
    *
    * @param array $refiners
    *   Refiners to register, as contributor => refiner.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The sealed surface.
+   *   The sealed data surface.
    */
   protected function surface(array $refiners = []): DataSurfaceInterface {
     $builder = $this->builder();
@@ -87,10 +87,10 @@ class DataSurfaceContributionTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Reads the values a surface offers for the variant key.
+   * Reads the values a data surface offers for the variant key.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface to read.
+   *   The data surface to read.
    *
    * @return array
    *   The allowed values.
@@ -148,7 +148,7 @@ class DataSurfaceContributionTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that a surface with one contribution behaves as a plain chain.
+   * Tests that a data surface with one contribution behaves as a plain chain.
    *
    * The overwhelmingly common case: no contributions at all, one owner
    * chain, and an answer identical to the one the chain gave before any
@@ -171,7 +171,7 @@ class DataSurfaceContributionTest extends DataSurfaceKernelTestBase {
     $refined = $surface->refine(['casing' => 'uppercase'])->getDefinition('variant');
     $this->assertSame(['bold'], $refined->getConstraints()['Choice']['choices']);
     $this->assertSame(['max' => 4], $refined->getConstraints()['Length']);
-    // And the advertised surface is untouched by any of it.
+    // And the advertised data surface is untouched by any of it.
     $this->assertArrayNotHasKey('Choice', $surface->getDefinition('variant')->getConstraints());
     $this->assertArrayNotHasKey('Length', $surface->getDefinition('variant')->getConstraints());
   }
@@ -295,7 +295,7 @@ class DataSurfaceContributionTest extends DataSurfaceKernelTestBase {
    * Tests that a refiner cannot reach the definitions it was not handed.
    *
    * Core's MapDataDefinition declares no __clone, so a plain clone hands
-   * a refiner the sealed surface's own property definitions.
+   * a refiner the sealed data surface's own property definitions.
    */
   public function testTheSealedSurfaceIsNeverReachable(): void {
     $map = MapDataDefinition::create()->setLabel('Extras');
@@ -316,10 +316,10 @@ class DataSurfaceContributionTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Reads the note property of a surface's extras map.
+   * Reads the note property of a data surface's extras map.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface to read.
+   *   The data surface to read.
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface
    *   The property definition.
@@ -356,7 +356,7 @@ class DataSurfaceContributionTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that a refiner's cacheability reaches the refined surface.
+   * Tests that a refiner's cacheability reaches the refined data surface.
    */
   public function testRefinerCacheabilityReachesTheRefinedSurface(): void {
     $builder = new DataSurfaceBuilder(
@@ -369,14 +369,14 @@ class DataSurfaceContributionTest extends DataSurfaceKernelTestBase {
     $builder->addCacheableDependency((new CacheableMetadata())->setCacheTags(['config:system.site']));
     $surface = $builder->addRefiner('variant', new CacheableCasingRefiner())->seal();
 
-    // Nothing has run yet: the surface carries what the build declared.
+    // Nothing has run yet: the data surface carries what the build declared.
     $this->assertSame(['config:system.site'], $surface->getCacheTags());
     $this->assertSame([], $surface->getCacheContexts());
     $this->assertSame(Cache::PERMANENT, $surface->getCacheMaxAge());
 
     $refined = $surface->refine(['casing' => 'uppercase']);
 
-    // And once it has, the refined surface says so: a shape that was
+    // And once it has, the refined data surface says so: a shape that was
     // read from site state can only be reused for as long as that state
     // holds, and only for the request it was read in.
     $this->assertSame(['config:system.site', 'data_surface_test:casing'], $refined->getCacheTags());

@@ -7,6 +7,7 @@ namespace Drupal\data_surface_examples;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\data_surface\Contract\ContractEmitter;
+use Drupal\data_surface\Contract\SchemaResolver;
 
 /**
  * Shows what config schema alone can say about an example's settings.
@@ -17,12 +18,14 @@ use Drupal\data_surface\Contract\ContractEmitter;
  * ConfigSchemaContract. Neither reads a value, so neither changes while
  * the form is filled in.
  *
- * Handed the full schema the surface emits for the same settings, the
+ * Handed the full schema the resource emits for the same settings, the
  * one that holds for any values, it adds a table that sets the two side
  * by side, key by key: the JSON Schema keywords each one states. That
  * table is counted from the two documents, never written down, and it is
  * static against static: neither side reads a value, so nothing in the
- * panel moves while the form is filled in.
+ * panel moves while the form is filled in. A part the resource defines
+ * once and refers to is counted as what the reference resolves to, and
+ * the reference is named beside it.
  *
  * @see \Drupal\data_surface_examples\ConfigSchemaContract
  * @see \Drupal\data_surface_examples\ExamplePanels
@@ -56,22 +59,22 @@ final class ConfigSchemaPanel {
    *
    * @param string $config
    *   The config object's name.
-   * @param array|null $surface
-   *   The full JSON Schema the surface emits for the same settings
+   * @param array|null $full
+   *   The full JSON Schema the resource emits for the same settings
    *   (ContractEmitter::emitFull()), to compare with; NULL for a page
-   *   with no surface.
+   *   with no resource.
    * @param string|\Stringable|null $note
    *   A sentence to add under the first, as safe HTML; NULL for none.
    *
    * @return array
    *   A render array: a collapsed details element.
    */
-  public function build(string $config, ?array $surface = NULL, string|\Stringable|null $note = NULL): array {
+  public function build(string $config, ?array $full = NULL, string|\Stringable|null $note = NULL): array {
     $today = $this->contract->describe($config);
     $panel = [
       '#type' => 'details',
       '#open' => FALSE,
-      '#title' => $this->t('Without a surface: what config schema can say'),
+      '#title' => $this->t('Without a resource: what config schema can say'),
       // The contract panel's own class, for its spacing and type sizes.
       '#attributes' => ['class' => ['data-surface-contract-panel', 'data-surface-today-panel']],
       '#attached' => ['library' => ['data_surface_tool/contract_panel']],
@@ -86,6 +89,9 @@ final class ConfigSchemaPanel {
       '#type' => 'details',
       '#open' => TRUE,
       '#title' => $this->t('What core answers when asked for a JSON Schema'),
+      'note' => [
+        '#markup' => '<p>' . $this->t("This is core's whole answer, not an error: core has no JSON Schema for a config mapping, and the page its comment links says how code implements a schema.") . '</p>',
+      ],
       'json' => $this->json($today['core']),
     ];
     $panel['derived'] = [
@@ -94,18 +100,18 @@ final class ConfigSchemaPanel {
       '#title' => $this->t('The most a plain mapping of config schema could say'),
       'json' => $this->json($today['derived']),
     ];
-    if ($surface !== NULL) {
+    if ($full !== NULL) {
       $panel['comparison_note'] = [
-        '#markup' => '<p>' . $this->t('Key by key, the JSON Schema keywords each one states: the mapping above, and the full schema the surface emits, the one that holds for any answers. Neither reads a value, so this table does not change either.') . '</p>',
+        '#markup' => '<p>' . $this->t('Key by key, the JSON Schema keywords each one states: the mapping above, and the full schema the resource emits, the one that holds for any answers. Neither reads a value, so this table does not change either.') . '</p>',
       ];
       $panel['comparison'] = [
         '#type' => 'table',
         '#header' => [
           $this->t('Key'),
           $this->t('From config schema'),
-          $this->t('From the surface'),
+          $this->t('From the resource'),
         ],
-        '#rows' => $this->comparison($today['derived'], $surface),
+        '#rows' => $this->comparison($today['derived'], $full),
         '#attributes' => ['class' => ['data-surface-today-comparison']],
       ];
     }
@@ -130,26 +136,33 @@ final class ConfigSchemaPanel {
   }
 
   /**
-   * Sets two schemas side by side, one row per key the surface declares.
+   * Sets two schemas side by side, one row per key the resource declares.
    *
    * @param array $derived
    *   The schema mapped from config schema.
-   * @param array $surface
-   *   The full schema the surface emits.
+   * @param array $full
+   *   The full schema the resource emits.
    *
    * @return array
    *   The table rows, and a last one for `required`.
    */
-  protected function comparison(array $derived, array $surface): array {
+  protected function comparison(array $derived, array $full): array {
     $rows = [];
-    foreach ($surface['properties'] ?? [] as $key => $property) {
+    foreach ($full['properties'] ?? [] as $key => $property) {
       $key = (string) $key;
       $from_schema = $derived['properties'][$key] ?? NULL;
+      // A member a structure mixed in is `true` here: its def, referred
+      // to from the top's allOf, states it.
+      $property = is_array($property) ? $property : $this->member($full, $key);
       $rows[] = [
         'data' => [
           ['data' => ['#markup' => '<code>' . htmlspecialchars($key) . '</code>']],
           is_array($from_schema) ? $this->keywords($from_schema) : (string) $this->t('not declared'),
-          implode(', ', array_filter([$this->keywords($property, ''), $this->conditionals($surface, $key)])),
+          implode(', ', array_filter([
+            $this->keywords(SchemaResolver::resolve($property, $full), ''),
+            $this->reference($property),
+            $this->conditionals($full, $key),
+          ])),
         ],
         'data-today-key' => $key,
       ];
@@ -158,11 +171,36 @@ final class ConfigSchemaPanel {
       'data' => [
         ['data' => ['#markup' => '<code>required</code>']],
         isset($derived['required']) ? implode(', ', $derived['required']) : (string) $this->t('not stated'),
-        isset($surface['required']) ? implode(', ', $surface['required']) : (string) $this->t('not stated'),
+        isset($full['required']) ? implode(', ', $full['required']) : (string) $this->t('not stated'),
       ],
       'data-today-keyword' => 'required',
     ];
     return $rows;
+  }
+
+  /**
+   * Finds a mixed-in member's schema in the def that states it.
+   *
+   * @param array $full
+   *   The full schema the resource emits.
+   * @param string $key
+   *   The member's key.
+   *
+   * @return array
+   *   The member's schema, with the reference to the def it is stated in;
+   *   empty when no def mixed in states it.
+   */
+  protected function member(array $full, string $key): array {
+    foreach ($full['allOf'] ?? [] as $branch) {
+      if (!is_array($branch) || !isset($branch['$ref'])) {
+        continue;
+      }
+      $def = SchemaResolver::resolve($branch, $full);
+      if (is_array($def['properties'][$key] ?? NULL)) {
+        return $def['properties'][$key] + ['$ref' => $branch['$ref']];
+      }
+    }
+    return [];
   }
 
   /**
@@ -191,49 +229,70 @@ final class ConfigSchemaPanel {
   }
 
   /**
-   * Says what the surface states about a key as conditionals on its parent.
+   * Names the def a property refers to, so the reader sees it is one.
    *
-   * A slot's shapes, one per value of the key that chooses it, and what
+   * @param array $schema
+   *   The property's schema, as the resource's contract wrote it.
+   *
+   * @return string
+   *   `$ref (<id>)`, or the empty string for a property that refers to no
+   *   def.
+   */
+  protected function reference(array $schema): string {
+    $def = SchemaResolver::refersTo($schema);
+    return $def === NULL ? '' : '$ref (' . $def . ')';
+  }
+
+  /**
+   * Says what the resource states about a key as conditionals on its parent.
+   *
+   * Variants, one per value of the key that chooses between them, and what
    * a refiner answers for each value it could be handed, are written on
-   * the parent object as `allOf` of `if`/`then`, not on the key. A shape
-   * is named by the value that chooses it and the keys it has; a case
-   * that only narrows the key is counted.
+   * the parent object as `allOf` of `if`/`then`, not on the key. A variant
+   * is named by the value that chooses it, the keys it has once its
+   * reference is resolved, and the def it refers to; a case that only
+   * narrows the key is counted.
    *
-   * @param array $surface
-   *   The full schema the surface emits.
+   * @param array $full
+   *   The full schema the resource emits.
    * @param string $key
    *   The key.
    *
    * @return string
-   *   The phrase, such as "if/then on pricing (2 shapes: free has note;
-   *   paid has price, currency)" or "if/then on venue (3 cases)", or the
-   *   empty string when no conditional names the key.
+   *   The phrase, such as "if/then on pricing (2 variants: free has note,
+   *   $ref (registration.step3.ticket.free); paid has price, currency,
+   *   $ref (registration.step3.ticket.paid))" or "if/then on venue (3
+   *   cases)", or the empty string when no conditional names the key.
    */
-  protected function conditionals(array $surface, string $key): string {
+  protected function conditionals(array $full, string $key): string {
     $count = 0;
     $on = [];
-    $shapes = [];
-    foreach ($surface['allOf'] ?? [] as $branch) {
-      $then = $branch['then']['properties'][$key] ?? NULL;
-      if (!is_array($then)) {
+    $variants = [];
+    foreach ($full['allOf'] ?? [] as $branch) {
+      $site = $branch['then']['properties'][$key] ?? NULL;
+      if (!is_array($site)) {
         continue;
       }
       $count++;
       $if = is_array($branch['if']['properties'] ?? NULL) ? $branch['if']['properties'] : [];
       $on += array_fill_keys(array_map('strval', array_keys($if)), TRUE);
-      if (isset($then['properties'])) {
-        $shapes[] = $this->t('@value has @keys', [
-          '@value' => implode(', ', array_map('strval', array_column($if, 'const'))),
-          '@keys' => implode(', ', array_keys($then['properties'])),
-        ]);
+      $then = SchemaResolver::resolve($site, $full);
+      if (is_array($then['properties'] ?? NULL)) {
+        $variants[] = implode(', ', array_filter([
+          (string) $this->t('@value has @keys', [
+            '@value' => implode(', ', array_map('strval', array_column($if, 'const'))),
+            '@keys' => implode(', ', array_keys($then['properties'])),
+          ]),
+          $this->reference($site),
+        ]));
       }
     }
     if ($count === 0) {
       return '';
     }
-    $arguments = ['@keys' => implode(', ', array_keys($on)), '@shapes' => implode('; ', $shapes)];
-    return (string) ($shapes !== []
-      ? $this->formatPlural($count, 'if/then on @keys (1 shape: @shapes)', 'if/then on @keys (@count shapes: @shapes)', $arguments)
+    $arguments = ['@keys' => implode(', ', array_keys($on)), '@variants' => implode('; ', $variants)];
+    return (string) ($variants !== []
+      ? $this->formatPlural($count, 'if/then on @keys (1 variant: @variants)', 'if/then on @keys (@count variants: @variants)', $arguments)
       : $this->formatPlural($count, 'if/then on @keys (1 case)', 'if/then on @keys (@count cases)', $arguments));
   }
 

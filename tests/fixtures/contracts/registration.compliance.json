@@ -1,0 +1,76 @@
+{
+    "resource": "registration.compliance",
+    "module": "data_surface_examples_compliance",
+    "contract": 2,
+    "documents": [
+        {
+            "resource": "registration.compliance",
+            "operation": null,
+            "label": null,
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "x-surface": {
+                    "contract": 2,
+                    "version": 1,
+                    "ports": {
+                        "capacity": {
+                            "type": "integer",
+                            "required": true
+                        }
+                    }
+                },
+                "type": "object",
+                "properties": {
+                    "license": {
+                        "$ref": "#/$defs/event.license",
+                        "title": "Event license",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "patternMessage": "A license number is four digits, such as 2048."
+                        }
+                    },
+                    "stewards": {
+                        "title": "Stewards",
+                        "type": "integer",
+                        "default": 1,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [
+                                "capacity"
+                            ]
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "stewards"
+                ],
+                "$defs": {
+                    "event.license": {
+                        "title": "event.license",
+                        "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "pattern": "^\\d{4}$",
+                        "examples": [
+                            "2048"
+                        ],
+                        "x-surface": {
+                            "patternMessage": "A license number is four digits, such as 2048."
+                        }
+                    }
+                }
+            }
+        }
+    ],
+    "allowed": [
+        {
+            "path": "#/properties/licence",
+            "change": "key removed",
+            "reason": "A rename to US spelling (2026-10-20): the examples' own key and its def are spelled license now, a compatible rename for them; no stored value held the old key, and only the examples read it."
+        }
+    ]
+}

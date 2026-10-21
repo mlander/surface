@@ -1,0 +1,230 @@
+{
+    "resource": "event.press",
+    "module": "data_surface_examples",
+    "contract": 2,
+    "documents": [
+        {
+            "resource": "event.press",
+            "operation": "configure",
+            "label": "Configure the press page",
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": "Configure the press page",
+                "description": "Sets the press page: whether it is shown, the press contact, and who last reviewed it and when.",
+                "x-surface": {
+                    "contract": 2,
+                    "operation": {
+                        "id": "configure",
+                        "label": "Configure the press page",
+                        "description": "Sets the press page: whether it is shown, the press contact, and who last reviewed it and when.",
+                        "kind": "update",
+                        "creates": false,
+                        "destructive": false,
+                        "idempotent": true
+                    },
+                    "version": 1,
+                    "rules": [
+                        1
+                    ]
+                },
+                "type": "object",
+                "properties": {
+                    "public": {
+                        "title": "Show on the press page",
+                        "type": [
+                            "boolean",
+                            "null"
+                        ],
+                        "default": true,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "contact": {
+                        "title": "Press contact",
+                        "$ref": "#/$defs/event.person",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [
+                                "public"
+                            ],
+                            "reads": {
+                                "listed": "public"
+                            },
+                            "declared": true
+                        }
+                    },
+                    "reviewed_on": true,
+                    "reviewed_by": true
+                },
+                "unevaluatedProperties": false,
+                "allOf": [
+                    {
+                        "$ref": "#/$defs/event.review"
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "public": {
+                                    "const": true
+                                }
+                            },
+                            "required": [
+                                "public"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "contact": {
+                                    "type": "object",
+                                    "properties": {
+                                        "email": {
+                                            "description": "Required while this person is listed publicly.",
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "email"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                ],
+                "$defs": {
+                    "event.person": {
+                        "title": "event.person",
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "title": "Name",
+                                "type": "string",
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "email": {
+                                "title": "Email",
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "idn-email",
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": [
+                                        "listed"
+                                    ]
+                                }
+                            },
+                            "phone": {
+                                "$ref": "#/$defs/event.phone",
+                                "title": "Phone",
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": [],
+                                    "patternMessage": "Write the number in digits, such as +1 555 0100."
+                                }
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "name"
+                        ],
+                        "x-surface": {
+                            "ports": {
+                                "listed": {
+                                    "type": "boolean",
+                                    "required": false
+                                }
+                            }
+                        }
+                    },
+                    "event.review": {
+                        "title": "event.review",
+                        "type": "object",
+                        "properties": {
+                            "reviewed_on": {
+                                "title": "Reviewed on",
+                                "description": "YYYY-MM-DD.",
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": [],
+                                    "patternMessage": "Write the date as YYYY-MM-DD, such as 2026-10-19."
+                                }
+                            },
+                            "reviewed_by": {
+                                "title": "Reviewed by",
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": [
+                                        "reviewed_on"
+                                    ],
+                                    "declared": true
+                                }
+                            }
+                        },
+                        "allOf": [
+                            {
+                                "if": {
+                                    "properties": {
+                                        "reviewed_on": {
+                                            "not": {
+                                                "type": "null"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "reviewed_on"
+                                    ]
+                                },
+                                "then": {
+                                    "properties": {
+                                        "reviewed_by": {
+                                            "description": "Required once a review date is set.",
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "reviewed_by"
+                                    ]
+                                }
+                            }
+                        ],
+                        "x-surface": {
+                            "rules": [
+                                0
+                            ]
+                        }
+                    },
+                    "event.phone": {
+                        "title": "event.phone",
+                        "description": "Digits, with spaces if you like, and a leading + for a country code.",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "pattern": "^\\+?[0-9 ]{7,20}$",
+                        "examples": [
+                            "+1 555 0100"
+                        ],
+                        "x-surface": {
+                            "patternMessage": "Write the number in digits, such as +1 555 0100."
+                        }
+                    }
+                }
+            }
+        }
+    ]
+}

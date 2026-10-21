@@ -45,7 +45,7 @@ class DataSurfacePluginFormTest extends DataSurfaceKernelTestBase {
 
     $form_state = new FormState();
     $form = $plugin_form->buildConfigurationForm([], $form_state);
-    // The whole form is the surface, with none of the block host's own
+    // The whole form is the structure's, with none of the block host's own
     // elements: this operation covers the plugin's values only.
     $this->assertSame('textfield', $form['headline']['#type']);
     $this->assertSame('number', $form['limit']['#type']);
@@ -72,7 +72,7 @@ class DataSurfacePluginFormTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the refined surface is what the form validates against.
+   * Tests that the refined structure is what the form validates against.
    */
   public function testRefinementHoldsThroughTheFormClass(): void {
     $block = $this->container->get('plugin.manager.block')->createInstance('data_surface_test_block');
@@ -94,7 +94,7 @@ class DataSurfacePluginFormTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that a plugin without a surface is refused loudly.
+   * Tests that a plugin without a structure is refused loudly.
    */
   public function testNonProviderRejected(): void {
     $block = $this->container->get('plugin.manager.block')->createInstance('system_powered_by_block');

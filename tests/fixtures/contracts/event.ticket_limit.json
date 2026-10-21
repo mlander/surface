@@ -1,0 +1,59 @@
+{
+    "resource": "event.ticket_limit",
+    "module": "data_surface_examples",
+    "contract": 2,
+    "documents": [
+        {
+            "resource": "event.ticket_limit",
+            "operation": null,
+            "label": null,
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "x-surface": {
+                    "contract": 2,
+                    "version": 1,
+                    "ports": {
+                        "selling": {
+                            "type": "boolean",
+                            "required": false
+                        }
+                    }
+                },
+                "type": "object",
+                "properties": {
+                    "per_order": {
+                        "title": "Per order",
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 1,
+                        "maximum": 10,
+                        "default": 4,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [
+                                "selling"
+                            ]
+                        }
+                    },
+                    "waiting_list": {
+                        "title": "Waiting list when sold out",
+                        "type": [
+                            "boolean",
+                            "null"
+                        ],
+                        "default": false,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [
+                                "selling"
+                            ]
+                        }
+                    }
+                },
+                "additionalProperties": false
+            }
+        }
+    ]
+}

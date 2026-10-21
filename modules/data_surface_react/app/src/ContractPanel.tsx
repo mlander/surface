@@ -1,5 +1,7 @@
+import { useMemo } from 'react';
+import type { FullSchema } from './api';
 import type { Contract, Schema, Values } from './contract';
-import { choices, isObject, jsonType, resolveSlot } from './contract';
+import { choices, inlineSchema, isObject, jsonType, resolveVariants } from './contract';
 
 interface Row {
   path: string;
@@ -36,18 +38,25 @@ function allows(schema: Schema): Phrase[] {
   else if (schema.maximum !== undefined) {
     phrases.push(`at most ${schema.maximum}`);
   }
+  if (schema['x-surface']?.list) {
+    const atLeast = schema.minItems;
+    const atMost = schema.maxItems;
+    phrases.push(atLeast !== undefined && atMost !== undefined
+      ? `from ${atLeast} to ${atMost} items`
+      : atLeast !== undefined ? `at least ${atLeast} items` : atMost !== undefined ? `at most ${atMost} items` : 'any number of items');
+  }
   if (schema.maxLength !== undefined) {
     phrases.push(`at most ${schema.maxLength} characters`);
   }
-  if (schema.format === 'email') {
+  if (schema.format === 'email' || schema.format === 'idn-email') {
     phrases.push('an email address');
   }
   if (schema.pattern !== undefined) {
     const message = schema['x-surface']?.patternMessage;
     phrases.push(message ?? { words: 'matches a required format: ', code: schema.pattern });
   }
-  for (const name of schema['x-surface']?.checkedOnServer ?? []) {
-    phrases.push(`${name}, checked on the server`);
+  for (const checked of schema['x-surface']?.checkedOnServer ?? []) {
+    phrases.push(`checked on the server: ${checked.message}`);
   }
   return phrases.length === 0 ? ['anything of its type'] : phrases;
 }
@@ -81,22 +90,29 @@ function rows(schema: Schema, values: Values, prefix = ''): Row[] {
     const widget = extension?.widget;
     found.push({
       path,
-      type: widget === 'slot' ? 'slot' : widget === 'fieldset' ? 'part' : (jsonType(property) ?? 'any'),
+      type: widget === 'variants' ? 'variants' : widget === 'fieldset' ? 'part' : extension?.list ? 'collection' : (jsonType(property) ?? 'any'),
       label: property.title ?? name,
       required: (schema.required ?? []).includes(name),
-      allows: widget === 'slot'
-        ? [`a part chosen by ${extension?.by}: ${(extension?.variants ?? []).join(', ')}`]
+      allows: widget === 'variants'
+        ? [`a part chosen by ${extension?.by}: ${Object.keys(extension?.variants ?? {}).join(', ')}`]
         : widget === 'fieldset' ? ['its own keys'] : allows(property),
       dependsOn: extension?.dependsOn ?? [],
       now: extension?.locked
         ? 'locked'
         : extension?.stale
           ? 'stale: shown empty, the stored value kept'
-          : widget === 'slot'
+          : widget === 'variants'
             ? (extension?.chosen ? `the ${extension.chosen} variant` : 'not chosen yet')
-            : extension?.refined ? 'narrowed' : 'as declared',
+            : extension?.live
+              ? (extension.refined ? 'narrowed, and checked by a live rule' : 'as declared, checked by a live rule')
+              : extension?.refined ? 'narrowed' : 'as declared',
     });
-    const inner = widget === 'slot' ? resolveSlot(schema, name, values) : widget === 'fieldset' ? property : null;
+    if (extension?.list && property.items !== undefined) {
+      // A collection's item keys, once, under `*`: each item is the child.
+      found.push(...rows(property.items, {}, `${path}.*.`));
+      continue;
+    }
+    const inner = widget === 'variants' ? resolveVariants(schema, name, values) : widget === 'fieldset' ? property : null;
     if (inner !== null) {
       found.push(...rows(inner, nested, `${path}.`));
     }
@@ -107,16 +123,40 @@ function rows(schema: Schema, values: Values, prefix = ''): Row[] {
 /**
  * The contract as it stands, collapsed under the form: a row per key,
  * then the JSON itself. The React twin of the contract panel the
- * situation form shows.
+ * operation form shows. The rows read each key's effective schema, its
+ * references resolved (`schema`: the server's last answer, or what the
+ * form narrowed from the full schema since); the JSON is each document as
+ * served, `$defs` and all. One line says how the last change was
+ * narrowed: here, naming the keys, or by the server, naming the key and
+ * the marker that sent it there.
  */
-export function ContractPanel({ contract, values }: { contract: Contract; values: Values }): JSX.Element {
+export function ContractPanel({
+  contract,
+  full,
+  schema,
+  values,
+  narrowing,
+}: {
+  contract: Contract;
+  full?: FullSchema | null;
+  schema?: Schema;
+  values: Values;
+  narrowing?: string | null;
+}): JSX.Element {
+  const inline = useMemo(() => schema ?? inlineSchema(contract.schema), [schema, contract]);
   return (
     <details className="dsr-contract">
       <summary>Contract</summary>
       <p>
-        Read from the contract the server serves for this situation, re-narrowed as the answers above change.
+        Read from the contract the server serves for this operation, re-narrowed as the answers above change: here,
+        from the full schema, where it states the answer, and by the server where it does not.
         Change an answer another key depends on and this changes with the form.
       </p>
+      {narrowing ? (
+        <p className="dsr-contract__narrowing" aria-live="polite">
+          {narrowing}.
+        </p>
+      ) : null}
       <div className="dsr-contract__table">
         <table>
           <thead>
@@ -131,7 +171,7 @@ export function ContractPanel({ contract, values }: { contract: Contract; values
             </tr>
           </thead>
           <tbody>
-            {rows(contract.schema, values).map((row) => (
+            {rows(inline, values).map((row) => (
               <tr key={row.path} data-surface-key={row.path}>
                 <td>
                   <code>{row.path}</code>
@@ -153,6 +193,12 @@ export function ContractPanel({ contract, values }: { contract: Contract; values
         <summary>JSON</summary>
         <pre>{JSON.stringify(contract, null, 2)}</pre>
       </details>
+      {full ? (
+        <details className="dsr-contract__json">
+          <summary>The full schema, for any answers</summary>
+          <pre>{JSON.stringify(full, null, 2)}</pre>
+        </details>
+      ) : null}
     </details>
   );
 }

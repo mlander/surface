@@ -1,0 +1,601 @@
+{
+    "schema": {
+        "resource": "resource_test.bulletin",
+        "operation": "configure",
+        "label": "Configure the bulletin",
+        "schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": "http://localhost/surface-api/resource_test.bulletin/configure/schema",
+            "title": "Configure the bulletin",
+            "description": "Configures the bulletin, whose settings always exist.",
+            "x-surface": {
+                "contract": 2,
+                "operation": {
+                    "id": "configure",
+                    "label": "Configure the bulletin",
+                    "description": "Configures the bulletin, whose settings always exist.",
+                    "kind": "update",
+                    "creates": false,
+                    "destructive": false,
+                    "idempotent": true
+                },
+                "version": 1
+            },
+            "type": "object",
+            "properties": {
+                "frequency": {
+                    "title": "Frequency",
+                    "type": "string",
+                    "oneOf": [
+                        {
+                            "const": "weekly",
+                            "title": "Weekly"
+                        },
+                        {
+                            "const": "monthly",
+                            "title": "Monthly"
+                        }
+                    ],
+                    "default": "weekly",
+                    "x-surface": {
+                        "widget": "select",
+                        "locked": false,
+                        "dependsOn": []
+                    }
+                },
+                "send_day": {
+                    "title": "Send day",
+                    "type": "string",
+                    "oneOf": [
+                        {
+                            "const": "monday",
+                            "title": "Monday"
+                        },
+                        {
+                            "const": "wednesday",
+                            "title": "Wednesday"
+                        },
+                        {
+                            "const": "friday",
+                            "title": "Friday"
+                        }
+                    ],
+                    "default": "monday",
+                    "x-surface": {
+                        "widget": "select",
+                        "locked": false,
+                        "dependsOn": [
+                            "frequency"
+                        ],
+                        "enumerated": true
+                    }
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "frequency"
+            ],
+            "allOf": [
+                {
+                    "if": {
+                        "properties": {
+                            "frequency": {
+                                "const": "weekly"
+                            }
+                        },
+                        "required": [
+                            "frequency"
+                        ]
+                    },
+                    "then": {
+                        "required": [
+                            "send_day"
+                        ]
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "frequency": {
+                                "const": "monthly"
+                            }
+                        },
+                        "required": [
+                            "frequency"
+                        ]
+                    },
+                    "then": {
+                        "properties": {
+                            "send_day": false
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    "contract": {
+        "resource": "resource_test.bulletin",
+        "operation": "configure",
+        "label": "Configure the bulletin",
+        "schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": "http://localhost/surface-api/resource_test.bulletin/configure",
+            "title": "Configure the bulletin",
+            "description": "Configures the bulletin, whose settings always exist.",
+            "x-surface": {
+                "contract": 2,
+                "operation": {
+                    "id": "configure",
+                    "label": "Configure the bulletin",
+                    "description": "Configures the bulletin, whose settings always exist.",
+                    "kind": "update",
+                    "creates": false,
+                    "destructive": false,
+                    "idempotent": true
+                },
+                "version": 1
+            },
+            "type": "object",
+            "properties": {
+                "frequency": {
+                    "title": "Frequency",
+                    "type": "string",
+                    "oneOf": [
+                        {
+                            "const": "weekly",
+                            "title": "Weekly"
+                        },
+                        {
+                            "const": "monthly",
+                            "title": "Monthly"
+                        }
+                    ],
+                    "default": "weekly",
+                    "x-surface": {
+                        "widget": "select",
+                        "locked": false,
+                        "dependsOn": [],
+                        "refined": false,
+                        "stale": false,
+                        "emptyOption": {
+                            "show": false,
+                            "label": "- Select -"
+                        }
+                    }
+                },
+                "send_day": {
+                    "title": "Send day",
+                    "type": "string",
+                    "oneOf": [
+                        {
+                            "const": "monday",
+                            "title": "Monday"
+                        },
+                        {
+                            "const": "wednesday",
+                            "title": "Wednesday"
+                        },
+                        {
+                            "const": "friday",
+                            "title": "Friday"
+                        }
+                    ],
+                    "default": "monday",
+                    "x-surface": {
+                        "widget": "select",
+                        "locked": false,
+                        "dependsOn": [
+                            "frequency"
+                        ],
+                        "refined": false,
+                        "stale": false,
+                        "emptyOption": {
+                            "show": false,
+                            "label": "- Select -"
+                        }
+                    }
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "frequency",
+                "send_day"
+            ]
+        },
+        "values": {
+            "frequency": "weekly",
+            "send_day": "friday"
+        },
+        "stale": []
+    },
+    "steps": [
+        {
+            "changes": [
+                {
+                    "path": "frequency",
+                    "value": "monthly"
+                }
+            ],
+            "sent": {
+                "values": {
+                    "frequency": "monthly",
+                    "send_day": "friday"
+                },
+                "stale": []
+            },
+            "answer": {
+                "resource": "resource_test.bulletin",
+                "operation": "configure",
+                "label": "Configure the bulletin",
+                "schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$id": "http://localhost/surface-api/resource_test.bulletin/configure",
+                    "title": "Configure the bulletin",
+                    "description": "Configures the bulletin, whose settings always exist.",
+                    "x-surface": {
+                        "contract": 2,
+                        "operation": {
+                            "id": "configure",
+                            "label": "Configure the bulletin",
+                            "description": "Configures the bulletin, whose settings always exist.",
+                            "kind": "update",
+                            "creates": false,
+                            "destructive": false,
+                            "idempotent": true
+                        },
+                        "version": 1,
+                        "doesNotApply": {
+                            "send_day": [
+                                "frequency"
+                            ]
+                        }
+                    },
+                    "type": "object",
+                    "properties": {
+                        "frequency": {
+                            "title": "Frequency",
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "weekly",
+                                    "title": "Weekly"
+                                },
+                                {
+                                    "const": "monthly",
+                                    "title": "Monthly"
+                                }
+                            ],
+                            "default": "weekly",
+                            "x-surface": {
+                                "widget": "select",
+                                "locked": false,
+                                "dependsOn": [],
+                                "refined": false,
+                                "stale": false,
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
+                            }
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                        "frequency"
+                    ]
+                },
+                "values": {
+                    "frequency": "monthly"
+                },
+                "stale": [],
+                "discarded": []
+            }
+        },
+        {
+            "changes": [
+                {
+                    "path": "frequency",
+                    "value": "weekly"
+                }
+            ],
+            "sent": {
+                "values": {
+                    "frequency": "weekly"
+                },
+                "stale": []
+            },
+            "answer": {
+                "resource": "resource_test.bulletin",
+                "operation": "configure",
+                "label": "Configure the bulletin",
+                "schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$id": "http://localhost/surface-api/resource_test.bulletin/configure",
+                    "title": "Configure the bulletin",
+                    "description": "Configures the bulletin, whose settings always exist.",
+                    "x-surface": {
+                        "contract": 2,
+                        "operation": {
+                            "id": "configure",
+                            "label": "Configure the bulletin",
+                            "description": "Configures the bulletin, whose settings always exist.",
+                            "kind": "update",
+                            "creates": false,
+                            "destructive": false,
+                            "idempotent": true
+                        },
+                        "version": 1
+                    },
+                    "type": "object",
+                    "properties": {
+                        "frequency": {
+                            "title": "Frequency",
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "weekly",
+                                    "title": "Weekly"
+                                },
+                                {
+                                    "const": "monthly",
+                                    "title": "Monthly"
+                                }
+                            ],
+                            "default": "weekly",
+                            "x-surface": {
+                                "widget": "select",
+                                "locked": false,
+                                "dependsOn": [],
+                                "refined": false,
+                                "stale": false,
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
+                            }
+                        },
+                        "send_day": {
+                            "title": "Send day",
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "monday",
+                                    "title": "Monday"
+                                },
+                                {
+                                    "const": "wednesday",
+                                    "title": "Wednesday"
+                                },
+                                {
+                                    "const": "friday",
+                                    "title": "Friday"
+                                }
+                            ],
+                            "default": "monday",
+                            "x-surface": {
+                                "widget": "select",
+                                "locked": false,
+                                "dependsOn": [
+                                    "frequency"
+                                ],
+                                "refined": false,
+                                "stale": false,
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
+                            }
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                        "frequency",
+                        "send_day"
+                    ]
+                },
+                "values": {
+                    "frequency": "weekly",
+                    "send_day": "friday"
+                },
+                "stale": [],
+                "discarded": []
+            }
+        },
+        {
+            "changes": [
+                {
+                    "path": "send_day",
+                    "value": "wednesday"
+                },
+                {
+                    "path": "frequency",
+                    "value": "monthly"
+                }
+            ],
+            "sent": {
+                "values": {
+                    "frequency": "monthly",
+                    "send_day": "wednesday"
+                },
+                "stale": []
+            },
+            "answer": {
+                "resource": "resource_test.bulletin",
+                "operation": "configure",
+                "label": "Configure the bulletin",
+                "schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$id": "http://localhost/surface-api/resource_test.bulletin/configure",
+                    "title": "Configure the bulletin",
+                    "description": "Configures the bulletin, whose settings always exist.",
+                    "x-surface": {
+                        "contract": 2,
+                        "operation": {
+                            "id": "configure",
+                            "label": "Configure the bulletin",
+                            "description": "Configures the bulletin, whose settings always exist.",
+                            "kind": "update",
+                            "creates": false,
+                            "destructive": false,
+                            "idempotent": true
+                        },
+                        "version": 1,
+                        "doesNotApply": {
+                            "send_day": [
+                                "frequency"
+                            ]
+                        }
+                    },
+                    "type": "object",
+                    "properties": {
+                        "frequency": {
+                            "title": "Frequency",
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "weekly",
+                                    "title": "Weekly"
+                                },
+                                {
+                                    "const": "monthly",
+                                    "title": "Monthly"
+                                }
+                            ],
+                            "default": "weekly",
+                            "x-surface": {
+                                "widget": "select",
+                                "locked": false,
+                                "dependsOn": [],
+                                "refined": false,
+                                "stale": false,
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
+                            }
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                        "frequency"
+                    ]
+                },
+                "values": {
+                    "frequency": "monthly"
+                },
+                "stale": [],
+                "discarded": []
+            }
+        },
+        {
+            "changes": [
+                {
+                    "path": "frequency",
+                    "value": "weekly"
+                }
+            ],
+            "sent": {
+                "values": {
+                    "frequency": "weekly"
+                },
+                "stale": []
+            },
+            "answer": {
+                "resource": "resource_test.bulletin",
+                "operation": "configure",
+                "label": "Configure the bulletin",
+                "schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$id": "http://localhost/surface-api/resource_test.bulletin/configure",
+                    "title": "Configure the bulletin",
+                    "description": "Configures the bulletin, whose settings always exist.",
+                    "x-surface": {
+                        "contract": 2,
+                        "operation": {
+                            "id": "configure",
+                            "label": "Configure the bulletin",
+                            "description": "Configures the bulletin, whose settings always exist.",
+                            "kind": "update",
+                            "creates": false,
+                            "destructive": false,
+                            "idempotent": true
+                        },
+                        "version": 1
+                    },
+                    "type": "object",
+                    "properties": {
+                        "frequency": {
+                            "title": "Frequency",
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "weekly",
+                                    "title": "Weekly"
+                                },
+                                {
+                                    "const": "monthly",
+                                    "title": "Monthly"
+                                }
+                            ],
+                            "default": "weekly",
+                            "x-surface": {
+                                "widget": "select",
+                                "locked": false,
+                                "dependsOn": [],
+                                "refined": false,
+                                "stale": false,
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
+                            }
+                        },
+                        "send_day": {
+                            "title": "Send day",
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "monday",
+                                    "title": "Monday"
+                                },
+                                {
+                                    "const": "wednesday",
+                                    "title": "Wednesday"
+                                },
+                                {
+                                    "const": "friday",
+                                    "title": "Friday"
+                                }
+                            ],
+                            "default": "monday",
+                            "x-surface": {
+                                "widget": "select",
+                                "locked": false,
+                                "dependsOn": [
+                                    "frequency"
+                                ],
+                                "refined": false,
+                                "stale": false,
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
+                            }
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                        "frequency",
+                        "send_day"
+                    ]
+                },
+                "values": {
+                    "frequency": "weekly",
+                    "send_day": "friday"
+                },
+                "stale": [],
+                "discarded": []
+            }
+        }
+    ]
+}

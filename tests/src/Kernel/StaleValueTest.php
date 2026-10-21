@@ -14,7 +14,7 @@ use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
-use Drupal\data_surface\Target\StateTarget;
+use Drupal\data_surface\Pipeline\Storage\StateStorage;
 use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
@@ -83,7 +83,7 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
    *   The value the select declares as its default, if any.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface.
+   *   The data surface.
    */
   protected function surface(bool $required, array $choices = ['keep', 'other'], ?string $default = NULL): DataSurfaceInterface {
     $pick = DataDefinition::create('string')
@@ -112,11 +112,11 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
    * untouched, and it is the case the trap lives in.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The surface to build and extract against.
+   *   The data surface to build and extract against.
    * @param array $current
    *   The stored values the form is built from.
    * @param array $submitted
-   *   What the browser sends, keyed by surface key. A key left out is
+   *   What the browser sends, keyed by data surface key. A key left out is
    *   submitted as the element came up, which is what leaving a control
    *   alone does.
    *
@@ -175,13 +175,13 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * The target the payload path writes through.
+   * The storage the payload path writes through.
    *
-   * @return \Drupal\data_surface\Target\StateTarget
-   *   The target.
+   * @return \Drupal\data_surface\Pipeline\Storage\StateStorage
+   *   The storage.
    */
-  protected function target(): StateTarget {
-    return new StateTarget($this->container->get('state'), self::STATE_KEY);
+  protected function storage(): StateStorage {
+    return new StateStorage($this->container->get('state'), self::STATE_KEY);
   }
 
   /**
@@ -206,10 +206,13 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
     // The empty option, selected: nothing real is chosen and nothing was
     // guessed at.
     $this->assertSame('', $element['#default_value']);
+    // The empty option says what it stands for, and still posts the
+    // empty string, never a value the key does not take.
     $this->assertSame(
-      ['' => $required ? '- Select -' : '- None -', 'keep' => 'Keep', 'other' => 'Other'],
+      ['' => '- Keep ' . self::GONE . ' (no longer offered) -', 'keep' => 'Keep', 'other' => 'Other'],
       $this->shown($element),
     );
+    $this->assertSame('', $element['#empty_value']);
     // The stale value is never offered as a choice, nor named by an
     // option of its own: putting it back would let somebody re-save a
     // reference to something gone, and would make the list that is
@@ -218,17 +221,17 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
     // It travels on the element instead, which is how an untouched
     // select keeps it.
     $this->assertSame(self::GONE, $element[DataSurfaceWidgetBase::STALE_KEY]);
-    // No note and no class: the stored value no longer being an option
-    // is the whole of the presentational change.
+    // No note and no class: the stored value no longer being an option,
+    // said on the empty option, is the whole of the presentational change.
     $this->assertSame('What to feature.', (string) $element['#description']);
-    $this->assertArrayNotHasKey('#attributes', $element);
+    $this->assertSame($required ? ['aria-required' => 'true'] : [], $element['#attributes'] ?? []);
   }
 
   /**
-   * Tests a required stale select is not refused by core before the surface.
+   * Tests a required stale select is not refused by core's own check.
    *
    * Empty on a stale select means keep, so core's required check, which
-   * runs before the surface is asked, must not see it as unanswered; the
+   * runs before the data surface is asked, must not see it as unanswered; the
    * required marker stays on the label.
    */
   public function testRequiredStaleSelectKeepsItsMarkerButNotCoresCheck(): void {
@@ -237,14 +240,20 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($element['#required']);
     $this->assertContains('form-required', $element['#label_attributes']['class']);
     $this->assertArrayNotHasKey('#required_error', $element);
+    // The hint the required-as-hint rule draws on every required element,
+    // less the browser's `required` attribute, which would refuse the
+    // option that keeps the value: the marker for the eye, aria-required
+    // for a screen reader, so the two agree.
+    $this->assertSame('true', $element['#attributes']['aria-required']);
   }
 
   /**
    * Tests that a key that was never set renders on the empty option.
    *
    * Rule 3: a required select on first entry shows its empty option,
-   * selected, and core's required check refuses it in the surface's own
-   * words until something is chosen.
+   * selected, and the data surface refuses it in its own words until
+   * something is chosen: the form builder keeps core's own check off, so
+   * the widget sets no #required_error.
    */
   #[DataProvider('requiredCases')]
   public function testNeverSetSelectComesUpOnTheEmptyOption(bool $required): void {
@@ -259,9 +268,7 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
     $this->assertSame('What to feature.', (string) $element['#description']);
     $this->assertArrayNotHasKey('#attributes', $element);
     $this->assertSame($required, $element['#required']);
-    if ($required) {
-      $this->assertSame('Pick is required.', (string) $element['#required_error']);
-    }
+    $this->assertArrayNotHasKey('#required_error', $element);
   }
 
   /**
@@ -283,7 +290,7 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
   /**
    * Tests rule 2 for a declared default the list offers.
    *
-   * The surface author chose it, so it counts as a valid choice selected
+   * Whoever declared it chose it, so it counts as a valid choice selected
    * and no empty option appears; a declared default the list does not
    * offer is no choice at all, and the empty option is back.
    */
@@ -357,7 +364,7 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
     $this->assertCount(1, $violations->stale());
     $this->assertSame('pick', $violations->stale()[0]->key);
 
-    $result = $this->pipeline()->submit($surface, $values, $this->target());
+    $result = $this->pipeline()->submit($surface, $values, $this->storage());
     $this->assertTrue($result->isValid());
     $this->assertTrue($result->committed);
     $this->assertSame(self::GONE, $this->container->get('state')->get(self::STATE_KEY)['pick']);
@@ -451,7 +458,7 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
     $this->container->get('state')->set(self::STATE_KEY, ['pick' => self::GONE, 'note' => 'before']);
     $surface = $this->surface(TRUE);
 
-    $result = $this->pipeline()->submit($surface, ['pick' => self::GONE, 'note' => 'after'], $this->target());
+    $result = $this->pipeline()->submit($surface, ['pick' => self::GONE, 'note' => 'after'], $this->storage());
 
     $this->assertTrue($result->isValid());
     $this->assertTrue($result->committed);
@@ -471,7 +478,7 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
     $this->container->get('state')->set(self::STATE_KEY, ['pick' => self::GONE, 'note' => 'before']);
     $surface = $this->surface(TRUE);
 
-    $result = $this->pipeline()->submit($surface, ['note' => 'after'], $this->target());
+    $result = $this->pipeline()->submit($surface, ['note' => 'after'], $this->storage());
 
     $this->assertTrue($result->committed);
     $this->assertSame(self::GONE, $this->container->get('state')->get(self::STATE_KEY)['pick']);
@@ -484,7 +491,7 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
     $this->container->get('state')->set(self::STATE_KEY, ['pick' => self::GONE, 'note' => 'before']);
     $surface = $this->surface(TRUE);
 
-    $result = $this->pipeline()->submit($surface, ['pick' => 'invented'], $this->target());
+    $result = $this->pipeline()->submit($surface, ['pick' => 'invented'], $this->storage());
 
     // Chosen, therefore judged: the line between "re-choose this" and
     // "that is not a valid answer" is whether the value is the one that

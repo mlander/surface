@@ -4,61 +4,75 @@ Three parties, in order:
 
 | Party | Does | Knows |
 | --- | --- | --- |
-| **Caller** (a route's form, a tool, a plugin host, a test) | builds a context, asks for the surface, then uses it | where it is |
-| **Framework** (`Surfaces`, the service `data_surface.surfaces`) | runs the shape methods, applies alters, applies the context, binds refiners, builds children, seals | everything |
-| **Surface** and its **alters** | declare | nothing about the caller |
+| **Caller** (a route's form, a tool, a plugin host, a test) | builds a context, asks for the built resource or structure, then uses it | where it is |
+| **Framework** (`Resources`, the service `data_surface.resources`) | runs `defineInputs()` and `defineOutputs()`, applies alters, applies the context, binds refiners, builds children, seals | everything |
+| **Resource** or **structure**, and its **alters** | declare | nothing about the caller |
 
 The context is how the caller tells the framework where it is. The
-framework does most of the work with it. A surface only reads it for the
-rare fact that is not a value, such as "this field already has data",
-and only in a situation method, which is where contexts are made.
+framework does most of the work with it. A resource or structure only
+reads it for the rare fact that is not a value, such as "this field
+already has data", and only in an operation method, which is where
+contexts are made.
 
 ## Discovery
 
-Before anything is built, `SurfaceBuild\SurfaceCollectorPass`, a
+Before anything is built, `ResourceBuild\ResourceCollectorPass`, a
 compiler pass registered by `DataSurfaceServiceProvider`, lists every
-class in an enabled module's `src/Surface/` and `src/SurfaceAlter/`
-into a container parameter, and registers each alter, and each target
-and access class a surface names, as an autowired service.
-`SurfaceRegistry` (`data_surface.surface_registry`) reads their
-attributes into the discovery cache: each surface's id, identity,
-target, access class and `#[RefinesInput]` methods; each situation with
-its parameters; each alter with the situations it applies in; each
-variant with the slot and value it fills. Plugin definitions get
-`#[UsesSurface]` copied in by `SurfacePluginHooks`, and that is where
-the registry finds the other kind of surface: a plugin that is its own
-surface, `#[UsesSurface]` with no argument, whose definition records
-its own class (`SurfacePlugins::ownSurfaces()`). It is read the same
-way, under the id `<host type>:<plugin id>` unless it carries
-`#[Surface]`, and the cache id hashes both lists. Discovery refuses a
-surface whose `defineInputs()` or `defineOutputs()` is not static.
+class in an enabled module's `src/Resource/`, `src/Structure/` and
+`src/Alter/` into a container parameter, and registers each alter, and
+each storage and access class a resource or structure names, as an
+autowired service. `ResourceRegistry` (`data_surface.resource_registry`)
+reads their attributes into the discovery cache: each resource's or
+structure's id and access class (and a resource's identity and storage)
+and its `#[RefinesInput]` methods; each operation with its parameters;
+each alter with the operations it applies in; each variant with the
+key and value it is for. Plugin definitions get `#[UsesStructure]`
+copied in by `ResourcePluginHooks`, and that is where the registry
+finds the other kind of structure: a plugin that is its own structure,
+`#[UsesStructure]` with no argument, whose definition records its own
+class (`ResourcePlugins::ownStructures()`). It is read the same way,
+under the id `<host type>:<plugin id>` unless it carries
+`#[Structure]`, and the cache id hashes both lists. Discovery refuses a
+class whose `defineInputs()` or `defineOutputs()` is not static.
+
+A class carrying `#[DerivesResources]` is a deriver, registered as an
+autowired service; the registry asks it for its resources and
+structures here, and reads each into a definition with no class,
+`<base>:<derivative>`, whose inputs and operations are methods the
+deriver names. Each derivative is an entry of its own carrying the tags
+it was read from, so a saved field clears that field's entries and no
+other ([Derived resources](resources.md#derived-resources)); the
+section below says what else is kept.
 
 ## The build step
 
-`SurfacesInterface::build(string $surface, SurfaceContext $context):
-DataSurfaceInterface`, in `Surfaces::buildSurface()`:
+`ResourcesInterface::build(string $resource, OperationContext $context):
+DataSurfaceInterface`, in `Resources::buildResource()`:
 
 ```
-build(FieldInstanceSurface::class, $context):
+build(FieldInstanceResource::class, $context):
 
-  1. the owner's shape, asked of the class: no instance is ever made
-       $class::defineInputs(new SurfaceShape($builder))          <- no context: the
-       $class::defineOutputs(new SurfaceShape($builder, TRUE))      same everywhere
-     SurfaceShape writes straight into a fresh DataSurfaceBuilder,
-     the engine's internal builder. $class is the #[Surface] class,
-     or the plugin class of a plugin that is its own surface
+  1. the owner's blueprint, filled by the class: no instance is ever made
+       $class::defineInputs(new ResourceBlueprint($builder))          <- no context: the
+       $class::defineOutputs(new ResourceBlueprint($builder, TRUE))      same everywhere
+     ResourceBlueprint writes straight into a fresh DataSurfaceBuilder,
+     the engine's internal builder. $class is the #[Resource] or
+     #[Structure] class, or the plugin class of a plugin that is its
+     own structure
 
-  2. the alters #[AltersSurface] names for this surface, skipping one
-     whose situations leave this context's operation out:
-       $alter->alterInputs(new SurfaceShapeAdditions($builder, $module))
+  2. the alters #[Alters] names for this class, skipping one
+     whose operations leave this context's id out:
+       $alter->alterInputs(new ResourceBlueprintAdditions($builder, $module))
        $alter->alterOutputs(...)                    <- if it has outputs
-       $alter->storageShape()                       <- if HasStorageShapeInterface
-     SurfaceShapeAdditions mounts what it adds at
-     third_party_settings.<module>
+       $alter->storageLayout()                       <- if AltersStorageLayoutInterface
+     ResourceBlueprintAdditions mounts what it adds at
+     third_party_settings.<module>; a structure an alter attached there
+     is built now, in its own frame, its keys the mount's and its ports
+     wired to the owner's keys (mountStructure)
 
-  3. the checks on the shape: every identity key is a declared input,
-     no situation id is provided twice, no surface is attached inside
-     itself, every slot is chosen by a plain input
+  3. the checks on the blueprint: every identity key is a declared input,
+     no operation id is provided twice, no class is attached inside
+     itself, the variants at every key are chosen by a plain input
 
   4. the context (applyContext):
        starting values become the keys' defaults, if it creates
@@ -66,56 +80,76 @@ build(FieldInstanceSurface::class, $context):
        each identity key it knows becomes that key's default, locked
 
   5. the refiners (bindRefiners), owner's first, then each alter's:
-       each #[RefinesInput] method checked against the shape and the wall,
-         and a surface's checked static
+       each #[RefinesInput] method checked against the declared keys and the wall,
+         the owner's checked static, and an alter's static unless it
+         declares runtime
        the keys it watches become refinement edges; a key its alter
          mounted, refined or watched, by its dotted path in the mount
        its class becomes one RefinesInputRefiner link on each key it refines:
-         the surface's link holds its class name and calls static methods,
-         an alter's holds the alter service and calls instance methods
+         the owner's link holds its class name and calls static methods,
+         an alter's holds the alter service, whose runtime refiners
+         may be instance methods
        a method watching nothing runs now, checked narrower
+     then the rules each declared with narrow() (bindRules), after its
+       contributor's methods: checked against the keys, the wall and
+       the narrowing check as written; the keys a condition reads become
+       edges that gate nothing; one DeclaredRefiner link per contributor
 
-  6. the children, each through this same build step in its own frame:
-       attach('storage', FieldStorageSurface::class)
-         -> build(FieldStorageSurface::class, childContext($context, 'storage'))
-       attachBy('settings', by: 'field_type')
-         -> one child per #[SurfaceVariant] for (FieldInstanceSurface, settings)
+  6. the children, each through this same build step in its own frame,
+     invoked the way a resource asked on its own is (invokeChild): the
+     child operation the parent's context names, else the one with the
+     parent's context id, else the child's default, else the parent's
+     context id and identity (childContext); an operation's permission and
+     the child's access class then make it open, locked (the parent's
+     key locked) or omitted (the key left out):
+       attach('storage', FieldStorageResource::class)
+         -> build(FieldStorageResource::class, <its add operation, by id>)
+       attach('compliance', ComplianceStructure::class, reads: ['capacity' => 'seats'])
+         -> its ports checked against the parent's keys (assertWiring)
+         -> what reads a port recorded at its path, on the parent's key
+            (wirePorts); the child refines with the key's value, live
+       attachVariants('settings', by: 'field_type')
+         -> one child per #[Variant] for (FieldInstanceResource, settings)
          -> one derived child per value a DerivedVariantsInterface service
             fills and no variant class does
 
   7. seal: a DataSurfaceInterface, its children sealed into the parent's
-     entries as SurfaceAttachment / SurfaceSlot
+     entries as Attachment / Variants
 ```
 
-Nothing is cached across builds: a surface describes live site state,
-and what that state is, a shape says with `addCacheableDependency()`.
+Nothing is cached across builds: a build describes live site state,
+and what that state is, a blueprint says with `addCacheableDependency()`.
 
 The rest of the framework, beside the build:
 
 ```
-access($surface, $context, $account)           Surfaces::access()
-  the situation's permission, %keys filled from the known identity,
-  then the surface's access class if it has one,
-  then each child the context resolves, through its own access class,
-  which may refuse and never allow
+access($resource, $context, $account)          Resources::access()
+  the operation's permission, %keys filled from the known identity,
+  then the resource's access class if it has one,
+  then each variant a locked deciding key chose, through its own
+  access class, which may refuse and never allow (every child's access
+  was answered at build, however it was invoked)
 
-target($surface, $context, $built)              Surfaces::target()
-  the surface's SurfaceTargetInterface, wrapped in a SurfaceTargetAdapter
-  bound to the context, with a route per child whose class names a
-  target, each in the context its parent hands it; a child without one
-  is stored by the parent under its key
+storage($resource, $context, $built)           Resources::storage()
+  the resource's ResourceStorageInterface, wrapped in a StorageAdapter
+  bound to the context, with a route per child whose class names
+  storage, each in the context it is invoked in; a child without it
+  is stored by the parent under its key, and one its access omitted
+  keeps what is stored under its key
 
 refine($values)                                  DataSurface::refine()
   for each key whose watched siblings all hold values (a key an alter
   mounted, which only that alter watches, is read at its path and not
   waited for): its chain of
   RefinesInputRefiner links (owner's, then alters'), each handed a deep
-  clone and checked narrower; each child refined in its own frame
+  clone and checked narrower; a key's DeclaredRefiner links run whether
+  or not its siblings hold values, reading them as they stand; each child refined in its own frame
 ```
 
 Values never travel in the context. Identity facts in the context
 become locks (step 4). Current values come from storage, loaded by the
-target, and submitted values arrive at the refiners and the pipeline.
+storage class, and submitted values arrive at the refiners and the
+pipeline.
 
 ## One request: editing an existing field
 
@@ -123,113 +157,141 @@ The derived tool `data_surface:field.instance:edit`, given
 `field: node.article.field_address`:
 
 ```
-SurfaceSituationTool
-  $context = $surfaces->situation(FieldInstanceSurface::class, 'edit',
+ResourceOperationTool
+  $context = $resources->operation(FieldInstanceResource::class, 'edit',
                                   ['field' => 'node.article.field_address']);
-      SituationArguments loads the FieldConfig: FieldConfigInterface is
+      OperationArguments loads the FieldConfig: FieldConfigInterface is
       satisfied by one entity type's class
-      FieldInstanceSurface::edit($field) returns
-        operation  edit, creates FALSE
+      FieldInstanceResource::edit($field) returns
+        id         edit, creates FALSE
         known      entity_type_id=node, bundle=article,
                    field_name=field_address, field_type=address
-        children   storage  => FieldStorageSurface::edit($storage)
+        children   storage  => FieldStorageResource::edit($storage)
                                  known entity_type_id, field_name, field_type
                                  cardinality => Range(min: current), if it has data
                    settings => edit, knowing entity_type_id, bundle, field_name
 
-  $access = $surfaces->access(FieldInstanceSurface::class, $context);
+  $access = $resources->access(FieldInstanceResource::class, $context);
       'administer node fields', then FieldInstanceAccess (a locked
       storage is refused), then the settings' access class, if any
 
-  $surface = $surfaces->build(FieldInstanceSurface::class, $context);
+  $built = $resources->build(FieldInstanceResource::class, $context);
 
-Step 1   FieldInstanceSurface::defineInputs(), static
+Step 1   FieldInstanceResource::defineInputs(), static
            entity_type_id, bundle, field_type, field_name, label, ...
-           attach storage; attachBy settings on field_type
-Step 2   no alter in this repository names the field surface
+           attach storage; attachVariants settings on field_type
+Step 2   no alter in this repository names the field resource
 Step 4   all four identity keys are known -> locked
            (on the add tool only two are known -> two stay open)
 Step 5   bundleOfEntityType() watches entity_type_id -> an edge
 Step 6   storage built with ITS context: field_type locked to address,
            cardinality narrowed right there if the field has data; its
-           settings slot resolved to the variant derived from
+           settings variants resolved to the one derived from
            field.storage_settings.address
-         settings slot: field_type is locked to address, so the child
-           is AddressFieldSettingsSurface, built in the settings context;
+         settings variants: field_type is locked to address, so the child
+           is AddressFieldSettingsResource, built in the settings context;
            every other field type's settings, derived from
-           field.field_settings.<type>, sit in the slot's table too
+           field.field_settings.<type>, sit in the variants' table too
 
-  $target = $surfaces->target(FieldInstanceSurface::class, $context, $surface);
-      FieldInstanceTarget, routing storage to FieldStorageTarget and the
-      address settings to AddressFieldSettingsTarget
+  $storage = $resources->storage(FieldInstanceResource::class, $context, $built);
+      FieldInstanceStorage, routing storage to FieldStorageStorage and the
+      address settings to AddressFieldSettingsStorage
 
-  $pipeline->submit($surface, $values, $target)
+  $pipeline->submit($built, $values, $storage)
       load     each level loads its own slice and the adapter assembles it
       accept   the payload merged over what was loaded, level by level
       validate each child in its own frame, violations filed under its key
-      prepare  each target rehearses its write: the storage, the field,
+      prepare  each storage class rehearses its write: the storage, the field,
                the settings, each held to its config schema
       commit   the storage first, then the field, then the settings
 ```
 
-## The same surface from the add tool
+## The same resource from the add tool
 
 ```
-$context = FieldInstanceSurface::add('node', 'article');   knows two keys
-$surface = $surfaces->build(FieldInstanceSurface::class, $context);
+$context = FieldInstanceResource::add('node', 'article');   knows two keys
+$built = $resources->build(FieldInstanceResource::class, $context);
 ```
 
 Step 4 locks the entity type and the bundle; the field type and the
-machine name stay open, and the caller supplies them. The settings slot
-stays an `any` placeholder until `field_type` has a value, then resolves
-to that type's variant. The storage child sees the field's operation,
+machine name stay open, and the caller supplies them. The settings
+variants stay an `any` placeholder until `field_type` has a value, then
+resolve to that type's variant. The storage child sees the field's context id,
 `creates` and known identity, so its own `field_type` is open too: a
-caller describing the storage's settings names the type there, and the
-storage target refuses one that differs from the field's. When the
+caller describing the storage's settings names the type there, and
+`FieldStorageStorage` refuses one that differs from the field's. When the
 values are committed, the storage learns the field's accepted name and
 type as identity, is created first, and the field is created on it.
-Same surface, same alters, same children.
+Same resource, same alters, same children.
 
-## The same surface from a plugin host
+## A structure from a plugin host
 
-A plugin's surface is built by its host, in
-`DataSurfaceHostTrait::hostedSurface()`, with `new
-SurfaceContext('configure')`: the host's own verb, which is no declared
-situation, and nothing known. The host supplies the target (the
+A plugin's structure is built by its host, in
+`DataSurfaceHostTrait::hostedStructure()`, with `new
+OperationContext('configure')`: the host's own verb, which is no declared
+operation, and nothing known. The host supplies the storage (the
 plugin's configuration, or the field config Field UI is editing),
-because only it holds the instance, and asks access of the surface's
+because only it holds the instance, and asks access of the structure's
 access class alone. A plugin protocol that asks a class for its
-defaults statically gets `SurfacesInterface::defaults()`: the owner's
-shape alone, with no alter and no context.
+defaults statically gets `ResourcesInterface::defaults()`: the owner's
+blueprint alone, with no alter and no context.
 
 ## Tools, derived
 
-`data_surface_tool` derives one tool per situation that can be asked
-on its own (`SurfaceCatalogue::standalone()`: the surface names a
-target, no plugin uses it, and every `%key` in its permission can be
-supplied by a parameter). `SurfaceSituationToolDeriver` writes each
-definition from the static layer: `SituationInputs` turns the
-situation's parameters into inputs and builds the surface in a context
-read off the signature for `values`; `SurfaceSituationTool` refines
+`data_surface_tool` derives one tool per operation that can be asked
+on its own (`ResourceCatalog::standalone()`: the resource names
+storage, no plugin uses it, and every `%key` in its permission can be
+supplied by a parameter). `ResourceOperationToolDeriver` writes each
+definition from the static layer: `OperationInputs` turns the
+operation's parameters into inputs and builds the resource in a context
+read off the signature for `values`; `ResourceOperationTool` refines
 `values` to the real context once the parameters arrive, asks
-`Surfaces::access()` decisively, and submits through the pipeline to
-the composed target, stopping after prepare for a dry run. Beside each
-that changes a thing that exists (`SurfaceCatalogue::reads()`) the same
-deriver writes a read tool, `SurfaceSituationReadTool`, which takes the
-parameters, asks the same access, and answers with what the target
+`Resources::access()` decisively, and submits through the pipeline to
+the composed storage, stopping after prepare for a dry run. Beside each
+that changes a thing that exists (`ResourceCatalog::reads()`) the same
+deriver writes a read tool, `ResourceOperationReadTool`, which takes the
+parameters, asks the same access, and answers with what its storage
 loads, less every secret. Nothing in any of these classes names a
-surface or a key.
+resource or a key.
+
+## What is cached
+
+Everything a request may reuse is kept by what it was read from and
+dropped by tag; nothing is one account's, and nothing holds a stored
+value ([decision](decisions.md#what-is-paid-once-and-what-per-request)).
+
+- **Discovery** is an index in the discovery bin (every resource's and
+  structure's name, id, kind, module and base, and the shapes) and one
+  entry per definition. A request reads the index and the entries of
+  what it asks for. A derivative's entry carries only its own tags (a
+  field item its field's configuration); the index carries what decides
+  which derivatives there are (a bundle created, a form display saved),
+  and reading it again writes only the entries that went.
+- **Tools.** Each resource's tools are an entry of their own, under that
+  resource's tags, each operation built once for all of its tools and
+  the whole rebuilt under core's lock. The Tool API keeps every tool in
+  one item, which a tag of any tool clears; deriving it again reads the
+  entries that are still there.
+- **A sealed build** is kept for the rest of the request, by resource,
+  context, kind and account kind, until a tag it read is invalidated;
+  never one that expires or varies by more than the account
+  ([decision](decisions.md#a-build-is-not-cached-across-requests)). A
+  route's access check asks with the context alone and builds nothing.
+- **One document** refines each combination of watched values once,
+  however many keys watch it, and a static access answer is asked once
+  per context and account kind.
 
 ## So, the context is
 
-- **Built by** a static `#[Situation]` method on the surface, one per
-  way it is asked for, or a bare `new SurfaceContext($operation)` from a
-  plugin host or a test.
+- **Built by** a static `#[Operation]` method on the resource or
+  structure, one per way it is asked for, or a bare
+  `new OperationContext($id)` from a plugin host or a test.
 - **Read by the framework** to lock identity, to narrow keys, to start
-  a new thing's values, to hand children their own context, to name a
-  situation's permission, and by targets and access classes to know
+  a new thing's values, to hand children their own context, to name an
+  operation's permission, and by storage and access classes to know
   which thing.
-- **Never read by a shape or a refiner.** The shape methods take a
-  shape, refiners take the values they name. State such as "this field
-  has data" is narrowing the situation imposes, applied once at build.
+
+- **Never read by `defineInputs()` or a refiner.** `defineInputs()` and
+  `defineOutputs()` take a blueprint, refiners take the values they name. State such as "this field
+  has data" is narrowing the operation imposes, applied once at build.
 - **Never** a bag of submitted values.

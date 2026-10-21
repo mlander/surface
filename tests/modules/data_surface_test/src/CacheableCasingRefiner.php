@@ -13,9 +13,9 @@ use Drupal\data_surface\DataSurfaceRefinerInterface;
  *
  * The shape a refiner declares cacheability in: core's own
  * CacheableDependencyInterface, no second interface of this module's.
- * What is declared here is merged into the refined surface whenever this
- * refiner runs, so a form built from that surface knows it holds a list
- * read from a configurable site, for one language, for a minute.
+ * What is declared here is merged into the refined data surface whenever
+ * this refiner runs, so a form built from it knows it holds a list read
+ * from a configurable site, for one language, for a minute.
  */
 final class CacheableCasingRefiner implements DataSurfaceRefinerInterface, CacheableDependencyInterface {
 

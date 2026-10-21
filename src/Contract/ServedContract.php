@@ -8,7 +8,7 @@ use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Cache\CacheableMetadata;
 
 /**
- * The contract one surface serves for one set of values.
+ * The contract one data surface serves for one set of values.
  *
  * The document is a payload, an array ready for json_encode(); what it
  * was read from carries cacheability, which travels beside it rather
@@ -22,10 +22,11 @@ final class ServedContract implements CacheableDependencyInterface {
    * Constructs a ServedContract.
    *
    * @param array $document
-   *   The contract: `surface`, `situation`, `label`, `schema`, `values`,
-   *   `stale`, and `outputs` when the surface declares any.
+   *   The contract: `resource`, `operation`, `label`, `schema`, `values`,
+   *   `stale`, and `outputs` when the data surface declares any.
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
-   *   What the refined surface and the option lists it offers depend on.
+   *   What the refined data surface and the option lists it offers
+   *   depend on.
    */
   public function __construct(
     public readonly array $document,

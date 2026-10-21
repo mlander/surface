@@ -1,0 +1,430 @@
+{
+    "resource": "resource_test.workshop",
+    "operation": "configure",
+    "label": "Configure the workshop",
+    "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Configure the workshop",
+        "x-surface": {
+            "contract": 2,
+            "version": 1
+        },
+        "type": "object",
+        "properties": {
+            "closed": {
+                "title": "Closed",
+                "type": [
+                    "boolean",
+                    "null"
+                ],
+                "default": false,
+                "x-surface": {
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": false,
+                    "stale": false
+                }
+            },
+            "benches": {
+                "title": "Benches",
+                "allOf": [
+                    {
+                        "$ref": "#/$defs/resource_test.workshop.benches"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "lathe": {
+                                "allOf": [
+                                    {
+                                        "$ref": "#/$defs/resource_test.workshop.bench"
+                                    },
+                                    true
+                                ]
+                            },
+                            "press": {
+                                "allOf": [
+                                    {
+                                        "$ref": "#/$defs/resource_test.workshop.bench"
+                                    },
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "enabled": {
+                                                "readOnly": true,
+                                                "const": true
+                                            },
+                                            "hours": {
+                                                "readOnly": true,
+                                                "const": 2
+                                            }
+                                        }
+                                    }
+                                ],
+                                "readOnly": true
+                            },
+                            "saw": {
+                                "allOf": [
+                                    {
+                                        "$ref": "#/$defs/resource_test.workshop.bench"
+                                    },
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "hours": false
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                ],
+                "x-surface": {
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": false,
+                    "stale": false,
+                    "within": {
+                        "/allOf/1/properties/lathe/allOf/1/properties/hours": {
+                            "locked": false,
+                            "dependsOn": [
+                                "enabled"
+                            ],
+                            "refined": false,
+                            "stale": false
+                        },
+                        "/allOf/1/properties/press": {
+                            "locked": true,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        },
+                        "/allOf/1/properties/press/allOf/1/properties/enabled": {
+                            "locked": true,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        },
+                        "/allOf/1/properties/press/allOf/1/properties/hours": {
+                            "locked": true,
+                            "dependsOn": [
+                                "enabled"
+                            ],
+                            "refined": false,
+                            "stale": false
+                        },
+                        "/allOf/1/properties/saw/allOf/1": {
+                            "doesNotApply": {
+                                "hours": [
+                                    "enabled"
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+            "lights": {
+                "title": "Lights",
+                "description": "Which benches have their lamp on.",
+                "allOf": [
+                    {
+                        "$ref": "#/$defs/resource_test.workshop.lights"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "press": {
+                                "default": false,
+                                "readOnly": true,
+                                "const": false
+                            }
+                        }
+                    }
+                ],
+                "x-surface": {
+                    "locked": false,
+                    "dependsOn": [
+                        "closed"
+                    ],
+                    "refined": false,
+                    "stale": false,
+                    "within": {
+                        "/allOf/1/properties/press": {
+                            "locked": true,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    }
+                }
+            },
+            "codes": {
+                "title": "Bench codes",
+                "allOf": [
+                    {
+                        "$ref": "#/$defs/resource_test.workshop.codes"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "press": {
+                                "readOnly": true,
+                                "const": "DP2"
+                            }
+                        }
+                    }
+                ],
+                "x-surface": {
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": false,
+                    "stale": false,
+                    "within": {
+                        "/allOf/1/properties/press": {
+                            "locked": true,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false,
+                            "patternMessage": "A stock code is two capitals and digits, such as AB12."
+                        }
+                    }
+                }
+            }
+        },
+        "additionalProperties": false,
+        "$defs": {
+            "resource_test.workshop.bench": {
+                "title": "resource_test.workshop.bench",
+                "type": "object",
+                "properties": {
+                    "enabled": {
+                        "title": "In use",
+                        "type": [
+                            "boolean",
+                            "null"
+                        ],
+                        "default": true,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    },
+                    "hours": {
+                        "title": "Hours a day",
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 1,
+                        "maximum": 12,
+                        "default": 1,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [
+                                "enabled"
+                            ],
+                            "refined": false,
+                            "stale": false,
+                            "declared": true
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "allOf": [
+                    {
+                        "if": {
+                            "properties": {
+                                "enabled": {
+                                    "const": false
+                                }
+                            },
+                            "required": [
+                                "enabled"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "hours": false
+                            }
+                        }
+                    }
+                ],
+                "x-surface": {
+                    "rules": [
+                        0
+                    ]
+                }
+            },
+            "resource_test.workshop.benches": {
+                "title": "resource_test.workshop.benches",
+                "type": "object",
+                "properties": {
+                    "lathe": {
+                        "title": "Lathe",
+                        "$ref": "#/$defs/resource_test.workshop.bench",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    },
+                    "press": {
+                        "title": "Drill press",
+                        "$ref": "#/$defs/resource_test.workshop.bench",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    },
+                    "saw": {
+                        "title": "Band saw",
+                        "$ref": "#/$defs/resource_test.workshop.bench",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    }
+                },
+                "additionalProperties": false
+            },
+            "resource_test.workshop.lights": {
+                "title": "resource_test.workshop.lights",
+                "type": "object",
+                "properties": {
+                    "lathe": {
+                        "title": "Lathe",
+                        "type": [
+                            "boolean",
+                            "null"
+                        ],
+                        "default": false,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    },
+                    "press": {
+                        "title": "Drill press",
+                        "type": [
+                            "boolean",
+                            "null"
+                        ],
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    },
+                    "saw": {
+                        "title": "Band saw",
+                        "type": [
+                            "boolean",
+                            "null"
+                        ],
+                        "default": false,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    }
+                },
+                "additionalProperties": false
+            },
+            "resource_test.workshop.codes": {
+                "title": "resource_test.workshop.codes",
+                "type": "object",
+                "properties": {
+                    "lathe": {
+                        "$ref": "#/$defs/resource_test.sku",
+                        "title": "Lathe",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false,
+                            "patternMessage": "A stock code is two capitals and digits, such as AB12."
+                        }
+                    },
+                    "press": {
+                        "$ref": "#/$defs/resource_test.sku",
+                        "title": "Drill press",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false,
+                            "patternMessage": "A stock code is two capitals and digits, such as AB12."
+                        }
+                    },
+                    "saw": {
+                        "$ref": "#/$defs/resource_test.sku",
+                        "title": "Band saw",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false,
+                            "patternMessage": "A stock code is two capitals and digits, such as AB12."
+                        }
+                    }
+                },
+                "additionalProperties": false
+            },
+            "resource_test.sku": {
+                "title": "resource_test.sku",
+                "description": "Two capitals and digits, as printed on the shelf.",
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "pattern": "^[A-Z]{2}\\d+$",
+                "maxLength": 12,
+                "examples": [
+                    "AB12"
+                ],
+                "x-surface": {
+                    "patternMessage": "A stock code is two capitals and digits, such as AB12."
+                }
+            }
+        }
+    },
+    "values": {
+        "closed": false,
+        "benches": {
+            "lathe": {
+                "enabled": true,
+                "hours": 4
+            },
+            "press": {
+                "enabled": true,
+                "hours": 2
+            },
+            "saw": {
+                "enabled": false
+            }
+        },
+        "lights": {
+            "lathe": true,
+            "press": false,
+            "saw": false
+        },
+        "codes": {
+            "lathe": "LA1",
+            "press": "DP2",
+            "saw": null
+        }
+    },
+    "stale": []
+}

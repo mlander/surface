@@ -19,7 +19,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * refused on the room; the other moves the venue, its room and the
  * ticket's variant at once, all valid, and has to be written. Each says
  * what happened: an error on the element, or the status message. With
- * example 4's module on, a large event is refused without its licence
+ * example 4's module on, a large event is refused without its license
  * and written with one.
  */
 #[Group('data_surface')]
@@ -51,7 +51,7 @@ class ExamplesFullSubmitTest extends BrowserTestBase {
    * Posts the form at a path with raw field names, as a browser would.
    *
    * Raw rather than through submitForm(), which only fills fields the
-   * page already shows: a slot flipped in the same request sends keys the
+   * page already shows: variants flipped in the same request send keys the
    * page was not rendered with, which is the case under test.
    *
    * @param string $path
@@ -139,7 +139,7 @@ class ExamplesFullSubmitTest extends BrowserTestBase {
       'surface[pricing]' => 'paid',
       'surface[contact][email]' => 'gala@example.com',
       'surface[contact][phone]' => '',
-      'surface[third_party_settings][data_surface_examples_compliance][licence]' => '',
+      'surface[third_party_settings][data_surface_examples_compliance][license]' => '',
       'surface[third_party_settings][data_surface_examples_compliance][stewards]' => '1',
     ];
 
@@ -149,7 +149,9 @@ class ExamplesFullSubmitTest extends BrowserTestBase {
     $this->rawPost('surface-examples/3', $fields + ['surface[ticket][note]' => 'Donations welcome']);
     $assert = $this->assertSession();
     $assert->elementExists('css', 'input[name="surface[ticket][price]"][aria-invalid="true"]');
-    $assert->pageTextContains('Price field is required.');
+    // In the resource's own words: Form API's required check is off.
+    $assert->pageTextContains('Price is required.');
+    $assert->pageTextNotContains('Price field is required.');
     $assert->pageTextNotContains('The changes have been saved.');
     $this->assertSame($before, $this->stored('step3'));
 
@@ -167,12 +169,12 @@ class ExamplesFullSubmitTest extends BrowserTestBase {
   }
 
   /**
-   * Tests step 3 refuses a large event without a licence, and writes one.
+   * Tests step 3 refuses a large event without a license, and writes one.
    *
    * Example 4's module caps the capacity at a hundred until an event
-   * licence is given, and asks for a steward per fifty people.
+   * license is given, and asks for a steward per fifty people.
    */
-  public function testStepThreeNeedsLicenceAboveOneHundred(): void {
+  public function testStepThreeNeedsLicenseAboveOneHundred(): void {
     $fields = [
       'surface[title]' => 'Festival',
       'surface[capacity]' => '150',
@@ -185,23 +187,94 @@ class ExamplesFullSubmitTest extends BrowserTestBase {
       'surface[contact][phone]' => '',
       'surface[third_party_settings][data_surface_examples_compliance][stewards]' => '3',
     ];
-    $licence = 'surface[third_party_settings][data_surface_examples_compliance][licence]';
+    $license = 'surface[third_party_settings][data_surface_examples_compliance][license]';
 
     $before = $this->stored('step3');
-    $this->rawPost('surface-examples/3', $fields + [$licence => '']);
+    $this->rawPost('surface-examples/3', $fields + [$license => '']);
     $assert = $this->assertSession();
     $assert->statusCodeEquals(200);
     $assert->elementExists('css', 'input[name="surface[capacity]"][aria-invalid="true"]');
-    $assert->elementNotExists('css', 'input[name="' . $licence . '"][aria-invalid="true"]');
+    $assert->elementNotExists('css', 'input[name="' . $license . '"][aria-invalid="true"]');
     $assert->pageTextNotContains('The changes have been saved.');
     $this->assertSame($before, $this->stored('step3'));
 
-    $this->rawPost('surface-examples/3', $fields + [$licence => '2048']);
+    $this->rawPost('surface-examples/3', $fields + [$license => '2048']);
     $assert->statusCodeEquals(200);
     $assert->pageTextContains('The changes have been saved.');
     $stored = $this->stored('step3');
     $this->assertSame(150, $stored['capacity']);
-    $this->assertSame(['licence' => '2048', 'stewards' => 3], $stored['third_party_settings']['data_surface_examples_compliance']);
+    $this->assertSame(['license' => '2048', 'stewards' => 3], $stored['third_party_settings']['data_surface_examples_compliance']);
+  }
+
+  /**
+   * Reads a config object of the examples as stored.
+   *
+   * @param string $name
+   *   The config name suffix.
+   *
+   * @return array
+   *   The stored values.
+   */
+  protected function storedAs(string $name): array {
+    $this->container->get('config.factory')->reset();
+    return array_diff_key($this->config('data_surface_examples.' . $name)->getRawData(), ['_core' => TRUE]);
+  }
+
+  /**
+   * Posts a form as the page drew it, with the keys it drew as nothing.
+   *
+   * @param string $path
+   *   The form's path.
+   * @param array $fields
+   *   The fields, keyed by their input name.
+   */
+  protected function postAsDrawn(string $path, array $fields): void {
+    $this->drupalGet($path);
+    $marker = $this->assertSession()->hiddenFieldExists('surface[@absent]')->getValue();
+    $this->rawPost($path, $fields + ['surface[@absent]' => $marker]);
+  }
+
+  /**
+   * Tests a type put back on sale in the same post keeps its stored limits.
+   *
+   * Off sale, the type's limits are drawn as nothing; ticked and saved in
+   * one post, they apply, were never sent, and keep what is stored.
+   */
+  public function testExampleNineKeepsTheLimitsWhenBackOnSale(): void {
+    $this->config('data_surface_examples.sales')->set('on_sale.student', FALSE)->save();
+    $this->drupalGet('surface-examples/9');
+    $this->assertSession()->fieldNotExists('surface[limits][student][per_order]');
+    $this->assertSame('limits.student.per_order limits.student.waiting_list limits.speaker.per_order limits.speaker.waiting_list', $this->assertSession()->hiddenFieldExists('surface[@absent]')->getValue());
+
+    $this->postAsDrawn('surface-examples/9', [
+      'surface[on_sale][standard]' => '1',
+      'surface[on_sale][student]' => '1',
+      'surface[limits][standard][per_order]' => '4',
+    ]);
+    $this->assertSession()->pageTextContains('The changes have been saved.');
+    $stored = $this->storedAs('sales');
+    $this->assertTrue($stored['on_sale']['student']);
+    $this->assertSame(['per_order' => 1, 'waiting_list' => TRUE], $stored['limits']['student']);
+    $this->assertSame(['per_order' => 4, 'waiting_list' => FALSE], $stored['limits']['standard']);
+  }
+
+  /**
+   * Tests a top-level key put back in the same post keeps its stored value.
+   *
+   * Example 7's send day does not apply to a monthly bulletin; switched
+   * to weekly and saved in one post, it was never sent, and keeps Friday.
+   */
+  public function testExampleSevenKeepsTheSendDayWhenWeeklyAgain(): void {
+    $this->config('data_surface_examples.bulletin')->set('frequency', 'monthly')->save();
+    $this->drupalGet('surface-examples/7');
+    $this->assertSession()->fieldNotExists('surface[send_day]');
+
+    $this->postAsDrawn('surface-examples/7', [
+      'surface[frequency]' => 'weekly',
+      'surface[items]' => '4',
+    ]);
+    $this->assertSession()->pageTextContains('The changes have been saved.');
+    $this->assertSame(['frequency' => 'weekly', 'send_day' => 'friday', 'items' => 4], $this->storedAs('bulletin'));
   }
 
 }

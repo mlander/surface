@@ -14,9 +14,9 @@ use Symfony\Component\Validator\Constraints\UniqueValidator;
  *
  * Symfony has the constraint and core does not register it, so it is
  * registered here under this module's name rather than assumed. On the
- * content type surface it is how "each tag once" is said as contract:
+ * content type resource it is how "each tag once" is said as contract:
  * the classic form removes a repeated tag without a word, and the
- * surface refuses the list instead, naming it, because a surface never
+ * resource refuses the list instead, naming it, because a resource never
  * turns a value into a different one on a caller's behalf.
  *
  * The Tool API's schema normalizer has no mapping for it, so the

@@ -7,10 +7,11 @@ namespace Drupal\data_surface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 
 /**
- * The ordered, immutable set of keys a surface advertises.
+ * The ordered, immutable set of keys a data surface advertises.
  *
- * One collection in place of the parallel arrays a surface used to hold.
- * Every key is a SurfaceEntry carrying its definition, who introduced
+ * One collection in place of the parallel arrays a data surface used to
+ * hold.
+ * Every key is an Entry carrying its definition, who introduced
  * it, whether it is locked, what it refines against, whose values it
  * offers and whose refiners narrow it, so nothing can name a key one of
  * those arrays had never heard of.
@@ -26,9 +27,9 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
  * Iterating yields name => definition, which is the shape every call
  * site that used to read the definitions array expects, and array
  * access answers the same question; set and unset throw, because a
- * sealed surface has already been advertised.
+ * sealed data surface has already been advertised.
  *
- * @see \Drupal\data_surface\SurfaceEntry
+ * @see \Drupal\data_surface\Entry
  * @see \Drupal\data_surface\DataSurfaceInterface::getDefinitions()
  *
  * @implements \IteratorAggregate<string, \Drupal\Core\TypedData\DataDefinitionInterface>
@@ -37,21 +38,35 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countable {
 
   /**
-   * The entries, keyed by surface key, in insertion order.
+   * The entries, keyed by definition key, in insertion order.
    *
    * Not readonly: with() clones the map and replaces one entry, and a
    * readonly property cannot be written even on a fresh clone. The
    * property is private and nothing else assigns to it, so the map is
    * immutable to everything outside this class.
    *
-   * @var array<string, \Drupal\data_surface\SurfaceEntry>
+   * @var array<string, \Drupal\data_surface\Entry>
    */
   private array $entries = [];
 
   /**
+   * The ports the data surface reads from its container, by name.
+   *
+   * @var array<string, \Drupal\data_surface\Port>
+   */
+  private array $ports = [];
+
+  /**
+   * The structures mixed into the data surface, in the order mixed in.
+   *
+   * @var \Drupal\data_surface\Mixin[]
+   */
+  private array $mixins = [];
+
+  /**
    * Constructs a DefinitionMap.
    *
-   * This is where a surface's shape is checked, once: afterwards every
+   * This is where a data surface's shape is checked, once: afterwards every
    * reader can assume a key is declared exactly once and that every
    * refinement edge names a key that exists.
    *
@@ -59,28 +74,49 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * DataSurfaceBuilderInterface::seal(), which is the moment the map is
    * whole, and not again here.
    *
-   * @param \Drupal\data_surface\SurfaceEntry[] $entries
-   *   The entries, in the order the surface declares them.
+   * @param \Drupal\data_surface\Entry[] $entries
+   *   The entries, in the order the data surface declares them.
+   * @param \Drupal\data_surface\Port[] $ports
+   *   The ports the data surface reads from its container: names a
+   *   refinement edge may watch that are no key of its own.
+   * @param \Drupal\data_surface\Mixin[] $mixins
+   *   The structures mixed into it, whose members are among the entries.
    *
    * @throws \InvalidArgumentException
-   *   When two entries share a name, or a refinement edge names a key
-   *   nothing declares.
+   *   When two entries share a name, a port is named as a key, a
+   *   refinement edge names a key nothing declares, or a mixed-in
+   *   structure brought a key the entries do not hold.
    */
-  public function __construct(array $entries) {
+  public function __construct(array $entries, array $ports = [], array $mixins = []) {
+    foreach ($ports as $port) {
+      $this->ports[$port->name] = $port;
+    }
     foreach ($entries as $entry) {
       if (isset($this->entries[$entry->name])) {
-        throw new \InvalidArgumentException(sprintf('The surface key "%s" is declared twice.', $entry->name));
+        throw new \InvalidArgumentException(sprintf('The key "%s" is declared twice.', $entry->name));
+      }
+      if (isset($this->ports[$entry->name])) {
+        throw new \InvalidArgumentException(sprintf('The key "%s" is declared, and read as a port.', $entry->name));
       }
       $this->entries[$entry->name] = $entry;
     }
     foreach ($this->entries as $name => $entry) {
       foreach ($entry->dependencies as $dependency) {
-        // A mounted key is named by its path, inside a key declared here.
-        if (!isset($this->entries[explode('.', $dependency)[0]])) {
-          throw new \InvalidArgumentException(sprintf('Refinement dependency "%s" of "%s" is not a surface definition.', $dependency, $name));
+        // A mounted key is named by its path, inside a key declared here;
+        // a port by its own name.
+        if (!isset($this->entries[explode('.', $dependency)[0]]) && !isset($this->ports[$dependency])) {
+          throw new \InvalidArgumentException(sprintf('Refinement dependency "%s" of "%s" is not a data surface definition.', $dependency, $name));
         }
       }
     }
+    foreach ($mixins as $mixin) {
+      foreach ($mixin->keys as $key) {
+        if (!isset($this->entries[$key])) {
+          throw new \InvalidArgumentException(sprintf('"%s", which %s brought, is not a data surface definition.', $key, $mixin->structure->id ?? 'a mixed-in structure'));
+        }
+      }
+    }
+    $this->mixins = array_values($mixins);
   }
 
   /**
@@ -90,10 +126,10 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * payloads and authoring syntax are arrays. A declaration says
    * definitions, a refinement map and a list of locked keys as plain
    * arrays, and this is where they become one collection, so nothing
-   * about declaring a surface changes.
+   * about declaring a resource or structure changes.
    *
    * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $definitions
-   *   The definitions, keyed by surface key, in declaration order.
+   *   The definitions, keyed by definition key, in declaration order.
    * @param array<string, string[]> $refinements
    *   Refinement dependencies: target key => the sibling keys it
    *   refines against. A target may be a dotted path to one property
@@ -101,17 +137,45 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    *   refines against the union of its properties' dependencies, and
    *   remembers each property's own.
    * @param string[] $locked
-   *   The keys whose value the surface fixes.
+   *   The keys whose value the data surface fixes.
    * @param string $contributor
    *   Who introduced these keys.
    * @param array<string, array<string, array<\Drupal\data_surface\DataSurfaceRefinerInterface>>> $refiners
    *   Refiner chains keyed by target key, then by contributor.
    * @param array<string, array<string, array>> $contributions
-   *   Contributed values keyed by surface key, then by provider.
-   * @param array<string, \Drupal\data_surface\SurfaceAttachment> $attachments
-   *   The child surfaces fixed at keys, keyed by surface key.
-   * @param array<string, \Drupal\data_surface\SurfaceSlot> $slots
-   *   The variant tables of the slot keys, keyed by surface key.
+   *   Contributed values keyed by definition key, then by provider.
+   * @param array<string, \Drupal\data_surface\Attachment> $attachments
+   *   The children fixed at keys, keyed by definition key.
+   * @param array<string, \Drupal\data_surface\Variants> $variants
+   *   The variant tables of the keys with variants, keyed by definition
+   *   key.
+   * @param array<string, string[]>|null $staticRefinements
+   *   The part of $refinements a static refiner declared, in the same
+   *   form; what is in $refinements and not here only a runtime refiner
+   *   watches. NULL when every refiner is static.
+   * @param array<string, \Drupal\data_surface\Collection> $lists
+   *   The collections, each the child its items are, keyed by definition
+   *   key.
+   * @param array<string, array<string, int>> $watchedBy
+   *   For each target of $refinements, which kinds of link watch each of
+   *   its dependencies, as a mask of DataSurfaceInterface::CODED,
+   *   DECLARED and RUNTIME. Empty for a map built by hand.
+   * @param \Drupal\data_surface\Port[] $ports
+   *   The ports the data surface reads from its container.
+   * @param array<string, array<string, \Drupal\data_surface\Attachment>> $mounted
+   *   The structures alters attached at their mounts, keyed by the key
+   *   holding the mounts, then by the path below it.
+   * @param \Drupal\data_surface\Mixin[] $mixins
+   *   The structures mixed in, in order.
+   * @param string[] $held
+   *   The locked keys that hold what is stored rather than a declared
+   *   value: a mixed-in structure's, which its access locked.
+   * @param string[] $runtimeAccess
+   *   The keys an access answer decided once the subject is known would
+   *   lock or leave out, which a build for the account alone kept open.
+   * @param array<string, string|\Stringable> $lockReasons
+   *   Why a locked key is locked, keyed by definition key, for a key an
+   *   access answer locked and said why.
    *
    * @return static
    *   The map.
@@ -127,11 +191,20 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
     array $refiners = [],
     array $contributions = [],
     array $attachments = [],
-    array $slots = [],
+    array $variants = [],
+    ?array $staticRefinements = NULL,
+    array $lists = [],
+    array $watchedBy = [],
+    array $ports = [],
+    array $mounted = [],
+    array $mixins = [],
+    array $held = [],
+    array $runtimeAccess = [],
+    array $lockReasons = [],
   ): static {
-    foreach (array_merge(array_keys($refiners), array_keys($contributions), $locked, array_keys($attachments), array_keys($slots)) as $key) {
+    foreach (array_merge(array_keys($refiners), array_keys($contributions), $locked, array_keys($attachments), array_keys($variants), array_keys($lists), array_keys($mounted)) as $key) {
       if (!isset($definitions[$key])) {
-        throw new \InvalidArgumentException(sprintf('"%s" is not a surface definition.', $key));
+        throw new \InvalidArgumentException(sprintf('"%s" is not a data surface definition.', $key));
       }
     }
     $dependencies = [];
@@ -139,7 +212,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
     foreach ($refinements as $target => $watched) {
       [$key, $path] = array_pad(explode('.', (string) $target, 2), 2, NULL);
       if (!isset($definitions[$key])) {
-        throw new \InvalidArgumentException(sprintf('Refinement target "%s" is not a surface definition.', $target));
+        throw new \InvalidArgumentException(sprintf('Refinement target "%s" is not a data surface definition.', $target));
       }
       $watched = array_values(array_map('strval', $watched));
       $dependencies[$key] = array_values(array_unique([...($dependencies[$key] ?? []), ...$watched]));
@@ -147,9 +220,21 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
         $paths[$key][$path] = $watched;
       }
     }
+    $static = $staticRefinements === NULL ? $dependencies : [];
+    foreach ($staticRefinements ?? [] as $target => $watched) {
+      $key = explode('.', (string) $target, 2)[0];
+      $static[$key] = array_values(array_unique([...($static[$key] ?? []), ...array_map('strval', $watched)]));
+    }
+    $kinds = [];
+    foreach ($watchedBy as $target => $watched) {
+      $key = explode('.', (string) $target, 2)[0];
+      foreach ($watched as $dependency => $mask) {
+        $kinds[$key][(string) $dependency] = ($kinds[$key][(string) $dependency] ?? 0) | $mask;
+      }
+    }
     $entries = [];
     foreach ($definitions as $name => $definition) {
-      $entries[] = new SurfaceEntry(
+      $entries[] = new Entry(
         name: (string) $name,
         definition: $definition,
         contributor: $contributor,
@@ -158,18 +243,25 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
         refiners: $refiners[$name] ?? [],
         contributions: $contributions[$name] ?? [],
         attachment: $attachments[$name] ?? NULL,
-        slot: $slots[$name] ?? NULL,
+        variants: $variants[$name] ?? NULL,
         paths: $paths[$name] ?? [],
+        runtimeOnly: array_values(array_diff($dependencies[$name] ?? [], $static[$name] ?? [])),
+        list: $lists[$name] ?? NULL,
+        watchedBy: $kinds[$name] ?? [],
+        mounted: $mounted[$name] ?? [],
+        held: in_array($name, $held, TRUE),
+        runtimeAccess: in_array($name, $runtimeAccess, TRUE),
+        lockedBecause: in_array($name, $locked, TRUE) ? ($lockReasons[$name] ?? NULL) : NULL,
       );
     }
-    return new static($entries);
+    return new static($entries, $ports, $mixins);
   }
 
   /**
    * Gets one definition.
    *
    * @param string $name
-   *   The surface key.
+   *   The definition key.
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
    *   The definition, or NULL when the map declares no such key.
@@ -179,22 +271,22 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
   }
 
   /**
-   * Gets everything the surface knows about one key.
+   * Gets everything the data surface knows about one key.
    *
    * @param string $name
-   *   The surface key.
+   *   The definition key.
    *
-   * @return \Drupal\data_surface\SurfaceEntry|null
+   * @return \Drupal\data_surface\Entry|null
    *   The entry, or NULL when the map declares no such key.
    */
-  public function entry(string $name): ?SurfaceEntry {
+  public function entry(string $name): ?Entry {
     return $this->entries[$name] ?? NULL;
   }
 
   /**
-   * Gets every entry, keyed by surface key, in declaration order.
+   * Gets every entry, keyed by definition key, in declaration order.
    *
-   * @return array<string, \Drupal\data_surface\SurfaceEntry>
+   * @return array<string, \Drupal\data_surface\Entry>
    *   The entries.
    */
   public function entries(): array {
@@ -205,7 +297,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * Returns whether the map declares a key.
    *
    * @param string $name
-   *   The surface key.
+   *   The definition key.
    *
    * @return bool
    *   TRUE when the key is declared.
@@ -215,7 +307,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
   }
 
   /**
-   * Gets the surface keys, in declaration order.
+   * Gets the definition keys, in declaration order.
    *
    * @return string[]
    *   The keys.
@@ -225,10 +317,10 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
   }
 
   /**
-   * Returns whether a key's value is fixed by the surface.
+   * Returns whether a key's value is fixed by the data surface.
    *
    * @param string $name
-   *   The surface key.
+   *   The definition key.
    *
    * @return bool
    *   TRUE when the key is locked. A key the map does not declare is
@@ -242,7 +334,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * Gets the sibling keys one key refines against.
    *
    * @param string $name
-   *   The surface key.
+   *   The definition key.
    *
    * @return string[]
    *   The dependency names, empty for a key that never refines.
@@ -271,11 +363,11 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * Gets the refinement map one property path at a time.
    *
    * The map refinements() returns, with a key refined one property at a
-   * time — the mount, where an alter refines the keys it added — split
+   * time (the mount, where an alter refines the keys it added) split
    * into those properties' dotted paths, each with what it refines
-   * against. What a
-   * form rebuilds is this: a change to the owner's capacity moves the
-   * one mounted key that watches it, not every key the mount holds.
+   * against. What a form rebuilds is this: a change to the owner's
+   * capacity moves the one mounted key that watches it, not every key the
+   * mount holds.
    *
    * @return array<string, string[]>
    *   The map, target key or dotted path => the keys or dotted paths it
@@ -320,11 +412,11 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    *
    * What the owner declared is not here: the owner's contribution is
    * everything else. This is what refinement divides the option space
-   * by and what a target reports as the providers a stored value
+   * by and what storage reports as the providers a stored value
    * depends on.
    *
    * @return array<string, array<string, array>>
-   *   Contributed values, keyed by surface key, then by provider.
+   *   Contributed values, keyed by definition key, then by provider.
    */
   public function contributions(): array {
     $contributions = [];
@@ -342,14 +434,14 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * @param string $contributor
    *   The provider id, or DataSurfaceInterface::OWNER.
    *
-   * @return array<string, \Drupal\data_surface\SurfaceEntry>
+   * @return array<string, \Drupal\data_surface\Entry>
    *   The entries that provider introduced, contributed values to, or
-   *   registered a refiner for, keyed by surface key.
+   *   registered a refiner for, keyed by definition key.
    */
   public function byContributor(string $contributor): array {
     return array_filter(
       $this->entries,
-      static fn (SurfaceEntry $entry): bool => $entry->touchedBy($contributor),
+      static fn (Entry $entry): bool => $entry->touchedBy($contributor),
     );
   }
 
@@ -361,7 +453,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * declared, and an entry carries the same name, the same dependency
    * edges and the same contributors whatever definition it holds.
    *
-   * @param \Drupal\data_surface\SurfaceEntry $entry
+   * @param \Drupal\data_surface\Entry $entry
    *   The replacement entry.
    *
    * @return static
@@ -371,9 +463,9 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    *   When the map declares no key of that name. Adding a key is
    *   widening, and the build is over.
    */
-  public function with(SurfaceEntry $entry): static {
+  public function with(Entry $entry): static {
     if (!isset($this->entries[$entry->name])) {
-      throw new \InvalidArgumentException(sprintf('"%s" is not a surface definition.', $entry->name));
+      throw new \InvalidArgumentException(sprintf('"%s" is not a data surface definition.', $entry->name));
     }
     $map = clone $this;
     $map->entries[$entry->name] = $entry;
@@ -381,14 +473,15 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
   }
 
   /**
-   * Returns whether any key holds a subsurface: attached or a slot.
+   * Returns whether any key holds a child: attached, variants, or mounted.
    *
    * @return bool
-   *   TRUE when at least one entry is nested.
+   *   TRUE when at least one entry is nested, or holds a structure an
+   *   alter attached at its mount.
    */
   public function hasNested(): bool {
     foreach ($this->entries as $entry) {
-      if ($entry->isNested()) {
+      if ($entry->isNested() || $entry->mounted !== []) {
         return TRUE;
       }
     }
@@ -396,34 +489,86 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
   }
 
   /**
-   * Returns the map with every slot resolved to its chosen variant.
+   * Gets the ports the data surface reads from its container.
    *
-   * Only the shape: each slot whose deciding key holds a variant id in
+   * @return array<string, \Drupal\data_surface\Port>
+   *   The ports, keyed by name, in the order they were declared.
+   */
+  public function ports(): array {
+    return $this->ports;
+  }
+
+  /**
+   * Gets the structures mixed into the data surface.
+   *
+   * Their members are entries of this map like any other key; this says
+   * which structure brought which, for the contract, which states each
+   * structure once as a def the owner composes.
+   *
+   * @return \Drupal\data_surface\Mixin[]
+   *   The mixed-in structures, in the order they were mixed in.
+   */
+  public function mixins(): array {
+    return $this->mixins;
+  }
+
+  /**
+   * Answers whether a locked key holds what is stored, not a known value.
+   *
+   * @param string $name
+   *   The key.
+   *
+   * @return bool
+   *   TRUE for a key locked by access, which holds whatever storage holds:
+   *   nothing ahead of time can say what that is.
+   */
+  public function isHeld(string $name): bool {
+    return $this->entries[$name]->held ?? FALSE;
+  }
+
+  /**
+   * Answers whether access to a key is decided once the subject is known.
+   *
+   * @param string $name
+   *   The key.
+   *
+   * @return bool
+   *   TRUE for a key a runtime access answer may lock or leave out, which
+   *   a build for the account alone kept open and marked.
+   */
+  public function isRuntimeAccess(string $name): bool {
+    return $this->entries[$name]->runtimeAccess ?? FALSE;
+  }
+
+  /**
+   * Returns the map with every key's variants resolved to the chosen one.
+   *
+   * Only the shape: each key whose variants' deciding key holds a variant id in
    * the given values takes that variant's advertised map, and nothing is
    * refined. This is what reading a value needs — a form's extraction
    * places the value by the shape the deciding key chose, and leaves
-   * narrowing to validation. A slot whose deciding key holds nothing, or
-   * a value naming no variant, keeps its placeholder.
+   * narrowing to validation. A key whose deciding key holds nothing, or a
+   * value naming no variant, keeps the variants' placeholder.
    *
    * @param array $values
    *   The values the deciding keys are read from.
    *
    * @return static
-   *   The map, or this same map when no slot resolved.
+   *   The map, or this same map when no variant was chosen.
    */
-  public function withSlotsResolved(array $values): static {
+  public function withVariantsResolved(array $values): static {
     $map = $this;
     foreach ($this->entries as $entry) {
-      $chosen = $entry->slot?->chosen($values[$entry->slot->by] ?? NULL);
+      $chosen = $entry->variants?->chosen($values[$entry->variants->by] ?? NULL);
       if ($chosen !== NULL) {
-        $map = $map->with($entry->withDefinition($entry->slot->definitionFor($chosen)));
+        $map = $map->with($entry->withDefinition($entry->variants->definitionFor($chosen)));
       }
     }
     return $map;
   }
 
   /**
-   * Gets the definitions as a plain array, keyed by surface key.
+   * Gets the definitions as a plain array, keyed by definition key.
    *
    * For the callers that hand the whole group to an array function —
    * array_intersect_key() against stored values, above all — where an
@@ -434,7 +579,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    */
   public function toArray(): array {
     return array_map(
-      static fn (SurfaceEntry $entry): DataDefinitionInterface => $entry->definition,
+      static fn (Entry $entry): DataDefinitionInterface => $entry->definition,
       $this->entries,
     );
   }
@@ -473,20 +618,20 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * {@inheritdoc}
    *
    * @throws \LogicException
-   *   Always: a sealed surface has been advertised and cannot change.
+   *   Always: a sealed data surface has been advertised and cannot change.
    */
   public function offsetSet(mixed $offset, mixed $value): void {
-    throw new \LogicException('A definition map cannot be written to: the surface has been sealed and advertised, and widening is a build-time act.');
+    throw new \LogicException('A definition map cannot be written to: the data surface has been sealed and advertised, and widening is a build-time act.');
   }
 
   /**
    * {@inheritdoc}
    *
    * @throws \LogicException
-   *   Always: a sealed surface has been advertised and cannot change.
+   *   Always: a sealed data surface has been advertised and cannot change.
    */
   public function offsetUnset(mixed $offset): void {
-    throw new \LogicException('A definition map cannot be written to: the surface has been sealed and advertised, and removing a key would contradict what it advertised.');
+    throw new \LogicException('A definition map cannot be written to: the data surface has been sealed and advertised, and removing a key would contradict what it advertised.');
   }
 
 }

@@ -1,0 +1,364 @@
+{
+    "resource": "registration.step2",
+    "module": "data_surface_examples",
+    "contract": 2,
+    "documents": [
+        {
+            "resource": "registration.step2",
+            "operation": "configure",
+            "label": "Configure registration (step 2)",
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": "Configure registration (step 2)",
+                "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
+                "x-surface": {
+                    "contract": 2,
+                    "operation": {
+                        "id": "configure",
+                        "label": "Configure registration (step 2)",
+                        "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
+                        "kind": "update",
+                        "creates": false,
+                        "destructive": false,
+                        "idempotent": true
+                    },
+                    "version": 1
+                },
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "title": "Event title",
+                        "type": "string",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "open": {
+                        "title": "Registration open",
+                        "type": [
+                            "boolean",
+                            "null"
+                        ],
+                        "default": true,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "venue": {
+                        "title": "Venue",
+                        "type": "string",
+                        "oneOf": [
+                            {
+                                "const": "riverside",
+                                "title": "Riverside Hall"
+                            },
+                            {
+                                "const": "library",
+                                "title": "Old Library"
+                            },
+                            {
+                                "const": "harbour",
+                                "title": "Harbour Centre"
+                            }
+                        ],
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "room": {
+                        "title": "Room",
+                        "type": "string",
+                        "oneOf": [
+                            {
+                                "const": "riverside_main",
+                                "title": "Main hall"
+                            },
+                            {
+                                "const": "riverside_east",
+                                "title": "East room"
+                            },
+                            {
+                                "const": "library_reading",
+                                "title": "Reading room"
+                            },
+                            {
+                                "const": "library_garden",
+                                "title": "Garden room"
+                            },
+                            {
+                                "const": "harbour_auditorium",
+                                "title": "Auditorium"
+                            },
+                            {
+                                "const": "harbour_deck",
+                                "title": "Upper deck"
+                            }
+                        ],
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [
+                                "venue"
+                            ],
+                            "enumerated": true
+                        }
+                    },
+                    "capacity": {
+                        "title": "Capacity",
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 1,
+                        "default": 50,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [
+                                "room"
+                            ],
+                            "enumerated": true
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "title",
+                    "venue",
+                    "room"
+                ],
+                "allOf": [
+                    {
+                        "if": {
+                            "properties": {
+                                "venue": {
+                                    "const": "riverside"
+                                }
+                            },
+                            "required": [
+                                "venue"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "room": {
+                                    "oneOf": [
+                                        {
+                                            "const": "riverside_main",
+                                            "title": "Main hall"
+                                        },
+                                        {
+                                            "const": "riverside_east",
+                                            "title": "East room"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "venue": {
+                                    "const": "library"
+                                }
+                            },
+                            "required": [
+                                "venue"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "room": {
+                                    "oneOf": [
+                                        {
+                                            "const": "library_reading",
+                                            "title": "Reading room"
+                                        },
+                                        {
+                                            "const": "library_garden",
+                                            "title": "Garden room"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "venue": {
+                                    "const": "harbour"
+                                }
+                            },
+                            "required": [
+                                "venue"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "room": {
+                                    "oneOf": [
+                                        {
+                                            "const": "harbour_auditorium",
+                                            "title": "Auditorium"
+                                        },
+                                        {
+                                            "const": "harbour_deck",
+                                            "title": "Upper deck"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "room": {
+                                    "const": "riverside_main"
+                                }
+                            },
+                            "required": [
+                                "room"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "capacity": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
+                                    "description": "Up to 400 for the Main hall.",
+                                    "maximum": 400
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "room": {
+                                    "const": "riverside_east"
+                                }
+                            },
+                            "required": [
+                                "room"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "capacity": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
+                                    "description": "Up to 120 for the East room.",
+                                    "maximum": 120
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "room": {
+                                    "const": "library_reading"
+                                }
+                            },
+                            "required": [
+                                "room"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "capacity": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
+                                    "description": "Up to 60 for the Reading room.",
+                                    "maximum": 60
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "room": {
+                                    "const": "library_garden"
+                                }
+                            },
+                            "required": [
+                                "room"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "capacity": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
+                                    "description": "Up to 30 for the Garden room.",
+                                    "maximum": 30
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "room": {
+                                    "const": "harbour_auditorium"
+                                }
+                            },
+                            "required": [
+                                "room"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "capacity": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
+                                    "description": "Up to 800 for the Auditorium.",
+                                    "maximum": 800
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "room": {
+                                    "const": "harbour_deck"
+                                }
+                            },
+                            "required": [
+                                "room"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "capacity": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
+                                    "description": "Up to 150 for the Upper deck.",
+                                    "maximum": 150
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}

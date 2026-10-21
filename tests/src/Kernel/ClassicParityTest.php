@@ -19,7 +19,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * Holds the classic demo and the surface demo to the same behavior.
+ * Holds the classic demo and the Data Surface demo to the same behavior.
  *
  * The comparison in modules/data_surface_demo_classic/README.md counts
  * lines and concepts, and a count proves nothing unless the two versions
@@ -241,7 +241,7 @@ class ClassicParityTest extends DataSurfaceKernelTestBase {
   /**
    * Tests that both formatters declare the same static defaults.
    *
-   * The surface one declares one key more, the namespace third parties
+   * The Data Surface one declares one key more, the namespace third parties
    * mount settings into, which is a thing the classic one cannot have.
    */
   public function testFormatterDefaultsMatch(): void {

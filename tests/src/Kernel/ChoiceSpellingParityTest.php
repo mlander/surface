@@ -236,7 +236,7 @@ class ChoiceSpellingParityTest extends DataSurfaceKernelTestBase {
     }
     $this->assertCount(1, array_unique($messages));
     $this->assertStringContainsString(
-      'already contributed by the surface owner',
+      'already contributed by the declaring class',
       (string) reset($messages),
     );
   }
@@ -257,13 +257,13 @@ class ChoiceSpellingParityTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Seals the one-key definition into a surface.
+   * Seals the one-key definition into a data surface.
    *
    * @param array $options
    *   The constraint options, in one spelling or the other.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
-   *   The surface.
+   *   The data surface.
    */
   protected function surface(array $options): DataSurfaceInterface {
     return new DataSurface(DefinitionMap::fromArrays(

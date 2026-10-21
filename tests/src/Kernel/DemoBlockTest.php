@@ -7,11 +7,11 @@ namespace Drupal\Tests\data_surface\Kernel;
 use Drupal\Core\Form\EnforcedResponseException;
 use Drupal\Core\Form\FormState;
 use Drupal\block\Entity\Block;
-use Drupal\data_surface\Surface\SurfaceContext;
-use Drupal\data_surface\Target\PluginConfigurationTarget;
+use Drupal\data_surface\Resource\OperationContext;
+use Drupal\data_surface\Pipeline\Storage\PluginConfigurationStorage;
 use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
 use Drupal\data_surface_demo\Plugin\Block\DataSurfaceDemoBlock;
-use Drupal\data_surface_demo\Surface\DemoBlockSurface;
+use Drupal\data_surface_demo\Structure\DemoBlockStructure;
 use Drupal\node\Entity\NodeType;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
@@ -61,7 +61,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
   /**
    * Creates the demo block through the block manager.
    *
-   * A plugin-hosted surface is read the way any consumer would read it:
+   * A plugin-hosted structure is read the way any consumer would read it:
    * through the manager that owns the plugin, not by constructing the
    * class.
    *
@@ -79,9 +79,9 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the surface, and nothing else, declares the defaults.
+   * Tests that the structure, and nothing else, declares the defaults.
    */
-  public function testDefaultsComeFromTheSurface(): void {
+  public function testDefaultsComeFromTheStructure(): void {
     $this->assertSame([
       'headline' => 'Featured content',
       // The declared default is a content entity type every site has,
@@ -94,7 +94,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
       'field' => NULL,
       'limit' => 10,
       'presentation' => 'list',
-      // The slot starts as the variant its deciding key starts on.
+      // The variants start as the one their deciding key starts on.
       'presentation_settings' => ['show_summary' => TRUE],
     ], $this->createBlock()->defaultConfiguration());
   }
@@ -163,14 +163,14 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests an entity type the surface refuses refines nothing.
+   * Tests an entity type the structure refuses refines nothing.
    *
    * A refiner never sees an invalid sibling: the bundle stays as it is
    * advertised, with no list and the declared description, rather than
    * being refined against an entity type that does not exist.
    */
   public function testAnInvalidEntityTypeLeavesTheBundleUnrefined(): void {
-    $surface = $this->container->get('data_surface.surfaces')->build(DemoBlockSurface::class, new SurfaceContext('configure'));
+    $surface = $this->container->get('data_surface.resources')->build(DemoBlockStructure::class, new OperationContext('configure'));
     $advertised = $surface->getDefinition('bundle');
     $bundle = $surface->refine(['entity_type' => 'no_such_type'])->getDefinition('bundle');
     $this->assertArrayNotHasKey('EntityBundleExists', $bundle->getConstraints());
@@ -272,15 +272,15 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
    * list no longer offers is kept rather than refused, because this
    * method is how a host loads what the site saved and cannot tell a
    * bundle that was deleted from a bundle that never existed. Everything
-   * else the surface refuses still refuses here.
+   * else the structure refuses still refuses here.
    */
   public function testSetConfigurationValidates(): void {
     $block = $this->createBlock();
 
-    // A bundle the refined surface does not allow is kept and reported
-    // as stale rather than thrown: the refinement chain still ran — it
-    // is what says the bundle is not on the list — and what changed is
-    // what happens next.
+    // A bundle the refined structure does not allow is kept and reported
+    // as stale rather than thrown: the refinement chain still ran (it is
+    // what says the bundle is not on the list), and what changed is what
+    // happens next.
     $block->setConfiguration(['entity_type' => 'node', 'bundle' => 'not-a-bundle']);
     $this->assertSame('not-a-bundle', $block->getConfiguration()['bundle']);
     $stale = $this->pipeline()
@@ -300,8 +300,8 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
    * Tests a full pipeline submit into the block's configuration array.
    *
    * The same call a form's submit handler makes, made directly: accept
-   * casts the submitted strings, validate runs the refined surface, and
-   * the target puts the block host's own keys back around the accepted
+   * casts the submitted strings, validate runs the refined structure, and
+   * the storage puts the block host's own keys back around the accepted
    * values.
    */
   public function testPipelineSubmitStoresValuesAndKeepsHostKeys(): void {
@@ -316,7 +316,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
       'limit' => '5',
       'presentation' => 'list',
       'presentation_settings' => ['show_summary' => 0],
-    ], new PluginConfigurationTarget($block));
+    ], new PluginConfigurationStorage($block));
 
     $this->assertTrue($result->isValid());
     $this->assertTrue($result->committed);
@@ -325,7 +325,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     // Submitted strings arrived as the definitions' native types.
     $this->assertSame('Latest articles', $configuration['headline']);
     $this->assertSame(5, $configuration['limit']);
-    // At every depth: the list's checkbox, inside the slot, too.
+    // At every depth: the list's checkbox, inside the variant, too.
     $this->assertSame(['show_summary' => FALSE], $configuration['presentation_settings']);
     $this->assertSame('article', $configuration['bundle']);
     $this->assertSame('title', $configuration['field']);
@@ -336,15 +336,15 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests the presentation slot: the form rebuilds as the chosen variant.
+   * Tests the presentation's variants: the form rebuilds as the chosen one.
    *
-   * The presentation is a refinement dependency of its slot, so it
+   * The presentation is a refinement dependency of its variants, so it
    * carries the AJAX rebuild. Moved from list to grid, the settings the
    * person left in the list's checkbox answer a question no longer on
-   * the form: the discard cascade drops that input, and the slot comes
+   * the form: the discard cascade drops that input, and the key comes
    * back as the grid, from the grid's own defaults.
    */
-  public function testPresentationSlotRebuildsAsTheChosenVariant(): void {
+  public function testPresentationVariantsRebuildAsTheChosenVariant(): void {
     $stored = ['presentation' => 'list', 'presentation_settings' => ['show_summary' => FALSE]];
     $form = $this->createBlock($stored)->buildConfigurationForm([], new FormState());
     $this->assertArrayHasKey('#ajax', $form['presentation']);
@@ -385,17 +385,17 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the slot's value has to fit the chosen presentation.
+   * Tests that the presentation settings have to fit the presentation.
    */
   public function testPresentationSettingsFitThePresentation(): void {
     $block = $this->createBlock();
-    $target = new PluginConfigurationTarget($block);
+    $storage = new PluginConfigurationStorage($block);
 
     // The list's key under a grid is refused by name, on its own path.
     $result = $this->pipeline()->submit($block->getDataSurface(), [
       'presentation' => 'grid',
       'presentation_settings' => ['show_summary' => TRUE],
-    ], $target);
+    ], $storage);
     $this->assertFalse($result->isValid());
     $violation = iterator_to_array($result->violations, FALSE)[0];
     $this->assertSame('presentation_settings.show_summary', $violation->fullPath());
@@ -405,12 +405,12 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     $result = $this->pipeline()->submit($block->getDataSurface(), [
       'presentation' => 'grid',
       'presentation_settings' => ['columns' => '9'],
-    ], $target);
+    ], $storage);
     $this->assertSame(['presentation_settings.columns'], array_map(static fn ($violation): string => $violation->fullPath(), iterator_to_array($result->violations, FALSE)));
 
     // Moving to a grid and saying nothing else: the list's stored
     // settings do not fit, so the grid starts from its own defaults.
-    $result = $this->pipeline()->submit($block->getDataSurface(), ['presentation' => 'grid'], $target);
+    $result = $this->pipeline()->submit($block->getDataSurface(), ['presentation' => 'grid'], $storage);
     $this->assertTrue($result->committed);
     $this->assertSame(['columns' => 3], $block->getConfiguration()['presentation_settings']);
   }
@@ -426,7 +426,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
       'headline' => 'Latest articles',
       'entity_type' => 'node',
       'bundle' => 'not-a-bundle',
-    ], new PluginConfigurationTarget($block));
+    ], new PluginConfigurationStorage($block));
 
     $this->assertFalse($result->isValid());
     $this->assertFalse($result->committed);
@@ -436,7 +436,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that build() renders what the surface and configuration hold.
+   * Tests that build() renders what the structure and configuration hold.
    */
   public function testBuildRendersTheConfiguredValues(): void {
     $build = $this->createBlock(['headline' => 'Latest articles'])->build();
@@ -519,7 +519,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     $stored = ['headline' => 'Featured', 'entity_type' => 'node', 'bundle' => 'article', 'limit' => 5];
     $block = $this->createBlock($stored);
 
-    $result = $this->pipeline()->submit($block->getDataSurface(), ['entity_type' => 'user', 'bundle' => 'article'], new PluginConfigurationTarget($block));
+    $result = $this->pipeline()->submit($block->getDataSurface(), ['entity_type' => 'user', 'bundle' => 'article'], new PluginConfigurationStorage($block));
     $this->assertFalse($result->committed);
     $this->assertSame(['bundle'], $result->violations->keys());
     $this->assertFalse($result->violations->hasStale());
@@ -550,7 +550,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
    * Through core's own block form, posted as a browser without
    * JavaScript posts it: the entity type moves from user to node and the
    * bundle to article in the same request. The combination is valid, and
-   * it is refused today — not by the surface, by Form API's own check
+   * it is refused today: not by the structure, by Form API's own check
    * that a select's value was among the options it was built with. A
    * plugin host answers NULL from surfaceSubmissionPath(), because a
    * subform cannot know where it sits in the input before Form API
@@ -613,7 +613,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     }
 
     // Refused on the bundle, by Form API's choice check, before the
-    // surface is asked: the select was built offering user's bundles.
+    // structure is asked: the select was built offering user's bundles.
     $errors = array_map('strval', $form_state->getErrors());
     $this->assertArrayHasKey('settings][bundle', $errors);
     $this->assertStringContainsString('element is not allowed', $errors['settings][bundle']);
@@ -625,7 +625,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     $settings = Block::load('demo')->get('settings');
     $this->assertSame('user', $settings['entity_type']);
     $this->assertSame('user', $settings['bundle']);
-    // The surface itself accepts the pair: the refusal is the host's.
+    // The structure itself accepts the pair: the refusal is the host's.
     $block = $this->createBlock($stored);
     $surface = $block->getDataSurface();
     $current = $block->getConfiguration();

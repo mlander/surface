@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface\Pipeline;
 
 /**
- * Thrown when input carries keys the surface does not declare.
+ * Thrown when input carries keys the data surface does not declare.
  *
  * Unknown keys are refused rather than silently dropped: a caller that
  * misspells a key learns about it instead of watching the value vanish.
@@ -27,11 +27,14 @@ final class UnknownKeysException extends \InvalidArgumentException {
    *   The undeclared keys found at one level of the input.
    * @param string $path
    *   The dotted path of the level the keys were found in; the empty
-   *   string for the surface's own top level.
+   *   string for the data surface's own top level.
+   * @param string[] $declared
+   *   The keys declared at that level, for the nearest to be suggested.
    */
   public function __construct(
     protected readonly array $keys,
     protected readonly string $path = '',
+    protected readonly array $declared = [],
   ) {
     parent::__construct(sprintf(
       'Unknown key(s) %s%s.',
@@ -54,10 +57,20 @@ final class UnknownKeysException extends \InvalidArgumentException {
    * Gets the dotted path of the level the keys were found in.
    *
    * @return string
-   *   The path, or the empty string at the surface's top level.
+   *   The path, or the empty string at the data surface's top level.
    */
   public function getPath(): string {
     return $this->path;
+  }
+
+  /**
+   * Gets the keys declared at the level the keys were found in.
+   *
+   * @return string[]
+   *   The declared keys, in declaration order.
+   */
+  public function getDeclared(): array {
+    return $this->declared;
   }
 
 }

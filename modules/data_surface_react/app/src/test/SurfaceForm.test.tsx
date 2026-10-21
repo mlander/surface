@@ -1,11 +1,16 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { pageOf, type Settings } from '../api';
-import type { Contract } from '../contract';
+import { createApi, pageOf, type Settings } from '../api';
+import type { Contract, Schema } from '../contract';
+import { getAt } from '../contract';
 import { SurfaceForm } from '../SurfaceForm';
 import example2 from './fixtures/example2.json';
 import library from './fixtures/example2-library.json';
 import example3 from './fixtures/example3.json';
+import narrowed2 from './fixtures/refine-example2.json';
+import narrowed3 from './fixtures/refine-example3.json';
+import compliance from './fixtures/refine-example3-compliance.json';
+import bulletin from './fixtures/refine-bulletin.json';
 
 // One integration test over a mocked server: the contracts are what the
 // module's emitter wrote for examples 2 and 3 (ServedContractTest's
@@ -13,8 +18,8 @@ import example3 from './fixtures/example3.json';
 
 const settings: Settings = {
   apiBase: '/surface-api',
-  surface: 'registration.step2',
-  situation: 'configure',
+  resource: 'registration.step2',
+  operation: 'configure',
   parameters: {},
   tokenUrl: '/session/token',
 };
@@ -34,6 +39,40 @@ function refined({ init }: Call): Contract {
   return { ...(library as unknown as Contract), values: { ...library.values, title: sent.values.title } };
 }
 
+/** What the recorder wrote: the full schema, the GET contract, and /refine's answers to a chain of changes. */
+interface Recorded {
+  schema: { schema: Schema };
+  contract: Contract;
+  steps: { changes: { path: string; value: unknown }[]; answer: Contract }[];
+}
+
+/**
+ * A server serving one recorded chain: the contract, the full schema, and
+ * for a refine the answer to the latest recorded change the values sent
+ * carry.
+ */
+function recordedServer(recorded: Recorded, resource: string, more: Record<string, (call: Call) => unknown> = {}) {
+  const base = `/surface-api/${resource}/configure`;
+  return server({
+    ...more,
+    [base]: () => recorded.contract,
+    [`${base}/schema`]: () => recorded.schema,
+    [`${base}/refine`]: ({ init }) => {
+      const sent = JSON.parse(String(init?.body));
+      const step = [...recorded.steps].reverse().find(({ changes }) => {
+        const last = changes[changes.length - 1];
+        return JSON.stringify(getAt(sent.values, last.path)) === JSON.stringify(last.value);
+      });
+      return step?.answer ?? recorded.contract;
+    },
+  });
+}
+
+/** The contract panel's line saying how the last change was narrowed. */
+function narrowingLine(): string | null {
+  return document.querySelector('.dsr-contract__narrowing')?.textContent ?? null;
+}
+
 function server(routes: Record<string, (call: Call) => unknown>) {
   const calls: Call[] = [];
   const fetcher = vi.fn(async (url: string, init?: RequestInit) => {
@@ -41,7 +80,10 @@ function server(routes: Record<string, (call: Call) => unknown>) {
     if (url === '/session/token') {
       return new Response('the-token');
     }
-    const route = Object.keys(routes).find((path) => url.startsWith(path));
+    // By path: a server with no route for the full schema answers it 404,
+    // and the form asks /refine for every change, as it did before it
+    // could narrow by itself.
+    const route = Object.keys(routes).find((path) => url.split('?')[0] === path);
     if (route === undefined) {
       return new Response('Not found', { status: 404, statusText: 'Not Found' });
     }
@@ -84,8 +126,9 @@ describe('the React form of example 2', () => {
     expect(screen.getByLabelText(/Room/)).toHaveDisplayValue('- Select -');
     expect(screen.getByLabelText(/Room/)).not.toBeRequired();
     expect(screen.getByLabelText(/Event title/)).toHaveValue('Spring meetup!');
-    // The capacity is no longer capped by the room the room stands for.
-    expect(screen.getByLabelText(/Capacity/)).toHaveAttribute('max', '1000');
+    // The capacity is no longer capped by the room the room stands for:
+    // with no room, it has no upper bound.
+    expect(screen.getByLabelText(/Capacity/)).not.toHaveAttribute('max');
     expect(screen.getByLabelText(/Capacity/)).toHaveValue(50);
   });
 
@@ -111,8 +154,12 @@ describe('the React form of example 2', () => {
       '/surface-api/registration.step2/configure/refine': answered,
       '/surface-api/registration.step2/configure/submit': () => ({
         committed: false,
-        valid: false,
-        violations: [{ path: 'room', message: 'The value you selected is not a valid choice.' }],
+        ok: false,
+        changed: false,
+        changes: [],
+        values: {},
+        notes: [],
+        violations: [{ path: 'room', code: 'no_such_choice', message: 'The value you selected is not a valid choice.' }],
         stale: [],
         outputs: {},
         contract: null,
@@ -155,8 +202,12 @@ describe('the React form of example 2', () => {
       '/surface-api/registration.step2/configure/refine': () => library,
       '/surface-api/registration.step2/configure/submit': () => ({
         committed: false,
-        valid: false,
-        violations: [{ path: 'room', message: 'The value you selected is not a valid choice.' }],
+        ok: false,
+        changed: false,
+        changes: [],
+        values: {},
+        notes: [],
+        violations: [{ path: 'room', code: 'no_such_choice', message: 'The value you selected is not a valid choice.' }],
         stale: [],
         outputs: {},
         contract: null,
@@ -194,9 +245,13 @@ describe('the React form of example 2', () => {
 
 describe('submitting example 2', () => {
   const loaded = { ...(example2 as unknown as Contract), fingerprint: 'fp-loaded' };
-  const refused = (violations: { path: string; message: string }[]) => ({
+  const refused = (violations: { path: string; code: string; message: string }[]) => ({
     committed: false,
-    valid: false,
+    ok: false,
+    changed: false,
+    changes: [],
+    values: {},
+    notes: [],
     violations,
     stale: [],
     outputs: {},
@@ -204,14 +259,18 @@ describe('submitting example 2', () => {
     created: null,
   });
 
-  it('writes, says so with the stale warnings, and re-renders from the contract it answers with', async () => {
+  it('writes, says so with the notes and the stale warnings, and re-renders from the contract it answers with', async () => {
     const written = { ...loaded, values: { ...loaded.values, title: 'Spring meetup, as stored' }, fingerprint: 'fp-written' };
     const { calls, fetcher } = server({
       '/surface-api/registration.step2/configure/submit': () => ({
         committed: true,
-        valid: true,
+        ok: true,
+        changed: true,
+        changes: ['title'],
+        values: {},
+        notes: [{ path: 'venue', code: 'locked', message: 'Venue is locked and kept as stored; the value sent was not taken.' }],
         violations: [],
-        stale: [{ path: 'room', message: 'The stored room is no longer offered; it was kept.' }],
+        stale: [{ path: 'room', code: 'stale', message: 'The stored room is no longer offered; it was kept.', stored: 'library_garden' }],
         outputs: {},
         contract: written,
         created: null,
@@ -227,6 +286,7 @@ describe('submitting example 2', () => {
     const summary = await screen.findByRole('status');
     expect(summary).toHaveTextContent('Saved: the values were written.');
     expect(summary).toHaveTextContent('room: The stored room is no longer offered; it was kept.');
+    expect(summary).toHaveTextContent('venue: Venue is locked and kept as stored; the value sent was not taken.');
     expect(screen.getByLabelText(/Event title/)).toHaveValue('Spring meetup, as stored');
     expect(navigate).not.toHaveBeenCalled();
 
@@ -247,7 +307,7 @@ describe('submitting example 2', () => {
   it('shows a refusal inline and in a summary, as Validate does', async () => {
     const { fetcher } = server({
       '/surface-api/registration.step2/configure/submit': () =>
-        refused([{ path: 'room', message: 'The value you selected is not a valid choice.' }]),
+        refused([{ path: 'room', code: 'no_such_choice', message: 'The value you selected is not a valid choice.' }]),
       '/surface-api/registration.step2/configure': () => loaded,
     });
     render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
@@ -263,7 +323,7 @@ describe('submitting example 2', () => {
   it('refuses a submit after someone else saved, the message without a path', async () => {
     const message = 'The stored values changed since this form was loaded. Reload it to see them, then make your changes again.';
     const { calls, fetcher } = server({
-      '/surface-api/registration.step2/configure/submit': () => refused([{ path: '', message }]),
+      '/surface-api/registration.step2/configure/submit': () => refused([{ path: '', code: 'conflict', message }]),
       '/surface-api/registration.step2/configure': () => loaded,
     });
     render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
@@ -276,7 +336,7 @@ describe('submitting example 2', () => {
 
   it('sends no fingerprint when the page turns it off', async () => {
     const { calls, fetcher } = server({
-      '/surface-api/registration.step2/configure/submit': () => refused([{ path: 'room', message: 'No.' }]),
+      '/surface-api/registration.step2/configure/submit': () => refused([{ path: 'room', code: 'no_such_choice', message: 'No.' }]),
       '/surface-api/registration.step2/configure': () => loaded,
     });
     render(<SurfaceForm settings={{ ...settings, sendFingerprint: false }} fetcher={fetcher} refineDelay={0} />);
@@ -286,18 +346,43 @@ describe('submitting example 2', () => {
   });
 });
 
-describe('submitting a situation that creates', () => {
+describe('a resource its access locks whole', () => {
+  it('draws every field disabled and offers no Submit', async () => {
+    // What the emitter writes for it: readOnly at the top and on every key.
+    const contract = example2 as unknown as Contract;
+    const properties = Object.fromEntries(
+      Object.entries(contract.schema.properties ?? {}).map(([name, property]) => [
+        name,
+        { ...property, readOnly: true, 'x-surface': { ...property['x-surface'], locked: true } },
+      ]),
+    );
+    const locked = { ...contract, schema: { ...contract.schema, readOnly: true, properties } } as Contract;
+    const { fetcher } = server({ '/surface-api/registration.step2/configure': () => locked });
+    render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
+
+    expect(await screen.findByLabelText(/Event title/)).toBeDisabled();
+    expect(screen.getByLabelText(/Venue/)).toBeDisabled();
+    expect(screen.getByText('This may be seen and not changed.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Submit' })).toBeNull();
+  });
+});
+
+describe('submitting an operation that creates', () => {
   it('moves to the page where the created thing now lives', async () => {
-    const add: Settings = { ...settings, surface: 'node.type', situation: 'add', pageBase: '/base/surface-react' };
+    const add: Settings = { ...settings, resource: 'node.type', operation: 'add', pageBase: '/base/surface-react' };
     const { fetcher } = server({
       '/surface-api/node.type/add/submit': () => ({
         committed: true,
-        valid: true,
+        ok: true,
+        changed: true,
+        changes: [],
+        values: {},
+        notes: [],
         violations: [],
         stale: [],
         outputs: {},
         contract: { ...(example2 as unknown as Contract), fingerprint: 'fp-after' },
-        created: { surface: 'node.type', situation: 'edit', parameters: { type: 'recipe' } },
+        created: { resource: 'node.type', operation: 'edit', parameters: { type: 'recipe' } },
       }),
       '/surface-api/node.type/add': () => ({ ...(example2 as unknown as Contract), fingerprint: 'fp-before' }),
     });
@@ -309,7 +394,7 @@ describe('submitting a situation that creates', () => {
   });
 
   it('finds the pages beside the API when the page names no page base', () => {
-    expect(pageOf({ ...settings, apiBase: '/sub/surface-api' }, { surface: 'node.type', situation: 'edit', parameters: { type: 'a b' } })).toBe(
+    expect(pageOf({ ...settings, apiBase: '/sub/surface-api' }, { resource: 'node.type', operation: 'edit', parameters: { type: 'a b' } })).toBe(
       '/sub/surface-react/node.type/edit?type=a+b',
     );
   });
@@ -318,38 +403,102 @@ describe('submitting a situation that creates', () => {
 describe('the browser fetch', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('fetches the contract once, however often the form renders', async () => {
-    const { calls, fetcher } = server({ '/surface-api/registration.step2/configure': () => example2 });
+  it('fetches the contract and the full schema once, together, however often the form renders', async () => {
+    const recorded = narrowed2 as unknown as Recorded;
+    const { calls, fetcher } = server({
+      '/surface-api/registration.step2/configure': () => recorded.contract,
+      '/surface-api/registration.step2/configure/schema': () => recorded.schema,
+    });
     vi.stubGlobal('fetch', fetcher);
     render(<SurfaceForm settings={settings} />);
     await userEvent.type(await screen.findByLabelText(/Event title/), ' again');
     expect(screen.getByLabelText(/Event title/)).toHaveValue('Spring meetup again');
-    expect(calls.map((call) => call.url)).toEqual(['/surface-api/registration.step2/configure']);
+    // A change narrowed here asks for nothing more.
+    await userEvent.selectOptions(screen.getByLabelText(/Venue/), 'Old Library');
+    expect(calls.map((call) => call.url)).toEqual(['/surface-api/registration.step2/configure', '/surface-api/registration.step2/configure/schema']);
   });
 });
 
 describe('the React form of example 3', () => {
   it('renders the chosen ticket and the contact part', async () => {
     const { fetcher } = server({ '/surface-api/registration.step3/configure': () => example3 as unknown as Contract });
-    render(<SurfaceForm settings={{ ...settings, surface: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
+    render(<SurfaceForm settings={{ ...settings, resource: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
     expect(await screen.findByRole('group', { name: 'Ticket' })).toBeInTheDocument();
     expect(screen.getByLabelText('Note')).toHaveValue('');
     expect(within(screen.getByRole('group', { name: 'Contact' })).getByLabelText(/Email/)).toHaveValue('events@example.com');
   });
 
-  it('draws example 4\'s keys in one fieldset, titled by its alter', async () => {
-    const { fetcher } = server({ '/surface-api/registration.step3/configure': () => example3 as unknown as Contract });
-    render(<SurfaceForm settings={{ ...settings, surface: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
-    const compliance = await screen.findByRole('group', { name: 'Compliance' });
-    expect(within(compliance).getByLabelText(/Event licence/)).toHaveValue('');
-    expect(within(compliance).getByLabelText(/Stewards/)).toHaveAccessibleDescription('At least 1 steward for 50 attendees.');
-    expect(screen.queryByRole('group', { name: /third.party/i })).toBeNull();
-    expect(screen.getByLabelText(/Capacity/)).toHaveAccessibleDescription('Up to 100 without an event licence. With one, up to 400.');
+  it('draws the paid ticket from its def when the pricing changes', async () => {
+    const { fetcher } = server({
+      // The server's refine: the same contract, the paid ticket from its defaults.
+      '/surface-api/registration.step3/configure/refine': () => ({
+        ...(example3 as unknown as Contract),
+        values: { ...example3.values, pricing: 'paid', ticket: { price: null, currency: 'EUR' } },
+      }),
+      '/surface-api/registration.step3/configure': () => example3 as unknown as Contract,
+    });
+    render(<SurfaceForm settings={{ ...settings, resource: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
+    await userEvent.selectOptions(await screen.findByLabelText(/Pricing/), 'Paid');
+    // Drawn at once from the variant the pricing chooses; the refine then
+    // brings the variant's defaults.
+    await waitFor(() => expect(within(screen.getByRole('group', { name: 'Ticket' })).getByLabelText(/Currency/)).toHaveDisplayValue('EUR'));
+    const ticket = screen.getByRole('group', { name: 'Ticket' });
+    expect(within(ticket).getByLabelText(/Price/)).toBeRequired();
+    expect(within(within(ticket).getByLabelText(/Currency/)).getAllByRole('option').map((option) => option.textContent)).toEqual(['EUR', 'GBP', 'USD']);
+    expect(within(ticket).queryByLabelText('Note')).toBeNull();
   });
 
-  it('draws the Compliance fieldset right after the capacity its licence lifts', async () => {
+  it('shows a refusal inside the contact on its email field', async () => {
+    const { calls, fetcher } = server({
+      '/surface-api/registration.step3/configure/submit': () => ({
+        committed: false,
+        ok: false,
+        changed: false,
+        changes: [],
+        values: {},
+        notes: [],
+        violations: [{ path: 'contact.email', code: 'invalid_format', message: 'This value is not a valid email address.' }],
+        stale: [],
+        outputs: {},
+        contract: null,
+        created: null,
+      }),
+      '/surface-api/registration.step3/configure': () => example3 as unknown as Contract,
+    });
+    render(<SurfaceForm settings={{ ...settings, resource: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
+    const email = within(await screen.findByRole('group', { name: 'Contact' })).getByLabelText(/Email/);
+    await userEvent.clear(email);
+    await userEvent.type(email, 'nobody');
+    await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('contact.email: This value is not a valid email address.');
+    expect(email).toHaveAccessibleDescription('This value is not a valid email address.');
+    expect(JSON.parse(String(calls.find((call) => call.url.endsWith('/submit'))?.init?.body)).values.contact).toEqual({ email: 'nobody', phone: '' });
+  });
+
+  it('says in the contract table where a live rule narrows a key', async () => {
     const { fetcher } = server({ '/surface-api/registration.step3/configure': () => example3 as unknown as Contract });
-    render(<SurfaceForm settings={{ ...settings, surface: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
+    render(<SurfaceForm settings={{ ...settings, resource: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
+    const panel = (await screen.findByText('Contract')).closest('details');
+    // Example 4 takes away the rooms a site has closed: a live refiner.
+    // Narrowed by the venue, and checked by the live rule as well: which
+    // of the two narrowed it is not said.
+    expect(panel?.querySelector('tr[data-surface-key="room"]')).toHaveTextContent('narrowed, and checked by a live rule');
+    expect(panel?.querySelector('tr[data-surface-key="capacity"]')).not.toHaveTextContent('live rule');
+  });
+
+  it('draws example 4\'s keys in one fieldset, titled by its alter', async () => {
+    const { fetcher } = server({ '/surface-api/registration.step3/configure': () => example3 as unknown as Contract });
+    render(<SurfaceForm settings={{ ...settings, resource: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
+    const compliance = await screen.findByRole('group', { name: 'Compliance' });
+    expect(within(compliance).getByLabelText(/Event license/)).toHaveValue('');
+    expect(within(compliance).getByLabelText(/Stewards/)).toHaveAccessibleDescription('At least 1 steward for 50 attendees.');
+    expect(screen.queryByRole('group', { name: /third.party/i })).toBeNull();
+    expect(screen.getByLabelText(/Capacity/)).toHaveAccessibleDescription('Up to 100 without an event license.');
+  });
+
+  it('draws the Compliance fieldset right after the capacity its license lifts', async () => {
+    const { fetcher } = server({ '/surface-api/registration.step3/configure': () => example3 as unknown as Contract });
+    render(<SurfaceForm settings={{ ...settings, resource: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
     const compliance = await screen.findByRole('group', { name: 'Compliance' });
     const legends = Array.from(document.querySelectorAll('form fieldset > legend'), (legend) => legend.textContent);
     expect(legends).toEqual(['Compliance', 'Ticket', 'Contact']);
@@ -358,5 +507,181 @@ describe('the React form of example 3', () => {
     expect(compliance.nextElementSibling).toContainElement(screen.getByLabelText(/Pricing/));
     // The group it was stored in draws nothing of its own.
     expect(document.querySelector('.dsr-group')).toBeNull();
+  });
+});
+
+describe('narrowing here, from the full schema', () => {
+  const refines = (calls: Call[]) => calls.filter((call) => call.url.endsWith('/refine'));
+
+  it('narrows the room and the capacity of example 2 on a venue change, with no request', async () => {
+    const { calls, fetcher } = recordedServer(narrowed2 as unknown as Recorded, 'registration.step2');
+    render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
+    await userEvent.selectOptions(await screen.findByLabelText(/Venue/), 'Old Library');
+
+    const room = screen.getByLabelText(/Room/);
+    expect(within(room).getAllByRole('option').map((option) => option.textContent)).toEqual(['- Select -', 'Reading room', 'Garden room']);
+    expect(screen.getByLabelText(/Capacity/)).not.toHaveAttribute('max');
+    expect(narrowingLine()).toBe('Narrowed here: room, capacity.');
+
+    await userEvent.selectOptions(screen.getByLabelText(/Room/), 'Garden room');
+    expect(screen.getByLabelText(/Capacity/)).toHaveAttribute('max', '30');
+    expect(screen.getByLabelText(/Capacity/)).toHaveAccessibleDescription('Up to 30 for the Garden room.');
+    expect(narrowingLine()).toBe('Narrowed here: capacity.');
+    expect(refines(calls)).toHaveLength(0);
+  });
+
+  it('shows the room the venue orphaned stale, on its empty option, and sends it back by its path', async () => {
+    const { calls, fetcher } = recordedServer(narrowed2 as unknown as Recorded, 'registration.step2', {
+      // Only what is sent matters here.
+      '/surface-api/registration.step2/configure/submit': () => ({ ok: false, committed: false, changed: false, changes: [], values: {}, violations: [], notes: [], stale: [], outputs: {}, contract: null, created: null }),
+    });
+    const submits = () => calls.filter((call) => call.url.endsWith('/submit'));
+    render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
+    await userEvent.selectOptions(await screen.findByLabelText(/Venue/), 'Old Library');
+
+    // On the empty option, standing for the stored main hall; not required
+    // to a browser, since empty there means keep.
+    expect(screen.getByLabelText(/Room/)).toHaveDisplayValue('- Select -');
+    expect(screen.getByLabelText(/Room/)).not.toBeRequired();
+    await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    await waitFor(() => expect(submits()).toHaveLength(1));
+    const body = JSON.parse(String(submits()[0].init?.body));
+    expect(body.stale).toEqual(['room']);
+    expect(body.values.room).toBeNull();
+
+    // The venue moved back: the stored room is offered again, and stands.
+    await userEvent.selectOptions(screen.getByLabelText(/Venue/), 'Riverside Hall');
+    expect(screen.getByLabelText(/Room/)).toHaveDisplayValue('Main hall');
+    expect(screen.getByLabelText(/Capacity/)).toHaveAttribute('max', '400');
+    expect(refines(calls)).toHaveLength(0);
+  });
+
+  it('narrows example 3\'s ticket here on a pricing change: the variants', async () => {
+    const { calls, fetcher } = recordedServer(compliance as unknown as Recorded, 'registration.step3');
+    render(<SurfaceForm settings={{ ...settings, resource: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
+    await userEvent.selectOptions(await screen.findByLabelText(/Pricing/), 'Paid');
+    const ticket = screen.getByRole('group', { name: 'Ticket' });
+    expect(within(ticket).getByLabelText(/Price/)).toBeRequired();
+    expect(within(ticket).getByLabelText(/Currency/)).toHaveDisplayValue('EUR');
+    expect(within(ticket).queryByLabelText('Note')).toBeNull();
+    expect(narrowingLine()).toBe('Narrowed here: ticket.');
+    expect(refines(calls)).toHaveLength(0);
+  });
+
+  it('asks the server on a venue change of example 3 with compliance: the room is narrowed by a live rule', async () => {
+    const { calls, fetcher } = recordedServer(compliance as unknown as Recorded, 'registration.step3');
+    render(<SurfaceForm settings={{ ...settings, resource: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
+    await userEvent.selectOptions(await screen.findByLabelText(/Venue/), 'Old Library');
+    expect(narrowingLine()).toBe('Asked the server: room depends on a live rule.');
+    await waitFor(() => expect(refines(calls)).toHaveLength(1));
+    await waitFor(() => expect(screen.getByLabelText(/Room/)).toHaveDisplayValue('- Select -'));
+    expect(JSON.parse(String(refines(calls)[0].init?.body)).values.venue).toBe('library');
+
+    // The pricing after it still chooses the ticket variant, narrowed here.
+    await userEvent.selectOptions(screen.getByLabelText(/Pricing/), 'Paid');
+    expect(narrowingLine()).toBe('Narrowed here: ticket.');
+    expect(refines(calls)).toHaveLength(1);
+  });
+
+  it('asks the server on a license change of example 3 with compliance: the stewards are refined with values', async () => {
+    const { calls, fetcher } = recordedServer(compliance as unknown as Recorded, 'registration.step3');
+    render(<SurfaceForm settings={{ ...settings, resource: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
+    await userEvent.type(await screen.findByLabelText(/Event license/), '2');
+    expect(narrowingLine()).toBe('Asked the server: third_party_settings depends on a rule to refine with values.');
+    await waitFor(() => expect(refines(calls)).toHaveLength(1));
+  });
+
+  it('drops a key that does not apply, sends nothing for it, and requires it again where it applies', async () => {
+    const { calls, fetcher } = recordedServer(bulletin as unknown as Recorded, 'resource_test.bulletin', {
+      '/surface-api/resource_test.bulletin/configure/submit': () => ({ ok: false, committed: false, changed: false, changes: [], values: {}, violations: [], notes: [], stale: [], outputs: {}, contract: null, created: null }),
+    });
+    const submits = () => calls.filter((call) => call.url.endsWith('/submit'));
+    render(<SurfaceForm settings={{ ...settings, resource: 'resource_test.bulletin' }} fetcher={fetcher} refineDelay={0} />);
+    expect(await screen.findByLabelText(/Send day/)).toBeRequired();
+    await userEvent.selectOptions(screen.getByLabelText(/Frequency/), 'Monthly');
+    expect(screen.queryByLabelText(/Send day/)).not.toBeInTheDocument();
+    expect(narrowingLine()).toBe('Narrowed here: send_day.');
+    await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    await waitFor(() => expect(submits()).toHaveLength(1));
+    expect(JSON.parse(String(submits()[0].init?.body)).values).toEqual({ frequency: 'monthly' });
+
+    await userEvent.selectOptions(screen.getByLabelText(/Frequency/), 'Weekly');
+    expect(screen.getByLabelText(/Send day/)).toHaveDisplayValue('Friday');
+    expect(screen.getByLabelText(/Send day/)).toBeRequired();
+    expect(refines(calls)).toHaveLength(0);
+  });
+
+  it('narrows example 3 without compliance here, venue and room alike', async () => {
+    const { calls, fetcher } = recordedServer(narrowed3 as unknown as Recorded, 'registration.step3');
+    render(<SurfaceForm settings={{ ...settings, resource: 'registration.step3' }} fetcher={fetcher} refineDelay={0} />);
+    await userEvent.selectOptions(await screen.findByLabelText(/Venue/), 'Harbour Centre');
+    expect(within(screen.getByLabelText(/Room/)).getAllByRole('option').map((option) => option.textContent)).toEqual(['- Select -', 'Auditorium', 'Upper deck']);
+    expect(narrowingLine()).toBe('Narrowed here: room, capacity.');
+    expect(refines(calls)).toHaveLength(0);
+  });
+});
+
+describe('contract 2 only', () => {
+  /** example 2's contract as a server of contract 1 wrote it: no version stated. */
+  const contractOne = (): Contract => {
+    const contract = JSON.parse(JSON.stringify(example2)) as Contract;
+    delete contract.schema['x-surface']?.contract;
+    return contract;
+  };
+  const refusal = 'This page reads contract 2; the server sent contract 1.';
+
+  it('refuses a contract of contract 1, which states no version, as the form\'s error', async () => {
+    const { fetcher } = server({ '/surface-api/registration.step2/configure': () => contractOne() });
+    render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
+    expect(await screen.findByRole('alert')).toHaveTextContent(`The form could not be loaded: ${refusal}`);
+    expect(screen.queryByLabelText(/Venue/)).toBeNull();
+  });
+
+  it('refuses a full schema of contract 1 as it would the contract', async () => {
+    const recorded = narrowed2 as unknown as Recorded;
+    const old = JSON.parse(JSON.stringify(recorded.schema));
+    delete old.schema['x-surface'].contract;
+    const { fetcher } = server({
+      '/surface-api/registration.step2/configure': () => recorded.contract,
+      '/surface-api/registration.step2/configure/schema': () => old,
+    });
+    render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
+    expect(await screen.findByRole('alert')).toHaveTextContent(`The form could not be loaded: ${refusal}`);
+  });
+
+  it('refuses an answer whose Contract-Version header says 1, whatever its document says', async () => {
+    const answer = (version: string | null) => vi.fn(async () =>
+      new Response(JSON.stringify(example2), { status: 200, headers: version === null ? {} : { 'Content-Type': 'application/json', 'Contract-Version': version } }));
+    await expect(createApi(settings, answer('1')).contract()).rejects.toThrow(refusal);
+    await expect(createApi(settings, answer('2')).contract()).resolves.toMatchObject({ resource: 'registration.step2', operation: 'configure' });
+    // No header is no refusal by itself: the document is read.
+    await expect(createApi(settings, answer(null)).contract()).resolves.toMatchObject({ resource: 'registration.step2' });
+  });
+
+  it('shows a refine of contract 1 refused, and keeps the form as it was', async () => {
+    const { fetcher } = server({
+      '/surface-api/registration.step2/configure/refine': () => contractOne(),
+      '/surface-api/registration.step2/configure': () => example2,
+    });
+    render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
+    await userEvent.selectOptions(await screen.findByLabelText(/Venue/), 'Old Library');
+    expect(await screen.findByRole('alert')).toHaveTextContent(refusal);
+    expect(screen.getByLabelText(/Room/)).toHaveDisplayValue('Main hall');
+  });
+
+  it('refuses a write whose contract is of contract 1, and takes a write of contract 2', async () => {
+    const written = (contract: Contract) => ({
+      committed: true, ok: true, changed: true, changes: ['title'], values: {}, notes: [], violations: [], stale: [], outputs: {}, contract, created: null,
+    });
+    const one = server({
+      '/surface-api/registration.step2/configure/submit': () => written(contractOne()),
+      '/surface-api/registration.step2/configure': () => example2,
+    });
+    await expect(createApi(settings, one.fetcher).submit({}, [], null)).rejects.toThrow(refusal);
+    const two = server({
+      '/surface-api/registration.step2/configure/submit': () => written(example2 as unknown as Contract),
+      '/surface-api/registration.step2/configure': () => example2,
+    });
+    await expect(createApi(settings, two.fetcher).submit({}, [], null)).resolves.toMatchObject({ committed: true });
   });
 });

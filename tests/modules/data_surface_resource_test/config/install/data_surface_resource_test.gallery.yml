@@ -1,0 +1,17 @@
+name: 'The long gallery'
+caption: Seascapes
+credit: 'The county museum'
+north:
+  artwork: 'Storm at sea'
+  height: 120
+south:
+  artwork: 'Calm harbour'
+  height: 90
+medium: oil
+finish:
+  varnish: gloss
+rooms:
+  east:
+    lights: true
+  west:
+    lights: false

@@ -11,7 +11,7 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
 /**
  * The check that refinement only ever narrows.
  *
- * The module's loudest claim is that a surface advertises what it
+ * The module's loudest claim is that a data surface advertises what it
  * accepts and refinement can only make that smaller, so a consumer that
  * read the advertisement is never surprised by a value space it did not
  * see. That claim is worth nothing as a convention: it has to be checked
@@ -25,8 +25,9 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
  * | --- | --- |
  * | Adding a constraint | narrower |
  * | Dropping values from a list of allowed values | narrower |
- * | Raising a Length or Range minimum, lowering its maximum | narrower |
- * | Adding a Length or Range bound where there was none | narrower |
+ * | Raising a Length, Range or Count minimum, lowering its maximum | narrower |
+ * | Adding a Length, Range or Count bound where there was none | narrower |
+ * | Changing or dropping a Length or Count exactly | refused |
  * | Sharpening a label, description, default or example | neither |
  * | Changing the data type to one of its derivatives | narrower |
  * | Changing the data type any other way (except from 'any') | refused |
@@ -34,16 +35,21 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
  * | Removing a constraint | refused |
  * | Replacing the options of any other constraint | refused |
  * | Adding or removing a map property | refused |
+ * | Answering that the key does not apply | narrowest |
+ * | Making a key that did not apply apply again | refused |
  * | Any of the above inside a map property or a list item | as above |
  *
- * The last row is the conservative half: two Regex patterns cannot be
- * compared for containment, so replacing one is refused rather than
- * guessed at. A refiner that has to swap such a constraint says so by
+ * A key ruled out (DoesNotApply) accepts nothing at all, so nothing is
+ * compared after it; one that was ruled out stays so.
+ *
+ * The replaced-options row is the conservative half: two Regex patterns
+ * cannot be compared for containment, so replacing one is refused rather
+ * than guessed at. A refiner that has to swap such a constraint says so by
  * advertising the narrower one in the first place.
  *
  * 'any' is the declared escape hatch: it advertises nothing, so every
  * type is narrower than it. That is also the one way a shape may appear
- * during refinement: a slot's placeholder resolving to the map of the
+ * during refinement: the variants' placeholder resolving to the map of the
  * variant its deciding key chose, or a refiner on an `any` key returning
  * a map itself, for a child that cannot be enumerated statically.
  *
@@ -68,21 +74,22 @@ final class Narrowing {
   /**
    * Constraints whose options are compared as bounds rather than copied.
    *
-   * Both of core's comparator constraints spell their bounds the same
-   * way, and nothing else about them is a value space: their remaining
+   * Core's comparator constraints, and the list's Count, spell their
+   * bounds the same way (min, max, and Symfony's exactly for Length and
+   * Count), and nothing else about them is a value space: their remaining
    * options are messages.
    */
-  public const COMPARATORS = ['Length', 'Range'];
+  public const COMPARATORS = ['Length', 'Range', 'Count'];
 
   /**
    * Refuses a refinement that accepts more than what it was handed.
    *
    * @param string $key
-   *   The surface key being refined, named in the message because a
+   *   The definition key being refined, named in the message because a
    *   refiner that breaks the contract has to be findable.
    * @param string $contributor
-   *   Who did it, in words: the surface owner, a named contribution, a
-   *   situation or a slot.
+   *   Who did it, in words: the declaring class, a named contribution, an
+   *   operation or a key's variants.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $before
    *   The definition handed to the refiner.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $after
@@ -104,6 +111,26 @@ final class Narrowing {
   }
 
   /**
+   * Says how a refined definition narrowed, or NULL when it did not.
+   *
+   * The same table read the other way: whatever the refined definition
+   * would widen, going back to what it was handed, is what it narrowed.
+   * For a check that a refinement left something alone, a collection's
+   * items under its parent's refiners.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $before
+   *   The definition handed over.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $after
+   *   What came back.
+   *
+   * @return string|null
+   *   What narrowed, in words, or NULL.
+   */
+  public static function narrowed(DataDefinitionInterface $before, DataDefinitionInterface $after): ?string {
+    return self::widening($after, $before);
+  }
+
+  /**
    * Says how a refined definition widened, or NULL when it did not.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $before
@@ -115,6 +142,13 @@ final class Narrowing {
    *   What widened, in words, or NULL.
    */
   protected static function widening(DataDefinitionInterface $before, DataDefinitionInterface $after): ?string {
+    // Decision: see docs/decisions.md#a-key-that-does-not-apply.
+    if (DoesNotApply::marks($after)) {
+      return NULL;
+    }
+    if (DoesNotApply::marks($before)) {
+      return 'a key that did not apply was made to apply';
+    }
     if ($before->getDataType() === 'any' || self::isDerivative($before->getDataType(), $after->getDataType())) {
       // Advertised as anything, or as the base of what it became, so the
       // shape it becomes is no wider; only its own flag and constraints
@@ -287,6 +321,11 @@ final class Narrowing {
    *   What widened, in words, or NULL.
    */
   protected static function boundsWidening(string $name, array $before, array $after): ?string {
+    // Symfony spells min equal to max as `exactly` too: a bound like the
+    // other two, which only narrows by staying what it was.
+    if (isset($before['exactly']) && is_numeric($before['exactly']) && ($after['exactly'] ?? NULL) != $before['exactly']) {
+      return sprintf('the exactly of the %s constraint changed from %s', $name, self::describe($before['exactly']));
+    }
     foreach (['min' => 1, 'max' => -1] as $bound => $direction) {
       if (!isset($before[$bound]) || !is_numeric($before[$bound])) {
         // No bound, or one this check cannot read as a number: adding or

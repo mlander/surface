@@ -1,10 +1,25 @@
 {
-    "surface": "registration.step3",
-    "situation": "configure",
-    "label": "Configure registration",
+    "resource": "registration.step3",
+    "operation": "configure",
+    "label": "Configure registration (step 3)",
     "schema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "title": "Configure registration",
+        "$id": "http://localhost/surface-api/registration.step3/configure",
+        "title": "Configure registration (step 3)",
+        "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
+        "x-surface": {
+            "contract": 2,
+            "operation": {
+                "id": "configure",
+                "label": "Configure registration (step 3)",
+                "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
+                "kind": "update",
+                "creates": false,
+                "destructive": false,
+                "idempotent": true
+            },
+            "version": 1
+        },
         "type": "object",
         "properties": {
             "title": {
@@ -86,12 +101,13 @@
                     "emptyOption": {
                         "show": false,
                         "label": "- Select -"
-                    }
+                    },
+                    "live": true
                 }
             },
             "capacity": {
                 "title": "Capacity",
-                "description": "Up to 100 without an event licence. With one, up to 400.",
+                "description": "Up to 100 without an event license.",
                 "type": [
                     "integer",
                     "null"
@@ -104,7 +120,7 @@
                     "locked": false,
                     "dependsOn": [
                         "room",
-                        "third_party_settings.data_surface_examples_compliance.licence"
+                        "third_party_settings.data_surface_examples_compliance.license"
                     ],
                     "refined": true,
                     "stale": false
@@ -116,11 +132,11 @@
                 "oneOf": [
                     {
                         "const": "free",
-                        "title": "free"
+                        "title": "Free"
                     },
                     {
                         "const": "paid",
-                        "title": "paid"
+                        "title": "Paid"
                     }
                 ],
                 "default": "free",
@@ -138,12 +154,19 @@
             },
             "ticket": {
                 "title": "Ticket",
-                "type": [
-                    "object",
-                    "null"
+                "anyOf": [
+                    {
+                        "$ref": "#/$defs/registration.step3.ticket.free"
+                    },
+                    {
+                        "$ref": "#/$defs/registration.step3.ticket.paid"
+                    },
+                    {
+                        "type": "null"
+                    }
                 ],
                 "x-surface": {
-                    "widget": "slot",
+                    "widget": "variants",
                     "locked": false,
                     "dependsOn": [
                         "pricing"
@@ -151,48 +174,16 @@
                     "refined": true,
                     "stale": false,
                     "by": "pricing",
-                    "variants": [
-                        "free",
-                        "paid"
-                    ],
+                    "variants": {
+                        "free": "#/$defs/registration.step3.ticket.free",
+                        "paid": "#/$defs/registration.step3.ticket.paid"
+                    },
                     "chosen": "free"
                 }
             },
             "contact": {
                 "title": "Contact",
-                "type": "object",
-                "properties": {
-                    "email": {
-                        "title": "Email",
-                        "type": "string",
-                        "format": "email",
-                        "x-surface": {
-                            "widget": "email",
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
-                    },
-                    "phone": {
-                        "title": "Phone",
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "x-surface": {
-                            "widget": "text",
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
-                    }
-                },
-                "additionalProperties": false,
-                "required": [
-                    "email"
-                ],
+                "$ref": "#/$defs/registration.contact",
                 "x-surface": {
                     "widget": "fieldset",
                     "locked": false,
@@ -209,49 +200,20 @@
                 "properties": {
                     "data_surface_examples_compliance": {
                         "title": "Compliance",
-                        "type": [
-                            "object",
-                            "null"
-                        ],
-                        "properties": {
-                            "licence": {
-                                "title": "Event licence",
-                                "description": "The four digits after EV- on the licence, such as 2048. Required to host more than 100 people.",
-                                "type": [
-                                    "string",
-                                    "null"
-                                ],
-                                "pattern": "^\\d{4}$",
-                                "examples": [
-                                    "2048"
-                                ],
-                                "x-surface": {
-                                    "widget": "text",
-                                    "locked": false,
-                                    "dependsOn": [],
-                                    "refined": false,
-                                    "stale": false,
-                                    "patternMessage": "A licence number is four digits, such as 2048."
-                                }
+                        "allOf": [
+                            {
+                                "$ref": "#/$defs/registration.compliance"
                             },
-                            "stewards": {
-                                "title": "Stewards",
-                                "description": "At least 1 steward for 50 attendees.",
-                                "type": "integer",
-                                "minimum": 1,
-                                "default": 1,
-                                "x-surface": {
-                                    "widget": "number",
-                                    "locked": false,
-                                    "dependsOn": [],
-                                    "refined": true,
-                                    "stale": false
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "stewards": {
+                                        "type": "integer",
+                                        "description": "At least 1 steward for 50 attendees.",
+                                        "minimum": 1
+                                    }
                                 }
                             }
-                        },
-                        "additionalProperties": false,
-                        "required": [
-                            "stewards"
                         ],
                         "x-surface": {
                             "widget": "fieldset",
@@ -259,7 +221,21 @@
                             "dependsOn": [],
                             "refined": true,
                             "stale": false,
-                            "after": "capacity"
+                            "after": "capacity",
+                            "reads": {
+                                "capacity": "capacity"
+                            },
+                            "within": {
+                                "/allOf/1/properties/stewards": {
+                                    "widget": "number",
+                                    "locked": false,
+                                    "dependsOn": [
+                                        "capacity"
+                                    ],
+                                    "refined": true,
+                                    "stale": false
+                                }
+                            }
                         }
                     }
                 },
@@ -299,33 +275,7 @@
                     "properties": {
                         "ticket": {
                             "title": "Ticket",
-                            "type": "object",
-                            "properties": {
-                                "note": {
-                                    "title": "Note",
-                                    "description": "Shown beside the register button, for example \"Donations welcome\".",
-                                    "type": [
-                                        "string",
-                                        "null"
-                                    ],
-                                    "x-surface": {
-                                        "widget": "text",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
-                                    }
-                                }
-                            },
-                            "additionalProperties": false,
-                            "x-surface": {
-                                "widget": "fieldset",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
-                                "variant": "free"
-                            }
+                            "$ref": "#/$defs/registration.step3.ticket.free"
                         }
                     }
                 }
@@ -345,69 +295,184 @@
                     "properties": {
                         "ticket": {
                             "title": "Ticket",
-                            "type": "object",
-                            "properties": {
-                                "price": {
-                                    "title": "Price",
-                                    "type": "number",
-                                    "minimum": 0.01,
-                                    "x-surface": {
-                                        "widget": "number",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
-                                    }
-                                },
-                                "currency": {
-                                    "title": "Currency",
-                                    "type": "string",
-                                    "oneOf": [
-                                        {
-                                            "const": "EUR",
-                                            "title": "EUR"
-                                        },
-                                        {
-                                            "const": "GBP",
-                                            "title": "GBP"
-                                        },
-                                        {
-                                            "const": "USD",
-                                            "title": "USD"
-                                        }
-                                    ],
-                                    "default": "EUR",
-                                    "x-surface": {
-                                        "widget": "select",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false,
-                                        "emptyOption": {
-                                            "show": false,
-                                            "label": "- Select -"
-                                        }
-                                    }
-                                }
-                            },
-                            "additionalProperties": false,
-                            "required": [
-                                "price",
-                                "currency"
-                            ],
-                            "x-surface": {
-                                "widget": "fieldset",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
-                                "variant": "paid"
-                            }
+                            "$ref": "#/$defs/registration.step3.ticket.paid"
                         }
                     }
                 }
             }
-        ]
+        ],
+        "$defs": {
+            "registration.step3.ticket.free": {
+                "title": "registration.step3.ticket.free",
+                "type": "object",
+                "properties": {
+                    "note": {
+                        "title": "Note",
+                        "description": "Shown beside the register button, for example \"Donations welcome\".",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "x-surface": {
+                            "widget": "text",
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    }
+                },
+                "additionalProperties": false
+            },
+            "registration.step3.ticket.paid": {
+                "title": "registration.step3.ticket.paid",
+                "type": "object",
+                "properties": {
+                    "price": {
+                        "title": "Price",
+                        "type": "number",
+                        "minimum": 0.01,
+                        "x-surface": {
+                            "widget": "number",
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    },
+                    "currency": {
+                        "title": "Currency",
+                        "type": "string",
+                        "oneOf": [
+                            {
+                                "const": "EUR",
+                                "title": "EUR"
+                            },
+                            {
+                                "const": "GBP",
+                                "title": "GBP"
+                            },
+                            {
+                                "const": "USD",
+                                "title": "USD"
+                            }
+                        ],
+                        "default": "EUR",
+                        "x-surface": {
+                            "widget": "select",
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false,
+                            "emptyOption": {
+                                "show": false,
+                                "label": "- Select -"
+                            }
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "price",
+                    "currency"
+                ]
+            },
+            "registration.contact": {
+                "title": "registration.contact",
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "title": "Email",
+                        "type": "string",
+                        "format": "idn-email",
+                        "x-surface": {
+                            "widget": "email",
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    },
+                    "phone": {
+                        "title": "Phone",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "x-surface": {
+                            "widget": "text",
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "email"
+                ]
+            },
+            "registration.compliance": {
+                "title": "registration.compliance",
+                "type": "object",
+                "properties": {
+                    "license": {
+                        "$ref": "#/$defs/event.license",
+                        "title": "Event license",
+                        "x-surface": {
+                            "widget": "text",
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false,
+                            "patternMessage": "A license number is four digits, such as 2048."
+                        }
+                    },
+                    "stewards": {
+                        "title": "Stewards",
+                        "type": "integer",
+                        "default": 1,
+                        "x-surface": {
+                            "widget": "number",
+                            "locked": false,
+                            "dependsOn": [
+                                "capacity"
+                            ],
+                            "refined": false,
+                            "stale": false
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "stewards"
+                ],
+                "x-surface": {
+                    "ports": {
+                        "capacity": {
+                            "type": "integer",
+                            "required": true
+                        }
+                    }
+                }
+            },
+            "event.license": {
+                "title": "event.license",
+                "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "pattern": "^\\d{4}$",
+                "examples": [
+                    "2048"
+                ],
+                "x-surface": {
+                    "patternMessage": "A license number is four digits, such as 2048."
+                }
+            }
+        }
     },
     "values": {
         "title": "Spring meetup",
@@ -425,7 +490,7 @@
         },
         "third_party_settings": {
             "data_surface_examples_compliance": {
-                "licence": null,
+                "license": null,
                 "stewards": 1
             }
         }

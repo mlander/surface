@@ -1,50 +1,58 @@
-# The page and the four endpoints of one situation of one surface, both
-# named by id: /surface-react/registration.step2/configure. A situation's
+# The page and the five endpoints of one operation of one resource, both
+# named by id: /surface-react/registration.step2/configure. An operation's
 # parameters arrive in the query string (and, on a POST, in the body's
-# "parameters"), by the situation method's parameter names.
+# "parameters"), by the operation method's parameter names.
 #
-# One requirement on all five, the situation's: its permission, then the
-# surface's access class, and no opinion is a refusal. The three POSTs also
+# One requirement on all six, the operation's: its permission, then the
+# resource's access class, and no opinion is a refusal. The three POSTs also
 # want the X-CSRF-Token header a session token from /session/token is.
 
 data_surface_react.page:
-  path: '/surface-react/{surface}/{situation}'
+  path: '/surface-react/{resource}/{operation}'
   defaults:
-    _controller: '\Drupal\data_surface_react\Controller\SurfaceReactPage::page'
-    _title_callback: '\Drupal\data_surface_react\Controller\SurfaceReactPage::title'
+    _controller: '\Drupal\data_surface_react\Controller\ResourceReactPage::page'
+    _title_callback: '\Drupal\data_surface_react\Controller\ResourceReactPage::title'
   requirements:
     _data_surface_react_access: 'TRUE'
 
 data_surface_react.contract:
-  path: '/surface-api/{surface}/{situation}'
+  path: '/surface-api/{resource}/{operation}'
   defaults:
-    _controller: '\Drupal\data_surface_react\Controller\SurfaceApiController::contract'
+    _controller: '\Drupal\data_surface_react\Controller\ResourceApiController::contract'
+  methods: [GET]
+  requirements:
+    _data_surface_react_access: 'TRUE'
+
+data_surface_react.schema:
+  path: '/surface-api/{resource}/{operation}/schema'
+  defaults:
+    _controller: '\Drupal\data_surface_react\Controller\ResourceApiController::schema'
   methods: [GET]
   requirements:
     _data_surface_react_access: 'TRUE'
 
 data_surface_react.refine:
-  path: '/surface-api/{surface}/{situation}/refine'
+  path: '/surface-api/{resource}/{operation}/refine'
   defaults:
-    _controller: '\Drupal\data_surface_react\Controller\SurfaceApiController::refine'
+    _controller: '\Drupal\data_surface_react\Controller\ResourceApiController::refine'
   methods: [POST]
   requirements:
     _data_surface_react_access: 'TRUE'
     _csrf_request_header_token: 'TRUE'
 
 data_surface_react.validate:
-  path: '/surface-api/{surface}/{situation}/validate'
+  path: '/surface-api/{resource}/{operation}/validate'
   defaults:
-    _controller: '\Drupal\data_surface_react\Controller\SurfaceApiController::validate'
+    _controller: '\Drupal\data_surface_react\Controller\ResourceApiController::validate'
   methods: [POST]
   requirements:
     _data_surface_react_access: 'TRUE'
     _csrf_request_header_token: 'TRUE'
 
 data_surface_react.submit:
-  path: '/surface-api/{surface}/{situation}/submit'
+  path: '/surface-api/{resource}/{operation}/submit'
   defaults:
-    _controller: '\Drupal\data_surface_react\Controller\SurfaceApiController::submit'
+    _controller: '\Drupal\data_surface_react\Controller\ResourceApiController::submit'
   methods: [POST]
   requirements:
     _data_surface_react_access: 'TRUE'

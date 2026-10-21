@@ -11,13 +11,13 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * Tests the standalone form: one surface, a different storage.
+ * Tests the standalone form: one structure, a different storage.
  *
- * The form repeats none of the block's declaration — it reads the
- * plugin's contract through the block manager — and it writes none of
- * the block's storage: the same surface is committed to State because
- * the target owns the storage shape and the surface never hears about
- * it.
+ * The form repeats none of the block's declaration (it reads the
+ * plugin's contract through the block manager) and it writes none of
+ * the block's storage: the same structure is committed to State because
+ * the storage class owns the storage layout and the structure never hears
+ * about it.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -53,10 +53,10 @@ class DemoFormTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Submits the demo form with the given surface values.
+   * Submits the demo form with the given structure values.
    *
    * @param array $values
-   *   Raw values keyed by surface key, as a browser would submit them.
+   *   Raw values keyed by structure key, as a browser would submit them.
    *
    * @return \Drupal\Core\Form\FormStateInterface
    *   The form state after the submission.
@@ -64,7 +64,7 @@ class DemoFormTest extends DataSurfaceKernelTestBase {
   protected function submit(array $values) {
     $form_state = new FormState();
     $form_state->setValues(['surface' => $values]);
-    // The surface declares an entity type of its own, and the keys that
+    // The structure declares an entity type of its own, and the keys that
     // narrow against it are built from whatever is chosen. A browser
     // reaches a bundle other than the default's by changing the entity
     // type first and letting the container rebuild, so a programmatic
@@ -77,9 +77,9 @@ class DemoFormTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the form is generated from the block plugin's surface.
+   * Tests that the form is generated from the block plugin's structure.
    */
-  public function testFormIsGeneratedFromThePluginSurface(): void {
+  public function testFormIsGeneratedFromThePluginStructure(): void {
     $form_state = new FormState();
     $form = $this->container->get('form_builder')
       ->getForm(DataSurfaceDemoForm::class, $form_state);
@@ -89,8 +89,8 @@ class DemoFormTest extends DataSurfaceKernelTestBase {
     $this->assertSame('select', $form['surface']['entity_type']['#type']);
     $this->assertSame('number', $form['surface']['limit']['#type']);
     $this->assertSame('select', $form['surface']['presentation']['#type']);
-    // The slot, rendered as the variant the presentation starts on: the
-    // list's own checkbox, inside the slot's details.
+    // The variants, rendered as the one the presentation starts on: the
+    // list's own checkbox, inside the key's details.
     $this->assertSame('details', $form['surface']['presentation_settings']['#type']);
     $this->assertSame('checkbox', $form['surface']['presentation_settings']['show_summary']['#type']);
     $this->assertArrayNotHasKey('columns', $form['surface']['presentation_settings']);
@@ -166,7 +166,7 @@ class DemoFormTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the refined surface refuses what the form collected.
+   * Tests that the refined structure refuses what the form collected.
    */
   public function testInvalidSubmissionIsRefusedAndNotStored(): void {
     $form_state = $this->submit([

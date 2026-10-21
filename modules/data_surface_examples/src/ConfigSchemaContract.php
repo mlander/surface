@@ -17,11 +17,11 @@ use Drupal\data_surface\Contract\ContractEmitter;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 
 /**
- * Says what a client could be told about a config object without a surface.
+ * Says what a client could be told about a config object with no resource.
  *
  * The before picture beside an example's contract: two JSON Schema
  * documents for the config object the example is stored in, neither of
- * which reads a surface.
+ * which reads a resource.
  *
  * The first is what core's serializer answers when the typed config is
  * normalized in the `json_schema` format. It is asked, never written
@@ -49,7 +49,7 @@ use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
  *   which is the only case where config schema says a key must be there.
  *
  * It leaves out `_core` and `langcode`, config's own bookkeeping, which
- * a surface leaves out too. It errs on the side of config schema in one
+ * a resource leaves out too. It errs on the side of config schema in one
  * place: core lets any value of a type that is not fully validatable be
  * NULL, and this says so only where the schema says `nullable: true`.
  *
@@ -91,6 +91,10 @@ final class ConfigSchemaContract {
   /**
    * Asks core for the JSON Schema of a config object.
    *
+   * The schema describes the object whether or not it is stored, so it is
+   * read from the schema alone: asked for an object that does not exist,
+   * typed config throws.
+   *
    * @param string $name
    *   The config object's name.
    *
@@ -98,7 +102,7 @@ final class ConfigSchemaContract {
    *   What the serializer answers for its typed config, as it answers it.
    */
   public function core(string $name): array {
-    $answer = $this->serializer->normalize($this->typedConfig->get($name), 'json_schema');
+    $answer = $this->serializer->normalize($this->typedConfig->createFromNameAndData($name, []), 'json_schema');
     return is_array($answer) ? $answer : (array) $answer;
   }
 
@@ -109,7 +113,7 @@ final class ConfigSchemaContract {
    *   The config object's name.
    *
    * @return array
-   *   The schema, in the dialect the surface's contract is written in.
+   *   The schema, in the dialect the resource's contract is written in.
    */
   public function derived(string $name): array {
     $definition = $this->typedConfig->getDefinition($name);
@@ -252,7 +256,7 @@ final class ConfigSchemaContract {
   /**
    * States declared constraints as the keywords JSON Schema has for them.
    *
-   * The same reading the surface's contract gives the same constraints,
+   * The same reading the resource's contract gives the same constraints,
    * so the two documents differ only in what was declared.
    *
    * @param array $constraints

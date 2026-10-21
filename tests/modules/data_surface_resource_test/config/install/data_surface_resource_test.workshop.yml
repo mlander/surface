@@ -1,0 +1,17 @@
+closed: false
+benches:
+  lathe:
+    enabled: true
+    hours: 4
+  press:
+    enabled: true
+    hours: 2
+  saw:
+    enabled: false
+lights:
+  lathe: true
+  press: false
+  saw: false
+codes:
+  lathe: LA1
+  press: DP2

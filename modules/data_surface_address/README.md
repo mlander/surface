@@ -1,51 +1,51 @@
 # Data Surface - Address field settings
 
-Adopting a surface on a contrib field type without forking it, and the
+Adopting a resource on a contrib field type without forking it, and the
 A/B for what a typed contract adds over a config schema.
 
 ## What it shows
 
 The `address` field type's instance settings (`available_countries`,
-`langcode_override`, `field_overrides`) are described by a surface
+`langcode_override`, `field_overrides`) are described by a resource
 instead of by the form that collects them. Field UI renders the
 generated form; the address module is not modified.
 
 Four pieces:
 
-- `Surface\AddressFieldSettingsSurface` — the definitions, in the new
-  spelling: a class with a static `defineInputs()` and no services. The country
+- `Resource\AddressFieldSettingsResource`: the definitions, a class
+  with a static `defineInputs()` and no services. The country
   list and the language list are not in it: the items carry the address
   module's `Country` constraint and the `LanguageExists` constraint, and
   `CountryOptions` and `LanguageExistsOptions` resolve them live. It is
-  also the variant that fills the field instance surface's open
-  `settings` slot for the address field type, by
-  `#[SurfaceVariant(of: FieldInstanceSurface::class, key: 'settings', value: 'address')]`,
-  so the tool bridge's field surface never names it.
-- `SurfaceAddressItem` — the Field UI host. It names that surface with
-  `#[UsesSurface]`, which the field type trait reads from the field
-  type's definition to build it, and supplies the target bound to the
-  field config entity Field UI is editing. It writes no surface code of
-  its own.
-- `Target\AddressFieldSettingsTarget` — the surface's own target, for a
+  also the field instance resource's `settings` variant for the address
+  field type, by
+  `#[Variant(of: FieldInstanceResource::class, at: 'settings', for: 'address')]`,
+  so the tool bridge's field resource never names it.
+- `SurfaceAddressItem`: the Field UI host. It names that resource with
+  `#[UsesStructure]`, which the field type trait reads from the field
+  type's definition to build it, and supplies the storage bound to the
+  field config entity Field UI is editing. It declares no keys of its
+  own.
+- `Storage\AddressFieldSettingsStorage`: the resource's own storage, for a
   caller that addresses the field by its identity rather than holding
-  it: the field instance surface routes its settings here, after the
-  field itself is stored. Its prepare holds the settings, in the shape
+  it: the field instance resource routes its settings here, after the
+  field itself is stored. Its prepare holds the settings, in the layout
   the field stores, to the address field type's settings schema, so a
   dry run previews them.
-- `AddressSettingsShape::toStorage()` / `fromStorage()` — the shape transform between the input
-  shape and the stored shape. It is not new logic: it is the settings
+- `AddressStorageLayout::toStorage()` / `fromStorage()`: the layout transform between the input
+  layout and the stored layout. It is not new logic: it is the settings
   form's validate handler (strip the rows with an empty override) plus
   the item class's accessors (unwrap each override, drop the falsy
   countries, let the deprecated `fields` key win when it is set), given
   one visible home.
-- `hook_field_info_alter()` — the class swap, which is a fifth piece
+- `hook_field_info_alter()`: the class swap, which is a fifth piece
   only in name.
 
-The surface deliberately describes the input shape, not the storage
-shape: a list of country codes rather than a map of each code to itself,
+The resource deliberately describes the input layout, not the storage
+layout: a list of country codes rather than a map of each code to itself,
 one optional override per field rather than a single-key array around
 each one, and no deprecated `fields` key at all. Every write through the
-surface stores `fields` empty, so it can never shadow `field_overrides`.
+resource stores `fields` empty, so it can never shadow `field_overrides`.
 
 ### Why this field type
 
@@ -64,7 +64,7 @@ drush pm:install data_surface_address
 ```
 
 Add an address field to any bundle and open its field settings. The swap
-is a single assignment in `AddressSurfaceHooks::fieldInfoAlter()`, so the
+is a single assignment in `AddressResourceHooks::fieldInfoAlter()`, so the
 before and after are one uninstall apart:
 
 1. Configure an address field with the module uninstalled.
@@ -77,8 +77,8 @@ before and after are one uninstall apart:
 
 ## What gates it
 
-`Kernel\AddressFieldSurfaceTest` covers the surface, the shape transform
-in both directions, and the settings round trip. The same surface is what
+`Kernel\AddressFieldResourceTest` covers the resource, the layout transform
+in both directions, and the settings round trip. The same resource is what
 `data_surface_tool`'s tools describe, so
 `Kernel\FieldToolsTest` and `Kernel\FieldToolsComparisonTest` exercise it
 from a non-form caller.

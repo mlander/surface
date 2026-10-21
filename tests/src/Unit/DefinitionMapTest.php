@@ -7,15 +7,15 @@ namespace Drupal\Tests\data_surface\Unit;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMap;
-use Drupal\data_surface\SurfaceEntry;
+use Drupal\data_surface\Entry;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * Tests the collection a surface is sealed with.
+ * Tests the collection a data surface is sealed with.
  *
  * Three claims live here and nowhere else. The map is validated once,
- * at construction, so a surface that named a key twice or refined
+ * at construction, so a data surface that named a key twice or refined
  * against a key nobody declared never reaches a reader at all. The
  * order keys were declared in is the order everything downstream sees
  * them in, because a generated form renders that order and the emitted
@@ -24,7 +24,7 @@ use PHPUnit\Framework\Attributes\Group;
  * makes about itself, kept true of the thing the builder produced.
  *
  * @see \Drupal\data_surface\DefinitionMap
- * @see \Drupal\data_surface\SurfaceEntry
+ * @see \Drupal\data_surface\Entry
  */
 #[Group('data_surface')]
 class DefinitionMapTest extends UnitTestCase {
@@ -68,10 +68,10 @@ class DefinitionMapTest extends UnitTestCase {
    */
   public function testDuplicateNameRefused(): void {
     $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('The surface key "title" is declared twice.');
+    $this->expectExceptionMessage('The key "title" is declared twice.');
     new DefinitionMap([
-      new SurfaceEntry('title', DataDefinition::create('string')),
-      new SurfaceEntry('title', DataDefinition::create('integer')),
+      new Entry('title', DataDefinition::create('string')),
+      new Entry('title', DataDefinition::create('integer')),
     ]);
   }
 
@@ -80,9 +80,9 @@ class DefinitionMapTest extends UnitTestCase {
    */
   public function testUnknownDependencyRefused(): void {
     $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('Refinement dependency "kind" of "detail" is not a surface definition.');
+    $this->expectExceptionMessage('Refinement dependency "kind" of "detail" is not a data surface definition.');
     new DefinitionMap([
-      new SurfaceEntry('detail', DataDefinition::create('string'), dependencies: ['kind']),
+      new Entry('detail', DataDefinition::create('string'), dependencies: ['kind']),
     ]);
   }
 
@@ -91,7 +91,7 @@ class DefinitionMapTest extends UnitTestCase {
    */
   public function testUnknownRefinementTargetRefused(): void {
     $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('Refinement target "detail" is not a surface definition.');
+    $this->expectExceptionMessage('Refinement target "detail" is not a data surface definition.');
     DefinitionMap::fromArrays(
       definitions: ['kind' => DataDefinition::create('string')],
       refinements: ['detail' => ['kind']],
@@ -103,7 +103,7 @@ class DefinitionMapTest extends UnitTestCase {
    */
   public function testUnknownKeyInBookkeepingRefused(): void {
     $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('"missing" is not a surface definition.');
+    $this->expectExceptionMessage('"missing" is not a data surface definition.');
     DefinitionMap::fromArrays(
       definitions: ['kind' => DataDefinition::create('string')],
       locked: ['missing'],
@@ -135,7 +135,7 @@ class DefinitionMapTest extends UnitTestCase {
     $this->assertSame([], $map->contributions());
 
     $entry = $map->entry('detail');
-    $this->assertInstanceOf(SurfaceEntry::class, $entry);
+    $this->assertInstanceOf(Entry::class, $entry);
     $this->assertSame('detail', $entry->name);
     $this->assertSame(DataSurfaceInterface::OWNER, $entry->contributor);
     $this->assertFalse($entry->locked);
@@ -166,13 +166,13 @@ class DefinitionMapTest extends UnitTestCase {
    */
   public function testByContributor(): void {
     $map = new DefinitionMap([
-      new SurfaceEntry('owned', DataDefinition::create('string')),
-      new SurfaceEntry(
+      new Entry('owned', DataDefinition::create('string')),
+      new Entry(
         'extended',
         DataDefinition::create('string'),
         contributions: ['other_module' => ['ribbon']],
       ),
-      new SurfaceEntry('mounted', DataDefinition::create('string'), contributor: 'other_module'),
+      new Entry('mounted', DataDefinition::create('string'), contributor: 'other_module'),
     ]);
 
     $this->assertSame(
@@ -220,8 +220,8 @@ class DefinitionMapTest extends UnitTestCase {
     $map = DefinitionMap::fromArrays(['kind' => DataDefinition::create('string')]);
 
     $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('"extra" is not a surface definition.');
-    $map->with(new SurfaceEntry('extra', DataDefinition::create('string')));
+    $this->expectExceptionMessage('"extra" is not a data surface definition.');
+    $map->with(new Entry('extra', DataDefinition::create('string')));
   }
 
   /**

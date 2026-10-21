@@ -125,6 +125,11 @@ class StaleValueBlockFormTest extends BrowserTestBase {
     $assert_session->optionNotExists('settings[bundle]', 'article');
     $assert_session->optionExists('settings[bundle]', 'page');
     $assert_session->pageTextNotContains('no longer available');
+    // The empty option says it keeps the stored bundle, and still posts
+    // the empty string.
+    $empty = $assert_session->elementExists('css', 'select[name="settings[bundle]"] option[value=""]');
+    $this->assertSame('- Keep article (no longer offered) -', $empty->getText());
+    $this->assertTrue($empty->hasAttribute('selected'));
     $assert_session->hiddenFieldValueEquals('settings[@stale]', 'bundle');
     // Nothing is flagged as an error, because nothing is wrong.
     $assert_session->elementNotExists('css', 'select[name="settings[bundle]"].error');

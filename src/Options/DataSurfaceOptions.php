@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface\Options;
 
 use Drupal\Component\Plugin\Exception\PluginNotFoundException;
+use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\Validation\ConstraintManager;
 use Psr\Log\LoggerInterface;
@@ -20,6 +21,11 @@ use Psr\Log\LoggerInterface;
  */
 final class DataSurfaceOptions {
 
+  use DependencySerializationTrait {
+    __sleep as private sleepDependencies;
+    __wakeup as private wakeDependencies;
+  }
+
   /**
    * The instantiated resolvers, keyed by plugin ID.
    *
@@ -28,23 +34,24 @@ final class DataSurfaceOptions {
   protected array $resolvers;
 
   /**
-   * Resolved answers, keyed by the object ID of the definition asked.
+   * Resolved answers, keyed by the definition asked.
    *
-   * A per-request memo and nothing more. Resolving a list can mean
-   * reading entity types, bundles, languages or countries, and a
-   * generated form asks the same definition at least twice — once to
-   * pick the widget, once to build the element. There is no
-   * invalidation because there is nothing to invalidate: the memo dies
-   * with the request, and a refined definition is a different object
-   * with a different ID, so narrowing can never be served a stale list.
+   * An identity memo and nothing more. Resolving a list can mean reading
+   * entity types, bundles, languages or countries, and a generated form
+   * asks the same definition at least twice: once to pick the widget,
+   * once to build the element. There is no invalidation because there is
+   * nothing to invalidate: a refined definition is a different object, so
+   * narrowing can never be served a stale list.
    *
-   * Each entry holds the definition beside its answer. That is not
-   * bookkeeping: it keeps the object alive, and an object that is alive
-   * cannot have its spl_object_id() handed to a later object.
+   * Weak, so an entry lives exactly as long as its definition. Every
+   * refine makes new definitions, and a worker that outlives a request
+   * (an MCP stdio server, a queue, a Drush batch) would otherwise keep
+   * every one it ever resolved. FALSE stands for no list: no constraint
+   * on the definition names one.
    *
-   * @var array<int, array{definition: \Drupal\Core\TypedData\DataDefinitionInterface, set: \Drupal\data_surface\Options\OptionSet|null}>
+   * @var \WeakMap<\Drupal\Core\TypedData\DataDefinitionInterface, \Drupal\data_surface\Options\OptionSet|false>
    */
-  protected array $resolved = [];
+  protected \WeakMap $resolved;
 
   /**
    * Constraint plugin IDs already reported as unregistered.
@@ -70,6 +77,24 @@ final class DataSurfaceOptions {
     protected readonly ConstraintManager $constraintManager,
     protected readonly LoggerInterface $logger,
   ) {
+    $this->resolved = new \WeakMap();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function __sleep(): array {
+    // PHP refuses to serialize a WeakMap, and an identity memo means
+    // nothing to another process; the resolvers are made again on use.
+    return array_values(array_diff($this->sleepDependencies(), ['resolved', 'resolvers']));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function __wakeup(): void {
+    $this->wakeDependencies();
+    $this->resolved = new \WeakMap();
   }
 
   /**
@@ -93,9 +118,8 @@ final class DataSurfaceOptions {
    *   The allowed values, or NULL when no constraint names a list.
    */
   public function resolve(DataDefinitionInterface $definition): ?OptionSet {
-    $id = spl_object_id($definition);
-    if (array_key_exists($id, $this->resolved)) {
-      return $this->resolved[$id]['set'];
+    if ($this->resolved->offsetExists($definition)) {
+      return $this->resolved[$definition] ?: NULL;
     }
     $resolved = NULL;
     foreach ($definition->getConstraints() as $name => $options) {
@@ -114,7 +138,7 @@ final class DataSurfaceOptions {
         $resolved = $resolved === NULL ? $set : $resolved->intersect($set);
       }
     }
-    $this->resolved[$id] = ['definition' => $definition, 'set' => $resolved];
+    $this->resolved[$definition] = $resolved ?? FALSE;
     return $resolved;
   }
 

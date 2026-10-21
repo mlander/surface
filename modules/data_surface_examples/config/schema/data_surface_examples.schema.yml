@@ -1,10 +1,15 @@
 # One config object per example, so the examples never write over each other.
-# Each says in schema what its surface says in PHP; the targets hold
-# every write to it in prepare(), before anything is saved.
+# Each entry under a "Generated" line is written from its resource by
+# drush data_surface:config-schema --write, and a test fails when one drifts;
+# the storage classes hold every write to it in prepare(), before anything is
+# saved. The ticket types are the site's, not a resource's, and written here.
 
+# Generated from the registration.step1 resource by drush data_surface:config-schema.
 data_surface_examples.registration_step1:
   type: config_object
   label: 'Registration settings, example 1'
+  constraints:
+    FullyValidatable: ~
   mapping:
     title:
       type: string
@@ -12,31 +17,76 @@ data_surface_examples.registration_step1:
     capacity:
       type: integer
       label: 'Capacity'
+      nullable: true
+      constraints:
+        Range:
+          min: 1
+          max: 1000
     open:
       type: boolean
       label: 'Registration open'
+      nullable: true
 
+# Generated from the registration.step2 resource by drush data_surface:config-schema.
 data_surface_examples.registration_step2:
-  type: data_surface_examples.registration_step1
+  type: config_object
   label: 'Registration settings, example 2'
+  constraints:
+    FullyValidatable: ~
   mapping:
+    title:
+      type: string
+      label: 'Event title'
+    open:
+      type: boolean
+      label: 'Registration open'
+      nullable: true
     venue:
       type: string
       label: 'Venue'
     room:
       type: string
       label: 'Room'
+    capacity:
+      type: integer
+      label: 'Capacity'
+      nullable: true
+      constraints:
+        Range:
+          min: 1
 
+# Generated from the registration.step3 resource by drush data_surface:config-schema.
 data_surface_examples.registration_step3:
-  type: data_surface_examples.registration_step2
+  type: config_object
   label: 'Registration settings, example 3'
+  constraints:
+    FullyValidatable: ~
   mapping:
+    title:
+      type: string
+      label: 'Event title'
+    open:
+      type: boolean
+      label: 'Registration open'
+      nullable: true
+    venue:
+      type: string
+      label: 'Venue'
+    room:
+      type: string
+      label: 'Room'
+    capacity:
+      type: integer
+      label: 'Capacity'
+      nullable: true
+      constraints:
+        Range:
+          min: 1
     pricing:
       type: string
       label: 'Pricing'
-    # The slot: its shape is the chosen pricing's.
     ticket:
-      type: data_surface_examples.ticket.[%parent.pricing]
+      type: 'data_surface_examples.registration_step3.ticket.[%parent.pricing]'
       label: 'Ticket'
     contact:
       type: mapping
@@ -48,31 +98,295 @@ data_surface_examples.registration_step3:
         phone:
           type: string
           label: 'Phone'
-    # Where other modules' keys are mounted, each described by the module
-    # that mounts it, under its own name.
+          nullable: true
     third_party_settings:
       type: sequence
       label: 'Third party settings'
       requiredKey: false
       sequence:
-        type: data_surface_examples.registration.third_party.[%key]
+        type: 'data_surface_examples.registration_step3.third_party.[%key]'
 
-data_surface_examples.ticket.free:
+# Example 7: the bulletin. The send day is kept while it does not apply.
+# Generated from the event.bulletin resource by drush data_surface:config-schema.
+data_surface_examples.bulletin:
+  type: config_object
+  label: 'Bulletin settings, example 7'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    frequency:
+      type: string
+      label: 'Frequency'
+    send_day:
+      type: string
+      label: 'Send day'
+    items:
+      type: integer
+      label: 'Items per issue'
+      nullable: true
+      constraints:
+        Range:
+          min: 1
+          max: 20
+
+# Example 8: the press page, the review's two keys flat beside its own.
+# Generated from the event.press resource by drush data_surface:config-schema.
+data_surface_examples.press:
+  type: config_object
+  label: 'Press page settings, example 8'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    public:
+      type: boolean
+      label: 'Show on the press page'
+      nullable: true
+    contact:
+      type: mapping
+      label: 'Press contact'
+      mapping:
+        name:
+          type: string
+          label: 'Name'
+        email:
+          type: email
+          label: 'Email'
+          nullable: true
+        phone:
+          type: string
+          label: 'Phone'
+          nullable: true
+          constraints:
+            Regex:
+              pattern: '/^\+?[0-9 ]{7,20}$/D'
+    reviewed_on:
+      type: string
+      label: 'Reviewed on'
+      nullable: true
+      constraints:
+        Regex:
+          pattern: '/^\d{4}-\d{2}-\d{2}$/D'
+    reviewed_by:
+      type: string
+      label: 'Reviewed by'
+      nullable: true
+
+# Example 8: the information desk, its volunteers a list of persons.
+# Generated from the event.desk resource by drush data_surface:config-schema.
+data_surface_examples.desk:
+  type: config_object
+  label: 'Information desk settings, example 8'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    phone:
+      type: string
+      label: 'Desk phone'
+      constraints:
+        Regex:
+          pattern: '/^\+?[0-9 ]{7,20}$/D'
+    in_program:
+      type: boolean
+      label: 'Listed in the printed program'
+      nullable: true
+    lead:
+      type: mapping
+      label: 'Desk lead'
+      mapping:
+        name:
+          type: string
+          label: 'Name'
+        email:
+          type: email
+          label: 'Email'
+          nullable: true
+        phone:
+          type: string
+          label: 'Phone'
+          nullable: true
+          constraints:
+            Regex:
+              pattern: '/^\+?[0-9 ]{7,20}$/D'
+    volunteers:
+      type: sequence
+      label: 'Volunteers'
+      nullable: true
+      constraints:
+        Count:
+          max: 4
+      sequence:
+        type: mapping
+        label: 'Volunteers'
+        mapping:
+          name:
+            type: string
+            label: 'Name'
+          email:
+            type: email
+            label: 'Email'
+            nullable: true
+          phone:
+            type: string
+            label: 'Phone'
+            nullable: true
+            constraints:
+              Regex:
+                pattern: '/^\+?[0-9 ]{7,20}$/D'
+
+# Example 9: the ticket types the site sells, which example 9's keys come from.
+data_surface_examples.ticket_types:
+  type: config_object
+  label: 'Ticket types'
+  mapping:
+    types:
+      type: sequence
+      label: 'Types'
+      sequence:
+        type: mapping
+        label: 'Ticket type'
+        mapping:
+          label:
+            type: label
+            label: 'Label'
+          locked:
+            type: boolean
+            label: 'Locked'
+
+# Example 9: ticket sales, one entry per ticket type in each map.
+# Generated from the event.sales resource by drush data_surface:config-schema.
+data_surface_examples.sales:
+  type: config_object
+  label: 'Ticket sales settings, example 9'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    on_sale:
+      type: sequence
+      label: 'On sale'
+      sequence:
+        type: boolean
+        label: 'On sale'
+        nullable: true
+    limits:
+      type: sequence
+      label: 'Limits'
+      sequence:
+        type: mapping
+        label: 'Limits'
+        mapping:
+          per_order:
+            type: integer
+            label: 'Per order'
+            nullable: true
+            requiredKey: false
+          waiting_list:
+            type: boolean
+            label: 'Waiting list when sold out'
+            nullable: true
+            requiredKey: false
+
+# Example 10: the program, and its fees.
+# Generated from the event.program resource by drush data_surface:config-schema.
+data_surface_examples.program:
+  type: config_object
+  label: 'Program settings, example 10'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    headline:
+      type: string
+      label: 'Headline'
+    sessions:
+      type: integer
+      label: 'Sessions'
+      nullable: true
+      constraints:
+        Range:
+          min: 1
+          max: 30
+    published:
+      type: boolean
+      label: 'Published'
+      nullable: true
+    fees:
+      type: mapping
+      label: 'Fees'
+      mapping:
+        standard:
+          type: float
+          label: 'Standard fee'
+          nullable: true
+          constraints:
+            Range:
+              min: 0
+        concession:
+          type: float
+          label: 'Concession fee'
+          nullable: true
+          constraints:
+            Range:
+              min: 0
+
+# Example 11: fully validatable, so only the notes may hold nothing, and
+# every other key is always held.
+# Generated from the event.doors resource by drush data_surface:config-schema.
+data_surface_examples.doors:
+  type: config_object
+  label: 'Door settings, example 11'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    opens:
+      type: string
+      label: 'Doors open at'
+      constraints:
+        Regex:
+          pattern: '/^([01]\d|2[0-3]):[0-5]\d$/D'
+    days:
+      type: sequence
+      label: 'Days'
+      sequence:
+        type: string
+        label: 'Days'
+    badges:
+      type: string
+      label: 'Badges'
+    notes:
+      type: string
+      label: 'Notes for the door team'
+      nullable: true
+    greeters:
+      type: sequence
+      label: 'Greeters'
+      sequence:
+        type: string
+        label: 'Greeters'
+
+# Generated from the registration.step3 resource by drush data_surface:config-schema.
+data_surface_examples.registration_step3.ticket.free:
   type: mapping
-  label: 'Free ticket'
+  label: 'Free'
+  constraints:
+    FullyValidatable: ~
   mapping:
     note:
       type: string
       label: 'Note'
       nullable: true
 
-data_surface_examples.ticket.paid:
+# Generated from the registration.step3 resource by drush data_surface:config-schema.
+data_surface_examples.registration_step3.ticket.paid:
   type: mapping
-  label: 'Paid ticket'
+  label: 'Paid'
+  constraints:
+    FullyValidatable: ~
   mapping:
     price:
       type: float
       label: 'Price'
+      constraints:
+        Range:
+          min: 0.01
     currency:
       type: string
       label: 'Currency'

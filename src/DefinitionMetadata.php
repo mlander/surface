@@ -7,6 +7,7 @@ namespace Drupal\data_surface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\data_surface\Resource\Arrangement;
 
 /**
  * Reads and writes definition metadata core cannot express yet.
@@ -33,11 +34,11 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
  * one of these names for something else; supportsDefaultValue() says how
  * the two are told apart.
  *
- * Resolving a definition's effective default — including assembling a
- * map's default from its properties — lives here too, beside the
- * metadata it reads, so the surface value object has no public static of
- * its own and a host answering a static defaults protocol reads the same
- * rule the surface does.
+ * Resolving a definition's effective default (including assembling a
+ * map's default from its properties) lives here too, beside the
+ * metadata it reads, so the data surface value object has no public
+ * static of its own and a host answering a static defaults protocol
+ * reads the same rule the data surface does.
  */
 final class DefinitionMetadata {
 
@@ -57,13 +58,13 @@ final class DefinitionMetadata {
   protected const SECRET_KEY = 'secret';
 
   /**
-   * The definition array key marking a slot's placeholder.
+   * The definition array key marking the variants' placeholder.
    *
-   * Holds the sibling key whose value chooses the slot's variant. The
+   * Holds the sibling key whose value chooses the variant. The
    * module's own, like 'secret': core has no union type, and this is the
    * smallest thing a definition can say about being one.
    */
-  protected const SLOT_KEY = 'data_surface_slot';
+  protected const VARIANTS_BY_KEY = 'data_surface_variants_by';
 
   /**
    * The definition array key marking a map that only groups other maps.
@@ -74,6 +75,51 @@ final class DefinitionMetadata {
    * The definition array key holding where a module's mount is drawn.
    */
   protected const PLACED_AFTER_KEY = 'data_surface_placed_after';
+
+  /**
+   * The definition array key naming the shape a key was declared with.
+   *
+   * Holds the shape's id and its definition as its alters left it, which
+   * is what the key may only narrow and what its def in the served
+   * contract is written from.
+   */
+  protected const SHAPE_KEY = 'data_surface_shape';
+
+  /**
+   * The definition array key marking a key its storage always holds.
+   *
+   * Written by the build step, from what the storage says, never by an
+   * author: whether a key may hold nothing is a fact of where it is
+   * stored, which the resource does not know.
+   */
+  protected const ALWAYS_HELD_KEY = 'data_surface_always_held';
+
+  /**
+   * The definition array key holding what each entry from the site is.
+   *
+   * Written by the build step on the map addEach() or attachEach()
+   * declared: the entries are the site's, so a reader that describes the
+   * map whatever the site lists (its config schema) reads the entry here.
+   */
+  protected const EACH_KEY = 'data_surface_each';
+
+  /**
+   * The definition array key holding the label the owner gave a key.
+   *
+   * Written when an alter rewords a key it does not own, so what
+   * describes the owner's own storage (its config schema) reads the
+   * owner's words, not those of whichever modules were on.
+   */
+  protected const OWN_LABEL_KEY = 'data_surface_own_label';
+
+  /**
+   * The definition array key holding how a key is arranged where drawn.
+   *
+   * Holds an Arrangement: its group, weight, placeholder, prefix, suffix
+   * and help. The module's own, like 'secret': core's form display says
+   * the same for fields, and has nowhere on a data definition to say it.
+   */
+  protected const ARRANGEMENT_KEY = 'data_surface_arrangement';
 
   /**
    * Declares the value a definition starts from.
@@ -149,8 +195,8 @@ final class DefinitionMetadata {
    * array has nothing to merge and stands on its own.
    *
    * The rule lives beside the metadata it reads rather than on the
-   * surface, because a host with a static defaults protocol has to
-   * answer from the definitions alone, without a built surface: a field
+   * data surface, because a host with a static defaults protocol has to
+   * answer from the definitions alone, without a built structure: a field
    * formatter's defaultSettings() cannot consult an instance, so it
    * reads the attribute's definitions and resolves each one here rather
    * than keeping a second copy of this rule.
@@ -236,7 +282,7 @@ final class DefinitionMetadata {
    *   it, because a form that cannot echo a secret submits an empty box
    *   for an unchanged one (docs/semantics.md says how a caller clears
    *   one on purpose);
-   * - a settings shape decorated with EncryptedSettingsShape encrypts
+   * - a settings layout decorated with EncryptedStorageLayout encrypts
    *   the value on its way to storage.
    *
    * A secret holds one scalar value. A list or a complex definition is
@@ -302,40 +348,41 @@ final class DefinitionMetadata {
   }
 
   /**
-   * Marks a definition as the placeholder of a slot.
+   * Marks a definition as the placeholder of a key's variants.
    *
-   * A slot is typed `any` until the sibling that chooses it holds a
-   * value, and `any` alone reads as "anything at all". The mark is what
+   * The key is typed `any` until the sibling that chooses its variant
+   * holds a value, and `any` alone reads as "anything at all". The mark is what
    * lets a reader holding only the definition know it means "one of the
    * declared variants, chosen by that key" instead; the variant table is
-   * on the surface entry, which is where an emitter reads it.
+   * on the key's Entry, which is where an emitter reads it.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The placeholder.
    * @param string $by
    *   The sibling key whose value chooses the variant.
    *
-   * @see \Drupal\data_surface\SurfaceSlot
+   * @see \Drupal\data_surface\Variants
    */
-  public static function setSlot(DataDefinitionInterface $definition, string $by): void {
-    static::arrayAccess($definition)->offsetSet(static::SLOT_KEY, $by);
+  public static function setVariantsBy(DataDefinitionInterface $definition, string $by): void {
+    static::arrayAccess($definition)->offsetSet(static::VARIANTS_BY_KEY, $by);
   }
 
   /**
-   * Gets the key that chooses a slot placeholder's variant.
+   * Gets the key that chooses the variant for a variants' placeholder.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition to read.
    *
    * @return string|null
-   *   The deciding key, or NULL when the definition is no unresolved
-   *   slot: a plain key, or a slot that has resolved to its variant.
+   *   The deciding key, or NULL when the definition is no placeholder of
+   *   variants nothing has chosen yet: a plain key, or a key whose
+   *   variant is chosen.
    */
-  public static function slotOf(DataDefinitionInterface $definition): ?string {
-    if (!$definition instanceof \ArrayAccess || !$definition->offsetExists(static::SLOT_KEY)) {
+  public static function variantsBy(DataDefinitionInterface $definition): ?string {
+    if (!$definition instanceof \ArrayAccess || !$definition->offsetExists(static::VARIANTS_BY_KEY)) {
       return NULL;
     }
-    $by = $definition->offsetGet(static::SLOT_KEY);
+    $by = $definition->offsetGet(static::VARIANTS_BY_KEY);
     return is_string($by) ? $by : NULL;
   }
 
@@ -407,6 +454,224 @@ final class DefinitionMetadata {
     }
     $key = $definition->offsetGet(static::PLACED_AFTER_KEY);
     return is_string($key) ? $key : NULL;
+  }
+
+  /**
+   * Marks a definition as a key declared with a shape.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition.
+   * @param string $id
+   *   The shape's id.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $shape
+   *   The shape's definition, as its alters left it: what the key narrows.
+   *
+   * @see docs/decisions.md#a-shape-is-a-named-definition
+   */
+  public static function setShape(DataDefinitionInterface $definition, string $id, DataDefinitionInterface $shape): void {
+    static::arrayAccess($definition)->offsetSet(static::SHAPE_KEY, ['id' => $id, 'definition' => $shape]);
+  }
+
+  /**
+   * Gets the id of the shape a key was declared with.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to read.
+   *
+   * @return string|null
+   *   The shape's id, or NULL for a key declared with a type.
+   */
+  public static function shapeOf(DataDefinitionInterface $definition): ?string {
+    $shape = static::shape($definition);
+    return $shape === NULL ? NULL : $shape['id'];
+  }
+
+  /**
+   * Gets the definition of the shape a key was declared with.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to read.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
+   *   The shape's definition as its alters left it, or NULL for a key
+   *   declared with a type.
+   */
+  public static function shapeDefinition(DataDefinitionInterface $definition): ?DataDefinitionInterface {
+    $shape = static::shape($definition);
+    return $shape === NULL ? NULL : $shape['definition'];
+  }
+
+  /**
+   * Marks a key its storage always holds a value for.
+   *
+   * Null on an optional key clears it, where clearing is possible. Where
+   * the storage cannot hold nothing for the key (a config object whose
+   * schema is fully validatable and does not say the key is nullable),
+   * null is no answer the key takes: the pipeline refuses it naming the
+   * default, both schemas leave null out of its type, and a select or
+   * radios offers no empty choice once a valid one is chosen.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition.
+   *
+   * @see docs/decisions.md#a-key-its-storage-always-holds
+   */
+  public static function setAlwaysHeld(DataDefinitionInterface $definition): void {
+    static::arrayAccess($definition)->offsetSet(static::ALWAYS_HELD_KEY, TRUE);
+  }
+
+  /**
+   * Returns whether a key's storage always holds a value for it.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to read.
+   *
+   * @return bool
+   *   TRUE when null cannot clear it; FALSE when it may be cleared, or
+   *   when its storage says nothing.
+   */
+  public static function isAlwaysHeld(DataDefinitionInterface $definition): bool {
+    return $definition instanceof \ArrayAccess
+      && $definition->offsetExists(static::ALWAYS_HELD_KEY)
+      && (bool) $definition->offsetGet(static::ALWAYS_HELD_KEY);
+  }
+
+  /**
+   * Says what each entry of a map of keys from the site is.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The map addEach() or attachEach() declared.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface|string $each
+   *   The definition every entry has, for addEach(); the structure every
+   *   entry is, by class, for attachEach().
+   *
+   * @see docs/decisions.md#keys-that-come-from-the-site
+   */
+  public static function setEach(DataDefinitionInterface $definition, DataDefinitionInterface|string $each): void {
+    static::arrayAccess($definition)->offsetSet(static::EACH_KEY, $each);
+  }
+
+  /**
+   * Reads what each entry of a map of keys from the site is.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to read.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface|string|null
+   *   The definition every entry has, or the structure every entry is,
+   *   by class; NULL for any other key.
+   */
+  public static function eachOf(DataDefinitionInterface $definition): DataDefinitionInterface|string|null {
+    if (!$definition instanceof \ArrayAccess || !$definition->offsetExists(static::EACH_KEY)) {
+      return NULL;
+    }
+    $each = $definition->offsetGet(static::EACH_KEY);
+    return $each instanceof DataDefinitionInterface || is_string($each) ? $each : NULL;
+  }
+
+  /**
+   * Keeps the label a key's owner gave it, before another module rewords it.
+   *
+   * The first call wins: an owner's label is kept once, whichever alter
+   * rewords it after.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition.
+   */
+  public static function keepOwnLabel(DataDefinitionInterface $definition): void {
+    $access = static::arrayAccess($definition);
+    if (!$access->offsetExists(static::OWN_LABEL_KEY)) {
+      $access->offsetSet(static::OWN_LABEL_KEY, $definition->getLabel());
+    }
+  }
+
+  /**
+   * Reads the label a key's owner gave it.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to read.
+   *
+   * @return string|\Stringable|null
+   *   The owner's label, which another module has since reworded; the
+   *   label it has, when none has.
+   */
+  public static function ownLabel(DataDefinitionInterface $definition): string|\Stringable|null {
+    if ($definition instanceof \ArrayAccess && $definition->offsetExists(static::OWN_LABEL_KEY)) {
+      $label = $definition->offsetGet(static::OWN_LABEL_KEY);
+      return is_string($label) || $label instanceof \Stringable ? $label : NULL;
+    }
+    return $definition->getLabel();
+  }
+
+  /**
+   * Declares how a key is arranged where it is drawn.
+   *
+   * Replaces whatever arrangement the key had; an alter lays its own over
+   * the owner's with describe(..., arrangement:) instead. Read by the
+   * generated form for every host, and stated by the served contract as
+   * `x-surface.arrangement` when a renderer asks for widget hints. Nothing
+   * in it changes what is accepted.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition.
+   * @param \Drupal\data_surface\Resource\Arrangement $arrangement
+   *   Its arrangement.
+   *
+   * @see docs/decisions.md#arrangement-is-declared-once
+   */
+  public static function setArrangement(DataDefinitionInterface $definition, Arrangement $arrangement): void {
+    static::arrayAccess($definition)->offsetSet(static::ARRANGEMENT_KEY, $arrangement);
+  }
+
+  /**
+   * Reads how a key is arranged where it is drawn.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to read.
+   *
+   * @return \Drupal\data_surface\Resource\Arrangement|null
+   *   Its arrangement, or NULL when it declares none.
+   */
+  public static function arrangementOf(DataDefinitionInterface $definition): ?Arrangement {
+    if (!$definition instanceof \ArrayAccess || !$definition->offsetExists(static::ARRANGEMENT_KEY)) {
+      return NULL;
+    }
+    $arrangement = $definition->offsetGet(static::ARRANGEMENT_KEY);
+    return $arrangement instanceof Arrangement ? $arrangement : NULL;
+  }
+
+  /**
+   * Returns whether a key holds a value whatever is sent.
+   *
+   * A required key, or one its storage always holds: either way null is
+   * no answer it takes, and a choice of it needs no empty option once a
+   * valid one is chosen.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to read.
+   *
+   * @return bool
+   *   TRUE when null cannot clear it.
+   */
+  public static function holdsValue(DataDefinitionInterface $definition): bool {
+    return $definition->isRequired() || static::isAlwaysHeld($definition);
+  }
+
+  /**
+   * Reads the shape a definition carries.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition.
+   *
+   * @return array{id: string, definition: \Drupal\Core\TypedData\DataDefinitionInterface}|null
+   *   The shape, or NULL.
+   */
+  protected static function shape(DataDefinitionInterface $definition): ?array {
+    if (!$definition instanceof \ArrayAccess || !$definition->offsetExists(static::SHAPE_KEY)) {
+      return NULL;
+    }
+    $shape = $definition->offsetGet(static::SHAPE_KEY);
+    return is_array($shape) && is_string($shape['id'] ?? NULL) && ($shape['definition'] ?? NULL) instanceof DataDefinitionInterface ? $shape : NULL;
   }
 
   /**
