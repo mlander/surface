@@ -20,6 +20,7 @@ use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
 use Drupal\data_surface_examples\CodeLines;
 use Drupal\data_surface_examples\ExamplePanels;
 use Drupal\data_surface_examples\Form\RegistrationStep1ClassicForm;
+use Drupal\data_surface_examples\Form\RegistrationStep2ClassicForm;
 use Drupal\data_surface_examples\Resource\RegistrationStep1Resource;
 use Drupal\data_surface_examples\Resource\RegistrationStep2Resource;
 use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
@@ -228,6 +229,47 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     $state = $this->submitTheForm(['capacity' => '30'] + $garden);
     $this->assertSame([], $state->getErrors());
     $this->assertSame('library_garden', $this->config('data_surface_examples.registration_step2')->get('room'));
+  }
+
+  /**
+   * Tests step 2's classic twin refuses in the words the resource uses.
+   *
+   * The same answers asked of the resource and submitted to the twin: each
+   * refusal on the same key, as the same sentence, and a valid set stored
+   * by the twin as the resource would store it. A room of another venue is
+   * not among them: submitted here, the twin is built for the venue
+   * submitted, so core's choice check refuses it before validateForm()
+   * is asked; ExamplesStep2ClassicTest posts it as a browser does.
+   */
+  public function testStepTwosClassicTwinRefusesInTheResourcesWords(): void {
+    $surface = $this->surface(RegistrationStep2Resource::class);
+    $cases = [
+      'more than the room seats' => ['venue' => 'library', 'room' => 'library_garden', 'capacity' => 31],
+      'fewer than one' => ['venue' => 'harbour', 'room' => 'harbour_deck', 'capacity' => 0],
+    ];
+    foreach ($cases as $case => $values) {
+      $values += ['title' => 'Twin meetup', 'open' => TRUE];
+      $resource = [];
+      foreach ($this->pipeline()->validate($surface, $values) as $violation) {
+        $resource[$violation->fullPath()] = strip_tags((string) $violation->message);
+      }
+      $classic = new FormState();
+      $classic->setValues(['capacity' => (string) $values['capacity'], 'open' => 1] + $values);
+      $this->container->get('form_builder')->submitForm(RegistrationStep2ClassicForm::class, $classic);
+      $this->assertNotSame([], $resource, $case);
+      $this->assertSame($resource, array_map(static fn ($message): string => strip_tags((string) $message), $classic->getErrors()), $case);
+    }
+    // Nothing written: read from storage, since the parent's validateForm()
+    // copies what it validates onto the factory's editable object.
+    $this->assertSame('riverside_main', $this->container->get('config.storage')->read('data_surface_examples.registration_step2')['room']);
+
+    $classic = new FormState();
+    $garden = ['title' => 'Twin meetup', 'venue' => 'library', 'room' => 'library_garden'];
+    $classic->setValues(['open' => NULL, 'capacity' => '30'] + $garden);
+    $this->container->get('form_builder')->submitForm(RegistrationStep2ClassicForm::class, $classic);
+    $this->assertSame([], $classic->getErrors());
+    $config = $this->config('data_surface_examples.registration_step2');
+    $this->assertSame(['title' => 'Twin meetup', 'open' => FALSE] + $garden + ['capacity' => 30], array_diff_key($config->get(), ['_core' => TRUE]));
   }
 
   /**

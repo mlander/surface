@@ -322,7 +322,7 @@ their configuration may change without a deprecation path.
 - **Data Surface Examples** (`data_surface_examples`): one resource
   that grows, one idea per example, at `/surface-examples`: each
   example a form beside the contract it emits, a classic twin for
-  example 1, and example 3 called as a tool with no form, with a reset
+  examples 1 and 2, and example 3 called as a tool with no form, with a reset
   to the shipped settings for a retake. Then examples 7 to 11, a small
   resource each for a later concept: a rule written as data, one part
   used twice, keys that come from the site, access and how an operation

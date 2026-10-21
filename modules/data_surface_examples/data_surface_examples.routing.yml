@@ -6,8 +6,8 @@
 # rebuilt with the form whenever an answer narrows another key, and below
 # it what config schema alone can say about the same settings today.
 #
-# Example 1 also has a classic twin, the same three settings written as a
-# ConfigFormBase by hand, writing the same config object; its page is a
+# Examples 1 and 2 also have a classic twin each, the same settings written
+# as a ConfigFormBase by hand, writing the same config object; its page is a
 # controller only to put what config schema says under the form without
 # adding a line to it. Examples 4 and 5 change no resource, so their pages
 # say what to do and where to look.
@@ -61,6 +61,14 @@ data_surface_examples.step2:
     _data_surface_panel: 'data_surface_examples.panels'
   requirements:
     _data_surface_operation_access: 'TRUE'
+
+data_surface_examples.step2_classic:
+  path: '/surface-examples/2/classic'
+  defaults:
+    _controller: '\Drupal\data_surface_examples\Controller\ExamplesController::step2Classic'
+    _title: 'Example 2, the classic way'
+  requirements:
+    _permission: 'administer site configuration'
 
 data_surface_examples.step3:
   path: '/surface-examples/3'

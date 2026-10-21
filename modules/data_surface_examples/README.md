@@ -147,7 +147,11 @@ form, and no table, having no resource to compare with. Its form requires
 the title and holds the capacity between 1 and 1000, in its own code.
 The config schema states the bounds only because it is written from
 example 1's resource; written for the classic form alone, it would state
-neither rule.
+neither rule. Example 2's twin carries the same two documents too: its
+form offers the chosen venue's rooms, refuses a room of another venue
+and holds the capacity between 1 and the room's seats, in its own code,
+and the config schema states only the lower bound, because it is written
+from example 2's resource.
 
 ## Example 1: declare what you accept
 
@@ -333,6 +337,174 @@ the text under the capacity field, rebuilt with it, says "Up to 30 for
 the Garden room." A refiner can only tighten: the framework checks
 every result is narrower than what was declared, so the panel's first
 answer stays true.
+
+**The classic twin**, at `/surface-examples/2/classic`, is the same five
+settings written as a `ConfigFormBase` by hand, as well as core allows
+today, as example 1's twin is: `#config_target` reads and writes each
+setting, so the parent's `submitForm()` saves them. What depends on what
+is written out. The venue and the room rebuild the room and the capacity
+over `#ajax`; `buildForm()` reads the submitted venue and room from the
+form state, and on a new venue drops the old venue's room from the input
+and falls back to the stored room; `validateForm()` refuses a room of
+another venue and a capacity outside 1 and the room's seats, in the words
+the resource uses. It edits the same config object.
+
+Its page says what the two forms share and counts both, from the files,
+the way the landing page counts every class: without the namespace, the
+use statements, blank lines and comments. The twin is **94 lines of
+code**; example 2's resource and its storage are **40**. The storage is
+counted with the resource because the twin names its config object
+itself, which the resource leaves to its storage.
+
+The twin behaves the same at the form, and nowhere else: there is no
+tool for it, no schema says what it accepts, and no React page draws it.
+At the form it falls short of the module's rule for a room left behind
+by a new venue in three places, said in a comment in `buildForm()`: its
+select does not say it stands for the stored room, a save leaving it
+empty is refused as required, and a stored room its venue no longer
+offers is shown as "- Select -" rather than kept with a warning. Posted
+without JavaScript, a room of another venue is refused on the room by
+both forms, in different words: example 2's form lists the rooms of the
+venue sent, so core's own choice check answers first, and the twin lists
+those of the venue it was built for, so its `validateForm()` does.
+
+<!-- code: src/Form/RegistrationStep2ClassicForm.php -->
+
+```php
+final class RegistrationStep2ClassicForm extends ConfigFormBase {
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getFormId(): string {
+    return 'data_surface_examples_registration_step2_classic';
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function getEditableConfigNames(): array {
+    return ['data_surface_examples.registration_step2'];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildForm(array $form, FormStateInterface $form_state): array {
+    $stored = $this->config('data_surface_examples.registration_step2');
+    $venue = $form_state->getValue('venue') ?? $stored->get('venue');
+    $room = $form_state->getValue('room') ?? $stored->get('room');
+    if (($form_state->getTriggeringElement()['#name'] ?? NULL) === 'venue') {
+      // A new venue drops the room chosen under the old one from the input,
+      // which Form API would otherwise put back, and falls back to the
+      // stored room. The module's rule goes further in three places: its
+      // select says it stands for the stored room, a save leaving it empty
+      // is refused on the stored room rather than as required, and a
+      // stored room its venue no longer offers is kept with a warning
+      // rather than shown as "- Select -".
+      $input = $form_state->getUserInput();
+      unset($input['room']);
+      $form_state->setUserInput($input);
+      // The original: the parent's validateForm() copied the input onto
+      // this config object on the way to the rebuild.
+      $room = $stored->getOriginal('room', FALSE);
+    }
+    $rooms = Venues::rooms($venue);
+    // NULL, not '': a required select with no default gets "- Select -".
+    $room = isset($rooms[$room]) ? $room : NULL;
+    $ajax = ['callback' => '::rebuildWhere', 'wrapper' => 'registration-step2-where'];
+    $form['title'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Event title'),
+      '#required' => TRUE,
+      '#config_target' => 'data_surface_examples.registration_step2:title',
+    ];
+    $form['open'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Registration open'),
+      '#config_target' => 'data_surface_examples.registration_step2:open',
+    ];
+    $form['venue'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Venue'),
+      '#options' => Venues::VENUES,
+      '#required' => TRUE,
+      '#ajax' => $ajax,
+      '#config_target' => 'data_surface_examples.registration_step2:venue',
+    ];
+    $form['where'] = [
+      '#type' => 'container',
+      '#attributes' => ['id' => 'registration-step2-where'],
+    ];
+    $form['where']['room'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Room'),
+      '#options' => $rooms,
+      '#default_value' => $room,
+      '#required' => TRUE,
+      '#ajax' => $ajax,
+      '#config_target' => 'data_surface_examples.registration_step2:room',
+    ];
+    // No #min or #max: validateForm() holds the bounds, so the refusal is
+    // the resource's sentence and not the number element's own.
+    $form['where']['capacity'] = [
+      '#type' => 'number',
+      '#title' => $this->t('Capacity'),
+      '#step' => 1,
+      '#config_target' => 'data_surface_examples.registration_step2:capacity',
+    ];
+    if ($room !== NULL) {
+      $form['where']['capacity']['#description'] = $this->t('Up to @seats for the @room.', [
+        '@seats' => Venues::seats($room),
+        '@room' => $rooms[$room],
+      ]);
+    }
+    return parent::buildForm($form, $form_state);
+  }
+
+  /**
+   * Returns the room and the capacity, rebuilt for the venue and room.
+   *
+   * @param array $form
+   *   The rebuilt form.
+   *
+   * @return array
+   *   The part of the form the #ajax wrapper replaces.
+   */
+  public function rebuildWhere(array &$form): array {
+    return $form['where'];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function validateForm(array &$form, FormStateInterface $form_state): void {
+    $venue = (string) $form_state->getValue('venue');
+    $room = (string) $form_state->getValue('room');
+    $rooms = Venues::rooms($venue);
+    if ($room !== '' && !isset($rooms[$room])) {
+      $labels = array_values($rooms);
+      $last = array_pop($labels);
+      $form_state->setErrorByName('room', $this->t('The value you selected is not a valid choice. This applies when Venue is @venue. Choose @rooms or @last.', [
+        '@venue' => Venues::VENUES[$venue] ?? $venue,
+        '@rooms' => implode(', ', $labels),
+        '@last' => $last,
+      ]));
+    }
+    $seats = Venues::seats($room);
+    $capacity = (int) $form_state->getValue('capacity');
+    if ($seats !== NULL && ($capacity < 1 || $capacity > $seats)) {
+      $form_state->setErrorByName('capacity', $this->t('This value should be between %min and %max. This applies when Room is @room.', [
+        '%min' => 1,
+        '%max' => $seats,
+        '@room' => Venues::rooms()[$room],
+      ]));
+    }
+    parent::validateForm($form, $form_state);
+  }
+
+}
+```
 
 ## Example 3: made of parts
 
@@ -1725,14 +1897,16 @@ Drush commands are checked against `ExampleCalls`.
 
 | Test | Covers |
 | --- | --- |
-| `Kernel\ExamplesStepsTest` | Examples 1 to 3: each form builds and saves, example 1 as its classic twin does; the venue narrows the room and the room the capacity; the pricing chooses the ticket variant; the contact validates its email; the panel's rows as the answers move; each example's class stays screen sized. |
+| `Kernel\ExamplesStepsTest` | Examples 1 to 3: each form builds and saves, example 1 as its classic twin does; example 2's twin refuses a capacity beyond the room's seats or below 1 in the resource's words and stores a valid set as the resource does; the venue narrows the room and the room the capacity; the pricing chooses the ticket variant; the contact validates its email; the panel's rows as the answers move; each example's class stays screen sized. |
 | `Kernel\ExamplesComplianceTest` | Example 4: the alter's keys and label; its keys in one fieldset titled "Compliance", drawn between the capacity and the pricing; the capacity capped at a hundred without a license and the room's limit with one; the license's pattern; the stewards' minimum following the capacity; what the license and the capacity replace on the form; a room closed in State left out, said in the room's help, and refused on submit; example 5's calls unchanged. |
 | `Kernel\StaticRefinerEnforcementTest` | Examples 2 and 3, without example 4 and with it: every conditional the served contract enumerates, in the full schema and in the schema for no values and for the defaults, is what refining afresh for its values answers, and example 4's declared license rule is what refining with the rules alone answers for sampled values. |
 | `Kernel\ExamplesToolTest` | Example 5: the three calls and their answers; what the script prints. |
 | `Kernel\ConfigSchemaContractTest` | What config schema can say: the plain mapping of examples 1 and 3, whole, with no list, no bound, nothing required and no keys for the ticket, the same whatever is stored or mounted; core's answer, a comment and no property; a constraint a schema does declare is said; the JSON this page quotes. |
-| `Kernel\ExamplesTodayPanelTest` | The second panel under examples 1 to 3: its two documents and its table, row by row; its rows read from the resource's full schema, so the pricing, the venue and what is stored leave every row and both documents as they were; example 4's keys on the resource's side only; the classic twin's page. |
-| `Unit\ExamplesReadmeTest` | This page against the files it quotes, and its Drush commands. |
-| `Functional\ExamplesRoutesTest` | Every route answers an administrator and refuses anonymous; the landing page; both panels under example 3, and a save through it; the classic twin's page with its two documents, and a save through it. |
+| `Kernel\ExamplesTodayPanelTest` | The second panel under examples 1 to 3: its two documents and its table, row by row; its rows read from the resource's full schema, so the pricing, the venue and what is stored leave every row and both documents as they were; example 4's keys on the resource's side only; the classic twins' pages, example 2's with its two line counts. |
+| `Unit\ExamplesReadmeTest` | This page against the files it quotes, its Drush commands, and the two line counts it states for example 2's twin. |
+| `Functional\ExamplesRoutesTest` | Every route answers an administrator and refuses anonymous; the landing page; both panels under example 3, and a save through it; each classic twin's page with its two documents, and a save through it; example 2's twin linked from the landing page with its line counts, and its page saying them. |
+| `Functional\ExamplesStep2ClassicTest` | Example 2 and its twin posted the same answers without JavaScript: a room of another venue refused on the room by both, a capacity beyond the room's seats and one below 1 refused by both in the same words, and a valid set stored identically by each. |
+| `FunctionalJavascript\ExamplesStep2ClassicAjaxTest` | Example 2's twin in a browser: a new venue swaps the room's options and leaves it on "- Select -" with nothing stored changed, a room describes the capacity, the venue moved back shows the stored room again, and a save after a move writes the new venue and room. |
 | `FunctionalJavascript\ExamplesAjaxRefreshTest` | In a browser: example 2's venue replaces the room and the capacity and leaves the venue the same node, the orphaned room on its empty option with the stale marker and the capacity with no upper bound; a room then narrows the capacity and loses `- Select -`. Example 3's paid pricing swaps the note for a price and a currency, and leaves the second panel's table and its two documents as they were. |
 | `FunctionalJavascript\ExamplesComplianceRefreshTest` | Example 4, in a browser: one fieldset titled "Compliance", the ceiling of 100 lifted to the main hall's 400 by `2048`, and the stewards at 1 for 50 and 3 for 150; a malformed license on blur is said once, under the license, with `aria-invalid` and nothing at the top, and caps the capacity at a hundred; corrected, the error goes and the room's limit comes back. A refused capacity left by a click on text keeps no focus, and left by Tab lands on the Compliance fieldset after it. The fieldset is drawn below the capacity and above the pricing, and stays there when `2048` and Tab lift the capacity, which, with the stewards, is all that is replaced. With the East room closed in State, choosing Riverside Hall offers the main hall alone and says why. |
 | `Functional\ServedContractEndpointsTest` | In React: the landing page's links, and example 2's contract, refine and validate over HTTP. |

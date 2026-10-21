@@ -7,8 +7,12 @@ namespace Drupal\Tests\data_surface\Kernel;
 use Drupal\Core\Render\Element;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\data_surface\Form\DataSurfaceOperationForm;
+use Drupal\data_surface_examples\CodeLines;
 use Drupal\data_surface_examples\Controller\ExamplesController;
 use Drupal\data_surface_examples\ExamplePanels;
+use Drupal\data_surface_examples\Form\RegistrationStep2ClassicForm;
+use Drupal\data_surface_examples\Resource\RegistrationStep2Resource;
+use Drupal\data_surface_examples\Storage\RegistrationStep2Storage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -289,6 +293,30 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
     // The rules the note names are the form's own.
     $this->assertTrue($page['form']['title']['#required']);
     $this->assertSame([1, 1000], [$page['form']['capacity']['#min'], $page['form']['capacity']['#max']]);
+  }
+
+  /**
+   * Tests example 2's twin: its counts, then the two documents and a note.
+   */
+  public function testTheSecondClassicTwinCountsItselfAndShowsTheTwoDocuments(): void {
+    $page = $this->container->get('class_resolver')->getInstanceFromDefinition(ExamplesController::class)->step2Classic();
+    $this->assertSame(['about', 'form', 'today'], Element::children($page));
+    $this->assertSame('data_surface_examples_registration_step2_classic', $page['form']['#form_id']);
+    // The counts, made from the files as the page is.
+    $file = static fn (string $class): string => (string) (new \ReflectionClass($class))->getFileName();
+    $classic = CodeLines::count($file(RegistrationStep2ClassicForm::class));
+    $resource = CodeLines::count($file(RegistrationStep2Resource::class)) + CodeLines::count($file(RegistrationStep2Storage::class));
+    $this->assertStringContainsString(sprintf("<p>This form is %d lines of code; example 2's resource and its storage are %d, counted the same way, without blank lines or comments.</p>", $classic, $resource), (string) $page['about']['#markup']);
+    $today = $page['today'];
+    $this->assertSame(['intro', 'note', 'core', 'derived'], Element::children($today));
+    $this->assertSame(['$comment'], array_keys($this->document($today['core'])));
+    $derived = $this->document($today['derived']);
+    $this->assertSame(['title' => 'Capacity', 'type' => ['integer', 'null'], 'minimum' => 1], $derived['properties']['capacity']);
+    $this->assertSame(['title' => 'Room', 'type' => 'string'], $derived['properties']['room']);
+    // The rules the note names are the form's own: the rooms of the
+    // stored venue, and the seats of the stored room under the capacity.
+    $this->assertSame(['riverside_main', 'riverside_east'], array_keys($page['form']['where']['room']['#options']));
+    $this->assertSame('Up to 400 for the Main hall.', (string) $page['form']['where']['capacity']['#description']);
   }
 
 }

@@ -13,6 +13,7 @@ use Drupal\data_surface_examples\CodeLines;
 use Drupal\data_surface_examples\ConfigSchemaPanel;
 use Drupal\data_surface_examples\ExampleCalls;
 use Drupal\data_surface_examples\Form\RegistrationStep1ClassicForm;
+use Drupal\data_surface_examples\Form\RegistrationStep2ClassicForm;
 use Drupal\data_surface_examples\Resource\BulletinResource;
 use Drupal\data_surface_examples\Resource\DoorsResource;
 use Drupal\data_surface_examples\Resource\ProgramResource;
@@ -22,6 +23,7 @@ use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
 use Drupal\data_surface_examples\Resource\TicketSalesResource;
 use Drupal\data_surface_examples\Shape\PhoneNumber;
 use Drupal\data_surface_examples\Storage\RegistrationStep1Storage;
+use Drupal\data_surface_examples\Storage\RegistrationStep2Storage;
 use Drupal\data_surface_examples\Structure\PersonStructure;
 use Drupal\data_surface_examples\Structure\ReviewStructure;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -29,8 +31,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * The examples' landing page, and the pages no operation form serves.
  *
- * Those are the two examples with no form, and example 1's classic twin
- * with what config schema says under it.
+ * Those are the two examples with no form, and the classic twins of
+ * examples 1 and 2 with what config schema says under each.
  *
  * Plain on purpose: one sentence per example, where it is, and how many
  * lines of code it took, counted from the files by CodeLines rather than
@@ -75,7 +77,7 @@ final class ExamplesController extends ControllerBase {
    *   The module list, which knows where a module is whether or not it is
    *   enabled.
    * @param \Drupal\data_surface_examples\ConfigSchemaPanel $configSchemaPanel
-   *   The panel of what config schema can say, for the classic twin.
+   *   The panel of what config schema can say, for the classic twins.
    */
   public function __construct(
     protected readonly ModuleExtensionList $moduleList,
@@ -145,6 +147,34 @@ final class ExamplesController extends ControllerBase {
       'today' => $this->configSchemaPanel->build(
         RegistrationStep1Storage::CONFIG,
         note: $this->t('This form requires the event title and holds the capacity between 1 and 1000, in its own code. The config schema below states the bounds only because it is written from the resource of example 1; written for this form alone, it would state neither rule.'),
+      ),
+    ];
+  }
+
+  /**
+   * Shows example 2's classic twin, what it shares, and what it cost.
+   *
+   * As for example 1's twin, the panel is put under the form here and not
+   * in it, so the form class is only the twin. The two counts are made
+   * from the files at every request, so the page cannot fall behind them.
+   *
+   * @return array
+   *   A render array.
+   */
+  public function step2Classic(): array {
+    $lines = $this->step2Lines();
+    return [
+      'about' => [
+        '#markup' => '<p>' . $this->t("The settings of example 2, written by hand as a ConfigFormBase and editing the same config object. The two forms ask the same five questions under the same labels, offer only the chosen venue's rooms, rebuild the room and the capacity over AJAX when the venue or the room changes, and refuse a room of another venue and a capacity the room cannot hold in the same words. Where they differ is where that lives: here, in this form's own code, which nothing else can read; in example 2, in its resource, from which its form, its contract and its tool are all read.") . '</p>'
+        . '<p>' . $this->t("This form is @classic lines of code; example 2's resource and its storage are @resource, counted the same way, without blank lines or comments.", [
+          '@classic' => $lines['classic'],
+          '@resource' => $lines['resource'],
+        ]) . '</p>',
+      ],
+      'form' => $this->formBuilder()->getForm(RegistrationStep2ClassicForm::class),
+      'today' => $this->configSchemaPanel->build(
+        RegistrationStep2Storage::CONFIG,
+        note: $this->t("This form offers the rooms of the chosen venue, refuses a room of another venue, and holds the capacity between 1 and the room's seats, in its own code. The config schema below states the lower bound only because it is written from the resource of example 2; written for this form alone, it would state no rule, and it cannot say that the rooms depend on the venue."),
       ),
     ];
   }
@@ -235,6 +265,11 @@ final class ExamplesController extends ControllerBase {
           $this->route('data_surface_examples.step2'),
           $this->react('registration.step2'),
           $this->lines(RegistrationStep2Resource::class),
+          $this->route('data_surface_examples.step2_classic'),
+          $this->t('The classic twin, a config form: @classic lines of code, against @resource for the resource and its storage.', [
+            '@classic' => $this->step2Lines()['classic'],
+            '@resource' => $this->step2Lines()['resource'],
+          ]),
         ],
       ],
       3 => [
@@ -367,6 +402,23 @@ final class ExamplesController extends ControllerBase {
    */
   protected function lines(string $class): TranslatableMarkup {
     return $this->t('The resource: @lines lines of code.', ['@lines' => CodeLines::count($this->file($class))]);
+  }
+
+  /**
+   * Counts example 2's classic twin, and its resource with its storage.
+   *
+   * The twin names its config object itself, where the resource leaves
+   * that to its storage class, so the storage is counted with the
+   * resource.
+   *
+   * @return array{classic: int, resource: int}
+   *   The lines of code of each side.
+   */
+  protected function step2Lines(): array {
+    return [
+      'classic' => CodeLines::count($this->file(RegistrationStep2ClassicForm::class)),
+      'resource' => CodeLines::count($this->file(RegistrationStep2Resource::class)) + CodeLines::count($this->file(RegistrationStep2Storage::class)),
+    ];
   }
 
   /**

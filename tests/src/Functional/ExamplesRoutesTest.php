@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Functional;
 
+use Drupal\data_surface_examples\CodeLines;
+use Drupal\data_surface_examples\Form\RegistrationStep2ClassicForm;
+use Drupal\data_surface_examples\Resource\RegistrationStep2Resource;
+use Drupal\data_surface_examples\Storage\RegistrationStep2Storage;
 use Drupal\Tests\BrowserTestBase;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -39,6 +43,7 @@ class ExamplesRoutesTest extends BrowserTestBase {
     'surface-examples/1',
     'surface-examples/1/classic',
     'surface-examples/2',
+    'surface-examples/2/classic',
     'surface-examples/3',
     'surface-examples/4',
     'surface-examples/5',
@@ -74,6 +79,9 @@ class ExamplesRoutesTest extends BrowserTestBase {
     $assert->pageTextContains('The decoupled page is the "In React" links above');
     $assert->pageTextMatches('/The resource: \d+ lines of code\./');
     $assert->pageTextMatches('/The classic twin, a config form: \d+ lines of code\./');
+    [$classic, $resource] = $this->stepTwoLines();
+    $assert->linkByHrefExists('/surface-examples/2/classic');
+    $assert->pageTextContains(sprintf('The classic twin, a config form: %d lines of code, against %d for the resource and its storage.', $classic, $resource));
     $assert->linkByHrefExists('/surface-examples/reset');
     // Without data_surface_react the React twin is named, not linked.
     $assert->pageTextContains('In React at /surface-react/registration.step2/configure, once data_surface_react is enabled.');
@@ -123,10 +131,40 @@ class ExamplesRoutesTest extends BrowserTestBase {
     $assert->pageTextContains('The configuration options have been saved.');
     $this->assertSame('Classic meetup', $this->config('data_surface_examples.registration_step1')->get('title'));
 
+    // Example 2's twin: what it shares, what it cost against the resource
+    // and its storage, then the same panel under the form, with its note.
+    $this->drupalGet('surface-examples/2/classic');
+    $assert->pageTextContains('Example 2, the classic way');
+    $assert->pageTextContains('The two forms ask the same five questions under the same labels');
+    $assert->pageTextContains(sprintf("This form is %d lines of code; example 2's resource and its storage are %d, counted the same way, without blank lines or comments.", $classic, $resource));
+    $assert->fieldValueEquals('venue', 'riverside');
+    $assert->fieldValueEquals('room', 'riverside_main');
+    $assert->elementsCount('css', 'details.data-surface-today-panel pre', 2);
+    $assert->elementNotExists('css', 'table.data-surface-today-comparison');
+    $assert->pageTextContains("This form offers the rooms of the chosen venue, refuses a room of another venue, and holds the capacity between 1 and the room's seats, in its own code. The config schema below states the lower bound only because it is written from the resource of example 2; written for this form alone, it would state no rule, and it cannot say that the rooms depend on the venue.");
+    $assert->elementTextContains('css', 'details.data-surface-today-panel', 'Registration settings, example 2');
+    $this->submitForm(['title' => 'Classic meetup'], 'Save configuration');
+    $assert->pageTextContains('The configuration options have been saved.');
+    $this->assertSame('Classic meetup', $this->config('data_surface_examples.registration_step2')->get('title'));
+
     $this->drupalGet('surface-examples/5');
     $assert->pageTextContains('drush tool:info data_surface:registration.step3:configure');
     $assert->pageTextContains('drush tool:run data_surface:registration.step3:configure:read --uid=1');
     $assert->pageTextContains('--input=dry_run=true');
+  }
+
+  /**
+   * Counts example 2's classic twin, and its resource with its storage.
+   *
+   * @return int[]
+   *   The twin's lines of code, then the resource's and storage's.
+   */
+  protected function stepTwoLines(): array {
+    $file = static fn (string $class): string => (string) (new \ReflectionClass($class))->getFileName();
+    return [
+      CodeLines::count($file(RegistrationStep2ClassicForm::class)),
+      CodeLines::count($file(RegistrationStep2Resource::class)) + CodeLines::count($file(RegistrationStep2Storage::class)),
+    ];
   }
 
 }
